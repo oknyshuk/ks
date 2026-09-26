@@ -91,27 +91,27 @@ public:	// members are public to avoid to much changes
 
 /// Helper class to render a netadr_t.  Use this when formatting a net address
 /// in a printf.  Don't use adr.ToString()!
-class CUtlNetAdrRender
+class CNetAdrRender
 {
 public:
-	CUtlNetAdrRender( const netadr_t &obj, bool bBaseOnly = false )
+	CNetAdrRender( const netadr_t &obj, bool bBaseOnly = false )
 	{
 		obj.ToString( m_rgchString, sizeof(m_rgchString), bBaseOnly );
 	}
 
-	CUtlNetAdrRender( uint32 unIP )
+	CNetAdrRender( uint32 unIP )
 	{
 		netadr_t addr( unIP, 0 );
 		addr.ToString( m_rgchString, sizeof(m_rgchString), true );
 	}
 
-	CUtlNetAdrRender( uint32 unIP, uint16 unPort )
+	CNetAdrRender( uint32 unIP, uint16 unPort )
 	{
 		netadr_t addr( unIP, unPort );
 		addr.ToString( m_rgchString, sizeof(m_rgchString), false );
 	}
 
-	CUtlNetAdrRender( const struct sockaddr &s )
+	CNetAdrRender( const struct sockaddr &s )
 	{
 		netadr_t addr;
 		if ( addr.SetFromSockadr( &s ) )

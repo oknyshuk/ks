@@ -10,9 +10,6 @@
 #include "monitorscreen_ps20b.inc"
 #include "cpp_shader_constant_register_map.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 DEFINE_FALLBACK_SHADER( MonitorScreen, MonitorScreen_DX9 )
 
 BEGIN_VS_SHADER( MonitorScreen_DX9,

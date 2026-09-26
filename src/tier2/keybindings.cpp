@@ -9,10 +9,6 @@
 #include "tier2/keybindings.h"
 #include "tier2/tier2.h"
 #include "inputsystem/iinputsystem.h"
-#include "tier1/utlbuffer.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 
@@ -25,15 +21,15 @@ void CKeyBindings::SetBinding( ButtonCode_t code, const char *pBinding )
 		return;
 
 	// free old bindings
-	if ( !m_KeyInfo[code].IsEmpty() )
+	if ( !m_KeyInfo[code].empty() )
 	{
 		// Exactly the same, don't re-bind and fragment memory
-		if ( !Q_stricmp( m_KeyInfo[code], pBinding ) )
+		if ( !Q_stricmp( m_KeyInfo[code].c_str(), pBinding ) )
 			return;
 	}
 			
 	// allocate memory for new binding
-	m_KeyInfo[code] = pBinding;
+	m_KeyInfo[code] = ks::nz( pBinding );
 }
 
 void CKeyBindings::SetBinding( const char *pButtonName, const char *pBinding )
@@ -73,7 +69,7 @@ int CKeyBindings::GetBindingCount( ) const
 	int	nCount = 0;
 	for ( int i = 0; i < BUTTON_CODE_LAST; i++ )
 	{
-		if ( m_KeyInfo[i].Length() )
+		if ( std::ssize( m_KeyInfo[i] ) )
 		{
 			nCount++;
 		}
@@ -86,14 +82,14 @@ int CKeyBindings::GetBindingCount( ) const
 //-----------------------------------------------------------------------------
 // Writes lines containing "bind key value"
 //-----------------------------------------------------------------------------
-void CKeyBindings::WriteBindings( CUtlBuffer &buf )
+void CKeyBindings::WriteBindings( ks::text_writer &buf )
 {
 	for ( int i = 0; i < BUTTON_CODE_LAST; i++ )
 	{
-		if ( m_KeyInfo[i].Length() )
+		if ( std::ssize( m_KeyInfo[i] ) )
 		{
 			const char *pButtonCode = g_pInputSystem->ButtonCodeToString( (ButtonCode_t)i );
-			buf.Printf( "bind \"%s\" \"%s\"\n", pButtonCode, m_KeyInfo[i].Get() );
+			buf.printf( "bind \"%s\" \"%s\"\n", pButtonCode, m_KeyInfo[i].data() );
 		}
 	}
 }
@@ -113,7 +109,7 @@ const char *CKeyBindings::ButtonNameForBinding( const char *pBinding )
 
 	for ( int i = 0; i < BUTTON_CODE_LAST; i++ )
 	{
-		if ( !m_KeyInfo[i].Length() )
+		if ( !std::ssize( m_KeyInfo[i] ) )
 			continue;
 
 		if ( m_KeyInfo[i][0] == '+' )
@@ -123,7 +119,7 @@ const char *CKeyBindings::ButtonNameForBinding( const char *pBinding )
 		}
 		else
 		{
-			if ( !Q_stricmp( m_KeyInfo[i], pBind ) )
+			if ( !Q_stricmp( m_KeyInfo[i].c_str(), pBind ) )
 				return g_pInputSystem->ButtonCodeToString( (ButtonCode_t)i );
 		}
 	}
@@ -133,10 +129,10 @@ const char *CKeyBindings::ButtonNameForBinding( const char *pBinding )
 
 const char *CKeyBindings::GetBindingForButton( ButtonCode_t code )
 {
-	if ( m_KeyInfo[code].IsEmpty() )
+	if ( m_KeyInfo[code].empty() )
 		return nullptr;
 
-	return m_KeyInfo[ code ];
+	return m_KeyInfo[ code ].c_str();
 }
 
 

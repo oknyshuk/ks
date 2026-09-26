@@ -62,7 +62,7 @@ public:
 
 	CGlowObject m_GlowObject;
 
-	CUtlVector<CHandle<C_RopeKeyframe>> m_hDefuserRopes;
+	std::vector< CHandle<C_RopeKeyframe> > m_hDefuserRopes;
 	CHandle<C_BaseAnimating> m_hDefuserMultimeter;
 
 	float GetDefuseProgress( void )
@@ -92,6 +92,6 @@ private:
 
 };
 
-extern CUtlVector< C_PlantedC4* > g_PlantedC4s;
+extern std::vector< C_PlantedC4* > g_PlantedC4s;
 
 #endif //C_PLANTEDC4_H

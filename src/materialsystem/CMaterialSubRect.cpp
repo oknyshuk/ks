@@ -16,21 +16,20 @@
 #include "shadersystem.h"
 #include "materialsystem/imaterialproxyfactory.h"
 #include "IHardwareConfigInternal.h"
-#include "utlsymbol.h"
+#include "tier1/intern_pool.h"
+#include "tier1/string_ops.h"
 #include <malloc.h>
 #include "filesystem.h"
 #include <keyvalues.h>
-#include "mempool.h"
+#include "tier1/fixed_pool.h"
 #include "shaderapi/ishaderutil.h"
 #include "vtf/vtf.h"
 #include "tier1/strtools.h"
 #include <ctype.h>
-#include "utlbuffer.h"
 #include "mathlib/vmatrix.h"
 #include "texturemanager.h"
 #include "itextureinternal.h"
 #include "cmaterial_queuefriendly.h"
-#include "mempool.h"
 
 static IMaterialVar *CreateMaterialVarFromKeyValue( IMaterial* pMaterial, KeyValues* pKeyValue );
 
@@ -77,7 +76,7 @@ public:
 	void				Precache();
 	void				Uncache( bool bPreserveVars = false );
 	// If provided, pKeyValues and pPatchKeyValues should come from LoadVMTFile()
-	bool				PrecacheVars( KeyValues *pKeyValues = nullptr, KeyValues *pPatchKeyValues = nullptr, CUtlVector<FileNameHandle_t> *pIncludes = nullptr );
+	bool				PrecacheVars( KeyValues *pKeyValues = nullptr, KeyValues *pPatchKeyValues = nullptr, std::vector< FileNameHandle_t > *pIncludes = nullptr );
 	bool				IsPrecached() const;
 	bool				IsPrecachedVars( ) const;
 	bool				IsManuallyCreated() const;
@@ -225,7 +224,7 @@ public:
 	virtual void PrecacheMappingDimensions( void ) { m_pMaterialPage->PrecacheMappingDimensions(); }
 	virtual void FindRepresentativeTexture( void ) { m_pMaterialPage->FindRepresentativeTexture(); }
 
-	virtual void CompactMaterialVars()									{ ::CompactMaterialVars( m_aMaterialVars.Base(), m_aMaterialVars.Count() ); }
+	virtual void CompactMaterialVars()									{ ::CompactMaterialVars( m_aMaterialVars.data(), std::ssize( m_aMaterialVars ) ); }
 
 	virtual bool HasQueueFriendlyProxies() const OVERRIDE				{ return m_pMaterialPage->HasQueueFriendlyProxies(); }
 
@@ -261,8 +260,8 @@ private:
 
 	int							m_iEnumID;
 
-	CUtlSymbol					m_symName;
-	CUtlSymbol					m_symTextureGroupName;
+	std::string_view			m_symName;					// both in ks::global_symbols()
+	std::string_view			m_symTextureGroupName;
 
 	Vector2D					m_vecOffset;
 	Vector2D					m_vecScale;
@@ -272,7 +271,7 @@ private:
 
 	unsigned int				m_fLocal;					// Local flags - precached etc...
 
-	CUtlVector<IMaterialVar*>	m_aMaterialVars;
+	std::vector< IMaterialVar* >	m_aMaterialVars;
 
 	// Used only by procedural materials; it essentially is an in-memory .VMT file
 	KeyValues					*m_pVMTKeyValues;
@@ -287,10 +286,8 @@ private:
 
 
 // NOTE: This must be the last file included
-// Has to exist *after* fixed size allocator declaration
-#include "tier0/memdbgon.h"
 
-DEFINE_FIXEDSIZE_ALLOCATOR( CMaterialSubRect, 256, true );
+DEFINE_FIXEDSIZE_ALLOCATOR( CMaterialSubRect, 256, ks::fixed_pool::grow::fast );
 
 //-----------------------------------------------------------------------------
 // Purpose: Static create method for material subrect.
@@ -327,7 +324,7 @@ CMaterialSubRect::CMaterialSubRect( const char *pMaterialName, const char *pText
 	Q_strncpy( pTemp, pMaterialName, len + 1 );
 	Q_strlower( pTemp );
 	pTemp[ len - 4 ] = '\0';
-	m_symName = pTemp;
+	m_symName = ks::global_symbols().intern( pTemp );
 
 #ifdef _DEBUG
 	m_pDebugName = new char[Q_strlen( pTemp ) + 1];
@@ -337,13 +334,13 @@ CMaterialSubRect::CMaterialSubRect( const char *pMaterialName, const char *pText
 	m_pMaterialPage = nullptr;
 	m_pModelMaterialPage = nullptr;
 	m_iEnumID = 0;
-	m_symTextureGroupName = pTextureGroupName;
+	m_symTextureGroupName = ks::global_symbols().intern( ks::nz( pTextureGroupName ) );
 	m_vecOffset.Init();
 	m_vecScale.Init();
 	m_vecSize.Init();
 	m_nRefCount = 0;
 	m_fLocal = 0;
-	m_aMaterialVars.Purge();
+	m_aMaterialVars.clear(); m_aMaterialVars.shrink_to_fit();
 
 	if ( pTemp[0] == '/' && pTemp[1] == '/' && pTemp[2] != '/' )
 	{
@@ -452,7 +449,7 @@ void CMaterialSubRect::SetShaderAndParams( KeyValues *pKeyValues )
 //-----------------------------------------------------------------------------
 const char *CMaterialSubRect::GetName() const
 {
-	return m_symName.String();
+	return m_symName.data();
 }
 
 //-----------------------------------------------------------------------------
@@ -460,7 +457,7 @@ const char *CMaterialSubRect::GetName() const
 //-----------------------------------------------------------------------------
 const char *CMaterialSubRect::GetTextureGroupName() const
 {
-	return m_symTextureGroupName.String();
+	return m_symTextureGroupName.data();
 }
 
 //-----------------------------------------------------------------------------
@@ -581,7 +578,7 @@ void CMaterialSubRect::Precache()
 //-----------------------------------------------------------------------------
 // Purpose:
 //-----------------------------------------------------------------------------
-bool CMaterialSubRect::PrecacheVars( KeyValues *pVMTKeyValues, KeyValues *pPatchKeyValues, CUtlVector<FileNameHandle_t> *pIncludes )
+bool CMaterialSubRect::PrecacheVars( KeyValues *pVMTKeyValues, KeyValues *pPatchKeyValues, std::vector< FileNameHandle_t > *pIncludes )
 {
 	// FIXME:  Should call through to the parent material for all of this???
 	// We should get both parameters or neither
@@ -700,7 +697,7 @@ void CMaterialSubRect::ParseMaterialVars( KeyValues &keyValues )
 			IMaterialVar *pNewVar = CreateMaterialVarFromKeyValue( this, pVar );
 			if ( pNewVar )
 			{
-				m_aMaterialVars.AddToTail( pNewVar );		
+				m_aMaterialVars.push_back( pNewVar );		
 			}
 
 			// Continue getting the keys until they are all found.
@@ -758,9 +755,9 @@ IMaterialVar *CMaterialSubRect::FindVar( char const *varName, bool *found, bool 
 
 	// Look for the var in the local list of vars.
 	MaterialVarSym_t symVar = IMaterialVar::FindSymbol( varName );
-	if ( symVar != UTL_INVAL_SYMBOL )
+	if ( symVar != INVALID_MATERIAL_VAR_SYMBOL )
 	{
-		int nVarCount = m_aMaterialVars.Count();
+		int nVarCount = std::ssize( m_aMaterialVars );
 		for ( int iVar = 0; iVar < nVarCount; ++iVar )
 		{
 			if ( m_aMaterialVars[iVar]->GetNameAsSymbol() == symVar )
@@ -790,7 +787,7 @@ IMaterialVar *CMaterialSubRect::FindVarFast( char const *pVarName, unsigned int 
 	tokencache_t *pToken = reinterpret_cast<tokencache_t *>(pCacheData);
 	PrecacheVars();
 
-	int nVarCount = m_aMaterialVars.Count();
+	int nVarCount = std::ssize( m_aMaterialVars );
 	if ( pToken->cached && pToken->subrect )
 	{
 		if ( pToken->varIndex < nVarCount && m_aMaterialVars[pToken->varIndex]->GetNameAsSymbol() == pToken->symbol )
@@ -804,7 +801,7 @@ IMaterialVar *CMaterialSubRect::FindVarFast( char const *pVarName, unsigned int 
 
 	Assert( pToken->cached );
 
-	if ( pToken->symbol != UTL_INVAL_SYMBOL )
+	if ( pToken->symbol != INVALID_MATERIAL_VAR_SYMBOL )
 	{
 		for ( int iVar = 0; iVar < nVarCount; ++iVar )
 		{
@@ -865,11 +862,11 @@ void CMaterialSubRect::Uncache( bool bPreserveVars )
 	{
 		if ( IsPrecachedVars() )
 		{
-			for ( int i = 0; i < m_aMaterialVars.Count(); ++i )
+			for ( int i = 0; i < std::ssize( m_aMaterialVars ); ++i )
 			{
 				IMaterialVar::Destroy( m_aMaterialVars[i] );
 			}
-			m_aMaterialVars.Purge();
+			m_aMaterialVars.clear(); m_aMaterialVars.shrink_to_fit();
 
 			m_fLocal &= ~MATERIALSUBRECT_VARS_IS_PRECACHED;
 		}
@@ -883,7 +880,7 @@ void CMaterialSubRect::Uncache( bool bPreserveVars )
 //-----------------------------------------------------------------------------
 void CMaterialSubRect::AddMaterialVar( IMaterialVar *pMaterialVar )
 {
-	m_aMaterialVars.AddToTail( pMaterialVar );
+	m_aMaterialVars.push_back( pMaterialVar );
 }
 
 void CMaterialSubRect::MarkAsPreloaded( bool bSet )

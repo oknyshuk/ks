@@ -8,9 +8,6 @@
 
 #include "fmtstr.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define MMVOICEMSG(...) ((void)0)
 #define MMVOICEMSG2(...) ((void)0)
 
@@ -76,7 +73,7 @@ bool CMatchVoice::IsTalkerMuted( XUID xuidTalker )
 		return true;
 	}
 
-	if ( m_arrMutedTalkers.Find( xuidTalker ) != m_arrMutedTalkers.InvalidIndex() )
+	if ( ks::find_index( m_arrMutedTalkers, xuidTalker ) != -1 )
 	{
 		MMVOICEMSG( "IsTalkerMuted(0x%llX)=true(locallist)\n", xuidTalker );
 		return true;
@@ -91,7 +88,7 @@ bool CMatchVoice::IsTalkerMuted( XUID xuidTalker )
 	}
 
 
-	if ( m_arrMutedTalkers.Find( xuidTalker ) != m_arrMutedTalkers.InvalidIndex() )
+	if ( ks::find_index( m_arrMutedTalkers, xuidTalker ) != -1 )
 	{
 		MMVOICEMSG( "IsTalkerMuted(0x%llX/0x%llX)=true(locallist)\n", xuidTalker, xuidOriginal );
 		return true;
@@ -157,7 +154,7 @@ XUID CMatchVoice::RemapTalkerXuid( XUID xuidTalker )
 bool CMatchVoice::IsTalkerMutedWithPrivileges( int dwCtrlr, XUID xuidTalker )
 {
 
-	if ( m_arrMutedTalkers.Find( xuidTalker ) != m_arrMutedTalkers.InvalidIndex() )
+	if ( ks::find_index( m_arrMutedTalkers, xuidTalker ) != -1 )
 	{
 		MMVOICEMSG( "IsTalkerMutedWithPrivileges(%d/0x%llX)=true(locallist)\n", dwCtrlr, xuidTalker );
 		return true;
@@ -246,14 +243,14 @@ void CMatchVoice::MuteTalker( XUID xuidTalker, bool bMute )
 	if ( !xuidTalker )
 	{
 		if ( !bMute )
-			m_arrMutedTalkers.Purge();
+			m_arrMutedTalkers.clear();
 	}
 	else
 	{
-		m_arrMutedTalkers.FindAndFastRemove( xuidTalker );
+		ks::swap_erase_first( m_arrMutedTalkers, xuidTalker );
 		if ( bMute )
 		{
-			m_arrMutedTalkers.AddToTail( xuidTalker );
+			m_arrMutedTalkers.push_back( xuidTalker );
 		}
 	}
 	

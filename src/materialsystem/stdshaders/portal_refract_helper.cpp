@@ -11,9 +11,6 @@
 
 #include "shaderapifast.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 void InitParamsPortalRefract( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, PortalRefractVars_t &info )
 {

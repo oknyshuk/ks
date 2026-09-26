@@ -9,9 +9,6 @@
 #include "convar.h"
 #include "refract_dx9_helper.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 DEFINE_FALLBACK_SHADER( Refract, Refract_DX90 )
 

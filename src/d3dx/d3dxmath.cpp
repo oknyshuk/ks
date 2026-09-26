@@ -11,12 +11,10 @@
 #include "tier0/threadtools.h"
 #include "tier0/vprof.h"
 #include "tier1/strtools.h"
-#include "tier1/utlbuffer.h"
 #include "mathlib/vmatrix.h"
 #include "materialsystem/IShader.h"
 
 #include "tier0/icommandline.h"
-#include "tier0/memdbgon.h"
 
 // ------------------------------------------------------------------------------------------------------------------------------ //
 
@@ -177,8 +175,8 @@ ULONG ID3DXMatrixStack::Release( int which, char *comment )
 
 HRESULT	ID3DXMatrixStack::Create()
 {
-	m_stack.EnsureCapacity( 16 );	// 1KB ish
-	m_stack.AddToTail();
+	m_stack.reserve( 16 );	// 1KB ish
+	m_stack.emplace_back();
 	m_stackTop = 0;				// top of stack is at index 0 currently
 	
 	LoadIdentity();
@@ -194,14 +192,14 @@ D3DXMATRIX* ID3DXMatrixStack::GetTop()
 void ID3DXMatrixStack::Push()
 {
 	D3DMATRIX temp = m_stack[ m_stackTop ];
-	m_stack.AddToTail( temp );
+	m_stack.push_back( temp );
 	m_stackTop ++;
 }
 
 void ID3DXMatrixStack::Pop()
 {
 	int elem = m_stackTop--;
-	m_stack.Remove( elem );
+	m_stack.erase( m_stack.begin() + elem );
 }
 
 void ID3DXMatrixStack::LoadIdentity()

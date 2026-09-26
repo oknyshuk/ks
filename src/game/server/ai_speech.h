@@ -8,11 +8,10 @@
 #ifndef AI_SPEECH_H
 #define AI_SPEECH_H
 
-#include "utlmap.h"
 
 #include "soundflags.h"
 #include "ai_responsesystem.h"
-#include "utldict.h"
+#include "tier1/map_ops.h"
 #include "ai_speechconcept.h"
 
 
@@ -245,7 +244,7 @@ private:
 	// Speech concept data structures
 	//
 
-	CUtlDict< ConceptHistory_t, int > m_ConceptHistories;
+	ks::idict< ConceptHistory_t > m_ConceptHistories;
 
 	// --------------------------------
 	//

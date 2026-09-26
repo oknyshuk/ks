@@ -7,9 +7,6 @@
 #include "imagepacker.h"
 #include "mathlib/mathlib.h"
 
-// NOTE: This has to be the last file included
-#include "tier0/memdbgon.h"
-
 float CImagePacker::GetEfficiency( void )
 {
 	return ( float )m_AreaUsed / ( float )( m_MaxLightmapWidth * CeilPow2( m_MinimumHeight ) );

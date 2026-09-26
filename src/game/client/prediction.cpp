@@ -21,9 +21,6 @@
 
 #include "tier0/vprof.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 IPredictionSystem *IPredictionSystem::g_pPredictionSystems = nullptr;
 
 #if !defined( NO_ENTITY_PREDICTION )
@@ -138,7 +135,7 @@ void CPrediction::CheckError( int nSlot, C_BasePlayer *player, int commands_ackn
 		const typedescription_t *td = CPredictionCopy::FindFlatFieldByName( "m_vecNetworkOrigin", player->GetPredDescMap() );
 		if ( td ) 
 		{
-			m_PlayerOriginTypeDescription.AddToTail( td );
+			m_PlayerOriginTypeDescription.push_back( td );
 		}
 #else
 		const typedescription_t *td = CPredictionCopy::FindFlatFieldByName( "m_vecNetworkOrigin.x", player->GetPredDescMap() );
@@ -165,7 +162,7 @@ void CPrediction::CheckError( int nSlot, C_BasePlayer *player, int commands_ackn
 #endif
 	}
 
-	if ( !m_PlayerOriginTypeDescription.Count() )
+	if ( m_PlayerOriginTypeDescription.empty() )
 		return;
 
 	Vector predicted_origin;
@@ -609,7 +606,7 @@ void CPrediction::PostNetworkDataReceived( int commands_acknowledged )
 		split.m_nServerCommandsAcknowledged += commands_acknowledged;
 		split.m_bPreviousAckHadErrors = false;
 		split.m_bPreviousAckErrorTriggersFullLatchReset = false;
-		split.m_EntsWithPredictionErrorsInLastAck.RemoveAll();
+		split.m_EntsWithPredictionErrorsInLastAck.clear();
 
 		if ( bPredict )
 		{
@@ -636,7 +633,7 @@ void CPrediction::PostNetworkDataReceived( int commands_acknowledged )
 				{
 					split.m_bPreviousAckHadErrors = true;
 					split.m_bPreviousAckErrorTriggersFullLatchReset |= ent->PredictionErrorShouldResetLatchedForAllPredictables();
-					split.m_EntsWithPredictionErrorsInLastAck.AddToTail( ent ); 
+					split.m_EntsWithPredictionErrorsInLastAck.push_back( ent ); 
 				}
 
 				if ( !showlist )
@@ -1600,9 +1597,9 @@ int CPrediction::ComputeFirstCommandToExecute( int nSlot, bool received_new_worl
 			// this is where we would normally start
 			int start = incoming_acknowledged + 1;
 			// outgoing_command is where we really want to start
-			skipahead = MAX( 0, ( outgoing_command - start ) );
+			skipahead = std::max( 0, ( outgoing_command - start ) );
 			// Don't start past the last predicted command, though, or we'll get prediction errors
-			skipahead = MIN( skipahead, split.m_nCommandsPredicted );
+			skipahead = std::min( skipahead, split.m_nCommandsPredicted );
 
 			// Always restore since otherwise we might start prediction using an "interpolated" value instead of a purely predicted value
 			RestoreEntityToPredictedFrame( nSlot, skipahead - 1 );
@@ -1687,7 +1684,7 @@ int CPrediction::ComputeFirstCommandToExecute( int nSlot, bool received_new_worl
 				else
 				{
 					//individual latch resets
-					for ( int i = 0; i < split.m_EntsWithPredictionErrorsInLastAck.Count(); i++ )
+					for ( int i = 0; i < std::ssize( split.m_EntsWithPredictionErrorsInLastAck ); i++ )
 					{
 						C_BaseEntity *entity = split.m_EntsWithPredictionErrorsInLastAck[i];
 						if( entity )

@@ -11,9 +11,6 @@
 #include "reflect_annotations.h"
 #include "steamjet.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //Networking
 IMPLEMENT_REFLECT_SERVERCLASS( CSteamJet, DT_SteamJet )
 

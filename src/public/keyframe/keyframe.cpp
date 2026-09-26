@@ -12,16 +12,12 @@
 #include <string.h>
 
 typedef unsigned char byte;
-#pragma warning(disable:4244)
 
 #include "tier0/dbg.h"
 #include "mathlib/vector.h"
 #include "keyframe.h"
 #include "mathlib/mathlib.h"
 #include "rope_shared.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 //

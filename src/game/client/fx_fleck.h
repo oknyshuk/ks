@@ -42,7 +42,7 @@ public:
 
 	explicit 				CFleckParticles( const char *pDebugName );
 							~CFleckParticles();
-	static CSmartPtr<CFleckParticles> Create( const char *pDebugName, const Vector &vCenter, const Vector &extents );
+	static ks::intrusive_ptr<CFleckParticles> Create( const char *pDebugName, const Vector &vCenter, const Vector &extents );
 
 	virtual void RenderParticles( CParticleRenderIterator *pIterator );
 	virtual void SimulateParticles( CParticleSimulateIterator *pIterator );

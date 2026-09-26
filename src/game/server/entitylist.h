@@ -75,7 +75,7 @@ private:
 	int m_iNumEdicts;
 
 	bool m_bClearingEntities;
-	CUtlVector<IEntityListener *>	m_entityListeners;
+	std::vector< IEntityListener * >	m_entityListeners;
 
 public:
 	CBaseHandle AddNetworkableEntity( IHandleEntity *pEnt, int index, int iForcedSerialNum = -1 );

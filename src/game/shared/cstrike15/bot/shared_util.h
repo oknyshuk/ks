@@ -10,9 +10,6 @@
 #ifndef SHARED_UTIL_H
 #define SHARED_UTIL_H
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //--------------------------------------------------------------------------------------------------------
 /**
  * Returns the token parsed by SharedParse()
@@ -83,7 +80,5 @@ const char * NumAsString( int val );
  *  convenience function that composes a string into a static char*
  */
 char * SharedVarArgs(PRINTF_FORMAT_STRING const char *format, ...);
-
-#include "tier0/memdbgoff.h"
 
 #endif // SHARED_UTIL_H

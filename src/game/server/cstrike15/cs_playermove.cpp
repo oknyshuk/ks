@@ -13,9 +13,6 @@
 #include "iservervehicle.h"
 #include "cs_player.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 static CMoveData g_MoveData;
 CMoveData *g_pMoveData = &g_MoveData;

@@ -6,10 +6,10 @@
 //=============================================================================//
 
 #include "cbase.h"
-#include "utlbufferutil.h"
+#include "serialization.h"
 #include "cs_custom_embroider_visualsdata_processor.h"
 
-void CCSEmbroiderVisualsDataCompare::SerializeToBuffer( CUtlBuffer &buf )
+void CCSEmbroiderVisualsDataCompare::SerializeToBuffer( ks::byte_writer &buf )
 {
 	CBaseVisualsDataCompare::SerializeToBuffer( buf );
 }
@@ -18,7 +18,7 @@ CCSEmbroiderVisualsDataProcessor::CCSEmbroiderVisualsDataProcessor( CCSEmbroider
 	: m_pCompositingShaderName( nullptr )
 	, m_visualsData( visualsData )
 {
-	m_compareObject = Move( compareObject );
+	m_compareObject = std::move( compareObject );
 	SetVisualsData( pCompositingShaderName );
 }
 

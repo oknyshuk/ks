@@ -12,9 +12,6 @@
 #include "c_basetempentity.h"
 #include <cliententitylist.h>
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 class [[= ks::reflect::NetTable{ .name = "DT_TEFireBullets", .base = false } ]]
       C_TEFireBullets : public C_BaseTempEntity
 {

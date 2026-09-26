@@ -41,7 +41,7 @@ void CHostageRescueZone::ReInitOnRoundStart( void )
 
 		for ( int i=0; i < MAX_HOSTAGE_RESCUES; i++ )
 		{
-			vecPosNew = CSPlayerResource()->GetHostageRescuePosition( MIN( i+1, MAX_HOSTAGE_RESCUES-1 ) );
+			vecPosNew = CSPlayerResource()->GetHostageRescuePosition( std::min( i+1, MAX_HOSTAGE_RESCUES-1 ) );
 			if ( vecPosNew != vec3_origin )
 			{
 				if ( vecTrigger.DistTo( vecPosCur ) > vecTrigger.DistTo( vecPosNew ) )

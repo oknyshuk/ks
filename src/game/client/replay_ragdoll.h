@@ -7,6 +7,8 @@
 #ifndef REPLAY_RAGDOLL_H
 #define REPLAY_RAGDOLL_H
 
+#include <vector>
+
 //--------------------------------------------------------------------------------
 
 class C_BaseAnimating;
@@ -41,7 +43,7 @@ struct RagdollSimulationData_t
 
 	typedef unsigned short Iterator_t;
 
-	CUtlLinkedList< RagdollSimulationFrame_t*, Iterator_t > m_lstFrames;
+	std::vector< RagdollSimulationFrame_t* > m_lstFrames;
 	C_BaseAnimating* m_pEntity;
 };
 
@@ -82,8 +84,8 @@ private:
 
 	bool FindEntryInRecordingList( C_BaseAnimating* pEntity, Iterator_t& nOutIndex );
 
-	CUtlLinkedList< RagdollSimulationData_t*, Iterator_t > m_lstRagdolls;
-	CUtlLinkedList< RagdollSimulationData_t*, Iterator_t > m_lstRagdollsToRecord;	// Contains some of the elements from m_lstRagdolls -
+	std::vector< RagdollSimulationData_t* > m_lstRagdolls;
+	std::vector< RagdollSimulationData_t* > m_lstRagdollsToRecord;	// Contains some of the elements from m_lstRagdolls -
 																					// the ones which are still recording
 
 	bool m_bIsRecording;
@@ -124,7 +126,7 @@ private:
 	typedef unsigned short Iterator_t;
 	bool m_bInit;
 
-	CUtlLinkedList< RagdollSimulationData_t*, Iterator_t > m_lstRagdolls;
+	std::vector< RagdollSimulationData_t* > m_lstRagdolls;
 };
 
 //--------------------------------------------------------------------------------

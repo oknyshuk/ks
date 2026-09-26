@@ -46,10 +46,10 @@ public:
 
 	FORCEINLINE float GetMinAxialDistanceToPoint( const Vector &vPoint ) const
 	{
-		float flXInterval = MAX( 0, MAX( vPoint.x - m_vMaxBounds.x, m_vMinBounds.x - vPoint.x ) );
-		float flYInterval = MAX( 0, MAX( vPoint.y - m_vMaxBounds.y, m_vMinBounds.y - vPoint.y ) );
-		float flZInterval = MAX( 0, MAX( vPoint.z - m_vMaxBounds.z, m_vMinBounds.z - vPoint.z ) );
-		return MAX( flXInterval, MAX( flYInterval, flZInterval ) );
+		float flXInterval = std::max( 0.0f, std::max( vPoint.x - m_vMaxBounds.x, m_vMinBounds.x - vPoint.x ) );
+		float flYInterval = std::max( 0.0f, std::max( vPoint.y - m_vMaxBounds.y, m_vMinBounds.y - vPoint.y ) );
+		float flZInterval = std::max( 0.0f, std::max( vPoint.z - m_vMaxBounds.z, m_vMinBounds.z - vPoint.z ) );
+		return std::max( flXInterval, std::max( flYInterval, flZInterval ) );
 	}
 
 	/// expand the aabt_t to contain a point

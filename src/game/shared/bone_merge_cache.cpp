@@ -10,9 +10,6 @@
 #include "bone_merge_cache.h"
 #include "bone_setup.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // CBoneMergeCache
 //-----------------------------------------------------------------------------
@@ -32,7 +29,7 @@ void CBoneMergeCache::Init( CBaseAnimating *pOwner )
 	m_pFollowRenderHdr = nullptr;
 	m_nFollowBoneSetupMask = 0;
 	m_bForceCacheClear = false;
-	m_MergedBones.Purge();
+	m_MergedBones.clear(); m_MergedBones.shrink_to_fit();
 	V_memset( m_iRawIndexMapping, 0xFF, sizeof( m_iRawIndexMapping ) );	// initialize to -1s
 }
 
@@ -53,7 +50,7 @@ void CBoneMergeCache::UpdateCache()
 	// if the follow parent has changed, or any of the underlying models has changed, reset the MergedBones list
 	if ( pFollow != m_pFollow || pFollowRenderHdr != m_pFollowRenderHdr || pOwnerRenderHdr != m_pOwnerRenderHdr || m_bForceCacheClear )
 	{
-		m_MergedBones.Purge();
+		m_MergedBones.clear(); m_MergedBones.shrink_to_fit();
 
 		m_bForceCacheClear = false;
 	
@@ -66,8 +63,7 @@ void CBoneMergeCache::UpdateCache()
 			m_pOwnerHdr = pOwnerHdr;
 			m_pOwnerRenderHdr = pOwnerRenderHdr;
 
-			m_BoneMergeBits.Resize( pOwnerHdr->numbones() );
-			m_BoneMergeBits.ClearAll();
+			m_BoneMergeBits.assign( pOwnerHdr->numbones(), false );
 
 			const mstudiobone_t *pOwnerBones = m_pOwnerHdr->pBone( 0 );
 			
@@ -84,8 +80,8 @@ void CBoneMergeCache::UpdateCache()
 				CMergedBone mergedBone;
 				mergedBone.m_iMyBone = i;
 				mergedBone.m_iParentBone = parentBoneIndex;
-				m_MergedBones.AddToTail( mergedBone );
-				m_BoneMergeBits.Set( i );
+				m_MergedBones.push_back( mergedBone );
+				m_BoneMergeBits[i] = true;
 
 				// flag bones used in merge so that they'll always be setup
 				if ( ( m_pFollowHdr->boneFlags( parentBoneIndex ) & BONE_USED_BY_BONE_MERGE ) == 0 )
@@ -113,7 +109,7 @@ void CBoneMergeCache::UpdateCache()
 			}
 
 			// No merged bones found? Slam the mask to 0
-			if ( !m_MergedBones.Count() )
+			if ( m_MergedBones.empty() )
 			{
 				m_nFollowBoneSetupMask = 0;
 			}
@@ -156,7 +152,7 @@ void CBoneMergeCache::MergeMatchingPoseParams( void )
 	UpdateCache();
 
 	// If this is set, then all the other cache data is set.
-	if ( !m_pOwnerHdr || m_MergedBones.Count() == 0 )
+	if ( !m_pOwnerHdr || std::ssize( m_MergedBones ) == 0 )
 		return;
 
 	// set follower pose params using mapped indices from owner
@@ -175,7 +171,7 @@ void CBoneMergeCache::MergeMatchingBones( int boneMask )
 	UpdateCache();
 
 	// If this is set, then all the other cache data is set.
-	if ( !m_pOwnerHdr || m_MergedBones.Count() == 0 )
+	if ( !m_pOwnerHdr || std::ssize( m_MergedBones ) == 0 )
 		return;
 
 	// Have the entity we're following setup its bones.
@@ -194,7 +190,7 @@ void CBoneMergeCache::MergeMatchingBones( int boneMask )
 	m_pFollow->SetupBones( nullptr, -1, nTempMask, gpGlobals->curtime );
 
 	// Now copy the bone matrices.
-	for ( int i=0; i < m_MergedBones.Count(); i++ )
+	for ( int i=0; i < std::ssize( m_MergedBones ); i++ )
 	{
 		int iOwnerBone = m_MergedBones[i].m_iMyBone;
 		int iParentBone = m_MergedBones[i].m_iParentBone;
@@ -229,7 +225,7 @@ void CBoneMergeCache::BuildMatricesWithBoneMerge(
 	memset( &bMergedBone, 0, sizeof(bool) * MAXSTUDIOBONES );
 
 
-	for ( int i=0; i < m_MergedBones.Count(); i++ )
+	for ( int i=0; i < std::ssize( m_MergedBones ); i++ )
 	{
 		int iOwnerBone = m_MergedBones[i].m_iMyBone;
 		int iParentBone = m_MergedBones[i].m_iParentBone;
@@ -322,11 +318,11 @@ void CBoneMergeCache::CopyFromFollow( const BoneVector followPos[], const BoneQu
 	UpdateCache();
 
 	// If this is set, then all the other cache data is set.
-	if ( !m_pOwnerHdr || m_MergedBones.Count() == 0 )
+	if ( !m_pOwnerHdr || std::ssize( m_MergedBones ) == 0 )
 		return;
 
 	// Now copy the bone matrices.
-	for ( int i=0; i < m_MergedBones.Count(); i++ )
+	for ( int i=0; i < std::ssize( m_MergedBones ); i++ )
 	{
 		int iOwnerBone = m_MergedBones[i].m_iMyBone;
 		int iParentBone = m_MergedBones[i].m_iParentBone;
@@ -345,11 +341,11 @@ void CBoneMergeCache::CopyToFollow( const BoneVector myPos[], const BoneQuaterni
 	UpdateCache();
 
 	// If this is set, then all the other cache data is set.
-	if ( !m_pOwnerHdr || m_MergedBones.Count() == 0 )
+	if ( !m_pOwnerHdr || std::ssize( m_MergedBones ) == 0 )
 		return;
 
 	// Now copy the bone matrices.
-	for ( int i=0; i < m_MergedBones.Count(); i++ )
+	for ( int i=0; i < std::ssize( m_MergedBones ); i++ )
 	{
 		int iOwnerBone = m_MergedBones[i].m_iMyBone;
 		int iParentBone = m_MergedBones[i].m_iParentBone;
@@ -375,7 +371,7 @@ bool CBoneMergeCache::GetAimEntOrigin( Vector *pAbsOrigin, QAngle *pAbsAngles )
 	UpdateCache();
 
 	// If this is set, then all the other cache data is set.
-	if ( !m_pOwnerHdr || m_MergedBones.Count() == 0 )
+	if ( !m_pOwnerHdr || std::ssize( m_MergedBones ) == 0 )
 		return false;
 
 	// We want the abs origin such that if we put the entity there, the first merged bone
@@ -423,7 +419,7 @@ bool CBoneMergeCache::GetRootBone( matrix3x4_t &rootBone )
 	UpdateCache();
 
 	// If this is set, then all the other cache data is set.
-	if ( !m_pOwnerHdr || m_MergedBones.Count() == 0 )
+	if ( !m_pOwnerHdr || std::ssize( m_MergedBones ) == 0 )
 		return false;
 
 	// Get mFollowBone.

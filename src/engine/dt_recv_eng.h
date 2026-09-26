@@ -67,7 +67,7 @@ bool RecvTable_MergeDeltas(
 
 	int objectID = - 1,
 	
-	CUtlVector< int >	*pChangedProps = nullptr
+	std::vector< int >	*pChangedProps = nullptr
 	);
 
 

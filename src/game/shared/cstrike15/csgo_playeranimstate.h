@@ -370,7 +370,7 @@ private:
 	bool					m_bTwitchAnimStarted;
 	bool					m_bAdjustStarted;
 
-	CUtlVector<CUtlSymbol>	m_ActivityModifiers;
+	std::vector< ActivityModifierSym_t >	m_ActivityModifiers;
 
 	float					m_flNextTwitchTime;
 

@@ -7,9 +7,6 @@
 
 #include "rrbase.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 using namespace ResponseRules;
 
 
@@ -61,13 +58,7 @@ int ResponseRulePartition::Count( void )
 void ResponseRulePartition::RemoveAll( void )
 {
 	for ( int bukkit = 0 ; bukkit < N_RESPONSE_PARTITIONS ; ++bukkit )
-	{
-		for ( int i = m_RuleParts[bukkit].FirstInorder(); i != m_RuleParts[bukkit].InvalidIndex(); i = m_RuleParts[bukkit].NextInorder( i ) )
-		{
-			delete m_RuleParts[bukkit][ i ];
-		}
-		m_RuleParts[bukkit].RemoveAll();
-	}
+		m_RuleParts[bukkit].RemoveAll();	// owns its rules
 }
 
 // don't bucket "subject" criteria that prefix with operators, since stripping all that out again would
@@ -81,9 +72,9 @@ static inline bool CanBucketBySubject( const char * RESTRICT pszSubject )
 
 ResponseRulePartition::tRuleDict &ResponseRulePartition::GetDictForRule( CResponseSystem *pSystem, Rule *pRule )
 {
-	const static CUtlSymbol kWHO = CriteriaSet::ComputeCriteriaSymbol("Who");
-	const static CUtlSymbol kCONCEPT = CriteriaSet::ComputeCriteriaSymbol("Concept");
-	const static CUtlSymbol kSUBJECT = CriteriaSet::ComputeCriteriaSymbol("Subject");
+	const static CriteriaSet::CritSymbol_t kWHO = CriteriaSet::ComputeCriteriaSymbol("Who");
+	const static CriteriaSet::CritSymbol_t kCONCEPT = CriteriaSet::ComputeCriteriaSymbol("Concept");
+	const static CriteriaSet::CritSymbol_t kSUBJECT = CriteriaSet::ComputeCriteriaSymbol("Subject");
 
 	const char *pszSpeaker = pRule->GetValueForRuleCriterionByName( pSystem, kWHO );
 	const char *pszConcept = pRule->GetValueForRuleCriterionByName( pSystem, kCONCEPT );
@@ -98,10 +89,10 @@ ResponseRulePartition::tRuleDict &ResponseRulePartition::GetDictForRule( CRespon
 }
 
 
-void ResponseRulePartition::GetDictsForCriteria( CUtlVectorFixed< ResponseRulePartition::tRuleDict *, 2 > *pResult, const CriteriaSet &criteria )
+void ResponseRulePartition::GetDictsForCriteria( std::inplace_vector< ResponseRulePartition::tRuleDict *, 2 > *pResult, const CriteriaSet &criteria )
 {
-	pResult->RemoveAll();
-	pResult->EnsureCapacity( 2 );
+	pResult->clear();
+	pResult->reserve( 2 );
 
 	// get the values for Who and Concept, which are what we bucket on
 	int speakerIdx = criteria.FindCriterionIndex( "Who" );
@@ -113,8 +104,8 @@ void ResponseRulePartition::GetDictsForCriteria( CUtlVectorFixed< ResponseRulePa
 	int subjectIdx = criteria.FindCriterionIndex( "Subject" );
 	const char *pszSubject = subjectIdx != -1 ? criteria.GetValue( subjectIdx ) : nullptr ;
 
-	pResult->AddToTail( &m_RuleParts[ GetBucketForSpeakerAndConcept(pszSpeaker, pszConcept, pszSubject) ] );
+	pResult->push_back( &m_RuleParts[ GetBucketForSpeakerAndConcept(pszSpeaker, pszConcept, pszSubject) ] );
 	// also try the rules not specifying subject
-	pResult->AddToTail( &m_RuleParts[ GetBucketForSpeakerAndConcept(pszSpeaker, pszConcept, nullptr) ] );
+	pResult->push_back( &m_RuleParts[ GetBucketForSpeakerAndConcept(pszSpeaker, pszConcept, nullptr) ] );
 
 }

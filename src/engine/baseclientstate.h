@@ -18,7 +18,8 @@
 #include "cl_bounded_cvars.h"
 #include "tier1/utlstring.h"
 #include "netmessages.h"
-#include "utlmap.h"
+#include <map>
+#include <memory>
 
 #include "matchmaking/imatchasync.h"
 #include "netmessages_schema.h"
@@ -107,8 +108,8 @@ struct Remote_t
 {
 	bool Resolve();
 
-	CUtlString	m_szAlias; // debugging: "public", "private", "direct"
-	CUtlString	m_szRetryAddress;
+	std::string	m_szAlias; // debugging: "public", "private", "direct"
+	std::string	m_szRetryAddress;
 	// Address for actual packets (may  differ from m_szRetryAddress)
 	ns_address	m_adrRemote;
 };
@@ -126,7 +127,7 @@ public:
 	// Only adds if not in list already
 	void AddRemote( char const *pchAddress, char const *pchAlias );
 
-	void Describe( CUtlString &str );
+	void Describe( std::string &str );
 
 	int	Count() const;
 	Remote_t &Get( int index );
@@ -134,7 +135,7 @@ public:
 
 private:
 
-	CUtlVector< Remote_t > m_List;
+	std::vector< Remote_t > m_List;
 };
 
 // Classes to help with sending messages to server, with retries and timeouts
@@ -514,8 +515,8 @@ public:
 	CAsyncOperation_ReserveServer *m_pServerReservationOperation;			// server reservation operation
 	IMatchAsyncOperationCallback *m_pServerReservationCallback;		// callback for pending reservation request
 
-	CUtlVector< CServerMsg_CheckReservation * > m_arrSvReservationCheck;
-	CUtlVector< CServerMsg_Ping * > m_arrSvPing;
+	std::vector< CServerMsg_CheckReservation * > m_arrSvReservationCheck;
+	std::vector< CServerMsg_Ping * > m_arrSvPing;
 
 	uint64 m_nServerReservationCookie;								// cookie to set during reservation and provide upon connection
 	KeyValues *m_pKVGameSettings;									// game settings to request on reserved server
@@ -530,7 +531,7 @@ public:
 #endif
 
 	DeferredConnection_t			m_DeferredConnection;
-	CUtlMap< int32, byte*, int32, CDefLess< int32 > > m_mapGeneratedEncryptionKeys;
+	std::map< int32, std::unique_ptr< byte[] > > m_mapGeneratedEncryptionKeys;
 
 	PackedEntity	*m_pEntityBaselines[2][MAX_EDICTS];	// storing entity baselines
 		
@@ -544,9 +545,9 @@ public:
 
 	CNetworkStringTableContainer *m_StringTableContainer;
 
-	CUtlMap< int, SerializedEntityHandle_t > m_BaselineHandles;
+	std::map< int, SerializedEntityHandle_t > m_BaselineHandles;
 
-	typedef CUtlMap< uint32, CNETMsg_PlayerAvatarData_t *, int, CDefLess< uint32 > > PlayerAvatarDataMap_t;
+	typedef std::map< uint32, std::unique_ptr< CNETMsg_PlayerAvatarData_t > > PlayerAvatarDataMap_t;
 	PlayerAvatarDataMap_t m_mapPlayerAvatarData;
 	CNETMsg_PlayerAvatarData_t * AllocOwnPlayerAvatarData() const;
 	

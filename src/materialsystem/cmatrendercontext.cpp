@@ -21,9 +21,6 @@
 #include "tier1/fmtstr.h"
 //#include "glmgr/glmdebug.h"
 
-// NOTE: This must be the last file included!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 
 // FIXME: right now, always keeping shader API in sync, because debug overlays don't seem to work 100% with the delayed matrix loading
@@ -103,9 +100,12 @@ int	CMatRenderContextBase::sm_nInitializeCount = 0;
 // Constructor
 //-----------------------------------------------------------------------------
 CMatRenderContextBase::CMatRenderContextBase() :
-	m_pMaterialSystem( nullptr ), m_RenderTargetStack( 16, 32 ), m_ScissorRectStack( 16, 32 ), m_MatrixMode( NUM_MATRIX_MODES )
+	m_pMaterialSystem( nullptr ), m_MatrixMode( NUM_MATRIX_MODES )
 {
 	int i;
+
+	m_RenderTargetStack.reserve( 32 );
+	m_ScissorRectStack.reserve( 32 );
 
 	m_bDirtyViewState = true;
 
@@ -113,7 +113,7 @@ CMatRenderContextBase::CMatRenderContextBase() :
 	// NULL indicates back buffer, -1 indicates full-size viewport
 	RenderTargetStackElement_t initialElement = { {nullptr, nullptr, nullptr, nullptr}, nullptr, 0, 0, -1, -1 };
 
-	m_RenderTargetStack.Push( initialElement );
+	m_RenderTargetStack.push_back( initialElement );
 
 	for ( i = 0; i < MAX_FB_TEXTURES; i++ )
 	{
@@ -134,11 +134,11 @@ CMatRenderContextBase::CMatRenderContextBase() :
 
 	for ( i = 0; i < NUM_MATRIX_MODES; i++ )
 	{
-		m_MatrixStacks[i].Push();
-		m_MatrixStacks[i].Top().matrix.Identity();
-		m_MatrixStacks[i].Top().flags |= ( MSF_DIRTY| MSF_IDENTITY );
+		m_MatrixStacks[i].emplace_back();
+		m_MatrixStacks[i].back().matrix.Identity();
+		m_MatrixStacks[i].back().flags |= ( MSF_DIRTY| MSF_IDENTITY );
 	}
-	m_pCurMatrixItem = &m_MatrixStacks[0].Top();
+	m_pCurMatrixItem = &m_MatrixStacks[0].back();
 
 	m_Viewport.Init( 0, 0, 0, 0 );
 
@@ -297,29 +297,16 @@ void CMatRenderContextBase::InitializeFrom( CMatRenderContextBase *pInitialState
 
 	m_pBoundMorph = pInitialState->m_pBoundMorph; // not reference counted?
 
-	m_RenderTargetStack.Clear();
-	m_RenderTargetStack.EnsureCapacity( pInitialState->m_RenderTargetStack.Count() );
-
-	for ( i = 0; i < pInitialState->m_RenderTargetStack.Count(); i++ )
-	{
-		m_RenderTargetStack.Push( pInitialState->m_RenderTargetStack[i] );
-	}
-
-
-	m_ScissorRectStack.Clear();
-	m_ScissorRectStack.EnsureCapacity( pInitialState->m_ScissorRectStack.Count() );
-
-	for ( i = 0; i < pInitialState->m_ScissorRectStack.Count(); i++ )
-	{
-		m_ScissorRectStack.Push( pInitialState->m_ScissorRectStack[i] );
-	}
+	m_RenderTargetStack = pInitialState->m_RenderTargetStack;
+	m_ScissorRectStack = pInitialState->m_ScissorRectStack;
 
 
 	m_MatrixMode = pInitialState->m_MatrixMode;
 	for ( i = 0; i < NUM_MATRIX_MODES; i++ )
 	{
-		m_MatrixStacks[i].CopyFrom( pInitialState->m_MatrixStacks[i] );
+		m_MatrixStacks[i] = pInitialState->m_MatrixStacks[i];
 	}
+	m_pCurMatrixItem = &m_MatrixStacks[m_MatrixMode].back();	// the copies may have reallocated
 
 	m_bFlashlightEnable = pInitialState->m_bFlashlightEnable;
 	m_bCascadedShadowMappingEnabled = pInitialState->m_bCascadedShadowMappingEnabled;
@@ -367,13 +354,13 @@ void CMatRenderContextBase::BindLightmapPage( int lightmapPageID )
 void CMatRenderContextBase::SetRenderTargetEx( int nRenderTargetID, ITexture *pNewTarget ) 
 {
 	// Verify valid top of RT stack
-	Assert ( m_RenderTargetStack.Count() > 0 );
+	Assert ( !m_RenderTargetStack.empty() );
 
 	// Reset the top of stack to the new target with old viewport
-	RenderTargetStackElement_t newTOS = m_RenderTargetStack.Top();
+	RenderTargetStackElement_t newTOS = m_RenderTargetStack.back();
 	newTOS.m_pRenderTargets[nRenderTargetID] = pNewTarget;
-	m_RenderTargetStack.Pop( );
-	m_RenderTargetStack.Push( newTOS );
+	m_RenderTargetStack.pop_back();
+	m_RenderTargetStack.push_back( newTOS );
 }
 
 void CMatRenderContextBase::BindLocalCubemap( ITexture *pTexture )
@@ -390,9 +377,9 @@ void CMatRenderContextBase::BindLocalCubemap( ITexture *pTexture )
 
 ITexture *CMatRenderContextBase::GetRenderTarget( void )
 {
-	if (m_RenderTargetStack.Count() > 0)
+	if (!m_RenderTargetStack.empty())
 	{
-		return m_RenderTargetStack.Top().m_pRenderTargets[0];
+		return m_RenderTargetStack.back().m_pRenderTargets[0];
 	}
 	else
 	{
@@ -403,10 +390,10 @@ ITexture *CMatRenderContextBase::GetRenderTarget( void )
 ITexture *CMatRenderContextBase::GetRenderTargetEx( int nRenderTargetID  )
 {
 	// Verify valid top of stack
-	Assert ( m_RenderTargetStack.Count() > 0 );
+	Assert ( !m_RenderTargetStack.empty() );
 
 	// Top of render target stack
-	ITexture *pTexture = m_RenderTargetStack.Top().m_pRenderTargets[ nRenderTargetID ];
+	ITexture *pTexture = m_RenderTargetStack.back().m_pRenderTargets[ nRenderTargetID ];
 	return pTexture;
 }
 
@@ -435,9 +422,9 @@ ITexture *CMatRenderContextBase::GetFrameBufferCopyTexture( int textureIndex )
 
 void CMatRenderContextBase::MatrixMode( MaterialMatrixMode_t mode )
 {
-	Assert( m_MatrixStacks[mode].Count() );
+	Assert( std::ssize( m_MatrixStacks[mode] ) );
 	m_MatrixMode = mode;
-	m_pCurMatrixItem = &m_MatrixStacks[mode].Top();
+	m_pCurMatrixItem = &m_MatrixStacks[mode].back();
 }
 
 void CMatRenderContextBase::CurrentMatrixChanged()
@@ -455,19 +442,18 @@ void CMatRenderContextBase::CurrentMatrixChanged()
 
 void CMatRenderContextBase::PushMatrix()
 {
-	CUtlStack<MatrixStackItem_t> &curStack = m_MatrixStacks[ m_MatrixMode ];
-	Assert( curStack.Count() );
-	int iNew = curStack.Push();
-	curStack[ iNew ] = curStack[ iNew - 1 ];
-	m_pCurMatrixItem = &curStack.Top();
+	std::vector<MatrixStackItem_t> &curStack = m_MatrixStacks[ m_MatrixMode ];
+	Assert( std::ssize( curStack ) );
+	curStack.push_back( curStack.back() );
+	m_pCurMatrixItem = &curStack.back();
 	CurrentMatrixChanged();
 }
 
 void CMatRenderContextBase::PopMatrix()
 {
-	Assert( m_MatrixStacks[m_MatrixMode].Count() > 1 );
-	m_MatrixStacks[ m_MatrixMode ].Pop();
-	m_pCurMatrixItem = &m_MatrixStacks[m_MatrixMode].Top();
+	Assert( std::ssize( m_MatrixStacks[m_MatrixMode] ) > 1 );
+	m_MatrixStacks[ m_MatrixMode ].pop_back();
+	m_pCurMatrixItem = &m_MatrixStacks[m_MatrixMode].back();
 	CurrentMatrixChanged();
 }
 
@@ -584,28 +570,28 @@ void CMatRenderContextBase::Scale( float x, float y, float z )
 
 void CMatRenderContextBase::GetMatrix( MaterialMatrixMode_t matrixMode, VMatrix *pMatrix )
 {
-	CUtlStack<MatrixStackItem_t> &stack = m_MatrixStacks[ matrixMode ];
+	std::vector<MatrixStackItem_t> &stack = m_MatrixStacks[ matrixMode ];
 
-	if ( !stack.Count() )
+	if ( stack.empty() )
 	{
 		pMatrix->Identity();
 		return;
 	}
 
-	*pMatrix = stack.Top().matrix;
+	*pMatrix = stack.back().matrix;
 }
 
 void CMatRenderContextBase::GetMatrix( MaterialMatrixMode_t matrixMode, matrix3x4_t *pMatrix )
 {
-	CUtlStack<MatrixStackItem_t> &stack = m_MatrixStacks[ matrixMode ];
+	std::vector<MatrixStackItem_t> &stack = m_MatrixStacks[ matrixMode ];
 
-	if ( !stack.Count() )
+	if ( stack.empty() )
 	{
 		SetIdentityMatrix( *pMatrix );
 		return;
 	}
 
-	*pMatrix = stack.Top().matrix.As3x4();
+	*pMatrix = stack.back().matrix.As3x4();
 }
 
 void CMatRenderContextBase::RecomputeViewState()
@@ -777,18 +763,18 @@ bool CMatRenderContextBase::EnableClipping( bool bEnable )
 void CMatRenderContextBase::Viewport( int x, int y, int width, int height )
 {
 	// Verify valid top of RT stack
-	Assert ( m_RenderTargetStack.Count() > 0 );
+	Assert ( !m_RenderTargetStack.empty() );
 
 	// Reset the top of stack to the new viewport
 	RenderTargetStackElement_t newTOS;
-	memcpy(&newTOS,&(m_RenderTargetStack.Top()),sizeof(newTOS));
+	memcpy(&newTOS,&(m_RenderTargetStack.back()),sizeof(newTOS));
 	newTOS.m_nViewX = x;
 	newTOS.m_nViewY = y;
 	newTOS.m_nViewW = width;
 	newTOS.m_nViewH = height;
 
-	m_RenderTargetStack.Pop( );
-	m_RenderTargetStack.Push( newTOS );
+	m_RenderTargetStack.pop_back();
+	m_RenderTargetStack.push_back( newTOS );
 }
 
 
@@ -798,8 +784,8 @@ void CMatRenderContextBase::Viewport( int x, int y, int width, int height )
 void CMatRenderContextBase::PushRenderTargetAndViewport( )
 {
 	// Necessary to push the stack top onto itself; realloc could happen otherwise
-	m_RenderTargetStack.EnsureCapacity( m_RenderTargetStack.Count() + 1 );
-	m_RenderTargetStack.Push( m_RenderTargetStack.Top() );
+	m_RenderTargetStack.reserve( std::ssize( m_RenderTargetStack ) + 1 );
+	m_RenderTargetStack.push_back( m_RenderTargetStack.back() );
 	CommitRenderTargetAndViewport();
 }
 
@@ -818,7 +804,7 @@ void CMatRenderContextBase::PushRenderTargetAndViewport( ITexture *pTexture )
 {
 	// Just blindly push the data on the stack with flags indicating full bounds
 	RenderTargetStackElement_t element = { {pTexture, nullptr, nullptr, nullptr}, nullptr, 0, 0, -1, -1 };
-	m_RenderTargetStack.Push( element );
+	m_RenderTargetStack.push_back( element );
 	CommitRenderTargetAndViewport();
 }
 
@@ -844,7 +830,7 @@ void CMatRenderContextBase::PushRenderTargetAndViewport( ITexture *pTexture, ITe
 {
 	// Just blindly push the data on the stack
 	RenderTargetStackElement_t element = { {pTexture, nullptr, nullptr, nullptr}, pDepthTexture, nViewX, nViewY, nViewW, nViewH };
-	m_RenderTargetStack.Push( element );
+	m_RenderTargetStack.push_back( element );
 	CommitRenderTargetAndViewport();
 }
 
@@ -856,7 +842,7 @@ void CMatRenderContextBase::PushRenderTargetAndViewport( ITexture *pTexture, ITe
 void CMatRenderContextBase::PopRenderTargetAndViewport( void )
 {
 	// Check for underflow
-	if ( m_RenderTargetStack.Count() == 0 )
+	if ( m_RenderTargetStack.empty() )
 	{
 		Assert( !"CMatRenderContext::PopRenderTargetAndViewport:  Stack is empty!!!" );
 		return;
@@ -865,7 +851,7 @@ void CMatRenderContextBase::PopRenderTargetAndViewport( void )
 	Flush();
 
 	// Remove the top of stack
-	m_RenderTargetStack.Pop( );
+	m_RenderTargetStack.pop_back();
 	CommitRenderTargetAndViewport();
 }
 
@@ -1092,7 +1078,7 @@ void CMatRenderContext::BeginRender()
 		TelemetrySetLockName( TELEMETRY_LEVEL0, (char const *)&g_MatSysMutex, "MatSysMutex" );
 
 		tmTryLock( TELEMETRY_LEVEL0, (char const *)&g_MatSysMutex, "BeginRender" );
-		g_MatSysMutex.Lock();
+		g_MatSysMutex.lock();
 		tmEndTryLock( TELEMETRY_LEVEL0, (char const *)&g_MatSysMutex, TMLR_SUCCESS );
 		tmSetLockState( TELEMETRY_LEVEL0, (char const *)&g_MatSysMutex, TMLS_LOCKED, "BeginRender" );
 	}
@@ -1102,7 +1088,7 @@ void CMatRenderContext::EndRender()
 {
 	if ( GetMaterialSystem()->GetThreadMode() != MATERIAL_SINGLE_THREADED )
 	{
-		g_MatSysMutex.Unlock();
+		g_MatSysMutex.unlock();
 		tmSetLockState( TELEMETRY_LEVEL0, (char const *)&g_MatSysMutex, TMLS_RELEASED, "EndRender" );
 	}
 }
@@ -1122,7 +1108,7 @@ bool CMatRenderContext::TestMatrixSync( MaterialMatrixMode_t mode )
 	g_pShaderAPI->GetMatrix( mode, (float*)transposeMatrix.m );
 	MatrixTranspose( transposeMatrix, matrix );
 
-	ValidateMatrices( matrix, m_MatrixStacks[mode].Top().matrix );
+	ValidateMatrices( matrix, m_MatrixStacks[mode].back().matrix );
 
 	return true;
 }
@@ -1371,7 +1357,7 @@ void CMatRenderContext::SyncMatrices()
 	{
 		for( int i = 0; i < NUM_MATRIX_MODES; i++ )
 		{
-			MatrixStackItem_t &top = m_MatrixStacks[i].Top();
+			MatrixStackItem_t &top = m_MatrixStacks[i].back();
 			if ( top.flags & MSF_DIRTY )
 			{
 				g_pShaderAPI->MatrixMode( (MaterialMatrixMode_t)i );
@@ -1394,7 +1380,7 @@ void CMatRenderContext::SyncMatrices()
 
 void CMatRenderContext::ForceSyncMatrix( MaterialMatrixMode_t mode )
 {
-	MatrixStackItem_t &top = m_MatrixStacks[mode].Top();
+	MatrixStackItem_t &top = m_MatrixStacks[mode].back();
 	if ( top.flags & MSF_DIRTY )
 	{
 		bool bSetMode = ( m_MatrixMode != mode );
@@ -1495,21 +1481,21 @@ void CMatRenderContext::PushCustomClipPlane( const float *pPlane )
 	PlaneStackElement psePlane;
 	memcpy( psePlane.fValues, pPlane, sizeof( float ) * 4 );
 	psePlane.bHack_IsHeightClipPlane = false;
-	m_CustomClipPlanes.AddToTail( psePlane ); //we're doing this as a UtlVector so height clip planes never change their cached index
+	m_CustomClipPlanes.push_back( psePlane ); //we're doing this as a UtlVector so height clip planes never change their cached index
 	ApplyCustomClipPlanes();
 }
 
 void CMatRenderContext::PopCustomClipPlane( void )
 {
-	Assert( m_CustomClipPlanes.Count() );
+	Assert( std::ssize( m_CustomClipPlanes ) );
 	
 	//remove the endmost non-height plane found
 	int i;
-	for( i = m_CustomClipPlanes.Count(); --i >= 0; )
+	for( i = std::ssize( m_CustomClipPlanes ); --i >= 0; )
 	{
 		if( m_CustomClipPlanes[i].bHack_IsHeightClipPlane == false )
 		{
-			m_CustomClipPlanes.Remove(i);
+			m_CustomClipPlanes.erase( m_CustomClipPlanes.begin() + i );
 			break;
 		}
 	}
@@ -1523,7 +1509,7 @@ void CMatRenderContext::ApplyCustomClipPlanes( void )
 	int iCustomPlanes;
 
 	if( m_bEnableClipping )
-		iCustomPlanes = m_CustomClipPlanes.Count();
+		iCustomPlanes = std::ssize( m_CustomClipPlanes );
 	else
 		iCustomPlanes = 0;
 
@@ -1697,9 +1683,9 @@ void CMatRenderContext::DepthRange( float zNear, float zFar )
 //-----------------------------------------------------------------------------
 void CMatRenderContext::CommitRenderTargetAndViewport( void )
 {
-	Assert( m_RenderTargetStack.Count() > 0 );
+	Assert( !m_RenderTargetStack.empty() );
 
-	const RenderTargetStackElement_t &element = m_RenderTargetStack.Top( );
+	const RenderTargetStackElement_t &element = m_RenderTargetStack.back();
 
 	for( int rt=0; rt<NELEMS(element.m_pRenderTargets); rt++ )
 	{
@@ -1874,10 +1860,10 @@ void CMatRenderContext::EnableNonInteractiveMode( MaterialNonInteractiveMode_t m
 void CMatRenderContext::SetRenderTargetEx( int nRenderTargetID, ITexture *pNewTarget ) 
 {
 	// Verify valid top of RT stack
-	Assert ( m_RenderTargetStack.Count() > 0 );
+	Assert ( !m_RenderTargetStack.empty() );
 	
 	// Grab the old target
-	ITexture *pOldTarget = m_RenderTargetStack.Top().m_pRenderTargets[nRenderTargetID];
+	ITexture *pOldTarget = m_RenderTargetStack.back().m_pRenderTargets[nRenderTargetID];
 
 	CMatRenderContextBase::SetRenderTargetEx( nRenderTargetID, pNewTarget );
 
@@ -1940,7 +1926,7 @@ void CMatRenderContext::SetRenderTargetEx( int nRenderTargetID, ITexture *pNewTa
 void CMatRenderContext::GetRenderTargetDimensions( int &width, int &height ) const
 {
 	// Target at top of stack
-	ITexture *pTOS = m_RenderTargetStack.Top().m_pRenderTargets[0];
+	ITexture *pTOS = m_RenderTargetStack.back().m_pRenderTargets[0];
 
 	// If top of stack isn't the back buffer, get dimensions from the texture
 	if ( pTOS != nullptr )
@@ -2309,7 +2295,7 @@ void CMatRenderContext::Viewport( int x, int y, int width, int height )
 	// If either dimension is negative, set to full bounds of current target
 	if ( (width < 0) || (height < 0) )
 	{
-		ITexture *pTarget = m_RenderTargetStack.Top().m_pRenderTargets[0];
+		ITexture *pTarget = m_RenderTargetStack.back().m_pRenderTargets[0];
 
 		// If target is the back buffer
 		if ( pTarget == nullptr )
@@ -2341,10 +2327,10 @@ void CMatRenderContext::Viewport( int x, int y, int width, int height )
 void CMatRenderContext::GetViewport( int& x, int& y, int& width, int& height ) const
 {
 	// Verify valid top of RT stack
-	Assert ( m_RenderTargetStack.Count() > 0 );
+	Assert ( !m_RenderTargetStack.empty() );
 
 	// Grab the top of stack
-	const RenderTargetStackElement_t& element = m_RenderTargetStack.Top();
+	const RenderTargetStackElement_t& element = m_RenderTargetStack.back();
 
 	// If either dimension is not positive, set to full bounds of current target
 	if ( (element.m_nViewW <= 0) || (element.m_nViewH <= 0) )
@@ -2383,7 +2369,7 @@ void CMatRenderContext::UpdateHeightClipUserClipPlane( void )
 	pse.bHack_IsHeightClipPlane = true;
 
 	int iExistingHeightClipPlaneIndex;
-	for( iExistingHeightClipPlaneIndex = m_CustomClipPlanes.Count(); --iExistingHeightClipPlaneIndex >= 0; )
+	for( iExistingHeightClipPlaneIndex = std::ssize( m_CustomClipPlanes ); --iExistingHeightClipPlaneIndex >= 0; )
 	{
 		if( m_CustomClipPlanes[iExistingHeightClipPlaneIndex].bHack_IsHeightClipPlane )
 			break;
@@ -2393,7 +2379,7 @@ void CMatRenderContext::UpdateHeightClipUserClipPlane( void )
 	{
 	case MATERIAL_HEIGHTCLIPMODE_DISABLE:
 		if( iExistingHeightClipPlaneIndex != -1 )
-			m_CustomClipPlanes.Remove( iExistingHeightClipPlaneIndex );
+			m_CustomClipPlanes.erase( m_CustomClipPlanes.begin() + iExistingHeightClipPlaneIndex );
 		break;
 	case MATERIAL_HEIGHTCLIPMODE_RENDER_ABOVE_HEIGHT:
 		pse.fValues[0] = 0.0f;
@@ -2402,11 +2388,11 @@ void CMatRenderContext::UpdateHeightClipUserClipPlane( void )
 		pse.fValues[3] = m_HeightClipZ;
 		if( iExistingHeightClipPlaneIndex != -1 )
 		{
-			memcpy( m_CustomClipPlanes.Base() + iExistingHeightClipPlaneIndex, &pse, sizeof( PlaneStackElement ) );
+			memcpy( m_CustomClipPlanes.data() + iExistingHeightClipPlaneIndex, &pse, sizeof( PlaneStackElement ) );
 		}
 		else
 		{
-			m_CustomClipPlanes.AddToTail( pse );
+			m_CustomClipPlanes.push_back( pse );
 		}
 		break;
 	case MATERIAL_HEIGHTCLIPMODE_RENDER_BELOW_HEIGHT:
@@ -2416,11 +2402,11 @@ void CMatRenderContext::UpdateHeightClipUserClipPlane( void )
 		pse.fValues[3] = -m_HeightClipZ;
 		if( iExistingHeightClipPlaneIndex != -1 )
 		{
-			memcpy( m_CustomClipPlanes.Base() + iExistingHeightClipPlaneIndex, &pse, sizeof( PlaneStackElement ) );
+			memcpy( m_CustomClipPlanes.data() + iExistingHeightClipPlaneIndex, &pse, sizeof( PlaneStackElement ) );
 		}
 		else
 		{
-			m_CustomClipPlanes.AddToTail( pse );
+			m_CustomClipPlanes.push_back( pse );
 		}
 		break;
 	};
@@ -2989,13 +2975,13 @@ void CMatRenderContext::SetCascadedShadowMappingState( const CascadedShadowMappi
 void CMatRenderContext::PushScissorRect( const int nLeft, const int nTop, const int nRight, const int nBottom )
 {
 	// Really deep stack, overflow?
-	if ( m_ScissorRectStack.Count() > 32 )
+	if ( std::ssize( m_ScissorRectStack ) > 32 )
 	{
 		DevMsg( "Scissor Rect Stack overflow.  Too many Pushes?\n" );
 	}
 
 	// Necessary to push the stack top onto itself; realloc could happen otherwise
-	m_ScissorRectStack.EnsureCapacity( m_ScissorRectStack.Count() + 1 );
+	m_ScissorRectStack.reserve( std::ssize( m_ScissorRectStack ) + 1 );
 
 	int nNewLeft = nLeft;
 	int nNewTop = nTop;
@@ -3003,12 +2989,12 @@ void CMatRenderContext::PushScissorRect( const int nLeft, const int nTop, const 
 	int nNewBottom = nBottom;
 
 	// If there are already elements in the stack, intersect with them
-	if ( m_ScissorRectStack.Count() > 0 )
+	if ( !m_ScissorRectStack.empty() )
 	{
-		nNewLeft   = MAX( m_ScissorRectStack.Top().nLeft, nLeft );
-		nNewTop    = MAX( m_ScissorRectStack.Top().nTop, nTop );
-		nNewRight  = MIN( m_ScissorRectStack.Top().nRight, nRight );
-		nNewBottom = MIN( m_ScissorRectStack.Top().nBottom, nBottom );
+		nNewLeft   = std::max( m_ScissorRectStack.back().nLeft, nLeft );
+		nNewTop    = std::max( m_ScissorRectStack.back().nTop, nTop );
+		nNewRight  = std::min( m_ScissorRectStack.back().nRight, nRight );
+		nNewBottom = std::min( m_ScissorRectStack.back().nBottom, nBottom );
 	}
 
 	// If we have a negative width, just slam to a rect of zero width
@@ -3029,7 +3015,7 @@ void CMatRenderContext::PushScissorRect( const int nLeft, const int nTop, const 
 
 	// Make an element and push it
 	ScissorRectStackElement_t element = { nNewLeft, nNewTop, nNewRight, nNewBottom };
-	m_ScissorRectStack.Push( element );
+	m_ScissorRectStack.push_back( element );
 
 	g_pShaderAPI->SetScissorRect( element.nLeft, element.nTop, element.nRight, element.nBottom, true );
 }
@@ -3037,7 +3023,7 @@ void CMatRenderContext::PushScissorRect( const int nLeft, const int nTop, const 
 void CMatRenderContext::PopScissorRect( )
 {
 	// Nothing on the stack.  Just disable scissoring and bail
-	if ( m_ScissorRectStack.Count() <= 0 )
+	if ( std::ssize( m_ScissorRectStack ) <= 0 )
 	{
 		DevMsg( "Scissor Rect Stack underflow.  Too many Pops?\n" );
 	
@@ -3045,15 +3031,15 @@ void CMatRenderContext::PopScissorRect( )
 		return;
 	}
 
-	m_ScissorRectStack.Pop();
+	m_ScissorRectStack.pop_back();
 
 	// If there is anything left on the stack, set the ShaderAPI rect to the top
-	if ( m_ScissorRectStack.Count() > 0 )
+	if ( !m_ScissorRectStack.empty() )
 	{
-		g_pShaderAPI->SetScissorRect( m_ScissorRectStack.Top().nLeft, 
-									  m_ScissorRectStack.Top().nTop,
-									  m_ScissorRectStack.Top().nRight,
-									  m_ScissorRectStack.Top().nBottom, true );
+		g_pShaderAPI->SetScissorRect( m_ScissorRectStack.back().nLeft, 
+									  m_ScissorRectStack.back().nTop,
+									  m_ScissorRectStack.back().nRight,
+									  m_ScissorRectStack.back().nBottom, true );
 	}
 	else
 	{

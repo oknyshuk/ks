@@ -22,9 +22,6 @@
 #include "collisionutils.h"
 #include "point_hiding_spot.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include <tier0/memdbgon.h>
-
 
 
 //--------------------------------------------------------------------------------------------------------------
@@ -58,7 +55,7 @@ void CCSNavArea::OnRoundRestart( void )
 }
 
 
-void CCSNavArea::Save( CUtlBuffer &fileBuffer, unsigned int version ) const
+void CCSNavArea::Save( ks::byte_writer &fileBuffer, unsigned int version ) const
 {
 	CNavArea::Save( fileBuffer, version );
 
@@ -67,31 +64,31 @@ void CCSNavArea::Save( CUtlBuffer &fileBuffer, unsigned int version ) const
 	//
 
 	// save number of approach areas
-	fileBuffer.PutUnsignedChar(m_approachCount);
+	fileBuffer.write< unsigned char >( m_approachCount);
 
 	// save approach area info
 	for( int a=0; a<m_approachCount; ++a )
 	{
 		if (m_approach[a].here.area)
-			fileBuffer.PutUnsignedInt(m_approach[a].here.area->GetID());
+			fileBuffer.write< unsigned int >( m_approach[a].here.area->GetID());
 		else
-			fileBuffer.PutUnsignedInt(0);
+			fileBuffer.write< unsigned int >( 0);
 
 		if (m_approach[a].prev.area)
-			fileBuffer.PutUnsignedInt(m_approach[a].prev.area->GetID());
+			fileBuffer.write< unsigned int >( m_approach[a].prev.area->GetID());
 		else
-			fileBuffer.PutUnsignedInt(0);
-		fileBuffer.PutUnsignedChar(m_approach[a].prevToHereHow);
+			fileBuffer.write< unsigned int >( 0);
+		fileBuffer.write< unsigned char >( m_approach[a].prevToHereHow);
 
 		if (m_approach[a].next.area)
-			fileBuffer.PutUnsignedInt(m_approach[a].next.area->GetID());
+			fileBuffer.write< unsigned int >( m_approach[a].next.area->GetID());
 		else
-			fileBuffer.PutUnsignedInt(0);
-		fileBuffer.PutUnsignedChar(m_approach[a].hereToNextHow);
+			fileBuffer.write< unsigned int >( 0);
+		fileBuffer.write< unsigned char >( m_approach[a].hereToNextHow);
 	}
 }
 
-NavErrorType CCSNavArea::Load( CUtlBuffer &fileBuffer, unsigned int version, unsigned int subVersion )
+NavErrorType CCSNavArea::Load( ks::byte_reader &fileBuffer, unsigned int version, unsigned int subVersion )
 {
 	if ( version < 15 )
 		return LoadLegacy(fileBuffer, version, subVersion);
@@ -105,21 +102,21 @@ NavErrorType CCSNavArea::Load( CUtlBuffer &fileBuffer, unsigned int version, uns
 		//
 		// Load number of approach areas
 		//
-		m_approachCount = fileBuffer.GetUnsignedChar();
+		m_approachCount = fileBuffer.read< unsigned char >();
 
 		// load approach area info (IDs)
 		for( int a = 0; a < m_approachCount; ++a )
 		{
-			m_approach[a].here.id = fileBuffer.GetUnsignedInt();
+			m_approach[a].here.id = fileBuffer.read< unsigned int >();
 
-			m_approach[a].prev.id = fileBuffer.GetUnsignedInt();
-			m_approach[a].prevToHereHow = (NavTraverseType)fileBuffer.GetUnsignedChar();
+			m_approach[a].prev.id = fileBuffer.read< unsigned int >();
+			m_approach[a].prevToHereHow = (NavTraverseType)fileBuffer.read< unsigned char >();
 
-			m_approach[a].next.id = fileBuffer.GetUnsignedInt();
-			m_approach[a].hereToNextHow = (NavTraverseType)fileBuffer.GetUnsignedChar();
+			m_approach[a].next.id = fileBuffer.read< unsigned int >();
+			m_approach[a].hereToNextHow = (NavTraverseType)fileBuffer.read< unsigned char >();
 		}
 
-		if ( !fileBuffer.IsValid() )
+		if ( !fileBuffer.ok() )
 			error = NAV_INVALID_FILE;
 
 		// fall through
@@ -218,10 +215,10 @@ bool CCSNavArea::IsBlocked( int teamID, bool ignoreNavBlockers /*= false */ ) co
 /**
  * Load legacy navigation area from the file
  */
-NavErrorType CCSNavArea::LoadLegacy( CUtlBuffer &fileBuffer, unsigned int version, unsigned int subVersion )
+NavErrorType CCSNavArea::LoadLegacy( ks::byte_reader &fileBuffer, unsigned int version, unsigned int subVersion )
 {
 	// load ID
-	m_id = fileBuffer.GetUnsignedInt();
+	m_id = fileBuffer.read< unsigned int >();
 
 	// update nextID to avoid collisions
 	if (m_id >= m_nextID)
@@ -230,20 +227,20 @@ NavErrorType CCSNavArea::LoadLegacy( CUtlBuffer &fileBuffer, unsigned int versio
 	// load attribute flags
 	if ( version <= 8 )
 	{
-		m_attributeFlags = fileBuffer.GetUnsignedChar();
+		m_attributeFlags = fileBuffer.read< unsigned char >();
 	}
 	else if ( version < 13 )
 	{
-		m_attributeFlags = fileBuffer.GetUnsignedShort();
+		m_attributeFlags = fileBuffer.read< unsigned short >();
 	}
 	else
 	{
-		m_attributeFlags = fileBuffer.GetInt();
+		m_attributeFlags = fileBuffer.read< int >();
 	}
 
 	// load extent of area
-	fileBuffer.Get( &m_nwCorner, 3*sizeof(float) );
-	fileBuffer.Get( &m_seCorner, 3*sizeof(float) );
+	fileBuffer.read_bytes( &m_nwCorner, 3*sizeof(float) );
+	fileBuffer.read_bytes( &m_seCorner, 3*sizeof(float) );
 
 	if ( ( m_seCorner.x - m_nwCorner.x ) > 0.0f && ( m_seCorner.y - m_nwCorner.y ) > 0.0f )
 	{
@@ -259,8 +256,8 @@ NavErrorType CCSNavArea::LoadLegacy( CUtlBuffer &fileBuffer, unsigned int versio
 	}
 
 	// load heights of implicit corners
-	m_neZ = fileBuffer.GetFloat();
-	m_swZ = fileBuffer.GetFloat();
+	m_neZ = fileBuffer.read< float >();
+	m_swZ = fileBuffer.read< float >();
 
 	CheckWaterLevel();
 
@@ -269,20 +266,20 @@ NavErrorType CCSNavArea::LoadLegacy( CUtlBuffer &fileBuffer, unsigned int versio
 	for( int d=0; d<NUM_DIRECTIONS; d++ )
 	{
 		// load number of connections for this direction
-		unsigned int count = fileBuffer.GetUnsignedInt();
-		Assert( fileBuffer.IsValid() );
+		unsigned int count = fileBuffer.read< unsigned int >();
+		Assert( fileBuffer.ok() );
 
-		m_connect[d].EnsureCapacity( count );
+		m_connect[d].reserve( count );
 		for( unsigned int i=0; i<count; ++i )
 		{
 			NavConnect connect;
-			connect.id = fileBuffer.GetUnsignedInt();
-			Assert( fileBuffer.IsValid() );
+			connect.id = fileBuffer.read< unsigned int >();
+			Assert( fileBuffer.ok() );
 
 			// don't allow self-referential connections
 			if ( connect.id != m_id )
 			{
-				m_connect[d].AddToTail( connect );
+				m_connect[d].push_back( connect );
 			}
 		}
 	}
@@ -292,7 +289,7 @@ NavErrorType CCSNavArea::LoadLegacy( CUtlBuffer &fileBuffer, unsigned int versio
 	//
 
 	// load number of hiding spots
-	unsigned char hidingSpotCount = fileBuffer.GetUnsignedChar();
+	unsigned char hidingSpotCount = fileBuffer.read< unsigned char >();
 
 	if (version == 1)
 	{
@@ -300,13 +297,13 @@ NavErrorType CCSNavArea::LoadLegacy( CUtlBuffer &fileBuffer, unsigned int versio
 		Vector pos;
 		for( int h=0; h<hidingSpotCount; ++h )
 		{
-			fileBuffer.Get( &pos, 3 * sizeof(float) );
+			fileBuffer.read_bytes( &pos, 3 * sizeof(float) );
 
 			// create new hiding spot and put on master list
 			HidingSpot *spot = TheNavMesh->CreateHidingSpot();
 			spot->SetPosition( pos );
 			spot->SetFlags( HidingSpot::IN_COVER );
-			m_hidingSpots.AddToTail( spot );
+			m_hidingSpots.push_back( spot );
 		}
 	}
 	else
@@ -319,7 +316,7 @@ NavErrorType CCSNavArea::LoadLegacy( CUtlBuffer &fileBuffer, unsigned int versio
 
 			spot->Load( fileBuffer, version );
 			
-			m_hidingSpots.AddToTail( spot );
+			m_hidingSpots.push_back( spot );
 		}
 	}
 
@@ -328,18 +325,18 @@ NavErrorType CCSNavArea::LoadLegacy( CUtlBuffer &fileBuffer, unsigned int versio
 		//
 		// Load number of approach areas
 		//
-		m_approachCount = fileBuffer.GetUnsignedChar();
+		m_approachCount = fileBuffer.read< unsigned char >();
 
 		// load approach area info (IDs)
 		for( int a = 0; a < m_approachCount; ++a )
 		{
-			m_approach[a].here.id = fileBuffer.GetUnsignedInt();
+			m_approach[a].here.id = fileBuffer.read< unsigned int >();
 
-			m_approach[a].prev.id = fileBuffer.GetUnsignedInt();
-			m_approach[a].prevToHereHow = (NavTraverseType)fileBuffer.GetUnsignedChar();
+			m_approach[a].prev.id = fileBuffer.read< unsigned int >();
+			m_approach[a].prevToHereHow = (NavTraverseType)fileBuffer.read< unsigned char >();
 
-			m_approach[a].next.id = fileBuffer.GetUnsignedInt();
-			m_approach[a].hereToNextHow = (NavTraverseType)fileBuffer.GetUnsignedChar();
+			m_approach[a].next.id = fileBuffer.read< unsigned int >();
+			m_approach[a].hereToNextHow = (NavTraverseType)fileBuffer.read< unsigned char >();
 		}
 	}
 
@@ -347,7 +344,7 @@ NavErrorType CCSNavArea::LoadLegacy( CUtlBuffer &fileBuffer, unsigned int versio
 	//
 	// Load encounter paths for this area
 	//
-	unsigned int count = fileBuffer.GetUnsignedInt();
+	unsigned int count = fileBuffer.read< unsigned int >();
 
 	if (version < 3)
 	{
@@ -356,21 +353,21 @@ NavErrorType CCSNavArea::LoadLegacy( CUtlBuffer &fileBuffer, unsigned int versio
 		{
 			SpotEncounter encounter;
 
-			encounter.from.id = fileBuffer.GetUnsignedInt();
-			encounter.to.id = fileBuffer.GetUnsignedInt();
+			encounter.from.id = fileBuffer.read< unsigned int >();
+			encounter.to.id = fileBuffer.read< unsigned int >();
 
-			fileBuffer.Get( &encounter.path.from.x, 3 * sizeof(float) );
-			fileBuffer.Get( &encounter.path.to.x, 3 * sizeof(float) );
+			fileBuffer.read_bytes( &encounter.path.from.x, 3 * sizeof(float) );
+			fileBuffer.read_bytes( &encounter.path.to.x, 3 * sizeof(float) );
 
 			// read list of spots along this path
-			unsigned char spotCount = fileBuffer.GetUnsignedChar();
+			unsigned char spotCount = fileBuffer.read< unsigned char >();
 		
 			for( int s=0; s<spotCount; ++s )
 			{
-				fileBuffer.GetFloat();
-				fileBuffer.GetFloat();
-				fileBuffer.GetFloat();
-				fileBuffer.GetFloat();
+				fileBuffer.read< float >();
+				fileBuffer.read< float >();
+				fileBuffer.read< float >();
+				fileBuffer.read< float >();
 			}
 		}
 		return NAV_OK;
@@ -378,34 +375,34 @@ NavErrorType CCSNavArea::LoadLegacy( CUtlBuffer &fileBuffer, unsigned int versio
 
 	for( unsigned int e=0; e<count; ++e )
 	{
-		SpotEncounter *encounter = new SpotEncounter;
+		auto encounter = std::make_unique< SpotEncounter >();
 
-		encounter->from.id = fileBuffer.GetUnsignedInt();
+		encounter->from.id = fileBuffer.read< unsigned int >();
 
-		unsigned char dir = fileBuffer.GetUnsignedChar();
+		unsigned char dir = fileBuffer.read< unsigned char >();
 		encounter->fromDir = static_cast<NavDirType>( dir );
 
-		encounter->to.id = fileBuffer.GetUnsignedInt();
+		encounter->to.id = fileBuffer.read< unsigned int >();
 
-		dir = fileBuffer.GetUnsignedChar();
+		dir = fileBuffer.read< unsigned char >();
 		encounter->toDir = static_cast<NavDirType>( dir );
 
 		// read list of spots along this path
-		unsigned char spotCount = fileBuffer.GetUnsignedChar();
+		unsigned char spotCount = fileBuffer.read< unsigned char >();
 	
 		SpotOrder order;
 		for( int s=0; s<spotCount; ++s )
 		{
-			order.id = fileBuffer.GetUnsignedInt();
+			order.id = fileBuffer.read< unsigned int >();
 
-			unsigned char t = fileBuffer.GetUnsignedChar();
+			unsigned char t = fileBuffer.read< unsigned char >();
 
 			order.t = (float)t/255.0f;
 
-			encounter->spots.AddToTail( order );
+			encounter->spots.push_back( order );
 		}
 
-		m_spotEncounters.AddToTail( encounter );
+		m_spotEncounters.push_back( std::move( encounter ) );
 	}
 
 	if (version < 5)
@@ -414,7 +411,7 @@ NavErrorType CCSNavArea::LoadLegacy( CUtlBuffer &fileBuffer, unsigned int versio
 	//
 	// Load Place data
 	//
-	PlaceDirectory::IndexType entry = fileBuffer.GetUnsignedShort();
+	PlaceDirectory::IndexType entry = fileBuffer.read< unsigned short >();
 
 	// convert entry to actual Place
 	SetPlace( placeDirectory.IndexToPlace( entry ) );
@@ -425,16 +422,16 @@ NavErrorType CCSNavArea::LoadLegacy( CUtlBuffer &fileBuffer, unsigned int versio
 	// load ladder data
 	for ( int dir=0; dir<CNavLadder::NUM_LADDER_DIRECTIONS; ++dir )
 	{
-		count = fileBuffer.GetUnsignedInt();
+		count = fileBuffer.read< unsigned int >();
 		for( unsigned int i=0; i<count; ++i )
 		{
 			NavLadderConnect connect;
-			connect.id = fileBuffer.GetUnsignedInt();
+			connect.id = fileBuffer.read< unsigned int >();
 
 			bool alreadyConnected = false;
-			FOR_EACH_VEC( m_ladder[dir], j )
+			for ( const auto &ladderConnect : m_ladder[dir] )
 			{
-				if ( m_ladder[dir][j].id == connect.id )
+				if ( ladderConnect.id == connect.id )
 				{
 					alreadyConnected = true;
 					break;
@@ -443,7 +440,7 @@ NavErrorType CCSNavArea::LoadLegacy( CUtlBuffer &fileBuffer, unsigned int versio
 
 			if ( !alreadyConnected )
 			{
-				m_ladder[dir].AddToTail( connect );
+				m_ladder[dir].push_back( connect );
 			}
 		}
 	}
@@ -455,7 +452,7 @@ NavErrorType CCSNavArea::LoadLegacy( CUtlBuffer &fileBuffer, unsigned int versio
 	for( int i=0; i<MAX_NAV_TEAMS; ++i )
 	{
 		// no spot in the map should take longer than this to reach
-		m_earliestOccupyTime[i] = fileBuffer.GetFloat();
+		m_earliestOccupyTime[i] = fileBuffer.read< float >();
 	}
 
 	if ( version < 11 )
@@ -464,28 +461,28 @@ NavErrorType CCSNavArea::LoadLegacy( CUtlBuffer &fileBuffer, unsigned int versio
 	// load light intensity
 	for ( int i=0; i<NUM_CORNERS; ++i )
 	{
-		m_lightIntensity[i] = fileBuffer.GetFloat();
+		m_lightIntensity[i] = fileBuffer.read< float >();
 	}
 
 	if ( version < 16 )
 		return NAV_OK;
 
 	// load visibility information
-	unsigned int visibleAreaCount = fileBuffer.GetUnsignedInt();
+	unsigned int visibleAreaCount = fileBuffer.read< unsigned int >();
 
-	m_potentiallyVisibleAreas.EnsureCapacity( visibleAreaCount );
+	m_potentiallyVisibleAreas.reserve( visibleAreaCount );
 
 	for( unsigned int j=0; j<visibleAreaCount; ++j )
 	{
 		AreaBindInfo info;
-		info.id = fileBuffer.GetUnsignedInt();
-		info.attributes = fileBuffer.GetUnsignedChar();
+		info.id = fileBuffer.read< unsigned int >();
+		info.attributes = fileBuffer.read< unsigned char >();
 
-		m_potentiallyVisibleAreas.AddToTail( info );
+		m_potentiallyVisibleAreas.push_back( info );
 	}
 
 	// read area from which we inherit visibility
-	m_inheritVisibilityFrom.id = fileBuffer.GetUnsignedInt();
+	m_inheritVisibilityFrom.id = fileBuffer.read< unsigned int >();
 
 	return NAV_OK;
 }

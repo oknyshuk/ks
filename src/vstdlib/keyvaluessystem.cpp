@@ -5,19 +5,17 @@
 // $NoKeywords: $
 //=============================================================================//
 
+#include <mutex>
 #include <vstdlib/ikeyvaluessystem.h>
 #include <keyvalues.h>
-#include "tier1/mempool.h"
-#include "utlsymbol.h"
-#include "utlmap.h"
+#include "tier1/fixed_pool.h"
+#include "tier1/map_ops.h"
 #include "tier0/threadtools.h"
 #include "tier1/memstack.h"
 #include "tier1/convar.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include <tier0/memdbgon.h>
-
+#include "tier0/memalloc.h"
 #ifdef NO_SBH // no need to pool if using tier0 small block heap
 #define KEYVALUES_USE_POOL 1
 #endif
@@ -85,7 +83,7 @@ public:
 
 private:
 #ifdef KEYVALUES_USE_POOL
-	CUtlMemoryPool *m_pMemPool;
+	std::unique_ptr< ks::fixed_pool > m_pMemPool;
 #endif
 	int m_iMaxKeyValuesSize;
 
@@ -122,24 +120,15 @@ private:
 		int stringIndex;
 		hash_item_t *next;
 	};
-	CUtlMemoryPool m_HashItemMemPool;
-	CUtlVector<hash_item_t> m_HashTable;
+	ks::fixed_pool m_HashItemMemPool;
+	std::vector< hash_item_t > m_HashTable;
 	int CaseInsensitiveHash(const char *string, int iBounds);
 
-	struct MemoryLeakTracker_t
-	{
-		int nameIndex;
-		void *pMem;
-	};
-	static bool MemoryLeakTrackerLessFunc( const MemoryLeakTracker_t &lhs, const MemoryLeakTracker_t &rhs )
-	{
-		return lhs.pMem < rhs.pMem;
-	}
-	CUtlRBTree<MemoryLeakTracker_t, int> m_KeyValuesTrackingList;
+	std::map< void *, int > m_KeyValuesTrackingList;	// live block -> name symbol
 
-	CUtlMap< HKeySymbol, bool > m_KvConditionalSymbolTable;
+	std::map< HKeySymbol, bool > m_KvConditionalSymbolTable;
 
-	CThreadFastMutex m_mutex;
+	std::recursive_mutex m_mutex;
 };
 
 // EXPOSE_SINGLE_INTERFACE(CKeyValuesSystem, IKeyValuesSystem, KEYVALUES_INTERFACE_VERSION);
@@ -158,14 +147,12 @@ IKeyValuesSystem *KeyValuesSystem()
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
 CKeyValuesSystem::CKeyValuesSystem() :
-	m_HashItemMemPool(sizeof(hash_item_t), 64, CUtlMemoryPool::GROW_FAST, "CKeyValuesSystem::m_HashItemMemPool"),
-	m_KeyValuesTrackingList(0, 0, MemoryLeakTrackerLessFunc),
-	m_KvConditionalSymbolTable( DefLessFunc( HKeySymbol ) )
+	m_HashItemMemPool(sizeof(hash_item_t), 64, ks::fixed_pool::grow::fast, "CKeyValuesSystem::m_HashItemMemPool")
 {
 	MEM_ALLOC_CREDIT();
 	// initialize hash table
-	m_HashTable.AddMultipleToTail(2047);
-	for (int i = 0; i < m_HashTable.Count(); i++)
+	m_HashTable.resize( m_HashTable.size() + 2047 );
+	for (int i = 0; i < std::ssize( m_HashTable ); i++)
 	{
 		m_HashTable[i].stringIndex = 0;
 		m_HashTable[i].next = nullptr;
@@ -177,9 +164,6 @@ CKeyValuesSystem::CKeyValuesSystem() :
 	char *pszEmpty = ((char *)m_Strings.Alloc(1));
 	*pszEmpty = 0;
 
-#ifdef KEYVALUES_USE_POOL
-	m_pMemPool = nullptr;
-#endif
 	m_iMaxKeyValuesSize = sizeof(KeyValues);
 }
 
@@ -191,22 +175,17 @@ CKeyValuesSystem::~CKeyValuesSystem()
 #ifdef KEYVALUES_USE_POOL
 #ifdef _DEBUG
 	// display any memory leaks
-	if (m_pMemPool && m_pMemPool->Count() > 0)
+	if (m_pMemPool && m_pMemPool->count() > 0)
 	{
-		DevMsg("Leaked KeyValues blocks: %d\n", m_pMemPool->Count());
+		DevMsg("Leaked KeyValues blocks: %d\n", m_pMemPool->count());
 	}
 
 	// iterate all the existing keyvalues displaying their names
-	for (int i = 0; i < m_KeyValuesTrackingList.MaxElement(); i++)
+	for ( const auto &[pMem, nameIndex] : m_KeyValuesTrackingList )
 	{
-		if (m_KeyValuesTrackingList.IsValidIndex(i))
-		{
-			DevMsg("\tleaked KeyValues(%s)\n", &m_Strings[m_KeyValuesTrackingList[i].nameIndex]);
-		}
+		DevMsg("\tleaked KeyValues(%s)\n", &m_Strings[nameIndex]);
 	}
 #endif
-
-	delete m_pMemPool;
 #endif
 }
 
@@ -223,18 +202,6 @@ void CKeyValuesSystem::RegisterSizeofKeyValues(int size)
 	}
 }
 
-static void KVLeak( char const *fmt, ... )
-{
-	va_list argptr; 
-    char data[1024];
-    
-    va_start(argptr, fmt);
-    Q_vsnprintf(data, sizeof( data ), fmt, argptr);
-    va_end(argptr);
-
-	Msg( "%s", data );
-}
-
 //-----------------------------------------------------------------------------
 // Purpose: allocates a KeyValues object from the shared mempool
 //-----------------------------------------------------------------------------
@@ -244,13 +211,12 @@ void *CKeyValuesSystem::AllocKeyValuesMemory(int size)
 	// allocate, if we don't have one yet
 	if (!m_pMemPool)
 	{
-		m_pMemPool = new CUtlMemoryPool(m_iMaxKeyValuesSize, 1024, CUtlMemoryPool::GROW_FAST, "CKeyValuesSystem::m_pMemPool" );
-		m_pMemPool->SetErrorReportFunc( KVLeak );
+		m_pMemPool = std::make_unique< ks::fixed_pool >( m_iMaxKeyValuesSize, 1024, ks::fixed_pool::grow::fast, "CKeyValuesSystem::m_pMemPool" );
 	}
 
-	return m_pMemPool->Alloc(size);
+	return m_pMemPool->alloc(size);
 #else
-	return malloc( size );
+	return MemAlloc_Alloc( size );
 #endif
 }
 
@@ -260,9 +226,9 @@ void *CKeyValuesSystem::AllocKeyValuesMemory(int size)
 void CKeyValuesSystem::FreeKeyValuesMemory(void *pMem)
 {
 #ifdef KEYVALUES_USE_POOL
-	m_pMemPool->Free(pMem);
+	m_pMemPool->free(pMem);
 #else
-	free( pMem );
+	g_pMemAlloc->Free( pMem );
 #endif
 }
 
@@ -276,10 +242,10 @@ HKeySymbol CKeyValuesSystem::GetSymbolForString( const char *name, bool bCreate 
 		return (-1);
 	}
 
-	AUTO_LOCK( m_mutex );
+	std::scoped_lock lock( m_mutex );
 	MEM_ALLOC_CREDIT();
 
-	int hash = CaseInsensitiveHash(name, m_HashTable.Count());
+	int hash = CaseInsensitiveHash(name, std::ssize( m_HashTable ));
 	int i = 0;
 	hash_item_t *item = &m_HashTable[hash];
 	while (1)
@@ -303,7 +269,7 @@ HKeySymbol CKeyValuesSystem::GetSymbolForString( const char *name, bool bCreate 
 			if (item->stringIndex != 0)
 			{
 				// first item is used, an new item
-				item->next = (hash_item_t *)m_HashItemMemPool.Alloc(sizeof(hash_item_t));
+				item->next = (hash_item_t *)m_HashItemMemPool.alloc(sizeof(hash_item_t));
 				item = item->next;
 			}
 
@@ -340,10 +306,10 @@ HKeySymbol CKeyValuesSystem::GetSymbolForStringCaseSensitive( HKeySymbol &hCaseI
 		return (-1);
 	}
 
-	AUTO_LOCK( m_mutex );
+	std::scoped_lock lock( m_mutex );
 	MEM_ALLOC_CREDIT();
 
-	int hash = CaseInsensitiveHash(name, m_HashTable.Count());
+	int hash = CaseInsensitiveHash(name, std::ssize( m_HashTable ));
 	int numNameStringBytes = -1;
 	int i = 0;
 	hash_item_t *item = &m_HashTable[hash];
@@ -416,7 +382,7 @@ HKeySymbol CKeyValuesSystem::GetSymbolForStringCaseSensitive( HKeySymbol &hCaseI
 			if (item->stringIndex != 0)
 			{
 				// first item is used, an new item
-				item->next = (hash_item_t *)m_HashItemMemPool.Alloc(sizeof(hash_item_t));
+				item->next = (hash_item_t *)m_HashItemMemPool.alloc(sizeof(hash_item_t));
 				item = item->next;
 			}
 
@@ -463,8 +429,7 @@ void CKeyValuesSystem::AddKeyValuesToMemoryLeakList(void *pMem, HKeySymbol name)
 {
 #ifdef _DEBUG
 	// only track the memory leaks in debug builds
-	MemoryLeakTracker_t item = { name, pMem };
-	m_KeyValuesTrackingList.Insert(item);
+	m_KeyValuesTrackingList.emplace( pMem, name );
 #endif
 }
 
@@ -475,9 +440,7 @@ void CKeyValuesSystem::RemoveKeyValuesFromMemoryLeakList(void *pMem)
 {
 #ifdef _DEBUG
 	// only track the memory leaks in debug builds
-	MemoryLeakTracker_t item = { 0, pMem };
-	int index = m_KeyValuesTrackingList.Find(item);
-	m_KeyValuesTrackingList.RemoveAt(index);
+	m_KeyValuesTrackingList.erase( pMem );
 #endif
 }
 
@@ -518,8 +481,8 @@ void CKeyValuesSystem::SetKeyValuesExpressionSymbol( const char *name, bool bVal
 	HKeySymbol hSym = GetSymbolForString( name, true );	// find or create symbol
 	
 	{
-		AUTO_LOCK( m_mutex );
-		m_KvConditionalSymbolTable.InsertOrReplace( hSym, bValue );
+		std::scoped_lock lock( m_mutex );
+		m_KvConditionalSymbolTable.insert_or_assign( hSym, bValue );
 	}
 }
 
@@ -534,12 +497,11 @@ bool CKeyValuesSystem::GetKeyValuesExpressionSymbol( const char *name )
 	HKeySymbol hSym = GetSymbolForString( name, false );	// find or create symbol
 	if ( hSym != -1 )
 	{
-		AUTO_LOCK( m_mutex );
-		CUtlMap< HKeySymbol, bool >::IndexType_t idx = m_KvConditionalSymbolTable.Find( hSym );
-		if ( idx != m_KvConditionalSymbolTable.InvalidIndex() )
+		std::scoped_lock lock( m_mutex );
+		if ( bool *pValue = ks::find_ptr( m_KvConditionalSymbolTable, hSym ) )
 		{
 			// Found the symbol value in conditional symbol table
-			return m_KvConditionalSymbolTable.Element( idx );
+			return *pValue;
 		}
 	}
 

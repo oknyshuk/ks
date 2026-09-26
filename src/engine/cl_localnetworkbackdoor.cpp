@@ -12,9 +12,6 @@
 #include "client_class.h"
 #include "dt_localtransfer.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static CLocalNetworkBackdoor s_LocalNetworkBackdoor;
 
 void CL_SetupLocalNetworkBackDoor( bool bUseBackDoor )

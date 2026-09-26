@@ -11,7 +11,7 @@
 #ifndef EVENTQUEUE_H
 #define EVENTQUEUE_H
 
-#include "mempool.h"
+#include "tier1/fixed_pool.h"
 
 struct EventQueuePrioritizedEvent_t
 {

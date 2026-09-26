@@ -14,9 +14,6 @@
 #include "tier1/keyvalues.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 IMPLEMENT_REFLECT_CLIENTCLASS( C_PointCamera, DT_PointCamera, CPointCamera )
 
 C_EntityClassList<C_PointCamera> g_PointCameraList;

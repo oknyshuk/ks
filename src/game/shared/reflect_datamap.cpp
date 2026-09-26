@@ -4,8 +4,6 @@
 #include "cbase.h"
 #include "reflect_datamap.h"
 
-#include "tier0/memdbgon.h"
-
 namespace ks::reflect::dmap
 {
 

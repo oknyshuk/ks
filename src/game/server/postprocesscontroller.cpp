@@ -17,9 +17,6 @@
 #include "ndebugoverlay.h"
 #include "triggers.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 CPostProcessSystem s_PostProcessSystem( "PostProcessSystem" );
 
 //-----------------------------------------------------------------------------

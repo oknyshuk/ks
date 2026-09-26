@@ -18,7 +18,6 @@
 #include "modes.h"
 #include "string_t.h"
 #include "toolframework/itoolentity.h"
-#include "bitvec.h"
 #include "steam/isteamremotestorage.h"
 
 //-----------------------------------------------------------------------------
@@ -109,8 +108,8 @@ struct DemoImportantTick_t
 //-----------------------------------------------------------------------------
 
 // Engine player info, no game related infos here
-// If you change this, change the two byteswap defintions: 
-// cdll_client_int.cpp and cdll_engine_int.cpp
+// Transmitted in platform-native byte order: the server fills this in and the client
+// reads it back verbatim (no byteswapping). Keep both ends in sync if the layout changes.
 typedef struct player_info_s
 {
 	// version for future compatibility
@@ -746,7 +745,7 @@ public:
 	virtual bool HasPaintmap() = 0;
 	// Enable paint in the engine for project Paint
 	virtual void EnablePaintmapRender() = 0;
-	virtual void SphereTracePaintSurface( const model_t *pModel, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, CUtlVector<BYTE>& surfColors ) = 0;
+	virtual void SphereTracePaintSurface( const model_t *pModel, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, std::vector< BYTE >& surfColors ) = 0;
 	virtual void RemoveAllPaint() = 0;
 	virtual void PaintAllSurfaces( BYTE color ) = 0;
 	virtual void RemovePaint( const model_t *pModel ) = 0;
@@ -1052,9 +1051,9 @@ public:
 
 	virtual bool			IsBuildWRThreaded( void ) = 0;
 	virtual void			QueueBuildWorldListJob( CJob* pJob ) = 0;
-	virtual void			CacheFrustumData( const Frustum_t& frustum, const CUtlVector< Frustum_t, CUtlMemoryAligned< Frustum_t,16 > >& aeraFrustums ) = 0;
+	virtual void			CacheFrustumData( const Frustum_t& frustum, const std::vector< Frustum_t >& aeraFrustums ) = 0;
 	virtual const Frustum_t* GetBuildViewFrustum( void ) const = 0;
-	virtual const CUtlVector< Frustum_t, CUtlMemoryAligned< Frustum_t,16 > >* GetBuildViewAeraFrustums( void ) const = 0;
+	virtual const std::vector< Frustum_t >* GetBuildViewAeraFrustums( void ) const = 0;
 
 	virtual bool IsSubscribedMap( const char *pchMapName, bool bOnlyOnDisk ) = 0;
 	virtual bool IsFeaturedMap( const char *pchMapName, bool bOnlyOnDisk ) = 0;

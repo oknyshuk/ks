@@ -30,9 +30,6 @@
 	#include "bot_manager.h"
 #endif
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 ConVar molotov_throw_detonate_time( "molotov_throw_detonate_time", "2.0", FCVAR_CHEAT | FCVAR_REPLICATED );
 
 #if defined( CLIENT_DLL )

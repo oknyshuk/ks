@@ -6,6 +6,8 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include <ranges>
+#include "tier1/bit_ops.h"
 #include "c_baseviewmodel.h"
 #include "model_types.h"
 #include "hud.h"
@@ -37,9 +39,6 @@
 #if defined( REPLAY_ENABLED )
 #include "replaycamera.h"
 #endif
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 #ifdef CSTRIKE_DLL
 	ConVar cl_righthand( "cl_righthand", "1", FCVAR_ARCHIVE | FCVAR_SS, "Use right-handed view models." );
@@ -143,7 +142,7 @@ void C_BaseViewModel::UpdateStatTrakGlow( void )
 void C_BaseViewModel::OnNewParticleEffect( const char *pszParticleName, CNewParticleEffect *pNewParticleEffect )
 {
 	// [msmith] We want the split screen visibility of the particles to be the same as the visibility of the view model.
-	uint32 visBits = m_VisibilityBits.Get(0, 0xff);
+	uint32 visBits = ks::get_word( m_VisibilityBits, 0 ) & 0xff;
 	int nSlot = -1;
 
 	if ( visBits < 3 )
@@ -769,21 +768,21 @@ int C_BaseViewModel::DrawModel( int flags, const RenderableInstance_t &instance 
 #endif
 		)
 	{
-		FOR_EACH_VEC( m_vecViewmodelArmModels, i )
+		for ( auto &hArmModel : m_vecViewmodelArmModels )
 		{
-			if ( m_vecViewmodelArmModels[i] )
+			if ( hArmModel )
 			{
 
-				if ( m_vecViewmodelArmModels[i]->GetMoveParent() != this )
+				if ( hArmModel->GetMoveParent() != this )
 				{
-					m_vecViewmodelArmModels[i]->SetEFlags( EF_BONEMERGE );
-					m_vecViewmodelArmModels[i]->SetParent( this );
+					hArmModel->SetEFlags( EF_BONEMERGE );
+					hArmModel->SetParent( this );
 				}
 
-				m_vecViewmodelArmModels[i]->DrawModel( flags | STUDIO_DONOTMODIFYSTENCILSTATE, instance );
+				hArmModel->DrawModel( flags | STUDIO_DONOTMODIFYSTENCILSTATE, instance );
 			}
 		}
-		for ( int i=0; i < m_hStickerModelAddons.Count(); ++i )
+		for ( int i=0; i < std::ssize( m_hStickerModelAddons ); ++i )
 		{
 			if ( m_hStickerModelAddons[i] )
 			{
@@ -985,7 +984,7 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 	}
 	
 	// add gloves and sleeves
-	if ( pPlayer->m_pViewmodelArmConfig != nullptr && m_vecViewmodelArmModels.Count() == 0 )
+	if ( pPlayer->m_pViewmodelArmConfig != nullptr && std::ssize( m_vecViewmodelArmModels ) == 0 )
 	{
 		{
 			AddViewmodelArmModel( pPlayer->m_pViewmodelArmConfig->szAssociatedGloveModel, atoi(pPlayer->m_pViewmodelArmConfig->szSkintoneIndex) );
@@ -1008,14 +1007,14 @@ void C_BaseViewModel::UpdateAllViewmodelAddons( void )
 	AddViewmodelLabel( pItem );
 
 	// verify stattrak module and add if necessary
-	CUtlSortVector<uint32> vTypes;
+	std::flat_multiset<uint32> vTypes;
 
 	pItem->GetKillEaterTypes( vTypes );
-	if ( (vTypes.Count() > 0) && ( pItem->GetKillEaterValueByType( vTypes[ vTypes.Count() - 1] ) >= 0 ) )
+	if ( (!vTypes.empty()) && ( pItem->GetKillEaterValueByType( *vTypes.rbegin() ) >= 0 ) )
 	{
 		CSteamID HolderSteamID;
 		pPlayer->GetSteamID( &HolderSteamID );
-		AddViewmodelStatTrak( pItem, vTypes[ vTypes.Count() - 1], weaponID, HolderSteamID.GetAccountID() );
+		AddViewmodelStatTrak( pItem, *vTypes.rbegin(), weaponID, HolderSteamID.GetAccountID() );
 	}
 	else
 	{
@@ -1059,7 +1058,7 @@ C_ViewmodelAttachmentModel* C_BaseViewModel::AddViewmodelArmModel( const char *p
 	C_ViewmodelAttachmentModel *pEnt = new class C_ViewmodelAttachmentModel;
 	if ( pEnt && pEnt->InitializeAsClientEntity( pszArmsModel, true ) )
 	{
-		m_vecViewmodelArmModels[ m_vecViewmodelArmModels.AddToTail() ] = pEnt;
+		m_vecViewmodelArmModels.emplace_back() = pEnt;
 
 		if ( nSkintoneIndex != -1 )
 			pEnt->SetSkin( nSkintoneIndex );
@@ -1155,12 +1154,12 @@ void C_BaseViewModel::AddViewmodelStatTrak( CEconItemView *pItem, int nStatTrakT
 
 bool C_BaseViewModel::ViewmodelStickersAreValid( int nWeaponID )
 {
-	if ( m_hStickerModelAddons.Count() == 0 )
+	if ( m_hStickerModelAddons.empty() )
 	{
 		return false;
 	}
 	// returns true if all viewmodel sticker handles are non-null and appropriate for the given weapon id
-	for ( int i=0; i < m_hStickerModelAddons.Count(); ++i )
+	for ( int i=0; i < std::ssize( m_hStickerModelAddons ); ++i )
 	{
 		if ( !m_hStickerModelAddons[i] || !m_hStickerModelAddons[i].Get() || !m_hStickerModelAddons[i]->GetMoveParent() )
 		{
@@ -1177,15 +1176,15 @@ void C_BaseViewModel::AddViewmodelStickers( CEconItemView *pItem, int nWeaponID 
 
 void C_BaseViewModel::RemoveViewmodelArmModels( void )
 {
-	FOR_EACH_VEC_BACK( m_vecViewmodelArmModels, i )
+	for ( auto &hArmModel : m_vecViewmodelArmModels | std::views::reverse )
 	{
-		C_ViewmodelAttachmentModel *pEnt = m_vecViewmodelArmModels[i].Get();
+		C_ViewmodelAttachmentModel *pEnt = hArmModel.Get();
 		if ( pEnt )
 		{
 			pEnt->Remove();
 		}
 	}
-	m_vecViewmodelArmModels.RemoveAll();
+	m_vecViewmodelArmModels.clear();
 }
 
 void C_BaseViewModel::RemoveViewmodelLabel( void )
@@ -1208,7 +1207,7 @@ void C_BaseViewModel::RemoveViewmodelStatTrak( void )
 
 void C_BaseViewModel::RemoveViewmodelStickers( void )
 {
-	for ( int i=0; i < m_hStickerModelAddons.Count(); ++i )
+	for ( int i=0; i < std::ssize( m_hStickerModelAddons ); ++i )
 	{
 		C_ViewmodelAttachmentModel *pStickerAddon = m_hStickerModelAddons[i];
 		if ( pStickerAddon )
@@ -1216,7 +1215,7 @@ void C_BaseViewModel::RemoveViewmodelStickers( void )
 			pStickerAddon->Remove();
 		}
 	}
-	m_hStickerModelAddons.RemoveAll();
+	m_hStickerModelAddons.clear();
 }
 
 //--------------------------------------------------------------------------------------------------------

@@ -43,9 +43,6 @@
 
 #include "c_cs_playerresource.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 class CHudWeaponSelection;
 class CHudChat;
 
@@ -486,16 +483,12 @@ bool ContainsBinding( const char *pszBindingString, const char *pszBinding, bool
 	}
 	else
 	{
-		//lwss: change this to a regular CUtlVector.
-		// This is the only use of this weird Vector class that calls the wrong delete operator instead of delete[] on destruction.
-		//CUtlVectorAutoPurge< char *> cmdStrings;
-		CUtlVector< char *> cmdStrings;
-		//lwss end
+		std::vector< std::string > cmdStrings;
         // Tokenize the binding name
         V_SplitString( pszBindingString, ";", cmdStrings );
-		FOR_EACH_VEC( cmdStrings, i )
+		for ( const auto &cmdString : cmdStrings )
 		{
-			char* szCmd = cmdStrings[ i ];
+			const char* szCmd = cmdString.c_str();
 			if ( bSearchAliases )
 			{
 				// Search for command in any contained aliases. 
@@ -504,9 +497,9 @@ bool ContainsBinding( const char *pszBindingString, const char *pszBinding, bool
 				// when being processed by the cmd system. 
 				if ( szAliasCmd )
 				{
-					CUtlString strCmd( szAliasCmd );
-					V_StripTrailingWhitespace( strCmd.Access() ); // Alias adds trailing spaces to commands, strip it here so the compare works
-					if ( ContainsBinding( strCmd.Get(), pszBinding, true ) )
+					std::string strCmd( ks::nz( szAliasCmd ) );
+					V_StripTrailingWhitespace( strCmd.data() ); // Alias adds trailing spaces to commands, strip it here so the compare works
+					if ( ContainsBinding( strCmd.data(), pszBinding, true ) )
 						return true;
 				}
 			}

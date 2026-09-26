@@ -14,9 +14,6 @@
 #include "fx.h"
 #include "tier0/vprof.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // UNDONE:  Get rid of this?
 #define FDECAL_PERMANENT			0x01
 

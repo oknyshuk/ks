@@ -9,9 +9,6 @@
 #include "server.h"
 #include "enginesingleuserfilter.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 void SV_DetermineMulticastRecipients( bool usepas, const Vector& origin, CPlayerBitVec& playerbits );
 
 //-----------------------------------------------------------------------------
@@ -29,7 +26,7 @@ void CEngineRecipientFilter::Reset( void )
 {
 	m_bReliable			= false;
 	m_bInit				= false;
-	m_Recipients.RemoveAll();
+	m_Recipients.clear();
 }
 
 void CEngineRecipientFilter::MakeReliable( void )
@@ -45,7 +42,7 @@ void CEngineRecipientFilter::MakeInitMessage( void )
 
 int CEngineRecipientFilter::GetRecipientCount( void ) const
 {
-	return m_Recipients.Count();
+	return std::ssize( m_Recipients );
 }
 
 int	CEngineRecipientFilter::GetRecipientIndex( int slot ) const
@@ -58,7 +55,7 @@ int	CEngineRecipientFilter::GetRecipientIndex( int slot ) const
 
 void CEngineRecipientFilter::AddAllPlayers( void )
 {
-	m_Recipients.RemoveAll();
+	m_Recipients.clear();
 
 	for ( int i = 0; i < sv.GetClientCount(); i++ )
 	{
@@ -67,7 +64,7 @@ void CEngineRecipientFilter::AddAllPlayers( void )
 		if ( !cl->IsActive() )
 			continue;
 
-		m_Recipients.AddToTail( i+1 );
+		m_Recipients.push_back( i+1 );
 	}
 }
 
@@ -75,16 +72,16 @@ void CEngineRecipientFilter::AddAllPlayers( void )
 void CEngineRecipientFilter::AddRecipient( int index )
 {
 	// Already in list
-	if ( m_Recipients.Find( index ) != m_Recipients.InvalidIndex() )
+	if ( ks::find_index( m_Recipients, index ) != -1 )
 		return;
 
-	m_Recipients.AddToTail( index );
+	m_Recipients.push_back( index );
 }
 
 void CEngineRecipientFilter::RemoveRecipient( int index )
 {
 	// Remove it if it's in the list
-	m_Recipients.FindAndRemove( index );
+	ks::erase_first( m_Recipients, index );
 }
 
 void CEngineRecipientFilter::AddPlayersFromBitMask( CPlayerBitVec& playerbits )

@@ -15,9 +15,6 @@
 #include "localize/ilocalize.h"
 #include "c_cs_player.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //--------------------------------------------------------------------------------------------------------------
 struct WeaponDisplayNameInfo
 {
@@ -164,7 +161,7 @@ int CalcClipsNeeded( const BuyPresetWeapon *pWeapon, const CCSWeaponInfo *pInfo,
 			{
 				numClips = ceil(maxRounds/(float)buySize);
 			}
-			numClips = MIN( ceil(maxRounds/(float)buySize), numClips );
+			numClips = std::min<std::common_type_t<float, int>>( ceil(maxRounds/(float)buySize), numClips );
 
 			numClips -= ammo[pInfo->GetPrimaryAmmoType() ]/buySize;
 			if ( numClips < 0 || ammo[pInfo->GetPrimaryAmmoType() ] == maxRounds )
@@ -316,7 +313,7 @@ void FillClientAmmo( int ammo[MAX_AMMO_TYPES] )
 		int clientAmmoCount = localPlayer->GetAmmoCount( clientAmmoType );
 		if ( clientAmmoCount > 0 )
 		{
-			ammo[ clientAmmoType ] = MAX( ammo[ clientAmmoType ], clientAmmoCount );
+			ammo[ clientAmmoType ] = std::max( ammo[ clientAmmoType ], clientAmmoCount );
 		}
 	}
 }

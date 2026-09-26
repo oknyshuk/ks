@@ -6,6 +6,7 @@
 //=============================================================================//
 
 #include "pch_tier0.h"
+#include <mutex>
 #include "tier0/platform.h"
 #include "tier0/memalloc.h"
 #include "tier0/dbg.h"
@@ -322,7 +323,7 @@ void BeginWatchdogTimer( int nSecs )
 		InitWatchDogTimer();
 	}
 	nSecs *= s_nWatchDogTimerTimeScale;
-	nSecs = MIN( nSecs, 5 * 60 );							// no more than 5 minutes no matter what
+	nSecs = std::min( nSecs, 5 * 60 );							// no more than 5 minutes no matter what
 	if ( nSecs )
 		alarm( nSecs );
 }
@@ -332,7 +333,7 @@ void EndWatchdogTimer( void )
 	alarm( 0 );
 }
 
-static CThreadMutex g_LocalTimeMutex CONSTRUCT_EARLY;
+static std::recursive_mutex g_LocalTimeMutex CONSTRUCT_EARLY;
 
 
 void Plat_GetLocalTime( struct tm *pNow )
@@ -347,7 +348,7 @@ void Plat_GetLocalTime( struct tm *pNow )
 void Plat_ConvertToLocalTime( uint64 nTime, struct tm *pNow )
 {
 	// Since localtime() returns a global, we need to protect against multiple threads stomping it.
-	g_LocalTimeMutex.Lock();
+	g_LocalTimeMutex.lock();
 	
 	time_t ltime = (time_t)nTime;
 	tm *pTime = localtime( &ltime );
@@ -356,18 +357,18 @@ void Plat_ConvertToLocalTime( uint64 nTime, struct tm *pNow )
 	else
 		memset( pNow, 0, sizeof( *pNow ) );
 	
-	g_LocalTimeMutex.Unlock();
+	g_LocalTimeMutex.unlock();
 }
 
 void Plat_GetTimeString( struct tm *pTime, char *pOut, int nMaxBytes )
 {
-	g_LocalTimeMutex.Lock();
+	g_LocalTimeMutex.lock();
 	
 	char *pStr = asctime( pTime );
 	strncpy( pOut, pStr, nMaxBytes );
 	pOut[nMaxBytes-1] = 0;
 	
-	g_LocalTimeMutex.Unlock();
+	g_LocalTimeMutex.unlock();
 }
 
 // timezone

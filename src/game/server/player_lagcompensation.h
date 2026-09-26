@@ -12,7 +12,11 @@
 
 #include "igamesystem.h"
 #include "ilagcompensationmanager.h"
-#include "utllinkedlist.h"
+
+#include <deque>
+#include <map>
+#include <memory>
+#include <set>
 
 #define MAX_LAYER_RECORDS (CBaseAnimatingOverlay::MAX_OVERLAYS)
 
@@ -114,16 +118,14 @@ public:
 	float					m_flPoseParameters[MAXSTUDIOPOSEPARAM];
 };
 
-typedef CUtlFixedLinkedList< LagRecord > LagRecordList;
+typedef std::deque< LagRecord > LagRecordList;	// newest at front
 
 //-----------------------------------------------------------------------------
 class CLagCompensationManager : public CAutoGameSystemPerFrame, public ILagCompensationManager
 {
 public:
 	CLagCompensationManager( char const *name ) : 
-		CAutoGameSystemPerFrame( name ), 
-		m_CompensatedEntities( 0, 0, DefLessFunc( EHANDLE ) ),
-		m_AdditionalEntities( 0, 0, DefLessFunc( EHANDLE ) )
+		CAutoGameSystemPerFrame( name )
 	{
 		m_bNeedToRestore = false;
 		m_weaponRange = 0.0f;
@@ -162,11 +164,7 @@ private:
 
 	void ClearHistory()
 	{
-		FOR_EACH_MAP( m_CompensatedEntities, i )
-		{
-			delete m_CompensatedEntities[ i ];
-		}
-		m_CompensatedEntities.Purge();
+		m_CompensatedEntities.clear();
 	}
 
 	struct EntityLagData
@@ -186,7 +184,7 @@ private:
 		LagRecord		m_ChangeData;
 	};
 
-	CUtlMap< EHANDLE, EntityLagData * > m_CompensatedEntities;
+	std::map< EHANDLE, std::unique_ptr< EntityLagData > > m_CompensatedEntities;
 
 	// True if at least one entity was changed
 	bool					m_bNeedToRestore;
@@ -199,7 +197,7 @@ private:
 	bool					m_isCurrentlyDoingCompensation;	// Sentinel to prevent calling StartLagCompensation a second time before a Finish.
 
     // List of additional entities flagged by mappers for lag compensation (shouldn't be more than a few)
-	CUtlRBTree< EHANDLE >	m_AdditionalEntities;
+	std::set< EHANDLE >		m_AdditionalEntities;
 };
 
 #endif

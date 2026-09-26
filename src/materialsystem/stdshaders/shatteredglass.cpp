@@ -12,9 +12,6 @@
 #include "ShatteredGlass_ps20b.inc"
 #include "ShatteredGlass_vs20.inc"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 BEGIN_VS_SHADER( ShatteredGlass,
 			  "Help for ShatteredGlass" )

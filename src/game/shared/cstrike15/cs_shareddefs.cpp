@@ -9,9 +9,6 @@
 #include "gametypes/igametypes.h"
 #include "econ/econ_item_schema_minimal.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 // Item schema singleton
 static CEconItemSchema s_ItemSchema;
 static bool s_bSchemaInitialized = false;
@@ -259,12 +256,12 @@ void PlayerModelInfo::InitializeForCurrentMap( void )
 
 		// Add the terrorist models.
 		// NOTE: Terrorists must be loaded first since it is assumed they are first in the list of models.
-		const CUtlStringList *pTModelNames = g_pGameTypes->GetTModelsForMap( m_mapName );
+		const std::vector< std::string > *pTModelNames = g_pGameTypes->GetTModelsForMap( m_mapName );
 		if ( pTModelNames )
 		{
-			FOR_EACH_VEC( *pTModelNames, iModel )
+			for ( const std::string &tModelName : *pTModelNames )
 			{
-				const char *modelName = (*pTModelNames)[iModel];
+				const char *modelName = tModelName.c_str();
 				if ( modelName )
 				{
 					AddModel( modelName );
@@ -283,12 +280,12 @@ void PlayerModelInfo::InitializeForCurrentMap( void )
 		}
 
 		// Add the counter-terrorist models.
-		const CUtlStringList *pCTModelNames = g_pGameTypes->GetCTModelsForMap( m_mapName );
+		const std::vector< std::string > *pCTModelNames = g_pGameTypes->GetCTModelsForMap( m_mapName );
 		if ( pCTModelNames )
 		{
-			FOR_EACH_VEC( *pCTModelNames, iModel )
+			for ( const std::string &ctModelName : *pCTModelNames )
 			{
-				const char *modelName = (*pCTModelNames)[iModel];
+				const char *modelName = ctModelName.c_str();
 				if ( modelName )
 				{
 					AddModel( modelName );

@@ -11,7 +11,7 @@
 #include "cmd.h"
 #include "toolframework/itoolframework.h"
 #include "toolframework/itoolsystem.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/text_writer.h"
 #include "engineui.h"
 #include "tier2/tier2.h"
 #include "inputsystem/iinputsystem.h"
@@ -28,9 +28,6 @@
 #endif
 
 #include "rocketui/rocketui.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 ConVar in_forceuser( "in_forceuser", "0", FCVAR_CHEAT, "Force user input to this split screen player." );
 
@@ -517,11 +514,11 @@ Key_WriteBindings
 Writes lines containing "bind key value"
 ============
 */
-void Key_WriteBindings( CUtlBuffer &buf, const int iSplitscreenSlot /*= -1*/ )
+void Key_WriteBindings( ks::text_writer &buf, const int iSplitscreenSlot /*= -1*/ )
 {
 	int		i;
 
-	CUtlVector< CUtlString > deferred[ MAX_SPLITSCREEN_CLIENTS ];
+	std::vector< std::string > deferred[ MAX_SPLITSCREEN_CLIENTS ];
 	for ( i = 0 ; i < BUTTON_CODE_LAST ; i++ )
 	{
 		char const *pszBinding = s_KeyContext.m_pKeyInfo[i].m_pKeyBinding;
@@ -539,29 +536,29 @@ void Key_WriteBindings( CUtlBuffer &buf, const int iSplitscreenSlot /*= -1*/ )
 			if ( iSplitscreenSlot != nSlot )
 				continue;
 
-			buf.Printf( "bind \"%s\" \"%s\"\n", pszKeyName, pszBinding );
+			buf.printf( "bind \"%s\" \"%s\"\n", pszKeyName, pszBinding );
 		}
 		else
 		{
 			if ( nSlot == 0 )
 			{
-				buf.Printf( "bind \"%s\" \"%s\"\n", pszKeyName, pszBinding );
+				buf.printf( "bind \"%s\" \"%s\"\n", pszKeyName, pszBinding );
 			}
 			else
 			{
-				CUtlString str;
+				std::string str;
 				str = CFmtStrN< 2048 >( "cmd%d bind \"%s\" \"%s\"\n", nSlot + 1, pszKeyName, pszBinding );
-				deferred[ nSlot ].AddToTail( str );
+				deferred[ nSlot ].push_back( str );
 			}
 		}		
 	}
 
 	for ( int nSlot = 1; nSlot < host_state.max_splitscreen_players; ++nSlot )
 	{
-		int c = deferred[ nSlot ].Count();
+		int c = std::ssize( deferred[ nSlot ] );
 		for ( int i = 0; i < c; ++i )
 		{
-			buf.Printf( "%s", deferred[ nSlot ][ i ].String() );
+			buf.put( deferred[ nSlot ][ i ] );
 		}
 	}
 }

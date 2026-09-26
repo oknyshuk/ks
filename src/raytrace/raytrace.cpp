@@ -4,9 +4,8 @@
 #include <filesystem_tools.h>
 #include <cmdlib.h>
 #include <stdio.h>
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
+#include <tier1/byte_reader.h>
+#include <tier1/byte_writer.h>
 
 
 static bool SameSign(float a, float b)
@@ -77,7 +76,7 @@ void RayTracingEnvironment::MakeRoomForTriangles( int ntris )
 {
 	//OptimizedTriangleList.EnsureCapacity( ntris );
 	if (! (Flags & RTE_FLAGS_DONT_STORE_TRIANGLE_COLORS))
-		TriangleColors.EnsureCapacity( ntris );
+		TriangleColors.reserve( ntris );
 }
 
 
@@ -98,11 +97,11 @@ void RayTracingEnvironment::AddTriangle(int32 id, const Vector &v1,
 	tmptri.Vertex( 1 ) = v2;
 	tmptri.Vertex( 2 ) = v3;
 	tmptri.m_Data.m_GeometryData.m_nFlags = flags;
-	OptimizedTriangleList.AddToTail( tmptri );
+	OptimizedTriangleList.push_back( tmptri );
 	if ( ! ( Flags & RTE_FLAGS_DONT_STORE_TRIANGLE_COLORS ) )
-		TriangleColors.AddToTail( color );
+		TriangleColors.push_back( color );
 	if ( ! ( Flags & RTE_FLAGS_DONT_STORE_TRIANGLE_MATERIALS ) )
-		TriangleMaterials.AddToTail( materialIndex );
+		TriangleMaterials.push_back( materialIndex );
 // 	printf("add triange from (%f %f %f),(%f %f %f),(%f %f %f) id %d\n",
 // 		   XYZ(v1),XYZ(v2),XYZ(v3),id);
 }
@@ -241,8 +240,8 @@ int CacheOptimizedTriangle::ClassifyAgainstAxisSplit(int split_plane, float spli
 	float maxc = minc;
 	for( int v = 1; v < 3; v++ )
 	{
-		minc=MIN(minc,Vertex(v)[split_plane]);
-		maxc=MAX(maxc,Vertex(v)[split_plane]);
+		minc=std::min(minc,Vertex(v)[split_plane]);
+		maxc=std::max(maxc,Vertex(v)[split_plane]);
 	}
 
 	if ( minc >= split_value )
@@ -676,12 +675,12 @@ void RayTracingEnvironment::Trace4Rays(const FourRays &rays, fltx4 TMin, fltx4 T
 int RayTracingEnvironment::MakeLeafNode(int first_tri, int last_tri)
 {
 	CacheOptimizedKDNode ret;
-	ret.Children = KDNODE_STATE_LEAF + ( TriangleIndexList.Count() << 2 );
+	ret.Children = KDNODE_STATE_LEAF + ( std::ssize( TriangleIndexList ) << 2 );
 	ret.SetNumberOfTrianglesInLeafNode( 1 + ( last_tri - first_tri ));
 	for( int tnum = first_tri; tnum <= last_tri; tnum++ )
-		TriangleIndexList.AddToTail( tnum );
-	OptimizedKDTree.AddToTail( ret );
-	return OptimizedKDTree.Count() - 1;
+		TriangleIndexList.push_back( tnum );
+	OptimizedKDTree.push_back( ret );
+	return std::ssize( OptimizedKDTree ) - 1;
 }
 
 
@@ -696,8 +695,8 @@ void RayTracingEnvironment::CalculateTriangleListBounds(int32 const *tris,int nt
 		for( int v = 0; v < 3; v++ )
 			for( int c = 0; c < 3; c++ )
 			{
-				minout[c]=MIN(minout[c],tri.Vertex(v)[c]);
-							  maxout[c]=MAX(maxout[c],tri.Vertex(v)[c]);
+				minout[c]=std::min(minout[c],tri.Vertex(v)[c]);
+							  maxout[c]=std::max(maxout[c],tri.Vertex(v)[c]);
 			}
 	}
 }
@@ -752,8 +751,8 @@ float RayTracingEnvironment::CalculateCostsOfSplit(
 		// determine max and min coordinate values for later optimization
 		for( int v = 0; v < 3; v++ )
 		{
-			min_coord = MIN( min_coord, tri.Vertex(v)[split_plane] );
-			max_coord = MAX( max_coord, tri.Vertex(v)[split_plane] );
+			min_coord = std::min( min_coord, tri.Vertex(v)[split_plane] );
+			max_coord = std::max( max_coord, tri.Vertex(v)[split_plane] );
 		}
 		switch( tri.ClassifyAgainstAxisSplit( split_plane, split_value ))
 		{
@@ -803,7 +802,7 @@ void RayTracingEnvironment::RefineNode( int node_number, int32 const * tri_list,
 	if ( ntris < 3 )											// never split empty lists
 	{
 		// no point in continuing
-		OptimizedKDTree[node_number].Children = KDNODE_STATE_LEAF + ( TriangleIndexList.Count() << 2 );
+		OptimizedKDTree[node_number].Children = KDNODE_STATE_LEAF + ( std::ssize( TriangleIndexList ) << 2 );
 		OptimizedKDTree[node_number].SetNumberOfTrianglesInLeafNode( ntris );
 
 #ifdef DEBUG_RAYTRACE
@@ -812,7 +811,7 @@ void RayTracingEnvironment::RefineNode( int node_number, int32 const * tri_list,
 #endif
 
 		for( int t = 0; t < ntris; t++ )
-			TriangleIndexList.AddToTail( tri_list[t] );
+			TriangleIndexList.push_back( tri_list[t] );
 		return;
 	}
 
@@ -873,14 +872,14 @@ void RayTracingEnvironment::RefineNode( int node_number, int32 const * tri_list,
 	if ( ( cost_of_no_split <= best_cost ) || NEVER_SPLIT || ( depth > MAX_TREE_DEPTH ))
 	{
 		// no benefit to splitting. just make this a leaf node
-		OptimizedKDTree[node_number].Children = KDNODE_STATE_LEAF + ( TriangleIndexList.Count() << 2 );
+		OptimizedKDTree[node_number].Children = KDNODE_STATE_LEAF + ( std::ssize( TriangleIndexList ) << 2 );
 		OptimizedKDTree[node_number].SetNumberOfTrianglesInLeafNode( ntris );
 #ifdef DEBUG_RAYTRACE
 		OptimizedKDTree[node_number].vecMins = MinBound;
 		OptimizedKDTree[node_number].vecMaxs = MaxBound;
 #endif
 		for( int t = 0; t < ntris; t++ )
-			TriangleIndexList.AddToTail( tri_list[t] );
+			TriangleIndexList.push_back( tri_list[t] );
 	}
 	else
 	{
@@ -925,7 +924,7 @@ void RayTracingEnvironment::RefineNode( int node_number, int32 const * tri_list,
 
 			}
 		}
-		int left_child = OptimizedKDTree.Count();
+		int left_child = std::ssize( OptimizedKDTree );
 		int right_child = left_child + 1;
 // 		printf("node %d split on axis %d at %f, nl=%d nr=%d nb=%d lc=%d rc=%d\n",node_number,
 // 			   split_plane,best_splitvalue,best_nleft,best_nright,best_nboth,
@@ -937,8 +936,8 @@ void RayTracingEnvironment::RefineNode( int node_number, int32 const * tri_list,
 		OptimizedKDTree[node_number].vecMaxs = MaxBound;
 #endif
 		CacheOptimizedKDNode newnode;
-		OptimizedKDTree.AddToTail( newnode );
-		OptimizedKDTree.AddToTail( newnode );
+		OptimizedKDTree.push_back( newnode );
+		OptimizedKDTree.push_back( newnode );
 		// now, recurse!
 		if ( ( ntris < 20 ) && ( (best_nleft == 0 ) || ( best_nright == 0 )) )
 			depth += 100;
@@ -953,17 +952,17 @@ void RayTracingEnvironment::RefineNode( int node_number, int32 const * tri_list,
 void RayTracingEnvironment::SetupAccelerationStructure( void )
 {
 	CacheOptimizedKDNode root;
-	OptimizedKDTree.AddToTail( root );
-	int32 * root_triangle_list = new int32[OptimizedTriangleList.Count()];
-	for( int t = 0; t < OptimizedTriangleList.Count(); t++ )
+	OptimizedKDTree.push_back( root );
+	int32 * root_triangle_list = new int32[std::ssize( OptimizedTriangleList )];
+	for( int t = 0; t < std::ssize( OptimizedTriangleList ); t++ )
 		root_triangle_list[t] = t;
-	CalculateTriangleListBounds( root_triangle_list, OptimizedTriangleList.Count(), m_MinBound,
+	CalculateTriangleListBounds( root_triangle_list, std::ssize( OptimizedTriangleList ), m_MinBound,
 								 m_MaxBound );
-	RefineNode( 0, root_triangle_list, OptimizedTriangleList.Count(), m_MinBound, m_MaxBound, 0 );
+	RefineNode( 0, root_triangle_list, std::ssize( OptimizedTriangleList ), m_MinBound, m_MaxBound, 0 );
 	delete[] root_triangle_list;
 
 	// now, convert all triangles to "intersection format"
-	for( int i = 0; i < OptimizedTriangleList.Count(); i++ )
+	for( int i = 0; i < std::ssize( OptimizedTriangleList ); i++ )
 		OptimizedTriangleList[i].ChangeIntoIntersectionFormat();
 }
 
@@ -972,7 +971,7 @@ void RayTracingEnvironment::SetupAccelerationStructure( void )
 void RayTracingEnvironment::AddInfinitePointLight( Vector position, Vector intensity )
 {
 	LightDesc_t mylight( position, intensity );
-	LightList.AddToTail( mylight );
+	LightList.push_back( mylight );
 
 }
 
@@ -995,153 +994,153 @@ struct RayTracingSerializationHeader
 		m_nVersionNumber = RTENV_SERIALIZATION_VERSION;
 	}
 
-	void Put( CUtlBuffer &outbuf )
+	void Put( ks::byte_writer &outbuf )
 	{
-		outbuf.PutInt( m_nVersionNumber );
-		outbuf.PutInt( m_nSerializationFlags );
-		outbuf.PutInt( m_nNumKDNodes );
-		outbuf.PutInt( m_nNumTriangles );
-		outbuf.PutInt( m_nNumTriangleIndices );
-		outbuf.PutInt( m_nNumColors );
-		outbuf.PutFloat( m_vMinBound.x );
-		outbuf.PutFloat( m_vMinBound.y );
-		outbuf.PutFloat( m_vMinBound.z );
-		outbuf.PutFloat( m_vMaxBound.x );
-		outbuf.PutFloat( m_vMaxBound.y );
-		outbuf.PutFloat( m_vMaxBound.z );
+		outbuf.write< int >( m_nVersionNumber );
+		outbuf.write< int >( m_nSerializationFlags );
+		outbuf.write< int >( m_nNumKDNodes );
+		outbuf.write< int >( m_nNumTriangles );
+		outbuf.write< int >( m_nNumTriangleIndices );
+		outbuf.write< int >( m_nNumColors );
+		outbuf.write< float >( m_vMinBound.x );
+		outbuf.write< float >( m_vMinBound.y );
+		outbuf.write< float >( m_vMinBound.z );
+		outbuf.write< float >( m_vMaxBound.x );
+		outbuf.write< float >( m_vMaxBound.y );
+		outbuf.write< float >( m_vMaxBound.z );
 	}
 
-	void Get( CUtlBuffer &inbuf )
+	void Get( ks::byte_reader &inbuf )
 	{
-		m_nVersionNumber = inbuf.GetInt();
-		m_nSerializationFlags = inbuf.GetInt();
-		m_nNumKDNodes = inbuf.GetInt();
-		m_nNumTriangles = inbuf.GetInt();
-		m_nNumTriangleIndices = inbuf.GetInt();
-		m_nNumColors = inbuf.GetInt();
-		m_vMinBound.x = inbuf.GetFloat();
-		m_vMinBound.y = inbuf.GetFloat();
-		m_vMinBound.z = inbuf.GetFloat();
-		m_vMaxBound.x = inbuf.GetFloat();
-		m_vMaxBound.y = inbuf.GetFloat();
-		m_vMaxBound.z = inbuf.GetFloat();
+		m_nVersionNumber = inbuf.read< int >();
+		m_nSerializationFlags = inbuf.read< int >();
+		m_nNumKDNodes = inbuf.read< int >();
+		m_nNumTriangles = inbuf.read< int >();
+		m_nNumTriangleIndices = inbuf.read< int >();
+		m_nNumColors = inbuf.read< int >();
+		m_vMinBound.x = inbuf.read< float >();
+		m_vMinBound.y = inbuf.read< float >();
+		m_vMinBound.z = inbuf.read< float >();
+		m_vMaxBound.x = inbuf.read< float >();
+		m_vMaxBound.y = inbuf.read< float >();
+		m_vMaxBound.z = inbuf.read< float >();
 	}
 };
 
 size_t RayTracingEnvironment::GetSerializationNumBytes( uint32 nSerializationFlags ) const
 {
 	size_t nRet = sizeof( RayTracingSerializationHeader );
-	nRet += sizeof( CacheOptimizedKDNode ) * OptimizedKDTree.Count();
-	nRet += sizeof( CacheOptimizedTriangle ) * OptimizedTriangleList.Count();
-	nRet += sizeof( int32 ) * TriangleIndexList.Count();
+	nRet += sizeof( CacheOptimizedKDNode ) * std::ssize( OptimizedKDTree );
+	nRet += sizeof( CacheOptimizedTriangle ) * std::ssize( OptimizedTriangleList );
+	nRet += sizeof( int32 ) * std::ssize( TriangleIndexList );
 
 	if ( nSerializationFlags & RT_ENV_SERIALIZE_COLORS )
-		nRet += sizeof( Vector ) * TriangleColors.Count();
+		nRet += sizeof( Vector ) * std::ssize( TriangleColors );
 	return nRet;
 }
 
 
-void RayTracingEnvironment::Serialize( CUtlBuffer &outbuf, uint32 nSerializationFlags ) const
+void RayTracingEnvironment::Serialize( ks::byte_writer &outbuf, uint32 nSerializationFlags ) const
 {
 	RayTracingSerializationHeader hdr;
 	hdr.m_nSerializationFlags = nSerializationFlags;
-	hdr.m_nNumKDNodes = OptimizedKDTree.Count();
-	hdr.m_nNumTriangles = OptimizedTriangleList.Count();
-	hdr.m_nNumTriangleIndices = TriangleIndexList.Count();
-	hdr.m_nNumColors = ( nSerializationFlags & RT_ENV_SERIALIZE_COLORS ) ? TriangleColors.Count() : 0;
+	hdr.m_nNumKDNodes = std::ssize( OptimizedKDTree );
+	hdr.m_nNumTriangles = std::ssize( OptimizedTriangleList );
+	hdr.m_nNumTriangleIndices = std::ssize( TriangleIndexList );
+	hdr.m_nNumColors = ( nSerializationFlags & RT_ENV_SERIALIZE_COLORS ) ? std::ssize( TriangleColors ) : 0;
 	hdr.m_vMinBound = m_MinBound;
 	hdr.m_vMaxBound = m_MaxBound;
 	hdr.Put( outbuf );
-	for( int i = 0 ; i < OptimizedKDTree.Count(); i++ )
+	for( int i = 0 ; i < std::ssize( OptimizedKDTree ); i++ )
 	{
 		CacheOptimizedKDNode const * pNode = &OptimizedKDTree[i];
-		outbuf.PutInt( pNode->Children );
+		outbuf.write< int >( pNode->Children );
 		if ( pNode->NodeType() == KDNODE_STATE_LEAF )
-			outbuf.PutInt( * ( reinterpret_cast < int32 const *> ( &pNode->SplittingPlaneValue ) ) );
+			outbuf.write< int >( * ( reinterpret_cast < int32 const *> ( &pNode->SplittingPlaneValue ) ) );
 		else
-			outbuf.PutFloat( pNode->SplittingPlaneValue );
+			outbuf.write< float >( pNode->SplittingPlaneValue );
 	}
-	for( int i = 0; i < OptimizedTriangleList.Count() ; i++ )
+	for( int i = 0; i < std::ssize( OptimizedTriangleList ) ; i++ )
 	{
 		TriIntersectData_t const * pTri = &( OptimizedTriangleList[i].m_Data.m_IntersectData );
-		outbuf.PutFloat( pTri->m_flNx );
-		outbuf.PutFloat( pTri->m_flNy );
-		outbuf.PutFloat( pTri->m_flNz );
-		outbuf.PutFloat( pTri->m_flD );
-		outbuf.PutFloat( pTri->m_nTriangleID );
+		outbuf.write< float >( pTri->m_flNx );
+		outbuf.write< float >( pTri->m_flNy );
+		outbuf.write< float >( pTri->m_flNz );
+		outbuf.write< float >( pTri->m_flD );
+		outbuf.write< float >( pTri->m_nTriangleID );
 		for( int j = 0; j < ARRAYSIZE( pTri->m_ProjectedEdgeEquations ); j++ )
-			outbuf.PutFloat( pTri->m_ProjectedEdgeEquations[j] );
-		outbuf.PutUnsignedChar( pTri->m_nCoordSelect0 );
-		outbuf.PutUnsignedChar( pTri->m_nCoordSelect1 );
-		outbuf.PutUnsignedChar( pTri->m_nFlags );
-		outbuf.PutUnsignedChar( 0 );						// for unused.
+			outbuf.write< float >( pTri->m_ProjectedEdgeEquations[j] );
+		outbuf.write< unsigned char >( pTri->m_nCoordSelect0 );
+		outbuf.write< unsigned char >( pTri->m_nCoordSelect1 );
+		outbuf.write< unsigned char >( pTri->m_nFlags );
+		outbuf.write< unsigned char >( 0 );						// for unused.
 	}
-	for( int i = 0; i < TriangleIndexList.Count(); i++ )
-		outbuf.PutInt( TriangleIndexList[i] );
+	for( int i = 0; i < std::ssize( TriangleIndexList ); i++ )
+		outbuf.write< int >( TriangleIndexList[i] );
 	if ( nSerializationFlags & RT_ENV_SERIALIZE_COLORS )
-		for( int i = 0 ; i < TriangleColors.Count() ; i++ )
+		for( int i = 0 ; i < std::ssize( TriangleColors ) ; i++ )
 		{
 			Vector const &v = TriangleColors[i];
-			outbuf.PutFloat( v.x );
-			outbuf.PutFloat( v.y );
-			outbuf.PutFloat( v.z );
+			outbuf.write< float >( v.x );
+			outbuf.write< float >( v.y );
+			outbuf.write< float >( v.z );
 		}
 }
 
 
 
 
-void RayTracingEnvironment::UnSerialize( CUtlBuffer &inbuf )
+void RayTracingEnvironment::UnSerialize( ks::byte_reader &inbuf )
 {
 	RayTracingSerializationHeader hdr;
 	hdr.Get( inbuf );
 	m_MinBound = hdr.m_vMinBound;
 	m_MaxBound = hdr.m_vMaxBound;
-	OptimizedKDTree.SetCount( hdr.m_nNumKDNodes );
+	OptimizedKDTree.assign( hdr.m_nNumKDNodes, {} );
 	for( int i = 0; i < hdr.m_nNumKDNodes; i++ )
 	{
 		CacheOptimizedKDNode *pNode = &OptimizedKDTree[i];
-		pNode->Children = inbuf.GetInt();
+		pNode->Children = inbuf.read< int >();
 		if ( pNode->NodeType() == KDNODE_STATE_LEAF )
 		{
-			*( ( int32 * ) &pNode->SplittingPlaneValue ) = inbuf.GetInt();
+			*( ( int32 * ) &pNode->SplittingPlaneValue ) = inbuf.read< int >();
 		}
 		else
 		{
-			pNode->SplittingPlaneValue = inbuf.GetFloat();
+			pNode->SplittingPlaneValue = inbuf.read< float >();
 		}
 	}
 	// now, read the triangles
-	OptimizedTriangleList.SetCount( hdr.m_nNumTriangles );
-	for( int i = 0; i < OptimizedTriangleList.Count() ; i++ )
+	OptimizedTriangleList.assign( hdr.m_nNumTriangles, {} );
+	for( int i = 0; i < std::ssize( OptimizedTriangleList ) ; i++ )
 	{
 		TriIntersectData_t * pTri = &( OptimizedTriangleList[i].m_Data.m_IntersectData );
-		pTri->m_flNx = inbuf.GetFloat();
-		pTri->m_flNy = inbuf.GetFloat();
-		pTri->m_flNz = inbuf.GetFloat();
-		pTri->m_flD = inbuf.GetFloat();
-		pTri->m_nTriangleID = inbuf.GetFloat();
+		pTri->m_flNx = inbuf.read< float >();
+		pTri->m_flNy = inbuf.read< float >();
+		pTri->m_flNz = inbuf.read< float >();
+		pTri->m_flD = inbuf.read< float >();
+		pTri->m_nTriangleID = inbuf.read< float >();
 		for( int j = 0; j < ARRAYSIZE( pTri->m_ProjectedEdgeEquations ); j++ )
 		{
-			pTri->m_ProjectedEdgeEquations[j] = inbuf.GetFloat();
+			pTri->m_ProjectedEdgeEquations[j] = inbuf.read< float >();
 		}
-		pTri->m_nCoordSelect0 = inbuf.GetUnsignedChar();
-		pTri->m_nCoordSelect1 = inbuf.GetUnsignedChar();
-		pTri->m_nFlags = inbuf.GetUnsignedChar();
-		inbuf.GetUnsignedChar();						// for unused.
+		pTri->m_nCoordSelect0 = inbuf.read< unsigned char >();
+		pTri->m_nCoordSelect1 = inbuf.read< unsigned char >();
+		pTri->m_nFlags = inbuf.read< unsigned char >();
+		inbuf.read< unsigned char >();						// for unused.
 	}
-	TriangleIndexList.SetCount( hdr.m_nNumTriangleIndices );
-	for( int i = 0; i < TriangleIndexList.Count(); i++ )
+	TriangleIndexList.assign( hdr.m_nNumTriangleIndices, {} );
+	for( int i = 0; i < std::ssize( TriangleIndexList ); i++ )
 	{
-		TriangleIndexList[i] = inbuf.GetInt();
+		TriangleIndexList[i] = inbuf.read< int >();
 	}
-	TriangleColors.SetCount( hdr.m_nNumColors );
-	for( int i = 0 ; i < TriangleColors.Count() ; i++ )
+	TriangleColors.assign( hdr.m_nNumColors, {} );
+	for( int i = 0 ; i < std::ssize( TriangleColors ) ; i++ )
 	{
 		Vector &v = TriangleColors[i];
-		v.x = inbuf.GetFloat();
-		v.y = inbuf.GetFloat();
-		v.z = inbuf.GetFloat();
+		v.x = inbuf.read< float >();
+		v.y = inbuf.read< float >();
+		v.z = inbuf.read< float >();
 	}
 }
 

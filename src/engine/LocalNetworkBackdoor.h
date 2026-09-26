@@ -7,6 +7,7 @@
 #ifndef LOCALNETWORKBACKDOOR_H
 #define LOCALNETWORKBACKDOOR_H
 
+#include <bitset>
 #include "quakedef.h"
 #include "cl_localnetworkbackdoor.h"
 #include "icliententitylist.h"
@@ -19,7 +20,7 @@
 #include "cdll_engine_int.h"
 #include "datacache/imdlcache.h"
 #include "sys_dll.h"
-#include "utllinkedlist.h"
+#include <vector>
 #include "edict.h"
 #include "server.h"
 
@@ -67,10 +68,10 @@ public:
 
 private:
 	// Temporarily built up while processing a frame.
-	CBitVec<MAX_EDICTS> m_EntsAlive;
+	std::bitset<MAX_EDICTS> m_EntsAlive;
 	
 	// This should correspond to which m_CachedEntState entries have a non-null m_pNetworkable pointer.
-	CBitVec<MAX_EDICTS> m_PrevEntsAlive;
+	std::bitset<MAX_EDICTS> m_PrevEntsAlive;
 
 	// Entities that get created during a frame are remembered here.
 	unsigned short m_EntsCreatedIndices[MAX_EDICTS];
@@ -82,7 +83,7 @@ private:
 
 	// Tell the client DLL about entities that need to be notified about being dormant.
 	// Anything that EntityDormant() would care about needs to get added to this list.
-	CUtlLinkedList<unsigned short,unsigned short> m_PendingDormantEntities;
+	std::vector<unsigned short> m_PendingDormantEntities;
 
 	// This data is cached in here so we don't have to call a lot of virtuals to get it from the client DLL.
 	class CCachedEntState

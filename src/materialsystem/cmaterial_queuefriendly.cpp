@@ -9,9 +9,6 @@
 #include "cmaterial_queuefriendly.h"
 #include "tier1/callqueue.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 #define USE_QUEUED_MATERIAL_CALLS //uncomment to queue up material changing calls. Comment out to always use instant calls.
 

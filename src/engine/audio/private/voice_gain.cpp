@@ -10,9 +10,6 @@
 #include "basetypes.h"
 #include "voice_gain.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 CAutoGain::CAutoGain()
 {
 	Reset(128, 5.0f, 0.5f, 1);
@@ -49,19 +46,19 @@ void CAutoGain::ProcessSamples(
 	// Continue until we hit the end of this block.
 	while(nSamplesLeft)
 	{
-		int nToProcess = MIN(nSamplesLeft, (m_BlockSize - m_CurBlockOffset));
+		int nToProcess = std::min(nSamplesLeft, (m_BlockSize - m_CurBlockOffset));
 		for(int iSample=0; iSample < nToProcess; iSample++)
 		{
 			// Update running totals..
 			m_CurTotal += abs( pCurPos[iSample] );
-			m_CurMax = MAX( m_CurMax, abs( pCurPos[iSample] ) );
+			m_CurMax = std::max<std::common_type_t<int, short int>>( m_CurMax, abs( pCurPos[iSample] ) );
 			
 			// Apply gain on this sample.
 			AGFixed gain = m_FixedCurrentGain + m_CurBlockOffset * m_GainMultiplier;
 			m_CurBlockOffset++;
 			
 			int newval = ((int)pCurPos[iSample] * gain) >> AG_FIX_SHIFT;
-			newval = MIN(32767, MAX(newval, -32768));
+			newval = std::min(32767, std::max(newval, -32768));
 			pCurPos[iSample] = (short)newval;
 		}
 		pCurPos += nToProcess;
@@ -77,7 +74,7 @@ void CAutoGain::ProcessSamples(
 			// Figure out the next gain (the gain we'll interpolate to).
 			int avg = m_CurTotal / m_BlockSize;
 			float modifiedMax = avg + (m_CurMax - avg) * m_AvgToMaxVal;
-			m_NextGain = MIN(32767.0f / modifiedMax, m_MaxGain) * m_Scale;
+			m_NextGain = std::min(32767.0f / modifiedMax, m_MaxGain) * m_Scale;
 
 			// Setup the interpolation multiplier.			
 			float fGainMultiplier = (m_NextGain - m_CurrentGain) / (m_BlockSize - 1);

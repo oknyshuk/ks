@@ -9,17 +9,17 @@
 
 #include "cs_custom_epidermis_visualsdata_processor.h"
 
-void CCSEpidermisVisualsDataCompare::SerializeToBuffer( CUtlBuffer &buf )
+void CCSEpidermisVisualsDataCompare::SerializeToBuffer( ks::byte_writer &buf )
 {
 	CBaseVisualsDataCompare::SerializeToBuffer( buf );
 	Serialize( buf, m_bIsBody );
-	Serialize( buf, CUtlString( m_pchSkinIdent ) );
+	Serialize( buf, std::string( ks::nz( m_pchSkinIdent ) ) );
 }
 
 CCSEpidermisVisualsDataProcessor::CCSEpidermisVisualsDataProcessor( CCSEpidermisVisualsDataCompare &&compareObject, const char *pCompositingShaderName )
 	: m_pCompositingShaderName( nullptr )
 {
-	m_compareObject = Move( compareObject );
+	m_compareObject = std::move( compareObject );
 	m_compareObject.FillCompareBlob();
 	memset( &m_visualsData, 0, sizeof( m_visualsData ) );
 }

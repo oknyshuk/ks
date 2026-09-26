@@ -16,8 +16,8 @@ public:
 	}
 	CHierarchicalBitVector( const CHierarchicalBitVector &other )
 	{
-		m_Level0.CopyArray( other.m_Level0.Base( ), other.m_Level0.Count( ) );
-		m_Level1.CopyArray( other.m_Level1.Base( ), other.m_Level1.Count( ) );
+		m_Level0.assign( other.m_Level0.begin(), other.m_Level0.end() );
+		m_Level1.assign( other.m_Level1.begin(), other.m_Level1.end() );
 	}
 
 
@@ -39,13 +39,13 @@ public:
 	}
 	const uint32 * Base() const
 	{
-		return m_Level0.Base();
+		return m_Level0.data();
 	}
 
 	void Validate()const
 	{
 #ifdef DBGFLAG_ASSERT
-		for( int i = 0; i < m_Level0.Count(); ++i )
+		for( int i = 0; i < std::ssize( m_Level0 ); ++i )
 		{
 			uint nLevel0Bits = m_Level0[ i ];
 			uint nLevel1Bits = m_Level1[ i >> 5 ];
@@ -56,18 +56,18 @@ public:
 	
 	void EnsureBitExists( int nBit ) // reallocate if necessary
 	{
-		int nLevel0Size = ( nBit >> 5 ) + 1, nLevel0OldSize = m_Level0.Count();
+		int nLevel0Size = ( nBit >> 5 ) + 1, nLevel0OldSize = std::ssize( m_Level0 );
 		if( nLevel0OldSize < nLevel0Size )
 		{
-			m_Level0.AddMultipleToTail( nLevel0Size - nLevel0OldSize );
+			m_Level0.resize( m_Level0.size() + ( nLevel0Size - nLevel0OldSize ) );
 			for( int i = nLevel0OldSize; i < nLevel0Size; ++i )
 			{
 				m_Level0[i] = 0;
 			}
-			int nLevel1Size = ( nBit >> 10 ) + 1, nLevel1OldSize = m_Level1.Count();
+			int nLevel1Size = ( nBit >> 10 ) + 1, nLevel1OldSize = std::ssize( m_Level1 );
 			if( nLevel1OldSize < nLevel1Size )
 			{
-				m_Level1.AddMultipleToTail( nLevel1Size - nLevel1OldSize );
+				m_Level1.resize( m_Level1.size() + ( nLevel1Size - nLevel1OldSize ) );
 				for( int i = nLevel1OldSize; i < nLevel1Size; ++i )
 				{
 					m_Level1[i] = 0;
@@ -78,13 +78,13 @@ public:
 
 	int Count()
 	{
-		return m_Level0.Count() << 5;
+		return std::ssize( m_Level0 ) << 5;
 	}
 
 	template < typename Functor >
 	void ScanBits( Functor functor )
 	{
-		for( int nItLevel1 = 0; nItLevel1 < m_Level1.Count(); ++nItLevel1 )
+		for( int nItLevel1 = 0; nItLevel1 < std::ssize( m_Level1 ); ++nItLevel1 )
 		{
 			uint nLevel1Bits = m_Level1[ nItLevel1 ];
 			uint nBaseLevel1 = nItLevel1 * 32;
@@ -114,12 +114,12 @@ public:
 	}
 	void Clear( )
 	{
-		m_Level0.FillWithValue( 0 );
-		m_Level1.FillWithValue( 0 );
+		std::ranges::fill( m_Level0, 0 );
+		std::ranges::fill( m_Level1, 0 );
 	}
 protected:
-	CUtlVector< uint32 > m_Level1; // one bit for each 32 bits  in m_MoveBufferLevel0
-	CUtlVector< uint32 > m_Level0; // one bit for each proxy
+	std::vector< uint32 > m_Level1; // one bit for each 32 bits  in m_MoveBufferLevel0
+	std::vector< uint32 > m_Level0; // one bit for each proxy
 
 public:
 #ifdef AUTO_SERIALIZE

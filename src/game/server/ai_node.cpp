@@ -25,9 +25,6 @@
 #include "game.h"			
 #include "ai_networkmanager.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 
 CAI_Link *CAI_Node::GetLink( int destNodeId )
@@ -71,7 +68,7 @@ void CAI_Node::AddLink(CAI_Link *newLink)
 	AssertMsg( newLink->m_iDestID == m_iID || newLink->m_iSrcID == m_iID, "Added link to node that doesn't reference the node" );
 #endif
 
-	m_Links.AddToTail( newLink );
+	m_Links.push_back( newLink );
 }
 
 
@@ -250,7 +247,7 @@ Vector CAI_Node::GetPosition(int hull) const
 // Output :
 //-----------------------------------------------------------------------------
 CAI_Node::CAI_Node( int id, const Vector &origin, float yaw  ) 
- :	m_Links( 0, 4 )
+
 {
 	m_vOrigin		= origin;
 	m_iID			= id;

@@ -12,9 +12,6 @@
 #include "imaterialsysteminternal.h"
 #include "imatrendercontextinternal.h"
 
-// NOTE: This must be the last file included!!!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Singleton
@@ -37,17 +34,27 @@ COcclusionQueryMgr::COcclusionQueryMgr()
 //-----------------------------------------------------------------------------
 OcclusionQueryObjectHandle_t COcclusionQueryMgr::CreateOcclusionQueryObject( )
 {
-	m_Mutex.Lock();
-	OcclusionQueryObjectHandle_t h = (OcclusionQueryObjectHandle_t)m_OcclusionQueryObjects.AddToTail();
-	m_Mutex.Unlock();
-	return h;
+	m_Mutex.lock();
+	OcclusionQueryObject_t *pObject;
+	if ( !m_FreeOcclusionQueryObjects.empty() )
+	{
+		pObject = m_FreeOcclusionQueryObjects.back();
+		m_FreeOcclusionQueryObjects.pop_back();
+		*pObject = OcclusionQueryObject_t();
+	}
+	else
+	{
+		pObject = &m_OcclusionQueryObjects.emplace_back();
+	}
+	m_Mutex.unlock();
+	return (OcclusionQueryObjectHandle_t)pObject;
 }
 
 void COcclusionQueryMgr::OnCreateOcclusionQueryObject( OcclusionQueryObjectHandle_t h )
 {
 	for ( int i = 0; i < COUNT_OCCLUSION_QUERY_STACK; i++)
 	{
-		m_OcclusionQueryObjects[(intp)h].m_QueryHandle[i] = g_pShaderAPI->CreateOcclusionQueryObject( );
+		FromHandle( h ).m_QueryHandle[i] = g_pShaderAPI->CreateOcclusionQueryObject( );
 	}
 }
 
@@ -56,10 +63,10 @@ void COcclusionQueryMgr::OnCreateOcclusionQueryObject( OcclusionQueryObjectHandl
 void COcclusionQueryMgr::FlushQuery( OcclusionQueryObjectHandle_t hOcclusionQuery, int nIndex )
 {
 	// Flush out any previous queries
-	intp h = (intp)hOcclusionQuery;
-	if ( m_OcclusionQueryObjects[h].m_bHasBeenIssued[nIndex] )
+	OcclusionQueryObject_t &query = FromHandle( hOcclusionQuery );
+	if ( query.m_bHasBeenIssued[nIndex] )
 	{
-		ShaderAPIOcclusionQuery_t hQuery = m_OcclusionQueryObjects[h].m_QueryHandle[nIndex];
+		ShaderAPIOcclusionQuery_t hQuery = query.m_QueryHandle[nIndex];
 		
 		while ( OCCLUSION_QUERY_RESULT_PENDING == g_pShaderAPI->OcclusionQuery_GetNumPixelsRendered( hQuery, true ) )
 			continue;
@@ -68,20 +75,21 @@ void COcclusionQueryMgr::FlushQuery( OcclusionQueryObjectHandle_t hOcclusionQuer
 
 void COcclusionQueryMgr::DestroyOcclusionQueryObject( OcclusionQueryObjectHandle_t hOcclusionQuery )
 {
-	intp h = (intp)hOcclusionQuery;
-	Assert( m_OcclusionQueryObjects.IsValidIndex( h ) );
-	if ( m_OcclusionQueryObjects.IsValidIndex( h ) )
+	Assert( IsValidHandle( hOcclusionQuery ) );
+	if ( IsValidHandle( hOcclusionQuery ) )
 	{
+		OcclusionQueryObject_t &query = FromHandle( hOcclusionQuery );
 		for ( int i = 0; i < COUNT_OCCLUSION_QUERY_STACK; i++)
 		{
-			if ( m_OcclusionQueryObjects[h].m_QueryHandle[i] != INVALID_SHADERAPI_OCCLUSION_QUERY_HANDLE )
+			if ( query.m_QueryHandle[i] != INVALID_SHADERAPI_OCCLUSION_QUERY_HANDLE )
 			{
-				g_pShaderAPI->DestroyOcclusionQueryObject( m_OcclusionQueryObjects[h].m_QueryHandle[i] );
+				g_pShaderAPI->DestroyOcclusionQueryObject( query.m_QueryHandle[i] );
 			}
 		}
-		m_Mutex.Lock();
-		m_OcclusionQueryObjects.Remove( h );
-		m_Mutex.Unlock();
+		m_Mutex.lock();
+		query.m_bInUse = false;
+		m_FreeOcclusionQueryObjects.push_back( &query );
+		m_Mutex.unlock();
 	}
 }
 
@@ -101,27 +109,31 @@ void COcclusionQueryMgr::AdvanceFrame()
 //-----------------------------------------------------------------------------
 void COcclusionQueryMgr::AllocOcclusionQueryObjects( void )
 {
-	FOR_EACH_LL( m_OcclusionQueryObjects, iterator )
+	for ( OcclusionQueryObject_t &query : m_OcclusionQueryObjects )
 	{
+		if ( !query.m_bInUse )
+			continue;
 		for ( int i = 0; i < COUNT_OCCLUSION_QUERY_STACK; i++)
 		{
-			m_OcclusionQueryObjects[iterator].m_QueryHandle[i] = g_pShaderAPI->CreateOcclusionQueryObject();
-			m_OcclusionQueryObjects[iterator].m_bHasBeenIssued[i] = false;		// any in-flight queries are never returning
+			query.m_QueryHandle[i] = g_pShaderAPI->CreateOcclusionQueryObject();
+			query.m_bHasBeenIssued[i] = false;		// any in-flight queries are never returning
 		}
 	}
 }
 
 void COcclusionQueryMgr::FreeOcclusionQueryObjects( void )
 {
-	FOR_EACH_LL( m_OcclusionQueryObjects, iterator )
+	for ( OcclusionQueryObject_t &query : m_OcclusionQueryObjects )
 	{
+		if ( !query.m_bInUse )
+			continue;
 		for ( int i = 0; i < COUNT_OCCLUSION_QUERY_STACK; i++)
 		{
-			if ( m_OcclusionQueryObjects[iterator].m_QueryHandle[i] != INVALID_SHADERAPI_OCCLUSION_QUERY_HANDLE )
+			if ( query.m_QueryHandle[i] != INVALID_SHADERAPI_OCCLUSION_QUERY_HANDLE )
 			{
-				g_pShaderAPI->DestroyOcclusionQueryObject( m_OcclusionQueryObjects[iterator].m_QueryHandle[i] );
-				m_OcclusionQueryObjects[iterator].m_QueryHandle[i] = INVALID_SHADERAPI_OCCLUSION_QUERY_HANDLE;
-				m_OcclusionQueryObjects[iterator].m_bHasBeenIssued[i] = false;
+				g_pShaderAPI->DestroyOcclusionQueryObject( query.m_QueryHandle[i] );
+				query.m_QueryHandle[i] = INVALID_SHADERAPI_OCCLUSION_QUERY_HANDLE;
+				query.m_bHasBeenIssued[i] = false;
 			}
 		}
 	}
@@ -133,18 +145,18 @@ void COcclusionQueryMgr::FreeOcclusionQueryObjects( void )
 //-----------------------------------------------------------------------------
 void COcclusionQueryMgr::ResetOcclusionQueryObject( OcclusionQueryObjectHandle_t hOcclusionQuery )
 {
-	intp h = (intp)hOcclusionQuery;
-	Assert( m_OcclusionQueryObjects.IsValidIndex( h ) );
-	if ( m_OcclusionQueryObjects.IsValidIndex( h ) )
+	Assert( IsValidHandle( hOcclusionQuery ) );
+	if ( IsValidHandle( hOcclusionQuery ) )
 	{
+		OcclusionQueryObject_t &query = FromHandle( hOcclusionQuery );
 		// Forget we've issued any previous queries - there's no need to flush them.
 		for ( int i = 0; i < COUNT_OCCLUSION_QUERY_STACK; i++)
 		{
-			m_OcclusionQueryObjects[h].m_bHasBeenIssued[i] = false;
+			query.m_bHasBeenIssued[i] = false;
 		}
 
-		m_OcclusionQueryObjects[h].m_LastResult = -1;
-		m_OcclusionQueryObjects[h].m_nFrameIssued = -1;
+		query.m_LastResult = -1;
+		query.m_nFrameIssued = -1;
 	}
 }
 
@@ -154,20 +166,20 @@ void COcclusionQueryMgr::ResetOcclusionQueryObject( OcclusionQueryObjectHandle_t
 //-----------------------------------------------------------------------------
 void COcclusionQueryMgr::BeginOcclusionQueryDrawing( OcclusionQueryObjectHandle_t hOcclusionQuery )
 {
-	intp h = (intp)hOcclusionQuery;
-	Assert( m_OcclusionQueryObjects.IsValidIndex( h ) );
-	if ( m_OcclusionQueryObjects.IsValidIndex( h ) )
+	Assert( IsValidHandle( hOcclusionQuery ) );
+	if ( IsValidHandle( hOcclusionQuery ) )
 	{
-		int nCurrent = m_OcclusionQueryObjects[h].m_nCurrentIssue;
-		ShaderAPIOcclusionQuery_t hQuery = m_OcclusionQueryObjects[h].m_QueryHandle[nCurrent];
+		OcclusionQueryObject_t &query = FromHandle( hOcclusionQuery );
+		int nCurrent = query.m_nCurrentIssue;
+		ShaderAPIOcclusionQuery_t hQuery = query.m_QueryHandle[nCurrent];
 		if ( hQuery != INVALID_SHADERAPI_OCCLUSION_QUERY_HANDLE )
 		{
 			// If it's been issued, but we haven't gotten a result when we polled last time,
 			// try polling one last time, since we can't poll again after we issue again.
-			if ( m_OcclusionQueryObjects[h].m_bHasBeenIssued[nCurrent] )
+			if ( query.m_bHasBeenIssued[nCurrent] )
 			{
 				int nPixels = g_pShaderAPI->OcclusionQuery_GetNumPixelsRendered( hQuery, false );
-				if ( ( nPixels == OCCLUSION_QUERY_RESULT_PENDING ) && ( m_OcclusionQueryObjects[h].m_nFrameIssued == m_nFrameCount ) )
+				if ( ( nPixels == OCCLUSION_QUERY_RESULT_PENDING ) && ( query.m_nFrameIssued == m_nFrameCount ) )
 				{
 					static int s_nWarnCount = 0;
 					if ( s_nWarnCount++ < 5 )
@@ -182,9 +194,9 @@ void COcclusionQueryMgr::BeginOcclusionQueryDrawing( OcclusionQueryObjectHandle_
 				}
 				if ( nPixels >= 0 )
 				{
-					m_OcclusionQueryObjects[h].m_LastResult = nPixels;
+					query.m_LastResult = nPixels;
 				}
-				m_OcclusionQueryObjects[h].m_bHasBeenIssued[nCurrent] = false;
+				query.m_bHasBeenIssued[nCurrent] = false;
 			}
 			g_pShaderAPI->BeginOcclusionQueryDrawing( hQuery );
 		}
@@ -194,21 +206,21 @@ void COcclusionQueryMgr::BeginOcclusionQueryDrawing( OcclusionQueryObjectHandle_
 
 void COcclusionQueryMgr::EndOcclusionQueryDrawing( OcclusionQueryObjectHandle_t hOcclusionQuery )
 {
-	intp h = (intp)hOcclusionQuery;
-	Assert( m_OcclusionQueryObjects.IsValidIndex( h ) );
-	if ( m_OcclusionQueryObjects.IsValidIndex( h ) )
+	Assert( IsValidHandle( hOcclusionQuery ) );
+	if ( IsValidHandle( hOcclusionQuery ) )
 	{
-		int nCurrent = m_OcclusionQueryObjects[h].m_nCurrentIssue;
-		ShaderAPIOcclusionQuery_t hQuery = m_OcclusionQueryObjects[h].m_QueryHandle[nCurrent];
+		OcclusionQueryObject_t &query = FromHandle( hOcclusionQuery );
+		int nCurrent = query.m_nCurrentIssue;
+		ShaderAPIOcclusionQuery_t hQuery = query.m_QueryHandle[nCurrent];
 		if ( hQuery != INVALID_SHADERAPI_OCCLUSION_QUERY_HANDLE )
 		{
 			g_pShaderAPI->EndOcclusionQueryDrawing( hQuery );
 
-			m_OcclusionQueryObjects[h].m_bHasBeenIssued[nCurrent] = true;
-			m_OcclusionQueryObjects[h].m_nFrameIssued = m_nFrameCount;
+			query.m_bHasBeenIssued[nCurrent] = true;
+			query.m_nFrameIssued = m_nFrameCount;
 
 			nCurrent = (nCurrent+1) % COUNT_OCCLUSION_QUERY_STACK;
-			m_OcclusionQueryObjects[h].m_nCurrentIssue = nCurrent;
+			query.m_nCurrentIssue = nCurrent;
 		}
 	}
 }
@@ -220,26 +232,26 @@ void COcclusionQueryMgr::EndOcclusionQueryDrawing( OcclusionQueryObjectHandle_t 
 //-----------------------------------------------------------------------------
 void COcclusionQueryMgr::OcclusionQuery_IssueNumPixelsRenderedQuery( OcclusionQueryObjectHandle_t hOcclusionQuery )
 {
-	intp h = (intp)hOcclusionQuery;
-	Assert( m_OcclusionQueryObjects.IsValidIndex( h ) );
-	if ( m_OcclusionQueryObjects.IsValidIndex( h ) )
+	Assert( IsValidHandle( hOcclusionQuery ) );
+	if ( IsValidHandle( hOcclusionQuery ) )
 	{
+		OcclusionQueryObject_t &query = FromHandle( hOcclusionQuery );
 		for( int i = 0; i < COUNT_OCCLUSION_QUERY_STACK; i++ )
 		{
-			int nIndex = ( m_OcclusionQueryObjects[h].m_nCurrentIssue + i ) % COUNT_OCCLUSION_QUERY_STACK;
-			ShaderAPIOcclusionQuery_t hQuery = m_OcclusionQueryObjects[h].m_QueryHandle[nIndex];
-			if ( hQuery != INVALID_SHADERAPI_OCCLUSION_QUERY_HANDLE && m_OcclusionQueryObjects[h].m_bHasBeenIssued[nIndex] )
+			int nIndex = ( query.m_nCurrentIssue + i ) % COUNT_OCCLUSION_QUERY_STACK;
+			ShaderAPIOcclusionQuery_t hQuery = query.m_QueryHandle[nIndex];
+			if ( hQuery != INVALID_SHADERAPI_OCCLUSION_QUERY_HANDLE && query.m_bHasBeenIssued[nIndex] )
 			{
 				int nPixels = g_pShaderAPI->OcclusionQuery_GetNumPixelsRendered( hQuery );
 				if ( nPixels == OCCLUSION_QUERY_RESULT_ERROR )
 				{
 					// In GL mode, it's possible for queries to fail (say when mat_queue_mode is toggled). In this case, just clear m_bHasBeenIssued and forget we ever issued this query.
-					m_OcclusionQueryObjects[h].m_bHasBeenIssued[nIndex] = false;
+					query.m_bHasBeenIssued[nIndex] = false;
 				}
 				else if ( nPixels >= 0 )
 				{
-					m_OcclusionQueryObjects[h].m_LastResult = nPixels;
-					m_OcclusionQueryObjects[h].m_bHasBeenIssued[nIndex] = false;
+					query.m_LastResult = nPixels;
+					query.m_bHasBeenIssued[nIndex] = false;
 				}
 
 			}
@@ -254,6 +266,6 @@ int COcclusionQueryMgr::OcclusionQuery_GetNumPixelsRendered( OcclusionQueryObjec
 		OcclusionQuery_IssueNumPixelsRenderedQuery( h );
 	}
 
-	int nPixels = m_OcclusionQueryObjects[(intp)h].m_LastResult;
+	int nPixels = FromHandle( h ).m_LastResult;
 	return nPixels;
 }

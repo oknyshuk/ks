@@ -15,9 +15,6 @@
 #include "ai_routedist.h"
 #include "ai_route.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_Path )
 
 //-----------------------------------------------------------------------------
@@ -255,7 +252,7 @@ float CAI_Path::GetGoalSpeed( const Vector &startPos )
 		Vector goalDirection = GetGoalDirection( startPos );
 		Vector targetVelocity = m_goalSpeedTarget->GetSmoothedVelocity();
 		float dot = DotProduct( goalDirection, targetVelocity );
-		dot = MAX( 0.0f, dot );
+		dot = std::max( 0.0f, dot );
 		// return a relative impact speed of m_goalSpeed
 		if (m_goalSpeed > 0.0)
 		{

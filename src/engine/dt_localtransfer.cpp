@@ -12,12 +12,9 @@
 #include "edict.h"
 #include "convar.h"
 #include "con_nprint.h"
-#include "utldict.h"
+#include "tier1/map_ops.h"
 #include "dt_localtransfer.h"
 #include "networkvar.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 
@@ -36,7 +33,7 @@ static ConVar dt_ShowPartialChangeEnts(
 	);
 
 // Negative numbers represent entities that were fully copied.
-static CUtlVector<int> g_PartialChangeEnts;
+static std::vector< int > g_PartialChangeEnts;
 static int g_nTotalPropChanges = 0;
 static int g_nTotalEntChanges = 0;
 
@@ -58,8 +55,9 @@ inline void LocalTransfer_FastType(
 		if ( pServerBase )
 		{
 			clientStack.SeekToProp( pCur->m_iProp );
-			unsigned char *pClientBase = clientStack.GetCurStructBase();
-			Assert( pClientBase );
+			unsigned char *pClientBase = clientStack.UpdateRoutesExplicit();
+			if ( !pClientBase )
+				continue;
 
 			const T *pSource = (const T*)( pServerBase + pCur->m_iSendOffset );
 			T *pDest = (T*)( pClientBase + pCur->m_iRecvOffset );
@@ -68,15 +66,31 @@ inline void LocalTransfer_FastType(
 	}
 }
 
+// serverStack must already be at iProp.
+static void LocalTransfer_CopyProp( CServerDatatableStack &serverStack, unsigned char *pSendBase,
+	CClientDatatableStack &clientStack, CRecvDecoder *pDecoder, int iProp, int objectID )
+{
+	const RecvProp *pRecvProp = pDecoder->GetProp( iProp );
+	if ( !pSendBase || !pRecvProp )
+		return;
+
+	clientStack.SeekToProp( iProp );
+	unsigned char *pRecvBase = clientStack.UpdateRoutesExplicit();
+	if ( !pRecvBase )
+		return;
+
+	g_PropTypeFns[pRecvProp->GetType()].FastCopy( serverStack.GetCurProp(), pRecvProp, pSendBase, pRecvBase, objectID );
+}
+
 void AddPropOffsetToMap( CSendTablePrecalc *pPrecalc, int iInProp, int iInOffset, const char *pszPropName )
 {
 	Assert( iInProp < 0xFFFF && iInOffset < 0xFFFF );	
 	unsigned short iProp = (unsigned short)iInProp;
 	unsigned short iOffset = (unsigned short)iInOffset;
 	
-	unsigned short iOldIndex = pPrecalc->m_PropOffsetToIndexMap.Find( iOffset );
+	auto iOldIndex = pPrecalc->m_PropOffsetToIndexMap.find( iOffset );
 
-	if ( iOldIndex == pPrecalc->m_PropOffsetToIndexMap.InvalidIndex() )
+	if ( iOldIndex == pPrecalc->m_PropOffsetToIndexMap.end() )
 	{
 		PropIndicesCollection_t coll;
 		coll.m_Indices[0] = iProp;
@@ -85,7 +99,7 @@ void AddPropOffsetToMap( CSendTablePrecalc *pPrecalc, int iInProp, int iInOffset
 			coll.m_Indices[i] = 0xFFFF;
 		}
 
-		pPrecalc->m_PropOffsetToIndexMap.Insert( iOffset, coll );
+		pPrecalc->m_PropOffsetToIndexMap.emplace( iOffset, coll );
 	}
 	else
 	{
@@ -94,7 +108,7 @@ void AddPropOffsetToMap( CSendTablePrecalc *pPrecalc, int iInProp, int iInOffset
 		// to this offset.
 		//
 		// Look for a slot in the PropIndicesCollection_t to hold the prop index.
-		PropIndicesCollection_t &coll = pPrecalc->m_PropOffsetToIndexMap[iOldIndex];
+		PropIndicesCollection_t &coll = iOldIndex->second;
 		int i;
 		for ( i=0; i < ARRAYSIZE( coll.m_Indices ); i++ )
 		{
@@ -198,7 +212,7 @@ void BuildPropOffsetToIndexMap( CSendTablePrecalc *pPrecalc, const CStandardSend
 	CPropMapStack pmStack( pPrecalc, pSendProxies );
 	pmStack.Init( false, false );
 	
-	for ( int i=0; i < pPrecalc->m_Props.Count(); i++ )
+	for ( int i=0; i < std::ssize( pPrecalc->m_Props ); i++ )
 	{
 		pmStack.SeekToProp( i );
 		if ( pmStack.GetCurStructBase() != 0 )
@@ -299,15 +313,15 @@ void LocalTransfer_InitFastCopy(
 	CSendTablePrecalc *pPrecalc = pSendTable->m_pPrecalc;
 
 	// Setup the offset-to-index map.
-	pPrecalc->m_PropOffsetToIndexMap.RemoveAll();
+	pPrecalc->m_PropOffsetToIndexMap.clear();
 	BuildPropOffsetToIndexMap( pPrecalc, pSendProxies );
 
 	// Clear the old lists.
-	pPrecalc->m_FastLocalTransfer.m_FastInt32.Purge();
-	pPrecalc->m_FastLocalTransfer.m_FastInt16.Purge();
-	pPrecalc->m_FastLocalTransfer.m_FastInt8.Purge();
-	pPrecalc->m_FastLocalTransfer.m_FastVector.Purge();
-	pPrecalc->m_FastLocalTransfer.m_OtherProps.Purge();
+	pPrecalc->m_FastLocalTransfer.m_FastInt32.clear(); pPrecalc->m_FastLocalTransfer.m_FastInt32.shrink_to_fit();
+	pPrecalc->m_FastLocalTransfer.m_FastInt16.clear(); pPrecalc->m_FastLocalTransfer.m_FastInt16.shrink_to_fit();
+	pPrecalc->m_FastLocalTransfer.m_FastInt8.clear(); pPrecalc->m_FastLocalTransfer.m_FastInt8.shrink_to_fit();
+	pPrecalc->m_FastLocalTransfer.m_FastVector.clear(); pPrecalc->m_FastLocalTransfer.m_FastVector.shrink_to_fit();
+	pPrecalc->m_FastLocalTransfer.m_OtherProps.clear(); pPrecalc->m_FastLocalTransfer.m_OtherProps.shrink_to_fit();
 	
 	CRecvDecoder *pDecoder = pRecvTable->m_pDecoder;
 	int iNumProp = pPrecalc->GetNumProps();
@@ -320,7 +334,7 @@ void LocalTransfer_InitFastCopy(
 		{
 			Assert( stricmp( pSendProp->GetName(), pRecvProp->GetName() ) == 0 );
 
-			CUtlVector<CFastLocalTransferPropInfo> *pList = &pPrecalc->m_FastLocalTransfer.m_OtherProps;
+			std::vector< CFastLocalTransferPropInfo > *pList = &pPrecalc->m_FastLocalTransfer.m_OtherProps;
 
 			if ( pSendProp->GetType() == DPT_Int &&
 				(pSendProp->GetProxyFn() == pSendProxies->m_Int32ToInt32 || pSendProp->GetProxyFn() == pSendProxies->m_UInt32ToInt32) &&
@@ -367,7 +381,7 @@ void LocalTransfer_InitFastCopy(
 			toAdd.m_iProp = iProp;
 			toAdd.m_iRecvOffset = pRecvProp->GetOffset();
 			toAdd.m_iSendOffset = pSendProp->GetOffset();
-			pList->AddToTail( toAdd );
+			pList->push_back( toAdd );
 		}
 	}
 }
@@ -400,8 +414,8 @@ inline int MapPropOffsetsToIndices(
 	
 	for ( unsigned short i=0; i < nOffsets; i++ )
 	{
-		unsigned short index = pPrecalc->m_PropOffsetToIndexMap.Find( pOffsets[i] );
-		if ( index == pPrecalc->m_PropOffsetToIndexMap.InvalidIndex() )
+		auto index = pPrecalc->m_PropOffsetToIndexMap.find( pOffsets[i] );
+		if ( index == pPrecalc->m_PropOffsetToIndexMap.end() )
 		{
 			// Note: this SHOULD be fine. In all known cases, when NetworkStateChanged is called with
 			// an offset, there should be a corresponding SendProp in order for that NetworkStateChanged
@@ -418,19 +432,18 @@ inline int MapPropOffsetsToIndices(
 
 			if ( dt_ShowPartialChangeEnts.GetInt() )
 			{
-				static CUtlDict<int,int> testDict;
+				static std::set< std::string, ks::iless > testDict;
 				char str[512];
 				Q_snprintf( str, sizeof( str ), "LocalTransfer offset miss - class: %s, DT: %s, offset: %d", pEdict->GetClassName(), pPrecalc->m_pSendTable->m_pNetTableName, pOffsets[i] );
-				if ( testDict.Find( str ) == testDict.InvalidIndex() )
+				if ( testDict.insert( str ).second )
 				{
-					testDict.Insert( str );
 					Warning( "%s\n", str );
 				}
 			}
 		}
 		else
 		{
-			const PropIndicesCollection_t &coll = pPrecalc->m_PropOffsetToIndexMap[index];
+			const PropIndicesCollection_t &coll = index->second;
 			
 			for ( int nIndex=0; nIndex < ARRAYSIZE( coll.m_Indices ); nIndex++ )
 			{
@@ -492,8 +505,8 @@ inline void AddToPartialChangeEntsList( int iEnt, bool bPartial )
 	if ( !bPartial )
 		iEnt = -iEnt;
 	
-	if ( g_PartialChangeEnts.Find( iEnt ) == -1 )
-		g_PartialChangeEnts.AddToTail( iEnt );
+	if ( ks::find_index( g_PartialChangeEnts, iEnt ) == -1 )
+		g_PartialChangeEnts.push_back( iEnt );
 }
 
 
@@ -515,7 +528,7 @@ void PrintPartialChangeEntsList()
 	
 	// Write the partial ents.
 	str[0] = 0;
-	for ( int i=0; i < g_PartialChangeEnts.Count(); i++ )
+	for ( int i=0; i < std::ssize( g_PartialChangeEnts ); i++ )
 	{
 		if ( g_PartialChangeEnts[i] >= 0 )
 		{
@@ -536,7 +549,7 @@ void PrintPartialChangeEntsList()
 	// Write the full ents.
 	bFirst = true;
 	str[0] = 0;
-	for ( int i=0; i < g_PartialChangeEnts.Count(); i++ )
+	for ( int i=0; i < std::ssize( g_PartialChangeEnts ); i++ )
 	{
 		if ( g_PartialChangeEnts[i] < 0 )
 		{
@@ -553,7 +566,7 @@ void PrintPartialChangeEntsList()
 	Q_strncat( str, " -    FULL", sizeof( str ) );
 	Con_NPrintf( iCurRow++, "%s", str );
 	
-	g_PartialChangeEnts.Purge();
+	g_PartialChangeEnts.clear(); g_PartialChangeEnts.shrink_to_fit();
 	g_nTotalPropChanges = g_nTotalEntChanges = 0;
 }
 
@@ -574,7 +587,7 @@ void LocalTransfer_TransferEntity(
 	unsigned short propIndices[MAX_PROP_OFFSET_TO_INDICES_RESULTS];
 	
 	unsigned char tempData[ sizeof( CSendProxyRecipients ) * MAX_DATATABLE_PROXIES ];
-	CUtlMemory< CSendProxyRecipients > recip( (CSendProxyRecipients*)tempData, pSendTable->m_pPrecalc->GetNumDataTableProxies() );
+	std::span< CSendProxyRecipients > recip( (CSendProxyRecipients*)tempData, pSendTable->m_pPrecalc->GetNumDataTableProxies() );
 
 	// This code tries to only copy fields expressly marked as "changed" (by having the field offsets added to the changeoffsets vectors)
 	if ( pEdict->GetChangeInfoSerialNumber() == g_pSharedChangeInfo->m_iSerialNumber &&
@@ -594,7 +607,7 @@ void LocalTransfer_TransferEntity(
 
 		// Setup the structure to traverse the source tree.
 		ErrorIfNot( pPrecalc, ("SendTable_Encode: Missing m_pPrecalc for SendTable %s.", pSendTable->m_pNetTableName) );
-		CServerDatatableStack serverStack( pPrecalc, (unsigned char*)pSrcEnt, objectID, &recip );
+		CServerDatatableStack serverStack( pPrecalc, (unsigned char*)pSrcEnt, objectID, recip );
 		serverStack.Init( true, true );
 
 		// Setup the structure to traverse the dest tree.
@@ -604,27 +617,14 @@ void LocalTransfer_TransferEntity(
 		clientStack.Init( true, true );
 
 		// Cool. We can get away with just transferring a few.
-		for ( int iChanged=0; iChanged < nChangeOffsets; iChanged++ )
-		{
-			int iProp = propIndices[iChanged];
-
-			++g_nTotalPropChanges;
-			
-			serverStack.SeekToProp( iProp );
-			const SendProp *pSendProp = serverStack.GetCurProp();
-			unsigned char *pSendBase = serverStack.UpdateRoutesExplicit();
-			if ( pSendBase )
+		pDecoder->ForEachLengthsFirst( nChangeOffsets,
+			[&]( int i ) { return (int)propIndices[i]; },
+			[&]( int i )
 			{
-				const RecvProp *pRecvProp = pDecoder->GetProp( iProp );
-				Assert( pRecvProp );
-
-				clientStack.SeekToProp( iProp );
-				unsigned char *pRecvBase = clientStack.UpdateRoutesExplicit();
-				Assert( pRecvBase );
-				
-				g_PropTypeFns[pRecvProp->GetType()].FastCopy( pSendProp, pRecvProp, pSendBase, pRecvBase, objectID );
-			}
-		}
+				++g_nTotalPropChanges;
+				serverStack.SeekToProp( propIndices[i] );
+				LocalTransfer_CopyProp( serverStack, serverStack.UpdateRoutesExplicit(), clientStack, pDecoder, propIndices[i], objectID );
+			} );
 	}
 	// Whereas the below code copies _all_ fields, regardless of whether they were changed or not.  We run this only newly created entities, or entities
 	//  which were previously dormant/outside the pvs but are now back in the PVS since we could have missed field updates since the changeoffsets get cleared every
@@ -634,47 +634,32 @@ void LocalTransfer_TransferEntity(
 		// Setup the structure to traverse the source tree.
 		CSendTablePrecalc *pPrecalc = pSendTable->m_pPrecalc;
 		ErrorIfNot( pPrecalc, ("SendTable_Encode: Missing m_pPrecalc for SendTable %s.", pSendTable->m_pNetTableName) );
-		CServerDatatableStack serverStack( pPrecalc, (unsigned char*)pSrcEnt, objectID, &recip );
+		CServerDatatableStack serverStack( pPrecalc, (unsigned char*)pSrcEnt, objectID, recip );
 		serverStack.Init( false, true );
 
 		// Setup the structure to traverse the dest tree.
 		CRecvDecoder *pDecoder = pRecvTable->m_pDecoder;
 		ErrorIfNot( pDecoder, ("RecvTable_Decode: table '%s' missing a decoder.", pRecvTable->GetName()) );
 		CClientDatatableStack clientStack( pDecoder, (unsigned char*)pDestEnt, objectID );
-		clientStack.Init( false, true );
+		clientStack.Init( true, true );
 
 		AddToPartialChangeEntsList( (edict_t*)pEdict - sv.edicts, false );
 
-		// Copy the properties that require proxies.
-		CFastLocalTransferPropInfo *pPropList = pPrecalc->m_FastLocalTransfer.m_OtherProps.Base();
-		int nProps = pPrecalc->m_FastLocalTransfer.m_OtherProps.Count();
-		
-		for ( int i=0; i < nProps; i++ )
-		{
-			int iProp = pPropList[i].m_iProp;
-
-			serverStack.SeekToProp( iProp );
-			const SendProp *pSendProp = serverStack.GetCurProp();
-			unsigned char *pSendBase = serverStack.GetCurStructBase();
-
-			if ( pSendBase )
+		// Props that require proxies (vector lengths included, so they land before the fast lists).
+		CFastLocalTransferPropInfo *pPropList = pPrecalc->m_FastLocalTransfer.m_OtherProps.data();
+		pDecoder->ForEachLengthsFirst( std::ssize( pPrecalc->m_FastLocalTransfer.m_OtherProps ),
+			[&]( int i ) { return pPropList[i].m_iProp; },
+			[&]( int i )
 			{
-				const RecvProp *pRecvProp = pDecoder->GetProp( iProp );
-				Assert( pRecvProp );
-
-				clientStack.SeekToProp( iProp );
-				unsigned char *pRecvBase = clientStack.GetCurStructBase();
-				Assert( pRecvBase );
-				
-				g_PropTypeFns[pRecvProp->GetType()].FastCopy( pSendProp, pRecvProp, pSendBase, pRecvBase, objectID );
-			}
-		}
+				serverStack.SeekToProp( pPropList[i].m_iProp );
+				LocalTransfer_CopyProp( serverStack, serverStack.GetCurStructBase(), clientStack, pDecoder, pPropList[i].m_iProp, objectID );
+			} );
 
  		// Transfer over the fast properties.
-		LocalTransfer_FastType( (int*)0, serverStack, clientStack, pPrecalc->m_FastLocalTransfer.m_FastInt32.Base(), pPrecalc->m_FastLocalTransfer.m_FastInt32.Count() );
-		LocalTransfer_FastType( (short*)0, serverStack, clientStack, pPrecalc->m_FastLocalTransfer.m_FastInt16.Base(), pPrecalc->m_FastLocalTransfer.m_FastInt16.Count() );
-		LocalTransfer_FastType( (char*)0, serverStack, clientStack, pPrecalc->m_FastLocalTransfer.m_FastInt8.Base(), pPrecalc->m_FastLocalTransfer.m_FastInt8.Count() );
-		LocalTransfer_FastType( (Vector*)0, serverStack, clientStack, pPrecalc->m_FastLocalTransfer.m_FastVector.Base(), pPrecalc->m_FastLocalTransfer.m_FastVector.Count() );
+		LocalTransfer_FastType( (int*)0, serverStack, clientStack, pPrecalc->m_FastLocalTransfer.m_FastInt32.data(), std::ssize( pPrecalc->m_FastLocalTransfer.m_FastInt32 ) );
+		LocalTransfer_FastType( (short*)0, serverStack, clientStack, pPrecalc->m_FastLocalTransfer.m_FastInt16.data(), std::ssize( pPrecalc->m_FastLocalTransfer.m_FastInt16 ) );
+		LocalTransfer_FastType( (char*)0, serverStack, clientStack, pPrecalc->m_FastLocalTransfer.m_FastInt8.data(), std::ssize( pPrecalc->m_FastLocalTransfer.m_FastInt8 ) );
+		LocalTransfer_FastType( (Vector*)0, serverStack, clientStack, pPrecalc->m_FastLocalTransfer.m_FastVector.data(), std::ssize( pPrecalc->m_FastLocalTransfer.m_FastVector ) );
 	}		
 
 	

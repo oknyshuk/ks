@@ -8,9 +8,6 @@
 #include "networkstringtable.h"
 #include "client.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #ifndef SHARED_NET_STRING_TABLES
  	static CNetworkStringTableContainer s_NetworkStringTableClient;
 	CNetworkStringTableContainer *networkStringTableContainerClient = &s_NetworkStringTableClient;

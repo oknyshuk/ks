@@ -10,8 +10,12 @@
 
 
 #include "ifilelist.h"
-#include "tier1/utldict.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/map_ops.h"
+#include <memory>
+#include <map>
+#include <set>
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
 #include "filesystem.h"
 
 
@@ -37,8 +41,8 @@ public:
 	bool				LoadFromKeyValues( KeyValues *kv );
 
 	// Encode for networking.
-	void				Encode( CUtlBuffer &buf );
-	void				Decode( CUtlBuffer &buf );
+	void				Encode( ks::byte_writer &buf );
+	void				Decode( ks::byte_reader &buf );
 
 	// Calls IFileSystem::CacheFileCRCs for all files and directories marked check_crc.
 	void				CacheFileCRCs();
@@ -89,23 +93,24 @@ private:
 		bool			m_bCheckCRC;
 		unsigned short	m_LoadOrder;	// What order this thing was specified in the whitelist file.
 	};
+	typedef ks::idict< std::unique_ptr< CCommand > > CommandDict_t;
 
 
 private:
 
-	void				UpdateCommandStats( CUtlDict<CPureServerWhitelist::CCommand*,int> &commands, int *pHighest, int *pLongestPathName );
+	void				UpdateCommandStats( CommandDict_t &commands, int *pHighest, int *pLongestPathName );
 	void				PrintCommand( const char *pFileSpec, const char *pExt, int maxPathnameLen, CPureServerWhitelist::CCommand *pCommand );
-	int					FindCommandByLoadOrder( CUtlDict<CPureServerWhitelist::CCommand*,int> &commands, int iLoadOrder );
+	CommandDict_t::iterator	FindCommandByLoadOrder( CommandDict_t &commands, int iLoadOrder );
 
-	void InternalCacheFileCRCs( CUtlDict<CCommand*,int> &theList, ECacheCRCType eType );
+	void InternalCacheFileCRCs( CommandDict_t &theList, ECacheCRCType eType );
 
 	CCommand* GetBestEntry( const char *pFilename );
 
-	void EncodeCommandList( CUtlDict<CPureServerWhitelist::CCommand*,int> &theList, CUtlBuffer &buf );
-	void DecodeCommandList( CUtlDict<CPureServerWhitelist::CCommand*,int> &theList, CUtlBuffer &buf );
+	void EncodeCommandList( CommandDict_t &theList, ks::byte_writer &buf );
+	void DecodeCommandList( CommandDict_t &theList, ks::byte_reader &buf );
 
 	CPureServerWhitelist::CCommand* CheckEntry( 
-		CUtlDict<CPureServerWhitelist::CCommand*,int> &dict, 
+		CommandDict_t &dict, 
 		const char *pEntryName, 
 		CPureServerWhitelist::CCommand *pBestEntry );
 
@@ -114,9 +119,9 @@ private:
 	int m_RefCount;
 
 	// Commands are applied to files in order.
-	CUtlDict<CCommand*,int>	m_FileCommands;				// file commands
-	CUtlDict<CCommand*,int> m_RecursiveDirCommands;		// ... commands
-	CUtlDict<CCommand*,int> m_NonRecursiveDirCommands;	// *.* commands
+	CommandDict_t	m_FileCommands;				// file commands
+	CommandDict_t	m_RecursiveDirCommands;		// ... commands
+	CommandDict_t	m_NonRecursiveDirCommands;	// *.* commands
 	IFileSystem *m_pFileSystem;
 	
 	CAllowFromDiskList m_AllowFromDiskList;
@@ -133,47 +138,53 @@ struct UserReportedFileHash_t
 {
 	int m_idxFile;
 	USERID_t m_userID;
-	FileHash_t m_FileHash;
+	mutable FileHash_t m_FileHash;	// not part of the ordering, updated in place
 
-	static bool Less( const UserReportedFileHash_t& lhs, const UserReportedFileHash_t& rhs )
+	struct Less
 	{
-		if ( lhs.m_idxFile < rhs.m_idxFile )
-			return true;
-		if ( lhs.m_idxFile > rhs.m_idxFile )
+		bool operator()( const UserReportedFileHash_t& lhs, const UserReportedFileHash_t& rhs ) const
+		{
+			if ( lhs.m_idxFile < rhs.m_idxFile )
+				return true;
+			if ( lhs.m_idxFile > rhs.m_idxFile )
+				return false;
+			if ( lhs.m_userID.uid.steamid.m_SteamLocalUserID.As64bits < rhs.m_userID.uid.steamid.m_SteamLocalUserID.As64bits )
+				return true;
 			return false;
-		if ( lhs.m_userID.uid.steamid.m_SteamLocalUserID.As64bits < rhs.m_userID.uid.steamid.m_SteamLocalUserID.As64bits )
-			return true;
-		return false;
-	}
+		}
+	};
 };
 
 struct UserReportedFile_t
 {
 	CRC32_t m_crcIdentifier;
-	CUtlString m_filename;
-	CUtlString m_path;
+	std::string m_filename;
+	std::string m_path;
 	int m_nFileFraction;
 
-	static bool Less( const UserReportedFile_t& lhs, const UserReportedFile_t& rhs )
+	struct Less
 	{
-		if ( lhs.m_crcIdentifier < rhs.m_crcIdentifier )
-			return true;
-		if ( lhs.m_crcIdentifier > rhs.m_crcIdentifier )
+		bool operator()( const UserReportedFile_t& lhs, const UserReportedFile_t& rhs ) const
+		{
+			if ( lhs.m_crcIdentifier < rhs.m_crcIdentifier )
+				return true;
+			if ( lhs.m_crcIdentifier > rhs.m_crcIdentifier )
+				return false;
+			if ( lhs.m_nFileFraction < rhs.m_nFileFraction )
+				return true;
+			if ( lhs.m_nFileFraction > rhs.m_nFileFraction )
+				return false;
+			int nCmp = Q_strcmp( lhs.m_filename.c_str(), rhs.m_filename.c_str() );
+			if ( nCmp < 0 )
+				return true;
+			if ( nCmp > 0 )
+				return false;
+			nCmp = Q_strcmp( lhs.m_path.c_str(), rhs.m_path.c_str() );
+			if ( nCmp < 0 )
+				return true;
 			return false;
-		if ( lhs.m_nFileFraction < rhs.m_nFileFraction )
-			return true;
-		if ( lhs.m_nFileFraction > rhs.m_nFileFraction )
-			return false;
-		int nCmp = Q_strcmp( lhs.m_filename.String(), rhs.m_filename.String() );
-		if ( nCmp < 0 )
-			return true;
-		if ( nCmp > 0 )
-			return false;
-		nCmp = Q_strcmp( lhs.m_path.String(), rhs.m_path.String() );
-		if ( nCmp < 0 )
-			return true;
-		return false;
-	}
+		}
+	};
 };
 
 struct MasterFileHash_t
@@ -182,20 +193,20 @@ struct MasterFileHash_t
 	int m_cMatches;
 	FileHash_t m_FileHash;
 
-	static bool Less( const MasterFileHash_t& lhs, const MasterFileHash_t& rhs )
+	struct Less
 	{
-		return lhs.m_idxFile < rhs.m_idxFile;
-	}
+		bool operator()( const MasterFileHash_t& lhs, const MasterFileHash_t& rhs ) const
+		{
+			return lhs.m_idxFile < rhs.m_idxFile;
+		}
+	};
 
 };
 
 class CPureFileTracker
 {
 public:
-	CPureFileTracker():
-	  m_treeAllReportedFiles( UserReportedFile_t::Less ),
-		  m_treeMasterFileHashes( MasterFileHash_t::Less ),
-		  m_treeUserReportedFileHash( UserReportedFileHash_t::Less )
+	CPureFileTracker()
 	  {
 		  m_flLastFileReceivedTime = 0.f;
 		  m_cMatchedFile = 0;
@@ -209,9 +220,11 @@ public:
 	  int ListUserFiles( bool bListAll, const char *pchFilenameFind );
 	  int ListAllTrackedFiles( bool bListAll, const char *pchFilenameFind, int nFileFractionMin, int nFileFractionMax );
 
-	  CUtlRBTree< UserReportedFile_t, int > m_treeAllReportedFiles;
-	  CUtlRBTree< MasterFileHash_t, int > m_treeMasterFileHashes;
-	  CUtlRBTree< UserReportedFileHash_t, int > m_treeUserReportedFileHash;
+	  // file -> its index; the other trees refer to files by index, in order of first report
+	  std::map< UserReportedFile_t, int, UserReportedFile_t::Less > m_treeAllReportedFiles;
+	  std::vector< const UserReportedFile_t * > m_vecReportedFilesByIndex;
+	  std::set< MasterFileHash_t, MasterFileHash_t::Less > m_treeMasterFileHashes;
+	  std::set< UserReportedFileHash_t, UserReportedFileHash_t::Less > m_treeUserReportedFileHash;
 
 	  float m_flLastFileReceivedTime;
 	  int m_cMatchedFile;

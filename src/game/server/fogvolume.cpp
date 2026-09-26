@@ -7,11 +7,8 @@
 #include "fogvolume.h"
 #include "collisionutils.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
-
-CUtlVector< CFogVolume * > TheFogVolumes;
+std::vector< CFogVolume * > TheFogVolumes;
 
 ConVar fog_volume_debug( "fog_volume_debug", "0", 0, "If enabled, prints diagnostic information about the current fog volume" );
 
@@ -25,7 +22,7 @@ IMPLEMENT_REFLECT_DATAMAP( CFogVolume )
 CFogVolume *CFogVolume::FindFogVolumeForPosition( const Vector &position )
 {
 	CFogVolume *fogVolume = nullptr;
-	for ( int i=0; i<TheFogVolumes.Count(); ++i )
+	for ( int i=0; i<std::ssize( TheFogVolumes ); ++i )
 	{
 		fogVolume = TheFogVolumes[i];
 
@@ -90,7 +87,7 @@ void CFogVolume::AddToGlobalList()
 {
 	if ( !m_bInFogVolumesList )
 	{
-		TheFogVolumes.AddToTail( this );
+		TheFogVolumes.push_back( this );
 		m_bInFogVolumesList = true;
 	}
 }
@@ -101,7 +98,7 @@ void CFogVolume::RemoveFromGlobalList()
 {
 	if ( m_bInFogVolumesList )
 	{
-		TheFogVolumes.FindAndRemove( this );
+		ks::erase_first( TheFogVolumes, this );
 		m_bInFogVolumesList = false;
 	}
 }

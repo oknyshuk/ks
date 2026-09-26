@@ -13,8 +13,8 @@ class C_BaseEntity;
 class C_LocalTempEntity;
 struct model_t;
 
-#include "mempool.h"
-#include "utllinkedlist.h"
+#include "tier1/fixed_pool.h"
+#include <list>
 
 extern color24 white24;
 #if defined( CSTRIKE_DLL ) || defined( SDK_DLL )
@@ -129,8 +129,9 @@ public:
 	};
 private:
 	// Global temp entity pool
-	CClassMemoryPool< C_LocalTempEntity >	m_TempEntsPool;
-	CUtlLinkedList< C_LocalTempEntity *, unsigned short >	m_TempEnts;
+	ks::object_pool< C_LocalTempEntity >	m_TempEntsPool;
+	// std::list: effects triggered from Update() may allocate or free other tempents mid-iteration
+	std::list< C_LocalTempEntity * >	m_TempEnts;
 
 	// Muzzle flash sprites
 	struct model_t			*m_pSpriteMuzzleFlash[10];
@@ -165,7 +166,7 @@ private:
 private:
 	CTempEnts( const CTempEnts & );
 
-	void					TempEntFree( int index );
+	void					TempEntFree( std::list< C_LocalTempEntity * >::iterator it );
 	C_LocalTempEntity		*TempEntAlloc();	
 	bool					FreeLowPriorityTempEnt();
 

@@ -165,8 +165,8 @@ inline C_CSPlayer *C_CHostage::GetLeader( void ) const
 }
 
 
-extern CUtlVector< C_CHostage* > g_Hostages;
-extern CUtlVector< CHandle<C_BaseAnimating> > g_HostageRagdolls;
+extern std::vector< C_CHostage* > g_Hostages;
+extern std::vector< CHandle<C_BaseAnimating> > g_HostageRagdolls;
 
 
 #endif // C_CHOSTAGE_H

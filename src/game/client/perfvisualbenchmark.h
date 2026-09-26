@@ -47,7 +47,7 @@ private:
 	};
 
 private:
-	CUtlVector<RunInfo_t> m_RunInfo;
+	std::vector< RunInfo_t > m_RunInfo;
 	bool m_bIsOn;				//is this thing on?
 	int m_iCurVar;				//what convar are we at?
 	float m_flTimer;			//time since we started measuring the current convar

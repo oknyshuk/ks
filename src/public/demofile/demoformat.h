@@ -228,14 +228,14 @@ struct CSmoothingContext
 		active = src.active;
 		Q_strncpy( filename, src.filename, sizeof( filename ) );
 
-		smooth.RemoveAll();
-		int c = src.smooth.Count();
+		smooth.clear();
+		int c = std::ssize( src.smooth );
 		int i;
 		for ( i = 0; i < c; i++ )
 		{
 			demosmoothing_t newitem;
 			newitem = src.smooth[ i ];
-			smooth.AddToTail( newitem );
+			smooth.push_back( newitem );
 		}
 
 		m_nFirstSelectableSample = src.m_nFirstSelectableSample;
@@ -245,7 +245,7 @@ struct CSmoothingContext
 
 	bool							active;
 	char							filename[ 512 ];
-	CUtlVector< demosmoothing_t >	smooth;
+	std::vector< demosmoothing_t >	smooth;
 	int								m_nFirstSelectableSample;
 };
 

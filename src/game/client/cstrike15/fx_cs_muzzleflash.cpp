@@ -10,9 +10,6 @@
 #include "c_te_effect_dispatch.h"
 #include "precache_register.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 // Precache our effects
 PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffect_CS_MuzzleFlash )
@@ -25,7 +22,7 @@ void TE_DynamicLight( IRecipientFilter& filter, float delay,
 
 void CS_MuzzleFlashCallback( const CEffectData &data )
 {
-	CSmartPtr<CLocalSpaceEmitter> pEmitter = 
+	ks::intrusive_ptr<CLocalSpaceEmitter> pEmitter = 
 		CLocalSpaceEmitter::Create( "CS_MuzzleFlash", data.m_hEntity, data.m_nAttachmentIndex, 0 );
 
 	if ( !pEmitter )
@@ -98,7 +95,7 @@ DECLARE_CLIENT_EFFECT( CS_MuzzleFlash, CS_MuzzleFlashCallback );
 // 'X' shaped muzzleflash used by certain weapons
 void CS_MuzzleFlashXCallback( const CEffectData &data )
 {
-	CSmartPtr<CLocalSpaceEmitter> pEmitter = 
+	ks::intrusive_ptr<CLocalSpaceEmitter> pEmitter = 
 		CLocalSpaceEmitter::Create( "CS_MuzzleFlashX", data.m_hEntity, data.m_nAttachmentIndex, 0 );
 
 	// SetBBox() manually on the particle system so it doesn't have to be recalculated more than once.

@@ -25,9 +25,6 @@
 //#define PROFILE_STUDIO VPROF
 #define PROFILE_STUDIO
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 typedef void (*SoftwareProcessMeshFunc_t)( const mstudio_meshvertexdata_t *, matrix3x4_t *pPoseToWorld,
 	CCachedRenderData &vertexCache, CMeshBuilder& meshBuilder, int numVertices, unsigned short* pGroupToMesh, unsigned int nAlphaMask,
 											  IMaterial *pMaterial);
@@ -477,7 +474,7 @@ void CStudioRender::PopScissor( FlashlightState_t *state )
 //-----------------------------------------------------------------------------
 void CStudioRender::DrawShadows( const DrawModelInfo_t& info, int flags, int boneMask )
 {
-	if ( !m_ShadowState.Count() )
+	if ( m_ShadowState.empty() )
 		return;
 
 	VPROF("CStudioRender::DrawShadows");
@@ -495,7 +492,7 @@ void CStudioRender::DrawShadows( const DrawModelInfo_t& info, int flags, int bon
 
 	pRenderContext->SetFlashlightMode( true );
 	int i;
-	for (i = 0; i < m_ShadowState.Count(); ++i )
+	for (i = 0; i < std::ssize( m_ShadowState ); ++i )
 	{
 		if( !m_ShadowState[i].m_pMaterial )
 		{
@@ -521,7 +518,7 @@ void CStudioRender::DrawShadows( const DrawModelInfo_t& info, int flags, int bon
 	pRenderContext->SetFlashlightMode( false );
 
 	// Here, we have to redraw the model one time for each shadow
-	for (int i = 0; i < m_ShadowState.Count(); ++i )
+	for (int i = 0; i < std::ssize( m_ShadowState ); ++i )
 	{
 		if( m_ShadowState[i].m_pMaterial )
 		{
@@ -558,13 +555,13 @@ void CStudioRender::DrawStaticPropShadows( const DrawModelInfo_t &info, const St
 // Draw flashlight lighting on decals.
 void CStudioRender::DrawFlashlightDecals( const DrawModelInfo_t& info, int lod )
 {
-	if ( !m_ShadowState.Count() ) // game console implies single pass flashlight
+	if ( m_ShadowState.empty() ) // game console implies single pass flashlight
 		return;
 
 	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
 	pRenderContext->SetFlashlightMode( true );
 	int i;
-	for (i = 0; i < m_ShadowState.Count(); ++i )
+	for (i = 0; i < std::ssize( m_ShadowState ); ++i )
 	{
 		// This isn't clear.  This means that this is a flashlight if the material is NULL.  FLASHLIGHTFIXME
 		if( !m_ShadowState[i].m_pMaterial )
@@ -772,7 +769,7 @@ inline void CStudioRender::R_ComputeLightAtPoint3( const Vector &pos, const Vect
 #ifdef SPECIAL_SSE_MESH_PROCESSOR
 //#define VERIFY_SSE_LIGHTING
 
-// false: MAX(0,L*N) true: .5*(L.N)+.5. set based on material
+// false: std::max(0,L*N) true: .5*(L.N)+.5. set based on material
 static bool SSELightingHalfLambert;							
 
 // These variables are used by the special SSE lighting path. The
@@ -870,7 +867,6 @@ inline void CStudioRender::R_ComputeLightAtPoints3( const FourVectors &pos, cons
 //-----------------------------------------------------------------------------
 // Optimized for low-end hardware
 //-----------------------------------------------------------------------------
-#pragma warning (disable:4701)
 
 // NOTE: I'm using this crazy wrapper because using straight template functions
 // doesn't appear to work with function tables 
@@ -1360,7 +1356,6 @@ void CStudioRender::R_StudioSoftwareProcessMesh_Normals( mstudiomesh_t* pmesh, C
 	}
 }
 
-#pragma warning (default:4701)
 
 
 static int r_studioProcess_maxVerts = 100;
@@ -2353,7 +2348,6 @@ int CStudioRender::SortMeshes( int* pIndices, IMaterial **ppMaterials,
 //
 // Returns the number of triangles rendered.
 //-----------------------------------------------------------------------------
-#pragma warning (disable:4189)
 int CStudioRender::R_StudioDrawPoints( IMatRenderContext *pRenderContext, int skin, void /*IClientEntity*/ *pClientEntity, 
 	IMaterial **ppMaterials, int *pMaterialFlags, int boneMask, int lod, ColorMeshInfo_t *pColorMeshes )
 {
@@ -2438,4 +2432,3 @@ int CStudioRender::R_StudioDrawPoints( IMatRenderContext *pRenderContext, int sk
 
 	return numFacesRendered;
 }
-#pragma warning (default:4189)

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2022 Joshua Ashton and Josh Dowell (Slartibarty)
+
 //=================================================================================================
 //
 // A physics object, implemented as a wrapper over JPH::Body
@@ -15,9 +18,6 @@
 #include "vjolt_controller_shadow.h"
 
 #include "vjolt_object.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-------------------------------------------------------------------------------------------------
 
@@ -66,7 +66,7 @@ JoltPhysicsObject::~JoltPhysicsObject()
 
 	// Josh:
 	// Iterate over this in reverse as we could remove a listener from inside this callback
-	for ( int i = m_Listeners.Count() - 1; i >= 0; i-- )
+	for ( int i = std::ssize( m_Listeners ) - 1; i >= 0; i-- )
 		m_Listeners[ i ]->OnJoltPhysicsObjectDestroyed( this );
 
 	m_pEnvironment->RemoveDirtyStaticBody( GetBodyID() );
@@ -1067,12 +1067,12 @@ void JoltPhysicsObject::UpdateEnvironment( JoltPhysicsEnvironment *pEnvironment 
 
 void JoltPhysicsObject::AddListener( IJoltObjectListener *pListener )
 {
-	m_Listeners.AddToTail( pListener );
+	m_Listeners.push_back( pListener );
 }
 
 void JoltPhysicsObject::RemoveListener( IJoltObjectListener *pListener )
 {
-	m_Listeners.FindAndRemove( pListener );
+	ks::erase_first( m_Listeners, pListener );
 }
 
 // Source hands us an isTeleport flag on the interface and we have always ignored it. It marks

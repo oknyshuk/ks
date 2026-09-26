@@ -7,9 +7,6 @@
 #include "cbase.h"
 #include "cs_ammodef.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 void CCSAmmoDef::AddAmmoCost( char const* name, int cost, int buySize )
 {

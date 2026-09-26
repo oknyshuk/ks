@@ -14,9 +14,6 @@
 #include <string.h>
 #include "characterset.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: builds a simple lookup table of a group of important characters
 // Input  : *pParseGroup - pointer to the buffer for the group

@@ -5,6 +5,10 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include <bitset>
+#include <mutex>
+#include "tier1/bit_ops.h"
+#include "tier0/memalloc.h"
 #include "reflect_predmap.h"
 #include "reflect_datamap.h"
 #include "reflect_recvtable.h"
@@ -43,6 +47,7 @@
 #include "cdll_bounded_cvars.h"
 #include "inetchannelinfo.h"
 #include "clientalphaproperty.h"
+#include "tier1/slot_pool.h"
 #include "cellcoord.h"
 #include "gamestringpool.h"
 #include "tier1/callqueue.h"
@@ -50,9 +55,6 @@
 #include "cs_gamerules.h"
 #include "c_cs_player.h"
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 #ifdef INTERPOLATEDVAR_PARANOID_MEASUREMENT
@@ -102,7 +104,8 @@ static bool g_bAbsRecomputationStack[8];
 static unsigned short g_iAbsRecomputationStackPos = 0;
 
 // All the entities that want Interpolate() called on them.
-static CUtlLinkedList<C_BaseEntity*, unsigned short> g_EntityLists[NUM_ENTITY_LISTS];
+// Linked: list order is the Simulate/Interpolate/PreRender order; handles live in C_BaseEntity::m_ListEntry
+static ks::linked_slot_pool<C_BaseEntity*, unsigned short> g_EntityLists[NUM_ENTITY_LISTS];
 static bool s_bImmediateRemovesAllowed = true;
 bool SetImmediateEntityRemovesAllowed( bool bAllowed )
 {
@@ -128,14 +131,8 @@ CPredictableList *GetPredictables( int nSlot )
 //-----------------------------------------------------------------------------
 void CPredictableList::AddToPredictableList( C_BaseEntity *add )
 {
-	// This is a hack to remap slot to index
-	if ( m_Predictables.Find( add ) != m_Predictables.InvalidIndex() )
-	{
-		return;
-	}
-
-	// Add to general sorted list
-	m_Predictables.Insert( add );
+	// Add to general sorted list, unless an entity with this entindex is already there
+	m_Predictables.insert( add );
 }
 
 //-----------------------------------------------------------------------------
@@ -144,7 +141,7 @@ void CPredictableList::AddToPredictableList( C_BaseEntity *add )
 //-----------------------------------------------------------------------------
 void CPredictableList::RemoveFromPredictablesList( C_BaseEntity *remove )
 {
-	m_Predictables.FindAndRemove( remove );
+	ks::erase_first( m_Predictables, remove );
 }
 
 //-----------------------------------------------------------------------------
@@ -198,7 +195,7 @@ public:
 	virtual int		Count();
 	IClientRenderable *Get( int index );
 private:
-	CUtlVector< ClientEntityHandle_t > m_Recording;
+	std::vector< ClientEntityHandle_t > m_Recording;
 };
 
 static CRecordingList g_RecordingList;
@@ -212,13 +209,13 @@ IRecordingList *recordinglist = &g_RecordingList;
 void CRecordingList::AddToList( ClientEntityHandle_t add )
 {
 	// This is a hack to remap slot to index
-	if ( m_Recording.Find( add ) != m_Recording.InvalidIndex() )
+	if ( ks::find_index( m_Recording, add ) != -1 )
 	{
 		return;
 	}
 
 	// Add to general list
-	m_Recording.AddToTail( add );
+	m_Recording.push_back( add );
 }
 
 //-----------------------------------------------------------------------------
@@ -227,7 +224,7 @@ void CRecordingList::AddToList( ClientEntityHandle_t add )
 //-----------------------------------------------------------------------------
 void CRecordingList::RemoveFromList( ClientEntityHandle_t remove )
 {
-	m_Recording.FindAndRemove( remove );
+	ks::erase_first( m_Recording, remove );
 }
 
 //-----------------------------------------------------------------------------
@@ -246,7 +243,7 @@ IClientRenderable *CRecordingList::Get( int index )
 //-----------------------------------------------------------------------------
 int CRecordingList::Count()
 {
-	return m_Recording.Count();
+	return std::ssize( m_Recording );
 }
 
 // Helper object implementation
@@ -689,8 +686,8 @@ void GetInterpolatedVarTimeRange( CInterpolatedVar<T> *pVar, float &flMin, float
 		if ( !pVar->GetHistoryValue( i, changetime ) )
 			return;
 
-		flMin = MIN( flMin, changetime );
-		flMax = MAX( flMax, changetime );
+		flMin = std::min( flMin, changetime );
+		flMax = std::max( flMax, changetime );
 		i = pVar->GetNext( i );
 	}
 }
@@ -790,7 +787,7 @@ void C_BaseEntity::Interp_SetupMappings( VarMapping_t *map )
 	if( !map )
 		return;
 
-	int c = map->m_Entries.Count();
+	int c = std::ssize( map->m_Entries );
 	for ( int i = 0; i < c; i++ )
 	{
 		VarMapEntry_t *e = &map->m_Entries[ i ];
@@ -810,7 +807,7 @@ void C_BaseEntity::Interp_RestoreToLastNetworked( VarMapping_t *map, int flags )
 	Vector oldOrigin = GetLocalOrigin();
 	QAngle oldAngles = GetLocalAngles();
 
-	int c = map->m_Entries.Count();
+	int c = std::ssize( map->m_Entries );
 	for ( int i = 0; i < c; i++ )
 	{
 		VarMapEntry_t *e = &map->m_Entries[ i ];
@@ -831,7 +828,7 @@ void C_BaseEntity::Interp_UpdateInterpolationAmounts( VarMapping_t *map )
 	if( !map )
 		return;
 
-	int c = map->m_Entries.Count();
+	int c = std::ssize( map->m_Entries );
 	for ( int i = 0; i < c; i++ )
 	{
 		VarMapEntry_t *e = &map->m_Entries[ i ];
@@ -1576,10 +1573,10 @@ bool C_BaseEntity::IsCachedRenderBoundsDisabled() const
 void C_BaseEntity::UpdateVisibility()
 {
 #if MAX_SPLITSCREEN_PLAYERS > 1
-	uint32 nPreviousValue = m_VisibilityBits.GetDWord( 0 );
+	uint32 nPreviousValue = ks::get_word( m_VisibilityBits, 0 );
 #endif
 
-	m_VisibilityBits.ClearAll();
+	m_VisibilityBits.reset();
 	
 	// NOTE: Do not reactivate this. We need to use ShouldSuppressForSplitScreenPlayer
 	// for make portals work. Make sure ShouldDraw always returns true
@@ -1602,7 +1599,7 @@ void C_BaseEntity::UpdateVisibility()
 			bool bShouldSkip = ShouldSuppressForSplitScreenPlayer( hh );
 			if ( !bShouldSkip )
 			{
-				m_VisibilityBits.Set( hh );
+				m_VisibilityBits.set( hh );
 			}
 		}
 
@@ -1615,7 +1612,7 @@ void C_BaseEntity::UpdateVisibility()
 
 
 #if MAX_SPLITSCREEN_PLAYERS > 1
-	if ( nPreviousValue != m_VisibilityBits.GetDWord( 0 ) )
+	if ( nPreviousValue != ks::get_word( m_VisibilityBits, 0 ) )
 	{
 		OnSplitscreenRenderingChanged();
 	}
@@ -1635,7 +1632,7 @@ void C_BaseEntity::UpdateVisibility()
 
 bool C_BaseEntity::ShouldDrawForSplitScreenUser( int nSlot )
 { 
-	return m_VisibilityBits.IsBitSet( nSlot );
+	return m_VisibilityBits[nSlot];
 }
 
 
@@ -2648,7 +2645,7 @@ void C_BaseEntity::LinkChild( C_BaseEntity *pParent, C_BaseEntity *pChild )
 	Interp_HierarchyUpdateInterpolationAmounts();
 }
 
-CUtlVector< C_BaseEntity * >	g_AimEntsList;
+std::vector< C_BaseEntity * >	g_AimEntsList;
 
 
 //-----------------------------------------------------------------------------
@@ -2673,7 +2670,7 @@ void C_BaseEntity::MarkAimEntsDirty()
 	//
 	// Then we will iterate over the loop a second time and call CalcAbsPosition on them,
 	int i;
-	int c = g_AimEntsList.Count();
+	int c = std::ssize( g_AimEntsList );
 	for ( i = 0; i < c; ++i )
 	{
 		C_BaseEntity *pEnt = g_AimEntsList[ i ];
@@ -2690,7 +2687,7 @@ void C_BaseEntity::CalcAimEntPositions()
 {
 	VPROF("CalcAimEntPositions");
 	int i;
-	int c = g_AimEntsList.Count();
+	int c = std::ssize( g_AimEntsList );
 	for ( i = 0; i < c; ++i )
 	{
 		C_BaseEntity *pEnt = g_AimEntsList[ i ];
@@ -2710,7 +2707,7 @@ void C_BaseEntity::AddToAimEntsList()
 	if ( m_AimEntsListHandle != INVALID_AIMENTS_LIST_HANDLE )
 		return;
 
-	m_AimEntsListHandle = g_AimEntsList.AddToTail( this );
+	m_AimEntsListHandle = std::ssize( g_AimEntsList ); g_AimEntsList.push_back( this );
 }
 
 void C_BaseEntity::RemoveFromAimEntsList()
@@ -2721,7 +2718,7 @@ void C_BaseEntity::RemoveFromAimEntsList()
 		return;
 	}
 
-	unsigned int c = g_AimEntsList.Count();
+	unsigned int c = std::ssize( g_AimEntsList );
 
 	Assert( m_AimEntsListHandle < c );
 
@@ -2730,13 +2727,13 @@ void C_BaseEntity::RemoveFromAimEntsList()
 	if ( last == m_AimEntsListHandle )
 	{
 		// Just wipe the final entry
-		g_AimEntsList.FastRemove( last );
+		ks::swap_remove( g_AimEntsList, last );
 	}
 	else
 	{
 		C_BaseEntity *lastEntity = g_AimEntsList[ last ];
 		// Remove the last entry
-		g_AimEntsList.FastRemove( last );
+		ks::swap_remove( g_AimEntsList, last );
 
 		// And update it's handle to point to this slot.
 		lastEntity->m_AimEntsListHandle = m_AimEntsListHandle;
@@ -3244,7 +3241,7 @@ void C_BaseEntity::OnStoreLastNetworkedValue()
 		MoveToLastReceivedPosition( true );
 	}
 
-	int c = m_VarMap.m_Entries.Count();
+	int c = std::ssize( m_VarMap.m_Entries );
 	for ( int i = 0; i < c; i++ )
 	{
 		VarMapEntry_t *e = &m_VarMap.m_Entries[ i ];
@@ -3279,7 +3276,7 @@ void C_BaseEntity::OnLatchInterpolatedVariables( int flags )
 
 	PREDICTION_TRACKVALUECHANGESCOPE_ENTITY( this, bUpdateLastNetworkedValue ? "latch+net" : "latch" );
 
-	int c = m_VarMap.m_Entries.Count();
+	int c = std::ssize( m_VarMap.m_Entries );
 	for ( int i = 0; i < c; i++ )
 	{
 		VarMapEntry_t *e = &m_VarMap.m_Entries[ i ];
@@ -3550,7 +3547,7 @@ bool C_BaseEntity::ShouldInterpolate()
 
 	// always interpolate if visible
 	if ( INVALID_CLIENT_RENDER_HANDLE != m_hRender &&
-		!m_VisibilityBits.IsAllClear() )
+		m_VisibilityBits.any() )
 	{
 		return true;
 	}
@@ -3572,11 +3569,11 @@ bool C_BaseEntity::ShouldInterpolate()
 
 void C_BaseEntity::ProcessTeleportList()
 {
-	int iNext;
-	for ( int iCur=g_EntityLists[ENTITY_LIST_TELEPORT].Head(); iCur != g_EntityLists[ENTITY_LIST_TELEPORT].InvalidIndex(); iCur=iNext )
+	unsigned short iNext;
+	for ( unsigned short iCur = g_EntityLists[ENTITY_LIST_TELEPORT].head(); iCur != g_EntityLists[ENTITY_LIST_TELEPORT].invalid; iCur = iNext )
 	{
-		iNext = g_EntityLists[ENTITY_LIST_TELEPORT].Next( iCur );
-		C_BaseEntity *pCur = g_EntityLists[ENTITY_LIST_TELEPORT].Element(iCur);
+		iNext = g_EntityLists[ENTITY_LIST_TELEPORT].next( iCur );
+		C_BaseEntity *pCur = g_EntityLists[ENTITY_LIST_TELEPORT][iCur];
 
 		bool teleport = pCur->Teleported();
 		bool ef_nointerp = pCur->IsEffectActive(EF_NOINTERP);
@@ -3641,11 +3638,11 @@ void C_BaseEntity::ProcessInterpolatedList()
 	CheckInterpolatedVarParanoidMeasurement();
 
 	// Interpolate the minimal set of entities that need it.
-	int iNext;
-	for ( int iCur=g_EntityLists[ENTITY_LIST_INTERPOLATE].Head(); iCur != g_EntityLists[ENTITY_LIST_INTERPOLATE].InvalidIndex(); iCur=iNext )
+	unsigned short iNext;
+	for ( unsigned short iCur = g_EntityLists[ENTITY_LIST_INTERPOLATE].head(); iCur != g_EntityLists[ENTITY_LIST_INTERPOLATE].invalid; iCur = iNext )
 	{
-		iNext = g_EntityLists[ENTITY_LIST_INTERPOLATE].Next( iCur );
-		C_BaseEntity *pCur = g_EntityLists[ENTITY_LIST_INTERPOLATE].Element(iCur);
+		iNext = g_EntityLists[ENTITY_LIST_INTERPOLATE].next( iCur );
+		C_BaseEntity *pCur = g_EntityLists[ENTITY_LIST_INTERPOLATE][iCur];
 		
 		pCur->m_bReadyToDraw = pCur->Interpolate( gpGlobals->curtime );
 	}
@@ -4049,8 +4046,6 @@ bool C_BaseEntity::SnatchModelInstance( C_BaseEntity *pToEntity )
 	return true;
 }
 
-#include "tier0/memdbgoff.h"
-
 //-----------------------------------------------------------------------------
 // C_BaseEntity new/delete
 // All fields in the object are all initialized to 0.
@@ -4105,8 +4100,6 @@ void C_BaseEntity::operator delete( void *pMem )
 	// get the engine to free the memory
 	MemAlloc_FreeAligned( pMem );
 }
-
-#include "tier0/memdbgon.h"
 
 //========================================================================================
 // TEAM HANDLING
@@ -4204,9 +4197,8 @@ void C_BaseEntity::AddToLeafSystem( bool bRenderWithViewModels )
 //-----------------------------------------------------------------------------
 void C_BaseEntity::CreateShadow()
 {
-	CBitVec< MAX_SPLITSCREEN_PLAYERS > bvPrevBits;
-	bvPrevBits.Copy( m_ShadowBits );
-	m_ShadowBits.ClearAll();
+	const std::bitset< MAX_SPLITSCREEN_PLAYERS > bvPrevBits = m_ShadowBits;
+	m_ShadowBits.reset();
 
 	ShadowType_t typeSeen = SHADOWS_NONE;
 	ShadowType_t shadowType[ MAX_SPLITSCREEN_PLAYERS ];
@@ -4216,7 +4208,7 @@ void C_BaseEntity::CreateShadow()
 		shadowType[ hh ]= ShadowCastType();
 		if ( shadowType[ hh ] != SHADOWS_NONE )
 		{
-			m_ShadowBits.Set( hh );
+			m_ShadowBits.set( hh );
 
 			// This check is to make sure that if the shadow gets drawn for an entity that it's always the 
 			//  same type for each split screen viewport (or SHADOWS_NONE if not visible in one of the viewports!)
@@ -4228,13 +4220,13 @@ void C_BaseEntity::CreateShadow()
 		}
 	}
 
-	if ( m_ShadowBits.IsAllClear() || 
-		!m_ShadowBits.Compare( bvPrevBits ) )
+	if ( m_ShadowBits.none() || 
+		m_ShadowBits != bvPrevBits )
 	{
 		DestroyShadow();
 	}
 	
-	if ( !m_ShadowBits.IsAllClear() )
+	if ( m_ShadowBits.any() )
 	{
 		if ( m_ShadowHandle == CLIENTSHADOW_INVALID_HANDLE )
 		{
@@ -4250,7 +4242,7 @@ void C_BaseEntity::CreateShadow()
 		}
 		else
 		{
-			Assert( m_ShadowBits.Compare( bvPrevBits ) );
+			Assert( m_ShadowBits == bvPrevBits );
 		}
 	}
 }
@@ -4670,7 +4662,7 @@ void C_BaseEntity::CalcAbsolutePosition( )
 		return;
 	}
 
-	AUTO_LOCK( m_CalcAbsolutePositionMutex );
+	std::scoped_lock lock( m_CalcAbsolutePositionMutex );
 
 	if ((m_iEFlags & EFL_DIRTY_ABSTRANSFORM) == 0) // need second check in event another thread grabbed mutex and did the calculation
 	{
@@ -4738,7 +4730,7 @@ void C_BaseEntity::CalcAbsoluteVelocity()
 	if ((m_iEFlags & EFL_DIRTY_ABSVELOCITY ) == 0)
 		return;
 
-	AUTO_LOCK( m_CalcAbsoluteVelocityMutex );
+	std::scoped_lock lock( m_CalcAbsoluteVelocityMutex );
 
 	if ((m_iEFlags & EFL_DIRTY_ABSVELOCITY) == 0) // need second check in event another thread grabbed mutex and did the calculation
 	{
@@ -5824,7 +5816,7 @@ void *C_BaseEntity::GetFirstPredictedFrame( int framenumber )
 //-----------------------------------------------------------------------------
 void C_BaseEntity::GetUnacknowledgedPredictedFrameRange( int &iStart, int &iEnd )
 {
-	iStart = MAX( s_nIncomingPacketCommandsAcknowledged, 0 );
+	iStart = std::max( s_nIncomingPacketCommandsAcknowledged, 0 );
 	iEnd = m_nIntermediateDataCount;
 }
 
@@ -5876,7 +5868,7 @@ int C_BaseEntity::GetIntermediateDataSize( void )
 	Assert( size > 0 );	
 
 	// At least 4 bytes to avoid some really bad stuff
-	return MAX( size, 4 );
+	return std::max( size, 4 );
 #else
 	return 0;
 #endif
@@ -6177,7 +6169,7 @@ void C_BaseEntity::EstimateAbsVelocity( Vector& vel )
 void C_BaseEntity::Interp_Reset( VarMapping_t *map )
 {
 	PREDICTION_TRACKVALUECHANGESCOPE_ENTITY( this, "reset" );
-	int c = map->m_Entries.Count();
+	int c = std::ssize( map->m_Entries );
 	for ( int i = 0; i < c; i++ )
 	{
 		VarMapEntry_t *e = &map->m_Entries[ i ];
@@ -6535,8 +6527,8 @@ bool C_BaseEntity::IsSpottedBy( int nPlayerIndex )
 	if ( nPlayerIndex >= 0 && nPlayerIndex <= MAX_PLAYERS )
 	{
 		int maskBitIndex = nPlayerIndex;
-		int maskIndex = BitVec_Int( maskBitIndex );
-		return ( m_bSpottedByMask[ maskIndex ] & BitVec_Bit( maskBitIndex ) ) != 0;
+		int maskIndex = maskBitIndex >> 5;
+		return ( m_bSpottedByMask[ maskIndex ] & ( 1u << ( maskBitIndex & 31 ) ) ) != 0;
 	}
 	return false;
 }
@@ -6575,8 +6567,8 @@ void C_BaseEntity::SetIsSpottedBy( int nPlayerIndex )
 	if ( nPlayerIndex >= 0 && nPlayerIndex < MAX_PLAYERS )
 	{
 		int maskBitIndex = nPlayerIndex;
-		int maskIndex = BitVec_Int( maskBitIndex );
-		m_bSpottedByMask.Set( maskIndex, m_bSpottedByMask.Get( maskIndex ) | BitVec_Bit( maskBitIndex ) );
+		int maskIndex = maskBitIndex >> 5;
+		m_bSpottedByMask.Set( maskIndex, m_bSpottedByMask.Get( maskIndex ) | ( 1u << ( maskBitIndex & 31 ) ) );
 	}
 }
 
@@ -6585,7 +6577,7 @@ void C_BaseEntity::AddToEntityList( entity_list_ids_t listId )
 	Assert(listId < NUM_ENTITY_LISTS);
 	if ( m_ListEntry[listId] == 0xFFFF )
 	{
-		m_ListEntry[listId] = g_EntityLists[listId].AddToTail( this );
+		m_ListEntry[listId] = g_EntityLists[listId].emplace_back( this );
 	}
 }
 
@@ -6595,7 +6587,7 @@ void C_BaseEntity::RemoveFromEntityList( entity_list_ids_t listId )
 	Assert( listId < NUM_ENTITY_LISTS );
 	if ( m_ListEntry[listId] != 0xFFFF )
 	{
-		g_EntityLists[listId].Remove( m_ListEntry[listId] );
+		g_EntityLists[listId].erase( m_ListEntry[listId] );
 		m_ListEntry[listId] = 0xFFFF;
 	}
 }
@@ -6605,7 +6597,7 @@ void C_BaseEntity::AddVar( void *data, IInterpolatedVar *watcher, int type, bool
 {
 	// Only add it if it hasn't been added yet.
 	bool bAddIt = true;
-	for ( int i=0; i < m_VarMap.m_Entries.Count(); i++ )
+	for ( int i=0; i < std::ssize( m_VarMap.m_Entries ); i++ )
 	{
 		if ( m_VarMap.m_Entries[i].watcher == watcher )
 		{
@@ -6636,11 +6628,11 @@ void C_BaseEntity::AddVar( void *data, IInterpolatedVar *watcher, int type, bool
 		map.m_bNeedsToInterpolate = true;
 		if ( type & EXCLUDE_AUTO_INTERPOLATE )
 		{
-			m_VarMap.m_Entries.AddToTail( map );
+			m_VarMap.m_Entries.push_back( map );
 		}
 		else
 		{
-			m_VarMap.m_Entries.AddToHead( map );
+			m_VarMap.m_Entries.insert( m_VarMap.m_Entries.begin(), map );
 			++m_VarMap.m_nInterpolatedEntries;
 		}
 	}
@@ -6655,14 +6647,14 @@ void C_BaseEntity::AddVar( void *data, IInterpolatedVar *watcher, int type, bool
 
 void C_BaseEntity::RemoveVar( void *data, bool bAssert )
 {
-	for ( int i=0; i < m_VarMap.m_Entries.Count(); i++ )
+	for ( int i=0; i < std::ssize( m_VarMap.m_Entries ); i++ )
 	{
 		if ( m_VarMap.m_Entries[i].data == data )
 		{
 			if ( !( m_VarMap.m_Entries[i].type & EXCLUDE_AUTO_INTERPOLATE ) )
 				--m_VarMap.m_nInterpolatedEntries;
 
-			m_VarMap.m_Entries.Remove( i );
+			m_VarMap.m_Entries.erase( m_VarMap.m_Entries.begin() + i );
 			return;
 		}
 	}
@@ -6723,11 +6715,11 @@ void C_BaseEntity::SimulateEntities()
 
 	if ( !report_cliententitysim.GetBool() )
 	{
-		int iNext;
-		for ( int iCur = g_EntityLists[ENTITY_LIST_SIMULATE].Head(); iCur != g_EntityLists[ENTITY_LIST_SIMULATE].InvalidIndex(); iCur = iNext )
+		unsigned short iNext;
+		for ( unsigned short iCur = g_EntityLists[ENTITY_LIST_SIMULATE].head(); iCur != g_EntityLists[ENTITY_LIST_SIMULATE].invalid; iCur = iNext )
 		{
-			iNext = g_EntityLists[ENTITY_LIST_SIMULATE].Next( iCur );
-			C_BaseEntity *pCur = g_EntityLists[ENTITY_LIST_SIMULATE].Element(iCur);
+			iNext = g_EntityLists[ENTITY_LIST_SIMULATE].next( iCur );
+			C_BaseEntity *pCur = g_EntityLists[ENTITY_LIST_SIMULATE][iCur];
 			if ( pCur->IsEFlagSet( EFL_KILLME ) )
 				continue;
 
@@ -6748,11 +6740,11 @@ void C_BaseEntity::SimulateEntities()
 	{
 		CFastTimer fastTimer;
 	
-		int iNext;
-		for ( int iCur = g_EntityLists[ENTITY_LIST_SIMULATE].Head(); iCur != g_EntityLists[ENTITY_LIST_SIMULATE].InvalidIndex(); iCur = iNext )
+		unsigned short iNext;
+		for ( unsigned short iCur = g_EntityLists[ENTITY_LIST_SIMULATE].head(); iCur != g_EntityLists[ENTITY_LIST_SIMULATE].invalid; iCur = iNext )
 		{
-			iNext = g_EntityLists[ENTITY_LIST_SIMULATE].Next( iCur );
-			C_BaseEntity *pCur = g_EntityLists[ENTITY_LIST_SIMULATE].Element(iCur);
+			iNext = g_EntityLists[ENTITY_LIST_SIMULATE].next( iCur );
+			C_BaseEntity *pCur = g_EntityLists[ENTITY_LIST_SIMULATE][iCur];
 			if ( pCur->IsEFlagSet( EFL_KILLME ) )
 				continue;
 
@@ -6785,14 +6777,14 @@ void C_BaseEntity::SimulateEntities()
 // static method
 void C_BaseEntity::PurgeRemovedEntities()
 {
-	int iNext;
-	for ( int iCur = g_EntityLists[ENTITY_LIST_DELETE].Head(); iCur != g_EntityLists[ENTITY_LIST_DELETE].InvalidIndex(); iCur = iNext )
+	unsigned short iNext;
+	for ( unsigned short iCur = g_EntityLists[ENTITY_LIST_DELETE].head(); iCur != g_EntityLists[ENTITY_LIST_DELETE].invalid; iCur = iNext )
 	{
-		iNext = g_EntityLists[ENTITY_LIST_DELETE].Next( iCur );
-		C_BaseEntity *pCur = g_EntityLists[ENTITY_LIST_DELETE].Element(iCur);
+		iNext = g_EntityLists[ENTITY_LIST_DELETE].next( iCur );
+		C_BaseEntity *pCur = g_EntityLists[ENTITY_LIST_DELETE][iCur];
 		pCur->Release();
 	}
-	g_EntityLists[ENTITY_LIST_DELETE].RemoveAll();
+	g_EntityLists[ENTITY_LIST_DELETE].clear();
 }
 
 // static method
@@ -6800,11 +6792,11 @@ void C_BaseEntity::PurgeRemovedEntities()
 void C_BaseEntity::PreRenderEntities( int nSplitScreenPlayerSlot )
 {
 	MDLCACHE_CRITICAL_SECTION();
-	int iNext;
-	for ( int iCur = g_EntityLists[ENTITY_LIST_PRERENDER].Head(); iCur != g_EntityLists[ENTITY_LIST_PRERENDER].InvalidIndex(); iCur = iNext )
+	unsigned short iNext;
+	for ( unsigned short iCur = g_EntityLists[ENTITY_LIST_PRERENDER].head(); iCur != g_EntityLists[ENTITY_LIST_PRERENDER].invalid; iCur = iNext )
 	{
-		iNext = g_EntityLists[ENTITY_LIST_PRERENDER].Next( iCur );
-		C_BaseEntity *pCur = g_EntityLists[ENTITY_LIST_PRERENDER].Element(iCur);
+		iNext = g_EntityLists[ENTITY_LIST_PRERENDER].next( iCur );
+		C_BaseEntity *pCur = g_EntityLists[ENTITY_LIST_PRERENDER][iCur];
 
 #ifdef _DEBUG
 		s_nSuppressChanges = ENTITY_LIST_PRERENDER;

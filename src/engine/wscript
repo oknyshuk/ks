@@ -79,7 +79,6 @@ def build(bld):
         "tmessage.cpp",
         "baseclientstate.cpp",
         "console.cpp",
-        "render_pch.cpp",
         "decals.cpp",
         "disp.cpp",
         "disp_interface.cpp",
@@ -92,7 +91,6 @@ def build(bld):
         "filemapping.cpp",
         "modelloader.cpp",
         "r_decal.cpp",
-        "server_pch.cpp",
         "sv_ipratelimit.cpp",
         "sv_rcon.cpp",
         "sv_steamauth.cpp",
@@ -231,7 +229,6 @@ def build(bld):
         "snd_io.cpp",
         "EngineSoundServer.cpp",
         "audio/private/voice_wavefile.cpp",
-        "audio/audio_pch.cpp",
         "audio/private/vox.cpp",
         "audio/private/snd_stubs.cpp",
         "serializedentity.cpp",
@@ -241,7 +238,6 @@ def build(bld):
         source += ["cl_null.cpp"]
     else:
         source += [
-            "client_pch.cpp",
             "cl_rcon.cpp",
             "rpt_engine.cpp",
             "cl_steamauth.cpp",

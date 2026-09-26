@@ -2,39 +2,14 @@
 #ifndef FINITE_ELEMENT_MODEL_BUILDER_HDR
 #define FINITE_ELEMENT_MODEL_BUILDER_HDR
 
+#include <memory>
 #include "tier1/utlvector.h"
-#include "tier1/utlhashtable.h"
-#include "tier1/utlsortvector.h"
+#include <unordered_map>
+#include <flat_set>
 #include "mathlib/femodel.h"
-#include "tier1/utlbufferstrider.h"
+#include "tier1/buffer_strider.h"
 
 
-template <typename T>
-class CUtlVectorOfPointers: public CUtlVector< T * >
-{
-public:
-	~CUtlVectorOfPointers( )
-	{
-		Purge( );
-	}
-	template <typename Functor>
-	void SetCountAndInit( int nCount, Functor fn )
-	{
-		CUtlVector< T * >::SetCount( nCount );
-		for ( int i = 0; i < nCount; ++i )
-		{
-			CUtlVector< T * >::Element( i ) = fn( i );
-		}
-	}
-	void Purge( )
-	{
-		for ( int i = 0; i < CUtlVector< T * >::Count( ); ++i )
-		{
-			delete ( *this )[ i ];
-		}
-		CUtlVector< T * >::Purge( );
-	}
-};
 
 
 
@@ -57,7 +32,7 @@ public:
 		m_bNeedBacksolvedBasesOnly = false;
 	}
 
-	typedef CUtlVectorFixedGrowable< FeFitWeight_t, 8 > FitWeightArray_t;
+	typedef ks::small_vector< FeFitWeight_t, 8 > FitWeightArray_t;
 
 	void EnableUnitlessDamping( bool bEnableUnitlessDamping ) { m_bUnitlessDamping = bEnableUnitlessDamping;  }
 	void EnableIdentityCtrlOrder( ) { m_bIdentityCtrlOrder = true; }
@@ -72,7 +47,7 @@ public:
 	Vector TriNormal( uint nNode0, uint nNode1, uint nNode2 );
 	void AddBendCurvature( float k )
 	{
-		for ( int i = 0; i < m_KelagerBends.Count( ); ++i )
+		for ( int i = 0; i < std::ssize( m_KelagerBends ); ++i )
 		{
 			FeKelagerBend_t &kbend = m_KelagerBends[ i ];
 			float flMinSide = FLT_MAX;
@@ -89,7 +64,7 @@ public:
 			kbend.flHeight0 += flMinSide * k;
 		}
 
-		for ( int i = 0; i < m_AxialEdges.Count( ); ++i )
+		for ( int i = 0; i < std::ssize( m_AxialEdges ); ++i )
 		{
 			FeAxialEdgeBend_t &edge = m_AxialEdges[ i ];
 			Vector f01 = m_Nodes[ edge.nNode[ 0 ] ].transform.m_vPosition * edge.te + m_Nodes[ edge.nNode[ 1 ] ].transform.m_vPosition * ( 1 - edge.te );
@@ -106,9 +81,9 @@ public:
 	void BuildOldFeEdges( );
 	void BuildKelagerBends( );
 	void BuildAndSortRods( float flCurvatureAngle, bool bTriangulate );
-	void BuildRod( float flCurvatureAngle, uint v0, uint v1, uint nElem0, uint nElem1, uint nEdge0, uint nEdge1, CUtlHashtable< uint32, uint32 > &edgeToRod );
-	void BuildQuads( CUtlVector< FeQuad_t > &quads, bool bSkipTris );
-	void BuildTris( CUtlVector< FeTri_t > &quads, bool bTriangulate );
+	void BuildRod( float flCurvatureAngle, uint v0, uint v1, uint nElem0, uint nElem1, uint nEdge0, uint nEdge1, std::unordered_map< uint32, uint32 > &edgeToRod );
+	void BuildQuads( std::vector< FeQuad_t > &quads, bool bSkipTris );
+	void BuildTris( std::vector< FeTri_t > &quads, bool bTriangulate );
 	void BuildNodeSlack( float flSlackMultiplier );
 	void BuildFeEdgeDesc( );
 	void BuildInvMassesAndSortNodes( );
@@ -118,21 +93,21 @@ public:
 	void BuildRopes( );
 	void BuildFreeNodes( MbaContext_t &context );
 	void BuildCtrlOffsets( );
-	void BuildNodeFollowers( CUtlVector< FeFollowNode_t > &nodeFollowers );
-	uint BuildCollisionSpheres( CUtlVector< FeCollisionSphere_t > &collisionSpheres );
-	void BuildCollisionPlanes( CUtlVector< FeCollisionPlane_t > &collisionPlanes );
-	void BuildWorldCollisionNodes( CUtlVector< FeWorldCollisionParams_t > &worldCollisionParams, CUtlVector< uint16 > &worldCollisionNodes );
+	void BuildNodeFollowers( std::vector< FeFollowNode_t > &nodeFollowers );
+	uint BuildCollisionSpheres( std::vector< FeCollisionSphere_t > &collisionSpheres );
+	void BuildCollisionPlanes( std::vector< FeCollisionPlane_t > &collisionPlanes );
+	void BuildWorldCollisionNodes( std::vector< FeWorldCollisionParams_t > &worldCollisionParams, std::vector< uint16 > &worldCollisionNodes );
 	void BuildFitMatrices( MbaContext_t &context );
 	void RemoveStandaloneNodeBases( MbaContext_t &context );
 	Vector ComputeCenter( const FitWeightArray_t &weights );
 	void CheckIdentityCtrlOrder( );
-	void BuildSprings( CUtlVector< FeSpringIntegrator_t > &springs );
+	void BuildSprings( std::vector< FeSpringIntegrator_t > &springs );
 	void ValidateBases( );
-	void PrintNodeTree( uint nNode, const CUtlString &prefix );
+	void PrintNodeTree( uint nNode, const std::string &prefix );
 
 	void CleanupElements();
-	void RecomputeMasses( CUtlVector< float >& nodeMass );
-	void BalanceGlobalMassMultipliers( CUtlVector< float >& nodeMass );
+	void RecomputeMasses( std::vector< float >& nodeMass );
+	void BalanceGlobalMassMultipliers( std::vector< float >& nodeMass );
 
 	int CountSimulatedNodesIn( const FeRodConstraint_t & rod );
 	int CountSimulatedNodesIn( const BuildElem_t& elem );
@@ -142,7 +117,7 @@ public:
 	uint GetDampingFlags( )const
 	{
 		uint nFlags = 0;
-		for ( int i = 0; i < m_Nodes.Count( ); ++i )
+		for ( int i = 0; i < std::ssize( m_Nodes ); ++i )
 		{
 			nFlags |= m_Nodes[ i ].GetDampingFlags( );
 		}
@@ -153,20 +128,20 @@ public:
 
 	struct MbaContext_t
 	{
-		CUtlVector< FeQuad_t > quads;
-		CUtlVector< FeTri_t > tris;
-		CUtlVectorAligned< FeSimdRodConstraint_t > simdRods;
-		CUtlVectorAligned< FeSimdQuad_t > simdQuads[ 3 ];
-		CUtlVectorAligned< FeSimdTri_t > simdTris[ 3 ];
-		CUtlVectorAligned< FeSimdNodeBase_t > simdBases;
-		CUtlVector< FeSpringIntegrator_t > springs;
-		CUtlVectorAligned< FeSimdSpringIntegrator_t > simdSprings;
-		CUtlVector< FeFollowNode_t > nodeFollowers;;
-		CUtlVector< FeCollisionSphere_t > collisionSpheres;
-		CUtlVector< FeCollisionPlane_t > collisionPlanes;
-		CUtlVector< FeWorldCollisionParams_t > worldCollisionParams;
-		CUtlVector< uint16 > worldCollisionNodes;
-		CUtlVectorAligned< FeFitMatrix_t > fitMatrices;
+		std::vector< FeQuad_t > quads;
+		std::vector< FeTri_t > tris;
+		std::vector< FeSimdRodConstraint_t > simdRods;
+		std::vector< FeSimdQuad_t > simdQuads[ 3 ];
+		std::vector< FeSimdTri_t > simdTris[ 3 ];
+		std::vector< FeSimdNodeBase_t > simdBases;
+		std::vector< FeSpringIntegrator_t > springs;
+		std::vector< FeSimdSpringIntegrator_t > simdSprings;
+		std::vector< FeFollowNode_t > nodeFollowers;;
+		std::vector< FeCollisionSphere_t > collisionSpheres;
+		std::vector< FeCollisionPlane_t > collisionPlanes;
+		std::vector< FeWorldCollisionParams_t > worldCollisionParams;
+		std::vector< uint16 > worldCollisionNodes;
+		std::vector< FeFitMatrix_t > fitMatrices;
 		FitWeightArray_t fitWeights;
 		uint m_nFitMatrices1;
 		uint m_nFitMatrices2;
@@ -187,18 +162,18 @@ protected:
 	{
 		if ( refCtrl >= 0 )
 		{
-			Assert( refCtrl < m_CtrlToNode.Count() );
+			Assert( refCtrl < std::ssize( m_CtrlToNode ) );
 			refCtrl = m_CtrlToNode[ refCtrl ];
 		}
 	}
 	void ConvertCtrlToNode( uint16 &refCtrl )
 	{
-		Assert( int( refCtrl ) < m_CtrlToNode.Count() );
+		Assert( int( refCtrl ) < std::ssize( m_CtrlToNode ) );
 		refCtrl = m_CtrlToNode[ refCtrl ];
 	}
 	void ConvertCtrlToNode( uint32 &refCtrl )
 	{
-		Assert( int( refCtrl ) < m_CtrlToNode.Count() );
+		Assert( int( refCtrl ) < std::ssize( m_CtrlToNode ) );
 		refCtrl = m_CtrlToNode[ refCtrl ];
 	}
 	float GetRank( const FeAxialEdgeBend_t &bend )const
@@ -385,8 +360,8 @@ public:
 
 public:
 	// this is to precompute orientations of bones that we have the freedom to orient
-	static FeNodeBase_t BuildNodeBasisFast( const CUtlVectorAligned< BuildNode_t > &nodes, uint nNode, const CUtlSortVector< int > &neighbors );
-	static void BuildNodeBases( const CUtlVectorAligned< BuildNode_t > &nodes, const CUtlVector< BuildElem_t > &elems, const CUtlVector< FeNodeBase_t > &presetNodeBases, CUtlVector< FeNodeBase_t > &nodeBases, CUtlVectorOfPointers< CUtlSortVector< int > > &neighbors );
+	static FeNodeBase_t BuildNodeBasisFast( const std::vector< BuildNode_t > &nodes, uint nNode, const std::flat_set< int > &neighbors );
+	static void BuildNodeBases( const std::vector< BuildNode_t > &nodes, const std::vector< BuildElem_t > &elems, const std::vector< FeNodeBase_t > &presetNodeBases, std::vector< FeNodeBase_t > &nodeBases, std::vector< std::flat_set< int > > &neighbors );
 	void BuildNodeBases();
 	FeNodeBase_t BuildNodeBasisFast( uint nNode );
 public:
@@ -395,44 +370,44 @@ public:
 // 	{
 // 	public:
 // 		int m_nStaticWeights; // should normally be 0,1 or 2. If 3+ static nodes influence this fit matrix, maybe we should only keep those static node influences and say we have 0 static nodes, so that it back-soves to static nodes only
-// 		CUtlVector< InfluenceWeight_t > m_Weights;
+// 		std::vector< InfluenceWeight_t > m_Weights;
 // 	};
 
 
 
 	// generated
-	CUtlVectorOfPointers< CUtlSortVector< int > > m_NodeNeighbors;
-	CUtlVector< FeCtrlOffset_t > m_CtrlOffsets;
-	CUtlVector< FeCtrlOsOffset_t > m_CtrlOsOffsets;
-	CUtlVector< FeAxialEdgeBend_t > m_AxialEdges;
-	CUtlVector< OldFeEdge_t > m_OldFeEdges;
-	CUtlVector< FeKelagerBend_t > m_KelagerBends;
+	std::vector< std::flat_set< int > > m_NodeNeighbors;
+	std::vector< FeCtrlOffset_t > m_CtrlOffsets;
+	std::vector< FeCtrlOsOffset_t > m_CtrlOsOffsets;
+	std::vector< FeAxialEdgeBend_t > m_AxialEdges;
+	std::vector< OldFeEdge_t > m_OldFeEdges;
+	std::vector< FeKelagerBend_t > m_KelagerBends;
 
-	CUtlVector< FeEdgeDesc_t > m_FeEdgeDesc;
+	std::vector< FeEdgeDesc_t > m_FeEdgeDesc;
 
-	CUtlVector< int > m_NodeToCtrl;
-	CUtlVector< int > m_CtrlToNode;
-	CUtlVectorOfPointers< CUtlVector< int > > m_Ropes;
+	std::vector< int > m_NodeToCtrl;
+	std::vector< int > m_CtrlToNode;
+	std::vector< std::unique_ptr< std::vector< int > > > m_Ropes;
 
-	CUtlVector< FeNodeBase_t > m_NodeBases;
-	CUtlVector< FeNodeReverseOffset_t > m_ReverseOffsets;
-	CUtlVector< uint16 > m_TreeParents; // dynamic nodes (N) + clusters (N-1)
-	CUtlVector< FeTreeChildren_t > m_TreeChildren; // clusters (N-1) * 2
-	CUtlVector< uint16 > m_FreeNodes;
+	std::vector< FeNodeBase_t > m_NodeBases;
+	std::vector< FeNodeReverseOffset_t > m_ReverseOffsets;
+	std::vector< uint16 > m_TreeParents; // dynamic nodes (N) + clusters (N-1)
+	std::vector< FeTreeChildren_t > m_TreeChildren; // clusters (N-1) * 2
+	std::vector< uint16 > m_FreeNodes;
 
 	// input
-	CUtlVector< FeNodeBase_t > m_PresetNodeBases;
-	CUtlVector< FeTaperedCapsuleStretch_t > m_TaperedCapsuleStretches;
-	CUtlVector< FeTaperedCapsuleRigid_t > m_TaperedCapsuleRigids;
-	CUtlVector< FeSphereRigid_t > m_SphereRigids;
-	CUtlVector< BuildCollisionSphere_t > m_CollisionSpheres;
-	CUtlVector< BuildCollisionPlane_t > m_CollisionPlanes;
-	CUtlVector< BuildSpring_t > m_Springs;
-	CUtlVector< FeRodConstraint_t > m_Rods;
-	CUtlVector< BuildElem_t > m_Elems;
-	CUtlVectorAligned< BuildNode_t > m_Nodes; // in-out
-	CUtlVector< FeFitInfluence_t > m_FitInfluences;
-	CUtlVectorOfPointers< CUtlSortVector< int > > m_Neighbors;
+	std::vector< FeNodeBase_t > m_PresetNodeBases;
+	std::vector< FeTaperedCapsuleStretch_t > m_TaperedCapsuleStretches;
+	std::vector< FeTaperedCapsuleRigid_t > m_TaperedCapsuleRigids;
+	std::vector< FeSphereRigid_t > m_SphereRigids;
+	std::vector< BuildCollisionSphere_t > m_CollisionSpheres;
+	std::vector< BuildCollisionPlane_t > m_CollisionPlanes;
+	std::vector< BuildSpring_t > m_Springs;
+	std::vector< FeRodConstraint_t > m_Rods;
+	std::vector< BuildElem_t > m_Elems;
+	std::vector< BuildNode_t > m_Nodes; // in-out
+	std::vector< FeFitInfluence_t > m_FitInfluences;
+	std::vector< std::flat_set< int > > m_Neighbors;
 
 	bool m_bIdentityCtrlOrder;
 	bool m_bEnableExplicitNodeMasses;

@@ -29,10 +29,6 @@ struct cache_user_t;
 
 #define COM_COPY_CHUNK_SIZE 1024   // For copying operations
 
-#ifndef nullptr
-#define NULL ((void *)0)
-#endif
-
 #include "tier1/strtools.h"
 
 //============================================================================

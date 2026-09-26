@@ -6,6 +6,7 @@
 //=====================================================================================//
 
 #include "render_pch.h"
+#include <mutex>
 #include "decal_private.h"
 #include "disp_defs.h"
 #include "disp.h"
@@ -24,26 +25,25 @@
 #include "paint.h"
 
 #include "tier0/vprof.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "chain_pool.h"
 
 // ----------------------------------------------------------------------------- //
 // 	Shadow decals + fragments
 // ----------------------------------------------------------------------------- //
 
-static CUtlLinkedList< CDispShadowDecal,		DispShadowHandle_t, true >			s_DispShadowDecals;
-static CUtlLinkedList< CDispShadowFragment,		DispShadowFragmentHandle_t, true >	s_DispShadowFragments;
-static CUtlLinkedList< CDispDecal,				DispShadowHandle_t, true >			s_DispDecals;
-static CUtlLinkedList< CDispDecalFragment,	DispShadowFragmentHandle_t, true >	s_DispDecalFragments;
+// Decals chain per displacement (m_FirstDecal / m_FirstShadowDecal), fragments per decal (m_FirstFragment).
+static ks::chain_pool< CDispShadowDecal,		DispShadowHandle_t >			s_DispShadowDecals;
+static ks::chain_pool< CDispShadowFragment,		DispShadowFragmentHandle_t >	s_DispShadowFragments;
+static ks::chain_pool< CDispDecal,				DispDecalHandle_t >				s_DispDecals;
+static ks::chain_pool< CDispDecalFragment,		DispDecalFragmentHandle_t >		s_DispDecalFragments;
 
 // This mutex protects the s_DispShadowFragments and s_DispShadowDecals list during in AllocateShadowFragment() during
 // threaded shadow clipping. It is NOT safe to Allocate and free shadow decal fragments from multiple threads.
-static CThreadFastMutex s_ShadowFragmentAllocLock;
+static std::recursive_mutex s_ShadowFragmentAllocLock;
 
 void CDispInfo::GetIntersectingSurfaces( GetIntersectingSurfaces_Struct *pStruct )
 {
-	if ( !m_Verts.Count() || !m_nIndices )
+	if ( !std::ssize( m_Verts ) || !m_nIndices )
 		return;
 
 	// Walk through all of our triangles and add them one by one.
@@ -105,7 +105,7 @@ void CDispInfo::RenderWireframeInLightmapPage( int pageId )
     // render displacement as wireframe into lightmap pages
 	SurfaceHandle_t surfID = GetParent();
 
-	Assert( ( MSurf_MaterialSortID( surfID ) >= 0 ) && ( MSurf_MaterialSortID( surfID ) < g_WorldStaticMeshes.Count() ) );
+	Assert( ( MSurf_MaterialSortID( surfID ) >= 0 ) && ( MSurf_MaterialSortID( surfID ) < std::ssize( g_WorldStaticMeshes ) ) );
 
 	if( materialSortInfoArray[MSurf_MaterialSortID( surfID ) ].lightmapPageID != pageId )
 		return;
@@ -208,9 +208,8 @@ void CDispInfo::AddDynamicLights( dlight_t *pLights, unsigned int mask )
 //-----------------------------------------------------------------------------
 CDispDecalFragment* CDispInfo::AllocateDispDecalFragment( DispDecalHandle_t h, int nVerts )
 {
-	DispDecalFragmentHandle_t f = s_DispDecalFragments.Alloc(true);
-	s_DispDecalFragments.LinkBefore( s_DispDecals[h].m_FirstFragment, f ); 
-	s_DispDecals[h].m_FirstFragment = f;
+	DispDecalFragmentHandle_t f = s_DispDecalFragments.alloc();
+	s_DispDecalFragments.push_front( s_DispDecals[h].m_FirstFragment, f );
 	CDispDecalFragment* pf = &s_DispDecalFragments[f];
 	
 	// Initialize the vert count:
@@ -228,18 +227,7 @@ void CDispInfo::ClearDecalFragments( DispDecalHandle_t h )
 {
 	// Iterate over all fragments associated with each shadow decal
 	CDispDecal& decal = s_DispDecals[h];
-	DispDecalFragmentHandle_t f = decal.m_FirstFragment;
-	DispDecalFragmentHandle_t next;
-
-	while( f != DISP_DECAL_FRAGMENT_HANDLE_INVALID )
-	{
-		next = s_DispDecalFragments.Next(f);
-		s_DispDecalFragments.Free(f);				// Destructs the decal, freeing the memory.
-		f = next;
-	}
-
-	// Blat out the list
-	decal.m_FirstFragment = DISP_DECAL_FRAGMENT_HANDLE_INVALID;
+	s_DispDecalFragments.free_chain( decal.m_FirstFragment );	// Destructs the fragments, freeing the memory.
 
 	// Mark is as not computed
 	decal.m_Flags &= ~CDispDecalBase::FRAGMENTS_COMPUTED;
@@ -256,7 +244,7 @@ void CDispInfo::ClearAllDecalFragments()
 	while( h != DISP_SHADOW_HANDLE_INVALID )
 	{
 		ClearDecalFragments( h );
-		h = s_DispDecals.Next(h);
+		h = s_DispDecals.next(h);
 	}
 }
 
@@ -266,21 +254,22 @@ void CDispInfo::ClearAllDecalFragments()
 DispDecalHandle_t CDispInfo::NotifyAddDecal( decal_t *pDecal, float flSize )
 {
 	// Create a new decal, link it in
-	DispDecalHandle_t h = s_DispDecals.Alloc( true );
-	if ( h != s_DispDecals.InvalidIndex() )
+	DispDecalHandle_t h = DISP_DECAL_HANDLE_INVALID;
+	if ( !s_DispDecals.full() )
 	{
+		h = s_DispDecals.alloc();
 #ifndef DEDICATED
 		int nDecalCount = 0;
-		int iDecal = m_FirstDecal;
-		int iLastDecal = s_DispDecals.InvalidIndex();
-		while( iDecal != s_DispDecals.InvalidIndex() )
+		DispDecalHandle_t iDecal = m_FirstDecal;
+		DispDecalHandle_t iLastDecal = DISP_DECAL_HANDLE_INVALID;
+		while( iDecal != DISP_DECAL_HANDLE_INVALID )
 		{
 			if ( 0 == ( s_DispDecals[ iDecal ].m_pDecal->flags & FDECAL_PLAYERSPRAY ) )
 			{	// Do not count player sprays for the purpose of unlinking decals
 				iLastDecal = iDecal;
 				++nDecalCount;
 			}
-			iDecal = s_DispDecals.Next( iDecal );
+			iDecal = s_DispDecals.next( iDecal );
 		}
 		
 		if ( nDecalCount >= MAX_DISP_DECALS )
@@ -289,8 +278,7 @@ DispDecalHandle_t CDispInfo::NotifyAddDecal( decal_t *pDecal, float flSize )
 		}
 #endif
 		
-		s_DispDecals.LinkBefore( m_FirstDecal, h );
-		m_FirstDecal = h;
+		s_DispDecals.push_front( m_FirstDecal, h );
 		
 		CDispDecal *pDispDecal = &s_DispDecals[h];
 		pDispDecal->m_pDecal = pDecal;
@@ -316,12 +304,8 @@ void CDispInfo::NotifyRemoveDecal( DispDecalHandle_t h )
 	// Any fragments we got we don't need
 	ClearDecalFragments(h);
 
-	// Reset the head of the list
-	if (m_FirstDecal == h)
-		m_FirstDecal = s_DispDecals.Next(h);
-
 	// Blow away the decal
-	s_DispDecals.Free( h );
+	s_DispDecals.free( m_FirstDecal, h );
 }
 
 
@@ -330,14 +314,13 @@ void CDispInfo::NotifyRemoveDecal( DispDecalHandle_t h )
 //-----------------------------------------------------------------------------
 CDispShadowFragment* CDispInfo::AllocateShadowDecalFragment( DispShadowHandle_t h, int nCount )
 {
-	s_ShadowFragmentAllocLock.Lock();
-	DispShadowFragmentHandle_t f = s_DispShadowFragments.Alloc(true);
-	s_DispShadowFragments.LinkBefore( s_DispShadowDecals[h].m_FirstFragment, f ); 
-	s_DispShadowDecals[h].m_FirstFragment = f;
+	s_ShadowFragmentAllocLock.lock();
+	DispShadowFragmentHandle_t f = s_DispShadowFragments.alloc();
+	s_DispShadowFragments.push_front( s_DispShadowDecals[h].m_FirstFragment, f );
 	CDispShadowFragment* pf = &s_DispShadowFragments[f];
 	pf->m_nVerts = nCount;
 	pf->m_ShadowVerts = new ShadowVertex_t[nCount];
-	s_ShadowFragmentAllocLock.Unlock();
+	s_ShadowFragmentAllocLock.unlock();
 	return pf;
 }
 
@@ -349,17 +332,7 @@ void CDispInfo::ClearShadowDecalFragments( DispShadowHandle_t h )
 {
 	// Iterate over all fragments associated with each shadow decal
 	CDispShadowDecal& decal = s_DispShadowDecals[h];
-	DispShadowFragmentHandle_t f = decal.m_FirstFragment;
-	DispShadowFragmentHandle_t next;
-	while( f != DISP_SHADOW_FRAGMENT_HANDLE_INVALID )
-	{
-		next = s_DispShadowFragments.Next(f);
-		s_DispShadowFragments.Free(f);
-		f = next;
-	}
-
-	// Blat out the list
-	decal.m_FirstFragment = DISP_SHADOW_FRAGMENT_HANDLE_INVALID;
+	s_DispShadowFragments.free_chain( decal.m_FirstFragment );
 
 	// Mark is as not computed
 	decal.m_Flags &= ~CDispDecalBase::FRAGMENTS_COMPUTED;
@@ -376,7 +349,7 @@ void CDispInfo::ClearAllShadowDecalFragments()
 	while( h != DISP_SHADOW_HANDLE_INVALID )
 	{
 		ClearShadowDecalFragments( h );
-		h = s_DispShadowDecals.Next(h);
+		h = s_DispShadowDecals.next(h);
 	}
 }
 
@@ -387,9 +360,8 @@ void CDispInfo::ClearAllShadowDecalFragments()
 DispShadowHandle_t CDispInfo::AddShadowDecal( ShadowHandle_t shadowHandle )
 {
 	// Create a new shadow decal, link it in
-	DispShadowHandle_t h = s_DispShadowDecals.Alloc( true );
-	s_DispShadowDecals.LinkBefore( m_FirstShadowDecal, h );
-	m_FirstShadowDecal = h;
+	DispShadowHandle_t h = s_DispShadowDecals.alloc();
+	s_DispShadowDecals.push_front( m_FirstShadowDecal, h );
 
 	CDispShadowDecal* pShadowDecal = &s_DispShadowDecals[h];
 	pShadowDecal->m_nTris = 0;
@@ -405,12 +377,8 @@ void CDispInfo::RemoveShadowDecal( DispShadowHandle_t h )
 	// Any fragments we got we don't need
 	ClearShadowDecalFragments(h);
 
-	// Reset the head of the list
-	if (m_FirstShadowDecal == h)
-		m_FirstShadowDecal = s_DispShadowDecals.Next(h);
-
 	// Blow away the decal
-	s_DispShadowDecals.Free( h );
+	s_DispShadowDecals.free( m_FirstShadowDecal, h );
 }
 
 
@@ -427,7 +395,7 @@ void CDispInfo::GenerateDecalFragments_R( CVertIndex const &nodeIndex,
 	int iNodeIndex = VertIndex( nodeIndex );
 	
 	// Don't bother adding decals if the node doesn't have decal info.
-	if( !pDispDecal->m_NodeIntersect.Get( iNodeBitIndex ) )
+	if( !pDispDecal->m_NodeIntersect[iNodeBitIndex] )
 		return;
 
 	// Recurse into child nodes, but only if they have triangles.
@@ -438,7 +406,7 @@ void CDispInfo::GenerateDecalFragments_R( CVertIndex const &nodeIndex,
 		{
 			CVertIndex const &childNode = m_pPowerInfo->m_pChildVerts[iNodeIndex].m_Verts[iChild];
 
-			bool bActiveChild = m_ActiveVerts.Get( VertIndex( childNode ) ) != 0;
+			bool bActiveChild = m_ActiveVerts[VertIndex( childNode )];
 			if ( bActiveChild )
 				GenerateDecalFragments_R( childNode, iChildNodeBit, decalHandle, pDispDecal, iLevel + 1
 				);
@@ -664,13 +632,13 @@ void DispInfo_DrawPrimLists( IMatRenderContext *pRenderContext, ERenderDepthMode
 #ifndef DEDICATED
 	VPROF("DispInfo_DrawPrimLists");
 
-	int nDispGroupsSize = g_DispGroups.Count();
+	int nDispGroupsSize = std::ssize( g_DispGroups );
 
 	int nFullbright = g_pMaterialSystemConfig->nFullbright;
 
 	for( int iGroup=0; iGroup < nDispGroupsSize; iGroup++ )
 	{
-		CDispGroup *pGroup = g_DispGroups[iGroup];
+		CDispGroup *pGroup = g_DispGroups[iGroup].get();
 		if( pGroup->m_nVisible == 0 )
 			continue;
 
@@ -748,11 +716,11 @@ void DispInfo_DrawPrimLists( IMatRenderContext *pRenderContext, ERenderDepthMode
 		}
 
 		
-		int nMeshesSize = pGroup->m_Meshes.Count();
+		int nMeshesSize = std::ssize( pGroup->m_Meshes );
 
 		for( int iMesh=0; iMesh < nMeshesSize; iMesh++ )
 		{
-			CGroupMesh *pMesh = pGroup->m_Meshes[iMesh];
+			CGroupMesh *pMesh = pGroup->m_Meshes[iMesh].get();
 			if( pMesh->m_nVisible == 0 )
 				continue;
 
@@ -765,7 +733,7 @@ void DispInfo_DrawPrimLists( IMatRenderContext *pRenderContext, ERenderDepthMode
 			}
 			else
 			{
-				pMesh->m_pMesh->Draw( pMesh->m_Visible.Base(), pMesh->m_nVisible );
+				pMesh->m_pMesh->Draw( pMesh->m_Visible.data(), pMesh->m_nVisible );
 			}
 
 			pMesh->m_nVisible = 0;
@@ -780,7 +748,7 @@ void DispInfo_DrawPrimLists( IMatRenderContext *pRenderContext, ERenderDepthMode
 void DecalDispSurfacesInit( void )
 {
 #ifndef DEDICATED
-	g_aDispDecalSortPool.RemoveAll();
+	g_aDispDecalSortPool.clear();
 	++g_nDispDecalSortCheckCount;
 #endif
 }
@@ -831,7 +799,7 @@ void DispInfo_BatchDecals( CDispInfo **pVisibleDisps, int nVisibleDisps )
 			// Don't draw if there's no triangles.
 			if ( decal.m_nTris == 0 )
 			{
-				hDecal = s_DispDecals.Next( hDecal );
+				hDecal = s_DispDecals.next( hDecal );
 				continue;
 			}
 
@@ -840,7 +808,7 @@ void DispInfo_BatchDecals( CDispInfo **pVisibleDisps, int nVisibleDisps )
 			if ( !pMaterial )
 			{
 				DevMsg( "DispInfo_BatchDecals: material is NULL, decal %i.\n", hDecal );
-				hDecal = s_DispDecals.Next( hDecal );
+				hDecal = s_DispDecals.next( hDecal );
 				continue;
 			}
 
@@ -868,30 +836,25 @@ void DispInfo_BatchDecals( CDispInfo **pVisibleDisps, int nVisibleDisps )
 			// There is only one group at a time.
 			int iGroup = 0;
 
-			intp iPool = g_aDispDecalSortPool.Alloc( true );
-			g_aDispDecalSortPool[iPool] = decal.m_pDecal;
-			
 			int iSortTree = decal.m_pDecal->m_iSortTree;
 			int iSortMaterial = decal.m_pDecal->m_iSortMaterial;
 
-			DecalMaterialBucket_t &materialBucket = g_aDispDecalSortTrees[iSortTree].m_aDecalSortBuckets[iGroup][iTreeType].Element( iSortMaterial );
+			DecalMaterialBucket_t &materialBucket = g_aDispDecalSortTrees[iSortTree].m_aDecalSortBuckets[iGroup][iTreeType][ iSortMaterial ];
 			if ( materialBucket.m_nCheckCount == g_nDispDecalSortCheckCount )
 			{	
 				// intp iTail = materialBucket.m_iTail;
 				// g_aDispDecalSortPool.LinkAfter( iTail, iPool );
 				// materialBucket.m_iTail = iPool;
 				// Displacement decals on the ground happen to render back-to-front, so link before head
-				intp iHead = materialBucket.m_iHead;
-				g_aDispDecalSortPool.LinkBefore( iHead, iPool );
-				materialBucket.m_iHead = iPool;
+				materialBucket.m_iHead = DecalSortPool_Add( g_aDispDecalSortPool, decal.m_pDecal, materialBucket.m_iHead );
 			}
 			else
 			{
-				materialBucket.m_iHead = materialBucket.m_iTail = iPool;
+				materialBucket.m_iHead = materialBucket.m_iTail = DecalSortPool_Add( g_aDispDecalSortPool, decal.m_pDecal );
 				materialBucket.m_nCheckCount = g_nDispDecalSortCheckCount;
 			}
 
-			hDecal = s_DispDecals.Next( hDecal );
+			hDecal = s_DispDecals.next( hDecal );
 		}
 	}
 #endif
@@ -904,7 +867,7 @@ inline void DispInfo_DrawDecalMeshList( IMatRenderContext *pRenderContext, Decal
 {
 	bool bMatFullbright = ( g_pMaterialSystemConfig->nFullbright == 1 );
 
-	int nBatchCount = meshList.m_aBatches.Count();
+	int nBatchCount = std::ssize( meshList.m_aBatches );
 	for ( int iBatch = 0; iBatch < nBatchCount; ++iBatch )
 	{
 		const DecalBatchList_t &batch = meshList.m_aBatches[iBatch];
@@ -926,7 +889,7 @@ inline void DispInfo_DrawDecalMeshList( IMatRenderContext *pRenderContext, Decal
 void DispInfo_DrawDecalsGroup( IMatRenderContext *pRenderContext, int iGroup, int iTreeType )
 {
 #ifndef DEDICATED
-	int nSortTreeCount = g_aDecalSortTrees.Count();
+	int nSortTreeCount = std::ssize( g_aDecalSortTrees );
 	if ( !nSortTreeCount )
 		return;
 
@@ -940,10 +903,10 @@ void DispInfo_DrawDecalsGroup( IMatRenderContext *pRenderContext, int iGroup, in
 
 	// NOTE: This is sort of a hack. The decal wireframe material is 20 bytes; this assumes
 	// we're going to render vertices no larger than 80 bytes/vert.
-	nDecalSortMaxVerts = MIN( nDecalSortMaxVerts, pRenderContext->GetMaxVerticesToRender( g_materialDecalWireframe ) / 4 );
+	nDecalSortMaxVerts = std::min( nDecalSortMaxVerts, pRenderContext->GetMaxVerticesToRender( g_materialDecalWireframe ) / 4 );
 
 	int nDecalSortMaxIndices = nDecalSortMaxVerts * 3;
-	nDecalSortMaxIndices = MIN( nDecalSortMaxIndices, pRenderContext->GetMaxIndicesToRender() );
+	nDecalSortMaxIndices = std::min( nDecalSortMaxIndices, pRenderContext->GetMaxIndicesToRender() );
 
 	bool bMatWireframe = ShouldDrawInWireFrameMode();
 
@@ -952,18 +915,18 @@ void DispInfo_DrawDecalsGroup( IMatRenderContext *pRenderContext, int iGroup, in
 		bool bMeshInit = true;
 		uint16 unPlayerDecalStickerKitID = 0;	// player decals must be split into separate calls by actual basetexture, but overall keep the state so they are bucketed by same material
 		
-		const CUtlVector<DecalMaterialBucket_t> &materialBucketList = g_aDispDecalSortTrees[iSortTree].m_aDecalSortBuckets[iGroup][iTreeType];
-		int nBucketCount = materialBucketList.Count();
+		const std::vector< DecalMaterialBucket_t > &materialBucketList = g_aDispDecalSortTrees[iSortTree].m_aDecalSortBuckets[iGroup][iTreeType];
+		int nBucketCount = std::ssize( materialBucketList );
 		for ( int iBucket = 0; iBucket < nBucketCount; ++iBucket )
 		{
-			if ( materialBucketList.Element( iBucket ).m_nCheckCount != g_nDispDecalSortCheckCount )
+			if ( materialBucketList[ iBucket ].m_nCheckCount != g_nDispDecalSortCheckCount )
 				continue;
 			
-			intp iHead = materialBucketList.Element( iBucket ).m_iHead;
-			if ( !g_aDispDecalSortPool.IsValidIndex( iHead ) )
+			intp iHead = materialBucketList[ iBucket ].m_iHead;
+			if ( iHead < 0 || iHead >= std::ssize( g_aDispDecalSortPool ) )
 				continue;
 
-			decal_t *pDecalHead = g_aDispDecalSortPool.Element( iHead );
+			decal_t *pDecalHead = g_aDispDecalSortPool[iHead].m_pDecal;
 			Assert( pDecalHead->material );
 			if ( !pDecalHead->material )
 				continue;
@@ -979,10 +942,10 @@ void DispInfo_DrawDecalsGroup( IMatRenderContext *pRenderContext, int iGroup, in
 			
 			int nCount;
 			intp iElement = iHead;
-			while ( iElement != g_aDispDecalSortPool.InvalidIndex() )
+			while ( iElement != DECAL_SORT_INVALID )
 			{
-				decal_t *pDecal = g_aDispDecalSortPool.Element( iElement );
-				iElement = g_aDispDecalSortPool.Next( iElement );
+				decal_t *pDecal = g_aDispDecalSortPool[iElement].m_pDecal;
+				iElement = g_aDispDecalSortPool[iElement].m_iNext;
 
 				CDispDecal &decal = s_DispDecals[pDecal->m_DispDecal];
 
@@ -998,7 +961,7 @@ void DispInfo_DrawDecalsGroup( IMatRenderContext *pRenderContext, int iGroup, in
 				while ( hFrag != DISP_DECAL_FRAGMENT_HANDLE_INVALID )
 				{
 					CDispDecalFragment &fragment = s_DispDecalFragments[hFrag];
-					hFrag = s_DispDecalFragments.Next( hFrag );
+					hFrag = s_DispDecalFragments.next( hFrag );
 					nCount = fragment.m_nVerts;
 
 					// Overflow - new mesh, batch.
@@ -1027,7 +990,7 @@ void DispInfo_DrawDecalsGroup( IMatRenderContext *pRenderContext, int iGroup, in
 					{
 						// Reset the mesh list.
 						meshList.m_pMesh = nullptr;
-						meshList.m_aBatches.RemoveAll();
+						meshList.m_aBatches.clear();
 
 						if ( !bMatWireframe )
 						{
@@ -1054,7 +1017,7 @@ void DispInfo_DrawDecalsGroup( IMatRenderContext *pRenderContext, int iGroup, in
 					if ( bBatchInit )
 					{
 						// Create a batch for this bucket = material/lightmap pair.
-						int iBatchList = meshList.m_aBatches.AddToTail();
+						int iBatchList = std::ssize( meshList.m_aBatches ); meshList.m_aBatches.emplace_back();
 						pBatch = &meshList.m_aBatches[iBatchList];
 						pBatch->m_iStartIndex = nIndexCount;
 						
@@ -1205,7 +1168,7 @@ int DispInfo_AddShadowsToMeshBuilder( CMeshBuilder& meshBuilder, DispShadowHandl
 		++nVertices;
 
 		baseIndex += fragment.m_nVerts;
-		f = s_DispShadowFragments.Next(f);
+		f = s_DispShadowFragments.next(f);
 
 #ifdef _DEBUG
 		triCount += fragment.m_nVerts - 2;

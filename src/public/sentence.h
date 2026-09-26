@@ -12,7 +12,13 @@
 
 #include "utlvector.h"
 
-class CUtlBuffer;
+namespace ks
+{
+	class byte_reader;
+	class byte_writer;
+	class text_reader;
+	class text_writer;
+}
 
 #define CACHED_SENTENCE_VERSION			1
 #define CACHED_SENTENCE_VERSION_ALIGNED	4
@@ -21,10 +27,6 @@ class CUtlBuffer;
 //-----------------------------------------------------------------------------
 // Purpose: A sample point
 //-----------------------------------------------------------------------------
-// Can't do this due to backward compat issues
-//#ifdef _WIN32
-//#pragma pack (1)
-//#endif
 
 struct CEmphasisSample
 {
@@ -117,7 +119,7 @@ public:
 	float			m_flStartTime;
 	float			m_flEndTime;
 
-	CUtlVector	< CPhonemeTag *> m_Phonemes;
+	std::vector< CPhonemeTag * > m_Phonemes;
 #if PHONEME_EDITOR
 	bool			m_bSelected;
 	unsigned int	m_uiStartByte;
@@ -198,16 +200,16 @@ public:
 	const char		*GetText( void ) const;
 
 	void			InitFromDataChunk( void *data, int size );
-	void			InitFromBuffer( CUtlBuffer& buf );
-	void			SaveToBuffer( CUtlBuffer& buf );
+	void			InitFromBuffer( ks::text_reader& buf );
+	void			SaveToBuffer( ks::text_writer& buf );
 
 	//				This strips out all of the stuff used by the editor, leaving just one blank work, no sentence text, and just
 	//					the phonemes without the phoneme text...(same as the cacherestore version below)
 	void			MakeRuntimeOnly();
 
 	// This is a compressed save of just the data needed to drive phonemes in the engine (no word / sentence text, etc )
-	void			CacheSaveToBuffer( CUtlBuffer& buf, int version );
-	void			CacheRestoreFromBuffer( CUtlBuffer& buf );
+	void			CacheSaveToBuffer( ks::byte_writer& buf, int version );
+	void			CacheRestoreFromBuffer( ks::byte_reader& buf );
 
 	// Add word/phoneme to sentence
 	void			AddPhonemeTag( CWordTag *word, CPhonemeTag *tag );
@@ -260,15 +262,15 @@ public:
 #if PHONEME_EDITOR
 	char			*m_szText;
 
-	CUtlVector< CWordTag * >	m_Words;
+	std::vector< CWordTag * >	m_Words;
 #endif
-	CUtlVector	< CBasePhonemeTag *> m_RunTimePhonemes;
+	std::vector< CBasePhonemeTag * > m_RunTimePhonemes;
 
 #if PHONEME_EDITOR
 	int				m_nResetWordBase;
 #endif
 	// Phoneme emphasis data
-	CUtlVector< CEmphasisSample > m_EmphasisSamples;
+	std::vector< CEmphasisSample > m_EmphasisSamples;
 
 #if PHONEME_EDITOR
 	unsigned int	m_uCheckSum;
@@ -279,20 +281,16 @@ public:
 	bool			m_bIsCached : 8;
 
 private:
-	void			ParseDataVersionOnePointZero( CUtlBuffer& buf );
-	void			ParsePlaintext( CUtlBuffer& buf );
-	void			ParseWords( CUtlBuffer& buf );
-	void			ParseEmphasis( CUtlBuffer& buf );
-	void			ParseOptions( CUtlBuffer& buf );
-	void			ParseCloseCaption( CUtlBuffer& buf );
+	void			ParseDataVersionOnePointZero( ks::text_reader& buf );
+	void			ParsePlaintext( ks::text_reader& buf );
+	void			ParseWords( ks::text_reader& buf );
+	void			ParseEmphasis( ks::text_reader& buf );
+	void			ParseOptions( ks::text_reader& buf );
+	void			ParseCloseCaption( ks::text_reader& buf );
 
 	void			ResetCloseCaptionAll( void );
 
 	friend class PhonemeEditor;
 };
-
-//#ifdef _WIN32
-//#pragma pack ()
-//#endif
 
 #endif // SENTENCE_H

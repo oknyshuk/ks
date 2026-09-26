@@ -12,10 +12,6 @@
 #include "cs_shareddefs.h"
 #include "mathlib/mathlib.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
-#pragma warning( disable : 4355 )			// warning 'this' used in base member initializer list - we're using it safely
 
 ConVar mp_coopmission_bot_difficulty_offset(
 	"mp_coopmission_bot_difficulty_offset",

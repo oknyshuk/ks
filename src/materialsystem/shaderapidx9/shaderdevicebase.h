@@ -115,11 +115,11 @@ private:
 
 protected:
 	// Stores adapter info for all adapters
-	CUtlVector<AdapterInfo_t> m_Adapters;
+	std::vector< AdapterInfo_t > m_Adapters;
 
 	// Installed mode change callbacks
-	CUtlVector< ShaderModeChangeCallbackFunc_t > m_ModeChangeCallbacks;
-	CUtlVector< IShaderDeviceDependentObject* > m_DeviceDependentObjects;
+	std::vector< ShaderModeChangeCallbackFunc_t > m_ModeChangeCallbacks;
+	std::vector< IShaderDeviceDependentObject* > m_DeviceDependentObjects;
 
 	KeyValues *m_pDXSupport;
 };

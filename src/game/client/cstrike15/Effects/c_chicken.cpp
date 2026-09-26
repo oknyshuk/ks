@@ -12,9 +12,6 @@
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 #undef CChicken
 
 IMPLEMENT_REFLECT_CLIENTCLASS( C_CChicken, DT_CChicken, CChicken )

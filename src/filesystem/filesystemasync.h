@@ -7,11 +7,13 @@
 //===========================================================================//
 
 #include <limits.h>
+#include <atomic>
+#include <mutex>
+#include <string>
 
 #include "tier0/threadtools.h"
 #include "tier0/memalloc.h"
 #include "tier1/interface.h"
-#include "tier1/utlsymbol.h"
 #include "appframework/iappsystem.h"
 #include "tier1/checksum_crc.h"
 #include "filesystem/iasyncfilesystem.h"
@@ -152,10 +154,10 @@ class CAsyncGroupRequest : public IAsyncGroupRequest
 	
 		CAsyncRequestBase				m_Base;							// Base request - we can't derive from due to multiple inheritance problems
 		
-		CUtlVector<IAsyncRequestBase*>	m_RequestList;					// List of requests to process
-		CUtlVector<bool>				m_ValidList;					// List of requests which are valid
+		std::vector< IAsyncRequestBase* >	m_RequestList;					// List of requests to process
+		std::vector< bool >				m_ValidList;					// List of requests which are valid
 		
-		CInterlockedInt					m_nNumRequestsOutstanding;
+		std::atomic<int>					m_nNumRequestsOutstanding;
 		
 
 
@@ -203,7 +205,7 @@ class CAsyncGroupRequest : public IAsyncGroupRequest
 
 		virtual void					AddAsyncRequest( IAsyncRequestBase* pRequest );
 		
-		virtual int32					GetAsyncRequestCount()			{ return m_RequestList.Count(); }
+		virtual int32					GetAsyncRequestCount()			{ return std::ssize( m_RequestList ); }
 		virtual IAsyncRequestBase*		GetAsyncRequest( int32 nRNum );
 		virtual IAsyncFileRequest*		GetAsyncFileRequest( int32 nRNum );
 		virtual IAsyncSearchRequest*	GetAsyncSearchRequest( int32 nRNum );
@@ -247,7 +249,7 @@ class CAsyncFileRequest : public IAsyncFileRequest
 		// -------------------------------------------------------
 		// Members to set by the user before submission
 		
-		const char*						m_pFileName;					// file system name (copy of string that we own)
+		std::string						m_pFileName;					// file system name (copy of string that we own)
 		
 		void*							m_pUserProvidedDataBuffer;		// optional (if read op), system will alloc one if NULL/free if NULL
 		size_t							m_nUserProvidedBufferSize;		// size of the memory buffer			
@@ -311,7 +313,7 @@ class CAsyncFileRequest : public IAsyncFileRequest
 		virtual void					AppendFile( const char* pFileName );								// make this a 'append data to file' request
 																											
 		virtual void					SetFileName( const char* pFileName );								// assign the filename to use
-		virtual const char*				GetFileName()				{ return m_pFileName; }					// get the filename we've assigned
+		virtual const char*				GetFileName()				{ return m_pFileName.c_str(); }			// get the filename we've assigned
 		
 		// Buffer control functions		
 		virtual void					SetUserBuffer( void* pDataBuffer, size_t nBufferSize );				// User supplies a memory buffer to use, which they own the memory for
@@ -366,12 +368,12 @@ class CAsyncSearchRequest  :  public IAsyncSearchRequest
 	public:
 		CAsyncRequestBase					m_Base;						// Base request - we can't derive from due to multiple inheritance problems
 	
-//		CUtlStringList						m_DirectoryList;			// List of directories we have scanned
+//		std::vector< std::string >						m_DirectoryList;			// List of directories we have scanned
 		
 		int32								m_nNumResults;				// number of results 
 		bool								m_bRecurseSubdirs;			// flag to activate recursing of subdirectories
 		
-		CUtlVector<CDirectoryEntryInfo_t>	m_Results;					// Search results...
+		std::vector< CDirectoryEntryInfo_t >	m_Results;					// Search results...
 
 		char								m_FileSpec[MAX_PATH];		// filespec of the files we are looking for
 		char								m_PathID[MAX_PATH];
@@ -459,7 +461,7 @@ class CAsyncSearchRequest  :  public IAsyncSearchRequest
 class CAsyncRequestQueue
 {
 	private:
-		CThreadFastMutex			m_Mutex;
+		std::recursive_mutex			m_Mutex;
 		int32						m_nQueueSize;
 		CAsyncRequestBase*			m_pHead;
 		CAsyncRequestBase*			m_pTail;
@@ -547,16 +549,16 @@ class CAsyncFileSystem : public CTier2AppSystem< IAsyncFileSystem >
 		CAsyncRequestQueue					m_Completed;				// requests in state: Awaiting Finished, Completed*
 
 		
-		CInterlockedInt						m_nJobsInflight;			// number of requests currently being serviced by the old system
-		CInterlockedInt						m_nSuspendCount;			// number of requests to suspend all Async IO outstanding (nested request support)
+		std::atomic<int>						m_nJobsInflight;			// number of requests currently being serviced by the old system
+		std::atomic<int>						m_nSuspendCount;			// number of requests to suspend all Async IO outstanding (nested request support)
 		bool								m_bIOSuspended;
 
 #if defined(_DEBUG)
-		CThreadFastMutex					m_MemoryTrackMutex;
-		CUtlVector<void*>					m_AllocList;				// Debug build - track allocations
+		std::recursive_mutex					m_MemoryTrackMutex;
+		std::vector< void* >					m_AllocList;				// Debug build - track allocations
 #endif
 
-		CThreadFastMutex					m_AsyncStateUpdateMutex;
+		std::recursive_mutex					m_AsyncStateUpdateMutex;
 		CThreadEvent						m_CompletionSignal;			// Used to signal the completion of an IO
 
 		AsyncRequestStatus_t				ValidateRequest( CAsyncRequestBase* pRequest, bool bPerformSync = false );

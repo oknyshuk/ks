@@ -10,7 +10,7 @@
 #define ENGINE_IENGINETRACE_H
 
 #include "basehandle.h"
-#include "utlvector.h" //need CUtlVector for IEngineTrace::GetBrushesIn*()
+#include <vector>
 #include "mathlib/vector4d.h"
 #include "bspflags.h"
 

@@ -61,11 +61,11 @@ public:
 	bool HasBuiltMedalCategories( void ) const;
 
 	// Get rank ups and medals earned during the current round. These lists are reset on round start.
-	const CUtlVector<MedalEarnedEvent_t>& GetMedalsEarnedThisRound( void ) const;
-	const CUtlVector<RankIncreasedEvent_t>& GetRankIncreasesThisRound( void ) const;
+	const std::vector< MedalEarnedEvent_t >& GetMedalsEarnedThisRound( void ) const;
+	const std::vector< RankIncreasedEvent_t >& GetRankIncreasesThisRound( void ) const;
 
 	// Builds a list of progress based achievements (goal > 1) who had their dependant gamestat increased this round.
-	void GetMedalStatsEarnedThisRound( CUtlVector<MedalStatEvent_t>& ) const;
+	void GetMedalStatsEarnedThisRound( std::vector< MedalStatEvent_t >& ) const;
 
 	// Number of achievements compeleted by the local player in the given category.
 	int CountAchievedInCategory( MedalCategory_t category ) const;
@@ -120,14 +120,14 @@ private:
 	// Info about each medal category.
 	MedalCategoryInfo_t m_categoryInfo[MEDAL_CATEGORY_COUNT];
 	// List of achievements assigned to each category.
-	CUtlVector<CBaseAchievement*> m_medalCategoryList[MEDAL_CATEGORY_COUNT];
+	std::vector< CBaseAchievement* > m_medalCategoryList[MEDAL_CATEGORY_COUNT];
 
 	// Per-round rank relevant events.
-	CUtlVector<RankIncreasedEvent_t> m_RankIncreases;
-	CUtlVector<MedalEarnedEvent_t> m_MedalsEarned;
+	std::vector< RankIncreasedEvent_t > m_RankIncreases;
+	std::vector< MedalEarnedEvent_t > m_MedalsEarned;
 
 	// List of stat based achievement
-	CUtlVector<CAchievement_StatGoal*> m_StatBasedAchievements;
+	std::vector< CAchievement_StatGoal* > m_StatBasedAchievements;
 
 	int m_iEloBracketDelta;
 	int m_iNewEloBracket;

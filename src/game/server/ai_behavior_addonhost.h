@@ -40,7 +40,7 @@ public:
 	void RegisterAddOn( CAI_AddOn *pAddOn );
 
 private:
-	CUtlVector<CHandle<CAI_AddOn>>m_AddOns;
+	std::vector< CHandle<CAI_AddOn> >m_AddOns;
 
 	DECLARE_DATADESC();
 };

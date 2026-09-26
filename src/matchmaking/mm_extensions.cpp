@@ -6,9 +6,6 @@
 
 #include "mm_extensions.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 CMatchExtensions::CMatchExtensions()
 {
 	;

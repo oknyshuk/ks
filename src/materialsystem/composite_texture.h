@@ -8,11 +8,14 @@
 #ifndef COMPOSITE_TEXTURE_H
 #define COMPOSITE_TEXTURE_H
 
+#include <mutex>
 #include "materialsystem/MaterialSystemUtil.h"
 #include "materialsystem/itexture.h"
 #include "materialsystem/icompositetexturegenerator.h"
-#include "utllinkedlist.h"
-#include "utlbuffer.h"
+#include <deque>
+#include <cstddef>
+#include <span>
+#include <vector>
 
 class IVisualsDataProcessor;
 class ITextureInternal;
@@ -88,7 +91,7 @@ public:
 class CCompositeTexture : public ICompositeTexture, public CRefCounted<>
 {
 public:
-	CCompositeTexture( const CUtlBuffer &compareBlob, KeyValues *pCompositingMaterialKeyValues, CompositeTextureSize_t size, CompositeTextureFormat_t format, int nMaterialParamNameId, bool bSRGB, bool bIgnorePicMip );
+	CCompositeTexture( std::span< const std::byte > compareBlob, KeyValues *pCompositingMaterialKeyValues, CompositeTextureSize_t size, CompositeTextureFormat_t format, int nMaterialParamNameId, bool bSRGB, bool bIgnorePicMip );
 	bool Init();
 
 	void Refresh() 
@@ -141,7 +144,7 @@ public:
 
 	bool ShouldRelease() { return ( ( GetRefCount() == 1 ) && IsReady() ); }
 
-	const CUtlBuffer &GetVisualsDataCompareBlob() { return m_compareBlob; }
+	const std::vector< std::byte > &GetVisualsDataCompareBlob() { return m_compareBlob; }
 
 	void ReleaseResult() { m_ResultTexture.Release(); }
 
@@ -160,7 +163,7 @@ protected:
 	int m_nMaterialParamNameId;	// the material parameter that this texture will fill/replace in the eventual Custom Material, also used to interact with the VisualsDataProcessor
 	bool m_bSRGB;
 	CompositeTextureStages_t m_nRegenerateStage;
-	CUtlBuffer m_compareBlob;
+	std::vector< std::byte > m_compareBlob;
 
 	IVTFTexture *m_pResultVTF;
 	CCompositeTextureResult m_ResultTexture;
@@ -210,8 +213,8 @@ public:
 	virtual bool ForceRegenerate( ICompositeTexture *pTexture );
 
 private:
-	CUtlVector< CCompositeTexture * > m_pCompositeTextures;
-	CUtlVector< CCompositeTexture * > m_pPendingCompositeTextures;
+	std::vector< CCompositeTexture * > m_pCompositeTextures;
+	std::vector< CCompositeTexture * > m_pPendingCompositeTextures;
 
 	void DestroyTextures( void );
 
@@ -219,8 +222,8 @@ private:
 	void CreateGenerateThread();
 	void DestroyGenerateThread();
 
-	CUtlLinkedList< CCompositeTexture * > m_pGenerateQueue;
-	CThreadFastMutex m_GenerateQueueMutex;
+	std::deque< CCompositeTexture * > m_pGenerateQueue;
+	std::recursive_mutex m_GenerateQueueMutex;
 	ThreadHandle_t m_hGenerateThread;
 	bool m_bGenerateThreadExit;
 

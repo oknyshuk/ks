@@ -20,9 +20,6 @@ extern ConVar r_buildingmapforworld;
 #include "water_ps20b.inc"
 #include "shaderlib/commandbuilder.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 DEFINE_FALLBACK_SHADER( Water, Water_DX9_HDR )
 
 BEGIN_VS_SHADER( Water_DX90, 

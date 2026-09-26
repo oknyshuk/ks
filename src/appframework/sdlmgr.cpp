@@ -17,9 +17,6 @@
 #include "tier0/fasttimer.h"
 
 
-// NOTE: This has to be the last file included! (turned off below, since this is included like a header)
-#include "tier0/memdbgon.h"
-
 
 static void DebugPrintf( const char *pMsg, ... )
 {
@@ -106,7 +103,6 @@ public:
 
 	virtual void GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta = false );
 
-	virtual int GetActiveDisplayIndex();
 	// Not part of ILauncherMgr; used internally by CreateGameWindow().
 	void GetNativeDisplayInfo( int nDisplay, uint &nWidth, uint &nHeight, uint &nRefreshHz );
 
@@ -589,7 +585,7 @@ int CSDLMgr::GetEvents( SDL_Event *pEvents, int nMaxEventsToReturn )
 {
 	SDLAPP_FUNC;
 
-	const int nToWrite = MIN( m_nEventsCount, nMaxEventsToReturn );
+	const int nToWrite = std::min( m_nEventsCount, nMaxEventsToReturn );
 
 	for ( int i = 0; i < nToWrite; i++ )
 	{
@@ -1216,34 +1212,6 @@ void CSDLMgr::GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta )
 	y = m_flMouseYDelta;
 
 	m_flMouseXDelta = m_flMouseYDelta = 0.0f;
-}
-
-//  Returns the current active display index
-//
-int CSDLMgr::GetActiveDisplayIndex()
-{
-	// Always return the display the window is actually on right now.
-	// Don't modify sdl_displayindex — that convar is only for explicit user overrides.
-	SDL_DisplayID activeDisplayID = SDL_GetDisplayForWindow( m_Window );
-	int activeDisplayindex = 0;
-	{
-		int dCount = 0;
-		SDL_DisplayID *dList = SDL_GetDisplays( &dCount );
-		if ( dList )
-		{
-			for ( int di = 0; di < dCount; di++ )
-			{
-				if ( dList[di] == activeDisplayID )
-				{
-					activeDisplayindex = di;
-					break;
-				}
-			}
-			SDL_free( dList );
-		}
-	}
-
-	return activeDisplayindex;
 }
 
 //  Returns the resolution of the nth display. 0 is the default display.

@@ -6,10 +6,12 @@
 
 
 #include "cbase.h"
+#include <algorithm>
+#include <set>
 #include "fmtstr.h"
 #include "filesystem.h"
-#include "utlbuffer.h"
-#include "utlrbtree.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
 #include "editor_sendcommand.h"
 
 #include "ai_networkmanager.h"
@@ -23,9 +25,6 @@
 #include "ai_hull.h"
 #include "ndebugoverlay.h"
 #include "ai_hint.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 // Increment this to force rebuilding of all networks
 #define	 AINET_VERSION_NUMBER	41
@@ -235,18 +234,18 @@ void CAI_NetworkManager::SaveNetworkGraph( void )
 	Q_strncat( szNrpFilename, STRING( gpGlobals->mapname ), sizeof( szNrpFilename ), COPY_ALL_CHARACTERS );
 	Q_strncat( szNrpFilename, PLATFORM_EXT ".ain", sizeof( szNrpFilename ), COPY_ALL_CHARACTERS  );
 
-	CUtlBuffer buf;
+	ks::byte_writer buf;
 
 	// ---------------------------
 	// Save the version number
 	// ---------------------------
-	buf.PutInt(AINET_VERSION_NUMBER);
-	buf.PutInt(gpGlobals->mapversion);
+	buf.write< int >( AINET_VERSION_NUMBER);
+	buf.write< int >( gpGlobals->mapversion);
 
 	// -------------------------------
 	// Dump all the nodes to the file
 	// -------------------------------
-	buf.PutInt( m_pNetwork->m_iNumNodes);
+	buf.write< int >( m_pNetwork->m_iNumNodes);
 
 	int node;
 	int totalNumLinks = 0;
@@ -255,14 +254,14 @@ void CAI_NetworkManager::SaveNetworkGraph( void )
 		CAI_Node *pNode = m_pNetwork->GetNode(node);
 		Assert( pNode->GetZone() != AI_NODE_ZONE_UNKNOWN );
 
-		buf.PutFloat( pNode->GetOrigin().x );
-		buf.PutFloat( pNode->GetOrigin().y );
-		buf.PutFloat( pNode->GetOrigin().z );
-		buf.PutFloat( pNode->GetYaw() );
-		buf.Put( pNode->m_flVOffset, sizeof( pNode->m_flVOffset ) );
-		buf.PutChar( pNode->GetType() );
-		buf.PutInt( ( pNode->m_eNodeInfo & bits_NODE_SAVE_MASK ) );
-		buf.PutShort( pNode->GetZone() );
+		buf.write< float >( pNode->GetOrigin().x );
+		buf.write< float >( pNode->GetOrigin().y );
+		buf.write< float >( pNode->GetOrigin().z );
+		buf.write< float >( pNode->GetYaw() );
+		buf.write_bytes( pNode->m_flVOffset, sizeof( pNode->m_flVOffset ) );
+		buf.write< char >( pNode->GetType() );
+		buf.write< int >( ( pNode->m_eNodeInfo & bits_NODE_SAVE_MASK ) );
+		buf.write< short >( pNode->GetZone() );
 
 		for (int link = 0; link < pNode->NumLinks(); link++)
 		{
@@ -277,7 +276,7 @@ void CAI_NetworkManager::SaveNetworkGraph( void )
 	// -------------------------------
 	// Dump all the links to the file
 	// -------------------------------
-	buf.PutInt( totalNumLinks );
+	buf.write< int >( totalNumLinks );
 
 	for (node = 0; node < m_pNetwork->m_iNumNodes; node++)
 	{
@@ -289,9 +288,9 @@ void CAI_NetworkManager::SaveNetworkGraph( void )
 			CAI_Link *pLink = pNode->GetLinkByIndex(link);
 			if (node == pLink->m_iSrcID)
 			{
-				buf.PutShort( pLink->m_iSrcID );
-				buf.PutShort( pLink->m_iDestID );
-				buf.Put( pLink->m_iAcceptedMoveTypes, sizeof( pLink->m_iAcceptedMoveTypes) );
+				buf.write< short >( pLink->m_iSrcID );
+				buf.write< short >( pLink->m_iDestID );
+				buf.write_bytes( pLink->m_iAcceptedMoveTypes, sizeof( pLink->m_iAcceptedMoveTypes) );
 			}
 		}
 	}
@@ -299,26 +298,21 @@ void CAI_NetworkManager::SaveNetworkGraph( void )
 	// -------------------------------
 	// Dump WC lookup table
 	// -------------------------------
-	CUtlMap<int, int> wcIDs;
-	SetDefLessFunc(wcIDs);
+	std::map<int, int> wcIDs;
 	bool bCheckForProblems = false;
 	for (node = 0; node < m_pNetwork->m_iNumNodes; node++)
 	{
-		int iPreviousNodeBinding = wcIDs.Find( GetEditOps()->m_pNodeIndexTable[node] );
-		if ( iPreviousNodeBinding != wcIDs.InvalidIndex() )
+		auto [itPreviousNodeBinding, bInserted] = wcIDs.emplace( GetEditOps()->m_pNodeIndexTable[node], node );
+		if ( !bInserted )
 		{
 			if ( !bCheckForProblems )
 			{
 				DevWarning( "******* MAP CONTAINS DUPLICATE HAMMER NODE IDS! CHECK FOR PROBLEMS IN HAMMER TO CORRECT *******\n" );
 				bCheckForProblems = true;
 			}
-			DevWarning( "   AI node %d is associated with Hammer node %d, but %d is already bound to node %d\n", node, GetEditOps()->m_pNodeIndexTable[node], GetEditOps()->m_pNodeIndexTable[node], wcIDs[iPreviousNodeBinding] );
+			DevWarning( "   AI node %d is associated with Hammer node %d, but %d is already bound to node %d\n", node, GetEditOps()->m_pNodeIndexTable[node], GetEditOps()->m_pNodeIndexTable[node], itPreviousNodeBinding->second );
 		}
-		else
-		{
-			wcIDs.Insert( GetEditOps()->m_pNodeIndexTable[node], node );
-		}
-		buf.PutInt( GetEditOps()->m_pNodeIndexTable[node] );
+		buf.write< int >( GetEditOps()->m_pNodeIndexTable[node] );
 	}
 
 	// -------------------------------
@@ -332,7 +326,7 @@ void CAI_NetworkManager::SaveNetworkGraph( void )
 		return;
 	}
 
-	filesystem->Write( buf.Base(), buf.TellPut(), fh );
+	filesystem->Write( buf.data(), buf.size(), fh );
 	filesystem->Close(fh);
 }
 
@@ -481,34 +475,34 @@ void CAI_NetworkManager::LoadNetworkGraph( void )
 	MEM_ALLOC_CREDIT();
 
 	// Read the file in one gulp
-	CUtlBuffer buf;
-	bool bHaveAIN = false;
-	
-	if ( !bHaveAIN && !filesystem->ReadFile( szNrpFilename, "game", buf ) )
+	auto fileData = filesystem->ReadFile( szNrpFilename, "game" );
+	if ( !fileData )
 	{
 		DevWarning( 2, "Couldn't read %s!\n", szNrpFilename );
 		return;
 	}
 
+	ks::byte_reader buf( *fileData );
+
 	// ---------------------------
 	// Check the version number
 	// ---------------------------
-	if ( buf.GetChar() == 'V' && buf.GetChar() == 'e' && buf.GetChar() == 'r' )
+	if ( buf.read< char >() == 'V' && buf.read< char >() == 'e' && buf.read< char >() == 'r' )
 	{
 		DevMsg( "AI node graph %s is out of date\n", szNrpFilename );
 		return;
 	}
 
-	buf.SeekGet( CUtlBuffer::SEEK_HEAD, 0 );
+	buf.seek( 0 );
 
-	int version = buf.GetInt();
+	int version = buf.read< int >();
 	if ( version != AINET_VERSION_NUMBER)
 	{
 		DevMsg( "AI node graph %s is out of date\n", szNrpFilename );
 		return;
 	}
 
-	int mapversion = buf.GetInt();
+	int mapversion = buf.read< int >();
 	if ( mapversion != gpGlobals->mapversion && !g_ai_norebuildgraph.GetBool() )
 	{
 		DevMsg( "AI node graph %s is out of date (map version changed)\n", szNrpFilename );
@@ -518,12 +512,12 @@ void CAI_NetworkManager::LoadNetworkGraph( void )
 	// ----------------------------------------
 	// Get the network size and allocate space
 	// ----------------------------------------
-	int numNodes = buf.GetInt();
+	int numNodes = buf.read< int >();
 
 	if ( numNodes > MAX_NODES || numNodes < 0 )
 	{
 		Error( "AI node graph %s is corrupt\n", szNrpFilename );
-		DevMsg( "%s", (const char *)buf.Base() );
+		DevMsg( "%.*s", (int)fileData->size(), (const char *)fileData->data() );
 		DevMsg( "\n" );
 		Assert( 0 );
 		return;
@@ -534,11 +528,11 @@ void CAI_NetworkManager::LoadNetworkGraph( void )
 	// ------------------------------------------------------------------------
 	if ( engine->IsInEditMode() )
 	{
-		numNodes = MAX( numNodes, 1024 );
+		numNodes = std::max( numNodes, 1024 );
 	}
 
-	m_pNetwork->m_pAInode = new CAI_Node*[MAX( numNodes, 1 )];
-	memset( m_pNetwork->m_pAInode, 0, sizeof( CAI_Node* ) * MAX( numNodes, 1 ) );
+	m_pNetwork->m_pAInode = new CAI_Node*[std::max( numNodes, 1 )];
+	memset( m_pNetwork->m_pAInode, 0, sizeof( CAI_Node* ) * std::max( numNodes, 1 ) );
 
 	// -------------------------------
 	// Load all the nodes to the file
@@ -548,56 +542,54 @@ void CAI_NetworkManager::LoadNetworkGraph( void )
 	{
 		Vector origin;
 		float yaw;
-		origin.x = buf.GetFloat();
-		origin.y = buf.GetFloat();
-		origin.z = buf.GetFloat();
-		yaw = buf.GetFloat();
+		origin.x = buf.read< float >();
+		origin.y = buf.read< float >();
+		origin.z = buf.read< float >();
+		yaw = buf.read< float >();
 
 		CAI_Node *new_node = m_pNetwork->AddNode( origin, yaw );
 
-		buf.Get( new_node->m_flVOffset, sizeof(new_node->m_flVOffset) );
-		new_node->m_eNodeType = (NodeType_e)buf.GetChar();
+		buf.read_bytes( new_node->m_flVOffset, sizeof(new_node->m_flVOffset) );
+		new_node->m_eNodeType = (NodeType_e)buf.read< char >();
 
-		new_node->m_eNodeInfo = buf.GetInt();
-		new_node->m_zone = buf.GetShort();
+		new_node->m_eNodeInfo = buf.read< int >();
+		new_node->m_zone = buf.read< short >();
 	}
 
 	// -------------------------------
 	// Load all the links to the fild
 	// -------------------------------
-	int totalNumLinks = buf.GetInt();
+	int totalNumLinks = buf.read< int >();
 
 	for (int link = 0; link < totalNumLinks; link++)
 	{
 		int srcID, destID;
 
-		srcID = buf.GetShort();
-		destID = buf.GetShort();
+		srcID = buf.read< short >();
+		destID = buf.read< short >();
 
 		CAI_Link *pLink = m_pNetwork->CreateLink( srcID, destID );;
 
 		byte ignored[NUM_HULLS];
 		byte *pDest = ( pLink ) ? &pLink->m_iAcceptedMoveTypes[0] : &ignored[0];
-		buf.Get( pDest, sizeof(ignored) );
+		buf.read_bytes( pDest, sizeof(ignored) );
 	}
 
 	// -------------------------------
 	// Load WC lookup table
 	// -------------------------------
 	delete [] GetEditOps()->m_pNodeIndexTable;
-	GetEditOps()->m_pNodeIndexTable	= new int[MAX( m_pNetwork->m_iNumNodes, 1 )];
-	memset( GetEditOps()->m_pNodeIndexTable, 0, sizeof( int ) *MAX( m_pNetwork->m_iNumNodes, 1 ) );
+	GetEditOps()->m_pNodeIndexTable	= new int[std::max( m_pNetwork->m_iNumNodes, 1 )];
+	memset( GetEditOps()->m_pNodeIndexTable, 0, sizeof( int ) *std::max( m_pNetwork->m_iNumNodes, 1 ) );
 
 	for (node = 0; node < m_pNetwork->m_iNumNodes; node++)
 	{
-		GetEditOps()->m_pNodeIndexTable[node] = buf.GetInt();
+		GetEditOps()->m_pNodeIndexTable[node] = buf.read< int >();
 	}
 
 	
-	CUtlRBTree<int> usedIds;
-	CUtlRBTree<int> reportedIds;
-	SetDefLessFunc( usedIds );
-	SetDefLessFunc( reportedIds );
+	std::set<int> usedIds;
+	std::set<int> reportedIds;
 
 	bool printedHeader = false;
 	
@@ -606,7 +598,7 @@ void CAI_NetworkManager::LoadNetworkGraph( void )
 		int editorId = GetEditOps()->m_pNodeIndexTable[node];
 		if ( editorId != NO_NODE )
 		{
-			if ( usedIds.Find( editorId ) != usedIds.InvalidIndex() )
+			if ( !usedIds.insert( editorId ).second )
 			{
 				if ( !printedHeader )
 				{
@@ -614,14 +606,11 @@ void CAI_NetworkManager::LoadNetworkGraph( void )
 					printedHeader = true;
 				}
 
-				if ( reportedIds.Find( editorId ) == reportedIds.InvalidIndex() )
+				if ( reportedIds.insert( editorId ).second )
 				{
 					DevMsg( "%d, ", editorId );
-					reportedIds.Insert( editorId );
 				}
 			}
-			else
-				usedIds.Insert( editorId );
 		}
 	}
 
@@ -697,7 +686,7 @@ void CAI_NetworkManager::LoadNetworkGraph( void )
 	// ------------------------------------------------------------------------
 	if ( engine->IsInEditMode() )
 	{
-		numNodes = MAX( numNodes, 1024 );
+		numNodes = std::max( numNodes, 1024 );
 	}
 
 	m_pAInode = new CAI_Node*[numNodes];
@@ -1071,7 +1060,7 @@ void CAI_NetworkManager::ThreadedInit( void )
 		case ThreadedGraphBuildData::BUILD_NOT_STARTED:
 		{
 			// seize the mutex while I set up the struct
-			if ( !m_ThreadedBuild.mutex.TryLock() )
+			if ( !m_ThreadedBuild.mutex.try_lock() )
 			{
 				AssertMsg( false, "FAILED to initiate threaded node graph build due to already locked mutex!\n" );
 				Warning( "FAILED to initiate threaded node graph build due to already locked mutex!" );
@@ -1089,7 +1078,7 @@ void CAI_NetworkManager::ThreadedInit( void )
 
 			CAI_DynamicLink::gm_bInitialized = false;
 			// and off you go!			
-			m_ThreadedBuild.mutex.Unlock();
+			m_ThreadedBuild.mutex.unlock();
 
 			// print a "building" message
 			UTIL_CenterPrintAll( "Node Graph out of Date. Rebuilding in background.\n" );
@@ -1107,10 +1096,10 @@ void CAI_NetworkManager::ThreadedInit( void )
 		}
 		case ThreadedGraphBuildData::BUILD_DONE:
 			// grab the lock again to make sure we're done
-			if ( !m_ThreadedBuild.mutex.TryLock() )
+			if ( !m_ThreadedBuild.mutex.try_lock() )
 			{
 				AssertMsg( false, "Had to wait for threaded node graph build lock even though it was supposedly done." );
-				m_ThreadedBuild.mutex.Lock();
+				m_ThreadedBuild.mutex.lock();
 			}
 			// set the global pointers again
 			g_pBigAINet = m_pNetwork = m_ThreadedBuild.pBuildingNetwork;
@@ -1167,10 +1156,10 @@ void CAI_NetworkManager::FixupHints()
 uintp CAI_NetworkManager::ThreadedBuildJob( /* (ThreadedGraphBuildData *) */ void *pBuildData )
 {
 	ThreadedGraphBuildData * RESTRICT pBuild = reinterpret_cast<ThreadedGraphBuildData *>(pBuildData);
-	pBuild->mutex.Lock();
+	pBuild->mutex.lock();
 	g_AINetworkBuilder.Build( pBuild->pBuildingNetwork );
 	pBuild->nBuildStage = ThreadedGraphBuildData::BUILD_DONE;
-	pBuild->mutex.Unlock();
+	pBuild->mutex.unlock();
 	return 0;
 }
 
@@ -2227,12 +2216,12 @@ void CAI_NetworkBuilder::Rebuild( CAI_Network *pNetwork )
 	// ---------------------------
 	// Initialize node neighbors
 	// ---------------------------
-	m_DidSetNeighborsTable.Resize( nNodes );
-	m_DidSetNeighborsTable.ClearAll();
-	m_NeighborsTable.SetSize( nNodes );
+	m_DidSetNeighborsTable.resize( nNodes );
+	std::ranges::fill( m_DidSetNeighborsTable, false );
+	m_NeighborsTable.assign( nNodes, {} );
 	for (i = 0; i < nNodes; i++)
 	{
-		m_NeighborsTable[i].Resize( nNodes );
+		m_NeighborsTable[i].resize( nNodes );
 	}
 	for (i = 0; i < nNodes; i++)
 	{
@@ -2282,8 +2271,8 @@ void CAI_NetworkBuilder::BeginBuild()
 
 void CAI_NetworkBuilder::EndBuild()
 {
-	m_NeighborsTable.SetSize(0);
-	m_DidSetNeighborsTable.Resize(0);
+	m_NeighborsTable.assign( 0, {} );
+	m_DidSetNeighborsTable.resize( 0 );
 	CAI_TestHull::ReturnTestHull();
 }
 
@@ -2334,13 +2323,13 @@ void CAI_NetworkBuilder::Build( CAI_Network *pNetwork )
 	// ---------------------------
 	DevMsg( "Initializing node neighbors...\n" );
 	timer.Start();
-	m_DidSetNeighborsTable.Resize( nNodes );
-	m_DidSetNeighborsTable.ClearAll();
-	m_NeighborsTable.SetSize( nNodes );
+	m_DidSetNeighborsTable.resize( nNodes );
+	std::ranges::fill( m_DidSetNeighborsTable, false );
+	m_NeighborsTable.assign( nNodes, {} );
 	for (i = 0; i < nNodes; i++)
 	{
-		m_NeighborsTable[i].Resize( nNodes );
-		m_NeighborsTable[i].ClearAll();
+		m_NeighborsTable[i].resize( nNodes );
+		std::ranges::fill( m_NeighborsTable[i], false );
 	}
 	for (i = 0; i < nNodes; i++)
 	{	
@@ -2440,8 +2429,8 @@ void CAI_NetworkBuilder::ForceDynamicLinkNeighbors(void)
 				Assert( pSrcNode );
 				Assert( pDestNode );
 
-				m_NeighborsTable[pSrcNode->GetId()].Set(pDestNode->GetId());
-				m_NeighborsTable[pDestNode->GetId()].Set(pSrcNode->GetId());
+				m_NeighborsTable[pSrcNode->GetId()][pDestNode->GetId()] = true;
+				m_NeighborsTable[pDestNode->GetId()][pSrcNode->GetId()] = true;
 			}
 		}
 
@@ -2705,7 +2694,7 @@ void CAI_NetworkBuilder::InitVisibility(CAI_Network *pNetwork, CAI_Node *pNode)
 		// We know we can view ourself
 		if (pNode->m_iID == testnode)
 		{
-			m_NeighborsTable[pNode->m_iID].Set(testNode->m_iID);
+			m_NeighborsTable[pNode->m_iID][testNode->m_iID] = true;
 			continue;
 		}
 		
@@ -2723,10 +2712,10 @@ void CAI_NetworkBuilder::InitVisibility(CAI_Network *pNetwork, CAI_Node *pNode)
 			continue;
 		}
 
-		if ( m_DidSetNeighborsTable.IsBitSet( testNode->m_iID ) )
+		if ( m_DidSetNeighborsTable[testNode->m_iID] )
 		{
-			if ( m_NeighborsTable[testNode->m_iID].IsBitSet(pNode->m_iID))
-				m_NeighborsTable[pNode->m_iID].Set(testNode->m_iID);
+			if ( m_NeighborsTable[testNode->m_iID][pNode->m_iID])
+				m_NeighborsTable[pNode->m_iID][testNode->m_iID] = true;
 
 			continue;
 		}
@@ -2854,7 +2843,7 @@ void CAI_NetworkBuilder::InitVisibility(CAI_Network *pNetwork, CAI_Node *pNode)
 			}
 		}
 */
-		m_NeighborsTable[pNode->m_iID].Set(testNode->m_iID);
+		m_NeighborsTable[pNode->m_iID][testNode->m_iID] = true;
 	}
 }
 
@@ -2867,7 +2856,7 @@ void CAI_NetworkBuilder::InitVisibility(CAI_Network *pNetwork, CAI_Node *pNode)
 
 void CAI_NetworkBuilder::InitNeighbors(CAI_Network *pNetwork, CAI_Node *pNode)
 {
-	m_NeighborsTable[pNode->m_iID].ClearAll();
+	std::ranges::fill( m_NeighborsTable[pNode->m_iID], false );
 	
 	// Begin by establishing viewability to limit the number of nodes tested
 	InitVisibility( pNetwork, pNode );
@@ -2886,12 +2875,12 @@ void CAI_NetworkBuilder::InitNeighbors(CAI_Network *pNetwork, CAI_Node *pNode)
 		// I'm not a neighbor of myself
 		if ( pNode->m_iID == checknode )
 		{
-			m_NeighborsTable[pNode->m_iID].Clear(checknode);
+			m_NeighborsTable[pNode->m_iID][checknode] = false;
 			continue;
 		}
 
 		// Only check if already on the neightbor list
-		if (!m_NeighborsTable[pNode->m_iID].IsBitSet(checknode)) 
+		if (!m_NeighborsTable[pNode->m_iID][checknode]) 
 		{
 			continue;
 		}
@@ -2907,7 +2896,7 @@ void CAI_NetworkBuilder::InitNeighbors(CAI_Network *pNetwork, CAI_Node *pNode)
 			}
 
 			// Only check if already on the neightbor list
-			if (!m_NeighborsTable[pNode->m_iID].IsBitSet(testnode)) 
+			if (!m_NeighborsTable[pNode->m_iID][testnode]) 
 			{
 				continue;
 			}
@@ -2965,12 +2954,12 @@ void CAI_NetworkBuilder::InitNeighbors(CAI_Network *pNetwork, CAI_Node *pNode)
 				if ( flDistToTestNode < flDistToCheckNode )
 				{
 					DebugConnectMsg( pNode->m_iID, checknode, "      Revoking neighbor status to closer redundant link %d\n", testnode );
-					m_NeighborsTable[pNode->m_iID].Clear(checknode);
+					m_NeighborsTable[pNode->m_iID][checknode] = false;
 				}
 				else
 				{
 					DebugConnectMsg( pNode->m_iID, testnode, "      Revoking neighbor status to closer redundant link %d\n", checknode );
-					m_NeighborsTable[pNode->m_iID].Clear(testnode);
+					m_NeighborsTable[pNode->m_iID][testnode] = false;
 				}
 			}
 		}
@@ -2978,7 +2967,7 @@ void CAI_NetworkBuilder::InitNeighbors(CAI_Network *pNetwork, CAI_Node *pNode)
 	
 	AI_PROFILE_SCOPE_END();
 
-	m_DidSetNeighborsTable.Set(pNode->m_iID);
+	m_DidSetNeighborsTable[pNode->m_iID] = true;
 }
 
 //-----------------------------------------------------------------------------
@@ -3276,7 +3265,7 @@ void CAI_NetworkBuilder::InitLinks(CAI_Network *pNetwork, CAI_Node *pNode)
 		}
 
 		// Only check if the node is a neighbor
-		if ( m_NeighborsTable[pNode->m_iID].IsBitSet(pDestNode->m_iID) ) 
+		if ( m_NeighborsTable[pNode->m_iID][pDestNode->m_iID] ) 
 		{
 			int acceptedMotions[NUM_HULLS];
 
@@ -3316,7 +3305,7 @@ void CAI_NetworkBuilder::InitLinks(CAI_Network *pNetwork, CAI_Node *pNode)
 			}
 			else 
 			{
-				m_NeighborsTable[pNode->m_iID].Clear(pDestNode->m_iID);
+				m_NeighborsTable[pNode->m_iID][pDestNode->m_iID] = false;
 				DebugConnectMsg(pNode->m_iID, i, "   NO LINK\n" );
 			}
 		}

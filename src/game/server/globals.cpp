@@ -19,9 +19,6 @@
 #include "cbase.h"
 #include "soundent.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 Vector			g_vecAttackDir(0.0f, 0.0f, 0.0f);
 int				g_iSkillLevel = 0;
 bool			g_fGameOver = false;

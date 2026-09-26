@@ -7,9 +7,6 @@
 
 #include "decal_clip.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // --------------------------------------------------------------------------- //
 // Template classes for the clipper.
 // --------------------------------------------------------------------------- //
@@ -274,8 +271,8 @@ void R_SetupDecalTextureSpaceBasis(
 	// world height of decal = ptexture->height / pDecal->scale
 	// scale is inverse, scales world space to decal u/v space [0,1]
 	// OPTIMIZE: Get rid of these divides
-	int nWidth = MAX( pMaterial->GetMappingWidth(), 1 );
-	int nHeight = MAX( pMaterial->GetMappingHeight(), 1 );
+	int nWidth = std::max( pMaterial->GetMappingWidth(), 1 );
+	int nHeight = std::max( pMaterial->GetMappingHeight(), 1 );
 	decalWorldScale[0] = pDecal->scale / nWidth;
 	decalWorldScale[1] = pDecal->scale / nHeight;
 
@@ -283,7 +280,7 @@ void R_SetupDecalTextureSpaceBasis(
 	{
 		int nWidthScale = nWidth / MAX_PLAYERSPRAY_SIZE;
 		int nHeightScale = nHeight / MAX_PLAYERSPRAY_SIZE;
-		float flScale = static_cast<float>( MAX( nWidthScale, nHeightScale ) );
+		float flScale = static_cast<float>( std::max( nWidthScale, nHeightScale ) );
 		if ( flScale > 1.0f )
 		{
 			decalWorldScale[0] *= flScale;

@@ -10,6 +10,7 @@
 
 
 #include "mdlcombine.h"
+#include "mathlib/vector2d.h"
 
 
 class KeyValues;
@@ -41,7 +42,7 @@ struct AtlasGroupData
 	int					m_nNumMaterials;
 	int					m_nMaterialIndices[ COMBINER_MAX_MATERIALS ];
 
-	CUtlBuffer			*m_pVTFData[ COMBINER_MAX_MATERIALS ];
+	std::vector< std::byte >	m_pVTFData[ COMBINER_MAX_MATERIALS ];
 	VTFFileHeader_t		*m_pVTFFileHeader[ COMBINER_MAX_MATERIALS ];
 	ResourceEntryInfo	*m_pResources[ COMBINER_MAX_MATERIALS ];
 	bool				m_bIsFlat[ COMBINER_MAX_MATERIALS ];

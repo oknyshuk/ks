@@ -4,9 +4,6 @@
 
 #include "tier1/sparsematrix.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 void CSparseMatrix::AdjustAllRowIndicesAfter( int nStartRow, int nDelta )
 {
@@ -21,8 +18,8 @@ void CSparseMatrix::SetDimensions( int nNumRows, int nNumCols )
 {
 	m_nNumRows = nNumRows;
 	m_nNumCols = nNumCols;
-	m_entries.SetCount( 0 );
-	m_rowDescriptors.SetCount( m_nNumRows );
+	m_entries.assign( 0, {} );
+	m_rowDescriptors.assign( m_nNumRows, {} );
 	// and set all rows to be empty
 	for( int i = 0; i < m_nNumRows; i++ )
 	{
@@ -59,7 +56,7 @@ void CSparseMatrix::SetElement( int nRow, int nCol, float flValue )
 					// there is a non-zero element currently at this position. We need to remove it
 					// and we need to remove its storage.
 					m_rowDescriptors[nRow].m_nNonZeroCount--;
-					m_entries.Remove( nFirstEntryIndex + i );
+					m_entries.erase( m_entries.begin() + ( nFirstEntryIndex + i ) );
 					// now, we need to offset the starting position of all subsequent rows by -1 to compensate for the removal of this element
 					AdjustAllRowIndicesAfter( nRow, -1 );
 				}
@@ -81,11 +78,11 @@ void CSparseMatrix::SetElement( int nRow, int nCol, float flValue )
 			newValue.m_flValue = flValue;
 			if ( i == nCount )								// need to append
 			{
-				m_entries.InsertAfter( nFirstEntryIndex + nCount - 1, newValue );
+				m_entries.insert( m_entries.begin() + ( nFirstEntryIndex + nCount - 1 ) + 1, newValue );
 			}
 			else
 			{
-				m_entries.InsertBefore( nFirstEntryIndex + i, newValue );
+				m_entries.insert( m_entries.begin() + ( nFirstEntryIndex + i ), newValue );
 			}
 			// now, we need to offset the starting position of all subsequent rows by -1 to compensate for the addition of this element
 			AdjustAllRowIndicesAfter( nRow, +1 );
@@ -100,7 +97,7 @@ void CSparseMatrix::SetElement( int nRow, int nCol, float flValue )
 			NonZeroValueDescriptor_t newValue;
 			newValue.m_nColumnNumber = nCol;
 			newValue.m_flValue = flValue;
-			m_entries.InsertBefore( nFirstEntryIndex, newValue );
+			m_entries.insert( m_entries.begin() + nFirstEntryIndex, newValue );
 			AdjustAllRowIndicesAfter( nRow, +1 );
 		}
 	}
@@ -111,7 +108,7 @@ void CSparseMatrix::FinishedAppending( void )
 	// set all pointers to space for subsequent rows to the right value
 	for( int i = m_nHighestRowAppendedTo + 1 ; i < Height(); i++ )
 	{
-		m_rowDescriptors[i].m_nDataIndex = m_entries.Count();
+		m_rowDescriptors[i].m_nDataIndex = std::ssize( m_entries );
 	}
 }
 
@@ -124,7 +121,7 @@ void CSparseMatrix::AppendElement( int nRow, int nColumn, float flValue )
 			Assert( nRow > m_nHighestRowAppendedTo );
 			for( int i = m_nHighestRowAppendedTo + 1; i <= nRow; i++ )
 			{
-				m_rowDescriptors[i].m_nDataIndex = m_entries.Count();
+				m_rowDescriptors[i].m_nDataIndex = std::ssize( m_entries );
 			}
 		}
 		m_nHighestRowAppendedTo = nRow;
@@ -132,7 +129,7 @@ void CSparseMatrix::AppendElement( int nRow, int nColumn, float flValue )
 		NonZeroValueDescriptor_t newDesc;
 		newDesc.m_nColumnNumber = nColumn;
 		newDesc.m_flValue = flValue;
-		m_entries.AddToTail( newDesc );
+		m_entries.push_back( newDesc );
 	}
 }
 	

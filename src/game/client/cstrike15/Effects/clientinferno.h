@@ -7,7 +7,6 @@
 
 
 #include "cbase.h"
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------------------------
 /**
@@ -42,7 +41,7 @@ public:
 
 private:
 	void UpdateParticles( void );
-	CUtlReference<CNewParticleEffect> m_burnParticleEffect;
+	ks::tracked_ref<CNewParticleEffect> m_burnParticleEffect;
 
 	enum { MAX_INFERNO_FIRES = 100 };
 	[[= ks::reflect::Net{} ]] int m_fireXDelta[ MAX_INFERNO_FIRES ];

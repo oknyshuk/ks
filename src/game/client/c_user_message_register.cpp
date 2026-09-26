@@ -7,9 +7,6 @@
 #include "cbase.h"
 #include "c_user_message_register.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 CUserMessageRegisterBase *CUserMessageRegisterBase::s_pHead = nullptr;
 
 CUserMessageRegisterBase::CUserMessageRegisterBase()

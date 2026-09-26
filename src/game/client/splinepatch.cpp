@@ -15,9 +15,6 @@
 
 #include "mathlib/vmatrix.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Catmull rom blend weights
 //-----------------------------------------------------------------------------

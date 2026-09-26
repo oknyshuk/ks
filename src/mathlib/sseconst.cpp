@@ -9,9 +9,6 @@
 #include "mathlib/ssequaternion.h"
 #include "mathlib/compressed_vector.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 const fltx4 Four_PointFives={0.5,0.5,0.5,0.5};
 const fltx4 Four_Zeros={0.0,0.0,0.0,0.0};
 const fltx4 Four_Ones={1.0,1.0,1.0,1.0};

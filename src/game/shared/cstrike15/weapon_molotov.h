@@ -49,7 +49,7 @@ private:
 
 private:
 #if defined( CLIENT_DLL )
-	CUtlReference<CNewParticleEffect> m_molotovParticleEffect;
+	ks::tracked_ref<CNewParticleEffect> m_molotovParticleEffect;
 #endif
 };
 
@@ -86,7 +86,7 @@ private:
 	/*
 private:
 #if defined( CLIENT_DLL )
-	CUtlReference<CNewParticleEffect> m_molotovParticleEffect;
+	ks::tracked_ref<CNewParticleEffect> m_molotovParticleEffect;
 #endif
 	*/
 };

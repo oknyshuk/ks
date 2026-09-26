@@ -7,8 +7,6 @@
 #include "singleplayersharedmemory.h"
 #include "tier1/utlstring.h"
 
-#include "tier0/memdbgon.h"
-
 CSPSharedMemoryManager s_SinglePlayerSharedMemoryManager;
 CSPSharedMemoryManager *g_pSinglePlayerSharedMemoryManager = &s_SinglePlayerSharedMemoryManager;
 
@@ -26,7 +24,7 @@ public:
 	virtual void	Release( void );
 
 	
-	CUtlString m_Name;
+	std::string m_Name;
 	int m_iEntNum;
 	uint8 *m_pMemory;
 	size_t m_Size;
@@ -78,11 +76,11 @@ void CSPSharedMemory::Release( void )
 	
 	if( m_iRefCount == 0 )
 	{
-		for( int i = s_SinglePlayerSharedMemoryManager.m_SharedSpaces.Count(); --i >= 0; )
+		for( int i = std::ssize( s_SinglePlayerSharedMemoryManager.m_SharedSpaces ); --i >= 0; )
 		{
 			if( s_SinglePlayerSharedMemoryManager.m_SharedSpaces[i] == this )
 			{
-				s_SinglePlayerSharedMemoryManager.m_SharedSpaces.FastRemove(i);
+				ks::swap_remove( s_SinglePlayerSharedMemoryManager.m_SharedSpaces, i );
 				break;
 			}
 		}
@@ -95,11 +93,11 @@ void CSPSharedMemory::Release( void )
 
 CSPSharedMemoryManager::~CSPSharedMemoryManager( void )
 {
-	Assert( m_SharedSpaces.Count() == 0 );
+	Assert( std::ssize( m_SharedSpaces ) == 0 );
 
-	for( int i = m_SharedSpaces.Count(); --i >= 0; )
+	for( int i = std::ssize( m_SharedSpaces ); --i >= 0; )
 	{
-		Warning( "Shared memory space %s (%i) still has %i references.\n", m_SharedSpaces[i]->m_Name.String(), m_SharedSpaces[i]->m_iEntNum, m_SharedSpaces[i]->m_iRefCount );
+		Warning( "Shared memory space %s (%i) still has %i references.\n", m_SharedSpaces[i]->m_Name.c_str(), m_SharedSpaces[i]->m_iEntNum, m_SharedSpaces[i]->m_iRefCount );
 		//leak it?
 	}
 }
@@ -107,7 +105,7 @@ CSPSharedMemoryManager::~CSPSharedMemoryManager( void )
 
 ISPSharedMemory *CSPSharedMemoryManager::GetSharedMemory( const char *szName, int ent_num )
 {
-	for( int i = m_SharedSpaces.Count(); --i >= 0; )
+	for( int i = std::ssize( m_SharedSpaces ); --i >= 0; )
 	{
 		if( m_SharedSpaces[i]->m_Name == szName && m_SharedSpaces[i]->m_iEntNum == ent_num )
 		{
@@ -118,9 +116,9 @@ ISPSharedMemory *CSPSharedMemoryManager::GetSharedMemory( const char *szName, in
 
 	//create a new one
 	CSPSharedMemory *pNew = new CSPSharedMemory;
-	pNew->m_Name = szName;
+	pNew->m_Name = ks::nz( szName );
 	pNew->m_iEntNum = ent_num;
-	m_SharedSpaces.AddToTail( pNew );
+	m_SharedSpaces.push_back( pNew );
 	pNew->AddRef();
 	return pNew;
 }

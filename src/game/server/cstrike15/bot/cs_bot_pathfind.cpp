@@ -10,9 +10,6 @@
 #include "cbase.h"
 #include "cs_bot.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 
 //--------------------------------------------------------------------------------------------------------------
@@ -113,7 +110,7 @@ bool CCSBot::ComputePathPositions( void )
 			// find our ladder
 			const NavLadderConnectVector *pLadders = from->area->GetLadders( CNavLadder::LADDER_UP );
 			int it;
-			for ( it = 0; it < pLadders->Count(); ++it)
+			for ( it = 0; it < std::ssize( *pLadders ); ++it)
 			{
 				CNavLadder *ladder = (*pLadders)[ it ].ladder;
 
@@ -128,7 +125,7 @@ bool CCSBot::ComputePathPositions( void )
 				}
 			}
 
-			if (it == pLadders->Count())
+			if (it == std::ssize( *pLadders ))
 			{
 				PrintIfWatched( "ERROR: Can't find ladder in path\n" );
 				return false;
@@ -139,7 +136,7 @@ bool CCSBot::ComputePathPositions( void )
 			// find our ladder
 			const NavLadderConnectVector *pLadders = from->area->GetLadders( CNavLadder::LADDER_DOWN );
 			int it;
-			for ( it = 0; it < pLadders->Count(); ++it)
+			for ( it = 0; it < std::ssize( *pLadders ); ++it)
 			{
 				CNavLadder *ladder = (*pLadders)[ it ].ladder;
 
@@ -152,7 +149,7 @@ bool CCSBot::ComputePathPositions( void )
 				}
 			}
 
-			if (it == pLadders->Count())
+			if (it == std::ssize( *pLadders ))
 			{
 				PrintIfWatched( "ERROR: Can't find ladder in path\n" );
 				return false;
@@ -1131,7 +1128,7 @@ int CCSBot::FindPathPoint( float aheadRange, Vector *point, int *prevIndex )
  */
 void CCSBot::SetPathIndex( int newIndex )
 {
-	m_pathIndex = MIN( newIndex, m_pathLength-1 );
+	m_pathIndex = std::min( newIndex, m_pathLength-1 );
 	m_areaEnteredTimestamp = gpGlobals->curtime;
 
 	if (m_path[ m_pathIndex ].ladder)

@@ -11,9 +11,6 @@
 #include "ai_memory.h"
 #include "ai_basenpc.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define	EMEMORY_POOL_SIZE		  64
 #define AI_FREE_KNOWLEDGE_DURATION 1.75
 
@@ -72,7 +69,6 @@ CAI_Enemies::CAI_Enemies(void)
 	m_vecDefaultLKP = vec3_invalid;
 	m_vecDefaultLSP = vec3_invalid;
 	m_serial = 0;
-	SetDefLessFunc( m_Map );
 }
 
 
@@ -80,10 +76,6 @@ CAI_Enemies::CAI_Enemies(void)
 
 CAI_Enemies::~CAI_Enemies()
 {
-	for ( CMemMap::IndexType_t i = m_Map.FirstInorder(); i != m_Map.InvalidIndex(); i = m_Map.NextInorder( i ) )
-	{
-		delete m_Map[i];
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -92,36 +84,32 @@ CAI_Enemies::~CAI_Enemies()
 
 AI_EnemyInfo_t *CAI_Enemies::GetFirst( AIEnemiesIter_t *pIter )
 {
-	CMemMap::IndexType_t i = m_Map.FirstInorder();
-	*pIter = (AIEnemiesIter_t)(uintp)i;
+	*pIter = m_Map.begin();
 
-	if ( i == m_Map.InvalidIndex() )
+	if ( *pIter == m_Map.end() )
 		return nullptr;
 
-	if ( m_Map[i]->hEnemy == nullptr )
+	if ( (*pIter)->second->hEnemy == nullptr )
 		return GetNext( pIter );
 
-	return m_Map[i];
+	return (*pIter)->second.get();
 }
 
 //-----------------------------------------------------------------------------
 
 AI_EnemyInfo_t *CAI_Enemies::GetNext( AIEnemiesIter_t *pIter )
 {
-	CMemMap::IndexType_t i = size_cast< CMemMap::IndexType_t >( (uintp)(*pIter) );
-
-	if ( i == m_Map.InvalidIndex() )
+	if ( *pIter == m_Map.end() )
 		return nullptr;
 
-	i = m_Map.NextInorder( i );
-	*pIter = size_cast< AIEnemiesIter_t >( (uintp)i );
-	if ( i == m_Map.InvalidIndex() )
+	++*pIter;
+	if ( *pIter == m_Map.end() )
 		return nullptr;
 
-	if ( m_Map[i]->hEnemy == nullptr )
+	if ( (*pIter)->second->hEnemy == nullptr )
 		return GetNext( pIter );
 
-	return m_Map[i];
+	return (*pIter)->second.get();
 }
 	
 //-----------------------------------------------------------------------------
@@ -131,14 +119,14 @@ AI_EnemyInfo_t *CAI_Enemies::Find( CBaseEntity *pEntity, bool bTryDangerMemory )
 	if ( pEntity == AI_UNKNOWN_ENEMY )
 		pEntity = nullptr;
 
-	CMemMap::IndexType_t i = m_Map.Find( pEntity );
-	if ( i == m_Map.InvalidIndex() )
+	auto it = m_Map.find( pEntity );
+	if ( it == m_Map.end() )
 	{
-		if ( !bTryDangerMemory || ( i = m_Map.Find( nullptr ) ) == m_Map.InvalidIndex() )
+		if ( !bTryDangerMemory || ( it = m_Map.find( nullptr ) ) == m_Map.end() )
 			return nullptr;
-		Assert(m_Map[i]->bDangerMemory == true);
+		Assert(it->second->bDangerMemory == true);
 	}
-	return m_Map[i];
+	return it->second.get();
 }
 
 
@@ -146,11 +134,11 @@ AI_EnemyInfo_t *CAI_Enemies::Find( CBaseEntity *pEntity, bool bTryDangerMemory )
 
 AI_EnemyInfo_t *CAI_Enemies::GetDangerMemory()
 {
-	CMemMap::IndexType_t i = m_Map.Find( nullptr );
-	if ( i == m_Map.InvalidIndex() )
+	auto it = m_Map.find( nullptr );
+	if ( it == m_Map.end() )
 		return nullptr;
-	Assert(m_Map[i]->bDangerMemory == true);
-	return m_Map[i];
+	Assert(it->second->bDangerMemory == true);
+	return it->second.get();
 }
 
 //-----------------------------------------------------------------------------
@@ -203,16 +191,15 @@ void CAI_Enemies::RefreshMemories(void)
 	// Check each record
 	// -------------------
 	
-	CMemMap::IndexType_t i = m_Map.FirstInorder();
-	while ( i != m_Map.InvalidIndex() )
+	auto it = m_Map.begin();
+	while ( it != m_Map.end() )
 	{	
-		AI_EnemyInfo_t *pMemory = m_Map[i];
+		AI_EnemyInfo_t *pMemory = it->second.get();
 		
-		CMemMap::IndexType_t iNext = m_Map.NextInorder( i ); // save so can remove
 		if ( ShouldDiscardMemory( pMemory ) )
 		{
-			delete pMemory;
-			m_Map.RemoveAt(i);
+			it = m_Map.erase( it );
+			continue;
 		}
 		else if ( pMemory->hEnemy )
 		{
@@ -230,7 +217,7 @@ void CAI_Enemies::RefreshMemories(void)
 				pMemory->vLastSeenLocation = pMemory->hEnemy->GetAbsOrigin();
 			}
 		}
-		i = iNext;
+		++it;
 	}
 }
 
@@ -285,7 +272,8 @@ bool CAI_Enemies::UpdateMemory(CAI_Network* pAINet, CBaseEntity *pEnemy, const V
 	}
 
 	// If not on my list of enemies add it
-	AI_EnemyInfo_t *pAddMemory = new AI_EnemyInfo_t;
+	auto pNewMemory = std::make_unique< AI_EnemyInfo_t >();
+	AI_EnemyInfo_t *pAddMemory = pNewMemory.get();
 	pAddMemory->vLastKnownLocation = vPosition;
 
 	if ( firstHand )
@@ -316,7 +304,7 @@ bool CAI_Enemies::UpdateMemory(CAI_Network* pAINet, CBaseEntity *pEnemy, const V
 	}
 
 	// add to the list
-	m_Map.Insert( pEnemy, pAddMemory );
+	m_Map.emplace( pEnemy, std::move( pNewMemory ) );
 	m_serial++;
 
 	return true;
@@ -345,12 +333,7 @@ bool CAI_Enemies::HasMemory( CBaseEntity *pEnemy )
 //-----------------------------------------------------------------------------
 void CAI_Enemies::ClearMemory(CBaseEntity *pEnemy)
 {
-	CMemMap::IndexType_t i = m_Map.Find( pEnemy );
-	if ( i != m_Map.InvalidIndex() )
-	{
-		delete m_Map[i];
-		m_Map.RemoveAt( i );
-	}
+	m_Map.erase( pEnemy );
 }
 
 //-----------------------------------------------------------------------------

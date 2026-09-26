@@ -14,9 +14,6 @@
 #include "reflect_annotations.h"
 #include "fish.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar fish_dormant( "fish_dormant", "0", FCVAR_REPLICATED | FCVAR_CHEAT, "Turns off interactive fish behavior. Fish become immobile and unresponsive." );
 
 
@@ -395,7 +392,7 @@ void CFish::Update( float deltaT )
 	float danger = Avoid();
 
 	// flock towards visible fish
-	for( int i=0; i<m_visible.Count(); ++i )
+	for( int i=0; i<std::ssize( m_visible ); ++i )
 	{
 		FlockTo( m_visible[i], (1.0f - danger) );
 	}
@@ -479,7 +476,7 @@ void CFish::Update( float deltaT )
  */
 void CFish::ResetVisible( void )
 {
-	m_visible.RemoveAll();
+	m_visible.clear();
 }
 
 
@@ -489,7 +486,7 @@ void CFish::ResetVisible( void )
  */
 void CFish::AddVisible( CFish *fish )
 {
-	m_visible.AddToTail( fish );
+	m_visible.push_back( fish );
 }
 
 
@@ -547,7 +544,7 @@ void CFishPool::Spawn()
 		{
 			CHandle<CFish> hFish;
 			hFish.Set( fish );
-			m_fishes.AddToTail( hFish );
+			m_fishes.push_back( hFish );
 		}
 	}
 }
@@ -603,7 +600,7 @@ void CFishPool::FireGameEvent( IGameEvent *event )
 
 	float range = (Q_strcmp( "player_footstep", event->GetName() )) ? loudRange : quietRange;
 
-	for( int i=0; i<m_fishes.Count(); ++i )
+	for( int i=0; i<std::ssize( m_fishes ); ++i )
 	{
 		// if player is NULL, assume a game-wide event
 		if (player && (player->GetAbsOrigin() - m_fishes[i]->GetAbsOrigin()).IsLengthGreaterThan( range ))
@@ -633,7 +630,7 @@ void CFishPool::Update( void )
 		if (!m_isDormant)
 		{
 			// stop all the fish
-			for( int i=0; i<m_fishes.Count(); ++i )
+			for( int i=0; i<std::ssize( m_fishes ); ++i )
 			{
 				m_fishes[i]->SetAbsVelocity( Vector( 0, 0, 0 ) );
 			}
@@ -657,18 +654,18 @@ void CFishPool::Update( void )
 		trace_t result;
 
 		// reset each fishes vis list
-		for( i=0; i<m_fishes.Count(); ++i )
+		for( i=0; i<std::ssize( m_fishes ); ++i )
 		{
 			m_fishes[i]->ResetVisible();
 		}
 
 		// build new vis lists - line of sight is symmetric
-		for( i=0; i<m_fishes.Count(); ++i )
+		for( i=0; i<std::ssize( m_fishes ); ++i )
 		{
 			if (!m_fishes[i]->IsAlive())
 				continue;
 
-			for( j=i+1; j<m_fishes.Count(); ++j )
+			for( j=i+1; j<std::ssize( m_fishes ); ++j )
 			{
 				if (!m_fishes[j]->IsAlive())
 					continue;
@@ -685,7 +682,7 @@ void CFishPool::Update( void )
 	}
 
 	// simulate the fishes behavior
-	for( int i=0; i<m_fishes.Count(); ++i )
+	for( int i=0; i<std::ssize( m_fishes ); ++i )
 	{
 		m_fishes[i]->Update( deltaT );
 	}

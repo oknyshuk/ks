@@ -104,7 +104,7 @@ private:
 #define GenerateHash( hash, pubData, cubData ) { CSHA1 sha1; sha1.Update( (byte *)pubData, cubData ); sha1.Final(); sha1.GetHash( hash ); } 
 
 #if !defined(_MINIMUM_BUILD_)
-// hash comparison function, for use with CUtlMap/CUtlRBTree
+// hash comparison function, for use with std::map
 bool HashLessFunc( SHADigest_t const &lhs, SHADigest_t const &rhs );
 
 // utility class for manipulating SHA1 hashes in their compact form

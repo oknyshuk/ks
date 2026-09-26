@@ -1,10 +1,12 @@
 //===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
 //
-// Purpose: 
+// Purpose:
 //
 //===========================================================================//
 
 #undef PROTECTED_THINGS_ENABLE
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
 #include <SDL3/SDL.h>
 
 typedef void *HDC;
@@ -44,9 +46,7 @@ typedef void *HDC;
 #include "tier2/renderutils.h"
 #include "LoadScreenUpdate.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 ConVar cl_savescreenshotstosteam( "cl_savescreenshotstosteam", "0", FCVAR_HIDDEN, "Saves screenshots to the Steam's screenshot library" );
 ConVar cl_screenshotusertag( "cl_screenshotusertag", "", FCVAR_HIDDEN, "User to tag in the screenshot" );
 ConVar cl_screenshotlocation( "cl_screenshotlocation", "", FCVAR_HIDDEN, "Location to tag the screenshot with" );
@@ -102,7 +102,7 @@ public:
 	virtual void		TakeSnapshotTGARect( const char *pFilename, int x, int y, int w, int h, int resampleWidth, int resampleHeight, bool bPFM, CubeMapFaceIndex_t faceIndex );
 	virtual void		WriteMovieFrame( const MovieInfo_t& info );
 	virtual void		TakeSnapshotJPEG( const char *pFileName, int quality );
-	virtual bool		TakeSnapshotJPEGToBuffer( CUtlBuffer& buf, int quality );
+	virtual bool		TakeSnapshotJPEGToBuffer( ks::byte_writer& buf, int quality );
 protected:
 	bool				GetInitialized( ) const;
 	void				SetInitialized( bool init );
@@ -114,7 +114,7 @@ protected:
 	void				WriteScreenshotToSteam( uint8 *pImage, int cubImage, int width, int height );
 	void				AddScreenshotToSteam( const char *pchFilenameJpeg, int width, int height );
 
-	// Finds the video mode in the list of video modes 
+	// Finds the video mode in the list of video modes
 	int					FindVideoMode( int nDesiredWidth, int nDesiredHeight, bool bWindowed );
 
 	// Purpose: Returns the optimal refresh rate for the specified mode
@@ -131,7 +131,7 @@ private:
     void                DrawStartupGraphic( HWND window );
     void                BlitGraphicToHDC(HDC hdc, byte *rgba, int imageWidth, int imageHeight, int x0, int y0, int x1, int y1);
     void                BlitGraphicToHDCWithAlpha(HDC hdc, byte *rgba, int imageWidth, int imageHeight, int x0, int y0, int x1, int y1);
-    IVTFTexture         *LoadVTF( CUtlBuffer &temp, const char *szFileName );
+    IVTFTexture         *LoadVTF( const char *szFileName );
     void                RecomputeClientViewRect();
 
     // Overridden by derived classes
@@ -201,7 +201,7 @@ inline vmode_t& CVideoMode_Common::RequestedWindowVideoMode()
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 CVideoMode_Common::CVideoMode_Common( void )
 {
@@ -232,7 +232,7 @@ CVideoMode_Common::CVideoMode_Common( void )
     RequestedWindowVideoMode().height = -1;
     RequestedWindowVideoMode().bpp    = 32;
     RequestedWindowVideoMode().refreshRate = 0;
-    
+
     m_bClientViewRectDirty = false;
     m_pBackgroundTexture   = nullptr;
     m_pLoadingTexture      = nullptr;
@@ -243,14 +243,14 @@ CVideoMode_Common::CVideoMode_Common( void )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 CVideoMode_Common::~CVideoMode_Common( void )
 {
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
 bool CVideoMode_Common::GetInitialized( void ) const
@@ -259,8 +259,8 @@ bool CVideoMode_Common::GetInitialized( void ) const
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : init - 
+// Purpose:
+// Input  : init -
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::SetInitialized( bool init )
 {
@@ -268,7 +268,7 @@ void CVideoMode_Common::SetInitialized( bool init )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
 bool CVideoMode_Common::IsWindowedMode( void ) const
@@ -373,7 +373,7 @@ vmode_t *CVideoMode_Common::GetMode( int num )
 
 
 //-----------------------------------------------------------------------------
-// Returns the number of fullscreen video modes 
+// Returns the number of fullscreen video modes
 //-----------------------------------------------------------------------------
 int CVideoMode_Common::GetModeCount( void )
 {
@@ -383,11 +383,11 @@ int CVideoMode_Common::GetModeCount( void )
 
 //-----------------------------------------------------------------------------
 // Purpose: Compares video modes so we can sort the list
-// Input  : *arg1 - 
-//          *arg2 - 
+// Input  : *arg1 -
+//          *arg2 -
 // Output : static int
 //-----------------------------------------------------------------------------
-static int __cdecl VideoModeCompare( const void *arg1, const void *arg2 )
+static int VideoModeCompare( const void *arg1, const void *arg2 )
 {
     vmode_t *m1, *m2;
 
@@ -419,16 +419,16 @@ static int __cdecl VideoModeCompare( const void *arg1, const void *arg2 )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 bool CVideoMode_Common::Init( )
-{   
+{
     return true;
 }
 
 
 //-----------------------------------------------------------------------------
-// Finds the video mode in the list of video modes 
+// Finds the video mode in the list of video modes
 //-----------------------------------------------------------------------------
 int CVideoMode_Common::FindVideoMode( int nDesiredWidth, int nDesiredHeight, bool bWindowed )
 {
@@ -456,7 +456,7 @@ int CVideoMode_Common::FindVideoMode( int nDesiredWidth, int nDesiredHeight, boo
         // Match width first
         if ( m_rgModeList[i].width != nDesiredWidth )
             continue;
-        
+
         iOK = i;
 
         if ( m_rgModeList[i].height != nDesiredHeight )
@@ -523,7 +523,7 @@ bool CVideoMode_Common::CreateGameWindow( int nWidth, int nHeight, bool bWindowe
         RequestedWindowVideoMode().width = nWidth;
         RequestedWindowVideoMode().height = nHeight;
     }
-    
+
     if ( !InEditMode() )
     {
         // Fill in vid structure for the mode.
@@ -535,7 +535,7 @@ bool CVideoMode_Common::CreateGameWindow( int nWidth, int nHeight, bool bWindowe
 		if( IsPS3QuitRequested() )
 			return false;
 
-        // When running in stand-alone mode, create your own window 
+        // When running in stand-alone mode, create your own window
         if ( !game->CreateGameWindow() )
             return false;
 
@@ -576,13 +576,15 @@ bool CVideoMode_Common::CreateGameWindow( int nWidth, int nHeight, bool bWindowe
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: loads a vtf, through the temporary buffer
+// Purpose: loads a vtf
 //-----------------------------------------------------------------------------
-IVTFTexture *CVideoMode_Common::LoadVTF( CUtlBuffer &temp, const char *szFileName )
+IVTFTexture *CVideoMode_Common::LoadVTF( const char *szFileName )
 {
-    if ( !g_pFileSystem->ReadFile( szFileName, nullptr, temp ) )
+    auto data = g_pFileSystem->ReadFile( szFileName, nullptr );
+    if ( !data )
         return nullptr;
 
+    ks::byte_reader temp( *data );
     IVTFTexture *texture = CreateVTFTexture();
     if ( !texture->Unserialize( temp ) )
     {
@@ -612,8 +614,7 @@ bool CVideoMode_Common::SetupStartupGraphic()
 	ComputeStartupGraphicName( startupName, sizeof( startupName ) );
 
 	// load in the background vtf
-	CUtlBuffer buf;
-	m_pBackgroundTexture = LoadVTF( buf, startupName );
+	m_pBackgroundTexture = LoadVTF( startupName );
 	if ( !m_pBackgroundTexture )
 	{
 		Error( "Can't find background image '%s'\n", startupName );
@@ -621,20 +622,17 @@ bool CVideoMode_Common::SetupStartupGraphic()
 	}
 
 	// loading vtf
-	// added this Clear() because we saw cases where LoadVTF was not emptying the buf fully in the above section
-	buf.Clear();
 	const char *pLoadingName = "materials/console/startup_loading.vtf";
-	m_pLoadingTexture = LoadVTF( buf, pLoadingName );
+	m_pLoadingTexture = LoadVTF( pLoadingName );
 	if ( !m_pLoadingTexture )
 	{
 		Error( "Can't find background image %s\n", pLoadingName );
 		return false;
 	}
 
-	buf.Clear();
 	const char *pTitleName = "materials/console/logo.vtf";
-		
-	m_pTitleTexture = LoadVTF( buf, pTitleName );
+
+	m_pTitleTexture = LoadVTF( pTitleName );
 	if ( !m_pTitleTexture )
 	{
 		Error( "Can't find title image %s\n", pTitleName );
@@ -745,7 +743,7 @@ void CVideoMode_Common::DrawStartupGraphic()
 				{
 					slide = 200-slide;		// aka 100-(slide-100).
 				}
-				
+
 				DrawScreenSpaceRectangle( pMaterial, 0, 0+slide, w, h-50, 0, 0, tw-1, th-1, tw, th, nullptr,1,1,depth );
 				DrawScreenSpaceRectangle( pLoadingMaterial, w-lw, h-lh+slide/2, lw, lh, 0, 0, lw-1, lh-1, lw, lh, nullptr,1,1,depth-0.1 );
 			}
@@ -756,11 +754,11 @@ void CVideoMode_Common::DrawStartupGraphic()
 				int grid_size = 8;
 				float depthacc = 0.0;
 				float depthinc = 1.0 / (float)((grid_size * grid_size)+1);
-				
+
 				for( int x = 0; x<grid_size; x++)
 				{
 					float cornerx = ((float)x) * 20.0f;
-					
+
 					for( int y=0; y<grid_size; y++)
 					{
 						float cornery = ((float)y) * 20.0f;
@@ -769,13 +767,13 @@ void CVideoMode_Common::DrawStartupGraphic()
 						{
 							DrawScreenSpaceRectangle( pMaterial, 10.0f+cornerx,10.0f+ cornery, 15, 15, 0, 0, tw-1, th-1, tw, th, nullptr,1,1, depthacc );
 						}
-						
+
 						depthacc += depthinc;
 					}
 				}
 			}
 
-			g_pMaterialSystem->SwapBuffers();			
+			g_pMaterialSystem->SwapBuffers();
 		}
 	}
 	else
@@ -785,7 +783,7 @@ void CVideoMode_Common::DrawStartupGraphic()
 		pRenderContext->ClearColor3ub( 0, 0, 0 );
 		pRenderContext->ClearBuffers( true, true, true );
 		pRenderContext->SetToneMappingScaleLinear( Vector(1,1,1) );
-		
+
 		float depth = 0.5f;
 
 		// Apply a custom scaling that mirrors the way we draw the Scaleform background texture
@@ -952,8 +950,8 @@ int CVideoMode_Common::GetRefreshRateForMode( const vmode_t *pMode )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : *mode - 
+// Purpose:
+// Input  : *mode -
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::AdjustWindow( int nWidth, int nHeight, int nBPP, bool bWindowed, bool bNoWindowBorder )
@@ -961,7 +959,7 @@ void CVideoMode_Common::AdjustWindow( int nWidth, int nHeight, int nBPP, bool bW
 
     if ( g_bTextMode )
         return;
-    
+
     // Use Change Display Settings to go full screen
     ChangeDisplaySettingsToFullscreen( nWidth, nHeight, nBPP, bNoWindowBorder );
 
@@ -971,12 +969,12 @@ void CVideoMode_Common::AdjustWindow( int nWidth, int nHeight, int nBPP, bool bW
     WindowRect.right    = nWidth;
     WindowRect.bottom   = nHeight;
 
-	
+
 	// Now center
 	CenterEngineWindow( game->GetMainWindow(),
 					   WindowRect.right - WindowRect.left,
 					   WindowRect.bottom - WindowRect.top );
-	
+
 
 
 	g_pLauncherMgr->SetWindowFullScreen( !bWindowed, nWidth, nHeight, bNoWindowBorder );
@@ -985,7 +983,7 @@ void CVideoMode_Common::AdjustWindow( int nWidth, int nHeight, int nBPP, bool bW
 
 	// Mid-2015 MBP with Intel and AMD GPUs can fail to set the resolution correctly the first time when
 	// transitioning to fullscreen. The low level driver seems to throw an error but moves past it. Terrifying.
-	// In the meantime, we workaround this by trying again--because trying a second time generally seems to 
+	// In the meantime, we workaround this by trying again--because trying a second time generally seems to
 	// be successful. If it isn't, then we punt on exclusive fullscreen mode and do non-exclusive fs instead.
 	// We can't fix this in sdlmgr.cpp (which would be less ugly) because SDL caches window and display
 	// information, and so it thinks everything worked great. We need to get the resolution of the desktop
@@ -1013,7 +1011,7 @@ void CVideoMode_Common::AdjustWindow( int nWidth, int nHeight, int nBPP, bool bW
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::Shutdown( void )
 {
@@ -1079,29 +1077,25 @@ void CVideoMode_Common::RecomputeClientViewRect()
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : hWndCenter - 
-//          width - 
-//          height - 
+// Purpose:
+// Input  : hWndCenter -
+//          width -
+//          height -
 // Output : static void
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::CenterEngineWindow( void *hWndCenter, int width, int height)
 {
     int     CenterX, CenterY;
 
-	// Get the displayindex, and center our window on that display.
-	int displayindex = g_pLauncherMgr->GetActiveDisplayIndex();
-
-	int dCount = 0;
-	SDL_DisplayID *dList = SDL_GetDisplays( &dCount );
-	SDL_DisplayID displayID = ( dList && displayindex < dCount ) ? dList[displayindex] : SDL_GetPrimaryDisplay();
-	SDL_free( dList );
+	SDL_DisplayID displayID = SDL_GetDisplayForWindow( GetGameSDLWindow() );
+	if ( !displayID )
+		displayID = SDL_GetPrimaryDisplay();
 
 	const SDL_DisplayMode *mode = SDL_GetCurrentDisplayMode( displayID );
 
 	const int wide = mode->w;
 	const int tall = mode->h;
-	
+
 	CenterX = (wide - width) / 2;
 	CenterY = (tall - height) / 2;
 	CenterX = (CenterX < 0) ? 0: CenterX;
@@ -1110,19 +1104,19 @@ void CVideoMode_Common::CenterEngineWindow( void *hWndCenter, int width, int hei
 	// tweak the x and w positions if the user species them on the command-line
 	CenterX = CommandLine()->ParmValue( "-x", CenterX );
 	CenterY = CommandLine()->ParmValue( "-y", CenterY );
-	
+
 	// also check for the negated form (since it is hard to say "-x -1000")
-	int negx = CommandLine()->ParmValue( "-negx", 0 ); 
+	int negx = CommandLine()->ParmValue( "-negx", 0 );
 	if (negx > 0)
 	{
 		CenterX = -negx;
 	}
-	int negy = CommandLine()->ParmValue( "-negy", 0 ); 
+	int negy = CommandLine()->ParmValue( "-negy", 0 );
 	if (negy > 0)
 	{
 		CenterY = -negy;
 	}
-	
+
 	SDL_Rect rect = { 0, 0, 0, 0 };
 	SDL_GetDisplayBounds( displayID, &rect );
 
@@ -1170,11 +1164,11 @@ void CVideoMode_Common::TakeSnapshotTGA( const char *pFilename )
 	// this xbox screenshot path is not meant as an exact framebuffer image
 	// need to correct for srgb disparity for proper comparison with PC screenshots
 
-    CUtlBuffer outBuf;
+    ks::byte_writer outBuf;
     if ( TGAWriter::WriteToBuffer( pImage, outBuf, GetModeWidth(), GetModeHeight(), IMAGE_FORMAT_RGB888,
         IMAGE_FORMAT_RGB888 ) )
     {
-        if ( !g_pFileSystem->WriteFile( pFilename, nullptr, outBuf ) )
+        if ( !g_pFileSystem->WriteFile( pFilename, nullptr, outBuf.bytes() ) )
         {
             Warning( "Couldn't write bitmap data snapshot to file %s.\n", pFilename );
 		}
@@ -1208,7 +1202,7 @@ ITexture *CVideoMode_Common::GetFullFrameFB0( void )
 
 void CVideoMode_Common::BlitHiLoScreenBuffersTo16Bit( void )
 {
-    
+
     IMaterial *pHDRCombineMaterial = materials->FindMaterial( "dev/hdrcombineto16bit", TEXTURE_GROUP_OTHER, true );
 //  if( IsErrorMaterial( pHDRCombineMaterial ) )
 //  {
@@ -1295,8 +1289,8 @@ void CVideoMode_Common::TakeSnapshotPFMRect( const char *pFilename, int x, int y
 //  resampleWidth = w;
 //  resampleHeight = h;
     // bitmap bits
-    float16 *pImage = ( float16 * )malloc( w * h * ImageLoader::SizeInBytes( IMAGE_FORMAT_RGBA16161616F ) );
-    float *pImage1 = ( float * )malloc( w * h * ImageLoader::SizeInBytes( IMAGE_FORMAT_RGB323232F ) );
+    float16 *pImage = ( float16 * )MemAlloc_Alloc( w * h * ImageLoader::SizeInBytes( IMAGE_FORMAT_RGBA16161616F ) );
+    float *pImage1 = ( float * )MemAlloc_Alloc( w * h * ImageLoader::SizeInBytes( IMAGE_FORMAT_RGB323232F ) );
 
     CMatRenderContextPtr pRenderContext( materials );
 
@@ -1325,13 +1319,13 @@ void CVideoMode_Common::TakeSnapshotPFMRect( const char *pFilename, int x, int y
     pRenderContext->SetRenderTarget( pSaveRenderTarget );
 
     // convert from float16 to float32
-    ImageLoader::ConvertImageFormat( ( unsigned char * )pImage, IMAGE_FORMAT_RGBA16161616F, 
-        ( unsigned char * )pImage1, IMAGE_FORMAT_RGB323232F, 
+    ImageLoader::ConvertImageFormat( ( unsigned char * )pImage, IMAGE_FORMAT_RGBA16161616F,
+        ( unsigned char * )pImage1, IMAGE_FORMAT_RGB323232F,
         w, h );
 
     Assert( w == h ); // garymcthack - this only works for square images
 
-    float *pFloatImage = ( float * )malloc( resampleWidth * resampleHeight * ImageLoader::SizeInBytes( IMAGE_FORMAT_RGB323232F ) );
+    float *pFloatImage = ( float * )MemAlloc_Alloc( resampleWidth * resampleHeight * ImageLoader::SizeInBytes( IMAGE_FORMAT_RGB323232F ) );
 
     ImageLoader::ResampleInfo_t info;
     info.m_pSrc = ( unsigned char * )pImage1;
@@ -1350,9 +1344,9 @@ void CVideoMode_Common::TakeSnapshotPFMRect( const char *pFilename, int x, int y
 
     PFMWrite( pFloatImage, pFilename, resampleWidth, resampleHeight );
 
-    free( pImage1 );
-    free( pImage );
-    free( pFloatImage );
+    g_pMemAlloc->Free( pImage1 );
+    g_pMemAlloc->Free( pImage );
+    g_pMemAlloc->Free( pFloatImage );
 }
 
 
@@ -1391,11 +1385,11 @@ void CVideoMode_Common::TakeSnapshotTGARect( const char *pFilename, int x, int y
     {
         Sys_Error( "Can't resample\n" );
     }
-    
-    CUtlBuffer outBuf;
+
+    ks::byte_writer outBuf;
     if ( TGAWriter::WriteToBuffer( pImage1, outBuf, resampleWidth, resampleHeight, IMAGE_FORMAT_RGBA8888, IMAGE_FORMAT_RGBA8888 ) )
     {
-        if ( !g_pFileSystem->WriteFile( pFilename, nullptr, outBuf ) )
+        if ( !g_pFileSystem->WriteFile( pFilename, nullptr, outBuf.bytes() ) )
         {
             Error( "Couldn't write bitmap data snapshot to file %s.\n", pFilename );
         }
@@ -1413,16 +1407,16 @@ void CVideoMode_Common::TakeSnapshotTGARect( const char *pFilename, int x, int y
 
 //-----------------------------------------------------------------------------
 // Purpose: Writes the data in *data to the sequentially number .bmp file filename
-// Input  : *filename - 
-//          width - 
-//          height - 
-//          depth - 
-//          *data - 
+// Input  : *filename -
+//          width -
+//          height -
+//          depth -
+//          *data -
 // Output : static void
 //-----------------------------------------------------------------------------
 static void VID_ProcessMovieFrame( const MovieInfo_t& info, bool jpeg, const char *filename, int width, int height, byte *data )
 {
-    CUtlBuffer outBuf;
+    ks::byte_writer outBuf;
     bool bSuccess = false;
     if ( jpeg )
     {
@@ -1435,7 +1429,7 @@ static void VID_ProcessMovieFrame( const MovieInfo_t& info, bool jpeg, const cha
 
     if ( bSuccess )
     {
-        if ( !g_pFileSystem->WriteFile( filename, nullptr, outBuf ) )
+        if ( !g_pFileSystem->WriteFile( filename, nullptr, outBuf.bytes() ) )
         {
             Warning( "Couldn't write movie snapshot to file %s.\n", filename );
 			Cbuf_AddText( Cbuf_GetCurrentPlayer(), "endmovie\n" );
@@ -1445,7 +1439,7 @@ static void VID_ProcessMovieFrame( const MovieInfo_t& info, bool jpeg, const cha
 
 //-----------------------------------------------------------------------------
 // Purpose: Store current frame to numbered .bmp file
-// Input  : *pFilename - 
+// Input  : *pFilename -
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::WriteMovieFrame( const MovieInfo_t& info )
 {
@@ -1475,13 +1469,13 @@ void CVideoMode_Common::WriteMovieFrame( const MovieInfo_t& info )
     // Store frame to disk
     if ( info.DoTga() )
     {
-        VID_ProcessMovieFrame( info, false, va( "%s%04d.tga", pMovieName, nMovieFrame ), 
+        VID_ProcessMovieFrame( info, false, va( "%s%04d.tga", pMovieName, nMovieFrame ),
             GetModeWidth(), GetModeHeight(), (unsigned char*)hp );
     }
 
     if ( info.DoJpg() )
     {
-        VID_ProcessMovieFrame( info, true, va( "%s%04d.jpg", pMovieName, nMovieFrame ), 
+        VID_ProcessMovieFrame( info, true, va( "%s%04d.jpg", pMovieName, nMovieFrame ),
             GetModeWidth(), GetModeHeight(), (unsigned char*)hp );
     }
 
@@ -1494,18 +1488,18 @@ void CVideoMode_Common::WriteMovieFrame( const MovieInfo_t& info )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Expanded data destination object for CUtlBuffer output
+// Purpose: Expanded data destination object for byte_writer output
 //-----------------------------------------------------------------------------
 struct JPEGDestinationManager_t
 {
     struct jpeg_destination_mgr pub; // public fields
-    
-    CUtlBuffer  *pBuffer;       // target/final buffer
+
+    ks::byte_writer *pBuffer;   // target/final buffer
     byte        *buffer;        // start of temp buffer
 };
 
 // choose an efficiently bufferaable size
-#define OUTPUT_BUF_SIZE  4096   
+#define OUTPUT_BUF_SIZE  4096
 
 //-----------------------------------------------------------------------------
 // Purpose:  Initialize destination --- called by jpeg_start_compress
@@ -1514,32 +1508,32 @@ struct JPEGDestinationManager_t
 METHODDEF(void) init_destination (j_compress_ptr cinfo)
 {
     JPEGDestinationManager_t *dest = ( JPEGDestinationManager_t *) cinfo->dest;
-    
+
     // Allocate the output buffer --- it will be released when done with image
     dest->buffer = (byte *)
         (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
         OUTPUT_BUF_SIZE * sizeof(byte));
-    
+
     dest->pub.next_output_byte = dest->buffer;
     dest->pub.free_in_buffer = OUTPUT_BUF_SIZE;
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Empty the output buffer --- called whenever buffer fills up.
-// Input  : boolean - 
+// Input  : boolean -
 //-----------------------------------------------------------------------------
 METHODDEF(boolean) empty_output_buffer (j_compress_ptr cinfo)
 {
     JPEGDestinationManager_t *dest = ( JPEGDestinationManager_t * ) cinfo->dest;
-    
-    CUtlBuffer *buf = dest->pBuffer;
+
+    ks::byte_writer *buf = dest->pBuffer;
 
     // Add some data
-    buf->Put( dest->buffer, OUTPUT_BUF_SIZE );
-    
+    buf->write_bytes( dest->buffer, OUTPUT_BUF_SIZE );
+
     dest->pub.next_output_byte = dest->buffer;
     dest->pub.free_in_buffer = OUTPUT_BUF_SIZE;
-    
+
     return TRUE;
 }
 
@@ -1555,23 +1549,23 @@ METHODDEF(void) term_destination (j_compress_ptr cinfo)
 {
     JPEGDestinationManager_t *dest = (JPEGDestinationManager_t *) cinfo->dest;
     size_t datacount = OUTPUT_BUF_SIZE - dest->pub.free_in_buffer;
-    
-    CUtlBuffer *buf = dest->pBuffer;
+
+    ks::byte_writer *buf = dest->pBuffer;
 
     /* Write any data remaining in the buffer */
-    if (datacount > 0) 
+    if (datacount > 0)
     {
-        buf->Put( dest->buffer, datacount );
+        buf->write_bytes( dest->buffer, datacount );
     }
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Set up functions for writing data to a CUtlBuffer instead of FILE *
+// Purpose: Set up functions for writing data to a byte_writer instead of FILE *
 //-----------------------------------------------------------------------------
-GLOBAL(void) jpeg_UtlBuffer_dest (j_compress_ptr cinfo, CUtlBuffer *pBuffer )
+GLOBAL(void) jpeg_ByteWriter_dest (j_compress_ptr cinfo, ks::byte_writer *pBuffer )
 {
     JPEGDestinationManager_t *dest;
-    
+
     /* The destination object is made permanent so that multiple JPEG images
     * can be written to the same file without re-executing jpeg_stdio_dest.
     * This makes it dangerous to use this manager and a different destination
@@ -1583,7 +1577,7 @@ GLOBAL(void) jpeg_UtlBuffer_dest (j_compress_ptr cinfo, CUtlBuffer *pBuffer )
             (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT,
             sizeof(JPEGDestinationManager_t));
     }
-    
+
     dest = ( JPEGDestinationManager_t * ) cinfo->dest;
 
     dest->pub.init_destination      = init_destination;
@@ -1592,7 +1586,7 @@ GLOBAL(void) jpeg_UtlBuffer_dest (j_compress_ptr cinfo, CUtlBuffer *pBuffer )
     dest->pBuffer                   = pBuffer;
 }
 
-bool CVideoMode_Common::TakeSnapshotJPEGToBuffer( CUtlBuffer& buf, int quality )
+bool CVideoMode_Common::TakeSnapshotJPEGToBuffer( ks::byte_writer& buf, int quality )
 {
     if ( g_LostVideoMemory )
         return false;
@@ -1628,8 +1622,8 @@ bool CVideoMode_Common::TakeSnapshotJPEGToBuffer( CUtlBuffer& buf, int quality )
     // create compressor
     jpeg_create_compress(&cinfo);
 
-    // Hook CUtlBuffer to compression
-    jpeg_UtlBuffer_dest(&cinfo, &buf );
+    // Hook byte_writer to compression
+    jpeg_ByteWriter_dest(&cinfo, &buf );
 
     // image width and height, in pixels
     cinfo.image_width = GetModeWidth();
@@ -1645,9 +1639,9 @@ bool CVideoMode_Common::TakeSnapshotJPEGToBuffer( CUtlBuffer& buf, int quality )
 
     // Start compressor
     jpeg_start_compress(&cinfo, TRUE);
-    
+
     // Write scanlines
-    while ( cinfo.next_scanline < cinfo.image_height ) 
+    while ( cinfo.next_scanline < cinfo.image_height )
     {
         row_pointer[ 0 ] = &pImage[ cinfo.next_scanline * row_stride ];
         jpeg_write_scanlines( &cinfo, row_pointer, 1 );
@@ -1658,7 +1652,7 @@ bool CVideoMode_Common::TakeSnapshotJPEGToBuffer( CUtlBuffer& buf, int quality )
 
     // Cleanup
     jpeg_destroy_compress(&cinfo);
-    
+
     delete[] pImage;
 
     return true;
@@ -1666,21 +1660,21 @@ bool CVideoMode_Common::TakeSnapshotJPEGToBuffer( CUtlBuffer& buf, int quality )
 
 //-----------------------------------------------------------------------------
 // Purpose: Write vid.buffer out as a .jpg file
-// Input  : *pFilename - 
+// Input  : *pFilename -
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::TakeSnapshotJPEG( const char *pFilename, int quality )
 {
     Assert( pFilename );
 
     // Output buffer
-    CUtlBuffer buf( 0, 0 );
+    ks::byte_writer buf;
     TakeSnapshotJPEGToBuffer( buf, quality );
 
     int finalSize = 0;
     FileHandle_t fh = g_pFileSystem->Open( pFilename, "wb" );
     if ( FILESYSTEM_INVALID_HANDLE != fh )
     {
-        g_pFileSystem->Write( buf.Base(), buf.TellPut(), fh );
+        g_pFileSystem->Write( buf.data(), int( buf.tell() ), fh );
         finalSize = g_pFileSystem->Tell( fh );
         g_pFileSystem->Close( fh );
     }
@@ -1707,13 +1701,13 @@ void CVideoMode_Common::TakeSnapshotJPEG( const char *pFilename, int quality )
 }
 
 //-----------------------------------------------------------------------------
-// The version of the VideoMode class for the material system 
+// The version of the VideoMode class for the material system
 //-----------------------------------------------------------------------------
 class CVideoMode_MaterialSystem: public CVideoMode_Common
 {
 public:
     typedef CVideoMode_Common BaseClass;
-    
+
     CVideoMode_MaterialSystem( );
 
     virtual bool        Init( );
@@ -1853,7 +1847,7 @@ bool CVideoMode_MaterialSystem::SetMode( int nWidth, int nHeight, bool bWindowed
     // Necessary for mode selection to work
     int nFoundMode = FindVideoMode( nWidth, nHeight, bWindowed );
 	vmode_t videoMode = *GetMode( nFoundMode );
-	
+
 	if ( bWindowed && ( nFoundMode == 0 ) && ( videoMode.width != nWidth || videoMode.height != nHeight ) )
 	{
 		// Setting a custom windowed size
@@ -1878,7 +1872,7 @@ bool CVideoMode_MaterialSystem::SetMode( int nWidth, int nHeight, bool bWindowed
 #else
 	config.m_VideoMode.m_RefreshRate = GetRefreshRateForMode( &videoMode );
 #endif
-    
+
     config.SetFlag( MATSYS_VIDCFG_FLAGS_WINDOWED, bWindowed );
 	config.SetFlag( MATSYS_VIDCFG_FLAGS_NO_WINDOW_BORDER, bNoWindowBorder );
 
@@ -1887,7 +1881,7 @@ bool CVideoMode_MaterialSystem::SetMode( int nWidth, int nHeight, bool bWindowed
     if ( !m_bSetModeOnce )
     {
 		//Debugger();
-		
+
         if ( !materials->SetMode( (void*)game->GetMainWindow(), config ) )
             return false;
 
@@ -1897,7 +1891,7 @@ bool CVideoMode_MaterialSystem::SetMode( int nWidth, int nHeight, bool bWindowed
         return true;
     }
 
-    // update the config 
+    // update the config
     OverrideMaterialSystemConfig( config );
     return true;
 }
@@ -1982,7 +1976,7 @@ void CVideoMode_MaterialSystem::ReleaseVideo( void )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 void CVideoMode_MaterialSystem::RestoreVideo( void )
 {
@@ -1999,7 +1993,7 @@ void CVideoMode_MaterialSystem::RestoreVideo( void )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 void CVideoMode_MaterialSystem::ReleaseFullScreen( void )
 {

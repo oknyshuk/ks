@@ -3,9 +3,6 @@
 #include "BaseVSShader.h"
 #include "portal_refract_helper.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 DEFINE_FALLBACK_SHADER( PortalRefract, PortalRefract_dx9 )
 BEGIN_VS_SHADER( PortalRefract_dx9, "PortalRefract" )
 	BEGIN_SHADER_PARAMS

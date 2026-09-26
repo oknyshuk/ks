@@ -9,6 +9,7 @@
 #define MDLUTILS_H
 
 
+#include <utility>
 #include "datacache/imdlcache.h"
 #include "mathlib/vector.h"
 #include "color.h"
@@ -38,11 +39,32 @@ struct MDLSquenceLayer_t
 //-----------------------------------------------------------------------------
 // Class containing simplistic MDL state for use in rendering
 //-----------------------------------------------------------------------------
+// Owns one MDL cache reference: moves hand it over, copies are not allowed. CMDL still takes the
+// reference itself (SetMDL); this makes moving a CMDL safe and releases anything left behind.
+class CMDLHandleOwner
+{
+public:
+	CMDLHandleOwner() = default;
+	CMDLHandleOwner( const CMDLHandleOwner & ) = delete;
+	CMDLHandleOwner &operator=( const CMDLHandleOwner & ) = delete;
+	CMDLHandleOwner( CMDLHandleOwner &&o ) : m_h( std::exchange( o.m_h, MDLHANDLE_INVALID ) ) {}
+	CMDLHandleOwner &operator=( CMDLHandleOwner &&o );
+	~CMDLHandleOwner();
+
+	CMDLHandleOwner &operator=( MDLHandle_t h ) { m_h = h; return *this; }	// no reference change
+	operator MDLHandle_t() const { return m_h; }
+
+private:
+	MDLHandle_t m_h = MDLHANDLE_INVALID;
+};
+
 class CMDL : public CCustomMaterialOwner, public IRenderToRTHelperObject
 {
 public:
 	CMDL();
 	virtual ~CMDL();
+	CMDL( CMDL && ) = default;
+	CMDL &operator=( CMDL && ) = default;
 
 	void SetMDL( MDLHandle_t h );
 	MDLHandle_t GetMDL() const;
@@ -79,7 +101,7 @@ private:
 
 	void SetupBones_AttachmentHelper( CStudioHdr *hdr, matrix3x4_t *pBoneToWorld );
 	bool PutAttachment( int number, const matrix3x4_t &attachmentToWorld );
-	CUtlVector<CMDLAttachmentData>		m_Attachments;
+	std::vector< CMDLAttachmentData >		m_Attachments;
 
 	CMaterialReference	m_pSimpleMaterialOverride;
 
@@ -88,7 +110,7 @@ protected:
 	CTextureReference m_DefaultHDREnvCubemap;
 
 public:
-	MDLHandle_t	m_MDLHandle;
+	CMDLHandleOwner	m_MDLHandle;
 	
 	// Adding m_Padding to coax the PS3 compiler into generating working code.
 	// Without it the m_Color field won't be 4-byte aligned and the PS3 compiler will try and vectorize
@@ -108,7 +130,7 @@ public:
 	bool		m_bUseSequencePlaybackFPS;
 	void		*m_pProxyData;
 	float		m_flTimeBasisAdjustment;
-	CUtlVector< int > m_arrSequenceFollowLoop;
+	std::vector< int > m_arrSequenceFollowLoop;
 };
 
 struct MDLData_t
@@ -178,13 +200,13 @@ protected:
 protected:
 
 	MDLData_t				m_RootMDL;
-	CUtlVector<MDLData_t>	m_aMergeMDLs;
+	std::vector< MDLData_t >	m_aMergeMDLs;
 
 	float	m_PoseParameters[ MAXSTUDIOPOSEPARAM ];
 
 private:
 
-	static const int MAX_SEQUENCE_LAYERS = 8;
+	static constexpr int MAX_SEQUENCE_LAYERS = 8;
 	int					m_nNumSequenceLayers;
 	MDLSquenceLayer_t	m_SequenceLayers[ MAX_SEQUENCE_LAYERS ];
 };

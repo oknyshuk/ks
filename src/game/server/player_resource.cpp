@@ -11,9 +11,6 @@
 #include "player_resource.h"
 #include <coordsize.h>
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // Datatable
 IMPLEMENT_REFLECT_SERVERCLASS( CPlayerResource, DT_PlayerResource )
 
@@ -84,7 +81,7 @@ void CPlayerResource::UpdatePlayerData( void )
 			m_iTeam.Set( i, pPlayer->GetTeamNumber() );
 			m_iPendingTeam.Set( i, pPlayer->GetPendingTeamNumber() );
 			m_bAlive.Set( i, pPlayer->IsAlive()?1:0 );
-			m_iHealth.Set(i, MAX( 0, pPlayer->GetHealth() ) );
+			m_iHealth.Set(i, std::max( 0, pPlayer->GetHealth() ) );
 			m_iCoachingTeam.Set( i, pPlayer->GetCoachingTeam() );
 
 			// Don't update ping / packetloss everytime

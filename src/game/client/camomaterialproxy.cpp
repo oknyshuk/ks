@@ -8,7 +8,6 @@
 
 #include "cbase.h"
 // identifier was truncated to '255' characters in the debug information
-#pragma warning(disable: 4786)
 
 #include "proxyentity.h"
 #include "materialsystem/imaterialvar.h"
@@ -20,8 +19,6 @@
 #include "vtf/vtf.h"
 
 #include "imaterialproxydict.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 class CCamoMaterialProxy;
 
@@ -89,7 +86,6 @@ void CCamoTextureRegen::RegenerateTextureBits( ITexture *pTexture, IVTFTexture *
 }
 
 
-#pragma warning (disable:4355)
 
 CCamoMaterialProxy::CCamoMaterialProxy() : m_TextureRegen(this)
 {
@@ -102,7 +98,6 @@ CCamoMaterialProxy::CCamoMaterialProxy() : m_TextureRegen(this)
 	m_pEnt = nullptr;
 }
 
-#pragma warning (default:4355)
 
 CCamoMaterialProxy::~CCamoMaterialProxy()
 {
@@ -115,8 +110,8 @@ CCamoMaterialProxy::~CCamoMaterialProxy()
 			pCamoTexture->SetTextureRegenerator( nullptr );
 	}
 
-	delete m_pCamoPatternImage;
-	delete m_pointsInNormalizedBox;
+	delete[] m_pCamoPatternImage;
+	delete[] m_pointsInNormalizedBox;
 }
 
 

@@ -35,9 +35,7 @@
 #include "tier2/tier2.h"
 #include "cl_steamauth.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 // Things in other C files.
 #define MAX_LOG_DIRECTORIES	10000
 
@@ -278,7 +276,6 @@ Parse a line out of a string
 ==============
 */
 
-#pragma warning( disable : 4706 )
 
 const char *COM_ParseLine (const char *data)
 {
@@ -323,7 +320,6 @@ const char *COM_ParseLine (const char *data)
 	return nullptr;
 }
 
-#pragma warning( default : 4706 )
 
 /*
 ==============
@@ -675,13 +671,13 @@ byte *COM_LoadFile (const char *path, int usehunk, int *pLength)
 	case 4:
 		{
 			if (len+1 > loadsize)
-				buf = (byte *)malloc(bufSize);
+				buf = (byte *)MemAlloc_Alloc(bufSize);
 			else
 				buf = loadbuf;
 		}
 		break;
 	case 5:
-		buf = (byte *)malloc(bufSize);  // YWB:  FIXME, this is evil.
+		buf = (byte *)MemAlloc_Alloc(bufSize);  // YWB:  FIXME, this is evil.
 		break;
 	default:
 		Sys_Error ("COM_LoadFile: bad usehunk");

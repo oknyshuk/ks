@@ -14,9 +14,6 @@
 #include "ragdoll_shared.h"
 #include "ai_basenpc.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 class [[= ks::reflect::NetTable{ .name = "DT_RagdollManager", .base = false } ]]
       CRagdollManager : public CBaseEntity
 {

@@ -7,6 +7,7 @@
 //=============================================================================
 
 
+#include <atomic>
 #include <sys/stat.h>
 
 
@@ -94,7 +95,6 @@ static int FileSelect( const char *name, const char *mask );
 
 
 #include "tier1/fileio.h"
-#include "tier1/utlbuffer.h"
 #include "tier1/strtools.h"
 #include <errno.h>
 #include "vstdlib/vstrtools.h"
@@ -514,9 +514,9 @@ bool CFileWriter::BSetFile( const char *pchFile, bool bAllowOpenExisting )
     CPathString strPath( pchFile );
 
     // make sure the full path to file exists
-    CUtlString strCopyUTF8 = strPath.GetUTF8Path();
-    Q_StripFilename( const_cast<char*>(strCopyUTF8.Access()) );
-    CreateDirRecursive( strCopyUTF8.Access() );
+    std::string strCopyUTF8 = ks::nz( strPath.GetUTF8Path() );
+    Q_StripFilename( const_cast<char*>(strCopyUTF8.data()) );
+    CreateDirRecursive( strCopyUTF8.data() );
     
     Close();
     m_bAsync = m_bDefaultAsync;
@@ -635,12 +635,12 @@ bool CFileWriter::Write( const void *pvData, uint32 cubData )
         bRet = !bRet; // aio_read returns 0 on success, this func returns success if bRet != 0
         if ( bRet )
 		{
-			ThreadInterlockedExchangeAdd( &m_cubOutstanding, cubData );
+			m_cubOutstanding.fetch_add( cubData );
 		
 			if ( ThreadGetCurrentId() != m_unThreadID  )
 			{
 				// this is not the main thread so we have to wait here 
-				ThreadInterlockedIncrement( &m_cPendingCallbacksFromOtherThreads );
+				++m_cPendingCallbacksFromOtherThreads;
 
 				while ( m_cPendingCallbacksFromOtherThreads )
 				{
@@ -706,7 +706,7 @@ void CFileWriter::Flush()
 			Sleep( 10 );
 			cWaits++;
 		}
-		AssertMsg1( cWaits < k_nMaxWaits, "Waited 60k iterations in CFileWriter::Flush - m_cubOutstanding = %u", m_cubOutstanding );
+		AssertMsg1( cWaits < k_nMaxWaits, "Waited 60k iterations in CFileWriter::Flush - m_cubOutstanding = %u", m_cubOutstanding.load() );
 	}
 }
 
@@ -817,27 +817,27 @@ void CDirWatcher::SetDirToWatch( const char *pchDir )
 void CDirWatcher::AddFileToChangeList( const char *pchFile )
 {
 	// make sure it isn't already in the list
-	FOR_EACH_LL( m_listChangedFiles, i )
+	for ( const std::string &sFile : m_listChangedFiles )
 	{
-		if ( !Q_stricmp( m_listChangedFiles[i], pchFile ) )
+		if ( !Q_stricmp( sFile.c_str(), pchFile ) )
 			return;
 	}
 
-	m_listChangedFiles.AddToTail( pchFile );
+	m_listChangedFiles.push_back( ks::nz( pchFile ) );
 }
 
 
 //-----------------------------------------------------------------------------
 // Purpose: retrieve any changes
 //-----------------------------------------------------------------------------
-bool CDirWatcher::GetChangedFile( CUtlString *psFile )
+bool CDirWatcher::GetChangedFile( std::string *psFile )
 {
 
-	if ( !m_listChangedFiles.Count() )
+	if ( m_listChangedFiles.empty() )
 		return false;
 
-	*psFile = m_listChangedFiles[m_listChangedFiles.Head()];
-	m_listChangedFiles.Remove( m_listChangedFiles.Head() );
+	*psFile = std::move( m_listChangedFiles.front() );
+	m_listChangedFiles.pop_front();
 	return true;
 }
 
@@ -851,9 +851,9 @@ void CDirWatcher::Validate( CValidator &validator, const char *pchName )
 	validator.ClaimMemory( m_pOverlapped );
 	validator.ClaimMemory( m_pFileInfo );
 	ValidateObj( m_listChangedFiles );
-	FOR_EACH_LL( m_listChangedFiles, i )
+	for ( std::string &sFile : m_listChangedFiles )
 	{
-		ValidateObj( m_listChangedFiles[i] );
+		ValidateObj( sFile );
 	}
 }
 #endif

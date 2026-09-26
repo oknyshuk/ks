@@ -16,7 +16,7 @@
 #include "sys_dll.h"
 #include "materialsystem/imesh.h"
 #include "gl_water.h"
-#include "utlrbtree.h"
+#include <algorithm>
 #include "istudiorender.h"
 #include "tier0/dbg.h"
 #include "keyvalues.h"
@@ -33,9 +33,6 @@
 
 
 extern ConVar developer;
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 #ifndef DEDICATED
 
@@ -67,9 +64,9 @@ IMaterial*	g_pMaterialSSAODepthWrite[ 2 ][ 2 ];
 
 
 #ifdef NEWMESH
-CUtlVector<IVertexBuffer *> g_WorldStaticMeshes;  // fixme - rename to g_WorldStaticVertexBuffers
+std::vector< IVertexBuffer * > g_WorldStaticMeshes;  // fixme - rename to g_WorldStaticVertexBuffers
 #else
-CUtlVector<IMesh *> g_WorldStaticMeshes;
+std::vector< IMesh * > g_WorldStaticMeshes;
 #endif
 
 void WorldStaticMeshCreate( void );
@@ -250,7 +247,8 @@ void MaterialSystem_RegisterLightmapSurfaces( void )
 
 	// Add all the surfaces to a list, sorted by lightmapped
 	// then by material enumeration then by area
-	CUtlRBTree< SurfaceHandle_t, int >	surfaces( 0, host_state.worldbrush->numsurfaces, LightmapLess );
+	std::vector< SurfaceHandle_t > surfaces;
+	surfaces.reserve( host_state.worldbrush->numsurfaces );
 	for( int surfaceIndex = 0; surfaceIndex < host_state.worldbrush->numsurfaces; surfaceIndex++ )
 	{
 		surfID = SurfaceHandleFromIndex( surfaceIndex );
@@ -264,14 +262,15 @@ void MaterialSystem_RegisterLightmapSurfaces( void )
 			MSurf_Flags( surfID ) &= ~SURFDRAW_NOLIGHT;
 		}
 
-		surfaces.Insert(surfID);
+		surfaces.push_back( surfID );
 	}
+	// stable: equal surfaces keep index order, as the legacy tree inserted after equals
+	std::ranges::stable_sort( surfaces, LightmapLess );
 
 	// iterate sorted surfaces
 	surfID = SURFACE_HANDLE_INVALID;
-	for (int i = surfaces.FirstInorder(); i != surfaces.InvalidIndex(); i = surfaces.NextInorder(i) )
+	for ( SurfaceHandle_t surfID : surfaces )
 	{
-		SurfaceHandle_t surfID = surfaces[i];
 
 		bool hasLightmap = ( MSurf_Flags( surfID ) & SURFDRAW_NOLIGHT) == 0;
 		if ( hasLightmap )
@@ -305,7 +304,7 @@ void MaterialSytsem_DoBumpWarnings( void )
 	int sortID;
 	IMaterial *pPrevMaterial = nullptr;
 
-	for( sortID = 0; sortID < g_WorldStaticMeshes.Count(); sortID++ )
+	for( sortID = 0; sortID < std::ssize( g_WorldStaticMeshes ); sortID++ )
 	{
 		if( pPrevMaterial == materialSortInfoArray[sortID].material )
 		{
@@ -427,7 +426,7 @@ struct sortmap_t
 
 IMatRenderContext *pSortMapRenderContext;
 
-int __cdecl SortMapCompareFunc( const void *pElem0, const void *pElem1 )
+int SortMapCompareFunc( const void *pElem0, const void *pElem1 )
 {
 	const sortmap_t *pMap0 = (const sortmap_t *)pElem0;
 	const sortmap_t *pMap1 = (const sortmap_t *)pElem1;
@@ -701,22 +700,22 @@ void BuildBrushModelVertexArray(worldbrushdata_t *pBrushData, SurfaceHandle_t su
 
 void CMSurfaceSortList::Init( int maxSortIDs, int minMaterialLists )
 {
-	m_list.RemoveAll();
-	m_list.EnsureCapacity(minMaterialLists);
+	m_list.clear();
+	m_list.reserve( minMaterialLists );
 	m_maxSortIDs = maxSortIDs;
 	int groupMax = maxSortIDs*MAX_MAT_SORT_GROUPS;
 
-	m_groups.RemoveAll();
-	m_groups.EnsureCount(groupMax);
+	m_groups.clear();
+	ks::ensure_size( m_groups, groupMax );
 	int groupBytes = (groupMax+7)>>3;
-	m_groupUsed.EnsureCount(groupBytes);
-	Q_memset(m_groupUsed.Base(), 0, groupBytes);
+	ks::ensure_size( m_groupUsed, groupBytes );
+	Q_memset(m_groupUsed.data(), 0, groupBytes);
 
 	for ( int i = 0; i < MAX_MAT_SORT_GROUPS; i++ )
 	{
-		m_sortGroupLists[i].RemoveAll();
+		m_sortGroupLists[i].clear();
 		int cap = (i==0) ? 128 : 16;
-		m_sortGroupLists[i].EnsureCapacity(cap);
+		m_sortGroupLists[i].reserve( cap );
 		groupOffset[i] = m_maxSortIDs * i;
 	}
 	InitGroup(&m_emptyGroup);
@@ -740,7 +739,7 @@ void CMSurfaceSortList::Shutdown()
 
 void CMSurfaceSortList::Reset()
 {
-	Init( m_maxSortIDs, m_list.NumAllocated() );
+	Init( m_maxSortIDs, int( m_list.capacity() ) );
 }
 
 
@@ -757,8 +756,8 @@ void CMSurfaceSortList::EnsureMaxSortIDs( int newMaxSortIDs )
 		int groupMax = newMaxSortIDs * MAX_MAT_SORT_GROUPS;
 		int groupBytes = (groupMax+7)>>3;
 		// resize the arrays
-		m_groups.EnsureCount(groupMax);
-		m_groupUsed.EnsureCount(groupBytes);
+		ks::ensure_size( m_groups, groupMax );
+		ks::ensure_size( m_groupUsed, groupBytes );
 		// now loop through the list backwards and move the old data over
 		for ( int i = MAX_MAT_SORT_GROUPS; --i >= 0; )
 		{
@@ -821,7 +820,7 @@ void CMSurfaceSortList::AddSurfaceToTail( msurface2_t *pSurface, int sortGroup, 
 	pGroup->triangleCount += triangleCount;
 	pGroup->surfaceCount++;
 
-	if ( pGroup->listTail != m_list.InvalidIndex() )
+	if ( pGroup->listTail != -1 )
 	{
 		// existing block
 		pList = &m_list[pGroup->listTail];
@@ -841,23 +840,23 @@ void CMSurfaceSortList::AddSurfaceToTail( msurface2_t *pSurface, int sortGroup, 
 	else
 	{
 		// allocate a new block
-		short nextBlock = m_list.AddToTail();
+		short nextBlock = std::ssize( m_list ); m_list.emplace_back();
 		if ( prevIndex >= 0 )
 		{
 			m_list[prevIndex].nextBlock = nextBlock;
 		}
 		pGroup->listTail = nextBlock;
 		// handle the first use case
-		if ( pGroup->listHead == m_list.InvalidIndex() )
+		if ( pGroup->listHead == -1 )
 		{
 			// UNDONE: This should really be sorted by sortID would help reduce state changes
 			// NOTE: Doesn't seem to help much in benchmarks to sort this vector
-			int index = m_sortGroupLists[sortGroup].AddToTail( (surfacesortgroup_t *) pGroup);
+			int index = std::ssize( m_sortGroupLists[sortGroup] ); m_sortGroupLists[sortGroup].push_back( (surfacesortgroup_t *) pGroup );
 			pGroup->groupListIndex = index;
 			pGroup->listHead = nextBlock;
 		}
 		pList = &m_list[nextBlock];
-		pList->nextBlock = m_list.InvalidIndex();
+		pList->nextBlock = -1;
 		pList->count = 1;
 		pList->pSurfaces[0] = pSurface;
 	}
@@ -865,17 +864,17 @@ void CMSurfaceSortList::AddSurfaceToTail( msurface2_t *pSurface, int sortGroup, 
 
 msurface2_t *CMSurfaceSortList::GetSurfaceAtHead( const surfacesortgroup_t &group ) const
 {
-	if ( group.listHead == m_list.InvalidIndex() )
+	if ( group.listHead == -1 )
 		return nullptr;
 	Assert(m_list[group.listHead].count>0);
 	return m_list[group.listHead].pSurfaces[0];
 }
 
-void CMSurfaceSortList::GetSurfaceListForGroup( CUtlVector<msurface2_t *> &list, const surfacesortgroup_t &group ) const
+void CMSurfaceSortList::GetSurfaceListForGroup( std::vector< msurface2_t * > &list, const surfacesortgroup_t &group ) const
 {
 	MSL_FOREACH_SURFACE_IN_GROUP_BEGIN( *this, group, surfID )
 	{
-		list.AddToTail(surfID);
+		list.push_back( surfID );
 	}
 	MSL_FOREACH_SURFACE_IN_GROUP_END()
 }

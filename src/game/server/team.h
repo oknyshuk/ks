@@ -108,8 +108,8 @@ public:
 
 	virtual int GetAliveMembers( void );
 
-	virtual int GetBotMembers( CUtlVector< class CCSBot* > *pOutVecBots = nullptr );
-	virtual int GetHumanMembers( CUtlVector< class CCSPlayer* > *pOutVecPlayers = nullptr );
+	virtual int GetBotMembers( std::vector< class CCSBot* > *pOutVecBots = nullptr );
+	virtual int GetHumanMembers( std::vector< class CCSPlayer* > *pOutVecPlayers = nullptr );
 
 	float m_flLastPlayerSortTime;
 	static int m_nStaticGGLeader_CT;
@@ -119,8 +119,8 @@ public:
 	int m_nLastGGLeader_T;
 
 public:
-	CUtlVector< CTeamSpawnPoint * > m_aSpawnPoints;
-	CUtlVector< CBasePlayer * >		m_aPlayers;
+	std::vector< CTeamSpawnPoint * > m_aSpawnPoints;
+	std::vector< CBasePlayer * >		m_aPlayers;
 
 	// Data
 	CNetworkString( m_szTeamname, MAX_TEAM_NAME_LENGTH, [[= ks::reflect::Net{} ]] );
@@ -148,7 +148,7 @@ public:
 	CNetworkVar( int, m_iTeamNum, [[= ks::reflect::Net{ .bits = 5 } ]] );			// Which team is this?
 };
 
-extern CUtlVector< CTeam * > g_Teams;
+extern std::vector< CTeam * > g_Teams;
 extern CTeam *GetGlobalTeam( int iIndex );
 extern int GetNumberOfTeams( void );
 extern const char* GetTeamName( int iTeam );

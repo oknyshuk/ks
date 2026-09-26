@@ -11,9 +11,6 @@
 
 //#include "tier1/strtools.h" // this is included for the definition of V_isspace()
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 const tchar* GetProcessorVendorId();
 const tchar* GetProcessorBrand();
 
@@ -447,7 +444,7 @@ const CPUInformation& GetCPUInformation()
 			if ( !strncasecmp( rgchLine, "core id", strlen( "core id" ) ) )
 			{
 				char *pchValue = strchr( rgchLine, ':' );
-				cMaxCoreId = MAX( cMaxCoreId, atoi( pchValue + 1 ) );
+				cMaxCoreId = std::max( cMaxCoreId, atoi( pchValue + 1 ) );
 			}
 			if ( !strncasecmp( rgchLine, "physical id", strlen( "physical id" ) ) )
 			{
@@ -464,7 +461,7 @@ const CPUInformation& GetCPUInformation()
 			if ( !strncasecmp( rgchLine, "physical id ", strlen( "physical id " ) ) )
 			{
 				char *pchValue = strchr( rgchLine, ':' );
-				pi.m_nPhysicalProcessors = MAX( pi.m_nPhysicalProcessors, atol( pchValue ) );
+				pi.m_nPhysicalProcessors = std::max( pi.m_nPhysicalProcessors, atol( pchValue ) );
 			}
 			*/
 		}

@@ -7,14 +7,16 @@
 #include "host.h"
 #include "sysexternal.h"
 #include "networkstringtable.h"
-#include "utlbuffer.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
 #include "bitbuf.h"
 #include "netmessages.h"
 #include "net.h"
 #include "filesystem_engine.h"
 #include "baseclient.h"
 #include "vprof.h"
-#include "tier2/utlstreambuffer.h"
+#include <deque>
+#include <map>
 #include "checksum_engine.h"
 #include "MapReslistGenerator.h"
 #include "lzma/lzma.h"
@@ -25,9 +27,7 @@
 #include "server.h"
 #include "eiface.h"
 #include "cdll_engine_int.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include <map>
 
 ConVar sv_dumpstringtables( "sv_dumpstringtables", "0", FCVAR_CHEAT );
 
@@ -61,11 +61,11 @@ static int CountSimilarCharacters( char const *str1, char const *str2 )
 	return c;
 }
 
-static int GetBestPreviousString( CUtlVector< StringHistoryEntry >& history, char const *newstring, int& substringsize )
+static int GetBestPreviousString( std::vector< StringHistoryEntry >& history, char const *newstring, int& substringsize )
 { 
 	int bestindex = -1;
 	int bestcount = 0;
-	int c = history.Count();
+	int c = std::ssize( history );
 	for ( int i = 0; i < c; i++ )
 	{
 		char const *prev = history[ i ].string;
@@ -112,17 +112,17 @@ public:
 	int		GetEncodeBits() const;
 	bool	ShouldRecreateDictionary( char const *pchMapName );
 	bool	IsValid() const;
-	void	ProcessBuffer( CUtlBuffer &buf );
+	void	ProcessBuffer( ks::byte_reader &buf );
 	void	SetLoadedFallbacks( bool bLoadedFromFallbacks );
 
-	bool	WriteDictionaryToBSP( char const *pchMapName, CUtlBuffer &buf, bool bCreatingFor360 );
-	void	CacheNewStringTableForWriteToBSPOnLevelShutdown( char const *pchMapName, CUtlBuffer &buf, bool bCreatingFor360 );
+	bool	WriteDictionaryToBSP( char const *pchMapName, std::span< const std::byte > buf, bool bCreatingFor360 );
+	void	CacheNewStringTableForWriteToBSPOnLevelShutdown( char const *pchMapName, std::span< const std::byte > buf, bool bCreatingFor360 );
 
 private:
 
 	void LoadMapStrings( char const *pchMapName, bool bServer );
 	void Clear();
-	bool LoadDictionaryFile( CUtlBuffer &buf, char const *pchMapName );
+	std::optional< std::vector< std::byte > > LoadDictionaryFile( char const *pchMapName );
 
 	CRC32_t HashStringCaselessIgnoreSlashes( char const *pString ) const
 	{
@@ -140,16 +140,16 @@ private:
 		return CRC32_ProcessSingleBuffer( (const void *)name, len );
 	}
 
-	CUtlString							m_sCurrentMap;
+	std::string							m_sCurrentMap;
 
 	// NOTE NOTE:  These need to be 'persistent' objects since our code stores off raw ptrs to these strings when 
 	//  precaching, etc.  Can't be constructed on stack buffer or with va( "%s", xxx ), etc.!!!!!
 	// Otherwise we could use FileNameHandle_t type stuff.
 
 	// Raw strings in order from the data file
-	CUtlVector< CUtlString >			m_Strings;
+	std::vector< std::string >			m_Strings;
 	// Mapping of string back to index in CUtlVector
-	CUtlMap< CRC32_t, int >				m_StringHashToIndex;
+	std::map< CRC32_t, int >				m_StringHashToIndex;
 	CRC32_t								m_CRC;
 	int									m_nEncodeBits;
 	bool								m_bForceRebuildDictionaries;
@@ -167,12 +167,12 @@ private:
 			m_bActive = false;
 			m_sBSPName = "";
 			m_bCreatingForX360 = false;
-			m_Buffer.Purge();
+			m_Buffer.clear();
 		}
 
 		bool		m_bActive;
-		CUtlString	m_sBSPName;
-		CUtlBuffer	m_Buffer;
+		std::string	m_sBSPName;
+		std::vector< std::byte >	m_Buffer;
 		bool		m_bCreatingForX360;
 	};
 
@@ -184,7 +184,6 @@ static CNetworkStringTableDictionaryManager g_StringTableDictionary;
 INetworkStringTableDictionaryMananger *g_pStringTableDictionary = &g_StringTableDictionary;
 
 CNetworkStringTableDictionaryManager::CNetworkStringTableDictionaryManager() : 
-	m_StringHashToIndex( 0, 0, DefLessFunc( CRC32_t ) ),
 	m_nEncodeBits( 1 ),
 	m_bForceRebuildDictionaries( false ),
 	m_bLoadedFallbacks( false ),
@@ -194,15 +193,15 @@ CNetworkStringTableDictionaryManager::CNetworkStringTableDictionaryManager() :
 
 void CNetworkStringTableDictionaryManager::Clear()
 {
-	m_StringHashToIndex.Purge();
-	m_Strings.Purge();
+	m_StringHashToIndex.clear();
+	m_Strings.clear(); m_Strings.shrink_to_fit();
 	m_CRC = 0;
 	m_nEncodeBits = 1;
 }
 
 bool CNetworkStringTableDictionaryManager::IsValid() const
 {
-	return m_Strings.Count() > 0;
+	return !m_Strings.empty();
 }
 
 int CNetworkStringTableDictionaryManager::GetEncodeBits() const
@@ -252,12 +251,12 @@ bool CNetworkStringTableDictionaryManager::ShouldRecreateDictionary( char const 
 	if ( m_bForceRebuildDictionaries ||	// being forced with -stringtables or stringtable_alwaysrebuilddictionaries
 			(
 			 MapReslistGenerator().IsEnabled() &&	// true if -makereslists
-			 ( m_Strings.Count() == 0 ||			// True if we couldn't load the file up before...
+			 ( m_Strings.empty() ||			// True if we couldn't load the file up before...
 			   m_bLoadedFallbacks )					// True if we loaded fallback file instead
 			)
 		)					
 	{
-		return m_Strings.Count() == 0 || // True if we couldn't load the file up before...
+		return m_Strings.empty() || // True if we couldn't load the file up before...
 				m_bLoadedFallbacks || // True if we loaded fallback file instead
 				MapReslistGenerator().IsEnabled(); // true if -makereslists
 	}
@@ -275,17 +274,17 @@ inline char const *GetStringTableDictionaryFileName( bool bIsFallback )
 	return BSPPACK_STRINGTABLE_DICTIONARY;
 }
 
-bool CNetworkStringTableDictionaryManager::LoadDictionaryFile( CUtlBuffer &buf, char const *pchMapName )
+std::optional< std::vector< std::byte > > CNetworkStringTableDictionaryManager::LoadDictionaryFile( char const *pchMapName )
 {
 	m_bLoadedFallbacks = false;
 
-	if ( g_pFileSystem->ReadFile( GetStringTableDictionaryFileName( false ), "BSP", buf ) )
+	if ( auto buf = g_pFileSystem->ReadFile( GetStringTableDictionaryFileName( false ), "BSP" ) )
 	{
-		return true;
+		return buf;
 	}
 
 	// Try backup file
-	if ( g_pFileSystem->ReadFile( GetStringTableDictionaryFileName( true ), "BSP", buf ) )
+	if ( auto buf = g_pFileSystem->ReadFile( GetStringTableDictionaryFileName( true ), "BSP" ) )
 	{
 		Warning( "#######################################\n" );
 		Warning( "Map %s using default stringtable dictionary, don't ship this way!!!\n", pchMapName );
@@ -293,13 +292,13 @@ bool CNetworkStringTableDictionaryManager::LoadDictionaryFile( CUtlBuffer &buf, 
 		Warning( "stringtable_alwaysrebuilddictionaries enabled to build the string table\n" );
 		Warning( "#######################################\n" );
 		m_bLoadedFallbacks = true;
-		return true;
+		return buf;
 	}
 
 	// Try fallback file
 	char szFallback[ 256 ];
 	Q_snprintf( szFallback, sizeof( szFallback ), "reslists/%s.dict", pchMapName );
-	if ( g_pFileSystem->ReadFile( szFallback, "GAME", buf ) )
+	if ( auto buf = g_pFileSystem->ReadFile( szFallback, "GAME" ) )
 	{
 		Warning( "#######################################\n" );
 		Warning( "Map %s using fallback stringtable dictionary, don't ship this way!!!\n", pchMapName );
@@ -307,7 +306,7 @@ bool CNetworkStringTableDictionaryManager::LoadDictionaryFile( CUtlBuffer &buf, 
 		Warning( "stringtable_alwaysrebuilddictionaries enabled to build the string table\n" );
 		Warning( "#######################################\n" );
 		m_bLoadedFallbacks = true;
-		return true;
+		return buf;
 	}
 
 	Warning( "#######################################\n" );
@@ -315,32 +314,32 @@ bool CNetworkStringTableDictionaryManager::LoadDictionaryFile( CUtlBuffer &buf, 
 	Warning( "Run with -stringtables on the command line or convar\n" );
 	Warning( "stringtable_alwaysrebuilddictionaries enabled to build the string table\n" );
 	Warning( "#######################################\n" );
-	return false;
+	return std::nullopt;
 }
 
-void CNetworkStringTableDictionaryManager::ProcessBuffer( CUtlBuffer &buf )
+void CNetworkStringTableDictionaryManager::ProcessBuffer( ks::byte_reader &buf )
 {
 	Clear();
 
-	m_CRC =	CRC32_ProcessSingleBuffer( buf.Base(), buf.TellMaxPut() );
-	while ( buf.GetBytesRemaining() > 0 )
+	m_CRC =	CRC32_ProcessSingleBuffer( buf.bytes().data(), buf.size() );
+	while ( buf.remaining() > 0 )
 	{
 		char line[ MAX_PATH ];
-		buf.GetString( line, sizeof( line ) );
+		buf.read_cstring( line, sizeof( line ) );
 
 		if ( !line[ 0 ] )
 			continue;
 
 		MEM_ALLOC_CREDIT();
-		CUtlString str;
+		std::string str;
 		str = line;
-		int index = m_Strings.AddToTail( str );
+		int index = std::ssize( m_Strings ); m_Strings.push_back( str );
 
-		CRC32_t hash = HashStringCaselessIgnoreSlashes( str );
-		m_StringHashToIndex.Insert( hash, index );
+		CRC32_t hash = HashStringCaselessIgnoreSlashes( str.c_str() );
+		m_StringHashToIndex.emplace( hash, index );	// a repeated hash keeps its first string
 	}
 
-	m_nEncodeBits = Q_log2( m_Strings.Count() ) + 1;
+	m_nEncodeBits = Q_log2( std::ssize( m_Strings ) ) + 1;
 }
 
 void CNetworkStringTableDictionaryManager::LoadMapStrings( char const *pchMapName, bool bServer )
@@ -348,7 +347,7 @@ void CNetworkStringTableDictionaryManager::LoadMapStrings( char const *pchMapNam
 	if ( m_sCurrentMap == pchMapName )
 		return;
 
-	m_sCurrentMap = pchMapName;
+	m_sCurrentMap = ks::nz( pchMapName );
 	Clear();
 
 	// On the client we need to add the bsp to the file search path before loading the dictionary file...
@@ -371,23 +370,21 @@ void CNetworkStringTableDictionaryManager::LoadMapStrings( char const *pchMapNam
 	if ( stringtable_usedictionaries.GetBool() )
 	{
 		// Load the data file
-		CUtlBuffer buf;
-		if ( LoadDictionaryFile( buf, pchMapName ) )
+		if ( auto buf = LoadDictionaryFile( pchMapName ) )
 		{
 			// LZMA decompress it if needed
 			CLZMA lzma;
-			if ( lzma.IsCompressed( (byte *)buf.Base() ) )
+			if ( lzma.IsCompressed( (byte *)buf->data() ) )
 			{
-				unsigned int decompressedSize = lzma.GetActualSize( (byte *)buf.Base() );
-				byte *work = new byte[ decompressedSize ];
-				int outputLength = lzma.Uncompress( (byte *)buf.Base(), work );
-				buf.Clear();
-				buf.SeekPut( CUtlBuffer::SEEK_HEAD, 0 );
-				buf.Put( work, outputLength );
-				delete[] work;
+				unsigned int decompressedSize = lzma.GetActualSize( (byte *)buf->data() );
+				std::vector< std::byte > work( decompressedSize );
+				int outputLength = lzma.Uncompress( (byte *)buf->data(), (byte *)work.data() );
+				work.resize( outputLength );
+				*buf = std::move( work );
 			}
 
-			ProcessBuffer( buf );
+			ks::byte_reader reader( *buf );
+			ProcessBuffer( reader );
 		}
 	}
 }
@@ -396,32 +393,32 @@ int CNetworkStringTableDictionaryManager::Find( char const *pchString ) const
 {
 	CRC32_t hash = HashStringCaselessIgnoreSlashes( pchString );
 	// Note that a string can contain subparts that together both exist as a valid filename, but they may be from separate paths
-	int idx = m_StringHashToIndex.Find( hash );
-	if ( idx == m_StringHashToIndex.InvalidIndex() )
+	auto idx = m_StringHashToIndex.find( hash );
+	if ( idx == m_StringHashToIndex.end() )
 		return -1;
-	return m_StringHashToIndex[ idx ];
+	return idx->second;
 }
 
 char const *CNetworkStringTableDictionaryManager::Lookup( int index ) const
 {
-	if ( index < 0 || index >= m_Strings.Count() )
+	if ( index < 0 || index >= std::ssize( m_Strings ) )
 	{
 		Assert( 0 );
 		return "";
 	}
-	const CUtlString &string = m_Strings[ index ];
-	return string.String();
+	const std::string &string = m_Strings[ index ];
+	return string.c_str();
 }
 
 void CNetworkStringTableDictionaryManager::OnBSPFullyUnloaded()
 {
 	if ( !m_BuildStringTableDictionaryCache.m_bActive )
 		return;
-	WriteDictionaryToBSP( m_BuildStringTableDictionaryCache.m_sBSPName, m_BuildStringTableDictionaryCache.m_Buffer, m_BuildStringTableDictionaryCache.m_bCreatingForX360 );
+	WriteDictionaryToBSP( m_BuildStringTableDictionaryCache.m_sBSPName.c_str(), m_BuildStringTableDictionaryCache.m_Buffer, m_BuildStringTableDictionaryCache.m_bCreatingForX360 );
 	m_BuildStringTableDictionaryCache.Reset();
 }
 
-bool CNetworkStringTableDictionaryManager::WriteDictionaryToBSP( char const *pchMapName, CUtlBuffer &buf, bool bCreatingFor360 )
+bool CNetworkStringTableDictionaryManager::WriteDictionaryToBSP( char const *pchMapName, std::span< const std::byte > buf, bool bCreatingFor360 )
 {
 	char mapPath[ MAX_PATH ];
 	Q_snprintf( mapPath, sizeof( mapPath ), "maps/%s.bsp", pchMapName );
@@ -462,7 +459,7 @@ bool CNetworkStringTableDictionaryManager::WriteDictionaryToBSP( char const *pch
 	// Remove the fallback that VBSP adds by default
 	iBSPPack->RemoveFileFromPack( bCreatingFor360 ? BSPPACK_STRINGTABLE_DICTIONARY_GAMECONSOLE_FALLBACK : BSPPACK_STRINGTABLE_DICTIONARY_FALLBACK );
 	// Now add in the up to date information
-	iBSPPack->AddBufferToPack( relative, buf.Base(), buf.TellPut(), false );
+	iBSPPack->AddBufferToPack( relative, (void *)buf.data(), int( buf.size() ), false );
 
 	iBSPPack->WriteBSPFile( mapPath );
 	iBSPPack->ClearPackFile();
@@ -473,12 +470,11 @@ bool CNetworkStringTableDictionaryManager::WriteDictionaryToBSP( char const *pch
 	return true;
 }
 
-void CNetworkStringTableDictionaryManager::CacheNewStringTableForWriteToBSPOnLevelShutdown( char const *pchMapName, CUtlBuffer &buf, bool bCreatingFor360 )
+void CNetworkStringTableDictionaryManager::CacheNewStringTableForWriteToBSPOnLevelShutdown( char const *pchMapName, std::span< const std::byte > buf, bool bCreatingFor360 )
 {
 	m_BuildStringTableDictionaryCache.m_bActive = true;
-	m_BuildStringTableDictionaryCache.m_sBSPName = pchMapName;
-	m_BuildStringTableDictionaryCache.m_Buffer.Purge();
-    m_BuildStringTableDictionaryCache.m_Buffer.Put( buf.Base(), buf.TellPut() );
+	m_BuildStringTableDictionaryCache.m_sBSPName = ks::nz( pchMapName );
+	m_BuildStringTableDictionaryCache.m_Buffer.assign( buf.begin(), buf.end() );
 	m_BuildStringTableDictionaryCache.m_bCreatingForX360 = bCreatingFor360;
 }
 
@@ -489,8 +485,7 @@ class CNetworkStringDict : public INetworkStringDict
 {
 public:
 	CNetworkStringDict( bool bUseDictionary ) : 
-		m_bUseDictionary( bUseDictionary ), 
-		m_Items( 0, 0, CTableItem::Less )
+		m_bUseDictionary( bUseDictionary )
 	{
 	}
 
@@ -501,51 +496,50 @@ public:
 
 	unsigned int Count()
 	{
-		return m_Items.Count();
+		return (unsigned int)m_Items.size();
 	}
 
 	void Purge()
 	{
-		m_Items.Purge();
+		m_Items.clear();
+		m_ItemsByHash.clear();
 	}
 
 	const char *String( int index )
 	{
-		return m_Items.Key( index ).GetName();
+		return m_Items[index].key.GetName();
 	}
 
 	bool IsValidIndex( int index )
 	{
-		return m_Items.IsValidIndex( index );
+		return index >= 0 && index < (int)m_Items.size();
 	}
 
 	int Insert( const char *pString )
 	{
-		CTableItem item;
+		int index = (int)m_Items.size();
+		CTableItem &item = m_Items.emplace_back().key;
 		item.SetName( m_bUseDictionary, pString );
-		return m_Items.Insert( item );
+		m_ItemsByHash.emplace( item.GetHash(), index );
+		return index;
 	}
 
 	int Find( const char *pString )
 	{
 		CTableItem search;
 		search.SetName( false, pString );
-		int iResult = m_Items.Find( search );
-		if ( iResult == m_Items.InvalidIndex() )
-		{
-			return -1;
-		}
-		return iResult;
+		auto it = m_ItemsByHash.find( search.GetHash() );
+		return it == m_ItemsByHash.end() ? -1 : it->second;
 	}
 
 	CNetworkStringTableItem	&Element( int index )
 	{
-		return m_Items.Element( index );
+		return m_Items[index].value;
 	}
 
 	const CNetworkStringTableItem &Element( int index ) const
 	{
-		return m_Items.Element( index );
+		return m_Items[index].value;
 	}
 
 	virtual void UpdateDictionary( int index )
@@ -553,8 +547,7 @@ public:
 		if ( !m_bUseDictionary )
 			return;
 
-		CTableItem &item = m_Items.Key( index );
-		item.Update();
+		m_Items[index].key.Update();	// refreshes the dictionary slot; the hash (name only) is unchanged
 	}
 
 	virtual int DictionaryIndex( int index )
@@ -562,15 +555,14 @@ public:
 		if ( !m_bUseDictionary )
 			return -1;
 
-		CTableItem &item = m_Items.Key( index );
-		return item.GetDictionaryIndex();
+		return m_Items[index].key.GetDictionaryIndex();
 	}
 
 private:
 	bool	m_bUseDictionary;
 
 	// We use this type of item to avoid having two copies of the strings in memory --
-	//  either we have a dictionary slot and point to that, or we have a m_Name CUtlString that gets
+	//  either we have a dictionary slot and point to that, or we have a m_Name std::string that gets
 	//  wiped between levels
 	class CTableItem
 	{
@@ -582,12 +574,12 @@ private:
 
 		char const *GetName() const
 		{
-			return m_Name.String();
+			return m_Name.c_str();
 		}
 
 		void Update()
 		{
-			m_DictionaryIndex = g_StringTableDictionary.Find( m_Name.String() );
+			m_DictionaryIndex = g_StringTableDictionary.Find( m_Name.c_str() );
 			ComputeHash();
 		}
 
@@ -598,14 +590,14 @@ private:
 
 		void SetName( bool bUseDictionary, char const *pString )
 		{
-			m_Name = pString;
+			m_Name = ks::nz( pString );
 			m_DictionaryIndex = bUseDictionary ? g_StringTableDictionary.Find( pString ) : -1;
 			ComputeHash();
 		}
 
-		static bool Less( const CTableItem &lhs, const CTableItem &rhs )
+		CRC32_t GetHash() const
 		{
-			return lhs.m_StringHash < rhs.m_StringHash;
+			return m_StringHash;
 		}
 		
 	private:
@@ -624,10 +616,16 @@ private:
 		}
 
 		int						m_DictionaryIndex;
-		CUtlString				m_Name;
+		std::string				m_Name;
 		CRC32_t					m_StringHash;
 	};
-	CUtlMap< CTableItem, CNetworkStringTableItem > m_Items;
+	struct Entry
+	{
+		CTableItem key;
+		CNetworkStringTableItem value;
+	};
+	std::deque< Entry > m_Items;					// index = network string number; deque: items never move
+	std::multimap< CRC32_t, int > m_ItemsByHash;
 };
 
 void CNetworkStringTable::CheckDictionary( int stringNumber )
@@ -933,7 +931,7 @@ void CNetworkStringTable::UpdateMirrorTable( int tick_ack  )
 
 int CNetworkStringTable::WriteUpdate( CBaseClient *client, bf_write &buf, int tick_ack ) const
 {
-	CUtlVector< StringHistoryEntry > history;
+	std::vector< StringHistoryEntry > history;
 
 	int entriesUpdated = 0;
 	int lastEntry = -1;
@@ -1062,15 +1060,15 @@ int CNetworkStringTable::WriteUpdate( CBaseClient *client, bf_write &buf, int ti
 		}
 
 		// limit string history to 32 entries
-		if ( history.Count() > 31 )
+		if ( std::ssize( history ) > 31 )
 		{
-			history.Remove( 0 );
+			history.erase( history.begin() + 0 );
 		}
 
 		// add string to string history
 		StringHistoryEntry she;
 		Q_strncpy( she.string, pEntry, sizeof( she.string ) );
-		history.AddToTail( she );
+		history.push_back( she );
 
 		entriesUpdated++;
 		lastEntry = i;
@@ -1107,7 +1105,7 @@ void CNetworkStringTable::ParseUpdate( bf_read &buf, int entries )
 
 	bool bEncodeUsingDictionaries = buf.ReadOneBit() ? true : false;
 
-	CUtlVector< StringHistoryEntry > history;
+	std::vector< StringHistoryEntry > history;
 
 	for (int i=0; i<entries; i++)
 	{
@@ -1223,14 +1221,14 @@ void CNetworkStringTable::ParseUpdate( bf_read &buf, int entries )
 			AddString( true, pEntry, nBytes, pUserData );
 		}
 
-		if ( history.Count() > 31 )
+		if ( std::ssize( history ) > 31 )
 		{
-			history.Remove( 0 );
+			history.erase( history.begin() + 0 );
 		}
 
 		StringHistoryEntry she;
 		Q_strncpy( she.string, pEntry, sizeof( she.string ) );
-		history.AddToTail( she );
+		history.push_back( she );
 	}
 }
 
@@ -1845,7 +1843,7 @@ bool  CNetworkStringTableContainer::Lock( bool bLock )
 	m_bLocked = bLock;
 
 	// Determine if an update is needed
-	for ( int i = 0; i < m_Tables.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Tables ); i++ )
 	{
 		CNetworkStringTable *table = (CNetworkStringTable*) GetTable( i );
 
@@ -1856,7 +1854,7 @@ bool  CNetworkStringTableContainer::Lock( bool bLock )
 
 void CNetworkStringTableContainer::SetAllowClientSideAddString( INetworkStringTable *table, bool bAllowClientSideAddString )
 {
-	for ( int i = 0; i < m_Tables.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Tables ); i++ )
 	{
 		CNetworkStringTable *t = (CNetworkStringTable*) GetTable( i );
 		if ( t == table )
@@ -1889,13 +1887,13 @@ INetworkStringTable *CNetworkStringTableContainer::CreateStringTable( const char
 		return nullptr;
 	}
 
-	if ( m_Tables.Count() >= MAX_TABLES )
+	if ( std::ssize( m_Tables ) >= MAX_TABLES )
 	{
 		Sys_Error( "Only %i string tables allowed, can't create'%s'", MAX_TABLES, tableName);
 		return nullptr;
 	}
 
-	TABLEID id = m_Tables.Count();
+	TABLEID id = std::ssize( m_Tables );
 
 	pTable = new CNetworkStringTable( id, tableName, maxentries, userdatafixedsize, userdatanetworkbits, flags );
 
@@ -1910,7 +1908,7 @@ INetworkStringTable *CNetworkStringTableContainer::CreateStringTable( const char
 
 	pTable->SetTick( m_nTickCount );
 
-	m_Tables.AddToTail( pTable );
+	m_Tables.push_back( pTable );
 
 	return pTable;
 }
@@ -1921,7 +1919,7 @@ INetworkStringTable *CNetworkStringTableContainer::CreateStringTable( const char
 //-----------------------------------------------------------------------------
 INetworkStringTable *CNetworkStringTableContainer::FindTable( const char *tableName ) const
 {
-	for ( int i = 0; i < m_Tables.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Tables ); i++ )
 	{
 		if ( !Q_stricmp( tableName, m_Tables[ i ]->GetTableName() ) )
 			return m_Tables[i];
@@ -1938,7 +1936,7 @@ INetworkStringTable *CNetworkStringTableContainer::FindTable( const char *tableN
 //-----------------------------------------------------------------------------
 INetworkStringTable *CNetworkStringTableContainer::GetTable( TABLEID stringTable ) const
 {
-	if ( stringTable < 0 || stringTable >= m_Tables.Count() )
+	if ( stringTable < 0 || stringTable >= std::ssize( m_Tables ) )
 		return nullptr;
 
 	return m_Tables[ stringTable ];
@@ -1946,7 +1944,7 @@ INetworkStringTable *CNetworkStringTableContainer::GetTable( TABLEID stringTable
 
 int CNetworkStringTableContainer::GetNumTables( void ) const
 {
-	return m_Tables.Count();
+	return std::ssize( m_Tables );
 }
 
 #ifndef SHARED_NET_STRING_TABLES
@@ -1964,7 +1962,7 @@ void CNetworkStringTableContainer::WriteBaselines( char const *pchMapName, bf_wr
 
 	CSVCMsg_CreateStringTable_t msg;
 
-	for ( int i = 0 ; i < m_Tables.Count() ; i++ )
+	for ( int i = 0 ; i < std::ssize( m_Tables ) ; i++ )
 	{
 		CNetworkStringTable *table = (CNetworkStringTable*) GetTable( i );
 
@@ -1988,7 +1986,7 @@ void CNetworkStringTableContainer::WriteBaselines( char const *pchMapName, bf_wr
 
 void CNetworkStringTableContainer::WriteStringTables( bf_write& buf )
 {
-	int numTables = m_Tables.Count();
+	int numTables = std::ssize( m_Tables );
 
 	buf.WriteByte( numTables );
 	for ( int i = 0; i < numTables; i++ )
@@ -2036,7 +2034,7 @@ void CNetworkStringTableContainer::WriteUpdateMessage( CBaseClient *client, int 
 	COMPILE_TIME_ASSERT( sizeof( StringTableBuff ) < 300 * 1024 );
 
 	// Determine if an update is needed
-	for ( int i = 0; i < m_Tables.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Tables ); i++ )
 	{
 		CNetworkStringTable *table = (CNetworkStringTable*) GetTable( i );
 
@@ -2084,7 +2082,7 @@ void CNetworkStringTableContainer::DirectUpdate( int tick_ack )
 	VPROF_BUDGET( "CNetworkStringTableContainer::DirectUpdate", VPROF_BUDGETGROUP_OTHER_NETWORKING );
 
 	// Determine if an update is needed
-	for ( int i = 0; i < m_Tables.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Tables ); i++ )
 	{
 		CNetworkStringTable *table = (CNetworkStringTable*) GetTable( i );
 
@@ -2100,7 +2098,7 @@ void CNetworkStringTableContainer::DirectUpdate( int tick_ack )
 void CNetworkStringTableContainer::EnableRollback( bool bState )
 {
 	// we can't dis/enable rollback if we already created tabled
-	Assert( m_Tables.Count() == 0 );
+	Assert( std::ssize( m_Tables ) == 0 );
 
 	m_bEnableRollback = bState;
 }
@@ -2108,7 +2106,7 @@ void CNetworkStringTableContainer::EnableRollback( bool bState )
 
 void CNetworkStringTableContainer::RestoreTick( int tick )
 {
-	for ( int i = 0; i < m_Tables.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Tables ); i++ )
 	{
 		CNetworkStringTable *table = (CNetworkStringTable*) GetTable( i );
 
@@ -2123,7 +2121,7 @@ void CNetworkStringTableContainer::RestoreTick( int tick )
 void CNetworkStringTableContainer::TriggerCallbacks( int tick_ack )
 {
 	// Determine if an update is needed
-	for ( int i = 0; i < m_Tables.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Tables ); i++ )
 	{
 		CNetworkStringTable *table = (CNetworkStringTable*) GetTable( i );
 
@@ -2143,7 +2141,7 @@ void CNetworkStringTableContainer::SetTick( int tick_count)
 	m_nTickCount = tick_count;
 
 	// Determine if an update is needed
-	for ( int i = 0; i < m_Tables.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Tables ); i++ )
 	{
 		CNetworkStringTable *table = (CNetworkStringTable*) GetTable( i );
 
@@ -2158,10 +2156,10 @@ void CNetworkStringTableContainer::SetTick( int tick_count)
 //-----------------------------------------------------------------------------
 void CNetworkStringTableContainer::RemoveAllTables( void )
 {
-	while ( m_Tables.Count() > 0 )
+	while ( !m_Tables.empty() )
 	{
 		CNetworkStringTable *table = m_Tables[ 0 ];
-		m_Tables.Remove( 0 );
+		m_Tables.erase( m_Tables.begin() + 0 );
 		delete table;
 	}
 }
@@ -2171,7 +2169,7 @@ void CNetworkStringTableContainer::RemoveAllTables( void )
 //-----------------------------------------------------------------------------
 void CNetworkStringTableContainer::Dump( void )
 {
-	for ( int i = 0; i < m_Tables.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Tables ); i++ )
 	{
 		m_Tables[ i ]->Dump();
 	}
@@ -2196,9 +2194,9 @@ void CNetworkStringTableContainer::CreateDictionary( char const *pchMapName )
 	Msg( "Creating dictionary %s\n", pchMapName );
 
 	// Create dictionary
-	CUtlBuffer buf;
+	ks::byte_writer buf;
 
-	for ( int i = 0; i < m_Tables.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_Tables ); ++i )
 	{
 		CNetworkStringTable *table = m_Tables[ i ];
 
@@ -2212,16 +2210,16 @@ void CNetworkStringTableContainer::CreateDictionary( char const *pchMapName )
 			// Skip empty strings (slot 0 is sometimes encoded as "")
 			if ( !*str )
 				continue;
-			buf.PutString( str );
+			buf.write_cstring( str );
 		}
 	}
 
-	g_StringTableDictionary.CacheNewStringTableForWriteToBSPOnLevelShutdown( pchMapName, buf, false ); 
+	g_StringTableDictionary.CacheNewStringTableForWriteToBSPOnLevelShutdown( pchMapName, buf.bytes(), false ); 
 }
 
 void CNetworkStringTableContainer::UpdateDictionaryStrings()
 {
-	for ( int i = 0; i < m_Tables.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_Tables ); ++i )
 	{
 		CNetworkStringTable *table = m_Tables[ i ];
 

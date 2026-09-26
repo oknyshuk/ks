@@ -8,9 +8,6 @@
 #include <lightdesc.h>
 #include "mathlib.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 void LightDesc_t::RecalculateOneOverThetaDotMinusPhiDot()
 {
@@ -96,7 +93,7 @@ float LightDesc_t::DistanceAtWhichBrightnessIsLessThan( float flAmount ) const
 		float r0, r1;
 		if ( SolveQuadratic( a, b, c, r0, r1 ) )
 		{
-			float rslt = MAX( 0, MAX( r0, r1 ) );
+			float rslt = std::max( 0.0f, std::max( r0, r1 ) );
 #ifdef _DEBUG
 			if ( rslt > 0.0 )
 			{

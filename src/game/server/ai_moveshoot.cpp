@@ -24,9 +24,6 @@
 #include "ai_navigator.h"
 #include "ai_memory.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 
 IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_MoveAndShootOverlay )

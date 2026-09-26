@@ -8,10 +8,8 @@
 #include "cbase.h"
 #include "recipientfilter.h"
 #include "team.h"
+#include "tier1/bit_ops.h"
 #include "ipredictionsystem.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 static IPredictionSystem g_RecipientFilterPredictionSystem;
 
@@ -42,7 +40,7 @@ void CRecipientFilter::CopyFrom( const CRecipientFilter& src )
 	int c = src.GetRecipientCount();
 	for ( int i = 0; i < c; ++i )
 	{
-		m_Recipients.AddToTail( src.GetRecipientIndex( i ) );
+		m_Recipients.push_back( src.GetRecipientIndex( i ) );
 	}
 }
 
@@ -53,7 +51,7 @@ void CRecipientFilter::Reset( void )
 {
 	m_bReliable			= false;
 	m_bInitMessage		= false;
-	m_Recipients.RemoveAll();
+	m_Recipients.clear();
 	m_bUsingPredictionRules = false;
 	m_bIgnorePredictionCull = false;
 }
@@ -70,7 +68,7 @@ bool CRecipientFilter::IsReliable( void ) const
 
 int CRecipientFilter::GetRecipientCount( void ) const
 {
-	return m_Recipients.Count();
+	return std::ssize( m_Recipients );
 }
 
 int	CRecipientFilter::GetRecipientIndex( int slot ) const
@@ -83,7 +81,7 @@ int	CRecipientFilter::GetRecipientIndex( int slot ) const
 
 void CRecipientFilter::AddAllPlayers( void )
 {
-	m_Recipients.RemoveAll();
+	m_Recipients.clear();
 
 	int i;
 	for ( i = 1; i <= gpGlobals->maxClients; i++ )
@@ -119,15 +117,15 @@ void CRecipientFilter::AddRecipient( CBasePlayer *player )
 	}
 
 	// Already in list
-	if ( m_Recipients.Find( index ) != m_Recipients.InvalidIndex() )
+	if ( ks::find_index( m_Recipients, index ) != -1 )
 		return;
 
-	m_Recipients.AddToTail( index );
+	m_Recipients.push_back( index );
 }
 
 void CRecipientFilter::RemoveAllRecipients( void )
 {
-	m_Recipients.RemoveAll();
+	m_Recipients.clear();
 }
 
 void CRecipientFilter::RemoveRecipient( CBasePlayer *player )
@@ -138,7 +136,7 @@ void CRecipientFilter::RemoveRecipient( CBasePlayer *player )
 		int index = player->entindex();
 
 		// Remove it if it's in the list
-		m_Recipients.FindAndRemove( index );
+		ks::erase_first( m_Recipients, index );
 	}
 }
 
@@ -146,7 +144,7 @@ void CRecipientFilter::RemoveRecipientByPlayerIndex( int playerindex )
 {
 	Assert( playerindex >= 1 && playerindex <= MAX_PLAYERS );
 
-	m_Recipients.FindAndRemove( playerindex );
+	ks::erase_first( m_Recipients, playerindex );
 }
 
 void CRecipientFilter::AddRecipientsByTeam( CTeam *team )
@@ -201,7 +199,7 @@ void CRecipientFilter::RemoveRecipientsNotOnTeam( CTeam *team )
 
 void CRecipientFilter::AddPlayersFromBitMask( CPlayerBitVec& playerbits )
 {
-	int index = playerbits.FindNextSetBit( 0 );
+	int index = ks::next_set_bit( playerbits, 0 );
 
 	while ( index > -1 )
 	{
@@ -211,13 +209,13 @@ void CRecipientFilter::AddPlayersFromBitMask( CPlayerBitVec& playerbits )
 			AddRecipient( pPlayer );
 		}
 
-		index = playerbits.FindNextSetBit( index + 1 );
+		index = ks::next_set_bit( playerbits, index + 1 );
 	}
 }
 
 void CRecipientFilter::RemovePlayersFromBitMask( CPlayerBitVec& playerbits )
 {
-	int index = playerbits.FindNextSetBit( 0 );
+	int index = ks::next_set_bit( playerbits, 0 );
 
 	while ( index > -1 )
 	{
@@ -227,7 +225,7 @@ void CRecipientFilter::RemovePlayersFromBitMask( CPlayerBitVec& playerbits )
 			RemoveRecipient( pPlayer );
 		}
 
-		index = playerbits.FindNextSetBit( index + 1 );
+		index = ks::next_set_bit( playerbits, index + 1 );
 	}
 }
 
@@ -249,7 +247,7 @@ void CRecipientFilter::RemoveRecipientsByPVS( const Vector& origin )
 {
 	if ( gpGlobals->maxClients == 1 )
 	{
-		m_Recipients.RemoveAll();
+		m_Recipients.clear();
 	}
 	else
 	{
@@ -308,8 +306,8 @@ void CRecipientFilter::UsePredictionRules( void )
 		}
 		else
 		{
-			CUtlVector< CHandle< CBasePlayer > > &players = pPlayer->GetSplitScreenAndPictureInPicturePlayers();
-			for ( int i = 0; i < players.Count(); ++i )
+			std::vector< CHandle< CBasePlayer > > &players = pPlayer->GetSplitScreenAndPictureInPicturePlayers();
+			for ( int i = 0; i < std::ssize( players ); ++i )
 			{
 				CBasePlayer *pl = players[i];
 				if ( !pl )
@@ -331,7 +329,7 @@ void CRecipientFilter::RemoveSplitScreenPlayers()
 		if ( !pPlayer || !pPlayer->IsSplitScreenPlayer() )
 			continue;
 
-		m_Recipients.Remove( i );
+		m_Recipients.erase( m_Recipients.begin() + i );
 	}
 }
 
@@ -343,8 +341,8 @@ void CRecipientFilter::ReplaceSplitScreenPlayersWithOwners()
 	// coop
 	if( gpGlobals->maxClients >= 2 ) 
 	{
-		int count = m_Recipients.Count();
-		CUtlVectorFixedGrowable<int, 4> playerOwners;
+		int count = std::ssize( m_Recipients );
+		ks::small_vector< int, 4 > playerOwners;
 		for( int i = 0; i < count; ++i )
 		{
 			// If this is a split screen player
@@ -354,21 +352,21 @@ void CRecipientFilter::ReplaceSplitScreenPlayersWithOwners()
 				// Add its owner to the recipients. If it doesn't exist, abort.
 				const CBasePlayer* pOwnerPlayer = pPlayer->GetSplitScreenPlayerOwner();
 				if( pOwnerPlayer )
-					playerOwners.AddToTail( pOwnerPlayer->entindex() );
+					playerOwners.push_back( pOwnerPlayer->entindex() );
 				else
 					return;
 			}
 		}
 
-		if( playerOwners.Count() > 0 )
+		if( std::ssize( playerOwners ) > 0 )
 		{
 			// Remove all split screen players
 			RemoveSplitScreenPlayers();
 
 			// Add all owner players
-			count = m_Recipients.Count();
-			m_Recipients.EnsureCount( count + playerOwners.Count() );
-			V_memcpy( m_Recipients.Base() + count, playerOwners.Base(), playerOwners.Count() * sizeof( int ) );
+			count = std::ssize( m_Recipients );
+			ks::ensure_size( m_Recipients, count + std::ssize( playerOwners ) );
+			V_memcpy( m_Recipients.data() + count, playerOwners.data(), std::ssize( playerOwners ) * sizeof( int ) );
 
 			// Remove duplicates
 			RemoveDuplicateRecipients();
@@ -483,11 +481,11 @@ void CPASAttenuationFilter::Filter( const Vector& origin, float attenuation /*= 
 
 		if ( player->EarPosition().DistTo(origin) <= maxAudible )
 			continue;
-		if ( player->GetSplitScreenAndPictureInPicturePlayers().Count() )
+		if ( std::ssize( player->GetSplitScreenAndPictureInPicturePlayers() ) )
 		{
-			CUtlVector< CHandle< CBasePlayer > > &list = player->GetSplitScreenAndPictureInPicturePlayers();
+			std::vector< CHandle< CBasePlayer > > &list = player->GetSplitScreenAndPictureInPicturePlayers();
 			bool bSend = false;
-			for ( int k = 0; k < list.Count(); k++ )
+			for ( int k = 0; k < std::ssize( list ); k++ )
 			{
 				CBasePlayer *pl = list[k];
 				if ( !pl )
@@ -509,13 +507,13 @@ void CPASAttenuationFilter::Filter( const Vector& origin, float attenuation /*= 
 
 void CRecipientFilter::RemoveDuplicateRecipients()
 {
-	for( int i = 0; i < m_Recipients.Count(); ++i )
+	for( int i = 0; i < std::ssize( m_Recipients ); ++i )
 	{
 		int currentElem = m_Recipients[i];
-		for( int j = m_Recipients.Count() - 1; j > i ; --j )
+		for( int j = std::ssize( m_Recipients ) - 1; j > i ; --j )
 		{
 			if( m_Recipients[j] == currentElem )
-				m_Recipients.FastRemove( j );
+				ks::swap_remove( m_Recipients, j );
 		}
 	}
 }
@@ -538,7 +536,7 @@ CSingleUserAndReplayRecipientFilter::CSingleUserAndReplayRecipientFilter( CBaseP
 			//  then don't send it to the local player again.
 			Assert( !IsUsingPredictionRules ());
 
-			m_Recipients.AddToTail( i );
+			m_Recipients.push_back( i );
 		}
 	}
 }

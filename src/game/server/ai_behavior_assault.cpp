@@ -11,9 +11,6 @@
 #include "ai_memory.h"
 #include "ai_squad.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar ai_debug_assault("ai_debug_assault", "0");
 
 CGameString g_AssaultPointString( "assault_assaultpoint" );
@@ -164,8 +161,8 @@ bool CAI_AssaultBehavior::AssaultHasBegun()
 //-----------------------------------------------------------------------------
 CAssaultPoint *CAI_AssaultBehavior::FindAssaultPoint( string_t iszAssaultPointName )
 {
-	CUtlVector<CAssaultPoint*>pAssaultPoints;
-	CUtlVector<CAssaultPoint*>pClearAssaultPoints;
+	std::vector< CAssaultPoint* >pAssaultPoints;
+	std::vector< CAssaultPoint* >pClearAssaultPoints;
 
 	CBaseEntity *pEnt = gEntList.FindEntityByName( nullptr, iszAssaultPointName );
 	while( pEnt != nullptr )
@@ -181,22 +178,22 @@ CAssaultPoint *CAI_AssaultBehavior::FindAssaultPoint( string_t iszAssaultPointNa
 		}
 		else
 		{
-			pAssaultPoints.AddToTail( pAssaultEnt );
+			pAssaultPoints.push_back( pAssaultEnt );
 		}
 		
 		pEnt = gEntList.FindEntityByName( pEnt, iszAssaultPointName );
 	}
 
 	// Didn't find any?!
-	if( pAssaultPoints.Count() < 1 )
+	if( std::ssize( pAssaultPoints ) < 1 )
 		return nullptr;
 
 	// Only found one, just return it.
-	if( pAssaultPoints.Count() == 1 )
+	if( std::ssize( pAssaultPoints ) == 1 )
 		return pAssaultPoints[0];
 
 	// Throw out any nodes that I cannot fit my bounding box on.
-	for( int i = 0 ; i < pAssaultPoints.Count() ; i++ )
+	for( int i = 0 ; i < std::ssize( pAssaultPoints ) ; i++ )
 	{
 		trace_t tr;
 		CAI_BaseNPC *pNPC = GetOuter();
@@ -207,23 +204,23 @@ CAssaultPoint *CAI_AssaultBehavior::FindAssaultPoint( string_t iszAssaultPointNa
 		if ( tr.fraction == 1.0 )
 		{
 			// Copy this into the list of clear points.
-			pClearAssaultPoints.AddToTail(pAssaultPoint);
+			pClearAssaultPoints.push_back( pAssaultPoint );
 		}
 	}
 
 	// Only one clear assault point left!
-	if( pClearAssaultPoints.Count() == 1 )
+	if( std::ssize( pClearAssaultPoints ) == 1 )
 		return pClearAssaultPoints[0];
 
 	// NONE left. Just return a random assault point, knowing that it's blocked. This is the old behavior, anyway.
-	if( pClearAssaultPoints.Count() < 1 )
-		return pAssaultPoints[ random->RandomInt(0, (pAssaultPoints.Count() - 1)) ];
+	if( std::ssize( pClearAssaultPoints ) < 1 )
+		return pAssaultPoints[ random->RandomInt(0, (std::ssize( pAssaultPoints ) - 1)) ];
 
 	// We found several! First throw out the one most recently used.
 	// This prevents picking the same point at this branch twice in a row.
 	float flMostRecentTime = -1.0f; // Impossibly old
 	int iMostRecentIndex = -1;
-	for( int i = 0 ; i < pClearAssaultPoints.Count() ; i++ )
+	for( int i = 0 ; i < std::ssize( pClearAssaultPoints ) ; i++ )
 	{
 		if( pClearAssaultPoints[i]->m_flTimeLastUsed > flMostRecentTime )
 		{
@@ -235,11 +232,11 @@ CAssaultPoint *CAI_AssaultBehavior::FindAssaultPoint( string_t iszAssaultPointNa
 	Assert( iMostRecentIndex > -1 );
 
 	// Remove the most recently used 
-	pClearAssaultPoints.Remove( iMostRecentIndex );
+	pClearAssaultPoints.erase( pClearAssaultPoints.begin() + iMostRecentIndex );
 
 	if ( !m_hGoal || m_hGoal->m_BranchMethod == BRANCH_RANDOM )
 	{
-		return pClearAssaultPoints[ random->RandomInt(0, (pClearAssaultPoints.Count() - 1)) ];
+		return pClearAssaultPoints[ random->RandomInt(0, (std::ssize( pClearAssaultPoints ) - 1)) ];
 	}
 
 	CAssaultPoint *pBest = nullptr;
@@ -249,7 +246,7 @@ CAssaultPoint *CAI_AssaultBehavior::FindAssaultPoint( string_t iszAssaultPointNa
 	if ( m_hGoal->m_BranchMethod == BRANCH_CLOSEST )
 	{
 		distBest = FLT_MAX;
-		for( int i = 0 ; i < pClearAssaultPoints.Count() ; i++ )
+		for( int i = 0 ; i < std::ssize( pClearAssaultPoints ) ; i++ )
 		{
 			distCur = ( pClearAssaultPoints[i]->GetAbsOrigin() - vStart ).LengthSqr();
 			if ( distCur < distBest )
@@ -262,7 +259,7 @@ CAssaultPoint *CAI_AssaultBehavior::FindAssaultPoint( string_t iszAssaultPointNa
 	else
 	{
 		distBest = 0;
-		for( int i = 0 ; i < pClearAssaultPoints.Count() ; i++ )
+		for( int i = 0 ; i < std::ssize( pClearAssaultPoints ) ; i++ )
 		{
 			distCur = ( pClearAssaultPoints[i]->GetAbsOrigin() - vStart ).LengthSqr();
 			if ( distCur > distBest )
@@ -985,21 +982,21 @@ void CAI_AssaultBehavior::SetParameters( string_t rallypointname, AssaultCue_t a
 		{
 			// Gather all available points into a utilvector, then pick one at random.
 			
-			CUtlVector<CRallyPoint *> rallyPoints; // List of rally points that are available to choose from.
+			std::vector< CRallyPoint * > rallyPoints; // List of rally points that are available to choose from.
 
 			while( pRallyEnt )
 			{
 				if( !pRallyEnt->IsLocked() )
 				{
-					rallyPoints.AddToTail( pRallyEnt );
+					rallyPoints.push_back( pRallyEnt );
 				}
 
 				pRallyEnt = dynamic_cast<CRallyPoint *>(gEntList.FindEntityByName( pRallyEnt, rallypointname ) );
 			}
 
-			if( rallyPoints.Count() > 0 )
+			if( !rallyPoints.empty() )
 			{
-				pBest = rallyPoints[ random->RandomInt(0, rallyPoints.Count()- 1) ];
+				pBest = rallyPoints[ random->RandomInt(0, std::ssize( rallyPoints )- 1) ];
 			}
 		}
 		break;

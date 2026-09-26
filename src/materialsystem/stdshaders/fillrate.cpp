@@ -12,9 +12,6 @@
 #include "fillrate_ps20.inc"
 #include "fillrate_ps20b.inc"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 BEGIN_VS_SHADER_FLAGS( Fillrate, "Help for Fillrate", SHADER_NOT_EDITABLE )
 	BEGIN_SHADER_PARAMS
 		SHADER_PARAM( PASSCOUNT, SHADER_PARAM_TYPE_INTEGER, "1", "Number of passes for this material" )

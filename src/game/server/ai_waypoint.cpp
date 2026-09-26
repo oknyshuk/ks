@@ -8,13 +8,10 @@
 #include "cbase.h"
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
-#include "mempool.h"
+#include "tier1/fixed_pool.h"
 #include "ai_navtype.h"
 #include "ai_node.h"
 #include "ai_waypoint.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 #define	WAYPOINT_POOL_SIZE 512
 
@@ -22,7 +19,7 @@
 // Init static variables
 //-----------------------------------------------------------------------------
 
-DEFINE_FIXEDSIZE_ALLOCATOR( AI_Waypoint_t, WAYPOINT_POOL_SIZE, CUtlMemoryPool::GROW_FAST );
+DEFINE_FIXEDSIZE_ALLOCATOR( AI_Waypoint_t, WAYPOINT_POOL_SIZE, ks::fixed_pool::grow::fast );
 
 //-------------------------------------
 

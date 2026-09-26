@@ -11,9 +11,6 @@
 
 #include <ctype.h>
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 
 //-----------------------------------------------------------------------------
@@ -50,22 +47,22 @@ bool ParseStringList( const char *&expr, const char **pOps, int &nOp )
 	return false;
 }
 
-bool ParseStringList( const char *&expr, const CUtlVector< CUtlString > &strings, int &nOp )
+bool ParseStringList( const char *&expr, const std::vector< std::string > &strings, int &nOp )
 {
 	while ( nOp-- )
 	{
-		if ( ParseString( expr, strings[ nOp ] ) )
+		if ( ParseString( expr, strings[ nOp ].c_str() ) )
 			return true;
 	}
 	return false;
 }
 
-int FindString( const CUtlVector< CUtlString > &strings, const char *str )
+int FindString( const std::vector< std::string > &strings, const char *str )
 {
-	uint sn = strings.Count();
+	uint sn = std::ssize( strings );
 	for ( uint si = 0; si < sn; ++si )
 	{
-		if ( !Q_strcmp( str, strings[ si ] ) )
+		if ( !Q_strcmp( str, strings[ si ].c_str() ) )
 			return si;
 	}
 	return -1;
@@ -74,12 +71,12 @@ int FindString( const CUtlVector< CUtlString > &strings, const char *str )
 class ParseState_t
 {
 public:
-	ParseState_t( const CUtlStack<float> &stack, const char *expr )
-		: m_stacksize( stack.Count() ), m_startingExpr( expr ) {}
-	void Reset( CUtlStack<float> &stack, const char *&expr )
+	ParseState_t( const std::vector<float> &stack, const char *expr )
+		: m_stacksize( std::ssize( stack ) ), m_startingExpr( expr ) {}
+	void Reset( std::vector<float> &stack, const char *&expr )
 	{
-		Assert( m_stacksize <= stack.Count() );
-		stack.PopMultiple( stack.Count() - m_stacksize );
+		Assert( m_stacksize <= std::ssize( stack ) );
+		stack.resize( m_stacksize );
 		expr = m_startingExpr;
 	}
 
@@ -105,8 +102,8 @@ void CExpressionCalculator::SetVariable( const char *var, float value )
 	}
 	else
 	{
-		m_varNames.AddToTail( var );
-		m_varValues.AddToTail( value );
+		m_varNames.push_back( ks::nz( var ) );
+		m_varValues.push_back( value );
 	}
 }
 
@@ -131,12 +128,12 @@ int CExpressionCalculator::FindVariableIndex( const char *var )
 bool CExpressionCalculator::Evaluate( float &value )
 {
 	m_bIsBuildingArgumentList = false;
-	m_stack.PopMultiple( m_stack.Count() );
-	const char *pExpr = m_expr.Get();
+	m_stack.clear();
+	const char *pExpr = m_expr.data();
 	bool success = ParseExpr( pExpr );
-	if ( success && m_stack.Count() == 1 )
+	if ( success && std::ssize( m_stack ) == 1 )
 	{
-		value = m_stack.Top();
+		value = m_stack.back();
 		return true;
 	}
 
@@ -151,13 +148,13 @@ bool CExpressionCalculator::Evaluate( float &value )
 bool CExpressionCalculator::BuildVariableListFromExpression( )
 {
 	m_bIsBuildingArgumentList = true;
-	m_stack.PopMultiple( m_stack.Count() );
-	const char *pExpr = m_expr.Get();
+	m_stack.clear();
+	const char *pExpr = m_expr.data();
 	bool bSuccess = ParseExpr( pExpr );
 	m_bIsBuildingArgumentList = false;
-	if ( !bSuccess || m_stack.Count() != 1 )
+	if ( !bSuccess || std::ssize( m_stack ) != 1 )
 	{
-		m_varNames.RemoveAll();
+		m_varNames.clear();
 		return false;
 	}
 	return true;
@@ -169,12 +166,12 @@ bool CExpressionCalculator::BuildVariableListFromExpression( )
 //-----------------------------------------------------------------------------
 int CExpressionCalculator::VariableCount()
 {
-	return m_varNames.Count();
+	return std::ssize( m_varNames );
 }
 
 const char *CExpressionCalculator::VariableName( int nIndex )
 {
-	return m_varNames[nIndex];
+	return m_varNames[nIndex].c_str();
 }
 
 
@@ -199,13 +196,13 @@ bool CExpressionCalculator::ParseConditional( const char *&expr )
 		ParseString( expr, ":" ) &&
 		ParseExpr( expr ) )
 	{
-		float f3 = m_stack.Top();
-		m_stack.Pop();
-		float f2 = m_stack.Top();
-		m_stack.Pop();
-		float f1 = m_stack.Top();
-		m_stack.Pop();
-		m_stack.Push( f1 != 0.0f ? f2 : f3 );
+		float f3 = m_stack.back();
+		m_stack.pop_back();
+		float f2 = m_stack.back();
+		m_stack.pop_back();
+		float f1 = m_stack.back();
+		m_stack.pop_back();
+		m_stack.push_back( f1 != 0.0f ? f2 : f3 );
 		return true; // and matched
 	}
 	ps1.Reset( m_stack, expr );
@@ -225,11 +222,11 @@ bool CExpressionCalculator::ParseOr( const char *&expr )
 	if ( ParseString( expr, "||" ) &&
 		ParseOr( expr ) )
 	{
-		float f2 = m_stack.Top();
-		m_stack.Pop();
-		float f1 = m_stack.Top();
-		m_stack.Pop();
-		m_stack.Push( ( f1 != 0.0f ) || ( f2 != 0.0f ) ? 1 : 0 );
+		float f2 = m_stack.back();
+		m_stack.pop_back();
+		float f1 = m_stack.back();
+		m_stack.pop_back();
+		m_stack.push_back( ( f1 != 0.0f ) || ( f2 != 0.0f ) ? 1 : 0 );
 		return true; // and matched
 	}
 	ps1.Reset( m_stack, expr );
@@ -249,11 +246,11 @@ bool CExpressionCalculator::ParseAnd( const char *&expr )
 	if ( ParseString( expr, "&&" ) &&
 		ParseAnd( expr ) )
 	{
-		float f2 = m_stack.Top();
-		m_stack.Pop();
-		float f1 = m_stack.Top();
-		m_stack.Pop();
-		m_stack.Push( ( f1 != 0.0f ) && ( f2 != 0.0f ) ? 1 : 0 );
+		float f2 = m_stack.back();
+		m_stack.pop_back();
+		float f1 = m_stack.back();
+		m_stack.pop_back();
+		m_stack.push_back( ( f1 != 0.0f ) && ( f2 != 0.0f ) ? 1 : 0 );
 		return true; // and matched
 	}
 	ps1.Reset( m_stack, expr );
@@ -276,17 +273,17 @@ bool CExpressionCalculator::ParseEquality( const char *&expr )
 	if ( ParseStringList( expr, pOps, nOp ) &&
 		ParseEquality( expr ) )
 	{
-		float f2 = m_stack.Top();
-		m_stack.Pop();
-		float f1 = m_stack.Top();
-		m_stack.Pop();
+		float f2 = m_stack.back();
+		m_stack.pop_back();
+		float f1 = m_stack.back();
+		m_stack.pop_back();
 		switch ( nOp )
 		{
 		case 0: // ==
-			m_stack.Push( f1 == f2 ? 1 : 0 );
+			m_stack.push_back( f1 == f2 ? 1 : 0 );
 			break;
 		case 1: // !=
-			m_stack.Push( f1 != f2 ? 1 : 0 );
+			m_stack.push_back( f1 != f2 ? 1 : 0 );
 			break;
 		}
 		return true; // equality matched
@@ -311,23 +308,23 @@ bool CExpressionCalculator::ParseLessGreater( const char *&expr )
 	if ( ParseStringList( expr, pOps, nOp ) &&
 		ParseLessGreater( expr ) )
 	{
-		float f2 = m_stack.Top();
-		m_stack.Pop();
-		float f1 = m_stack.Top();
-		m_stack.Pop();
+		float f2 = m_stack.back();
+		m_stack.pop_back();
+		float f1 = m_stack.back();
+		m_stack.pop_back();
 		switch ( nOp )
 		{
 		case 0: // <
-			m_stack.Push( f1 < f2 ? 1 : 0 );
+			m_stack.push_back( f1 < f2 ? 1 : 0 );
 			break;
 		case 1: // >
-			m_stack.Push( f1 > f2 ? 1 : 0 );
+			m_stack.push_back( f1 > f2 ? 1 : 0 );
 			break;
 		case 2: // <=
-			m_stack.Push( f1 <= f2 ? 1 : 0 );
+			m_stack.push_back( f1 <= f2 ? 1 : 0 );
 			break;
 		case 3: // >=
-			m_stack.Push( f1 >= f2 ? 1 : 0 );
+			m_stack.push_back( f1 >= f2 ? 1 : 0 );
 			break;
 		}
 		return true; // inequality matched
@@ -352,17 +349,17 @@ bool CExpressionCalculator::ParseAddSub( const char *&expr )
 	if ( ParseStringList( expr, pOps, nOp ) &&
 		ParseAddSub( expr ) )
 	{
-		float f2 = m_stack.Top();
-		m_stack.Pop();
-		float f1 = m_stack.Top();
-		m_stack.Pop();
+		float f2 = m_stack.back();
+		m_stack.pop_back();
+		float f1 = m_stack.back();
+		m_stack.pop_back();
 		switch ( nOp )
 		{
 		case 0: // +
-			m_stack.Push( f1 + f2 );
+			m_stack.push_back( f1 + f2 );
 			break;
 		case 1: // -
-			m_stack.Push( f1 - f2 );
+			m_stack.push_back( f1 - f2 );
 			break;
 		}
 		return true; // addsub matched
@@ -387,20 +384,20 @@ bool CExpressionCalculator::ParseDivMul( const char *&expr )
 	if ( ParseStringList( expr, pOps, nOp ) &&
 		ParseDivMul( expr ) )
 	{
-		float f2 = m_stack.Top();
-		m_stack.Pop();
-		float f1 = m_stack.Top();
-		m_stack.Pop();
+		float f2 = m_stack.back();
+		m_stack.pop_back();
+		float f1 = m_stack.back();
+		m_stack.pop_back();
 		switch ( nOp )
 		{
 		case 0: // *
-			m_stack.Push( f1 * f2 );
+			m_stack.push_back( f1 * f2 );
 			break;
 		case 1: // /
-			m_stack.Push( f1 / f2 );
+			m_stack.push_back( f1 / f2 );
 			break;
 		case 2: // %
-			m_stack.Push( fmod( f1, f2 ) );
+			m_stack.push_back( fmod( f1, f2 ) );
 			break;
 		}
 		return true; // divmul matched
@@ -419,18 +416,18 @@ bool CExpressionCalculator::ParseUnary( const char *&expr )
 	if ( ParseStringList( expr, pOps, nOp ) &&
 		ParseUnary( expr ) )
 	{
-		float f1 = m_stack.Top();
-		m_stack.Pop();
+		float f1 = m_stack.back();
+		m_stack.pop_back();
 		switch ( nOp )
 		{
 		case 0: // +
-			m_stack.Push( f1 );
+			m_stack.push_back( f1 );
 			break;
 		case 1: // -
-			m_stack.Push( -f1 );
+			m_stack.push_back( -f1 );
 			break;
 		case 2: // !
-			m_stack.Push( f1 == 0 ? 1 : 0 );
+			m_stack.push_back( f1 == 0 ? 1 : 0 );
 			break;
 		}
 		return true;
@@ -451,15 +448,15 @@ bool CExpressionCalculator::ParsePrimary( const char *&expr )
 	float value = 0.0f;
 	if ( ParseLiteral( expr, value ) )
 	{
-		m_stack.Push( value );
+		m_stack.push_back( value );
 		return true;
 	}
 
 	ps.Reset( m_stack, expr );
-	int nVar = m_varNames.Count();
+	int nVar = std::ssize( m_varNames );
 	if ( ParseStringList( expr, m_varNames, nVar) )
 	{
-		m_stack.Push( m_varValues[ nVar ] );
+		m_stack.push_back( m_varValues[ nVar ] );
 		return true;
 	}
 
@@ -501,7 +498,7 @@ bool CExpressionCalculator::ParsePrimary( const char *&expr )
 	pVariableName[nLen] = 0;
 
 	SetVariable( pVariableName, 0.0f );
-	m_stack.Push( 0.0f );
+	m_stack.push_back( 0.0f );
 	return true;
 }
 
@@ -542,57 +539,57 @@ bool CExpressionCalculator::Parse1ArgFunc( const char *&expr )
 		ParseExpr( expr ) &&
 		ParseString( expr, ")" ) )
 	{
-		float f1 = m_stack.Top();
-		m_stack.Pop();
+		float f1 = m_stack.back();
+		m_stack.pop_back();
 		switch ( nFunc )
 		{
 		case 0: // abs
-			m_stack.Push( fabs( f1 ) );
+			m_stack.push_back( fabs( f1 ) );
 			break;
 		case 1: // sqr
-			m_stack.Push( f1 * f1 );
+			m_stack.push_back( f1 * f1 );
 			break;
 		case 2: // sqrt
-			m_stack.Push( sqrt( f1 ) );
+			m_stack.push_back( sqrt( f1 ) );
 			break;
 		case 3: // sin
-			m_stack.Push( sin( f1 ) );
+			m_stack.push_back( sin( f1 ) );
 			break;
 		case 4: // asin
-			m_stack.Push( asin( f1 ) );
+			m_stack.push_back( asin( f1 ) );
 			break;
 		case 5: // cos
-			m_stack.Push( cos( f1 ) );
+			m_stack.push_back( cos( f1 ) );
 			break;
 		case 6: // acos
-			m_stack.Push( acos( f1 ) );
+			m_stack.push_back( acos( f1 ) );
 			break;
 		case 7: // tan
-			m_stack.Push( tan( f1 ) );
+			m_stack.push_back( tan( f1 ) );
 			break;
 		case 8: // exp
-			m_stack.Push( exp( f1 ) );
+			m_stack.push_back( exp( f1 ) );
 			break;
 		case 9: // log
-			m_stack.Push( log( f1 ) );
+			m_stack.push_back( log( f1 ) );
 			break;
 		case 10: // dtor
-			m_stack.Push( DEG2RAD( f1 ) );
+			m_stack.push_back( DEG2RAD( f1 ) );
 			break;
 		case 11: // rtod
-			m_stack.Push( RAD2DEG( f1 ) );
+			m_stack.push_back( RAD2DEG( f1 ) );
 			break;
 		case 12: // floor
-			m_stack.Push( floor( f1 ) );
+			m_stack.push_back( floor( f1 ) );
 			break;
 		case 13: // ceiling
-			m_stack.Push( ceil( f1 ) );
+			m_stack.push_back( ceil( f1 ) );
 			break;
 		case 14: // round
-			m_stack.Push( floor( f1 + 0.5f ) );
+			m_stack.push_back( floor( f1 + 0.5f ) );
 			break;
 		case 15: // sign
-			m_stack.Push( f1 >= 0.0f ? 1.0f : -1.0f );
+			m_stack.push_back( f1 >= 0.0f ? 1.0f : -1.0f );
 			break;
 		}
 		return true;
@@ -620,23 +617,23 @@ bool CExpressionCalculator::Parse2ArgFunc( const char *&expr )
 		ParseExpr( expr ) &&
 		ParseString( expr, ")" ) )
 	{
-		float f2 = m_stack.Top();
-		m_stack.Pop();
-		float f1 = m_stack.Top();
-		m_stack.Pop();
+		float f2 = m_stack.back();
+		m_stack.pop_back();
+		float f1 = m_stack.back();
+		m_stack.pop_back();
 		switch ( nFunc )
 		{
 		case 0: // min
-			m_stack.Push( MIN( f1, f2 ) );
+			m_stack.push_back( std::min( f1, f2 ) );
 			break;
 		case 1: // max
-			m_stack.Push( MAX( f1, f2 ) );
+			m_stack.push_back( std::max( f1, f2 ) );
 			break;
 		case 2: // atan2
-			m_stack.Push( atan2( f1, f2 ) );
+			m_stack.push_back( atan2( f1, f2 ) );
 			break;
 		case 3: // pow
-			m_stack.Push( pow( f1, f2 ) );
+			m_stack.push_back( pow( f1, f2 ) );
 			break;
 		}
 		return true;
@@ -692,37 +689,37 @@ bool CExpressionCalculator::Parse3ArgFunc( const char *&expr )
 		ParseExpr( expr ) &&
 		ParseString( expr, ")" ) )
 	{
-		float f3 = m_stack.Top();
-		m_stack.Pop();
-		float f2 = m_stack.Top();
-		m_stack.Pop();
-		float f1 = m_stack.Top();
-		m_stack.Pop();
+		float f3 = m_stack.back();
+		m_stack.pop_back();
+		float f2 = m_stack.back();
+		m_stack.pop_back();
+		float f1 = m_stack.back();
+		m_stack.pop_back();
 		switch ( nFunc )
 		{
 		case 0: // inrange
-			m_stack.Push( ( f1 >= f2 ) && ( f1 <= f3 ) ? 1.0f : 0.0f );
+			m_stack.push_back( ( f1 >= f2 ) && ( f1 <= f3 ) ? 1.0f : 0.0f );
 			break;
 		case 1: // clamp
-			m_stack.Push( clamp( f1, f2, f3 ) );
+			m_stack.push_back( clamp( f1, f2, f3 ) );
 			break;
 		case 2: // ramp
-			m_stack.Push( ramp( f1, f2, f3 ) );
+			m_stack.push_back( ramp( f1, f2, f3 ) );
 			break;
 		case 3: // lerp
-			m_stack.Push( lerp( f1, f2, f3 ) );
+			m_stack.push_back( lerp( f1, f2, f3 ) );
 			break;
 		case 4: // cramp
-			m_stack.Push( clamp( ramp( f1, f2, f3 ), 0, 1 ) );
+			m_stack.push_back( clamp( ramp( f1, f2, f3 ), 0, 1 ) );
 			break;
 		case 5: // clerp
-			m_stack.Push( clamp( lerp( f1, f2, f3 ), f2, f3 ) );
+			m_stack.push_back( clamp( lerp( f1, f2, f3 ), f2, f3 ) );
 			break;
 		case 6: // elerp
-			m_stack.Push( lerp( smoothstep( f1 ), f2, f3 ) );
+			m_stack.push_back( lerp( smoothstep( f1 ), f2, f3 ) );
 			break;
 		case 7: // noise
-			m_stack.Push( ImprovedPerlinNoise( Vector( f1, f2, f3 ) ) );
+			m_stack.push_back( ImprovedPerlinNoise( Vector( f1, f2, f3 ) ) );
 			break;
 		}
 		return true;
@@ -761,23 +758,23 @@ bool CExpressionCalculator::Parse5ArgFunc( const char *&expr )
 		ParseExpr( expr ) &&
 		ParseString( expr, ")" ) )
 	{
-		float f5 = m_stack.Top();
-		m_stack.Pop();
-		float f4 = m_stack.Top();
-		m_stack.Pop();
-		float f3 = m_stack.Top();
-		m_stack.Pop();
-		float f2 = m_stack.Top();
-		m_stack.Pop();
-		float f1 = m_stack.Top();
-		m_stack.Pop();
+		float f5 = m_stack.back();
+		m_stack.pop_back();
+		float f4 = m_stack.back();
+		m_stack.pop_back();
+		float f3 = m_stack.back();
+		m_stack.pop_back();
+		float f2 = m_stack.back();
+		m_stack.pop_back();
+		float f1 = m_stack.back();
+		m_stack.pop_back();
 		switch ( nFunc )
 		{
 		case 0: // rescale
-			m_stack.Push( rescale( f1, f2, f3, f4, f5 ) );
+			m_stack.push_back( rescale( f1, f2, f3, f4, f5 ) );
 			break;
 		case 1: // crescale
-			m_stack.Push( clamp( rescale( f1, f2, f3, f4, f5 ), f4, f5 ) );
+			m_stack.push_back( clamp( rescale( f1, f2, f3, f4, f5 ), f4, f5 ) );
 			break;
 		}
 		return true;
@@ -795,7 +792,7 @@ CExpressionCalculator& CExpressionCalculator::operator=( const CExpressionCalcul
 	m_expr = x.m_expr;
 	m_varNames = x.m_varNames;
 	m_varValues = x.m_varValues;
-	m_stack.CopyFrom( x.m_stack );
+	m_stack = x.m_stack;
 	m_bIsBuildingArgumentList = x.m_bIsBuildingArgumentList;
 	return *this;
 }

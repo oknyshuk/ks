@@ -7,9 +7,6 @@
 #include "cbase.h"
 #include "death_pose.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 #ifdef CLIENT_DLL
 

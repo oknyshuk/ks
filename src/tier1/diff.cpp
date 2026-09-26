@@ -10,9 +10,6 @@
 #include "tier1/diff.h"
 #include "mathlib/mathlib.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 // format of diff output:
 // 0NN (N=1..127)  copy next N literaly
@@ -219,8 +216,8 @@ int FindDiffsForLargeFiles(uint8 const *NewBlock, uint8 const *OldBlock,
         int match_of=b->dataptr-lastmatchend;
         if ((match_of>-32768) && (match_of<32767))
         {
-          int max_mlength=MIN(65535,OldBlock+OldSize-b->dataptr);
-          max_mlength=MIN(max_mlength,NewBlock+NewSize-walk);
+          int max_mlength=std::min<std::common_type_t<int, long int>>(65535,OldBlock+OldSize-b->dataptr);
+          max_mlength=std::min<std::common_type_t<int, long int>>(max_mlength,NewBlock+NewSize-walk);
           int i;
 		  for(i=0;i<max_mlength;i++)
             if (walk[i]!=b->dataptr[i])
@@ -355,8 +352,8 @@ int FindDiffs(uint8 const *NewBlock, uint8 const *OldBlock,
         int match_of=b->dataptr-lastmatchend;
         if ((match_of>-32768) && (match_of<32767))
         {
-          int max_mlength=MIN(65535,OldBlock+OldSize-b->dataptr);
-          max_mlength=MIN(max_mlength,NewBlock+NewSize-walk);
+          int max_mlength=std::min<std::common_type_t<int, long int>>(65535,OldBlock+OldSize-b->dataptr);
+          max_mlength=std::min<std::common_type_t<int, long int>>(max_mlength,NewBlock+NewSize-walk);
           int i;
 		  for(i=0;i<max_mlength;i++)
             if (walk[i]!=b->dataptr[i])
@@ -467,7 +464,7 @@ int FindDiffsLowMemory(uint8 const *NewBlock, uint8 const *OldBlock,
       uint16 hash1=(walk[0]+walk[1]+walk[2]+walk[3]) & (NELEMS(old_data_hash)-1);
       if (old_data_hash[hash1])
       {
-        int max_bytes_to_compare=MIN(NewBlock+NewSize-walk,OldBlock+OldSize-old_data_hash[hash1]);
+        int max_bytes_to_compare=std::min(NewBlock+NewSize-walk,OldBlock+OldSize-old_data_hash[hash1]);
         int nmatches;
 		for(nmatches=0;nmatches<max_bytes_to_compare;nmatches++)
           if (walk[nmatches]!=old_data_hash[hash1][nmatches])

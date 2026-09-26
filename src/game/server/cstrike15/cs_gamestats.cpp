@@ -32,9 +32,6 @@
 
 #include "cdll_int.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 //#define DEBUG_STAT_TRANSMISSION 
 
 extern ConVar game_mode;
@@ -221,7 +218,7 @@ CCSGameStats::CCSGameStats()
 	// create table for mapping prop models to stats
 	for ( int i = 0; i < ARRAYSIZE(PropModelStatsTableInit); ++i)
 	{
-		m_PropStatTable.Insert(PropModelStatsTableInit[i].szPropModelName, PropModelStatsTableInit[i].statType);
+		m_PropStatTable.emplace(PropModelStatsTableInit[i].szPropModelName, PropModelStatsTableInit[i].statType);
 	}
 
 	m_numberOfRoundsForDirectAverages = 0;
@@ -296,7 +293,7 @@ void CCSGameStats::Event_ShotFired( CBasePlayer *pPlayer, CBaseCombatWeapon* pWe
 			// OGS tracking
 			// Check to see if this bullet is from a weapon that fires multiple bullets with a single shot.
 			uint8 iSubBullet = 0;			
-			SWeaponShotData *lastShotData = m_WeaponShotData.Count() ? m_WeaponShotData.Tail() : nullptr;
+			SWeaponShotData *lastShotData = !m_WeaponShotData.empty() ? m_WeaponShotData.back().get() : nullptr;
 
 			// If the previous weapon shot data has the save bulletid, then we check the sub bullet id and increment one from that
 			if ( lastShotData && lastShotData->m_uiBulletID == CCSPlayer::GetBulletGroup() )
@@ -304,7 +301,7 @@ void CCSGameStats::Event_ShotFired( CBasePlayer *pPlayer, CBaseCombatWeapon* pWe
 				iSubBullet = lastShotData->m_uiSubBulletID + 1;
 			}
 
-			m_WeaponShotData.AddToTail( new SWeaponShotData( pCSPlayer, pCSWeapon, iSubBullet, CSGameRules()->m_iTotalRoundsPlayed, (int)pCSWeapon->m_flRecoilIndex ) );
+			m_WeaponShotData.push_back( std::make_unique< SWeaponShotData >( pCSPlayer, pCSWeapon, iSubBullet, CSGameRules()->m_iTotalRoundsPlayed, (int)pCSWeapon->m_flRecoilIndex ) );
 			for (int i = 0; WeaponName_StatId_Table[i].weaponId != WEAPON_NONE; ++i)
 			{
 			    if ( WeaponName_StatId_Table[i].weaponId == weaponId && WeaponName_StatId_Table[i].shotStatId != CSSTAT_UNDEFINED )
@@ -507,10 +504,9 @@ void CCSGameStats::Event_BreakProp( CCSPlayer* pPlayer, CBreakableProp *pProp )
 
 	DevMsg("Player %s broke a %s (%i)\n", pPlayer->GetPlayerName(), pProp->GetModelName().ToCStr(), pProp->entindex());
 
-	int iIndex = m_PropStatTable.Find(pProp->GetModelName().ToCStr());
-	if (m_PropStatTable.IsValidIndex(iIndex))
+	if (CSStatType_t *pStat = ks::find_ptr(m_PropStatTable, pProp->GetModelName().ToCStr()))
 	{
-		IncrementStat(pPlayer, m_PropStatTable[iIndex], 1);
+		IncrementStat(pPlayer, *pStat, 1);
 	}
 	IncrementStat(pPlayer, CSSTAT_PROPSBROKEN_ALL, 1);
 }
@@ -571,11 +567,11 @@ void CCSGameStats::UpdatePlayerRoundStats(int winner)
 			}
 			if( CSGameRules()->IsPlayingGunGameProgressive() )
 			{
-				IncrementStat( pPlayer,CSSTAT_GG_PROGRESSIVE_CONTRIBUTION_SCORE, MAX( pPlayer->GetRoundContributionScore(), 0.0f), false, true );
+				IncrementStat( pPlayer,CSSTAT_GG_PROGRESSIVE_CONTRIBUTION_SCORE, std::max<std::common_type_t<int, float>>( pPlayer->GetRoundContributionScore(), 0.0f), false, true );
 			}
 			else
 			{
-				IncrementStat( pPlayer,CSSTAT_CONTRIBUTION_SCORE, MAX( pPlayer->GetRoundContributionScore(), 0.0f), false, true );
+				IncrementStat( pPlayer,CSSTAT_CONTRIBUTION_SCORE, std::max<std::common_type_t<int, float>>( pPlayer->GetRoundContributionScore(), 0.0f), false, true );
 			}
 			pPlayer->ClearRoundContributionScore();
 			pPlayer->ClearRoundProximityScore();
@@ -832,8 +828,8 @@ void CCSGameStats::Event_PlayerKilledOther( CBasePlayer *pAttacker, CBaseEntity 
 	}	
 
 	// set the number of consecutive kills this scorer has on the victim:
-	int nConsecutiveKills = pPlayerAttacker ? MAX( FindPlayerStats( pPlayerVictim ).statsKills.iNumKilledByUnanswered[pPlayerAttacker->entindex()], 1 ) : 0;
-	pPlayerVictim->SetLastConcurrentKilled( MIN( nConsecutiveKills, 8 ) );
+	int nConsecutiveKills = pPlayerAttacker ? std::max( FindPlayerStats( pPlayerVictim ).statsKills.iNumKilledByUnanswered[pPlayerAttacker->entindex()], 1 ) : 0;
+	pPlayerVictim->SetLastConcurrentKilled( std::min( nConsecutiveKills, 8 ) );
 
 	// check to see if a player killed another with a StatTrak weapon
 	if ( CBaseCombatWeapon *pWeapon = dynamic_cast<CBaseCombatWeapon *>( info.GetWeapon() ) )
@@ -844,10 +840,10 @@ void CCSGameStats::Event_PlayerKilledOther( CBasePlayer *pAttacker, CBaseEntity 
 		if ( CEconItemView *pItemView = pWeapon->GetEconItemView() )
 		{
 			// Get the supported killeater types on this weapon
-			CUtlSortVector<uint32> killEaterTypes;
+			std::flat_multiset<uint32> killEaterTypes;
 			pItemView->GetKillEaterTypes( killEaterTypes );
 
-			if ( killEaterTypes.Count() > 0 )
+			if ( !killEaterTypes.empty() )
 			{
 				if ( pItemView->GetAccountID() == HolderSteamID.GetAccountID() )
 				{
@@ -891,7 +887,7 @@ void CCSGameStats::Event_PlayerDamage( CBasePlayer *pBasePlayer, const CTakeDama
 	if ( info.GetBulletID() != 0 )
 	{
 		uint8 iSubBullet = 0;			
-		SWeaponHitData *lastHitData = m_WeaponHitData.Count() ? m_WeaponHitData.Tail() : nullptr;
+		SWeaponHitData *lastHitData = !m_WeaponHitData.empty() ? m_WeaponHitData.back().get() : nullptr;
 
 		// If the previous weapon shot data has the save bulletid, then we check the sub bullet id and increment one from that
 		if ( lastHitData && lastHitData->m_uiBulletID == CCSPlayer::GetBulletGroup() )
@@ -899,7 +895,7 @@ void CCSGameStats::Event_PlayerDamage( CBasePlayer *pBasePlayer, const CTakeDama
 			iSubBullet = lastHitData->m_uiSubBulletID + 1;
 		}
 
-		m_WeaponHitData.AddToTail( new SWeaponHitData( ToCSPlayer( pBasePlayer ), info, iSubBullet, CSGameRules()->m_iTotalRoundsPlayed, info.GetRecoilIndex() ) );
+		m_WeaponHitData.push_back( std::make_unique< SWeaponHitData >( ToCSPlayer( pBasePlayer ), info, iSubBullet, CSGameRules()->m_iTotalRoundsPlayed, info.GetRecoilIndex() ) );
 	}
 }
 
@@ -923,7 +919,7 @@ void CCSGameStats::Event_MoneySpent( CCSPlayer* pPlayer, int moneySpent, const c
 		{
 			CSteamID steamIDForBuyer;
 			pPlayer->GetSteamID( &steamIDForBuyer );
-			m_MarketPurchases.AddToTail( new SMarketPurchases( steamIDForBuyer.ConvertToUint64(), moneySpent, pItemName, CSGameRules()->m_iTotalRoundsPlayed ) );
+			m_MarketPurchases.push_back( std::make_unique< SMarketPurchases >( steamIDForBuyer.ConvertToUint64(), moneySpent, pItemName, CSGameRules()->m_iTotalRoundsPlayed ) );
 		}
 	}
 }
@@ -1000,15 +996,9 @@ void CCSGameStats::FireGameEvent( IGameEvent *event )
 				if ( pCSPlayer->IsConnected() && pCSPlayer->IsAlive() && !pCSPlayer->IsBot() )
 				{
 					CCSPlayer::StartNewBulletGroup();
-					SWeaponHitData *pHitData = new SWeaponHitData;
+					auto pHitData = std::make_unique< SWeaponHitData >();
 					if ( pHitData->InitAsBombEvent( pCSPlayer, pPlantedC4, CCSPlayer::GetBulletGroup(), unBombsite, nBombEventName ) )
-					{
-						CCS_GameStats.RecordWeaponHit( pHitData ); // submission deletes the struct.
-					}
-					else
-					{
-						delete pHitData;
-					}
+						CCS_GameStats.RecordWeaponHit( std::move( pHitData ) );
 				}				
 			}
 		}					 	
@@ -1134,10 +1124,10 @@ void CCSGameStats::ResetRoundStats()
 //-----------------------------------------------------------------------------
 void CCSGameStats::ClearOGSRoundStats()
 {
-	m_WeaponHitData.PurgeAndDeleteElements();
-	m_WeaponMissData.PurgeAndDeleteElements();
-	m_WeaponShotData.PurgeAndDeleteElements();
-	m_MarketPurchases.PurgeAndDeleteElements();
+	m_WeaponHitData.clear();
+	m_WeaponMissData.clear();
+	m_WeaponShotData.clear();
+	m_MarketPurchases.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -1577,10 +1567,10 @@ void CCSGameStats::UploadRoundStats( void )
 	pKV->SetString( "MapID", pzMapName );
 
 	// Calculate the shot misses by searching for any entries that are in the shot fired list but not in the damage given list
-	for ( int i = 0 ; i < m_WeaponShotData.Count() ; ++i )
+	for ( int i = 0 ; i < std::ssize( m_WeaponShotData ) ; ++i )
 	{
 		bool found = false;
-		for ( int k=0 ; k < m_WeaponHitData.Count() ; ++k )
+		for ( int k=0 ; k < std::ssize( m_WeaponHitData ) ; ++k )
 		{
 			// This shot was a hit so we can move on and search for the next miss
 			if ( m_WeaponShotData[i]->m_uiBulletID == m_WeaponHitData[k]->m_uiBulletID && m_WeaponShotData[i]->m_uiSubBulletID == m_WeaponHitData[k]->m_uiSubBulletID )
@@ -1593,32 +1583,32 @@ void CCSGameStats::UploadRoundStats( void )
 		// This shot was a miss so add it to Missed container
 		if ( !found )
 		{
-			m_WeaponMissData.AddToTail( new SWeaponMissData( m_WeaponShotData[i] ) );
+			m_WeaponMissData.push_back( std::make_unique< SWeaponMissData >( m_WeaponShotData[i].get() ) );
 		}
 	}
 
 	weaponHitTimer.Start();
-	uint32 iNumHits = m_WeaponHitData.Count();
-	for ( int j=0 ; j < m_WeaponHitData.Count() ; ++j )
+	uint32 iNumHits = std::ssize( m_WeaponHitData );
+	for ( int j=0 ; j < std::ssize( m_WeaponHitData ) ; ++j )
 	{
 		m_WeaponHitData[ j ]->CompactBulletID();
-		SubmitStat( m_WeaponHitData[ j ] );
+		SubmitStat( m_WeaponHitData[ j ].get() );	// the stat tables only observe
 	}
 	weaponHitTimer.End();
 
 	weaponMissTimer.Start();
-	uint32 iNumMisses = m_WeaponMissData.Count();
-	for ( int k=0 ; k < m_WeaponMissData.Count() ; ++k )
+	uint32 iNumMisses = std::ssize( m_WeaponMissData );
+	for ( int k=0 ; k < std::ssize( m_WeaponMissData ) ; ++k )
 	{
 		m_WeaponMissData[ k ]->CompactBulletID();
-		SubmitStat( m_WeaponMissData[ k ] );
+		SubmitStat( m_WeaponMissData[ k ].get() );
 	}
 	weaponMissTimer.End();
 
 	marketPurchaseTimer.Start();
-	uint32 iNumPurchases = m_MarketPurchases.Count();
-	for ( int k=0 ; k < m_MarketPurchases.Count() ; ++k )
-		SubmitStat( m_MarketPurchases[ k ] );
+	uint32 iNumPurchases = std::ssize( m_MarketPurchases );
+	for ( int k=0 ; k < std::ssize( m_MarketPurchases ) ; ++k )
+		SubmitStat( m_MarketPurchases[ k ].get() );
 	marketPurchaseTimer.End();
 
 	submitTimer.Start();
@@ -1657,7 +1647,7 @@ void CCSGameStats::UploadRoundStats( void )
 //-----------------------------------------------------------------------------
 void CCSGameStats::SubmitGameStats( KeyValues *pKV )
 {
-	int listCount = s_StatLists->Count();
+	int listCount = std::ssize( *s_StatLists );
 	for( int i=0; i < listCount; ++i )
 	{
 		// Create a master key value that has stats everybody should share (map name, session ID, etc)
@@ -1679,7 +1669,7 @@ CCSGameStats::StatContainerList_t* CCSGameStats::GetStatContainerList( void )
 //-----------------------------------------------------------------------------
 bool CCSGameStats::AnyOGSDataToSubmit( void )
 {
-	return m_WeaponShotData.Count() > 0 || m_MarketPurchases.Count() > 0;
+	return !m_WeaponShotData.empty() || std::ssize( m_MarketPurchases ) > 0;
 }
 
 void CCSGameStats::CreateNewGameStatsSession( void )
@@ -1688,9 +1678,9 @@ void CCSGameStats::CreateNewGameStatsSession( void )
 	GetSteamWorksGameStatsServer().StartSession();
 }
 
-void CCSGameStats::RecordWeaponHit( SWeaponHitData* pHitData )
+void CCSGameStats::RecordWeaponHit( std::unique_ptr< SWeaponHitData > pHitData )
 {
-	m_WeaponHitData.AddToTail( pHitData );
+	m_WeaponHitData.push_back( std::move( pHitData ) );
 }
 
 float UTIL_GetEffectiveRange( CCSPlayer* pPlayer )

@@ -47,7 +47,7 @@ public:
 };
 
 
-class CAI_InterestTarget : public CUtlVector<CAI_InterestTarget_t>
+class CAI_InterestTarget : public std::vector< CAI_InterestTarget_t >
 {
 public:
 	void Add( CBaseEntity *pTarget, float flImportance, float flDuration, float flRamp );
@@ -56,22 +56,22 @@ public:
 	int Find( CBaseEntity *pTarget )
 	{
 		int i;
-		for ( i = 0; i < Count(); i++)
+		for ( i = 0; i < std::ssize( *this ); i++)
 		{
 			if (pTarget == (*this)[i].m_hTarget)
 				return i;
 		}
-		return InvalidIndex();
+		return -1;
 	}
 	
 	void Cleanup( void )
 	{
 		int i;
-		for (i = Count() - 1; i >= 0; i--)
+		for (i = std::ssize( *this ) - 1; i >= 0; i--)
 		{
-			if (!Element(i).IsActive())
+			if (!(*this)[ i ].IsActive())
 			{
-				Remove( i );
+				this->erase( this->begin() + i );
 			}
 		}
 	};

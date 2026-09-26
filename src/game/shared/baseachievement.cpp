@@ -18,9 +18,6 @@
 #endif // CLIENT_DLL
 
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 
 CBaseAchievementHelper *CBaseAchievementHelper::s_pFirst = nullptr;

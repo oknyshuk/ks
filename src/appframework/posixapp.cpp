@@ -16,9 +16,6 @@
 #include "vstdlib/cvar.h"
 #include "togl/rendermechanism.h"
 
-// NOTE: This has to be the last file included! (turned off below, since this is included like a header)
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Globals...
 //-----------------------------------------------------------------------------
@@ -171,7 +168,4 @@ void CSteamApplication::Shutdown()
 	m_pChildAppSystemGroup->Shutdown();
 	BaseClass::Shutdown();
 }
-
-// Turn off memdbg macros (turned on up top) since this is included like a header
-#include "tier0/memdbgoff.h"
 

@@ -22,8 +22,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <string>
+#include <vector>
 
-class CUtlBuffer;
+namespace ks
+{
+	class text_writer;
+}
 
 #define str_size size_t
 
@@ -52,9 +57,6 @@ void CopyMemory3D( void *pDestAdr, void const *pSrcAdr,
 #define FastASCIIToUpper toupper
 #endif
 
-
-template< class T, class I > class CUtlMemory;
-template< class T, class A > class CUtlVector;
 
 extern const char *nexttoken(char *token, const char *str, char sep);
 
@@ -195,7 +197,7 @@ const char*	V_strnistr( const char* pStr, const char* pSearch, int n );
 const char*	V_strnchr( const char* pStr, char c, int n );
 wchar_t*	V_wcsistr( wchar_t* pStr, const wchar_t* pSearch );
 const wchar_t*	V_wcsistr( const wchar_t* pStr, const wchar_t* pSearch );
-void		V_qsort_s( void *base, size_t num, size_t width, int ( __cdecl *compare )(void *, const void *, const void *), void *context );
+void		V_qsort_s( void *base, size_t num, size_t width, int ( *compare )(void *, const void *, const void *), void *context );
 
 #define V_strncmp_fast V_strncmp
 #define V_strnicmp_fast V_strnicmp
@@ -581,8 +583,7 @@ char *V_pretifymem( float value, int digitsafterdecimal = 2, bool usebinaryonek 
 char *V_pretifynum( int64 value );
 
 // Prints out a memory dump where stuff that's ascii is human readable, etc.
-class CUtlString;
-void V_LogMultiline( bool input, char const *label, const char *data, size_t len, CUtlString &output );
+void V_LogMultiline( bool input, char const *label, const char *data, size_t len, std::string &output );
 
 // conversion functions wchar_t <-> char, returning the number of characters converted
 int _V_UTF8ToUnicode( const char *pUTF8, OUT_Z_BYTECAP(cubDestSizeInBytes) wchar_t *pwchDest, int cubDestSizeInBytes );
@@ -724,26 +725,10 @@ bool V_IsAbsolutePath( IN_Z const char *pPath );
 // If it would overflow pOut, it fills as much as it can and returns false.
 bool V_StrSubst( IN_Z const char *pIn, IN_Z const char *pMatch, IN_Z const char *pReplaceWith, OUT_Z_CAP(outLen) char *pOut, int outLen, bool bCaseSensitive=false );
 
-// Split the specified string on the specified separator.
-// Returns a list of strings separated by pSeparator.
-// You are responsible for freeing the contents of outStrings (call outStrings.PurgeAndDeleteElements).
-// You can pass in a CUtlStringList to hold the results, and it will automatically free the strings,
-// but it does this in the destructor so if you make multiple calls to V_SplitString with the same
-// object you must call outStrings.PurgeAndDeleteElements between each call.
-// If you copy and retain pointers to any of the strings you must zero them before calling
-// PurgeAndDeleteElements to avoid having a pointer to freed memory.
-void V_SplitString( IN_Z const char *pString, IN_Z const char *pSeparator, CUtlVector<char*, CUtlMemory<char*, int> > &outStrings );
+// Split pString on pSeparator into outStrings. Case-insensitive separators; empty pieces are dropped unless asked for.
+void V_SplitString( const char *pString, const char *pSeparator, std::vector< std::string > &outStrings, bool bIncludeEmptyStrings = false );
+void V_SplitString2( const char *pString, const char * const *pSeparators, int nSeparators, std::vector< std::string > &outStrings, bool bIncludeEmptyStrings = false );
 
-void V_SplitString( const char *pString, const char *pSeparator, CUtlVector< CUtlString, CUtlMemory<CUtlString, int> > &outStrings, bool bIncludeEmptyStrings = false );
-
-// Just like V_SplitString, but it can use multiple possible separators.
-void V_SplitString2( const char *pString, const char **pSeparators, int nSeparators, CUtlVector<char*, CUtlMemory<char*, int> > &outStrings );
-
-// Split string for wide character strings
-void V_SplitWString( const wchar_t *pString, const wchar_t *pSeparator, CUtlVector<wchar_t*, CUtlMemory<wchar_t*, int> > &outStrings );
-
-// Just like V_SplitString, but for wide character strings
-void V_SplitWString2( const wchar_t *pString, const wchar_t **pSeparators, int nSeparators, CUtlVector<wchar_t*, CUtlMemory<wchar_t*, int> > &outStrings );
 
 // Returns false if the buffer is not large enough to hold the working directory name.
 bool V_GetCurrentDirectory( char *pOut, int maxLen );
@@ -861,7 +846,7 @@ bool V_TokenWaiting( const char *buffer );
 int V_BoyerMooreSearch( const byte *pNeedle, int nNeedleLength, const byte *pHayStack, int nHayStackLength );
 
 // Creates a random ascii string (alphanumeric only) of specified length
-CUtlString V_RandomString( int nLength );
+std::string V_RandomString( int nLength );
 
 // Encode a string for display as HTML -- this only encodes ' " & < >, which are the important ones to encode for 
 // security and ensuring HTML display doesn't break.  Other special chars like the ? sign and so forth will not
@@ -876,8 +861,8 @@ bool V_BasicHtmlEntityEncode( OUT_Z_CAP( nDestSize ) char *pDest, const int nDes
 bool V_HtmlEntityDecodeToUTF8( OUT_Z_CAP( nDestSize ) char *pDest, const int nDestSize, char const *pIn, const int nInSize );
 
 // strips HTML from a string.  Should call Q_HTMLEntityDecodeToUTF8 afterward.
-void V_StripAndPreserveHTML( CUtlBuffer *pbuffer, const char *pchHTML, const char **rgszPreserveTags, uint cPreserveTags, uint cMaxResultSize );
-void V_StripAndPreserveHTMLCore( CUtlBuffer *pbuffer, const char *pchHTML, const char **rgszPreserveTags, uint cPreserveTags, const char **rgszNoCloseTags, uint cNoCloseTags, uint cMaxResultSize );
+void V_StripAndPreserveHTML( ks::text_writer *pbuffer, const char *pchHTML, const char **rgszPreserveTags, uint cPreserveTags, uint cMaxResultSize );
+void V_StripAndPreserveHTMLCore( ks::text_writer *pbuffer, const char *pchHTML, const char **rgszPreserveTags, uint cPreserveTags, const char **rgszNoCloseTags, uint cNoCloseTags, uint cMaxResultSize );
 
 // Extracts the domain from a URL
 bool V_ExtractDomainFromURL( const char *pchURL, OUT_Z_CAP( cchDomain ) char *pchDomain, int cchDomain );
@@ -1366,6 +1351,15 @@ int isbreakablewspace( wchar_t ch );
 
 // Strip white space at the beginning and end of a string
 int V_StrTrim( char *pStr );
+
+
+// Null-sorts-last string orderings for std::map/std::sort comparators.
+inline bool CaselessStringLessThan( const char * const &lhs, const char * const &rhs )
+{
+	if ( !lhs ) return false;
+	if ( !rhs ) return true;
+	return stricmp( lhs, rhs ) < 0;
+}
 
 
 #endif	// TIER1_STRTOOLS_H

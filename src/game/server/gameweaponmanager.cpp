@@ -10,13 +10,10 @@
 
 #include "gameweaponmanager.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //=========================================================
 //=========================================================
 class CGameWeaponManager;
-static CUtlVector<CGameWeaponManager *> g_Managers;
+static std::vector< CGameWeaponManager * > g_Managers;
 
 
 //=========================================================
@@ -32,12 +29,12 @@ public:
 	{
 		m_flAmmoMod = 1.0f;
 		m_bExpectingWeapon = false;
-		g_Managers.AddToTail( this );
+		g_Managers.push_back( this );
 	}
 
 	~CGameWeaponManager()
 	{
-		g_Managers.FindAndRemove( this );
+		ks::erase_first( g_Managers, this );
 	}
 
 	void Think();
@@ -49,7 +46,7 @@ public:
 	[[= ks::reflect::Key{ .name = "ammomod" } ]] float		m_flAmmoMod;
 	bool		m_bExpectingWeapon;
 
-	CUtlVector<EHANDLE> m_ManagedNonWeapons;
+	std::vector< EHANDLE > m_ManagedNonWeapons;
 
 };
 
@@ -71,7 +68,7 @@ void CreateWeaponManager( const char *pWeaponName, int iMaxPieces )
 
 void WeaponManager_AmmoMod( CBaseCombatWeapon *pWeapon )
 {
-	for ( int i = 0; i < g_Managers.Count(); i++ )
+	for ( int i = 0; i < std::ssize( g_Managers ); i++ )
 	{
 		if ( g_Managers[i]->m_iszWeaponName == pWeapon->m_iClassname )
 		{
@@ -95,12 +92,12 @@ void WeaponManager_AmmoMod( CBaseCombatWeapon *pWeapon )
 
 void WeaponManager_AddManaged( CBaseEntity *pWeapon )
 {
-	for ( int i = 0; i < g_Managers.Count(); i++ )
+	for ( int i = 0; i < std::ssize( g_Managers ); i++ )
 	{
 		if ( g_Managers[i]->m_iszWeaponName == pWeapon->m_iClassname )
 		{
-			Assert( g_Managers[i]->m_ManagedNonWeapons.Find( pWeapon ) == g_Managers[i]->m_ManagedNonWeapons.InvalidIndex() );
-			g_Managers[i]->m_ManagedNonWeapons.AddToTail( pWeapon );
+			Assert( ks::find_index( g_Managers[i]->m_ManagedNonWeapons, pWeapon ) == -1 );
+			g_Managers[i]->m_ManagedNonWeapons.push_back( pWeapon );
 			break;
 		}
 	}
@@ -108,14 +105,14 @@ void WeaponManager_AddManaged( CBaseEntity *pWeapon )
 
 void WeaponManager_RemoveManaged( CBaseEntity *pWeapon )
 {
-	for ( int i = 0; i < g_Managers.Count(); i++ )
+	for ( int i = 0; i < std::ssize( g_Managers ); i++ )
 	{
 		if ( g_Managers[i]->m_iszWeaponName == pWeapon->m_iClassname )
 		{
-			int j = g_Managers[i]->m_ManagedNonWeapons.Find( pWeapon );
-			if ( j != g_Managers[i]->m_ManagedNonWeapons.InvalidIndex() )
+			int j = ks::find_index( g_Managers[i]->m_ManagedNonWeapons, pWeapon );
+			if ( j != -1 )
 			{
-				g_Managers[i]->m_ManagedNonWeapons.FastRemove( j );
+				ks::swap_remove( g_Managers[i]->m_ManagedNonWeapons, j );
 			}
 		}
 	}
@@ -173,7 +170,7 @@ void CGameWeaponManager::Think()
 
 	const char *pszWeaponName = STRING( m_iszWeaponName );
 
-	CUtlVector<CBaseEntity *> candidates( 0, 64 );
+	std::vector< CBaseEntity * > candidates; candidates.reserve( 64 );
 
 	if ( m_bExpectingWeapon )
 	{
@@ -186,7 +183,7 @@ void CGameWeaponManager::Think()
 		{
 			if( !pWeapon->IsEffectActive( EF_NODRAW ) && pWeapon->IsRemoveable() )
 			{
-				candidates.AddToTail( pWeapon );
+				candidates.push_back( pWeapon );
 			}
 
 			pWeapon = assert_cast<CBaseCombatWeapon *>(gEntList.FindEntityByClassname( pWeapon, pszWeaponName ));
@@ -194,7 +191,7 @@ void CGameWeaponManager::Think()
 	}
 	else
 	{
-		for ( i = 0; i < m_ManagedNonWeapons.Count(); i++)
+		for ( i = 0; i < std::ssize( m_ManagedNonWeapons ); i++)
 		{
 			CBaseEntity *pEntity = m_ManagedNonWeapons[i];
 			if ( pEntity )
@@ -202,23 +199,23 @@ void CGameWeaponManager::Think()
 				Assert( pEntity->m_iClassname == m_iszWeaponName );
 				if ( !pEntity->IsEffectActive( EF_NODRAW ) )
 				{
-					candidates.AddToTail( pEntity );
+					candidates.push_back( pEntity );
 				}
 			}
 			else
 			{
-				m_ManagedNonWeapons.FastRemove( i-- );
+				ks::swap_remove( m_ManagedNonWeapons, i-- );
 			}
 		}
 	}
 
 	// Calculate the surplus.
-	int surplus = candidates.Count() - m_iMaxPieces;
+	int surplus = std::ssize( candidates ) - m_iMaxPieces;
 
 	// Based on what the player can see, try to clean up the world by removing weapons that
 	// the player cannot see right at the moment.
 	CBaseEntity *pCandidate;
-	for ( i = 0; i < candidates.Count() && surplus > 0; i++ )
+	for ( i = 0; i < std::ssize( candidates ) && surplus > 0; i++ )
 	{
 		bool fRemovedOne = false;
 

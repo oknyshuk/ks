@@ -7,8 +7,6 @@
 #ifndef FX_BLOOD_H
 #define FX_BLOOD_H
 
-#include "tier0/memdbgon.h"
-
 class CBloodSprayEmitter : public CSimpleEmitter
 {
 public:
@@ -67,7 +65,5 @@ private:
 
 	CBloodSprayEmitter( const CBloodSprayEmitter & );
 };
-
-#include "tier0/memdbgoff.h"
 
 #endif // FX_BLOOD_H

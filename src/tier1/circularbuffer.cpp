@@ -5,12 +5,10 @@
 //=============================================================================//
 
 #include "tier0/dbg.h"
-#include "tier1/mempool.h"
+#include "tier1/fixed_pool.h"
 #include "circularbuffer.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 CCircularBuffer::CCircularBuffer()
 {
 	SetSize( 0 );
@@ -107,7 +105,7 @@ int CCircularBuffer::Peek(char *pchDest, int nCount)
 	//
 	// Requested amount should not exceed the available amount.
 	//
-	nCount = MIN(m_nCount, nCount);
+	nCount = std::min(m_nCount, nCount);
 
 	//
 	// Copy as many of the requested bytes as possible.
@@ -151,7 +149,7 @@ int CCircularBuffer::Advance(int nCount)
 	//
 	// Requested amount should not exceed the available amount.
 	//
-	nCount = MIN(m_nCount, nCount);
+	nCount = std::min(m_nCount, nCount);
 
 	//
 	// Advance the read pointer, checking for buffer wrap.
@@ -255,28 +253,28 @@ int CCircularBuffer::Write(void *pData, int nBytesRequested)
 	return nBytesRequested;
 }
 
-CFixedBudgetMemoryPool<ALIGN_VALUE(sizeof( CCircularBuffer ) + 8820 - 1, TSLIST_NODE_ALIGNMENT ), 24> g_SmallBuffers;
-CFixedBudgetMemoryPool<ALIGN_VALUE(sizeof( CCircularBuffer ) + 17640 - 1, TSLIST_NODE_ALIGNMENT ), 44> g_MediumBuffers;
-CFixedBudgetMemoryPool<ALIGN_VALUE(sizeof( CCircularBuffer ) + 35280 - 1, TSLIST_NODE_ALIGNMENT ), 16> g_LargeBuffers;
+ks::budget_pool<sizeof( CCircularBuffer ) + 8820 - 1, 24> g_SmallBuffers;
+ks::budget_pool<sizeof( CCircularBuffer ) + 17640 - 1, 44> g_MediumBuffers;
+ks::budget_pool<sizeof( CCircularBuffer ) + 35280 - 1, 16> g_LargeBuffers;
 
 CCircularBuffer *AllocateCircularBuffer( int nSize )
 {
 	CCircularBuffer *pCCircularBuffer;
 	if ( nSize <= 8820 )
 	{
-		pCCircularBuffer = (CCircularBuffer *)g_SmallBuffers.Alloc();
+		pCCircularBuffer = (CCircularBuffer *)g_SmallBuffers.alloc();
 	}
 	else if ( nSize <= 17640 )
 	{
-		pCCircularBuffer = (CCircularBuffer *)g_MediumBuffers.Alloc();
+		pCCircularBuffer = (CCircularBuffer *)g_MediumBuffers.alloc();
 	}
 	else if ( nSize <= 35280 )
 	{
-		pCCircularBuffer = (CCircularBuffer *)g_LargeBuffers.Alloc();
+		pCCircularBuffer = (CCircularBuffer *)g_LargeBuffers.alloc();
 	}
 	else
 	{
-		pCCircularBuffer = (CCircularBuffer *)malloc( sizeof( CCircularBuffer ) + nSize - 1 );
+		pCCircularBuffer = (CCircularBuffer *)MemAlloc_Alloc( sizeof( CCircularBuffer ) + nSize - 1 );
 	}
 
 	pCCircularBuffer->SetSize( nSize );
@@ -289,19 +287,19 @@ void FreeCircularBuffer( CCircularBuffer *pCircularBuffer )
 
 	if ( nSize <= 8820 )
 	{
-		g_SmallBuffers.Free( pCircularBuffer );
+		g_SmallBuffers.free( pCircularBuffer );
 	}
 	else if ( nSize <= 17640 )
 	{
-		g_MediumBuffers.Free( pCircularBuffer );
+		g_MediumBuffers.free( pCircularBuffer );
 	}
 	else if ( nSize <= 35280 )
 	{
-		g_LargeBuffers.Free( pCircularBuffer );
+		g_LargeBuffers.free( pCircularBuffer );
 	}
 	else
 	{
-		free( pCircularBuffer );
+		g_pMemAlloc->Free( pCircularBuffer );
 	}
 }
 

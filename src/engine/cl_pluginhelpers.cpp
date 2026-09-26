@@ -7,9 +7,6 @@
 #include "client_pch.h"
 #include "cl_pluginhelpers.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 static CPluginUIManager s_PluginManager;
 CPluginUIManager *g_PluginManager = &s_PluginManager;
 

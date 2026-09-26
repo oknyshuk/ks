@@ -9,9 +9,6 @@
 
 #include "screenspaceeffect_vs20.inc"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 static void GetAdjustedShaderName( char *pOutputBuffer, char const *pShader20Name )
 {
 	Q_strcpy( pOutputBuffer, pShader20Name );

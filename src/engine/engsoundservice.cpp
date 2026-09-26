@@ -34,9 +34,6 @@
 #include "MapReslistGenerator.h"
 #include "cl_main.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 void Snd_Restart_f();
 
 #define MAPLIST_FILE "maplist.txt"
@@ -222,9 +219,9 @@ public:
 		Snd_Restart_f();
 	}
 
-	virtual void GetAllManifestFiles( CUtlRBTree< FileNameHandle_t, int >& list )
+	virtual void GetAllManifestFiles( std::set< FileNameHandle_t >& list )
 	{
-		list.RemoveAll();
+		list.clear();
 
 		// Load them in
 		FileHandle_t resfilehandle = g_pFileSystem->Open( MAPLIST_FILE, "rb", "MOD" );
@@ -253,10 +250,7 @@ public:
 						if ( g_pFileSystem->FileExists( manifest_file, "MOD" ) )
 						{
 							FileNameHandle_t handle = g_pFileSystem->FindOrAddFileName( manifest_file );
-							if ( list.Find( handle ) == list.InvalidIndex() )
-							{
-								list.Insert( handle );
-							}
+							list.insert( handle );
 						}
 
 						// Any more tokens on this line?
@@ -277,17 +271,17 @@ public:
 		}
 	}
 
-	virtual void GetAllSoundFilesInManifest( CUtlRBTree< FileNameHandle_t, int >& list, char const *manifestfile )
+	virtual void GetAllSoundFilesInManifest( std::set< FileNameHandle_t >& list, char const *manifestfile )
 	{
-		list.RemoveAll();
+		list.clear();
 		CacheSoundsFromResFile( true, list, manifestfile, false );
 	}
 
-	virtual void GetAllSoundFilesReferencedInReslists( CUtlRBTree< FileNameHandle_t, int >& list )
+	virtual void GetAllSoundFilesReferencedInReslists( std::set< FileNameHandle_t >& list )
 	{
 		char reslistdir[ MAX_PATH ];
 		Q_strncpy( reslistdir, MapReslistGenerator().GetResListDirectory(), sizeof( reslistdir ) );
-		list.RemoveAll();
+		list.clear();
 
 		// Load them in
 		FileHandle_t resfilehandle = g_pFileSystem->Open( MAPLIST_FILE, "rb", "MOD" );
@@ -415,7 +409,7 @@ private:
 
 	float m_frameTime;
 
-	void CacheSoundsFromResFile( bool quiet, CUtlRBTree< FileNameHandle_t, int >& list, char const *resfile, bool checkandcleanname = true )
+	void CacheSoundsFromResFile( bool quiet, std::set< FileNameHandle_t >& list, char const *resfile, bool checkandcleanname = true )
 	{
 		if ( !g_pFileSystem->FileExists( resfile, "MOD" ) )
 		{
@@ -423,7 +417,7 @@ private:
 			return;
 		}
 
-		int oldCount = list.Count();
+		int oldCount = (int)list.size();
 
 		FileHandle_t resfilehandle = g_pFileSystem->Open( resfile, "rb", "MOD" );
 		if ( FILESYSTEM_INVALID_HANDLE != resfilehandle )
@@ -458,19 +452,13 @@ private:
 									pName++;
 								}										// "\sound\player\footstep.wav"
 								FileNameHandle_t handle = g_pFileSystem->FindOrAddFileName( pName+1 );   // "sound\player\footstep.wav"
-								if ( list.Find( handle ) == list.InvalidIndex() )
-								{
-									list.Insert( handle );
-								}
+								list.insert( handle );
 							}
 						}
 						else
 						{
 							FileNameHandle_t handle = g_pFileSystem->FindOrAddFileName( com_token );
-							if ( list.Find( handle ) == list.InvalidIndex() )
-							{
-								list.Insert( handle );
-							}
+							list.insert( handle );
 						}
 					}
 				}
@@ -480,7 +468,7 @@ private:
 			g_pFileSystem->Close(resfilehandle);
 		}
 
-		int newCount = list.Count();
+		int newCount = (int)list.size();
 
 		if ( !quiet )
 		{

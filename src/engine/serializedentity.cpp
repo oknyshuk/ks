@@ -3,14 +3,15 @@
 //
 //
 //==================================================================================================
+#include "tier0/memalloc.h"
+#include <mutex>
+#include <atomic>
 #include "tier1/bitbuf.h"
 #include "serializedentity.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
+#include <set>
 
 //-----------------------------------------------------------------------------
-DEFINE_FIXEDSIZE_ALLOCATOR_MT( CSerializedEntity, 2048, CUtlMemoryPool::GROW_FAST );
+DEFINE_FIXEDSIZE_ALLOCATOR_MT( CSerializedEntity, 2048, ks::fixed_pool::grow::fast );
 
 //-----------------------------------------------------------------------------
 CSerializedEntity::CSerializedEntity()	
@@ -123,7 +124,7 @@ void CSerializedEntity::ReservePathAndOffsetMemory( uint32 nNumElements )
 	Assert( !IsPacked() );
 
 	//don't allow them to reserve less memory than what we have already allocated
-	m_nNumReservedFields = MAX( nNumElements, m_nFieldCount );
+	m_nNumReservedFields = std::max<std::common_type_t<uint32, uint16>>( nNumElements, m_nFieldCount );
 
 	//save our old pointers so we can copy from them
 	short* pOldFields	= m_pFields;
@@ -173,7 +174,7 @@ void CSerializedEntity::Grow()
 
  
 // pvecFieldPathBits is used by DTI mode
-bool CSerializedEntity::ReadFieldPaths( bf_read *pBuf, CUtlVector< int > *pvecFieldPathBits /*= NULL*/ )
+bool CSerializedEntity::ReadFieldPaths( bf_read *pBuf, std::vector< int > *pvecFieldPathBits /*= NULL*/ )
 {
 	Assert( !IsPacked() );
 
@@ -188,7 +189,7 @@ bool CSerializedEntity::ReadFieldPaths( bf_read *pBuf, CUtlVector< int > *pvecFi
 		m_pFields[m_nFieldCount++] = iProp;
 		if ( pvecFieldPathBits )
 		{
-			pvecFieldPathBits->AddToTail( reader.GetFieldPathBits() );
+			pvecFieldPathBits->push_back( reader.GetFieldPathBits() );
 		}
 	}
 	return true;
@@ -262,10 +263,10 @@ void CSerializedEntity::StartWriting( bf_write& bitWriter )
 
 void CSerializedEntity::DumpMemInfo()
 {
-	CUtlMemoryPool &pool = s_Allocator;
+	ks::fixed_pool_mt &pool = s_Allocator;
 
 	Msg("Pool: Count,Peak,Size,Total\n");
-	Msg("      %d,%d,%d,%d\n", pool.Count(), pool.PeakCount(), pool.BlockSize(), pool.Size() );
+	Msg("      %d,%d,%d,%d\n", pool.count(), pool.peak_count(), (int)pool.block_size(), (int)pool.size() );
 }
 
 class CSerializedEntities : public ISerializedEntities
@@ -273,9 +274,9 @@ class CSerializedEntities : public ISerializedEntities
 public:
 
 #ifdef PARANOID_SERIALIZEDENTITY
-	CUtlRBTree< CSerializedEntity *, int > m_Current;
-	CThreadFastMutex m_Mutex;
-	CInterlockedInt m_Allocated;
+	std::set< CSerializedEntity * > m_Current;
+	std::recursive_mutex m_Mutex;
+	std::atomic<int> m_Allocated;
 
 	void Report()
 	{
@@ -289,8 +290,7 @@ public:
 
 	CSerializedEntities() 
 #ifdef PARANOID_SERIALIZEDENTITY
-	: m_Current( 0, 0, DefLessFunc( CSerializedEntity * ) )
-	, m_Allocated( 0 )
+	: m_Allocated( 0 )
 #endif
 	{
 	}
@@ -299,9 +299,9 @@ public:
 	{
 #ifdef PARANOID_SERIALIZEDENTITY
 		Report();
-		FOR_EACH_UTLRBTREE( m_Current, i )
+		for ( CSerializedEntity *pEntity : m_Current )
 		{
-			Msg( "Leak %s:%d\n", m_Current[ i ]->m_File, m_Current[ i ]->m_Line );
+			Msg( "Leak %s:%d\n", pEntity->m_File, pEntity->m_Line );
 		}
 #endif
 	}
@@ -314,8 +314,8 @@ public:
 		pEntity->m_Line = nLine;
 		m_Allocated++;
 		{
-			AUTO_LOCK_FM( m_Mutex );
-			m_Current.Insert( pEntity );
+			std::scoped_lock lock( m_Mutex );
+			m_Current.insert( pEntity );
 		}
 #endif
 		return reinterpret_cast< SerializedEntityHandle_t >( pEntity );
@@ -330,8 +330,8 @@ public:
 #ifdef PARANOID_SERIALIZEDENTITY
 		m_Allocated--;
 		{
-			AUTO_LOCK_FM( m_Mutex );
-			m_Current.Remove( pEntity );
+			std::scoped_lock lock( m_Mutex );
+			m_Current.erase( pEntity );
 		}
 #endif
 		delete pEntity;
@@ -366,9 +366,8 @@ CON_COMMAND( sv_dump_serialized_entities_mem, "Dump serialized entity allocation
 	// Use int64 to avoid integer overflow when we do the calculations incorrectly.
 	int64 totalBytes = 0;
 
-	FOR_EACH_UTLRBTREE( g_SerializedEntities.m_Current, i )
+	for ( CSerializedEntity *pEntity : g_SerializedEntities.m_Current )
 	{
-		CSerializedEntity *pEntity = g_SerializedEntities.m_Current[ i ];
 		// m_nNumReservedFields indicates whether the entity is packed, which then determines how
 		// we retrieve the size.
 		int numFields = pEntity->IsPacked() ? pEntity->m_nFieldCount : pEntity->m_nNumReservedFields;
@@ -381,7 +380,7 @@ CON_COMMAND( sv_dump_serialized_entities_mem, "Dump serialized entity allocation
 	}
 
 	double totalKB = totalBytes / 1024.0;
-	unsigned int count = g_SerializedEntities.m_Current.Count();
+	unsigned int count = (unsigned int)g_SerializedEntities.m_Current.size();
 	Msg( "SerializedEntity: %u, %1.1f KB, %1.1f KB/CSerializedEntity,\n", count, totalKB, totalKB / count );
 #endif
 }
@@ -389,13 +388,13 @@ CON_COMMAND( sv_dump_serialized_entities_mem, "Dump serialized entity allocation
 #ifdef PARANOID_SERIALIZEDENTITY
 CON_COMMAND( sv_dump_serialized_entities, "Dump serialized entity allocations." )
 {
-	FOR_EACH_UTLRBTREE( g_SerializedEntities.m_Current, i )
+	for ( CSerializedEntity *pEntity : g_SerializedEntities.m_Current )
 	{
 		Msg( "SerializedEntity from %s:%d: %d fields, %d bits\n", 
-			 g_SerializedEntities.m_Current[ i ]->m_File, 
-			 g_SerializedEntities.m_Current[ i ]->m_Line, 
-			 g_SerializedEntities.m_Current[ i ]->m_nFieldCount, 
-			 g_SerializedEntities.m_Current[ i ]->m_nFieldDataBits );
+			 pEntity->m_File, 
+			 pEntity->m_Line, 
+			 pEntity->m_nFieldCount, 
+			 pEntity->m_nFieldDataBits );
 	}
 }
 #endif

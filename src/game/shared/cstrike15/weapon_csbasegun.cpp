@@ -26,9 +26,6 @@
 #include "cs_player.h"
 #endif
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 #define DETACHABLE_SILENCER 1
 #define SILENCER_BODYGROUP_UNSET -2
 
@@ -219,7 +216,7 @@ void CWeaponCSBaseGun::ItemPostFrame()
 		{
 			// this is the zoom we are suppoed to be at if we're standing still
 
-			float flFOVDiff = MAX( 0, flFOV - pPlayer->GetFOV() );
+			float flFOVDiff = std::max( 0, flFOV - pPlayer->GetFOV() );
 
 			flFOV = ceil( flFOV );
 			if ( flFOV < 0 )
@@ -227,7 +224,7 @@ void CWeaponCSBaseGun::ItemPostFrame()
 
 			if ( flFOVDiff >= 1.0f )
 			{
-				flFOVDiff = MIN( flFOVDiff, 10.0f )/50;
+				flFOVDiff = std::min( flFOVDiff, 10.0f )/50;
 				if ( flFOVDiff < 0.05f )
 					flFOVDiff = 0;
 
@@ -293,7 +290,7 @@ float CWeaponCSBaseGun::GetFOVForAccuracy( void )
 	// and apply it to the player's fov
 	if ( m_fAccuracySmoothedForZoom >= 0 )
 	{
-		flFOV = flTargetFOVForZoom - ( m_fAccuracySmoothedForZoom - flDefaultAccuracy ) * 10;//MIN( flTargetFOVForZoom * ( 1 + ( m_fAccuracySmoothedForZoom*2 ) ), flTargetFOVForZoom * ( 1 + ( m_fAccuracySmoothedForZoom ) ) );
+		flFOV = flTargetFOVForZoom - ( m_fAccuracySmoothedForZoom - flDefaultAccuracy ) * 10;//std::min( flTargetFOVForZoom * ( 1 + ( m_fAccuracySmoothedForZoom*2 ) ), flTargetFOVForZoom * ( 1 + ( m_fAccuracySmoothedForZoom ) ) );
 		//Msg( "flFOV = %f\n", flFOV );
 	}
 
@@ -481,7 +478,7 @@ void CWeaponCSBaseGun::SecondaryAttack()
 				//{
 				//	color32 clr = {0, 0, 0, 200};
 				//	float flZoomTime = weaponInfo.m_fZoomTime[m_zoomLevel];
-				//	float flBlackTime = MAX( flZoomTime/15, 0.02 );
+				//	float flBlackTime = std::max( flZoomTime/15, 0.02 );
 				//	UTIL_ScreenFade( pPlayer, clr, flBlackTime, (flZoomTime - (flZoomTime/5)) - flBlackTime, FFADE_IN );
 				//}
 			}
@@ -497,7 +494,7 @@ void CWeaponCSBaseGun::SecondaryAttack()
 				//{
 				//	color32 clr = {0, 0, 0, 175};
 				//	float flZoomTime = weaponInfo.m_fZoomTime[0];
-				//	float flBlackTime = MAX( flZoomTime/15, 0.02 );
+				//	float flBlackTime = std::max( flZoomTime/15, 0.02 );
 				//	UTIL_ScreenFade( pPlayer, clr, flBlackTime, flZoomTime - flBlackTime, FFADE_OUT );
 				//}
 			}

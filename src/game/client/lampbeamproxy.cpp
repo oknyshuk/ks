@@ -11,8 +11,6 @@
 #include "view.h"
 
 #include "imaterialproxydict.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: Used for 'card' beams on lamps, this material fades the sprite out

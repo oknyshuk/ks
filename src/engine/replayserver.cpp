@@ -9,6 +9,7 @@
 //
 //////////////////////////////////////////////////////////////////////
 #if defined( REPLAY_ENABLED )
+#include <mutex>
 #include <server_class.h>
 #include <inetmessage.h>
 #include <tier0/vprof.h>
@@ -20,6 +21,7 @@
 #include <time.h>
 
 #include "replayserver.h"
+#include "tier1/bit_ops.h"
 #include "sv_client.h"
 #include "replayclient.h"
 #include "server.h"
@@ -38,9 +40,7 @@
 #include "tier0/icommandline.h"
 #include "client_class.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 extern CNetworkStringTableContainer *networkStringTableContainerClient;
 
 //////////////////////////////////////////////////////////////////////
@@ -103,7 +103,7 @@ void CReplayDeltaEntityCache::Flush()
 		{
 			if ( m_Cache[i] != nullptr )
 			{
-				free( m_Cache[i] );
+				g_pMemAlloc->Free( m_Cache[i] );
 				m_Cache[i] = nullptr;
 			}
 		}
@@ -126,7 +126,7 @@ void CReplayDeltaEntityCache::SetTick( int nTick, int nMaxEntities )
 	if ( m_nCacheSize <= 0 )
 		return;
 
-	m_nMaxEntities = MIN(nMaxEntities,MAX_EDICTS);
+	m_nMaxEntities = std::min(nMaxEntities,MAX_EDICTS);
 	m_nTick = nTick;
 }
 
@@ -170,7 +170,7 @@ void CReplayDeltaEntityCache::AddDeltaBits( int nEntityIndex, int nDeltaTick, in
 		if ( (int)(nBufferSize+sizeof(DeltaEntityEntry_s)) > m_nCacheSize )
 			return;  // way too big, don't even create an entry
 
-		pEntry = m_Cache[nEntityIndex] = (DeltaEntityEntry_s *) malloc( m_nCacheSize );
+		pEntry = m_Cache[nEntityIndex] = (DeltaEntityEntry_s *) MemAlloc_Alloc( m_nCacheSize );
 	}
 	else
 	{
@@ -467,7 +467,7 @@ CReplayServer::CReplayServer()
 	m_nGlobalSlots = 0;
 	m_nGlobalClients = 0;
 	m_nGlobalProxies = 0;
-	m_vecClientsDownloading.ClearAll();
+	m_vecClientsDownloading.reset();
 }
 
 CReplayServer::~CReplayServer()
@@ -588,7 +588,7 @@ void CReplayServer::StartMaster(CGameClient *client)
 	if ( m_bMasterOnlyMode )
 	{
 		// we allow only one client in master only mode
-		replay_maxclients.SetValue( MIN(1,replay_maxclients.GetInt()) );
+		replay_maxclients.SetValue( std::min(1,replay_maxclients.GetInt()) );
 	}
 
 	SetMaxClients( replay_maxclients.GetInt() );
@@ -673,7 +673,7 @@ bool CReplayServer::DispatchToRelay( CReplayClient *pClient )
 		// ratio = clients/slots. give relay proxies 25% bonus
 		float myRatio = ((float)GetNumClients()/(float)GetMaxClients()) * 1.25f;
 
-		myRatio = MIN( myRatio, 1.0f ); // clamp to 1
+		myRatio = std::min( myRatio, 1.0f ); // clamp to 1
 
 		// if we have a better local ratio then other proxies, keep this client here
 		if ( myRatio < fBestRatio )
@@ -714,7 +714,7 @@ int	CReplayServer::GetReplaySlot( void )
 
 float CReplayServer::GetOnlineTime( void )
 {
-	return MAX(0, net_time - m_flStartTime);
+	return std::max(0, net_time - m_flStartTime);
 }
 void CReplayServer::BroadcastLocalTitle( CReplayClient *client )
 {
@@ -963,7 +963,7 @@ void CReplayServer::UserInfoChanged( int nClientIndex )
 void CReplayServer::LinkInstanceBaselines( void )
 {	
 	// Forces to update m_pInstanceBaselineTable.
-	AUTO_LOCK_FM( g_svInstanceBaselineMutex );
+	std::scoped_lock lock( g_svInstanceBaselineMutex );
 	GetInstanceBaselineTable(); 
 
 	Assert( m_pInstanceBaselineTable );
@@ -1107,13 +1107,13 @@ void CReplayServer::EntityPVSCheck( CClientFrame *pFrame )
 
 	while ( true )
 	{
-		entindex = pFrame->transmit_entity.FindNextSetBit( entindex+1 );
+		entindex = ks::next_set_bit( pFrame->transmit_entity, entindex+1 );
 
 		if ( entindex < 0 )
 			break;
 			
 		// is transmit_always is set ->  no PVS check
-		if ( pFrame->transmit_always->Get(entindex) )
+		if ( (*pFrame->transmit_always)[entindex] )
 		{
 			pFrame->last_entity = entindex;
 			continue;
@@ -1281,10 +1281,10 @@ CClientFrame *CReplayServer::GetDeltaFrame( int nTick )
 		return GetClientFrame( nTick ); //expensive
 
 	// TODO make that a utlmap
-	FOR_EACH_VEC( m_FrameCache, iFrame )
+	for ( const auto &cacheEntry : m_FrameCache )
 	{
-		if ( m_FrameCache[iFrame].nTick == nTick )
-			return m_FrameCache[iFrame].pFrame;
+		if ( cacheEntry.nTick == nTick )
+			return cacheEntry.pFrame;
 	}
 
 	int i = m_FrameCache.AddToTail();
@@ -1352,7 +1352,7 @@ void CReplayServer::UpdateTick( void )
 	int nNewTick = m_nLastTick;
 
 	// get tick from director, he decides delay etc
-	nNewTick = MAX( m_nFirstTick, m_Director->GetDirectorTick() );
+	nNewTick = std::max( m_nFirstTick, m_Director->GetDirectorTick() );
 
 	// the the closest available frame
 	CReplayFrame *newFrame = (CReplayFrame*) GetClientFrame( nNewTick, false );
@@ -1416,7 +1416,7 @@ void CReplayServer::Clear( void )
 	m_fNextSendUpdateTime = 0.0f;
 	m_ReplayFrame.FreeBuffers();
 	m_vPVSOrigin.Init();
-	m_vecClientsDownloading.ClearAll();
+	m_vecClientsDownloading.reset();
 		
 	DeleteClientFrames( -1 );
 
@@ -1488,7 +1488,7 @@ const char *CReplayServer::GetPassword() const
 
 IClient *CReplayServer::ConnectClient ( const ns_address &adr, int protocol, int challenge, int authProtocol, 
 									    const char *name, const char *password, const char *hashedCDkey, int cdKeyLen,
-									    CUtlVector< CCLCMsg_SplitPlayerConnect_t * > & splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform,
+									    const SplitPlayerConnects_t &splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform,
 										const byte *pbEncryptionKey, int nEncryptionKeyIndex )
 {
 	IClient	*client = (CReplayClient*)CBaseServer::ConnectClient( 

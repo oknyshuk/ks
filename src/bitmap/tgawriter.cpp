@@ -10,13 +10,10 @@
 #include <malloc.h>
 #include "filesystem.h"
 #include "bitmap/tgawriter.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/byte_writer.h"
 #include "bitmap/imageformat.h"
 #include "tier2/tier2.h"
 #include "tier2/fileutils.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 namespace TGAWriter
 {
@@ -42,10 +39,10 @@ struct TGAHeader_t
 #define fputc myfputc
 #define fwrite myfwrite
 
-static void fputLittleShort( unsigned short s, CUtlBuffer &buffer )
+static void fputLittleShort( unsigned short s, ks::byte_writer &buffer )
 {
-	buffer.PutChar( s & 0xff );
-	buffer.PutChar( s >> 8 );
+	buffer.write< unsigned char >( s & 0xff );
+	buffer.write< unsigned char >( s >> 8 );
 }
 
 static inline void myfputc( unsigned char c, FileHandle_t fileHandle )
@@ -62,7 +59,7 @@ static inline void myfwrite( void const *data, int size1, int size2, FileHandle_
 //-----------------------------------------------------------------------------
 // FIXME: assumes that we don't need to do gamma correction.
 //-----------------------------------------------------------------------------
-bool WriteToBuffer( unsigned char *pImageData, CUtlBuffer &buffer, int width, int height, 
+bool WriteToBuffer( unsigned char *pImageData, ks::byte_writer &buffer, int width, int height, 
 					ImageFormat srcFormat, ImageFormat dstFormat )
 {
 	TGAHeader_t header;
@@ -109,27 +106,31 @@ bool WriteToBuffer( unsigned char *pImageData, CUtlBuffer &buffer, int width, in
 	header.height = ( unsigned short )height;
 	header.attributes = 0x20;	// Makes it so we don't have to vertically flip the image
 
-	buffer.PutChar( header.id_length );
-	buffer.PutChar( header.colormap_type );
-	buffer.PutChar( header.image_type );
+	buffer.write( header.id_length );
+	buffer.write( header.colormap_type );
+	buffer.write( header.image_type );
 	fputLittleShort( header.colormap_index, buffer );
 	fputLittleShort( header.colormap_length, buffer );
-	buffer.PutChar( header.colormap_size );
+	buffer.write( header.colormap_size );
 	fputLittleShort( header.x_origin, buffer );
 	fputLittleShort( header.y_origin, buffer );
 	fputLittleShort( header.width, buffer );
 	fputLittleShort( header.height, buffer );
-	buffer.PutChar( header.pixel_size );
-	buffer.PutChar( header.attributes );
+	buffer.write( header.pixel_size );
+	buffer.write( header.attributes );
 
 	int nSizeInBytes = width * height * ImageLoader::SizeInBytes( dstFormat );
-	buffer.EnsureCapacity( buffer.TellPut() + nSizeInBytes );
-	unsigned char *pDst = (unsigned char*)buffer.PeekPut();
-
-	if ( !ImageLoader::ConvertImageFormat( pImageData, srcFormat, pDst, dstFormat, width, height ) )
+	const size_t nPut = buffer.tell();
+	std::span< std::byte > dst = buffer.claim_span( nSizeInBytes );
+	if ( dst.size() != static_cast< size_t >( nSizeInBytes ) )
 		return false;
 
-	buffer.SeekPut( CUtlBuffer::SEEK_CURRENT, nSizeInBytes );
+	if ( !ImageLoader::ConvertImageFormat( pImageData, srcFormat, reinterpret_cast< unsigned char * >( dst.data() ), dstFormat, width, height ) )
+	{
+		buffer.seek( nPut );
+		return false;
+	}
+
 	return true;
 }
 

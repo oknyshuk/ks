@@ -4,7 +4,7 @@
 #include "interfaces/interfaces.h"
 
 #include "bitmap/imageformat.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/byte_reader.h"
 #include "vtf/vtf.h"
 
 RocketFileSystem RocketFileSystem::m_Instance;
@@ -31,7 +31,7 @@ bool RocketLoadVTF_RGBA(const char *gamePath, std::vector<unsigned char> &outRGB
   if (read != len)
     return false;
 
-  CUtlBuffer buf(raw.data(), len, CUtlBuffer::READ_ONLY);
+  ks::byte_reader buf(raw.data(), len);
   IVTFTexture *tex = CreateVTFTexture();
   if (!tex)
     return false;

@@ -34,7 +34,7 @@ public:
 	//Data members
 	float	m_flRadiusSquared;
 
-	CUtlVector< CHandle< C_BaseEntity > > m_Objects;
+	std::vector< CHandle< C_BaseEntity > > m_Objects;
 	C_BasePlayer *m_pLocal;
 };
 

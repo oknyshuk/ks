@@ -76,7 +76,7 @@ public:
 					Vector const &vert2, CSPColor const &color2, 
 					Vector const &vert3, CSPColor const &color3);
 
-	CUtlVector<CSPVert>	m_Verts;
+	std::vector< CSPVert >	m_Verts;
 };
 
 class SPRGBA
@@ -270,17 +270,17 @@ inline void CSPVert::Init( Vector const &vPos, const CSPColor &vColor )
 inline CSPVertList::CSPVertList( int nVerts )
 {
 	if( nVerts )
-		m_Verts.AddMultipleToTail( nVerts );
+		m_Verts.resize( m_Verts.size() + nVerts );
 }
 
 inline CSPVertList::CSPVertList(CSPVert const *pVerts, int nVerts )
 {
-	m_Verts.CopyArray( pVerts, nVerts );
+	m_Verts.assign( pVerts, pVerts + nVerts );
 }
 
 inline CSPVertList::CSPVertList(Vector const *pVerts, int nVerts, CSPColor vColor )
 {
-	m_Verts.AddMultipleToTail( nVerts );
+	m_Verts.resize( m_Verts.size() + nVerts );
 	for( int i=0; i < nVerts; i++ )
 	{
 		m_Verts[i].m_vPos = pVerts[i];
@@ -290,7 +290,7 @@ inline CSPVertList::CSPVertList(Vector const *pVerts, int nVerts, CSPColor vColo
 
 inline CSPVertList::CSPVertList( Vector const *pVerts, Vector const *pColors, int nVerts )
 {
-	m_Verts.AddMultipleToTail( nVerts );
+	m_Verts.resize( m_Verts.size() + nVerts );
 	for( int i=0; i < nVerts; i++ )
 	{
 		m_Verts[i].m_vPos = pVerts[i];
@@ -300,7 +300,7 @@ inline CSPVertList::CSPVertList( Vector const *pVerts, Vector const *pColors, in
 
 inline CSPVertList::CSPVertList( Vector const *pVerts, CSPColor const *pColors, int nVerts )
 {
-	m_Verts.AddMultipleToTail( nVerts );
+	m_Verts.resize( m_Verts.size() + nVerts );
 	for( int i=0; i < nVerts; i++ )
 	{
 		m_Verts[i].m_vPos = pVerts[i];
@@ -313,7 +313,7 @@ inline CSPVertList::CSPVertList(
 	Vector const &vert2, CSPColor const &color2, 
 	Vector const &vert3, CSPColor const &color3 )
 {
-	m_Verts.AddMultipleToTail( 3 );
+	m_Verts.resize( m_Verts.size() + 3 );
 	m_Verts[0].Init( vert1, color1 );
 	m_Verts[1].Init( vert2, color2 );
 	m_Verts[2].Init( vert3, color3 );

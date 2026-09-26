@@ -21,9 +21,6 @@
 #include "server.h"
 #include "networkstringtableclient.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static ConVar replay_record_directly_to_disk( "replay_record_directly_to_disk", "0", FCVAR_HIDDEN );
 
 extern CNetworkStringTableContainer *networkStringTableContainerServer;
@@ -334,7 +331,7 @@ void CReplayDemoRecorder::WriteFrame( CReplayFrame *pFrame )
 
 #ifndef SHARED_NET_STRING_TABLES
 	// Update shared client/server string tables. Must be done before sending entities
-	sv.m_StringTables->WriteUpdateMessage( nullptr, MAX( m_nSignonTick, m_nDeltaTick ), msg );
+	sv.m_StringTables->WriteUpdateMessage( nullptr, std::max( m_nSignonTick, m_nDeltaTick ), msg );
 #endif
 
 	// get delta frame

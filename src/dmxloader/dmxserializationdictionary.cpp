@@ -7,6 +7,7 @@
 #include "dmxserializationdictionary.h"
 #include "dmxloader/dmxelement.h"
 #include "dmxloader/dmxattribute.h"
+#include <algorithm>
 
 
 //-----------------------------------------------------------------------------
@@ -14,18 +15,10 @@
 // Element dictionary used in serialization
 //
 //-----------------------------------------------------------------------------
-CDmxSerializationDictionary::CDmxSerializationDictionary( int nElementsHint /* = 0 */ ) :
-	m_Dict( 0, nElementsHint, CDmxSerializationDictionary::LessFunc )
+CDmxSerializationDictionary::CDmxSerializationDictionary( int nElementsHint /* = 0 */ )
 {
-}
-
-
-//-----------------------------------------------------------------------------
-// Used to sort the list of elements
-//-----------------------------------------------------------------------------
-bool CDmxSerializationDictionary::LessFunc( const DmxElementInfo_t &lhs, const DmxElementInfo_t &rhs )
-{
-	return lhs.m_pElement < rhs.m_pElement;
+	m_Dict.reserve( nElementsHint );
+	m_Handles.reserve( nElementsHint );
 }
 
 
@@ -34,9 +27,8 @@ bool CDmxSerializationDictionary::LessFunc( const DmxElementInfo_t &lhs, const D
 //-----------------------------------------------------------------------------
 DmxSerializationHandle_t CDmxSerializationDictionary::Find( CDmxElement *pElement )
 {
-	DmxElementInfo_t find;
-	find.m_pElement = pElement;
-	return m_Dict.Find( find );
+	auto it = m_Handles.find( pElement );
+	return it == m_Handles.end() ? DMX_SERIALIZATION_HANDLE_INVALID : it->second;
 }
 
 	
@@ -54,16 +46,14 @@ void CDmxSerializationDictionary::BuildElementList_R( CDmxElement *pElement, boo
 	// This means we've already encountered this guy.
 	// Therefore, he can never be a root element
 	DmxSerializationHandle_t h = Find( pElement );
-	if ( h != m_Dict.InvalidIndex() )
+	if ( h != DMX_SERIALIZATION_HANDLE_INVALID )
 	{
 		m_Dict[h].m_bRoot = true;
 		return;
 	}
 
-	DmxElementInfo_t info;
-	info.m_bRoot = bFlatMode || bIsRoot;
-	info.m_pElement = pElement;
-	m_Dict.Insert( info );
+	m_Handles.emplace( pElement, (DmxSerializationHandle_t)m_Dict.size() );
+	m_Dict.push_back( { pElement, bFlatMode || bIsRoot } );
 
 	int nCount = pElement->AttributeCount();
 	for ( int i = 0; i < nCount; ++i )
@@ -83,8 +73,8 @@ void CDmxSerializationDictionary::BuildElementList_R( CDmxElement *pElement, boo
 
 		case AT_ELEMENT_ARRAY:
 			{
-				const CUtlVector<CDmxElement*> &array = pAttribute->GetArray<CDmxElement*>( );
-				int nCount = array.Count();
+				const std::vector< CDmxElement* > &array = pAttribute->GetArray<CDmxElement*>( );
+				int nCount = std::ssize( array );
 				for ( int i = 0; i < nCount; ++i )
 				{
 					CDmxElement *pChild = array[ i ];
@@ -113,7 +103,7 @@ bool CDmxSerializationDictionary::ShouldInlineElement( CDmxElement *pElement )
 	// This means we've already encountered this guy.
 	// Therefore, he can never be a root element
 	DmxSerializationHandle_t h = Find( pElement );
-	if ( h != m_Dict.InvalidIndex() )
+	if ( h != DMX_SERIALIZATION_HANDLE_INVALID )
 		return !m_Dict[h].m_bRoot;
 
 	// If we didn't find the element, it means it's a reference to an external
@@ -127,7 +117,8 @@ bool CDmxSerializationDictionary::ShouldInlineElement( CDmxElement *pElement )
 //-----------------------------------------------------------------------------
 void CDmxSerializationDictionary::Clear()
 {
-	m_Dict.RemoveAll();
+	m_Dict.clear();
+	m_Handles.clear();
 }
 
 
@@ -136,17 +127,7 @@ void CDmxSerializationDictionary::Clear()
 //-----------------------------------------------------------------------------
 int CDmxSerializationDictionary::RootElementCount() const
 {
-	int nCount = 0;
-	DmxSerializationHandle_t h = m_Dict.FirstInorder();
-	while( h != m_Dict.InvalidIndex() )
-	{
-		if ( m_Dict[h].m_bRoot )
-		{
-			++nCount;
-		}
-		h = m_Dict.NextInorder( h );
-	}
-	return nCount;
+	return (int)std::ranges::count_if( m_Dict, &DmxElementInfo_t::m_bRoot );
 }
 
 	
@@ -155,10 +136,8 @@ int CDmxSerializationDictionary::RootElementCount() const
 //-----------------------------------------------------------------------------
 DmxSerializationHandle_t CDmxSerializationDictionary::FirstRootElement() const
 {
-	// NOTE: I don't have to use First/NextInorder here because there
-	// are guaranteed to be no removals from the dictionary.
-	// Also, using inorder traversal won't get my actual root element to be first in the file
-	int nCount = m_Dict.Count();
+	// Insertion order puts the actual root element first in the file.
+	int nCount = (int)m_Dict.size();
 	for ( DmxSerializationHandle_t h = 0; h < nCount; ++h )
 	{
 		if ( m_Dict[h].m_bRoot )
@@ -170,7 +149,7 @@ DmxSerializationHandle_t CDmxSerializationDictionary::FirstRootElement() const
 DmxSerializationHandle_t CDmxSerializationDictionary::NextRootElement( DmxSerializationHandle_t h ) const
 {
 	++h;
-	int nCount = m_Dict.Count();
+	int nCount = (int)m_Dict.size();
 	for ( ; h < nCount; ++h )
 	{
 		if ( m_Dict[h].m_bRoot )

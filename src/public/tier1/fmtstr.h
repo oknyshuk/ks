@@ -138,7 +138,7 @@ public:
 		FmtStrVSNPrintf( m_szBuf, SIZE_BUF, m_bQuietTruncation, ppszFormat, 0, ppszFormat );
 	}
 
-	// Compatible API with CUtlString for converting to const char*
+	// Compatible API with std::string for converting to const char*
 	const char *Get( ) const					{ return m_szBuf; }
 	const char *String( ) const					{ return m_szBuf; }
 	// Use for access

@@ -14,9 +14,6 @@
 #include "unlittwotexture_ps20.inc"
 #include "unlittwotexture_ps20b.inc"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 DEFINE_FALLBACK_SHADER( UnlitTwoTexture, UnlitTwoTexture_DX9 )
 BEGIN_VS_SHADER( UnlitTwoTexture_DX9, "Help for UnlitTwoTexture_DX9" )
 	BEGIN_SHADER_PARAMS

@@ -11,6 +11,7 @@
 
 #include "cbase.h"
 #include "precipitation_shared.h"
+#include "tier1/intrusive_ptr.h"
 
 // Draw rain effects.
 void DrawPrecipitation();
@@ -33,7 +34,7 @@ public:
 };
 
 class CClient_Precipitation;
-static CUtlVector<CClient_Precipitation*> g_Precipitations;
+static std::vector< CClient_Precipitation* > g_Precipitations;
 
 //===========
 // Snow fall
@@ -168,8 +169,8 @@ private:
 
 	static Vector s_WindVector;			// Stores the wind speed vector
 
-	CUtlLinkedList<CPrecipitationParticle> m_Particles;
-	CUtlVector<Vector> m_Splashes;
+	std::vector<CPrecipitationParticle> m_Particles;
+	std::vector< Vector > m_Splashes;
 
 	struct AshSplit_t
 	{
@@ -177,7 +178,7 @@ private:
 		{
 		}
 
-		CSmartPtr<AshDebrisEffect>		m_pAshEmitter;
+		ks::intrusive_ptr<AshDebrisEffect>		m_pAshEmitter;
 		TimedEvent						m_tAshParticleTimer;
 		TimedEvent						m_tAshParticleTraceTimer;
 		bool							m_bActiveAshEmitter;

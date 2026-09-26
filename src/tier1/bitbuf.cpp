@@ -11,12 +11,6 @@
 #include "mathlib/vector.h"
 #include "mathlib/mathlib.h"
 #include "tier1/strtools.h"
-#include "bitvec.h"
-
-// FIXME: Can't use this until we get multithreaded allocations in tier0 working for tools
-// This is used by VVIS and fails to link
-// NOTE: This must be the last file included!!!
-//#include "tier0/memdbgon.h"
 
 #ifndef NDEBUG
 static volatile char const *pDebugString;
@@ -32,7 +26,7 @@ static BitBufErrorHandler g_BitBufErrorHandler = 0;
 
 inline int BitForBitnum(int bitnum)
 {
-	return GetBitForBitnum(bitnum);
+	return 1 << bitnum;
 }
 
 void InternalBitBufErrorHandler( BitBufErrorType errorType, const char *pDebugName )

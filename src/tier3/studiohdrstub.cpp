@@ -9,9 +9,6 @@
 #include "istudiorender.h"
 #include "tier3/tier3.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // FIXME: This trashy glue code is really not acceptable. Figure out a way of making it unnecessary.

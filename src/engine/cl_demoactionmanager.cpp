@@ -9,9 +9,6 @@
 #include "cl_demoaction.h"
 #include "cl_demoactionmanager.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -34,7 +31,7 @@ public:
 
 	virtual void		Update( bool newframe, int demotick, float demotime );
 
-	virtual void		SaveToBuffer( CUtlBuffer& buf );
+	virtual void		SaveToBuffer( ks::text_writer& buf );
 	virtual void		SaveToFile( void );
 
 	virtual char const	*GetCurrentDemoFile( void );
@@ -57,8 +54,8 @@ private:
 	void				OnVDMLoaded( char const *demfilename );
 	void				ClearAll();
 
-	CUtlVector< CBaseDemoAction * >	m_ActionStack;
-	CUtlVector< CBaseDemoAction * >	m_PendingFireActionStack;
+	std::vector< CBaseDemoAction * >	m_ActionStack;
+	std::vector< CBaseDemoAction * >	m_PendingFireActionStack;
 
 
 	int					m_nPrevTick;
@@ -106,8 +103,8 @@ void CDemoActionManager::Shutdown( void )
 {
 	StopPlaying();
 	ClearAll();
-	m_ActionStack.Purge();
-	m_PendingFireActionStack.Purge();
+	m_ActionStack.clear(); m_ActionStack.shrink_to_fit();
+	m_PendingFireActionStack.clear(); m_PendingFireActionStack.shrink_to_fit();
 }
 
 //-----------------------------------------------------------------------------
@@ -157,7 +154,7 @@ void CDemoActionManager::ReloadFromDisk( void )
 						}
 						else
 						{
-							m_ActionStack.AddToTail( action );
+							m_ActionStack.push_back( action );
 						}
 					}
 
@@ -222,13 +219,13 @@ void CDemoActionManager::StartPlaying( char const *demfilename )
 //-----------------------------------------------------------------------------
 void CDemoActionManager::ClearAll()
 {
-	m_PendingFireActionStack.RemoveAll();
+	m_PendingFireActionStack.clear();
 
-	while ( m_ActionStack.Count() > 0 )
+	while ( !m_ActionStack.empty() )
 	{
 		CBaseDemoAction *a = m_ActionStack[ 0 ];
 		delete a;
-		m_ActionStack.Remove( 0 );
+		m_ActionStack.erase( m_ActionStack.begin() + 0 );
 	}
 }
 
@@ -237,7 +234,7 @@ void CDemoActionManager::ClearAll()
 //-----------------------------------------------------------------------------
 void CDemoActionManager::StopPlaying()
 {
-	int count = m_ActionStack.Count();
+	int count = std::ssize( m_ActionStack );
 	for ( int i = 0; i < count; i++ )
 	{
 		CBaseDemoAction *a = m_ActionStack[ i ];
@@ -248,7 +245,7 @@ void CDemoActionManager::StopPlaying()
 	m_nPrevTick = 0;
 	m_flPrevTime = 0.0f;
 
-	m_PendingFireActionStack.RemoveAll();
+	m_PendingFireActionStack.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -259,7 +256,7 @@ void CDemoActionManager::StopPlaying()
 void CDemoActionManager::Update(  bool newframe, int demotick, float demotime )
 {
 	// Nothing to do?
-	int count = m_ActionStack.Count();
+	int count = std::ssize( m_ActionStack );
 	if ( count <= 0 )
 		return;
 
@@ -289,12 +286,12 @@ void CDemoActionManager::Update(  bool newframe, int demotick, float demotime )
 // Purpose: 
 // Input  : buf - 
 //-----------------------------------------------------------------------------
-void CDemoActionManager::SaveToBuffer( CUtlBuffer& buf )
+void CDemoActionManager::SaveToBuffer( ks::text_writer& buf )
 {
-	buf.Printf( "demoactions\n" );
-	buf.Printf( "{\n" );
+	buf.put( "demoactions\n" );
+	buf.put( "{\n" );
 
-	int count = m_ActionStack.Count();
+	int count = std::ssize( m_ActionStack );
 	int i;
 	for ( i = 0; i < count; i++ )
 	{
@@ -306,7 +303,7 @@ void CDemoActionManager::SaveToBuffer( CUtlBuffer& buf )
 		action->SaveToBuffer( 1, i + 1, buf );
 	}
 
-	buf.Printf( "}\n" );
+	buf.put( "}\n" );
 }
 
 //-----------------------------------------------------------------------------
@@ -328,7 +325,7 @@ void CDemoActionManager::SaveToFile( void )
 	Q_DefaultExtension( metafile, ".vdm", sizeof( metafile ) );
 
 	// Save data
-	CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
+	ks::text_writer buf;
 	SaveToBuffer( buf );
 
 	// Write to file
@@ -336,7 +333,7 @@ void CDemoActionManager::SaveToFile( void )
 	fh = g_pFileSystem->Open( metafile, "w" );
 	if ( fh != FILESYSTEM_INVALID_HANDLE )
 	{
-		g_pFileSystem->Write( buf.Base(), buf.TellPut(), fh );
+		g_pFileSystem->Write( buf.c_str(), buf.size(), fh );
 		g_pFileSystem->Close( fh );
 	}
 
@@ -367,7 +364,7 @@ char const *CDemoActionManager::GetCurrentDemoFile( void )
 //-----------------------------------------------------------------------------
 int CDemoActionManager::GetActionCount( void )
 {
-	int count = m_ActionStack.Count();
+	int count = std::ssize( m_ActionStack );
 	return count;
 }
 
@@ -378,7 +375,7 @@ int CDemoActionManager::GetActionCount( void )
 //-----------------------------------------------------------------------------
 CBaseDemoAction *CDemoActionManager::GetAction( int index )
 {
-	int count = m_ActionStack.Count();
+	int count = std::ssize( m_ActionStack );
 	if ( index < 0 || index >= count )
 		return nullptr;
 
@@ -393,7 +390,7 @@ void CDemoActionManager::AddAction( CBaseDemoAction *action )
 {
 	m_bDirty = true;
 	Assert( action );
-	m_ActionStack.AddToTail( action );
+	m_ActionStack.push_back( action );
 }
 
 //-----------------------------------------------------------------------------
@@ -405,7 +402,7 @@ void CDemoActionManager::RemoveAction( CBaseDemoAction *action )
 	Assert( action );
 	m_bDirty = true;
 
-	m_ActionStack.FindAndRemove( action );
+	ks::erase_first( m_ActionStack, action );
 	delete action;
 }
 
@@ -435,10 +432,10 @@ void CDemoActionManager::InsertFireEvent( CBaseDemoAction *action )
 {
 	// BUGBUG: Sometimes this can get called multiple times for the same event before DispatchEvents() is called.  Why?
 	// If that gets fixed, remove this hack.
-	if ( m_PendingFireActionStack.Find(action) >= 0 )
+	if ( ks::find_index( m_PendingFireActionStack, action ) >= 0 )
 		return;
 
-	m_PendingFireActionStack.AddToTail( action );
+	m_PendingFireActionStack.push_back( action );
 }
 
 //-----------------------------------------------------------------------------
@@ -446,7 +443,7 @@ void CDemoActionManager::InsertFireEvent( CBaseDemoAction *action )
 //-----------------------------------------------------------------------------
 void CDemoActionManager::DispatchEvents()
 {
-	int c = m_PendingFireActionStack.Count();
+	int c = std::ssize( m_PendingFireActionStack );
 	int i;
 	for ( i = 0; i < c; i++ )
 	{
@@ -456,7 +453,7 @@ void CDemoActionManager::DispatchEvents()
 		action->SetActionFired( true );
 	}
 
-	m_PendingFireActionStack.RemoveAll();
+	m_PendingFireActionStack.clear();
 }
 
 bool CDemoActionManager::OverrideView( democmdinfo_t& info, int tick )

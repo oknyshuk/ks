@@ -29,7 +29,7 @@ public:
 bool LogoFile_IsValidVTFFile( const void *pData, int len );
 
 // Read in and validate a logo file.
-bool LogoFile_ReadFile( CRC32_t crcValue, CUtlVector<char> &fileData );
+bool LogoFile_ReadFile( CRC32_t crcValue, std::vector< char > &fileData );
 
 
 #endif // LOGOFILE_SHARED_H

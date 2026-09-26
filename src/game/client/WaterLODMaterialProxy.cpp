@@ -11,8 +11,6 @@
 #include "iviewrender.h"
 
 #include "imaterialproxydict.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 // no inputs, assumes that the results go into $CHEAPWATERSTARTDISTANCE and $CHEAPWATERENDDISTANCE
 class CWaterLODMaterialProxy : public IMaterialProxy

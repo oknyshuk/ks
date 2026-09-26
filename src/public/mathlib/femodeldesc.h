@@ -157,8 +157,8 @@ public:
 protected:
 	const CFeModel *m_pOld;
 	const CFeModel *m_pNew;
-	CUtlVector< int > m_OldToNewNode, m_NewToOldNode;
-	CUtlVector< int > m_OldToNewCtrl, m_NewToOldCtrl;
+	std::vector< int > m_OldToNewNode, m_NewToOldNode;
+	std::vector< int > m_OldToNewCtrl, m_NewToOldCtrl;
 };
 
 

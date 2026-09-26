@@ -11,9 +11,6 @@
 #include "nav_mesh.h"
 #include "nav_node.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 extern ConVar nav_snap_to_grid;
 extern ConVar nav_split_place_on_ground;
 extern ConVar nav_coplanar_slope_limit;
@@ -100,21 +97,21 @@ CON_COMMAND_F( nav_chop_selected, "Chops all selected areas into their component
 	NavAreaCollector collector;
 	TheNavMesh->ForAllSelectedAreas( collector );
 
-	for ( int i=0; i<collector.m_area.Count(); ++i )
+	for ( int i=0; i<std::ssize( collector.m_area ); ++i )
 	{
 		ReduceToComponentAreas( collector.m_area[i], true );
 	}
 
-	Msg( "%d areas chopped into %d\n", collector.m_area.Count(), TheNavMesh->GetSelecteSetSize() );
+	Msg( "%d areas chopped into %d\n", (int)std::ssize( collector.m_area ), TheNavMesh->GetSelecteSetSize() );
 }
 
 
 //--------------------------------------------------------------------------------------------------------
 void CNavMesh::RemoveNodes( void )
 {
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		TheNavAreas[ it ]->ResetNodes();
+		area->ResetNodes();
 	}
 
 	// destroy navigation nodes created during map generation
@@ -146,10 +143,10 @@ void CNavMesh::SimplifySelectedAreas( void )
 	nav_split_place_on_ground.SetValue( 1 );
 
 	float savedCoplanarSlopeDisplacementLimit = nav_coplanar_slope_limit_displacement.GetFloat();
-	nav_coplanar_slope_limit_displacement.SetValue( MIN( 0.5f, savedCoplanarSlopeDisplacementLimit ) );
+	nav_coplanar_slope_limit_displacement.SetValue( std::min( 0.5f, savedCoplanarSlopeDisplacementLimit ) );
 
 	float savedCoplanarSlopeLimit = nav_coplanar_slope_limit.GetFloat();
-	nav_coplanar_slope_limit.SetValue( MIN( 0.5f, savedCoplanarSlopeLimit ) );
+	nav_coplanar_slope_limit.SetValue( std::min( 0.5f, savedCoplanarSlopeLimit ) );
 
 	int savedGrid = nav_snap_to_grid.GetInt();
 	nav_snap_to_grid.SetValue( 1 );
@@ -166,7 +163,7 @@ void CNavMesh::SimplifySelectedAreas( void )
 	Extent bounds;
 	bounds.lo.Init( FLT_MAX, FLT_MAX, FLT_MAX );
 	bounds.hi.Init( -FLT_MAX, -FLT_MAX, -FLT_MAX );
-	for ( int i=0; i<collector.m_area.Count(); ++i )
+	for ( int i=0; i<std::ssize( collector.m_area ); ++i )
 	{
 		Extent areaExtent;
 		CNavArea *area = collector.m_area[i];
@@ -193,16 +190,14 @@ void CNavMesh::SimplifySelectedAreas( void )
 	ClearWalkableSeeds();
 
 	// Split nav areas up into 1x1 component areas
-	for ( int i=0; i<collector.m_area.Count(); ++i )
+	for ( int i=0; i<std::ssize( collector.m_area ); ++i )
 	{
 		ReduceToComponentAreas( collector.m_area[i], true );
 	}
 
 	// Assign nodes to each component area
-	FOR_EACH_VEC( m_selectedSet, it )
+	for ( CNavArea *area : m_selectedSet )
 	{
-		CNavArea *area = m_selectedSet[ it ];
-
 		Vector corner = area->GetCorner( NORTH_EAST );
 		Vector normal;
 		if ( FindGroundForNode( &corner, &normal ) )
@@ -243,9 +238,8 @@ void CNavMesh::SimplifySelectedAreas( void )
 
 	// Re-select the new areas
 	ClearSelectedSet();
-	FOR_EACH_VEC( TheNavAreas, i )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[i];
 		if ( area->HasNodes() )
 		{
 			AddToSelectedSet( area );

@@ -31,9 +31,6 @@
 #include <string>
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include <tier0/memdbgon.h>
-
 extern int host_framecount;
 CRC32_t SendTable_ComputeCRC();
 
@@ -84,12 +81,12 @@ public:
 		else
 		{
 			Assert( pNode->GetDataTableProxyIndex() < m_nNewStateProxies );
-			bool bCur = m_pNewStateProxies[ pNode->GetDataTableProxyIndex() ].m_Bits.Get( m_iClient ) != 0;
+			bool bCur = m_pNewStateProxies[ pNode->GetDataTableProxyIndex() ].m_Bits[m_iClient];
 
 			if ( m_pOldStateProxies )
 			{
 				Assert( pNode->GetDataTableProxyIndex() < m_nOldStateProxies );
-				bool bPrev = m_pOldStateProxies[ pNode->GetDataTableProxyIndex() ].m_Bits.Get( m_iClient ) != 0;
+				bool bPrev = m_pOldStateProxies[ pNode->GetDataTableProxyIndex() ].m_Bits[m_iClient];
 				if ( bPrev != bCur )
 				{
 					if ( bPrev )
@@ -156,21 +153,21 @@ public:
 		m_NewProxyProps[m_nNewProxyProps] = PROP_SENTINEL;
 		int *pCurNewProxyProp = m_NewProxyProps;
 
-		for ( int i=0; i < startProps.Count(); i++ )
+		for ( int i=0; i < std::ssize( startProps ); i++ )
 		{
 			int iProp = startProps[i];
 
 			// Fill in the gaps with any properties that are newly enabled by the proxies.
 			while ( *pCurNewProxyProp < iProp )
 			{
-				m_pOutProps->AddToTail( *pCurNewProxyProp );
+				m_pOutProps->push_back( *pCurNewProxyProp );
 				++pCurNewProxyProp;
 			}
 
 			// Now write this property's index if the proxies are allowing this property to be written.
 			if ( IsPropProxyValid( iProp ) )
 			{
-				m_pOutProps->AddToTail( iProp );
+				m_pOutProps->push_back( iProp );
 
 				// avoid that we add it twice.
 				if ( *pCurNewProxyProp == iProp )
@@ -181,14 +178,14 @@ public:
 		// add any remaining new proxy props
 		while ( *pCurNewProxyProp < PROP_SENTINEL )
 		{
-			m_pOutProps->AddToTail( *pCurNewProxyProp );
+			m_pOutProps->push_back( *pCurNewProxyProp );
 			++pCurNewProxyProp;
 		}
 	}
 
 	int GetNumOutProps()
 	{
-		return m_pOutProps->Count();
+		return std::ssize( *m_pOutProps );
 	}
 
 
@@ -420,7 +417,7 @@ static bool CompareBits( bf_read &from, bf_read &to, int numbits )
 	int remaining = numbits;
 	while ( remaining > 0 )
 	{
-		int count = MIN( remaining, sizeof( unsigned int ) << 3 );
+		int count = std::min<std::common_type_t<int, long unsigned int>>( remaining, sizeof( unsigned int ) << 3 );
 		temp1 = from.ReadUBitLong( count );
 		temp2 = to.ReadUBitLong( count );
 		if ( temp1 != temp2 )
@@ -455,9 +452,9 @@ public:
 // Globals.
 // ------------------------------------------------------------------------ //
 
-CUtlVector< SendTable* > g_SendTables;
+std::vector< SendTable* > g_SendTables;
 #if CRC_SEND_TABLE_VERBOSE
-CUtlVector< SendTable* > g_SendTablesReferenced;
+std::vector< SendTable* > g_SendTablesReferenced;
 #endif
 CRC32_t	g_SendTableCRC = 0;
 
@@ -614,7 +611,7 @@ int SendTable_WriteAllDeltaProps(
 		nObjectID,
 		&deltaProps );
 
-	return deltaProps.Count();
+	return std::ssize( deltaProps );
 }
 
 
@@ -623,7 +620,7 @@ bool SendTable_Encode(
 	SerializedEntityHandle_t handle,
 	const void *pStruct, 
 	int objectID,
-	CUtlMemory<CSendProxyRecipients> *pRecipients
+	std::span<CSendProxyRecipients> pRecipients
 	)
 {
 	CSerializedEntity *pEntity = reinterpret_cast< CSerializedEntity * >( handle );
@@ -632,9 +629,9 @@ bool SendTable_Encode(
 
 	CSendTablePrecalc *pPrecalc = pTable->m_pPrecalc;
 	ErrorIfNot( pPrecalc, ("SendTable_Encode: Missing m_pPrecalc for SendTable %s.", pTable->m_pNetTableName) );
-	if ( pRecipients )
+	if ( !pRecipients.empty() )
 	{
-		ErrorIfNot(	pRecipients->NumAllocated() >= pPrecalc->GetNumDataTableProxies(), ("SendTable_Encode: pRecipients array too small.") );
+		ErrorIfNot(	std::ssize( pRecipients ) >= pPrecalc->GetNumDataTableProxies(), ("SendTable_Encode: pRecipients array too small.") );
 	}
 
 	VPROF( "SendTable_Encode" );
@@ -650,7 +647,7 @@ bool SendTable_Encode(
 
 	info.m_pOut = &writeBuf;
 	info.m_pEntity = pEntity;
-	info.m_pRecipients = pRecipients;	// optional buffer to store the bits for which clients get what data.
+	info.m_Recipients = pRecipients;	// optional buffer to store the bits for which clients get what data.
 
 	info.Init( false, false );
 
@@ -738,7 +735,7 @@ void SendTable_WritePropList_Guts(
 
 	CSendTablePrecalc *pPrecalc = pTable->m_pPrecalc;
 
-	if ( !pVecChanges || pVecChanges->Count() > 0 )
+	if ( !pVecChanges || std::ssize( *pVecChanges ) > 0 )
 	{
 		CSerializedEntityFieldIterator iterator( pToEntity );
 		iterator.First();
@@ -750,9 +747,9 @@ void SendTable_WritePropList_Guts(
 		// Ok, they want to specify a small list of properties to check.
 		CFieldPath toField = iterator.GetField();
 		int i = 0;
-		while ( !pVecChanges || i < pVecChanges->Count() )
+		while ( !pVecChanges || i < std::ssize( *pVecChanges ) )
 		{
-			if ( pVecChanges && toField < pVecChanges->Element( i ) )
+			if ( pVecChanges && toField < (*pVecChanges)[ i ] )
 			{
 				// Keep nFieldIndex, nFieldCount, fieldPaths, and nextElement as local variables
 				// instead of members of iterator to improve code-gen. Otherwise VC++ or gcc
@@ -760,7 +757,7 @@ void SendTable_WritePropList_Guts(
 				int nFieldIndex = iterator.GetIndex();
 				int nFieldCount = pToEntity->GetFieldCount();
 				const short* fieldPaths = pToEntity->GetFieldPaths();
-				int nextElement = pVecChanges->Element(i);
+				int nextElement = (*pVecChanges)[ i ];
 				while ( toField < nextElement )
 				{
 #ifdef PROP_SKIPPED_REPORT
@@ -780,7 +777,7 @@ void SendTable_WritePropList_Guts(
 				break;
 			}
 			else if ( !pVecChanges ||
-				toField == pVecChanges->Element( i ) )
+				toField == (*pVecChanges)[ i ] )
 			{
 				// See how many bits the data for this property takes up.
 				int nTotalBits = iterator.GetLength();
@@ -898,7 +895,7 @@ static inline bool DoesBitRangeMatch( const uint32* RESTRICT pOld, const uint32*
 static inline int32 GetFieldIndex( const short* RESTRICT pFieldStart, const short* RESTRICT pFieldEnd, short nDesiredField )
 {
 	//determine our starting pointer (likely to be the field itself)
-	const short* pCurr = MIN( pFieldEnd - 1, pFieldStart + nDesiredField );
+	const short* pCurr = std::min( pFieldEnd - 1, pFieldStart + nDesiredField );
 	
 	//check for a direct hit (most common case)
 	if( *pCurr == nDesiredField )
@@ -930,7 +927,7 @@ static inline int32 GetFieldIndex( const short* RESTRICT pFieldStart, const shor
 
 //given an entity that has had a partial change, this will take the previous data block, and splice in the new values, setting new change fields to the specified tick for ones that have actually changed. This will
 //return false if a delta table is not applicable and instead a full pack needs to be done
-SerializedEntityHandle_t SendTable_BuildDeltaProperties( edict_t *pEdict, int nObjectID, const SendTable* pTable, SerializedEntityHandle_t oldProps, CalcDeltaResultsList_t &deltaProps, CUtlMemory<CSendProxyRecipients> *pRecipients, bool& bCanReuseOldData )
+SerializedEntityHandle_t SendTable_BuildDeltaProperties( edict_t *pEdict, int nObjectID, const SendTable* pTable, SerializedEntityHandle_t oldProps, CalcDeltaResultsList_t &deltaProps, std::span<CSendProxyRecipients> pRecipients, bool& bCanReuseOldData )
 {
 	const CSerializedEntity* RESTRICT pOldProps = ( const CSerializedEntity* )oldProps;
 	
@@ -939,7 +936,7 @@ SerializedEntityHandle_t SendTable_BuildDeltaProperties( edict_t *pEdict, int nO
 
 	// Setup all the info we'll be walking the tree with.
 	CServerDatatableStack info( pTable->m_pPrecalc, (unsigned char*)pEdict->GetUnknown(), nObjectID );
-	info.m_pRecipients = pRecipients;	// optional buffer to store the bits for which clients get what data.
+	info.m_Recipients = pRecipients;	// optional buffer to store the bits for which clients get what data.
 	info.Init( false, false );
 
 	//get the change list associated with this object
@@ -1005,12 +1002,12 @@ SerializedEntityHandle_t SendTable_BuildDeltaProperties( edict_t *pEdict, int nO
 
 			//we now need to compare if we actually changed values between these bits
 			if( !DoesBitRangeMatch( ( const uint32* )pOldProps->GetFieldData(), ( const uint32* )packedData, nPropBitStart, nPropBitEnd ) )
-				deltaProps.AddToTail( nPropField );
+				deltaProps.push_back( nPropField );
 		}
 	}
 
 	//if we have no changes, we can just reuse the old one, don't bother making a copy
-	if( deltaProps.Count() == 0 )
+	if( std::ssize( deltaProps ) == 0 )
 	{
 		bCanReuseOldData = true;
 		return SERIALIZED_ENTITY_HANDLE_INVALID;
@@ -1048,7 +1045,7 @@ static void BuildNonZeroDelta( const SendTable *pTable,
 		if ( !g_PropTypeFns[pProp->m_Type].IsEncodedZero( pProp, &ToBits ) )
 		{
 			// add non-zero property to index list
-			deltaProps.AddToTail( nPath );
+			deltaProps.push_back( nPath );
 		}
 	}
 }
@@ -1107,7 +1104,7 @@ static inline uint32 FastPathCalcDelta( const CSerializedEntity *pFromEntity, co
 	const uint32* RESTRICT pToData	= (const uint32*)pToEntity->GetFieldData();
 
 	//determine how many integers we have in our buffer
-	const uint32 nEndDataInts = ( MIN( pToEntity->GetFieldDataBitCount(), pFromEntity->GetFieldDataBitCount() ) + 31 ) / 32;
+	const uint32 nEndDataInts = ( std::min( pToEntity->GetFieldDataBitCount(), pFromEntity->GetFieldDataBitCount() ) + 31 ) / 32;
 
 	//scan through our data to find the first area where we detect a change
 	uint32 nIntOffset = 0;
@@ -1128,7 +1125,7 @@ static inline uint32 FastPathCalcDelta( const CSerializedEntity *pFromEntity, co
 	}
 
 	//determine how many overlapping fields we can test against
-	uint32 nMinFieldOverlap = MIN( nFromFieldCount, nToFieldCount );
+	uint32 nMinFieldOverlap = std::min( nFromFieldCount, nToFieldCount );
 	if( nMinFieldOverlap == 0 )
 		return 0;
 
@@ -1161,7 +1158,7 @@ static inline uint32 FastPathCalcDelta( const CSerializedEntity *pFromEntity, co
 
 		//we can now tell if we have a dirty prop
 		if( DoesPropertyOverlapDirtyBit( nDataStartBit, pFromStartOffset[ nCurrField ], nFromEnd, nDataDiff ) )
-			deltaProps.AddToTail( nFromPath );
+			deltaProps.push_back( nFromPath );
 				
 		//and handle reading to the next diff which is either at the end of our property, or the next integer if we have no more dirty bits in this one
 		uint32 nPropEndInt = nFromEnd / 32;
@@ -1207,7 +1204,7 @@ static inline uint32 FastPathCalcDelta( const CSerializedEntity *pFromEntity, co
 		{
 			//we can now tell if we have a dirty prop
 			if( DoesPropertyOverlapDirtyBit( nDataStartBit, pFromStartOffset[ nLastField ], nFromEnd, nDataDiff ) )
-				deltaProps.AddToTail( nFromPath );
+				deltaProps.push_back( nFromPath );
 		}
 	}
 
@@ -1252,13 +1249,13 @@ static void SlowPathCompareProps( const CSerializedEntity *pFromEntity, const CS
 						
 			if( ( nToDataSize != nFromDataSize ) || !CompareBits( FromData, ToData, nToDataSize ) )
 			{
-				deltaProps.AddToTail( nToPath );
+				deltaProps.push_back( nToPath );
 			}
 		}
 		else
 		{
 			//this is a new property that we need to encode
-			deltaProps.AddToTail( nToPath );
+			deltaProps.push_back( nToPath );
 		}
 	}
 }
@@ -1451,9 +1448,9 @@ static void BuildPropOffsetToIndexMap( CSendTablePrecalc *pPrecalc )
 	CPropOffsetStack pmStack( pPrecalc );
 	pmStack.Init( false, false );
 
-	const int nNumProps = pPrecalc->m_Props.Count();
+	const int nNumProps = std::ssize( pPrecalc->m_Props );
 	
-	pPrecalc->m_PropOffsetToIndex.SetSize( nNumProps );
+	pPrecalc->m_PropOffsetToIndex.assign( nNumProps, {} );
 
 	for ( int i=0; i < nNumProps; i++ )
 	{
@@ -1467,7 +1464,7 @@ static void BuildPropOffsetToIndexMap( CSendTablePrecalc *pPrecalc )
 	}
 
 	//now sort our list to ensure it is efficient for lookup
-	std::sort( pPrecalc->m_PropOffsetToIndex.Base(), pPrecalc->m_PropOffsetToIndex.Base() + pPrecalc->m_PropOffsetToIndex.Count() );
+	std::sort( pPrecalc->m_PropOffsetToIndex.data(), pPrecalc->m_PropOffsetToIndex.data() + std::ssize( pPrecalc->m_PropOffsetToIndex ) );
 }
 
 static bool SendTable_InitTable( SendTable *pTable )
@@ -1627,7 +1624,7 @@ void SendTable_PrintStats( void )
 	int numFlatProps = 0;
 	int numExcludeProps = 0;
 
-	for ( int i=0; i < g_SendTables.Count(); i++ )
+	for ( int i=0; i < std::ssize( g_SendTables ); i++ )
 	{
 		SendTable *st =  g_SendTables[i];
 		
@@ -1679,7 +1676,7 @@ void SendTable_PrintStats( void )
 
 bool SendTable_Init( SendTable **pTables, int nTables )
 {
-	ErrorIfNot( g_SendTables.Count() == 0,
+	ErrorIfNot( g_SendTables.empty(),
 		("SendTable_Init: called twice.")
 	);
 
@@ -1700,7 +1697,7 @@ bool SendTable_Init( SendTable **pTables, int nTables )
 	}
 
 	// Store off the SendTable list.
-	g_SendTables.CopyArray( pTables, nTables );
+	g_SendTables.assign( pTables, pTables + nTables );
 
 	g_SendTableCRC = SendTable_ComputeCRC( );
 
@@ -1714,11 +1711,11 @@ bool SendTable_Init( SendTable **pTables, int nTables )
 void SendTable_Term()
 {
 	// Term all the SendTables.
-	for ( int i=0; i < g_SendTables.Count(); i++ )
+	for ( int i=0; i < std::ssize( g_SendTables ); i++ )
 		SendTable_TermTable( g_SendTables[i] );
 
 	// Clear the list of SendTables.
-	g_SendTables.Purge();
+	g_SendTables.clear(); g_SendTables.shrink_to_fit();
 	g_SendTableCRC = 0;
 }
 
@@ -1736,7 +1733,7 @@ CRC32_t SendTable_ComputeCRC()
 	CRC32_Init( &result );
 
 	// walk the tables and checksum them
-	int c = g_SendTables.Count();
+	int c = std::ssize( g_SendTables );
 	for ( int i = 0 ; i < c; i++ )
 	{
 		SendTable *st = g_SendTables[ i ];
@@ -1767,7 +1764,7 @@ SendTable *SendTabe_GetTable(int index)
 
 int	SendTable_GetNum()
 {
-	return g_SendTables.Count();
+	return std::ssize( g_SendTables );
 }
 
 //-----------------------------------------------------------------------------

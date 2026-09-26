@@ -11,7 +11,6 @@
 // $NoKeywords: $
 //=============================================================================//
 
-#pragma warning( disable : 4800  )  // disable forcing int to bool performance warning
 
 #include "cbase.h"
 #include <cdll_client_int.h>
@@ -30,9 +29,6 @@
 #include <filesystem.h>
 #include <convar.h>
 #include "iclientmode.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 static IViewPort *s_pFullscreenViewportInterface;
 static IViewPort *s_pViewportInterfaces[ MAX_SPLITSCREEN_PLAYERS ];
@@ -96,7 +92,7 @@ void CBaseViewport::CreateDefaultPanels( void )
 
 void CBaseViewport::UpdateAllPanels( void )
 {
-	for ( int i = 0; i < m_UnorderedPanels.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_UnorderedPanels ); ++i )
 	{
 		IViewPortPanel *p = m_UnorderedPanels[i];
 
@@ -126,19 +122,19 @@ bool CBaseViewport::AddNewPanel( IViewPortPanel* pPanel, char const *pchDebugNam
 		return false;
 	}
 
-	m_Panels.Insert( pPanel->GetName(), pPanel );
-	m_UnorderedPanels.AddToTail( pPanel );
+	m_Panels.emplace( pPanel->GetName(), pPanel );
+	m_UnorderedPanels.push_back( pPanel );
 
 	return true;
 }
 
 IViewPortPanel* CBaseViewport::FindPanelByName(const char *szPanelName)
 {
-	int idx = m_Panels.Find( szPanelName );
-	if ( idx == m_Panels.InvalidIndex() )
+	auto it = m_Panels.find( szPanelName );
+	if ( it == m_Panels.end() )
 		return nullptr;
 
-	return m_Panels[ idx ];
+	return it->second;
 }
 
 void CBaseViewport::PostMessageToPanel( const char *pName, KeyValues *pKeyValues )
@@ -186,7 +182,7 @@ void CBaseViewport::ShowPanel( const char *pName, bool state )
 
 	if ( Q_strcmp( pName, PANEL_ALL ) == 0 )
 	{
-		for ( int i = 0; i < m_UnorderedPanels.Count(); ++i )
+		for ( int i = 0; i < std::ssize( m_UnorderedPanels ); ++i )
 		{
 			IViewPortPanel *p = m_UnorderedPanels[i];
 			ShowPanel( p, state );
@@ -281,12 +277,12 @@ void CBaseViewport::RecreatePanel( const char *szPanelName )
 	IViewPortPanel *panel = FindPanelByName( szPanelName );
 	if ( panel )
 	{
-		m_Panels.Remove( szPanelName );
-		for ( int i = m_UnorderedPanels.Count() - 1; i >= 0; --i )
+		m_Panels.erase( m_Panels.find( szPanelName ) );
+		for ( int i = std::ssize( m_UnorderedPanels ) - 1; i >= 0; --i )
 		{
 			if ( m_UnorderedPanels[ i ] == panel )
 			{
-				m_UnorderedPanels.Remove( i );
+				m_UnorderedPanels.erase( m_UnorderedPanels.begin() + i );
 				break;
 			}
 		}
@@ -306,14 +302,14 @@ void CBaseViewport::RecreatePanel( const char *szPanelName )
 
 void CBaseViewport::RemoveAllPanels( void)
 {
-	for ( int i = 0; i < m_UnorderedPanels.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_UnorderedPanels ); ++i )
 	{
 		IViewPortPanel *p = m_UnorderedPanels[i];
 		delete p;
 	}
 
-	m_Panels.RemoveAll();
-	m_UnorderedPanels.RemoveAll();
+	m_Panels.clear();
+	m_UnorderedPanels.clear();
 	m_pActivePanel = nullptr;
 }
 
@@ -422,7 +418,7 @@ bool CBaseViewport::IsFullscreenViewport() const
 
 void CBaseViewport::LevelInit( void )
 {
-	for ( int i = 0; i < m_UnorderedPanels.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_UnorderedPanels ); ++i )
 	{
 		IViewPortPanel *p = m_UnorderedPanels[i];
 		if ( p )

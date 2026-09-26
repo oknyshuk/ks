@@ -19,9 +19,6 @@
 #include "props.h"
 #include "vphysics/object_hash.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #undef LOCAL_STEP_SIZE
 // FIXME: this should be based in their hull width
 #define	LOCAL_STEP_SIZE	16.0 // 8 // 16
@@ -544,7 +541,7 @@ bool CAI_MoveProbe::Confirm3DConnectivity( AIMoveTrace_t *pMoveTrace, unsigned f
 	if ( flags & AITGM_2D )
 		return true;
 
-	float threshold = MAX( 0.5f * GetHullHeight(), StepHeight() + 0.1 );
+	float threshold = std::max<std::common_type_t<float, double>>( 0.5f * GetHullHeight(), StepHeight() + 0.1 );
 	if ( fabs( pMoveTrace->vEndPosition.z - vecDesiredEnd.z ) > threshold )
 	{
 		// Ok, we ended up on a ledge above or below the desired destination
@@ -633,11 +630,11 @@ bool CAI_MoveProbe::TestGroundMove( const Vector &vecActualStart, const Vector &
 	float distStartToIgnoreGround = (pctToCheckStandPositions == 100) ? pMoveTrace->flTotalDist : pMoveTrace->flTotalDist * ( pctToCheckStandPositions * 0.01);
 	bool bTryNavIgnore = ( ( vecActualStart - GetLocalOrigin() ).Length2DSqr() < 0.1 && fabsf(vecActualStart.z - GetLocalOrigin().z) < checkStepArgs.stepHeight * 0.5 );
 
-	CUtlVector<CBaseEntity *> ignoredEntities;
+	std::vector< CBaseEntity * > ignoredEntities;
 
 	for (;;)
 	{
-		float flStepSize = MIN( LOCAL_STEP_SIZE, pMoveTrace->flTotalDist - distClear );
+		float flStepSize = std::min<std::common_type_t<double, float>>( LOCAL_STEP_SIZE, pMoveTrace->flTotalDist - distClear );
 		if ( flStepSize < 0.001 )
 			break;
 
@@ -684,7 +681,7 @@ bool CAI_MoveProbe::TestGroundMove( const Vector &vecActualStart, const Vector &
 				NDebugOverlay::EntityBounds( checkStepResult.pBlocker, 255, 0, 0, 0, .5 );
 			}
 
-			ignoredEntities.AddToTail( checkStepResult.pBlocker );
+			ignoredEntities.push_back( checkStepResult.pBlocker );
 			checkStepResult.pBlocker->SetNavIgnore();
 		}
 
@@ -731,7 +728,7 @@ bool CAI_MoveProbe::TestGroundMove( const Vector &vecActualStart, const Vector &
 		checkStepArgs.vecStart = checkStepResult.endPoint;
 	}
 
-	for ( i = 0; i < ignoredEntities.Count(); i++ )
+	for ( i = 0; i < std::ssize( ignoredEntities ); i++ )
 	{
 		ignoredEntities[i]->ClearNavIgnore();
 	}
@@ -1207,9 +1204,9 @@ Vector CAI_MoveProbe::CalcJumpLaunchVelocity(const Vector &startPos, const Vecto
 	float minHorzHeight = 0.5 * flGravity * (minHorzTime * 0.5) * (minHorzTime * 0.5);
 
 	// jump height must be enough to hang in the air
-	*pminHeight = MAX( *pminHeight, minHorzHeight );
+	*pminHeight = std::max( *pminHeight, minHorzHeight );
 	// jump height must be enough to cover the step up
-	*pminHeight = MAX( *pminHeight, stepHeight );
+	*pminHeight = std::max( *pminHeight, stepHeight );
 
 	// time from start to apex
 	float t0 = sqrt( ( 2.0 * *pminHeight) / flGravity );

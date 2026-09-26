@@ -19,9 +19,6 @@
 #include "tier0/icommandline.h" //command line
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define DEFAULT_PARTICLE_FEATHERING_ENABLED 1
 
 static ConVar mat_depthfeather_enable( "mat_depthfeather_enable", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_DEVELOPMENTONLY );
@@ -537,7 +534,7 @@ BEGIN_VS_SHADER_FLAGS( Spritecard, "Help for Spritecard", SHADER_NOT_EDITABLE )
 
 			// set fade constants in vsconsts 8 and 9
 			float flMaxDistance = params[MAXDISTANCE]->GetFloatValue();
-			float flStartFade = MAX( 1.0, flMaxDistance - params[FARFADEINTERVAL]->GetFloatValue() );
+			float flStartFade = std::max<std::common_type_t<double, float>>( 1.0, flMaxDistance - params[FARFADEINTERVAL]->GetFloatValue() );
 
 			float VC0[8]={ params[MINSIZE]->GetFloatValue(), params[MAXSIZE]->GetFloatValue(),
 						   params[STARTFADESIZE]->GetFloatValue(), params[ENDFADESIZE]->GetFloatValue(),

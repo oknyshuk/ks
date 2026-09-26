@@ -152,8 +152,8 @@ private:
 	
 	//---------------------------------
 
-	CUtlVector<AI_Movementscript_t>	m_scriptMove;
-	CUtlVector<AI_Movementscript_t>	m_scriptTurn;
+	std::vector< AI_Movementscript_t >	m_scriptMove;
+	std::vector< AI_Movementscript_t >	m_scriptTurn;
 
 	//---------------------------------
 

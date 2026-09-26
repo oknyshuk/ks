@@ -14,10 +14,10 @@
 #include <inetmessage.h>
 #include <filesystem.h>
 #include "utlvector.h"
-#include "utlbuffer.h"
 #include "const.h"
 #include "inetchannel.h"
 #include "netmessages.h"
+#include <set>
 
 // How fast to converge flow estimates
 #define FLOW_AVG ( 3.0 / 4.0 )
@@ -249,10 +249,13 @@ private:
 		int			m_nSlot;
 		INetChannel *m_pChannel;
 
-		static bool Less( const SplitPlayer_t &lhs, const SplitPlayer_t &rhs )
+		struct Less
 		{
-			return lhs.m_nSlot < rhs.m_nSlot;
-		}
+			bool operator()( const SplitPlayer_t &lhs, const SplitPlayer_t &rhs ) const
+			{
+				return lhs.m_nSlot < rhs.m_nSlot;
+			}
+		};
 	};
 	
 	void	FlowReset( void );
@@ -290,7 +293,7 @@ private:
 	// If we have "slave" channels with data, this adds the appropriate NET_SplitScreenUser guards and combines the payloads
 	void	SplitUserCombineForSending();
 	void	MergeSplitUserBuffers( EBufType eBufType, bf_write &outbuf );
-	void	MaybeAppendBuffer( EBufType eBufType, bf_write &out, SplitPlayer_t &sp, bf_write &src, int *pnCurrentSlot );
+	void	MaybeAppendBuffer( EBufType eBufType, bf_write &out, const SplitPlayer_t &sp, bf_write &src, int *pnCurrentSlot );
 	void	ChangeSplitUser( bf_write &out, int slot );
 
 private:
@@ -328,14 +331,14 @@ public:
 		
 	// Reliable data buffer, send which each packet (or put in waiting list)
 	bf_write	m_StreamReliable;
-	CUtlMemory<byte> m_ReliableDataBuffer;
+	std::vector<byte> m_ReliableDataBuffer;
 
 	// unreliable message buffer, cleared which each packet
 	bf_write	m_StreamUnreliable;
-	CUtlMemory<byte> m_UnreliableDataBuffer;
+	std::vector<byte> m_UnreliableDataBuffer;
 
 	bf_write	m_StreamVoice;
-	CUtlMemory<byte> m_VoiceDataBuffer;
+	std::vector<byte> m_VoiceDataBuffer;
 
 // don't use any vars below this (only in net_ws.cpp)
 
@@ -360,7 +363,7 @@ public:
 	// If realtime > cleartime, free to send next packet
 	double		m_fClearTime;
 
- 	CUtlVector<dataFragments_t*>	m_WaitingList[MAX_STREAMS];	// waiting list for reliable data and file transfer
+ 	std::vector< dataFragments_t* >	m_WaitingList[MAX_STREAMS];	// waiting list for reliable data and file transfer
 	dataFragments_t					m_ReceiveList[MAX_STREAMS]; // receive buffers for streams
 	subChannel_s					m_SubChannels[MAX_SUBCHANNELS];
 
@@ -375,7 +378,7 @@ public:
 	int			m_StreamLength;		// total length of current stream blob
 	int			m_StreamReceived;	// length of already received bytes
 	char		m_SteamFile[MAX_OSPATH];	// if receiving file, this is it's name
-	CUtlMemory<byte> m_StreamData;			// Here goes the stream data (if not file). Only allocated if we're going to use it.
+	std::vector<byte> m_StreamData;			// Here goes the stream data (if not file). Only allocated if we're going to use it.
 
 	// packet history
 	netflow_t		m_DataFlow[ MAX_FLOWS ];  
@@ -391,7 +394,7 @@ public:
 	float		m_Timeout;		// in seconds 
 
 	INetChannelHandler			*m_MessageHandler;	// who registers and processes messages
-	CUtlVector< CUtlVector< INetMessageBinder * > >	m_NetMessages;		// list of registered message
+	std::vector< std::vector< INetMessageBinder * > >	m_NetMessages;		// list of registered message
 
 	IDemoRecorder				*m_DemoRecorder;			// if != NULL points to a recording/playback demo object
 	int							m_nQueuedPackets;
@@ -408,9 +411,9 @@ public:
 	INetChannel					*m_pActiveChannel;
 
 
-	CUtlRBTree< SplitPlayer_t >		m_SplitPlayers;
+	std::set< SplitPlayer_t, SplitPlayer_t::Less >	m_SplitPlayers;
 
-	CUtlMemory< byte >			m_EncryptionKey;
+	std::vector<byte>			m_EncryptionKey;
 };
 
 

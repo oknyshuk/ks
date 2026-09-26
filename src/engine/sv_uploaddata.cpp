@@ -17,9 +17,6 @@
 #include "mathlib/IceKey.H"
 #include "net.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static int CountFields( KeyValues *fields )
 {
 	int c = 0;

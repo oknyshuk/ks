@@ -10,9 +10,6 @@
 #include "reflect_annotations.h"
 #include "filters.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 enum EntFinderMethod_t
 {
@@ -166,14 +163,14 @@ void CPointEntityFinder::FindByRandom( void )
 	// TODO: optimize the case where there is no filter
 	m_hEntity = nullptr;
 	CBaseFilter *pFilter = m_hFilter.Get();
-	CUtlVector<CBaseEntity *> ValidEnts;
+	std::vector< CBaseEntity * > ValidEnts;
 
 	CBaseEntity *pEntity = gEntList.FirstEnt();
 	do	   // note all valid entities.
 	{
 		if ( pFilter &&  pFilter->PassesFilter( this, pEntity ) )
 		{
-			ValidEnts.AddToTail( pEntity );
+			ValidEnts.push_back( pEntity );
 		}
 
 		pEntity = gEntList.NextEnt( pEntity );
@@ -181,9 +178,9 @@ void CPointEntityFinder::FindByRandom( void )
 	} while ( pEntity );
 
 	// pick one at random
-	if ( ValidEnts.Count() != 0 )
+	if ( !ValidEnts.empty() )
 	{
-		m_hEntity = ValidEnts[ RandomInt( 0, ValidEnts.Count() - 1 )];
+		m_hEntity = ValidEnts[ RandomInt( 0, std::ssize( ValidEnts ) - 1 )];
 	}
 }
 

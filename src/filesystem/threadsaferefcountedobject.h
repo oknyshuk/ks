@@ -7,6 +7,8 @@
 #ifndef THREADSAFEREFCOUNTEDOBJECT_H
 #define THREADSAFEREFCOUNTEDOBJECT_H
 
+#include <atomic>
+
 
 // This class can be used for fast access to an object from multiple threads,
 // and the main thread can wait until the threads are done using the object before it frees the object.
@@ -74,7 +76,7 @@ public:
 	}
 
 private:	
-	CInterlockedIntT<long>	m_RefCount;
+	std::atomic<long>	m_RefCount;
 	T						m_pObject;
 };
 

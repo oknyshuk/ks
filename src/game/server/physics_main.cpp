@@ -13,7 +13,6 @@
 #include "ai_basenpc.h"
 #include "gamerules.h"
 #include "vphysics_interface.h"
-#include "mempool.h"
 #include "entitylist.h"
 #include "engine/IEngineSound.h"
 #include "datacache/imdlcache.h"
@@ -27,8 +26,6 @@
 #include "igamemovement.h"
 #include "tier0/cache_hints.h"
 #include "basecsgrenade_projectile.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 extern IGameMovement *g_pGameMovement;
 
@@ -111,7 +108,7 @@ static void PhysicsCheckSweep( CBaseEntity *pEntity, const Vector& vecAbsStart, 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CPhysicsPushedEntities::CPhysicsPushedEntities( void ) : m_rgPusher(8, 8), m_rgMoved(32, 32)
+CPhysicsPushedEntities::CPhysicsPushedEntities( void )
 {
 	m_flMoveTime = -1.0f;
 }
@@ -121,7 +118,7 @@ CPhysicsPushedEntities::CPhysicsPushedEntities( void ) : m_rgPusher(8, 8), m_rgM
 //-----------------------------------------------------------------------------
 void CPhysicsPushedEntities::AddEntity( CBaseEntity *ent )
 {
-	int i = m_rgMoved.AddToTail();
+	int i = std::ssize( m_rgMoved ); m_rgMoved.emplace_back();
 	m_rgMoved[i].m_pEntity = ent;
 	m_rgMoved[i].m_vecStartAbsOrigin = ent->GetAbsOrigin();
 }
@@ -132,7 +129,7 @@ void CPhysicsPushedEntities::AddEntity( CBaseEntity *ent )
 //-----------------------------------------------------------------------------
 void CPhysicsPushedEntities::UnlinkPusherList( int *pPusherHandles )
 {
-	for ( int i = m_rgPusher.Count(); --i >= 0; )
+	for ( int i = std::ssize( m_rgPusher ); --i >= 0; )
 	{
 		pPusherHandles[i] = ::partition->HideElement( m_rgPusher[i].m_pEntity->CollisionProp()->GetPartitionHandle() );
 	}
@@ -140,7 +137,7 @@ void CPhysicsPushedEntities::UnlinkPusherList( int *pPusherHandles )
 
 void CPhysicsPushedEntities::RelinkPusherList( int *pPusherHandles )
 {
-	for ( int i = m_rgPusher.Count(); --i >= 0; )
+	for ( int i = std::ssize( m_rgPusher ); --i >= 0; )
 	{
 		::partition->UnhideElement( m_rgPusher[i].m_pEntity->CollisionProp()->GetPartitionHandle(), pPusherHandles[i] );
 	}
@@ -311,7 +308,7 @@ bool CPhysicsPushedEntities::SpeculativelyCheckPush( PhysicsPushedInfo_t &info, 
 	CBaseEntity *pBlocker = info.m_pEntity;
 
 	// See if it's possible to move the entity, but disable all pushers in the hierarchy first
-	int *pPusherHandles = (int*)stackalloc( m_rgPusher.Count() * sizeof(int) );
+	int *pPusherHandles = (int*)stackalloc( std::ssize( m_rgPusher ) * sizeof(int) );
 	UnlinkPusherList( pPusherHandles );
 	CTraceFilterPushMove pushFilter(pBlocker, pBlocker->GetCollisionGroup() );
 
@@ -478,7 +475,7 @@ bool CPhysicsPushedEntities::SpeculativelyCheckRotPush( const RotatingPushMove_t
 	// them in sync.
 	Vector vecAbsPush;
 	m_nBlocker = -1;
-	for (int i = m_rgMoved.Count(); --i >= 0; )
+	for (int i = std::ssize( m_rgMoved ); --i >= 0; )
 	{
 		ComputeRotationalPushDirection( m_rgMoved[i].m_pEntity, rotPushMove, &vecAbsPush, pRoot );
 		if (!SpeculativelyCheckPush( m_rgMoved[i], vecAbsPush, true, pRoot ))
@@ -500,7 +497,7 @@ bool CPhysicsPushedEntities::SpeculativelyCheckLinearPush( const Vector &vecAbsP
 	// This function is overridden by CCSPhysicsPushEntities::SpeculativelyCheckLinearPush, make sure 
 	// to keep them in sync.
 	m_nBlocker = -1;
-	for (int i = m_rgMoved.Count(); --i >= 0; )
+	for (int i = std::ssize( m_rgMoved ); --i >= 0; )
 	{
 		if (!SpeculativelyCheckPush( m_rgMoved[i], vecAbsPush, false, nullptr ))
 		{
@@ -514,7 +511,7 @@ bool CPhysicsPushedEntities::SpeculativelyCheckLinearPush( const Vector &vecAbsP
 
 void CPhysicsPushedEntities::UpdatePusherPhysicsEndOfTick()
 {
-	int nCount = m_rgUpdatedPushers.Count();
+	int nCount = std::ssize( m_rgUpdatedPushers );
 	for ( int i = 0; i < nCount; i++ )
 	{
 		PhysicsPusherInfo_t &info = m_rgUpdatedPushers[i];
@@ -523,7 +520,7 @@ void CPhysicsPushedEntities::UpdatePusherPhysicsEndOfTick()
 		// FIXME: it'd be better for the engine to just have a touch method
 		info.m_pEntity->PhysicsTouchTriggers( &info.m_vecStartAbsOrigin );
 	}
-	for ( int i = 0; i < m_rgUpdatedChildren.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_rgUpdatedChildren ); i++ )
 	{
 		m_rgUpdatedChildren[i]->PhysicsTouchTriggers();
 	}
@@ -531,12 +528,12 @@ void CPhysicsPushedEntities::UpdatePusherPhysicsEndOfTick()
 	{
 		m_rgUpdatedPushers[i].m_pEntity->UpdatePhysicsShadowToCurrentPosition( gpGlobals->frametime );
 	}
-	for ( int i = 0; i < m_rgUpdatedChildren.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_rgUpdatedChildren ); i++ )
 	{
 		m_rgUpdatedChildren[i]->UpdatePhysicsShadowToCurrentPosition( gpGlobals->frametime );
 	}
-	m_rgUpdatedPushers.RemoveAll();
-	m_rgUpdatedChildren.RemoveAll();
+	m_rgUpdatedPushers.clear();
+	m_rgUpdatedChildren.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -547,7 +544,7 @@ void CPhysicsPushedEntities::FinishPushers()
 	// We succeeded! Now that we know the final location of all entities,
 	// touch triggers + update physics objects + do other fixup.
 	// schedule this to happen all at once at the end of the tick
-	m_rgUpdatedPushers.AddVectorToTail( m_rgPusher );
+	m_rgUpdatedPushers.append_range( m_rgPusher );
 }
 
 
@@ -592,7 +589,7 @@ void CPhysicsPushedEntities::FinishPush( bool bIsRotPush, const RotatingPushMove
 {
 	FinishPushers();
 
-	for ( int i = m_rgMoved.Count(); --i >= 0; )
+	for ( int i = std::ssize( m_rgMoved ); --i >= 0; )
 	{
 		PhysicsPushedInfo_t &info = m_rgMoved[i];
 		CBaseEntity *pPushedEntity = info.m_pEntity;
@@ -624,8 +621,8 @@ void CPhysicsPushedEntities::FinishPush( bool bIsRotPush, const RotatingPushMove
 // save initial state when beginning a push sequence
 void CPhysicsPushedEntities::BeginPush( CBaseEntity *pRoot )
 {
-	m_rgMoved.RemoveAll();
-	m_rgPusher.RemoveAll();
+	m_rgMoved.clear();
+	m_rgPusher.clear();
 
 	m_rootPusherStartLocalOrigin = pRoot->GetLocalOrigin();
 	m_rootPusherStartLocalAngles = pRoot->GetLocalAngles();
@@ -678,7 +675,7 @@ CBaseEntity *CPhysicsPushedEntities::RegisterBlockage()
 void CPhysicsPushedEntities::RestoreEntities( )
 {
 	// Reset all of the pushed entities to get them back into place also
-	for ( int i = m_rgMoved.Count(); --i >= 0; )
+	for ( int i = std::ssize( m_rgMoved ); --i >= 0; )
 	{
 		m_rgMoved[ i ].m_pEntity->SetAbsOrigin( m_rgMoved[ i ].m_vecStartAbsOrigin );
 	}
@@ -695,7 +692,7 @@ class CTraceFilterAgainstEntityList : public ITraceFilter
 public:
 	virtual bool ShouldHitEntity( IHandleEntity *pEntity, int contentsMask )
 	{
-		for ( int i = m_entityList.Count()-1; i >= 0; --i )
+		for ( int i = std::ssize( m_entityList )-1; i >= 0; --i )
 		{
 			if ( m_entityList[i] == pEntity )
 				return true;
@@ -711,10 +708,10 @@ public:
 
 	void AddEntityToHit( IHandleEntity *pEntity )
 	{
-		m_entityList.AddToTail(pEntity);
+		m_entityList.push_back( pEntity );
 	}
 
-	CUtlVector<IHandleEntity *>	m_entityList;
+	std::vector< IHandleEntity * >	m_entityList;
 };
 
 //-----------------------------------------------------------------------------
@@ -731,7 +728,7 @@ public:
 		++s_nEnumCount;
 
 		m_collisionGroupCount = 0;
-		for ( int i = m_pPushedEntities->m_rgPusher.Count(); --i >= 0; )
+		for ( int i = std::ssize( m_pPushedEntities->m_rgPusher ); --i >= 0; )
 		{
 			if ( !m_pPushedEntities->m_rgPusher[i].m_pEntity->IsSolid() )
 				continue;
@@ -776,7 +773,7 @@ private:
 		CBaseEntity *pGroundEnt = pCheck->GetGroundEntity();
 		if ( pCheck->GetFlags() & FL_ONGROUND || pGroundEnt )
 		{
-			for ( int i = m_pPushedEntities->m_rgPusher.Count(); --i >= 0; )
+			for ( int i = std::ssize( m_pPushedEntities->m_rgPusher ); --i >= 0; )
 			{
 				if (m_pPushedEntities->m_rgPusher[i].m_pEntity == pGroundEnt)
 				{
@@ -866,10 +863,10 @@ void CPhysicsPushedEntities::GenerateBlockingEntityList()
 {
 	VPROF("CPhysicsPushedEntities::GenerateBlockingEntityList");
 
-	m_rgMoved.RemoveAll();
+	m_rgMoved.clear();
 	CPushBlockerEnum blockerEnum( this );
 
-	for ( int i = m_rgPusher.Count(); --i >= 0;  )
+	for ( int i = std::ssize( m_rgPusher ); --i >= 0;  )
 	{
 		CBaseEntity *pPusher = m_rgPusher[i].m_pEntity;
 
@@ -894,10 +891,10 @@ void CPhysicsPushedEntities::GenerateBlockingEntityListAddBox( const Vector &vec
 {
 	VPROF("CPhysicsPushedEntities::GenerateBlockingEntityListAddBox");
 
-	m_rgMoved.RemoveAll();
+	m_rgMoved.clear();
 	CPushBlockerEnum blockerEnum( this );
 
-	for ( int i = m_rgPusher.Count(); --i >= 0;  )
+	for ( int i = std::ssize( m_rgPusher ); --i >= 0;  )
 	{
 		CBaseEntity *pPusher = m_rgPusher[i].m_pEntity;
 
@@ -941,7 +938,7 @@ void CPhysicsPushedEntities::SetupAllInHierarchy( CBaseEntity *pRoot )
 	// rotation (which occurs in relink) will put it at the final location
 	// NOTE: The root object at this point is actually at its final position.
 	// We'll fix that up later
-	int i = m_rgPusher.AddToTail();
+	int i = std::ssize( m_rgPusher ); m_rgPusher.emplace_back();
 	m_rgPusher[i].m_pEntity = pRoot;
 	int nRecurseIndex = 0;
 	CBaseEntity *pEntity = pRoot;
@@ -950,16 +947,16 @@ void CPhysicsPushedEntities::SetupAllInHierarchy( CBaseEntity *pRoot )
 	{
 		for ( CBaseEntity *pChild = pEntity->FirstMoveChild(); pChild != nullptr; pChild = pChild->NextMovePeer() )
 		{
-			i = m_rgPusher.AddToTail();
+			i = std::ssize( m_rgPusher ); m_rgPusher.emplace_back();
 			m_rgPusher[i].m_pEntity = pChild;
 		}
 		nRecurseIndex++;
-		if ( nRecurseIndex >= m_rgPusher.Count() )
+		if ( nRecurseIndex >= std::ssize( m_rgPusher ) )
 			break;
 		pEntity = m_rgPusher[nRecurseIndex].m_pEntity;
 	} while ( true );
 
-	for ( i = 0; i < m_rgPusher.Count(); i++ )
+	for ( i = 0; i < std::ssize( m_rgPusher ); i++ )
 	{
 		m_rgPusher[i].m_vecStartAbsOrigin = m_rgPusher[i].m_pEntity->GetAbsOrigin();
 	}
@@ -1001,7 +998,7 @@ CBaseEntity *CPhysicsPushedEntities::PerformRotatePush( CBaseEntity *pRoot, floa
 	// Build a list of this entity + all its children because we're going to try to move them all
 	// This will also make sure each entity is linked in the appropriate place
 	// with correct absboxes
-	m_rgPusher.RemoveAll();
+	m_rgPusher.clear();
 	SetupAllInHierarchy( pRoot );
 
 	// save where we rotated from, in case we're blocked
@@ -1061,7 +1058,7 @@ CBaseEntity *CPhysicsPushedEntities::PerformLinearPush( CBaseEntity *pRoot, floa
 	// Build a list of this entity + all its children because we're going to try to move them all
 	// This will also make sure each entity is linked in the appropriate place
 	// with correct absboxes
-	m_rgPusher.RemoveAll();
+	m_rgPusher.clear();
 	SetupAllInHierarchy( pRoot );
 
 	// save where we started from, in case we're blocked
@@ -2284,7 +2281,7 @@ void Physics_RunThinkFunctions( bool simulating )
 	{
 		UTIL_DisableRemoveImmediate();
 		int listMax = SimThink_ListCount();
-		listMax = MAX(listMax,1);
+		listMax = std::max(listMax,1);
 		CBaseEntity **list = (CBaseEntity **)stackalloc( sizeof(CBaseEntity *) * listMax );
 		// iterate through all entities and have them think or simulate
 		

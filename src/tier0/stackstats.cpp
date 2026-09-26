@@ -17,8 +17,6 @@
 
 #include "tier0/valve_on.h"
 
-#include "tier0/memdbgon.h"
-
 
 #if !defined( ENABLE_RUNTIME_STACK_TRANSLATION )
 bool _CCallStackStatsGatherer_Internal_DumpStatsToFile( const char *szFileName, const CCallStackStatsGatherer_Standardized_t &StatsGatherer, bool bAllowMemoryAllocations )

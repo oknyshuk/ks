@@ -8,17 +8,16 @@
 #define CLOSEDCAPTIONS_H
 
 #include "captioncompiler.h"
-#include "tier1/utlsymbol.h"
-#include "tier1/utlsortvector.h"
+#include <flat_set>
+#include <set>
+#include <string>
 
 FORWARD_DECLARE_HANDLE( memhandle_t );
 
-typedef CUtlSortVector< CaptionLookup_t, CCaptionLookupLess > CaptionDictionary_t;
+typedef std::flat_multiset< CaptionLookup_t, CCaptionLookupLess > CaptionDictionary_t;
 struct AsyncCaption_t
 {
-	AsyncCaption_t() : 
-		m_DataBaseFile( UTL_INVAL_SYMBOL ),
-		m_RequestedBlocks( 0, 0, BlockInfo_t::Less )
+	AsyncCaption_t()
 	{
 		Q_memset( &m_Header, 0, sizeof( m_Header ) );
 	}
@@ -29,14 +28,20 @@ struct AsyncCaption_t
 		int			blocknum;
 		memhandle_t handle;
 
-		static bool Less( const BlockInfo_t& lhs, const BlockInfo_t& rhs )
+		struct Less
 		{
-			if ( lhs.fileindex != rhs.fileindex )
-				return lhs.fileindex < rhs.fileindex;
+			bool operator()( const BlockInfo_t& lhs, const BlockInfo_t& rhs ) const
+			{
+				if ( lhs.fileindex != rhs.fileindex )
+					return lhs.fileindex < rhs.fileindex;
 
-			return lhs.blocknum < rhs.blocknum;
-		}
+				return lhs.blocknum < rhs.blocknum;
+			}
+		};
 	};
+
+	AsyncCaption_t( AsyncCaption_t && ) = default;
+	AsyncCaption_t &operator=( AsyncCaption_t && ) = default;
 
 	AsyncCaption_t& operator =( const AsyncCaption_t& rhs )
 	{
@@ -47,21 +52,18 @@ struct AsyncCaption_t
 		m_Header = rhs.m_Header;
 		m_DataBaseFile = rhs.m_DataBaseFile;
 
-		for ( int i = rhs.m_RequestedBlocks.FirstInorder(); i != rhs.m_RequestedBlocks.InvalidIndex(); i = rhs.m_RequestedBlocks.NextInorder( i ) )
-		{
-			m_RequestedBlocks.Insert( rhs.m_RequestedBlocks[ i ] );
-		}
+		m_RequestedBlocks.insert( rhs.m_RequestedBlocks.begin(), rhs.m_RequestedBlocks.end() );
 
 		return *this;
 	}
 
 	bool LoadFromFile( char const *pchFullPath );
 
-	CUtlRBTree< BlockInfo_t, unsigned short >	m_RequestedBlocks;
+	std::multiset< BlockInfo_t, BlockInfo_t::Less >	m_RequestedBlocks;
 
 	CaptionDictionary_t		m_CaptionDirectory;
 	CompiledCaptionHeader_t	m_Header;
-	CUtlSymbol				m_DataBaseFile;
+	std::string				m_DataBaseFile;
 };
 
 #endif // CLOSEDCAPTIONS_H

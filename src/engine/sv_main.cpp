@@ -7,6 +7,8 @@
 //===========================================================================//
 
 #include "server_pch.h"
+#include <mutex>
+#include "tier0/memalloc.h"
 #include "decal.h"
 #include "host_cmd.h"
 #include "cmodel_engine.h"
@@ -84,8 +86,6 @@
 #include "matchmaking/imatchframework.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 #include <syscall.h>
 
 
@@ -331,14 +331,14 @@ bool SV_FlushMemoryIfMarked()
         g_pMaterialSystem->CompactMemory();
         g_pFileSystem->AsyncFinishAll();
 #if !defined( DEDICATED )
-        extern CThreadMutex g_SndMutex;
-        g_SndMutex.Lock();
+        extern std::recursive_mutex g_SndMutex;
+        g_SndMutex.lock();
         g_pFileSystem->AsyncSuspend();
         g_pThreadPool->SuspendExecution();
         g_pMemAlloc->CompactHeap();
         g_pThreadPool->ResumeExecution();
         g_pFileSystem->AsyncResume();
-        g_SndMutex.Unlock();
+        g_SndMutex.unlock();
 #endif // DEDICATED
 
         return true;
@@ -398,7 +398,7 @@ static FILE* OpenRecordingFile()
 void SpewToFile( char const* pFmt, ... )
 static void SpewToFile( const char* pFmt, ... )
 {
-    static CUtlVector<unsigned char> s_RecordingBuffer;
+    static std::vector< unsigned char > s_RecordingBuffer;
 
     char temp[2048];
     va_list args;
@@ -467,12 +467,12 @@ void CGameServer::Clear( void )
         }
     }
 
-    for ( int i = 0; i < m_TempEntities.Count(); i++ )
+    for ( int i = 0; i < std::ssize( m_TempEntities ); i++ )
     {
         delete m_TempEntities[i];
     }
 
-    m_TempEntities.Purge();
+    m_TempEntities.clear(); m_TempEntities.shrink_to_fit();
 
     BaseClass::Clear();
 }
@@ -598,9 +598,9 @@ void CGameServer::CopyPureServerWhitelistToStringTable()
     if ( !m_pPureServerWhitelist )
         return;
     
-    CUtlBuffer buf;
+    ks::byte_writer buf;
     m_pPureServerWhitelist->Encode( buf );
-    m_pServerStartupTable->AddString( true, "PureServerWhitelist", buf.TellPut(), buf.Base() );
+    m_pServerStartupTable->AddString( true, "PureServerWhitelist", buf.size(), buf.data() );
 }
 
 
@@ -767,8 +767,8 @@ void CGameServer::InitMaxClients( void )
     if ( newmaxplayers >= 1 )
     {
         // Never go above/below what the game .dll can handle
-        newmaxplayers	= MIN( newmaxplayers, maxmaxplayers );
-        m_nMaxClientsLimit	= MAX( m_nMinClientsLimit, newmaxplayers );
+        newmaxplayers	= std::min( newmaxplayers, maxmaxplayers );
+        m_nMaxClientsLimit	= std::max( m_nMinClientsLimit, newmaxplayers );
     }
     else
     {
@@ -1241,7 +1241,7 @@ shift pitch higher, values lower than 100 lower the pitch.
 */
 void SV_StartSound ( IRecipientFilter& filter, edict_t *pSoundEmittingEntity, int iChannel, 
     const char *pSoundEntry, HSOUNDSCRIPTHASH iSoundEntryHash, const char *pSample, float flVolume, soundlevel_t iSoundLevel, int iFlags, 
-    int iPitch, const Vector *pOrigin, float soundtime, int speakerentity, CUtlVector< Vector >* pUtlVecOrigins, int nSeed )
+    int iPitch, const Vector *pOrigin, float soundtime, int speakerentity, std::vector< Vector >* pUtlVecOrigins, int nSeed )
 {
 
     SoundInfo_t sound; 
@@ -1282,7 +1282,7 @@ void SV_StartSound ( IRecipientFilter& filter, edict_t *pSoundEmittingEntity, in
     // Add actual sound origin to vector if requested
     if ( pUtlVecOrigins )
     {
-        (*pUtlVecOrigins).AddToTail( sound.vOrigin );
+        (*pUtlVecOrigins).push_back( sound.vOrigin );
     }
 
     // set sound delay
@@ -1347,7 +1347,7 @@ void SV_DetermineMulticastRecipients( bool usepas, const Vector& origin, CPlayer
     int visType = usepas ? DVIS_PAS : DVIS_PVS;
     const byte *pMask = CM_Vis( pvs, sizeof(pvs), cluster, visType );
 
-    playerbits.ClearAll();
+    playerbits.reset();
 
     // Check for relevent clients
     for (int i = 0; i < sv.GetClientCount(); i++ )
@@ -1368,7 +1368,7 @@ void SV_DetermineMulticastRecipients( bool usepas, const Vector& origin, CPlayer
         if ( pClient->IsHLTV() )
 #endif
         {
-            playerbits.Set( i );
+            playerbits.set( i );
             continue;
         }
 
@@ -1381,10 +1381,10 @@ void SV_DetermineMulticastRecipients( bool usepas, const Vector& origin, CPlayer
 
         if ( pClient->IsSplitScreenUser() )
         {
-            playerbits.Set( pClient->m_pAttachedTo->GetPlayerSlot() );
+            playerbits.set( pClient->m_pAttachedTo->GetPlayerSlot() );
             continue;
         }
-        playerbits.Set( i );
+        playerbits.set( i );
     }
 }
 
@@ -1573,8 +1573,8 @@ crosses a waterline.
 static int		s_FatBytes;
 static byte*	s_pFatPVS = 0;
 
-CUtlVector<int> g_AreasNetworked;
-CUtlVector<int> g_ClustersNetworked;
+std::vector< int > g_AreasNetworked;
+std::vector< int > g_ClustersNetworked;
 
 static void SV_AddToFatPVS( int nClusterIndex )
 {
@@ -1609,8 +1609,8 @@ void SV_ResetPVS( byte* pvs, int nPVSSize )
     }
 
     Q_memset (s_pFatPVS, 0, s_FatBytes);
-    g_ClustersNetworked.RemoveAll();
-    g_AreasNetworked.RemoveAll();
+    g_ClustersNetworked.clear();
+    g_AreasNetworked.clear();
 }
 
 /*
@@ -1624,17 +1624,17 @@ void SV_AddOriginToPVS( const Vector& vOrigin )
     int nLeafIndex = CM_PointLeafnum( vOrigin );
     int nClusterIndex = CM_LeafCluster( nLeafIndex );
     // already included this cluster in the PVS?
-    if ( g_ClustersNetworked.Find( nClusterIndex ) != -1 )
+    if ( ks::find_index( g_ClustersNetworked, nClusterIndex ) != -1 )
         return;
 
     // mark as included
-    g_ClustersNetworked.AddToTail( nClusterIndex );
+    g_ClustersNetworked.push_back( nClusterIndex );
     SV_AddToFatPVS( nClusterIndex );
 
     int nArea = CM_LeafArea( nLeafIndex );
-    if ( g_AreasNetworked.Find( nArea ) != -1 )
+    if ( ks::find_index( g_AreasNetworked, nArea ) != -1 )
         return;
-    g_AreasNetworked.AddToTail( nArea );
+    g_AreasNetworked.push_back( nArea );
 }
 
 void CGameServer::BroadcastSound( SoundInfo_t &sound, IRecipientFilter &filter )
@@ -1738,7 +1738,7 @@ void CGameServer::SetHibernating( bool bHibernating )
 				}
 			}
             // see if we have any other connected bot clients
-            for ( int iClient = 0; iClient < m_Clients.Count(); iClient++ )
+            for ( int iClient = 0; iClient < std::ssize( m_Clients ); iClient++ )
             {			
                 CBaseClient *pClient = m_Clients[iClient];
                 if ( pClient->IsFakeClient() && pClient->IsConnected() && !pClient->IsSplitScreenUser() )
@@ -1772,12 +1772,12 @@ void CGameServer::SetHibernating( bool bHibernating )
 							( ( Plat_FloatTime() - s_flPlatFloatTimeBeginUptime ) / 3600.0 < sv_minuptimelimit.GetFloat() ) )
 						{
 							Warning( "Server is using %dMB with an sv_memory_limit of %dMB, but will not shutdown because sv_minuptimelimit is %.3f hr while current uptime is %.3f\n",
-								ApproximateProcessMemoryUsage() / ( 1024 * 1024 ), sv_memlimit.GetInt(),
+								(int)( ApproximateProcessMemoryUsage() / ( 1024 * 1024 ) ), sv_memlimit.GetInt(),
 								sv_minuptimelimit.GetFloat(), ( Plat_FloatTime() - s_flPlatFloatTimeBeginUptime ) / 3600.0 );
 						}
 						else
 						{
-							Warning( "Server shutting down because of using %dMB with an sv_memory_limit of %dMB\n", ApproximateProcessMemoryUsage() / ( 1024 * 1024 ), sv_memlimit.GetInt() );
+							Warning( "Server shutting down because of using %dMB with an sv_memory_limit of %dMB\n", (int)( ApproximateProcessMemoryUsage() / ( 1024 * 1024 ) ), sv_memlimit.GetInt() );
 							bExit = true;
 						}
                     }
@@ -1788,7 +1788,7 @@ void CGameServer::SetHibernating( bool bHibernating )
 				{
 					Warning( "Server will shutdown because sv_maxuptimelimit is %.3f hr while current uptime is %.3f, using %dMB with an sv_memory_limit of %dMB\n",
 						sv_maxuptimelimit.GetFloat(), ( Plat_FloatTime() - s_flPlatFloatTimeBeginUptime ) / 3600.0,
-						ApproximateProcessMemoryUsage() / ( 1024 * 1024 ), sv_memlimit.GetInt() );
+						(int)( ApproximateProcessMemoryUsage() / ( 1024 * 1024 ) ), sv_memlimit.GetInt() );
 					bExit = true;
 				}
             }
@@ -1849,7 +1849,7 @@ void CGameServer::UpdateHibernationState()
 	bool bHaveAnyClients = false;
 
 	// see if we have any other connected clients
-	for ( int iClient = 0; iClient < m_Clients.Count(); iClient++ )
+	for ( int iClient = 0; iClient < std::ssize( m_Clients ); iClient++ )
 	{
 		CBaseClient *pClient = m_Clients[ iClient ];
 		// don't consider the client being removed, it still shows as connected but won't be in a moment
@@ -1949,17 +1949,17 @@ void CGameServer::CopyTempEntities( CFrameSnapshot* pSnapshot )
 {
     Assert( pSnapshot->m_pTempEntities == nullptr );
 
-    if ( m_TempEntities.Count() > 0 )
+    if ( !m_TempEntities.empty() )
     {
         // copy temp entities if any
-        pSnapshot->m_nTempEntities = m_TempEntities.Count();
+        pSnapshot->m_nTempEntities = std::ssize( m_TempEntities );
 
         pSnapshot->m_pTempEntities = new CEventInfo*[pSnapshot->m_nTempEntities];
 
-        Q_memcpy( pSnapshot->m_pTempEntities, m_TempEntities.Base(), m_TempEntities.Count() * sizeof( CEventInfo * ) );
+        Q_memcpy( pSnapshot->m_pTempEntities, m_TempEntities.data(), std::ssize( m_TempEntities ) * sizeof( CEventInfo * ) );
 
         // clear server list
-        m_TempEntities.RemoveAll();
+        m_TempEntities.clear();
     }
 }
 
@@ -2027,7 +2027,7 @@ void CGameServer::SendClientMessages ( bool bSendSnapshots )
             // Add this client to the list of clients we're gonna send to.
             pReceivingClients[receivingClientCount] = client;
             ++receivingClientCount;
-			bHLTVOnly = bHLTVOnly && client->IsHLTV() && client->m_pLastSnapshot.IsValid();
+			bHLTVOnly = bHLTVOnly && client->IsHLTV() && static_cast< bool >( client->m_pLastSnapshot );
         }
         else
         {
@@ -2191,7 +2191,7 @@ void SV_BroadcastVoiceData(IClient * cl, const ks::net::CCLCMsg_VoiceData& msg )
 
 	if ( voice_debugfeedbackfrom.GetBool() )
 	{
-		Msg( "Sending voice from: %s - playerslot: %d [ xuid %llx ]\n", cl->GetClientName(), cl->GetPlayerSlot() + 1, msg.xuid );
+		Msg( "Sending voice from: %s - playerslot: %d [ xuid %llx ]\n", cl->GetClientName(), cl->GetPlayerSlot() + 1, (unsigned long long)msg.xuid );
 	}
 
     for(int i=0; i < sv.GetClientCount(); i++)
@@ -2206,7 +2206,7 @@ void SV_BroadcastVoiceData(IClient * cl, const ks::net::CCLCMsg_VoiceData& msg )
             if ( voice_verbose.GetBool() )
             {
                 Msg( "* SV_BroadcastVoiceData:  Not active (SignonState %d).  Dropping %d bytes from %s (%s) to %s (%s)\n", 
-					((CBaseClient*)pDestClient)->GetSignonState(), voiceData.voice_data->size(), 
+					((CBaseClient*)pDestClient)->GetSignonState(), (int)voiceData.voice_data->size(), 
 					cl->GetClientName(), 
 					cl->GetNetChannel() ? cl->GetNetChannel()->GetAddress() : "null", 
 					pDestClient->GetClientName(), pDestClient->GetNetChannel() ? pDestClient->GetNetChannel()->GetAddress() : "null" );
@@ -2249,7 +2249,7 @@ void SV_BroadcastVoiceData(IClient * cl, const ks::net::CCLCMsg_VoiceData& msg )
             if ( voice_verbose.GetBool() )
             {
                 Msg( "* SV_BroadcastVoiceData:  Doesn't hear player.  Dropping %d bytes from %s (%s) to %s (%s)\n", 
-					voiceData.voice_data->size(), cl->GetClientName(), 
+					(int)voiceData.voice_data->size(), cl->GetClientName(), 
 					cl->GetNetChannel() ? cl->GetNetChannel()->GetAddress() : "null", 
 					pDestClient->GetClientName(), pDestClient->GetNetChannel() ? pDestClient->GetNetChannel()->GetAddress() : "null" );
             }
@@ -2279,7 +2279,7 @@ void SV_BroadcastVoiceData(IClient * cl, const ks::net::CCLCMsg_VoiceData& msg )
 
         if ( voice_verbose.GetBool() )
         {
-            Msg( "* SV_BroadcastVoiceData: Sending %d bits (%d bytes) from %s (%s) to %s (%s).  Proximity %s.\n", voiceData.voice_data->size(), Bits2Bytes(voiceData.voice_data->size()), cl->GetClientName(), cl->GetNetChannel() ? cl->GetNetChannel()->GetAddress() : "null", pDestClient->GetClientName(), pDestClient->GetNetChannel() ? pDestClient->GetNetChannel()->GetAddress() : "null", voiceData.proximity ? "true" : "false" );
+            Msg( "* SV_BroadcastVoiceData: Sending %d bits (%d bytes) from %s (%s) to %s (%s).  Proximity %s.\n", (int)voiceData.voice_data->size(), Bits2Bytes((int)voiceData.voice_data->size()), cl->GetClientName(), cl->GetNetChannel() ? cl->GetNetChannel()->GetAddress() : "null", pDestClient->GetClientName(), pDestClient->GetNetChannel() ? pDestClient->GetNetChannel()->GetAddress() : "null", voiceData.proximity ? "true" : "false" );
         }
     }
 }
@@ -2301,8 +2301,8 @@ void SV_CreateBaseline (void)
     // Send SendTable info.
     if ( sv_sendtables.GetInt() )
     {
-        sv.m_FullSendTablesBuffer.EnsureCapacity( NET_MAX_PAYLOAD );
-        sv.m_FullSendTables.StartWriting( sv.m_FullSendTablesBuffer.Base(), sv.m_FullSendTablesBuffer.Count() );
+        ks::grow_to( sv.m_FullSendTablesBuffer, NET_MAX_PAYLOAD );
+        sv.m_FullSendTables.StartWriting( sv.m_FullSendTablesBuffer.data(), std::ssize( sv.m_FullSendTablesBuffer ) );
         
         SV_WriteSendTables( pClasses, sv.m_FullSendTables );
         
@@ -2364,8 +2364,7 @@ void SV_CreateBaseline (void)
                 pSendTable, 
                 handle,
                 edict->GetUnknown(), 
-                entnum,
-                nullptr
+                entnum
                 ) )
             {
                 Host_Error("SV_CreateBaseline: SendTable_Encode returned false (ent %d).\n", entnum);
@@ -2574,8 +2573,6 @@ bool SV_ActivateServer()
     return true;
 }
 
-#include "tier0/memdbgoff.h"
-
 static void SV_AllocateEdicts()
 {
     sv.edicts = (edict_t *)Hunk_AllocName( sv.max_edicts*sizeof(edict_t), "edicts" );
@@ -2589,8 +2586,6 @@ static void SV_AllocateEdicts()
 
     sv.edictchangeinfo = (IChangeInfoAccessor *)Hunk_AllocName( sv.max_edicts * sizeof( IChangeInfoAccessor ), "edictchangeinfo" );
 }
-
-#include "tier0/memdbgon.h"
 
 
 void CGameServer::ReloadWhitelist( const char *pMapName )
@@ -2762,8 +2757,8 @@ bool CGameServer::SpawnServer( char *mapname, char * mapGroupName, char *startsp
         deathmatch.SetValue( 0 );
     }
 
-    current_skill = MAX( current_skill, 0 );
-    current_skill = MIN( current_skill, 3 );
+    current_skill = std::max( current_skill, 0 );
+    current_skill = std::min( current_skill, 3 );
 
     skill.SetValue( (float)current_skill );
 
@@ -2883,7 +2878,7 @@ bool CGameServer::SpawnServer( char *mapname, char * mapGroupName, char *startsp
     flStartTimeOverride = CommandLine()->ParmValue( "-servertime", flStartTimeOverride );
     if ( flStartTimeOverride != -1.0f )
     {
-        m_nTickCount = MAX( (int)( flStartTimeOverride / host_state.interval_per_tick ) + 1, 1 );
+        m_nTickCount = std::max( (int)( flStartTimeOverride / host_state.interval_per_tick ) + 1, 1 );
     }
     g_ServerGlobalVariables.tickcount = m_nTickCount;
     g_ServerGlobalVariables.curtime = GetTime();

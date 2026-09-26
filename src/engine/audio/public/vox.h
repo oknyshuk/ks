@@ -15,6 +15,8 @@
 #define VOX_H
 #pragma once
 
+#include <string_view>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -22,7 +24,6 @@ extern "C" {
 struct sfxcache_t;
 struct channel_t;
 
-class CUtlSymbol;
 
 extern void				VOX_Init( void );
 extern void 			VOX_Shutdown( void );
@@ -30,7 +31,7 @@ extern void				VOX_ReadSentenceFile( const char *psentenceFileName );
 extern int				VOX_SentenceCount( void );
 extern void				VOX_LoadSound( channel_t *pchan, const char *psz );
 // UNDONE: Improve the interface of this call, it returns sentence data AND the sentence index
-extern char				*VOX_LookupString( const char *pSentenceName, int *psentencenum, bool *pbEmitCaption = nullptr, CUtlSymbol *pCaptionSymbol = nullptr, float * pflDuration = nullptr );
+extern char				*VOX_LookupString( const char *pSentenceName, int *psentencenum, bool *pbEmitCaption = nullptr, std::string_view *pCaptionSymbol = nullptr, float * pflDuration = nullptr );
 extern void				VOX_PrecacheSentenceGroup( class IEngineSound *pSoundSystem, const char *pGroupName, const char *pPathOverride = nullptr );
 extern const char		*VOX_SentenceNameFromIndex( int sentencenum );
 extern float			VOX_SentenceLength( int sentence_num );

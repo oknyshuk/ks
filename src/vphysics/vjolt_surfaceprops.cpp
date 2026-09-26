@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2022 Joshua Ashton and Josh Dowell (Slartibarty)
+
 
 #include "cbase.h"
 
@@ -5,9 +8,6 @@
 #include "vjolt_keyvalues_schema.h"
 
 #include "vjolt_surfaceprops.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-------------------------------------------------------------------------------------------------
 
@@ -97,7 +97,9 @@ JoltPhysicsSurfaceProps::JoltPhysicsSurfaceProps()
 	prop.data.physics.density		= 2000.0f;
 	prop.data.physics.thickness		= 0.0f;
 	prop.data.physics.dampening		= 0.0f;
-	m_SurfaceProps[ "default" ] = prop;
+	m_SurfaceProps.push_back( prop );
+	m_SurfacePropNames.emplace_back( "default" );
+	m_SurfacePropIndex.emplace( "default", 0 );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -113,28 +115,29 @@ int JoltPhysicsSurfaceProps::ParseSurfaceData( const char *pFilename, const char
 		JoltSurfaceProp values = {};
 		// Try to find it if we already have a material with this name,
 		// so we can update the values on it, otherwise take the base material.
-		UtlSymId_t id = m_SurfaceProps.Find( pSurfaceName );
-		if ( id != m_SurfaceProps.InvalidIndex() )
-			values = m_SurfaceProps[ id ];
-		else
-			values = m_SurfaceProps[ BaseMaterialIdx ];
+		const int *pId = ks::find_ptr( m_SurfacePropIndex, pSurfaceName );
+		values = m_SurfaceProps[ pId ? *pId : BaseMaterialIdx ];
 
 		ParseJoltKVSchema( pSurface, kSurfacePropDescs, uint( std::size( kSurfacePropDescs ) ), &values );
 
 		// If we don't have this already, add it,
 		// otherwise update the values.
-		if ( id == m_SurfaceProps.InvalidIndex() )
-			m_SurfaceProps[ pSurfaceName ] = values;
+		if ( !pId )
+		{
+			m_SurfacePropIndex.emplace( pSurfaceName, int( m_SurfaceProps.size() ) );
+			m_SurfacePropNames.emplace_back( pSurfaceName );
+			m_SurfaceProps.push_back( values );
+		}
 		else
-			m_SurfaceProps[ id ] = values;
+			m_SurfaceProps[ *pId ] = values;
 	}
 
-	return m_SurfaceProps.GetNumStrings();
+	return int( m_SurfaceProps.size() );
 }
 
 int JoltPhysicsSurfaceProps::SurfacePropCount( void ) const
 {
-	return int ( m_SurfaceProps.GetNumStrings() );
+	return int ( m_SurfaceProps.size() );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -143,17 +146,16 @@ int JoltPhysicsSurfaceProps::GetSurfaceIndex( const char *pSurfacePropName ) con
 {
 	// TODO(Josh): Something about reserved props for $MATERIAL_INDEX_SHADOW
 
-	UtlSymId_t nIndex = m_SurfaceProps.Find( pSurfacePropName );
-	if ( nIndex != m_SurfaceProps.InvalidIndex() )
-		return int( nIndex );
+	if ( const int *pIndex = ks::find_ptr( m_SurfacePropIndex, pSurfacePropName ) )
+		return *pIndex;
 
 	return -1;
 }
 
 void JoltPhysicsSurfaceProps::GetPhysicsProperties( int surfaceDataIndex, float *density, float *thickness, float *friction, float *elasticity ) const
 {
-	const UtlSymId_t id = surfaceDataIndex >= 0 && surfaceDataIndex < int( m_SurfaceProps.GetNumStrings() )
-		? UtlSymId_t( surfaceDataIndex )
+	const int id = surfaceDataIndex >= 0 && surfaceDataIndex < int( m_SurfaceProps.size() )
+		? surfaceDataIndex
 		: BaseMaterialIdx;
 
 	const JoltSurfaceProp& prop = m_SurfaceProps[ id ];
@@ -167,8 +169,8 @@ void JoltPhysicsSurfaceProps::GetPhysicsProperties( int surfaceDataIndex, float 
 
 surfacedata_t *JoltPhysicsSurfaceProps::GetSurfaceData( int surfaceDataIndex )
 {
-	const UtlSymId_t id = surfaceDataIndex >= 0 && surfaceDataIndex < int( m_SurfaceProps.GetNumStrings() )
-		? UtlSymId_t( surfaceDataIndex )
+	const int id = surfaceDataIndex >= 0 && surfaceDataIndex < int( m_SurfaceProps.size() )
+		? surfaceDataIndex
 		: BaseMaterialIdx;
 
 	JoltSurfaceProp& prop = m_SurfaceProps[ id ];
@@ -177,16 +179,16 @@ surfacedata_t *JoltPhysicsSurfaceProps::GetSurfaceData( int surfaceDataIndex )
 
 const char *JoltPhysicsSurfaceProps::GetString( unsigned short stringTableIndex ) const
 {
-	return m_SoundStrings.String( stringTableIndex );
+	return stringTableIndex < m_SoundStrings.size() ? m_SoundStrings[ stringTableIndex ].c_str() : "";
 }
 
 //-------------------------------------------------------------------------------------------------
 
 const char *JoltPhysicsSurfaceProps::GetPropName( int surfaceDataIndex ) const
 {
-	if ( surfaceDataIndex < 0 || surfaceDataIndex >= int ( m_SurfaceProps.GetNumStrings() ) )
+	if ( surfaceDataIndex < 0 || surfaceDataIndex >= int ( m_SurfaceProps.size() ) )
 		return nullptr;
-	return m_SurfaceProps.String( surfaceDataIndex );
+	return m_SurfacePropNames[ surfaceDataIndex ].c_str();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -203,8 +205,8 @@ void JoltPhysicsSurfaceProps::GetPhysicsParameters( int surfaceDataIndex, surfac
 	if ( !pParamsOut )
 		return;
 
-	const UtlSymId_t id = surfaceDataIndex >= 0 && surfaceDataIndex < int( m_SurfaceProps.GetNumStrings() )
-		? UtlSymId_t( surfaceDataIndex )
+	const int id = surfaceDataIndex >= 0 && surfaceDataIndex < int( m_SurfaceProps.size() )
+		? surfaceDataIndex
 		: BaseMaterialIdx;
 
 	const JoltSurfaceProp& prop = m_SurfaceProps[ id ];
@@ -215,7 +217,12 @@ void JoltPhysicsSurfaceProps::GetPhysicsParameters( int surfaceDataIndex, surfac
 
 unsigned short JoltPhysicsSurfaceProps::RegisterSound( const char *pName )
 {
-	return m_SoundStrings.AddString( pName );
+	if ( !pName )
+		return (unsigned short)~0;
+	auto [it, bNew] = m_SoundStringIndex.try_emplace( pName, (unsigned short)m_SoundStrings.size() );
+	if ( bNew )
+		m_SoundStrings.emplace_back( pName );
+	return it->second;
 }
 
 //-------------------------------------------------------------------------------------------------

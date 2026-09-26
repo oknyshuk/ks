@@ -128,11 +128,10 @@ class CUserCmd;
 class CSkyCamera;
 class CEntityMapData;
 class CWorld;
-typedef unsigned int UtlHashHandle_t;
 class INextBot;
 class CGlobalEvent;
 
-typedef CUtlVector< CBaseEntity* > EntityList_t;
+typedef std::vector< CBaseEntity* > EntityList_t;
 
 
 //
@@ -839,7 +838,7 @@ protected:
 		THINK_FIRE_ALL_BUT_BASE,
 	};
 	int		GetIndexForThinkContext( const char *pszContext );
-	CUtlVector< thinkfunc_t >	m_aThinkFunctions;
+	std::vector< thinkfunc_t >	m_aThinkFunctions;
 
 #ifdef _DEBUG
 	int							m_iCurrentThinkContext;
@@ -858,7 +857,7 @@ public:
 	void		ClearAllContexts( void );
 
 protected:
-	CUtlVector< ResponseContext_t > m_ResponseContexts;
+	std::vector< ResponseContext_t > m_ResponseContexts;
 
 	// Map defined context sets
 	[[= ks::reflect::Key{ .name = "ResponseContext" } ]] string_t	m_iszResponseContext;
@@ -1380,7 +1379,7 @@ public:
 	// For each client who appears to be a valid recipient, checks the client has disabled CC and if so, removes them from 
 	//  the recipient list.
 	static void RemoveRecipientsIfNotCloseCaptioning( CRecipientFilter& filter );
-	static void EmitCloseCaption( IRecipientFilter& filter, int entindex, char const *token, CUtlVector< Vector >& soundorigins, float duration, bool warnifmissing = false );
+	static void EmitCloseCaption( IRecipientFilter& filter, int entindex, char const *token, std::vector< Vector >& soundorigins, float duration, bool warnifmissing = false );
 	static void	EmitSentenceByIndex( IRecipientFilter& filter, int iEntIndex, int iChannel, int iSentenceIndex, 
 		float flVolume, soundlevel_t iSoundlevel, int iFlags = 0, int iPitch = PITCH_NORM,
 		const Vector *pOrigin = nullptr, const Vector *pDirection = nullptr, bool bUpdatePositions = true, float soundtime = 0.0f );
@@ -1632,7 +1631,7 @@ protected:
 	// Damage modifiers
 #if defined(ENABLE_DAMAGE_MODIFIERS)
 	friend class CDamageModifier;
-	CUtlLinkedList<CDamageModifier*,int>	m_DamageModifiers;		// ONLY TF, REMOVE?
+	std::vector<CDamageModifier*>	m_DamageModifiers;		// ONLY TF, REMOVE?
 #endif
 
 	EHANDLE m_pParent;  // for movement hierarchy
@@ -1779,7 +1778,7 @@ private:
 	// was pev->view_ofs ( FIXME:  Move somewhere up the hierarch, CBaseAnimating, etc. )
 	CNetworkVectorXYZForDerived( m_vecViewOffset, [[= ks::reflect::Key{ .name = "view_ofs" } ]] );
 
-	UtlHashHandle_t		m_ListByClass;
+	CBaseEntity	**		m_ppListByClassHead;	// head slot of this classname's list in g_EntsByClassname
 	CBaseEntity	*		m_pPrevByClass;
 	CBaseEntity	*		m_pNextByClass;
 	// So it can get at the physics methods
@@ -2093,7 +2092,7 @@ inline const char *CBaseEntity::GetPreTemplateName()
 	if ( !pszDelimiter )
 		return STRING( m_iName.Get() );
 	static char szStrippedName[128];
-	V_strncpy( szStrippedName, STRING( m_iName.Get() ), MIN( ARRAYSIZE(szStrippedName), pszDelimiter - STRING( m_iName.Get() ) + 1 ) );
+	V_strncpy( szStrippedName, STRING( m_iName.Get() ), std::min<std::common_type_t<long unsigned int, long int>>( ARRAYSIZE(szStrippedName), pszDelimiter - STRING( m_iName.Get() ) + 1 ) );
 	return szStrippedName;
 }
 

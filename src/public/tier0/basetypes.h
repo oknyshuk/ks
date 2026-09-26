@@ -45,10 +45,7 @@
 // so the PC version built in the xbox branch includes things like
 // tickrate changes.
 
-// stdio.h
-#ifndef nullptr
-#define NULL 0
-#endif
+// NULL comes from <stddef.h>, pulled in through platform.h
 
 #include <stdint.h>
 
@@ -90,13 +87,11 @@ T abs( const T &a )
 // #define COMPILETIME_MAX and COMPILETIME_MIN for max/min in constant expressions
 #define COMPILETIME_MIN( a, b ) ( ( ( a ) < ( b ) ) ? ( a ) : ( b ) )
 #define COMPILETIME_MAX( a, b ) ( ( ( a ) > ( b ) ) ? ( a ) : ( b ) )
-#ifndef MIN
-#define MIN( a, b ) ( ( ( a ) < ( b ) ) ? ( a ) : ( b ) )
-#endif
 
-#ifndef MAX
-#define MAX( a, b ) ( ( ( a ) > ( b ) ) ? ( a ) : ( b ) )
-#endif
+// MIN()/MAX() used to live here as type-agnostic macros. They are gone: every call site now
+// uses std::min/std::max (or std::clamp) from <algorithm>. The macros were a recurring source
+// of "not declared in this scope" because files picked them up transitively, and they
+// double-evaluated their arguments.
 
 
 
@@ -148,9 +143,9 @@ T Max( T const &val1, T const &val2 )
 template <typename T>
 void Swap( T &a, T &b )
 {
-	T temp = a;
-	a = b;
-	b = temp;
+	T temp = std::move( a );
+	a = std::move( b );
+	b = std::move( temp );
 }
 
 #else

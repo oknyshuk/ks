@@ -20,8 +20,6 @@
 #include "shaderapifast.h"
 #include "tier0/vprof.h"
 
-#include "tier0/memdbgon.h"
-
 ConVar mat_disable_fancy_blending( "mat_disable_fancy_blending", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
 
 extern ConVar mat_ambient_light_r;

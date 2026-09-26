@@ -20,9 +20,6 @@
 #include "view.h"
 #include "precache_register.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //
 // CRocketTrailParticle
 //
@@ -158,7 +155,7 @@ C_SmokeTrail::C_SmokeTrail()
 
 C_SmokeTrail::~C_SmokeTrail()
 {
-	if ( ToolsEnabled() && clienttools->IsInRecordingMode() && m_pSmokeEmitter.IsValid() && m_pSmokeEmitter->GetToolParticleEffectId() != TOOLPARTICLESYSTEMID_INVALID )
+	if ( ToolsEnabled() && clienttools->IsInRecordingMode() && m_pSmokeEmitter && m_pSmokeEmitter->GetToolParticleEffectId() != TOOLPARTICLESYSTEMID_INVALID )
 	{
 		KeyValues *msg = new KeyValues( "OldParticleSystem_ActivateEmitter" );
 		msg->SetInt( "id", m_pSmokeEmitter->GetToolParticleEffectId() );
@@ -309,7 +306,7 @@ void C_SmokeTrail::Update( float fTimeDelta )
 		VectorMA( pParticle->m_vecVelocity, flDirectedVel, vecForward, pParticle->m_vecVelocity );
 
 		offsetColor = m_StartColor;
-		float flMaxVal = MAX( m_StartColor[0], m_StartColor[1] );
+		float flMaxVal = std::max( m_StartColor[0], m_StartColor[1] );
 		if ( flMaxVal < m_StartColor[2] )
 		{
 			flMaxVal = m_StartColor[2];
@@ -367,7 +364,7 @@ void C_SmokeTrail::CleanupToolRecordingState( KeyValues *msg )
 	// allocated state it put into the message, but here we're going
 	// to use it to send particle system messages because we
 	// know the grenade has been recorded at this point
-	if ( !clienttools->IsInRecordingMode() || !m_pSmokeEmitter.IsValid() )
+	if ( !clienttools->IsInRecordingMode() || !m_pSmokeEmitter )
 		return;
 	
 	// For now, we can't record smoketrails that don't have a moveparent
@@ -630,7 +627,7 @@ void C_RocketTrail::Update( float fTimeDelta )
 	if ( gpGlobals->frametime == 0.0f )
 		return;
 
-	CSmartPtr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "MuzzleFlash" );
+	ks::intrusive_ptr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "MuzzleFlash" );
 	pSimple->SetSortOrigin( GetAbsOrigin() );
 	
 	SimpleParticle *pParticle;
@@ -744,7 +741,7 @@ void C_RocketTrail::Update( float fTimeDelta )
 		Vector			offset;
 		Vector			offsetColor;
 
-		CSmartPtr<CEmberEffect>	pEmitter = CEmberEffect::Create("C_RocketTrail::damaged");
+		ks::intrusive_ptr<CEmberEffect>	pEmitter = CEmberEffect::Create("C_RocketTrail::damaged");
 
 		pEmitter->SetSortOrigin( GetAbsOrigin() );
 
@@ -1146,7 +1143,7 @@ private:
 
 	PMaterialHandle		m_hMaterial;
 	TimedEvent			m_teParticleSpawn;
-	//CSmartPtr<SporeSmokeEffect> m_pSmokeEffect;
+	//ks::intrusive_ptr<SporeSmokeEffect> m_pSmokeEffect;
 
 	Vector			m_vecPos;
 	Vector			m_vecLastPos;	// This is stored so we can spawn particles in between the previous and new position
@@ -1440,7 +1437,7 @@ void C_FireTrail::Update( float fTimeDelta )
 	if ( ( m_flLifetime != 0 ) && ( m_flLifetime <= gpGlobals->curtime ) )
 		return;
 
-	CSmartPtr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "FireTrail" );
+	ks::intrusive_ptr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "FireTrail" );
 	pSimple->SetSortOrigin( GetAbsOrigin() );
 	
 	Vector			offset;
@@ -1576,7 +1573,7 @@ C_DustTrail::C_DustTrail()
 
 C_DustTrail::~C_DustTrail()
 {
-	if ( ToolsEnabled() && clienttools->IsInRecordingMode() && m_pDustEmitter.IsValid() && m_pDustEmitter->GetToolParticleEffectId() != TOOLPARTICLESYSTEMID_INVALID )
+	if ( ToolsEnabled() && clienttools->IsInRecordingMode() && m_pDustEmitter && m_pDustEmitter->GetToolParticleEffectId() != TOOLPARTICLESYSTEMID_INVALID )
 	{
 		KeyValues *msg = new KeyValues( "OldParticleSystem_ActivateEmitter" );
 		msg->SetInt( "id", m_pDustEmitter->GetToolParticleEffectId() );
@@ -1740,7 +1737,7 @@ void C_DustTrail::Update( float fTimeDelta )
 		VectorMA( pParticle->m_vecVelocity, flDirectedVel, vecForward, pParticle->m_vecVelocity );
 
 		offsetColor = m_Color;
-		float flMaxVal = MAX( m_Color[0], m_Color[1] );
+		float flMaxVal = std::max( m_Color[0], m_Color[1] );
 		if ( flMaxVal < m_Color[2] )
 		{
 			flMaxVal = m_Color[2];
@@ -1803,7 +1800,7 @@ void C_DustTrail::CleanupToolRecordingState( KeyValues *msg )
 	// allocated state it put into the message, but here we're going
 	// to use it to send particle system messages because we
 	// know the grenade has been recorded at this point
-	if ( !clienttools->IsInRecordingMode() || !m_pDustEmitter.IsValid() )
+	if ( !clienttools->IsInRecordingMode() || !m_pDustEmitter )
 		return;
 	
 	// For now, we can't record Dusttrails that don't have a moveparent

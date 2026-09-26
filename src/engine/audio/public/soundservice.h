@@ -18,7 +18,7 @@ typedef void *FileNameHandle_t;
 struct StartSoundParams_t;
 
 #include "cdll_int.h"
-#include "utlrbtree.h"
+#include <set>
 
 //-----------------------------------------------------------------------------
 // Purpose: Services required by the audio system to function, this facade
@@ -103,9 +103,9 @@ public:
 	// restarts the sound system externally
 	virtual void	RestartSoundSystem() = 0;
 
-	virtual void	GetAllSoundFilesReferencedInReslists( CUtlRBTree< FileNameHandle_t, int >& list ) = 0;
-	virtual void	GetAllManifestFiles( CUtlRBTree< FileNameHandle_t, int >& list ) = 0;
-	virtual void	GetAllSoundFilesInManifest( CUtlRBTree< FileNameHandle_t, int >& list, char const *manifestfile ) = 0;
+	virtual void	GetAllSoundFilesReferencedInReslists( std::set< FileNameHandle_t >& list ) = 0;
+	virtual void	GetAllManifestFiles( std::set< FileNameHandle_t >& list ) = 0;
+	virtual void	GetAllSoundFilesInManifest( std::set< FileNameHandle_t >& list, char const *manifestfile ) = 0;
 
 	virtual void	CacheBuildingStart() = 0;
 	virtual void	CacheBuildingUpdateProgress( float percent, char const *cachefile ) = 0;

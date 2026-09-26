@@ -185,16 +185,6 @@ extern const float CS_PLAYER_DUCK_SPEED_IDEAL;
 inline bool IsPreCrouchUpdateDemo( void ) { return (engine->IsHLTV() || engine->IsPlayingDemo()) && engine->GetConnectionDataProtocol() <= OLD_CROUCH_PROTOCOL_INDEX; }
 #endif
 
-template< class T >
-class CUtlVectorInitialized : public CUtlVector< T >
-{
-public:
-	CUtlVectorInitialized( T* pMemory, int numElements ) : CUtlVector< T >( pMemory, numElements )
-	{
-		CUtlVector< T >::SetSize( numElements );
-	}
-};
-
 namespace TeamJoinFailedReason
 {
 	enum Type

@@ -10,9 +10,6 @@
 #include "sos_entry_match_system.h"
 #include "sos_op_block_entry.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 
 extern Color OpColor;

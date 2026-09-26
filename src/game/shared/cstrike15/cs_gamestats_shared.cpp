@@ -10,9 +10,6 @@
 #endif
 #include "cs_gamestats_shared.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 // note:  We don't log match stats for any maps with CSSTAT_UNDEFINED for matchID
 const MapName_MapStatId MapName_StatId_Table[] =
 {

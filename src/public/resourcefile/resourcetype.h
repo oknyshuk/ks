@@ -12,6 +12,7 @@
 #define RESOURCETYPE_H
 #pragma once
 
+#include <atomic>
 #include "resourcefile/schema.h"
 #include "tier0/threadtools.h"
 #include "tier2/tier2.h" // g_nResourceFrameCount defn
@@ -80,7 +81,7 @@ struct ResourceBindingBase_t
 	void *m_pData;							// Needs to be a pointer type or a handle (RenderTextureHandle_t etc)
 	mutable uint32 m_nLastBindFrame;		// When's the last frame this was used?
 	uint32 m_nFlags;						// Flags
-	mutable CInterlockedInt m_nRefCount;	// How many resource pointers point to this resource?
+	mutable std::atomic<int> m_nRefCount;	// How many resource pointers point to this resource?
 };
 
 template< class T >

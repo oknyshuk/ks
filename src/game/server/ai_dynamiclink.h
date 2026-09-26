@@ -97,7 +97,7 @@ public:
 	[[= ks::reflect::Input{ .name = "SetAllowed", .type = FIELD_STRING } ]] void InputSetAllowed( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "SetInvert", .type = FIELD_BOOLEAN } ]] void InputSetInvert( inputdata_t &inputdata );
 	
-	CUtlVector< CHandle<CAI_DynamicLink> > m_ControlledLinks;
+	std::vector< CHandle<CAI_DynamicLink> > m_ControlledLinks;
 	[[= ks::reflect::Key{ .name = "initialstate" } ]] DynamicLinkState_t			m_nLinkState;
 	[[= ks::reflect::Key{ .name = "AllowUse" } ]] string_t					m_strAllowUse;		// Only this entity name or classname may use the link
 	[[= ks::reflect::Key{ .name = "Priority" } ]] int							m_nPriority;

@@ -12,9 +12,6 @@
 #include "tier1/strtools.h"
 #include "tier0/dbg.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // The four core functions - F1 is optimized somewhat
 // #define F1(x, y, z) (x & y | ~x & z)
 #define F1(x, y, z) (z ^ (x & (y ^ z)))

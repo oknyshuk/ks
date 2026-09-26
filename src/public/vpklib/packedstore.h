@@ -13,10 +13,16 @@
 #include <tier2/tier2.h>
 
 #include "filesystem.h"
-#include "tier1/utlintrusivelist.h"
 #include "tier1/utlvector.h"
-#include "tier1/utlsortvector.h"
-#include "tier1/utlmap.h"
+#include <atomic>
+#include <deque>
+#include <map>
+#include <mutex>
+#include <shared_mutex>
+#include <string_view>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
 
 //#define VPK_ENABLE_SIGNING
 
@@ -33,10 +39,9 @@ struct ChunkHashFraction_t
 	MD5Value_t m_md5contents;
 };
 
-class ChunkHashFractionLess_t
+struct ChunkHashFractionLess_t
 {
-public:
-	bool Less( const ChunkHashFraction_t& lhs, const ChunkHashFraction_t& rhs, void *pContext )
+	bool operator()( const ChunkHashFraction_t& lhs, const ChunkHashFraction_t& rhs ) const
 	{
 		if ( lhs.m_nPackFileNumber < rhs.m_nPackFileNumber )
 			return true;
@@ -88,7 +93,7 @@ public:
 				nOffset = m_nFileSize + nOffset;
 				break;
 		}
-		m_nCurrentFileOffset = MAX( 0, MIN( m_nFileSize, nOffset ) );
+		m_nCurrentFileOffset = std::max( 0, std::min( m_nFileSize, nOffset ) );
 		return m_nCurrentFileOffset;
 	}
 
@@ -119,7 +124,7 @@ struct FileHandleTracker_t
 	int m_nFileNumber;
 	PackDataFileHandle_t m_hFileHandle;
 	int m_nCurOfs;
-	CThreadFastMutex m_Mutex;
+	std::recursive_mutex m_Mutex;
 
 	FileHandleTracker_t( void )
 	{
@@ -139,7 +144,7 @@ enum ePackedStoreAddResultCode
 // purposes and during file building
 struct VPKContentFileInfo_t
 {
-	CUtlString m_sName;
+	std::string m_sName;
 	int m_idxChunk;
 	uint32 m_iTotalSize;
 	uint32 m_iOffsetInChunk;
@@ -191,20 +196,6 @@ struct CachedVPKRead_t
 	int m_cFailedHashes;	// did the MD5 match what it was supposed to?
 	MD5Value_t m_md5Value;
 	MD5Value_t m_md5ValueRetry;
-
-	static bool Less( const CachedVPKRead_t& lhs, const CachedVPKRead_t& rhs )
-	{
-		if ( lhs.m_nPackFileNumber < rhs.m_nPackFileNumber )
-			return true;
-		if ( lhs.m_nPackFileNumber > rhs.m_nPackFileNumber )
-			return false;
-		if ( lhs.m_nFileFraction < rhs.m_nFileFraction )
-			return true;
-		if ( lhs.m_nFileFraction > rhs.m_nFileFraction )
-			return false;
-		return false;
-	}
-
 };
 
 
@@ -235,16 +226,18 @@ public:
 	static const int k_cubCacheBufferSize = 0x00100000; // 1MB
 	static const int k_nCacheBufferMask = 0x7FF00000;
 
-	CThreadRWLock m_rwlock;
-	CUtlRBTree<CachedVPKRead_t> m_treeCachedVPKRead; // all the reads we have done
+	std::shared_mutex m_rwlock;
+	// all the reads we have done, keyed by ( m_nPackFileNumber, m_nFileFraction )
+	typedef std::map< std::pair< int, int >, CachedVPKRead_t > CachedVPKReadMap_t;
+	CachedVPKReadMap_t m_treeCachedVPKRead;
 
 	CTSQueue<CachedVPKRead_t> m_queueCachedVPKReadsRetry; // all the reads that have failed
-	CUtlLinkedList<CachedVPKRead_t> m_listCachedVPKReadsFailed; // all the reads that have failed
+	std::vector< CachedVPKRead_t > m_listCachedVPKReadsFailed; // all the reads that have failed
 
 	// current items in the cache
 	int m_cItemsInCache;
-	int m_rgCurrentCacheIndex[k_nCacheBuffersToKeep];
-	CInterlockedUInt m_rgLastUsedTime[k_nCacheBuffersToKeep];
+	CachedVPKReadMap_t::iterator m_rgCurrentCacheIndex[k_nCacheBuffersToKeep];
+	std::atomic<unsigned> m_rgLastUsedTime[k_nCacheBuffersToKeep];
 
 	CPackedStore *m_pPackedStore;
 	IBaseFileSystem *m_pFileSystem;
@@ -290,23 +283,22 @@ public:
 
 	FORCEINLINE void *DirectoryData( void )
 	{
-		return m_DirectoryData.Base();
+		return m_DirectoryData.data();
 	}
 
-	// Get a list of all the files in the zip You are responsible for freeing the contents of
-	// outFilenames (call outFilenames.PurgeAndDeleteElements).
-	int GetFileList( CUtlStringList &outFilenames, bool bFormattedOutput, bool bSortedOutput );
+	// Get a list of all the files in the zip.
+	int GetFileList( std::vector< std::string > &outFilenames, bool bFormattedOutput, bool bSortedOutput );
 
 	// Get a list of all files that match the given wildcard string
-	int GetFileList( const char *pWildCard, CUtlStringList &outFilenames, bool bFormattedOutput, bool bSortedOutput );
+	int GetFileList( const char *pWildCard, std::vector< std::string > &outFilenames, bool bFormattedOutput, bool bSortedOutput );
 	
 	/// Get a list of all files that match the given wildcard string, fetching all the details
 	/// at once
-	void GetFileList( const char *pWildcard, CUtlVector<VPKContentFileInfo_t> &outVecResults );
+	void GetFileList( const char *pWildcard, std::vector< VPKContentFileInfo_t > &outVecResults );
 
 	// Get a list of all directories of the given wildcard
-	int GetFileAndDirLists( const char *pWildCard, CUtlStringList &outDirnames, CUtlStringList &outFilenames, bool bSortedOutput );
-	int GetFileAndDirLists( CUtlStringList &outDirnames, CUtlStringList &outFilenames, bool bSortedOutput );
+	int GetFileAndDirLists( const char *pWildCard, std::vector< std::string > &outDirnames, std::vector< std::string > &outFilenames, bool bSortedOutput );
+	int GetFileAndDirLists( std::vector< std::string > &outDirnames, std::vector< std::string > &outFilenames, bool bSortedOutput );
 
 	bool IsEmpty( void ) const;
 
@@ -328,9 +320,9 @@ public:
 	MD5Value_t &GetDirFileMD5Value() { return m_TotalFileMD5; }
 	bool BTestDirectoryHash();
 	bool BTestMasterChunkHash();
-	CUtlSortVector<ChunkHashFraction_t, ChunkHashFractionLess_t > &AccessPackFileHashes() { return m_vecChunkHashFraction; }
+	std::vector< ChunkHashFraction_t > &AccessPackFileHashes() { return m_vecChunkHashFraction; }
 	bool FindFileHashFraction( int nPackFileNumber, int nFileFraction, ChunkHashFraction_t &chunkFileHashFraction );
-	void GetPackFileLoadErrorSummary( CUtlString &sErrors );
+	void GetPackFileLoadErrorSummary( std::string &sErrors );
 	void GetPackFileLoadErrorSummaryKV( KeyValues *pKV );
 
 	void GetPackFileName( CPackedStoreFileHandle &handle, char *pchFileNameOut, int cchFileNameOut ) const;
@@ -357,8 +349,8 @@ public:
 
 	void DiscardChunkHashes( int iChunkFileIndex );
 
-	const CUtlVector<uint8> &GetSignaturePublicKey() const { return m_SignaturePublicKey; }
-	const CUtlVector<uint8> &GetSignature() const { return m_Signature; }
+	const std::vector< uint8 > &GetSignaturePublicKey() const { return m_SignaturePublicKey; }
+	const std::vector< uint8 > &GetSignature() const { return m_Signature; }
 
 #ifdef VPK_ENABLE_SIGNING
 	enum ESignatureCheckResult
@@ -386,17 +378,18 @@ private:
 
 	IBaseFileSystem *m_pFileSystem;
 	IThreadedFileMD5Processor *m_pFileTracker;
-	CThreadFastMutex m_Mutex;
+	std::recursive_mutex m_Mutex;
 	
 	CPackedStoreReadCache m_PackedStoreReadCache;
 
-	CUtlIntrusiveList<class CFileExtensionData> m_pExtensionData[PACKEDFILE_EXT_HASH_SIZE];
+	// Directory names by extension, for file lookups; the views point into m_DirectoryData.
+	std::unordered_map< std::string_view, std::unordered_set< std::string_view > > m_DirsByExtension;
 
-	CUtlVector<uint8> m_DirectoryData;
-	CUtlBlockVector<uint8> m_EmbeddedChunkData;
+	std::vector< uint8 > m_DirectoryData;
+	std::deque< uint8 > m_EmbeddedChunkData;
 
-	CUtlSortVector<ChunkHashFraction_t, ChunkHashFractionLess_t > m_vecChunkHashFraction;
-	bool BFileContainedHashes() { return m_vecChunkHashFraction.Count() > 0; }
+	std::vector< ChunkHashFraction_t > m_vecChunkHashFraction;	// sorted by ChunkHashFractionLess_t; raw bytes are hashed and stored on disk
+	bool BFileContainedHashes() { return !m_vecChunkHashFraction.empty(); }
 	// these are valid if BFileContainedHashes() is true
 	MD5Value_t m_DirectoryMD5;
 	MD5Value_t m_ChunkHashesMD5;
@@ -407,13 +400,13 @@ private:
 	/// The private key that will be used to sign the directory file.
 	/// This will be empty for unsigned VPK's, or if we don't know the
 	/// private key.
-	CUtlVector<uint8> m_SignaturePrivateKey;
+	std::vector< uint8 > m_SignaturePrivateKey;
 
 	/// The public key in the VPK.
-	CUtlVector<uint8> m_SignaturePublicKey;
+	std::vector< uint8 > m_SignaturePublicKey;
 
 	/// The signature that was read / computed
-	CUtlVector<uint8> m_Signature;
+	std::vector< uint8 > m_Signature;
 
 	/// The number of bytes in the dir file that were signed
 	uint32 m_nSizeOfSignedData;
@@ -433,8 +426,8 @@ private:
 	void CloseWriteHandle( void );
 
 	// For cache-ing directory and contents data
-	CUtlStringList m_directoryList; // The index of this list of directories...
-	CUtlMap<int, CUtlStringList*> m_dirContents; // ...is the key to this map of filenames
+	std::vector< std::string > m_directoryList; // The index of this list of directories...
+	std::vector< std::vector< std::string > > m_dirContents; // ...indexes these file lists
 	void BuildFindFirstCache();
 
 	bool InternalRemoveFileFromDirectory( const char *pszName );

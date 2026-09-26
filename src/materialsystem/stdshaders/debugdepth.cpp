@@ -12,9 +12,6 @@
 #include "debugdrawdepth_ps20.inc"
 #include "debugdrawdepth_ps20b.inc"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static ConVar mat_debugdepthmode( "mat_debugdepthmode", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
 static ConVar mat_debugdepthval( "mat_debugdepthval", "128.0f", FCVAR_MATERIAL_SYSTEM_THREAD );
 static ConVar mat_debugdepthvalmax( "mat_debugdepthvalmax", "256.0f", FCVAR_MATERIAL_SYSTEM_THREAD );

@@ -18,9 +18,6 @@
 #include "eventqueue.h"
 #include "mathlib/mathlib.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define SF_USE_TARGET_FACING	(1<<0)	// Use the target entity's direction instead of position
 
 class CPointAngleSensor : public CPointEntity

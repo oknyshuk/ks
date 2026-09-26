@@ -28,9 +28,6 @@
 
 #include <map>
 
-// Must be last header...
-#include "tier0/memdbgon.h"
-
 #define THREADS_DEBUG 1
 
 #define DEBUG_ERROR(XX) Assert(0)
@@ -54,11 +51,11 @@ DLL_CLASS_EXPORT __thread int g_nThreadID;
 #endif 
 
 
-static CThreadFastMutex s_ThreadIDMutex;
+static std::recursive_mutex s_ThreadIDMutex;
 
 PLATFORM_INTERFACE void AllocateThreadID( void )
 {
-	AUTO_LOCK( s_ThreadIDMutex );
+	std::scoped_lock lock( s_ThreadIDMutex );
 	for( int i = 1; i < MAX_THREAD_IDS; i++ )
 	{
 		if ( ! s_bThreadIDAllocated[i] )
@@ -73,7 +70,7 @@ PLATFORM_INTERFACE void AllocateThreadID( void )
 
 PLATFORM_INTERFACE void FreeThreadID( void )
 {
-	AUTO_LOCK( s_ThreadIDMutex );
+	std::scoped_lock lock( s_ThreadIDMutex );
 	int nThread = g_nThreadID;
 	if ( nThread )
 		s_bThreadIDAllocated[nThread] = false;
@@ -714,7 +711,7 @@ bool CThreadEvent::Wait( uint32 dwTimeout )
 //
 //-----------------------------------------------------------------------------
 
-#if defined( WIN32 ) || defined( _OSX ) || ( defined (_LINUX) && !defined(DEDICATED) )
+#if defined( _OSX ) || ( defined (_LINUX) && !defined(DEDICATED) )
 namespace GenericThreadLocals
 {
 CThreadLocalBase::CThreadLocalBase()
@@ -746,7 +743,7 @@ void CThreadLocalBase::Set( void *value )
 		AssertMsg( 0, "Bad thread local" );
 }
 } // namespace GenericThreadLocals
-#endif // ( defined(WIN32) ) 
+#endif // defined(_OSX) || (defined(_LINUX) && !defined(DEDICATED))
 //-----------------------------------------------------------------------------
 
 
@@ -838,216 +835,6 @@ int64 ThreadInterlockedExchange64( int64 volatile *pDest, int64 value )
 
 //-----------------------------------------------------------------------------
 
-
-//-----------------------------------------------------------------------------
-//
-// CThreadMutex
-//
-//-----------------------------------------------------------------------------
-
-
-
-bool CThreadMutex::TryLock()
-{
-	return pthread_mutex_trylock( &m_Mutex ) == 0;
-}
-
-//-----------------------------------------------------------------------------
-//
-// CThreadFastMutex
-//
-//-----------------------------------------------------------------------------
-
-#ifdef THREAD_FAST_MUTEX_TIMINGS
-// This is meant to be used in combination with breakpoints and in-debugee, so we turn the optimizer off
-#pragma optimize( "", off )
-CThreadFastMutex *g_pIgnoredMutexes[256]; // Ignore noisy non-problem mutex. Probably could be an array. Right now needed only for sound thread
-float g_MutexTimingTolerance = 5;
-bool g_bMutexTimingOutput;
-
-void TrapMutexTimings( uint32 probableBlocker, uint32 thisThread, volatile CThreadFastMutex *pMutex, CFastTimer &spikeTimer, CAverageCycleCounter &sleepTimer )
-{
-	spikeTimer.End();
-	if ( spikeTimer.GetDuration().GetMillisecondsF() > g_MutexTimingTolerance )
-	{	
-		bool bIgnore = false;
-		for ( int j = 0; j < ARRAYSIZE( g_pIgnoredMutexes ) && g_pIgnoredMutexes[j]; j++ )
-		{
-			if ( g_pIgnoredMutexes[j] == pMutex )
-			{
-				bIgnore = true;
-				break;
-			}
-		}
-
-		if ( !bIgnore && spikeTimer.GetDuration().GetMillisecondsF() < 100 )
-		{
-			volatile float FastMutexDuration = spikeTimer.GetDuration().GetMillisecondsF();
-			volatile float average = sleepTimer.GetAverageMilliseconds();
-			volatile float peak = sleepTimer.GetPeakMilliseconds();			volatile int xx = 6;
-			if ( g_bMutexTimingOutput )
-			{
-				char szBuf[256];
-				Msg( "M (%.8x): [%.8x <-- %.8x] (%f,%f,%f)\n", pMutex, probableBlocker, thisThread, FastMutexDuration, average, peak );
-			}
-		}
-	}
-}
-
-#else
-#define TrapMutexTimings( a, b, c, d, e ) ((void)0)
-#endif
-
-//-------------------------------------
-
-#define THREAD_SPIN (8*1024)
-
-void CThreadFastMutex::Lock( const uint32 threadId, unsigned nSpinSleepTime ) volatile 
-{
-#ifdef THREAD_FAST_MUTEX_TIMINGS
-	CAverageCycleCounter sleepTimer;
-	CFastTimer spikeTimer;
-	uint32 currentOwner = (uint32)ThreadInterlockedExchangeAdd( &m_ownerID, 0 );
-	spikeTimer.Start();
-	sleepTimer.Init();
-#endif
-	int i;
-	if ( nSpinSleepTime != TT_INFINITE )
-	{
-		for ( i = THREAD_SPIN; i != 0; --i )
-		{
-			if ( TryLock( threadId ) )
-			{
-				TrapMutexTimings( currentOwner, threadId, this, spikeTimer, sleepTimer );
-				return;
-			}
-			ThreadPause();
-		}
-
-		for ( i = THREAD_SPIN; i != 0; --i )
-		{
-			if ( TryLock( threadId ) )
-			{
-				TrapMutexTimings( currentOwner, threadId, this, spikeTimer, sleepTimer );
-				return;
-			}
-			ThreadPause();
-			if ( i % 1024 == 0 )
-			{
-#ifdef THREAD_FAST_MUTEX_TIMINGS
-				CAverageTimeMarker marker( &sleepTimer );
-#endif
-				ThreadSleep( 0 );
-			}
-		}
-
-
-		if ( nSpinSleepTime )
-		{
-			for ( i = THREAD_SPIN; i != 0; --i )
-			{
-#ifdef THREAD_FAST_MUTEX_TIMINGS
-				CAverageTimeMarker marker( &sleepTimer );
-#endif
-				if ( TryLock( threadId ) )
-				{
-					TrapMutexTimings( currentOwner, threadId, this, spikeTimer, sleepTimer );
-					return;
-				}
-
-				ThreadPause();
-				ThreadSleep( 0 );
-			}
-
-		}
-
-		for ( ;; )
-		{
-#ifdef THREAD_FAST_MUTEX_TIMINGS
-			CAverageTimeMarker marker( &sleepTimer );
-#endif
-			if ( TryLock( threadId ) )
-			{
-				TrapMutexTimings( currentOwner, threadId, this, spikeTimer, sleepTimer );
-				return;
-			}
-
-			ThreadPause();
-			ThreadSleep( nSpinSleepTime );
-		}
-	}
-	else
-	{
-		for ( ;; )
-		{
-			if ( TryLock( threadId ) )
-			{
-				TrapMutexTimings( currentOwner, threadId, this, spikeTimer, sleepTimer );
-				return;
-			}
-
-			ThreadPause();
-		}
-	}
-}
-
-#ifdef THREAD_FAST_MUTEX_TIMINGS
-#pragma optimize( "", on )
-#endif
-
-//-----------------------------------------------------------------------------
-//
-// CThreadRWLock
-//
-//-----------------------------------------------------------------------------
-
-void CThreadRWLock::WaitForRead()
-{
-	m_nPendingReaders++;
-
-	do
-	{
-		m_mutex.Unlock();
-		m_CanRead.Wait();
-		m_mutex.Lock();
-	}
-	while (m_nWriters);
-
-	m_nPendingReaders--;
-}
-
-
-void CThreadRWLock::LockForWrite()
-{
-	m_mutex.Lock();
-	bool bWait = ( m_nWriters != 0 || m_nActiveReaders != 0 );
-	m_nWriters++;
-	m_CanRead.Reset();
-	m_mutex.Unlock();
-
-	if ( bWait )
-	{
-		m_CanWrite.Wait();
-	}
-}
-
-void CThreadRWLock::UnlockWrite()
-{
-	m_mutex.Lock();
-	m_nWriters--;
-	if ( m_nWriters == 0)
-	{
-		if ( m_nPendingReaders )
-		{
-			m_CanRead.Set();
-		}
-	}
-	else
-	{
-		m_CanWrite.Set();
-	}
-	m_mutex.Unlock();
-}
 
 //-----------------------------------------------------------------------------
 //
@@ -1413,7 +1200,7 @@ int CWorkerThread::Call(unsigned dwParam, unsigned timeout, bool fBoostPriority,
 {
 	AssertMsg(!m_EventSend.Check(), "Cannot perform call if there's an existing call pending" );
 
-	AUTO_LOCK( m_Lock );
+	std::scoped_lock lock( m_Lock );
 
 	if (!IsAlive())
 		return WTCR_FAIL;

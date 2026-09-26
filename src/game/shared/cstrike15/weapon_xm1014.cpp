@@ -30,9 +30,6 @@
 
 #endif
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 class [[= ks::reflect::NetTable{ .name = "DT_WeaponXM1014" } ]]
       CWeaponXM1014 : public CWeaponCSBase
 {

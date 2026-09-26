@@ -25,9 +25,6 @@
 	#include "cs_player.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include <tier0/memdbgon.h>
-
 #define TASER_BIRTHDAY_PARTICLES	"weapon_confetti"
 #define TASER_BIRTHDAY_SOUND		"Weapon_PartyHorn.Single"
 

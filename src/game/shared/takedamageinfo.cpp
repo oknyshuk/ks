@@ -15,9 +15,6 @@
 #include "cs_player.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar phys_pushscale( "phys_pushscale", "1", FCVAR_REPLICATED );
 
 IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CTakeDamageInfo )
@@ -238,7 +235,7 @@ void AddMultiDamage( const CTakeDamageInfo &info, CBaseEntity *pEntity )
 	g_MultiDamage.SetDamageForce( g_MultiDamage.GetDamageForce() + info.GetDamageForce() );
 	g_MultiDamage.SetDamagePosition( info.GetDamagePosition() );
 	g_MultiDamage.SetReportedPosition( info.GetReportedPosition() );
-	g_MultiDamage.SetMaxDamage( MAX( g_MultiDamage.GetMaxDamage(), info.GetMaxDamage() ) );
+	g_MultiDamage.SetMaxDamage( std::max( g_MultiDamage.GetMaxDamage(), info.GetMaxDamage() ) );
 	g_MultiDamage.SetAmmoType( info.GetAmmoType() );
 	g_MultiDamage.SetBulletID( info.GetBulletID(), info.GetRecoilIndex() );
 

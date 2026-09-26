@@ -49,9 +49,6 @@
 
 #include "paint.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern IVEngineClient *engineClient;
 
 extern CNetworkStringTableContainer *networkStringTableContainerClient;
@@ -203,12 +200,6 @@ void CClientState::Disconnect( bool bShowMainMenu )
 
 	if ( m_bSplitScreenUser )
 		return;
-
-	// clear any map hacks
-	{
-		static ConVarRef map_wants_save_disable( "map_wants_save_disable" );
-		map_wants_save_disable.SetValue( 0 );
-	}
 
 	// stop any demo activities
 	demoplayer->StopPlayback();
@@ -384,7 +375,7 @@ bool CClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg )
 		if ( msg.tick_interval != host_state.interval_per_tick )
 		{
 			Host_Error( "Expecting interval_per_tick %f, got %f\n", 
-				host_state.interval_per_tick, msg.tick_interval );
+				host_state.interval_per_tick, (float)msg.tick_interval );
 			return false;
 		}
 	}
@@ -607,7 +598,7 @@ bool CClientState::SVCMsg_FixAngle( const ks::net::CSVCMsg_FixAngle &msg )
 		a.total = addangletotal;
 		a.starttime = m_flLastServerTickTime;
 
-		addangle.AddToTail( a );
+		addangle.push_back( a );
 	}
 	else
 	{
@@ -656,8 +647,8 @@ bool CClientState::SVCMsg_BSPDecal( const ks::net::CSVCMsg_BSPDecal& msg )
 
 		Warning( "Warning! Static BSP decal (%s), on NULL model index %i for entity index %i.\n", 
 			matname,
-			msg.model_index, 
-			msg.entity_index );
+			(int)msg.model_index, 
+			(int)msg.entity_index );
 		return true;
 	}
 
@@ -705,7 +696,7 @@ bool CClientState::SVCMsg_UserMessage( const ks::net::CSVCMsg_UserMessage &msg)
 {
 	if ( !g_ClientDLL->DispatchUserMessage( msg.msg_type, msg.passthrough, msg.msg_data->size(), msg.msg_data->data() ) )
 	{
-		ConMsg( "Couldn't dispatch user message (%i)\n", msg.msg_type );
+		ConMsg( "Couldn't dispatch user message (%i)\n", (int)msg.msg_type );
 		return false;
 	}
 
@@ -720,7 +711,7 @@ bool CClientState::SVCMsg_EntityMsg( const ks::net::CSVCMsg_EntityMsg& msg )
 
 	if ( !entity )
 	{
-		int idx = queuedmessage.AddToTail();
+		int idx = std::ssize( queuedmessage ); queuedmessage.emplace_back();
 
 		CQueuedEntityMessage *pMessage = &queuedmessage[idx];
 		pMessage->m_msg = msg;	
@@ -824,7 +815,7 @@ bool CClientState::SVCMsg_TempEntities( const ks::net::CSVCMsg_TempEntities &msg
 	bf_write toBuf( data, sizeof(data) );
 	CEventInfo *ei = nullptr;
 
-	CUtlFixedLinkedList< CEventInfo > &eventList = GetBaseLocalClient().events;
+	std::list< CEventInfo > &eventList = GetBaseLocalClient().events;
 
 	class CAutoCleanupHandle
 	{
@@ -888,16 +879,16 @@ bool CClientState::SVCMsg_TempEntities( const ks::net::CSVCMsg_TempEntities &msg
 		}
 		else
 		{
-			Assert( eventList.Tail() != eventList.InvalidIndex() );
+			Assert( !eventList.empty() );
 
-			CEventInfo *previous = &eventList[ eventList.Tail() ];
+			CEventInfo *previous = &eventList.back();
 
 			RecvTable_ReadFieldList( pClientClass->m_pRecvTable, buffer, incoming, -1, false );
 			RecvTable_MergeDeltas( pClientClass->m_pRecvTable, previous->m_Packed, incoming, merged );
 		}
 
 		// Add a slot
-		ei = &GetBaseLocalClient().events[ GetBaseLocalClient().events.AddToTail() ];
+		ei = &eventList.emplace_back();
 
 		Assert( ei );
 
@@ -914,13 +905,13 @@ bool CClientState::SVCMsg_TempEntities( const ks::net::CSVCMsg_TempEntities &msg
 bool CClientState::SVCMsg_PaintmapData( const ks::net::CSVCMsg_PaintmapData& msg )
 {
 	int nDword = ( Bits2Bytes( msg.paintmap->size() ) + 3 ) / 4;
-	CUtlVector< uint32 > data;
-	data.SetCount( nDword );
+	std::vector< uint32 > data;
+	data.assign( nDword, {} );
 
 	bf_read dataIn;
 	dataIn.ReadBits( const_cast<char*>(msg.paintmap->data()), msg.paintmap->size() );
 	
-	if ( data.Count() > 0 )
+	if ( !data.empty() )
 	{
 		g_PaintManager.LoadPaintmapDataRLE( data );
 	}

@@ -11,9 +11,6 @@
 #include "c_cs_player.h"
 #include "c_rope.h"
 
-// NOTE: Always include this last!
-#include "tier0/memdbgon.h"
-
 extern int		g_sModelXmasBulb;	// holds the sprite index for splattered blood
 
 // Used for cycling so that they're sequencially ordered on each strand
@@ -64,7 +61,7 @@ public:
 
 private:
 
-	CUtlVector< HolidayLightData_t > m_PendingLightData;
+	std::vector< HolidayLightData_t > m_PendingLightData;
 };
 
 CHolidayLightManager g_CHolidayLightManager( "CHolidayLightManager" );
@@ -77,22 +74,22 @@ CHolidayLightManager::CHolidayLightManager( char const *name ) : CAutoGameSystem
 // Methods of IGameSystem
 void CHolidayLightManager::Update( float frametime )
 {
-	for ( int i = 0; i < m_PendingLightData.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_PendingLightData ); ++i )
 	{
 		CreateHolidayLight( m_PendingLightData[ i ] );
 	}
 
-	m_PendingLightData.RemoveAll();
+	m_PendingLightData.clear();
 }
 
 void CHolidayLightManager::LevelInitPostEntity( void )
 {
-	m_PendingLightData.RemoveAll();
+	m_PendingLightData.clear();
 }
 
 void CHolidayLightManager::LevelShutdownPreEntity()
 {
-	m_PendingLightData.RemoveAll();
+	m_PendingLightData.clear();
 }
 
 void CHolidayLightManager::AddHolidayLight( const CEffectData &data )
@@ -122,9 +119,9 @@ void CHolidayLightManager::AddHolidayLight( const CEffectData &data )
 	// Skybox lights pass in a smaller scale
 	newData.fScale = data.m_flScale;
 
-	if ( m_PendingLightData.Count() < CTempEnts::MAX_TEMP_ENTITIES / 2 )
+	if ( std::ssize( m_PendingLightData ) < CTempEnts::MAX_TEMP_ENTITIES / 2 )
 	{
-		m_PendingLightData.AddToTail( newData );
+		m_PendingLightData.push_back( newData );
 	}
 }
 

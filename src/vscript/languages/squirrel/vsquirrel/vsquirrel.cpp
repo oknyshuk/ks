@@ -5,11 +5,9 @@
 //==========================================================================
 
 //-------------------------------------
-// Work around one of the headers below including crtdbg.h
-#include "memdbgon.h"
-#include "memdbgoff.h"
 //-------------------------------------
 
+#include "tier0/memalloc.h"
 #include <stdio.h>
 #include <ctype.h>
 #include <wctype.h>
@@ -21,21 +19,21 @@
 
 #define _HAS_EXCEPTIONS 0
 #include <string>
+#include <unordered_map>
 
 #include "platform.h"
 
-#include "tier1/utlmap.h"
+#include "tier1/map_ops.h"
 #include "datamap.h"
 #include "tier1/functors.h"
 #include "tier1/utlvector.h"
-#include "tier1/utlhash.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
 #include "tier1/fmtstr.h"
 #include "tier1/convar.h"
 #include "mathlib/vector.h"
 #include "vstdlib/random.h"
 
-#pragma warning(push, 3)
 #include "squirrel.h"
 #include "sqstdaux.h"
 #include "sqstdstring.h"
@@ -53,14 +51,11 @@
 #include "../squirrel/sqclass.h"
 #include "../squirrel/sqclosure.h"
 #include "sqdbgserver.h"
-#pragma warning(pop)
 
 #include "vscript/ivscript.h"
 #include "tier0/vprof.h"
 
 #include "init_nut.h"
-
-#include "memdbgon.h"
 
 #ifdef VSQUIRREL_DEBUG_SERIALIZATION
 static SQObjectType lastType;
@@ -543,7 +538,7 @@ class CSquirrelVM : public IScriptVM
 {
 public:
 	CSquirrelVM( HSQUIRRELVM hVM = nullptr )
-	  :	m_hVM( hVM ), m_hDbg( nullptr ), m_PtrMap( DefLessFunc(void *) ), m_iUniqueIdSerialNumber( 0 )
+	  :	m_hVM( hVM ), m_hDbg( nullptr ), m_iUniqueIdSerialNumber( 0 )
 #ifndef VSQUIRREL_TEST
 	    , developer( "developer" )
 #else
@@ -591,7 +586,7 @@ public:
 
 		sq_pop( m_hVM, 1 );
 
-		m_TypeMap.Init( 256 );
+		m_TypeMap.reserve( 256 );
 
 		RegisterVector( m_hVM );
 
@@ -645,7 +640,7 @@ public:
 			sq_close( m_hVM );
 			m_hVM = nullptr;
 		}
-		m_TypeMap.Purge();
+		m_TypeMap.clear();
 	}
 
 	//-------------------------------------------------------------
@@ -1001,8 +996,7 @@ public:
 	//-------------------------------------------------------------
 	virtual bool RegisterClass( ScriptClassDesc_t *pClassDesc )
 	{
-		COMPILE_TIME_ASSERT( sizeof(pClassDesc) == sizeof(intptr_t) );
-		if ( m_TypeMap.Find( (intptr_t)pClassDesc ) != m_TypeMap.InvalidHandle() )
+		if ( m_TypeMap.contains( pClassDesc ) )
 		{
 			return true;
 		}
@@ -1045,7 +1039,7 @@ public:
 			sq_newclosure( m_hVM, &InstanceIsValid, 0 );
 			sq_createslot( m_hVM, -3 );
 
-			for ( int i = 0; i < pClassDesc->m_FunctionBindings.Count(); i++ )
+			for ( int i = 0; i < std::ssize( pClassDesc->m_FunctionBindings ); i++ )
 			{
 				RegisterFunctionGuts( &pClassDesc->m_FunctionBindings[i], pClassDesc );
 			}
@@ -1053,7 +1047,7 @@ public:
 			// more setup required for inheritance?
 		}
 		sq_settop(m_hVM, top);
-		m_TypeMap.Insert( (intptr_t)pClassDesc, newClass._unVal.pClass );
+		m_TypeMap.try_emplace( pClassDesc, newClass._unVal.pClass );
 		return true;
 	}
 
@@ -1062,7 +1056,7 @@ public:
 	//-------------------------------------------------------------
 	bool CreateNativeInstance( ScriptClassDesc_t *pDesc, SQUserPointer ud,SQRELEASEHOOK hook )
 	{
-		sq_pushobject( m_hVM, SQObjectPtr(m_TypeMap[m_TypeMap.Find((intptr_t)pDesc)]) );
+		sq_pushobject( m_hVM, SQObjectPtr(m_TypeMap.at(pDesc)) );
 		if(SQ_FAILED(sq_createinstance(m_hVM,-1))) 
 		{
 			sq_pop( m_hVM, 1 );
@@ -1518,19 +1512,19 @@ public:
 	//-------------------------------------------------------------
 	//
 	//-------------------------------------------------------------
-	virtual void WriteState( CUtlBuffer *pBuffer)
+	virtual void WriteState( ks::byte_writer *pBuffer )
 	{
 #ifdef VSQUIRREL_DEBUG_SERIALIZATION
 		Msg( "BEGIN WRITE\n" );
 #endif
-		m_pBuffer = pBuffer;
+		m_pWriter = pBuffer;
 		sq_collectgarbage( m_hVM );
 
-		m_pBuffer->PutInt( SAVEVERSION );
-		m_pBuffer->PutInt64( (int64)m_iUniqueIdSerialNumber );
+		m_pWriter->write< int >( SAVEVERSION );
+		m_pWriter->write< int64 >( (int64)m_iUniqueIdSerialNumber );
 		WriteVM( m_hVM );
 
-		m_pBuffer = nullptr;
+		m_pWriter = nullptr;
 
 		SQCollectable *t = m_hVM->_sharedstate->_gc_chain;
 		while(t) 
@@ -1539,13 +1533,13 @@ public:
 			t = t->_next;
 		}
 
-		m_PtrMap.Purge();
+		m_PtrMap.clear();
 	}
 
 	//-------------------------------------------------------------
 	//
 	//-------------------------------------------------------------
-	virtual void ReadState( CUtlBuffer *pBuffer )
+	virtual void ReadState( ks::byte_reader *pBuffer )
 	{
 #ifdef VSQUIRREL_DEBUG_SERIALIZATION
 #ifdef VSQUIRREL_DEBUG_SERIALIZATION_HEAPCHK
@@ -1556,21 +1550,21 @@ public:
 		Msg( "BEGIN READ\n" );
 #endif
 
-		if ( pBuffer->GetInt() != SAVEVERSION )
+		if ( pBuffer->read< int >() != SAVEVERSION )
 		{
 			DevMsg( "Incompatible script version\n" );
 			return;
 		}
 		sq_collectgarbage( m_hVM );
 		m_hVM->_sharedstate->_gc_disableDepth++;
-		m_pBuffer = pBuffer;
-		uint64 uniqueIdSerialNumber = (uint64)m_pBuffer->GetInt64();
+		m_pReader = pBuffer;
+		uint64 uniqueIdSerialNumber = (uint64)m_pReader->read< int64 >();
 		m_iUniqueIdSerialNumber = max( m_iUniqueIdSerialNumber, uniqueIdSerialNumber );
-		Verify( pBuffer->GetInt() == OT_THREAD );
-		m_PtrMap.Insert( pBuffer->GetPtr(), m_hVM );
+		Verify( pBuffer->read< int >() == OT_THREAD );
+		m_PtrMap.emplace( ReadPtr(), m_hVM );
 		ReadVM( m_hVM );
-		m_pBuffer = nullptr;
-		m_PtrMap.Purge();
+		m_pReader = nullptr;
+		m_PtrMap.clear();
 		m_hVM->_sharedstate->_gc_disableDepth--;
 		sq_collectgarbage( m_hVM );
 
@@ -1749,19 +1743,19 @@ private:
 		StackHandler sa(hVM);
 		int nActualParams = sa.GetParamCount();
 		ScriptFunctionBinding_t *pVMScriptFunction = *((ScriptFunctionBinding_t **)sa.GetUserData( nActualParams ));
-		int nFormalParams = pVMScriptFunction->m_desc.m_Parameters.Count();
-		CUtlVectorFixed<ScriptVariant_t, 14> params;
+		int nFormalParams = std::ssize( pVMScriptFunction->m_desc.m_Parameters );
+		std::inplace_vector< ScriptVariant_t, 14 > params;
 		ScriptVariant_t returnValue;
 		bool bCallFree = false;
 
-		params.SetSize( nFormalParams );
+		params.assign( nFormalParams, {} );
 
 		int i = 0;
 
 		if ( nActualParams )
 		{
-			int iLimit = MIN( nActualParams, nFormalParams );
-			ScriptDataType_t *pCurParamType = pVMScriptFunction->m_desc.m_Parameters.Base();
+			int iLimit = std::min( nActualParams, nFormalParams );
+			ScriptDataType_t *pCurParamType = pVMScriptFunction->m_desc.m_Parameters.data();
 			for ( i = 0; i < iLimit; i++, pCurParamType++ )
 			{
 				switch ( *pCurParamType )
@@ -1851,7 +1845,7 @@ private:
 			pObject = nullptr;
 		}
 
-		(*pVMScriptFunction->m_pfnBinding)( pVMScriptFunction->m_pFunction, pObject, params.Base(), params.Count(), ( pVMScriptFunction->m_desc.m_ReturnType != FIELD_VOID ) ? &returnValue : nullptr );
+		(*pVMScriptFunction->m_pfnBinding)( pVMScriptFunction->m_pFunction, pObject, params.data(), std::ssize( params ), ( pVMScriptFunction->m_desc.m_ReturnType != FIELD_VOID ) ? &returnValue : nullptr );
 
 		if ( pVMScriptFunction->m_desc.m_ReturnType != FIELD_VOID )
 		{
@@ -1889,7 +1883,7 @@ private:
 
 		if ( bCallFree )
 		{
-			for ( i = 0; i < params.Count(); i++ )
+			for ( i = 0; i < std::ssize( params ); i++ )
 			{
 				params[i].Free();
 			}
@@ -2002,7 +1996,7 @@ private:
 	{
 		char szTypeMask[64];
 
-		if ( pScriptFunction->m_desc.m_Parameters.Count() > ARRAYSIZE(szTypeMask) - 1 )
+		if ( std::ssize( pScriptFunction->m_desc.m_Parameters ) > ARRAYSIZE(szTypeMask) - 1 )
 		{
 			AssertMsg1( 0, "Too many agruments for script function %s\n", pScriptFunction->m_desc.m_pszFunction );
 			return;
@@ -2010,7 +2004,7 @@ private:
 
 		szTypeMask[0] = '.';
 		char *pCurrent = &szTypeMask[1];
-		for ( int i = 0; i < pScriptFunction->m_desc.m_Parameters.Count(); i++, pCurrent++ )
+		for ( int i = 0; i < std::ssize( pScriptFunction->m_desc.m_Parameters ); i++, pCurrent++ )
 		{
 			switch ( pScriptFunction->m_desc.m_Parameters[i] )
 			{
@@ -2049,7 +2043,7 @@ private:
 		HSQOBJECT hFunction;
 		sq_getstackobj( m_hVM, -1, &hFunction );
 		sq_setnativeclosurename(m_hVM, -1, pScriptFunction->m_desc.m_pszScriptName );
-		sq_setparamscheck( m_hVM, pScriptFunction->m_desc.m_Parameters.Count() + 1, szTypeMask );
+		sq_setparamscheck( m_hVM, std::ssize( pScriptFunction->m_desc.m_Parameters ) + 1, szTypeMask );
 		sq_createslot( m_hVM, -3 );
 
 		if ( developer.GetInt() )
@@ -2079,7 +2073,7 @@ private:
 					name );
 				V_strcat_safe( signature,
 					"(" );
-				for ( int i = 0; i < pScriptFunction->m_desc.m_Parameters.Count(); i++ )
+				for ( int i = 0; i < std::ssize( pScriptFunction->m_desc.m_Parameters ); i++ )
 				{
 					if ( i != 0 )
 					{
@@ -2206,29 +2200,39 @@ private:
 		SAVEVERSION = 2
 	};
 
+	void WritePtr( const void *p )
+	{
+		m_pWriter->write< uint64 >( reinterpret_cast< uintptr_t >( p ) );
+	}
+
+	void *ReadPtr()
+	{
+		return reinterpret_cast< void * >( static_cast< uintptr_t >( m_pReader->read< uint64 >() ) );
+	}
+
 	void WriteObject( const SQObjectPtr &object )
 	{
 		switch ( object._type )
 		{
 			case OT_NULL:
-				m_pBuffer->PutInt( OT_NULL ); 
+				m_pWriter->write< int >(  OT_NULL  ); 
 				break;
 			case OT_INTEGER:
-				m_pBuffer->PutInt( OT_INTEGER ); 
-				m_pBuffer->PutInt( object._unVal.nInteger );
+				m_pWriter->write< int >(  OT_INTEGER  ); 
+				m_pWriter->write< int >(  object._unVal.nInteger  );
 				break;
 			case OT_FLOAT:
-				m_pBuffer->PutInt( OT_FLOAT ); 
-				m_pBuffer->PutFloat( object._unVal.fFloat);
+				m_pWriter->write< int >(  OT_FLOAT  ); 
+				m_pWriter->write< float >(  object._unVal.fFloat );
 				break;
 			case OT_BOOL:			
-				m_pBuffer->PutInt( OT_BOOL ); 
-				m_pBuffer->PutInt( object._unVal.nInteger );
+				m_pWriter->write< int >(  OT_BOOL  ); 
+				m_pWriter->write< int >(  object._unVal.nInteger  );
 				break;
 			case OT_STRING:			
-				m_pBuffer->PutInt( OT_STRING ); 
-				m_pBuffer->PutInt( object._unVal.pString->_len );
-				m_pBuffer->PutString( object._unVal.pString->_val );	
+				m_pWriter->write< int >(  OT_STRING  ); 
+				m_pWriter->write< int >(  object._unVal.pString->_len  );
+				m_pWriter->write_cstring( object._unVal.pString->_val );	
 				break;
 			case OT_TABLE:			WriteTable( object._unVal.pTable );					break;
 			case OT_ARRAY:			WriteArray( object._unVal.pArray );					break;
@@ -2248,7 +2252,7 @@ private:
 #ifdef VSQUIRREL_DEBUG_SERIALIZATION
 		SQObjectPtr res;
 		m_hVM->ToString( object, res );
-		Msg( "%d: %s\n", m_pBuffer->TellPut(),  res._unVal.pString->_val );
+		Msg( "%d: %s\n", m_pWriter->tell(),  res._unVal.pString->_val );
 #endif
 	}
 
@@ -2259,22 +2263,22 @@ private:
 	{
 		unsigned i;
 
-		m_pBuffer->PutInt( OT_THREAD );
-		m_pBuffer->PutPtr( pVM );
+		m_pWriter->write< int >(  OT_THREAD  );
+		WritePtr( pVM );
 
 		if ( pVM->_uiRef & MARK_FLAG )
 			return;
 		pVM->_uiRef |= MARK_FLAG;
 
 		WriteObject( pVM->_roottable );
-		m_pBuffer->PutInt( pVM->_top );
-		m_pBuffer->PutInt( pVM->_stackbase );
-		m_pBuffer->PutUnsignedInt( pVM->_stack.size() );
+		m_pWriter->write< int >(  pVM->_top  );
+		m_pWriter->write< int >(  pVM->_stackbase  );
+		m_pWriter->write< unsigned >(  pVM->_stack.size()  );
 		for( i = 0; i < pVM->_stack.size(); i++ ) 
 		{
 			WriteObject( pVM->_stack[i] );
 		}
-		m_pBuffer->PutUnsignedInt( pVM->_vargsstack.size() );
+		m_pWriter->write< unsigned >(  pVM->_vargsstack.size()  );
 		for( i = 0; i < pVM->_vargsstack.size(); i++ ) 
 		{
 			WriteObject( pVM->_vargsstack[i] );
@@ -2286,15 +2290,15 @@ private:
 	//-------------------------------------------------------------
 	void WriteArray( SQArray *pArray )
 	{
-		m_pBuffer->PutInt( OT_ARRAY );
-		m_pBuffer->PutPtr( pArray );
+		m_pWriter->write< int >(  OT_ARRAY  );
+		WritePtr( pArray );
 
 		if ( pArray->_uiRef & MARK_FLAG )
 			return;
 		pArray->_uiRef |= MARK_FLAG;
 
 		int len = pArray->_values.size();
-		m_pBuffer->PutInt( len );
+		m_pWriter->write< int >(  len  );
 		for ( int i = 0; i < len; i++ )
 			WriteObject( pArray->_values[i] );
 	}
@@ -2304,21 +2308,21 @@ private:
 	//-------------------------------------------------------------
 	void WriteTable( SQTable *pTable )
 	{
-		m_pBuffer->PutInt( OT_TABLE );
-		m_pBuffer->PutPtr( pTable );
+		m_pWriter->write< int >(  OT_TABLE  );
+		WritePtr( pTable );
 
 		if ( pTable->_uiRef & MARK_FLAG )
 			return;
 		pTable->_uiRef |= MARK_FLAG;
 
-		m_pBuffer->PutInt( pTable->_delegate != nullptr );
+		m_pWriter->write< int >(  pTable->_delegate != nullptr  );
 		if ( pTable->_delegate )
 		{
 			WriteObject( pTable->_delegate );
 		}
 
 		int len = pTable->_numofnodes;
-		m_pBuffer->PutInt( len );
+		m_pWriter->write< int >(  len  );
 		for(int i = 0; i < len; i++)
 		{
 			WriteObject( pTable->_nodes[i].key );
@@ -2331,8 +2335,8 @@ private:
 	//-------------------------------------------------------------
 	void WriteClass( SQClass *pClass )
 	{
-		m_pBuffer->PutInt( OT_CLASS );
-		m_pBuffer->PutPtr( pClass );
+		m_pWriter->write< int >(  OT_CLASS  );
+		WritePtr( pClass );
 
 		if ( !pClass || ( pClass->_uiRef & MARK_FLAG ) )
 			return;
@@ -2351,10 +2355,10 @@ private:
 				}
 			}
 		}
-		m_pBuffer->PutInt( bIsNative );
+		m_pWriter->write< int >(  bIsNative  );
 		if ( !bIsNative )
 		{
-			m_pBuffer->PutInt( pClass->_base != nullptr );
+			m_pWriter->write< int >(  pClass->_base != nullptr  );
 			if ( pClass->_base )
 			{
 				WriteObject( pClass->_base );
@@ -2362,19 +2366,19 @@ private:
 
 			WriteObject( pClass->_members );
 			WriteObject( pClass->_attributes );
-			m_pBuffer->PutInt( pClass->_defaultvalues.size() );
+			m_pWriter->write< int >(  pClass->_defaultvalues.size()  );
 			for( i = 0; i< pClass->_defaultvalues.size(); i++) 
 			{
 				WriteObject(pClass->_defaultvalues[i].val);
 				WriteObject(pClass->_defaultvalues[i].attrs);
 			}
-			m_pBuffer->PutInt( pClass->_methods.size() );
+			m_pWriter->write< int >(  pClass->_methods.size()  );
 			for( i = 0; i < pClass->_methods.size(); i++) 
 			{
 				WriteObject(pClass->_methods[i].val);
 				WriteObject(pClass->_methods[i].attrs);
 			}
-			m_pBuffer->PutInt( pClass->_metamethods.size() );
+			m_pWriter->write< int >(  pClass->_metamethods.size()  );
 			for( i = 0; i < pClass->_metamethods.size(); i++) 
 			{
 				WriteObject(pClass->_metamethods[i]);
@@ -2386,12 +2390,12 @@ private:
 			{
 				if ( pClass->_typetag == TYPETAG_VECTOR )
 				{
-					m_pBuffer->PutString( "Vector" );
+					m_pWriter->write_cstring( "Vector" );
 				}
 				else
 				{
 					ScriptClassDesc_t *pDesc = (ScriptClassDesc_t *)pClass->_typetag;
-					m_pBuffer->PutString( pDesc->m_pszScriptName );
+					m_pWriter->write_cstring( ks::nz( pDesc->m_pszScriptName ) );
 				}
 			}
 			else
@@ -2400,12 +2404,12 @@ private:
 				SQObjectPtr key;
 				if ( FindKeyForObject( m_hVM->_roottable, pClass, key ) )
 				{
-					m_pBuffer->PutString( key._unVal.pString->_val );
+					m_pWriter->write_cstring( key._unVal.pString->_val );
 				}
 				else
 				{
 					Assert( 0 );
-					m_pBuffer->PutString( "" );
+					m_pWriter->write_cstring( "" );
 				}
 			}
 		}
@@ -2416,8 +2420,8 @@ private:
 	//-------------------------------------------------------------
 	void WriteInstance( SQInstance *pInstance )
 	{
-		m_pBuffer->PutInt( OT_INSTANCE );
-		m_pBuffer->PutPtr( pInstance );
+		m_pWriter->write< int >(  OT_INSTANCE  );
+		WritePtr( pInstance );
 
 		if ( pInstance->_uiRef & MARK_FLAG )
 			return;
@@ -2426,28 +2430,28 @@ private:
 		WriteObject( pInstance->_class );
 
 		unsigned nvalues = pInstance->_class->_defaultvalues.size();
-		m_pBuffer->PutInt( nvalues );
+		m_pWriter->write< int >(  nvalues  );
 		for ( unsigned i =0; i< nvalues; i++ ) 
 		{
 			WriteObject( pInstance->_values[i] );
 		}
 
-		m_pBuffer->PutPtr( pInstance->_class->_typetag );
+		WritePtr( pInstance->_class->_typetag );
 
 		if ( pInstance->_class->_typetag )
 		{
 			if ( pInstance->_class->_typetag == TYPETAG_VECTOR )
 			{
 				Vector *pVector = (Vector *)pInstance->_userpointer;
-				m_pBuffer->PutFloat( pVector->x );
-				m_pBuffer->PutFloat( pVector->y );
-				m_pBuffer->PutFloat( pVector->z );
+				m_pWriter->write< float >(  pVector->x  );
+				m_pWriter->write< float >(  pVector->y  );
+				m_pWriter->write< float >(  pVector->z  );
 			}
 			else
 			{
 				InstanceContext_t *pContext = ((InstanceContext_t *)pInstance->_userpointer);
 				WriteObject( pContext->name );
-				m_pBuffer->PutPtr( pContext->pInstance );
+				WritePtr( pContext->pInstance );
 			}
 		}
 		else
@@ -2464,17 +2468,17 @@ private:
 		ExecuteOnce( Msg( "Save load of generators not well tested. caveat emptor\n" ) );
 		WriteObject(pGenerator->_closure);
 
-		m_pBuffer->PutInt( OT_GENERATOR );
-		m_pBuffer->PutPtr( pGenerator );
+		m_pWriter->write< int >(  OT_GENERATOR  );
+		WritePtr( pGenerator );
 
 		if ( pGenerator->_uiRef & MARK_FLAG )
 			return;
 		pGenerator->_uiRef |= MARK_FLAG;
 		
 		WriteObject( pGenerator->_closure );
-		m_pBuffer->PutInt( pGenerator->_stack.size() );
+		m_pWriter->write< int >(  pGenerator->_stack.size()  );
 		for(SQUnsignedInteger i = 0; i < pGenerator->_stack.size(); i++) WriteObject(pGenerator->_stack[i]);
-		m_pBuffer->PutInt( pGenerator->_vargsstack.size() );
+		m_pWriter->write< int >(  pGenerator->_vargsstack.size()  );
 		for(SQUnsignedInteger j = 0; j < pGenerator->_vargsstack.size(); j++) WriteObject(pGenerator->_vargsstack[j]);
 	}
 
@@ -2483,8 +2487,8 @@ private:
 	//-------------------------------------------------------------
 	void WriteClosure( SQClosure *pClosure )
 	{
-		m_pBuffer->PutInt( OT_CLOSURE );
-		m_pBuffer->PutPtr( pClosure );
+		m_pWriter->write< int >(  OT_CLOSURE  );
+		WritePtr( pClosure );
 		if ( pClosure->_uiRef & MARK_FLAG )
 			return;
 		pClosure->_uiRef |= MARK_FLAG;
@@ -2492,9 +2496,9 @@ private:
 		WriteObject( pClosure->_function );
 		WriteObject( pClosure->_env );
 
-		m_pBuffer->PutInt( pClosure->_outervalues.size() );
+		m_pWriter->write< int >(  pClosure->_outervalues.size()  );
 		for(SQUnsignedInteger i = 0; i < pClosure->_outervalues.size(); i++) WriteObject(pClosure->_outervalues[i]);
-		m_pBuffer->PutInt( pClosure->_defaultparams.size() );
+		m_pWriter->write< int >(  pClosure->_defaultparams.size()  );
 		for(SQUnsignedInteger i = 0; i < pClosure->_defaultparams.size(); i++) WriteObject(pClosure->_defaultparams[i]);
 	}
 
@@ -2503,8 +2507,8 @@ private:
 	//-------------------------------------------------------------
 	void WriteNativeClosure( SQNativeClosure *pNativeClosure )
 	{
-		m_pBuffer->PutInt( OT_NATIVECLOSURE );
-		m_pBuffer->PutPtr( pNativeClosure );
+		m_pWriter->write< int >(  OT_NATIVECLOSURE  );
+		WritePtr( pNativeClosure );
 
 		if ( pNativeClosure->_uiRef & MARK_FLAG )
 			return;
@@ -2519,8 +2523,8 @@ private:
 	//-------------------------------------------------------------
 	void WriteUserData( SQUserData *pUserData )
 	{
-		m_pBuffer->PutInt( OT_USERDATA );
-		m_pBuffer->PutPtr( pUserData );
+		m_pWriter->write< int >(  OT_USERDATA  );
+		WritePtr( pUserData );
 
 		if ( pUserData->_uiRef & MARK_FLAG )
 			return;
@@ -2534,9 +2538,9 @@ private:
 	//-------------------------------------------------------------
 	void WriteUserPointer( SQUserPointer pUserPointer )
 	{
-		m_pBuffer->PutInt( OT_USERPOINTER );
+		m_pWriter->write< int >(  OT_USERPOINTER  );
 		// Need to call back or something. Unsure, TBD. [4/3/2008 tom]
-		m_pBuffer->PutPtr( pUserPointer );
+		WritePtr( pUserPointer );
 	}
 
 	//-------------------------------------------------------------
@@ -2545,21 +2549,20 @@ private:
 	static SQInteger SqWriteFunc(SQUserPointer up,SQUserPointer data, SQInteger size)
 	{
 		CSquirrelVM *pThis = (CSquirrelVM *)up;
-		pThis->m_pBuffer->Put( data, size );
+		pThis->m_pWriter->write_bytes( data, size );
 		return size;
 	}
 
 	void WriteFuncProto( SQFunctionProto *pFuncProto )
 	{
-		m_pBuffer->PutInt( OT_FUNCPROTO );
-		m_pBuffer->PutPtr( pFuncProto );
+		m_pWriter->write< int >(  OT_FUNCPROTO  );
+		WritePtr( pFuncProto );
 
 		// Using the map to track these as they're not collectables
-		if ( m_PtrMap.Find( pFuncProto ) != m_PtrMap.InvalidIndex() )
+		if ( !m_PtrMap.emplace( pFuncProto, pFuncProto ).second )
 		{
 			return;
 		}
-		m_PtrMap.Insert( pFuncProto, pFuncProto );
 
 		pFuncProto->Save( m_hVM, this, &SqWriteFunc );
 	}
@@ -2569,7 +2572,7 @@ private:
 	//-------------------------------------------------------------
 	void WriteWeakRef( SQWeakRef *pWeakRef )
 	{
-		m_pBuffer->PutInt( OT_WEAKREF );
+		m_pWriter->write< int >(  OT_WEAKREF  );
 		WriteObject( pWeakRef->_obj );
 	}
 
@@ -2577,13 +2580,12 @@ private:
 	template <typename T>
 	bool BeginRead( T **ppOld, T **ppNew )
 	{
-		*ppOld = (T *)m_pBuffer->GetPtr();
+		*ppOld = (T *)ReadPtr();
 		if ( *ppOld )
 		{
-			int iNew = m_PtrMap.Find( *ppOld );
-			if ( iNew != m_PtrMap.InvalidIndex() )
+			if ( void **pNew = ks::find_ptr( m_PtrMap, *ppOld ) )
 			{
-				*ppNew = (T*)m_PtrMap[iNew];
+				*ppNew = (T*)*pNew;
 				return false;
 			}
 		}
@@ -2596,8 +2598,8 @@ private:
 	//-------------------------------------------------------------
 	void MapPtr( void *pOld, void *pNew )
 	{
-		Assert( m_PtrMap.Find( pOld ) == m_PtrMap.InvalidIndex() );
-		m_PtrMap.Insert( pOld, pNew );
+		Assert( !m_PtrMap.contains( pOld ) );
+		m_PtrMap.emplace( pOld, pNew );
 	}
 
 	//-------------------------------------------------------------
@@ -2607,7 +2609,7 @@ private:
 	{
 		SQObject object;
 		bool bResult = true;
-		object._type = (SQObjectType)m_pBuffer->GetInt();
+		object._type = (SQObjectType)m_pReader->read< int >();
 		if ( _RAW_TYPE(object._type) < _RT_TABLE )
 		{
 			switch ( object._type )
@@ -2616,19 +2618,19 @@ private:
 				object._unVal.pUserPointer = 0;
 				break;
 			case OT_INTEGER:
-				object._unVal.nInteger = m_pBuffer->GetInt();
+				object._unVal.nInteger = m_pReader->read< int >();
 				break;
 			case OT_FLOAT:
-				object._unVal.fFloat = m_pBuffer->GetFloat();
+				object._unVal.fFloat = m_pReader->read< float >();
 				break;
 			case OT_BOOL:			
-				object._unVal.nInteger = m_pBuffer->GetInt();
+				object._unVal.nInteger = m_pReader->read< int >();
 				break;
 			case OT_STRING:
 				{
-					int len = m_pBuffer->GetInt();
+					int len = m_pReader->read< int >();
 					char *pString = (char *)stackalloc( len + 1 );
-					m_pBuffer->GetString( pString, len + 1 );
+					m_pReader->read_cstring( pString, len + 1 );
 					pString[len] = 0;
 					object._unVal.pString = SQString::Create( m_hVM->_sharedstate, pString, len );
 					break;
@@ -2739,7 +2741,7 @@ private:
 			object._unVal.pRefCounted->_uiRef--;
 			SQ_VALIDATE_REF_COUNT( object._unVal.pRefCounted );
 		}
-		Msg( "%d: %s [%d]\n", m_pBuffer->TellGet(),  res._unVal.pString->_val, ( ISREFCOUNTED(object._type) ) ? object._unVal.pRefCounted->_uiRef : -1 );
+		Msg( "%d: %s [%d]\n", m_pReader->tell(),  res._unVal.pString->_val, ( ISREFCOUNTED(object._type) ) ? object._unVal.pRefCounted->_uiRef : -1 );
 #ifdef VSQUIRREL_DEBUG_SERIALIZATION_HEAPCHK
 		_heapchk();
 #endif
@@ -2766,15 +2768,15 @@ private:
 		unsigned i;
 
 		ReadObject( pVM->_roottable );
-		pVM->_top = m_pBuffer->GetInt();
-		pVM->_stackbase  =  m_pBuffer->GetInt();
-		unsigned stackSize = m_pBuffer->GetUnsignedInt();
+		pVM->_top = m_pReader->read< int >();
+		pVM->_stackbase  =  m_pReader->read< int >();
+		unsigned stackSize = m_pReader->read< unsigned >();
 		pVM->_stack.resize( stackSize );
 		for( i = 0; i < pVM->_stack.size(); i++ ) 
 		{
 			ReadObject( pVM->_stack[i] );
 		}
-		stackSize = m_pBuffer->GetUnsignedInt();
+		stackSize = m_pReader->read< unsigned >();
 		for( i = 0; i < pVM->_vargsstack.size(); i++ ) 
 		{
 			ReadObject( pVM->_vargsstack[i] );
@@ -2798,7 +2800,7 @@ private:
 
 		MapPtr( pOld, pTable );
 
-		if ( m_pBuffer->GetInt() )
+		if ( m_pReader->read< int >() )
 		{
 			SQObjectPtr delegate;
 			ReadObject( delegate );
@@ -2808,7 +2810,7 @@ private:
 		{
 			pTable->_delegate = nullptr;
 		}
-		int n = m_pBuffer->GetInt();
+		int n = m_pReader->read< int >();
 		while ( n-- )
 		{
 			SQObjectPtr key, value;
@@ -2841,7 +2843,7 @@ private:
 
 		MapPtr( pOld, pArray );
 
-		int n = m_pBuffer->GetInt();
+		int n = m_pReader->read< int >();
 		pArray->Reserve( n );
 
 		while ( n-- )
@@ -2866,11 +2868,11 @@ private:
 		}
 
 		SQClass *pBase = nullptr;
- 		bool bIsNative = !!m_pBuffer->GetInt();
+ 		bool bIsNative = !!m_pReader->read< int >();
 		// If it's not a C++ defined type...
 		if ( !bIsNative )
 		{
-			if ( m_pBuffer->GetInt() )
+			if ( m_pReader->read< int >() )
 			{
 				SQObjectPtr base;
 				ReadObject( base );
@@ -2889,7 +2891,7 @@ private:
 			ReadObject( pClass->_attributes );
 			unsigned i, n;
 
-			n = m_pBuffer->GetUnsignedInt();
+			n = m_pReader->read< unsigned >();
 			pClass->_defaultvalues.resize( n );
 			for ( i = 0; i < n; i++ ) 
 			{
@@ -2897,7 +2899,7 @@ private:
 				ReadObject(pClass->_defaultvalues[i].attrs);
 			}
 
-			n = m_pBuffer->GetUnsignedInt();
+			n = m_pReader->read< unsigned >();
 			pClass->_methods.resize( n );
 			for ( i = 0; i < n; i++ ) 
 			{
@@ -2905,7 +2907,7 @@ private:
 				ReadObject(pClass->_methods[i].attrs);
 			}
 
-			n = m_pBuffer->GetUnsignedInt();
+			n = m_pReader->read< unsigned >();
 			pClass->_metamethods.resize( n );
 			for ( i = 0; i < n; i++ ) 
 			{
@@ -2916,7 +2918,7 @@ private:
 		else
 		{
 			char *pszName = (char *)stackalloc( 1024 );
-			m_pBuffer->GetString( pszName, 1024 );
+			m_pReader->read_cstring( pszName, 1024 );
 			pszName[1023] = 0;
 
 			SQObjectPtr value;
@@ -2950,20 +2952,20 @@ private:
 		{
 			pInstance = SQInstance::Create( _ss(m_hVM), pClass._unVal.pClass );
 
-			n = m_pBuffer->GetUnsignedInt();
+			n = m_pReader->read< unsigned >();
 			for ( i = 0; i < n; i++ ) 
 			{
 				ReadObject(pInstance->_values[i]);
 			}
-			m_pBuffer->GetPtr(); // ignored in this path
+			ReadPtr(); // ignored in this path
 			if ( pInstance->_class->_typetag )
 			{
 				if ( pInstance->_class->_typetag == TYPETAG_VECTOR )
 				{
 					Vector *pValue = new Vector;
-					pValue->x = m_pBuffer->GetFloat();
-					pValue->y = m_pBuffer->GetFloat();
-					pValue->z = m_pBuffer->GetFloat();
+					pValue->x = m_pReader->read< float >();
+					pValue->y = m_pReader->read< float >();
+					pValue->z = m_pReader->read< float >();
 					pInstance->_userpointer = pValue;
 				}
 				else
@@ -2972,7 +2974,7 @@ private:
 					pContext->pInstance = nullptr;
 					ReadObject( pContext->name );
 					pContext->pClassDesc = (ScriptClassDesc_t *)( pInstance->_class->_typetag );
-					void *pOldInstance = m_pBuffer->GetPtr();
+					void *pOldInstance = ReadPtr();
 					if ( sq_isstring(pContext->name) )
 					{
 						char *pszName = pContext->name._unVal.pString->_val;
@@ -3014,7 +3016,7 @@ private:
 			}
 			else 
 			{
-				Verify( m_pBuffer->GetInt() == OT_USERPOINTER );
+				Verify( m_pReader->read< int >() == OT_USERPOINTER );
 				pInstance->_userpointer = ReadUserPointer();
 				Assert( pInstance->_userpointer == nullptr );
 			}
@@ -3024,32 +3026,32 @@ private:
 		else
 		{
 			MapPtr( pOld, nullptr );
-			n = m_pBuffer->GetUnsignedInt();
+			n = m_pReader->read< unsigned >();
 			for ( i = 0; i < n; i++ ) 
 			{
 				SQObjectPtr ignored;
 				ReadObject(ignored);
 			}
-			void *pOldTypeTag = m_pBuffer->GetPtr(); // ignored in this path
+			void *pOldTypeTag = ReadPtr(); // ignored in this path
 
 			if ( pOldTypeTag )
 			{
 				if ( pOldTypeTag == TYPETAG_VECTOR )
 				{
-					m_pBuffer->GetFloat();
-					m_pBuffer->GetFloat();
-					m_pBuffer->GetFloat();
+					m_pReader->read< float >();
+					m_pReader->read< float >();
+					m_pReader->read< float >();
 				}
 				else
 				{
 					SQObjectPtr ignored;
 					ReadObject( ignored );
-					m_pBuffer->GetPtr();
+					ReadPtr();
 				}
 			}
 			else 
 			{
-				Verify( m_pBuffer->GetInt() == OT_USERPOINTER );
+				Verify( m_pReader->read< int >() == OT_USERPOINTER );
 				ReadUserPointer();
 			}
 			pInstance = nullptr;
@@ -3076,13 +3078,13 @@ private:
 		MapPtr( pOld, pGenerator );
 
 		unsigned i, n;
-		n = m_pBuffer->GetUnsignedInt();
+		n = m_pReader->read< unsigned >();
 		pGenerator->_stack.resize( n );
 		for ( i = 0; i < n; i++ ) 
 		{
 			ReadObject(pGenerator->_stack[i]);
 		}
-		n = m_pBuffer->GetUnsignedInt();
+		n = m_pReader->read< unsigned >();
 		pGenerator->_vargsstack.resize( n );
 		for ( i = 0; i < n; i++ ) 
 		{
@@ -3111,14 +3113,14 @@ private:
 		ReadObject( pClosure->_env );
 
 		unsigned i, n;
-		n = m_pBuffer->GetUnsignedInt();
+		n = m_pReader->read< unsigned >();
 		pClosure->_outervalues.resize( n );
 		for ( i = 0; i < n; i++ ) 
 		{
 			ReadObject(pClosure->_outervalues[i]);
 		}
 
-		n = m_pBuffer->GetUnsignedInt();
+		n = m_pReader->read< unsigned >();
 		pClosure->_defaultparams.resize( n );
 		for ( i = 0; i < n; i++ ) 
 		{
@@ -3157,7 +3159,7 @@ private:
 	//-------------------------------------------------------------
 	SQUserData *ReadUserData()
 	{
-		m_pBuffer->GetPtr();
+		ReadPtr();
 		return nullptr; // @TBD [4/15/2008 tom]
 	}
 
@@ -3166,7 +3168,7 @@ private:
 	//-------------------------------------------------------------
 	SQUserPointer *ReadUserPointer()
 	{
-		m_pBuffer->GetPtr();
+		ReadPtr();
 		return nullptr; // @TBD [4/15/2008 tom]
 	}
 
@@ -3176,7 +3178,7 @@ private:
 	static SQInteger SqReadFunc(SQUserPointer up,SQUserPointer data, SQInteger size)
  	{
  		CSquirrelVM *pThis = (CSquirrelVM *)up;
- 		pThis->m_pBuffer->Get( data, size );
+ 		pThis->m_pReader->read_bytes( data, size );
  		return size;
  	}
  
@@ -3274,12 +3276,13 @@ private:
 	ConVarRef		developer;
 #endif
 
-	CUtlHashFast<SQClass *, CUtlHashFastGenericHash> m_TypeMap;
+	std::unordered_map<ScriptClassDesc_t *, SQClass *> m_TypeMap;
 	friend class CVSquirrelSerializer;
 
 	// Serialization support
-	CUtlBuffer *m_pBuffer;
-	CUtlMap<void *, void *> m_PtrMap;
+	ks::byte_writer *m_pWriter = nullptr;
+	ks::byte_reader *m_pReader = nullptr;
+	std::map<void *, void *> m_PtrMap;
 };
 
 //-----------------------------------------------------------------------------
@@ -3527,7 +3530,7 @@ int main( int argc, const char **argv)
 			scope.Term();
 			scope.Init( "TestScope" );
 		}
-		delete pBuf;
+		delete[] pBuf;
 	} while ( key != 'q' );
 
 	scope.Term();

@@ -6,15 +6,17 @@
 //===========================================================================//
 
 #include "basefilesystem.h"
+#include <atomic>
+#include <mutex>
 #include "tier0/vprof.h"
 #include "tier1/characterset.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/byte_reader.h"
 #include "tier1/convar.h"
 #include "tier1/keyvalues.h"
 #include "tier0/icommandline.h"
 #include "tier0/stacktools.h"
 #include "generichash.h"
-#include "tier1/utllinkedlist.h"
+#include <deque>
 #include "tier2/tier2.h"
 #include "tier1/lzmaDecoder.h"
 #include "vstdlib/vstrtools.h"
@@ -36,11 +38,8 @@ static bool IsDvdDevPathString( char const *szPath )
 	return false;
 }
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier0/memalloc.h"
 
-
-#pragma warning( disable : 4355 )  // warning C4355: 'this' : used in base member initializer list
 
 
 ConVar fs_report_sync_opens( "fs_report_sync_opens", "0", FCVAR_RELEASE, "0:Off, 1:Always, 2:Not during map load" );
@@ -56,7 +55,7 @@ ConVar fs_monitor_read_from_pack( "fs_monitor_read_from_pack", "0", 0, "0:Off, 1
 static void AddSeperatorAndFixPath( char *str );
 
 // Case-insensitive symbol table for path IDs.
-CUtlSymbolTableMT g_PathIDTable( 0, 32, true );
+ks::intern_pool_mt g_PathIDTable( true );
 
 int g_iNextSearchPathID = 1;
 
@@ -228,8 +227,8 @@ struct FileOpenDuplicateTime_t
 		m_flAccumulatedMicroSeconds = 0.0f;
 	}
 };
-CUtlVector< FileOpenDuplicateTime_t* > g_FileOpenDuplicateTimes;	// Used to debug approximate time spent reading files duplicate times
-CThreadFastMutex g_FileOpenDuplicateTimesMutex;
+std::vector< FileOpenDuplicateTime_t* > g_FileOpenDuplicateTimes;	// Used to debug approximate time spent reading files duplicate times
+std::recursive_mutex g_FileOpenDuplicateTimesMutex;
 
 #if defined( TRACK_BLOCKING_IO )
 
@@ -272,7 +271,7 @@ public:
 		{
 			Error( "CBlockingFileItemList::First() w/o calling EnterCriticalSectionFirst!" );
 		}
-		return m_Items.Head();
+		return m_Items.empty() ? InvalidIndex() : 0;
 	}
 
 	virtual int Next( int i ) const
@@ -281,12 +280,13 @@ public:
 		{
 			Error( "CBlockingFileItemList::Next() w/o calling EnterCriticalSectionFirst!" );
 		}
-		return m_Items.Next( i ); 
+		return i + 1 < std::ssize( m_Items ) ? i + 1 : InvalidIndex();
 	}
 
+	// Indices are positions; the list only changes under the lock.
 	virtual int InvalidIndex() const
 	{
-		return m_Items.InvalidIndex();
+		return -1;
 	}
 
 	virtual const FileBlockingItem& Get( int index ) const
@@ -304,42 +304,38 @@ public:
 		{
 			Error( "CBlockingFileItemList::Reset() w/o calling EnterCriticalSectionFirst!" );
 		}
-		m_Items.RemoveAll();
+		m_Items.clear();
 	}
 
 	void Add( const FileBlockingItem& item )
 	{
-		// Ack, should use a linked list probably...
-		while ( m_Items.Count() > MAX_ITEMS )
+		while ( m_Items.size() > MAX_ITEMS )
 		{
-			m_Items.Remove( m_Items.Head() );
+			m_Items.pop_front();
 		}
-		m_Items.AddToTail( item );
+		m_Items.push_back( item );
 	}
 
 
 private:
-	CUtlLinkedList< FileBlockingItem, unsigned short >	m_Items;
+	std::deque< FileBlockingItem >		m_Items;
 	CBaseFileSystem						*m_pFS;
 	bool								m_bLocked;
 };
 #endif
 
-CUtlSymbol	CBaseFileSystem::m_GamePathID;
-CUtlSymbol	CBaseFileSystem::m_BSPPathID;
+std::string_view	CBaseFileSystem::m_GamePathID;
+std::string_view	CBaseFileSystem::m_BSPPathID;
 bool		CBaseFileSystem::m_bFoundXboxImageInCache;
 bool		CBaseFileSystem::m_bLaunchedFromXboxHDD;		
 bool		CBaseFileSystem::m_bDVDHosted;	
 bool		CBaseFileSystem::m_bAllowXboxInstall;			
 bool		CBaseFileSystem::m_bSearchPathsPatchedAfterInstall;
 
-CUtlVector< FileNameHandle_t > CBaseFileSystem::m_ExcludeFilePaths;
+std::vector< FileNameHandle_t > CBaseFileSystem::m_ExcludeFilePaths;
 
-CUtlSortVector< DLCContent_t, CDLCLess > CBaseFileSystem::m_DLCContents;
-CUtlVector< DLCCorrupt_t > CBaseFileSystem::m_CorruptDLC;
-
-CUtlBuffer	g_UpdateZipBuffer;
-
+std::flat_multiset< DLCContent_t, CDLCLess > CBaseFileSystem::m_DLCContents;
+std::vector< DLCCorrupt_t > CBaseFileSystem::m_CorruptDLC;
 
 class CStoreIDEntry
 {
@@ -352,7 +348,7 @@ public:
 	}
 
 public:
-	CUtlSymbol	m_PathIDString;
+	std::string	m_PathIDString;
 	int			m_StoreID;
 };
 
@@ -388,24 +384,22 @@ private:
 };
 
 
-static CStoreIDEntry* FindPrevFileByStoreID( CUtlDict< CUtlVector<CStoreIDEntry>* ,int> &filesByStoreID, const char *pFilename, const char *pPathIDStr, int foundStoreID )
+static CStoreIDEntry* FindPrevFileByStoreID( ks::idict< std::vector< CStoreIDEntry > > &filesByStoreID, const char *pFilename, const char *pPathIDStr, int foundStoreID )
 {
-	int iEntry = filesByStoreID.Find( pFilename );
-	if ( iEntry == filesByStoreID.InvalidIndex() )
+	auto iEntry = filesByStoreID.find( pFilename );
+	if ( iEntry == filesByStoreID.end() )
 	{
-		CUtlVector<CStoreIDEntry> *pList = new CUtlVector<CStoreIDEntry>; 
-		pList->AddToTail( CStoreIDEntry(pPathIDStr, foundStoreID) );
-		filesByStoreID.Insert( pFilename, pList );
+		filesByStoreID[pFilename].push_back( CStoreIDEntry(pPathIDStr, foundStoreID) );
 		return nullptr;
 	}
 	else
 	{
 		// Now is there a previous entry with a different path ID string and the same store ID?
-		CUtlVector<CStoreIDEntry> *pList = filesByStoreID[iEntry]; 
-		for ( int i=0; i < pList->Count(); i++ )
+		std::vector< CStoreIDEntry > *pList = &iEntry->second; 
+		for ( int i=0; i < std::ssize( *pList ); i++ )
 		{
-			CStoreIDEntry &entry = pList->Element( i );
-			if ( entry.m_StoreID == foundStoreID && V_stricmp( entry.m_PathIDString.String(), pPathIDStr ) != 0 )
+			CStoreIDEntry &entry = (*pList)[ i ];
+			if ( entry.m_StoreID == foundStoreID && V_stricmp( entry.m_PathIDString.c_str(), pPathIDStr ) != 0 )
 				return &entry;
 		}
 		return nullptr;
@@ -434,12 +428,12 @@ public:
 	void Reset();
 
 private:
-	CInterlockedInt m_nNumberOfFileSeeks;
-	CInterlockedInt m_nTimeInFileSeek;
-	CInterlockedInt m_nNumberOfFileReads;
-	CInterlockedInt m_nTimeInFileRead;
-	CInterlockedInt m_nFileReadTotalSize;
-	CInterlockedInt m_nNumberOfFileOpens;
+	std::atomic<int> m_nNumberOfFileSeeks;
+	std::atomic<int> m_nTimeInFileSeek;
+	std::atomic<int> m_nNumberOfFileReads;
+	std::atomic<int> m_nTimeInFileRead;
+	std::atomic<int> m_nFileReadTotalSize;
+	std::atomic<int> m_nNumberOfFileOpens;
 };
 
 static CIoStats s_IoStats;
@@ -531,9 +525,6 @@ CBaseFileSystem::CBaseFileSystem()
 
 	m_WhitelistFileTrackingEnabled = -1;
 
-	// If this changes then FileNameHandleInternal_t/FileNameHandle_t needs to be fixed!!!
-	Assert( sizeof( CUtlSymbol ) == sizeof( short ) );
-
 	// Clear out statistics
 	memset( &m_Stats, 0, sizeof(m_Stats) );
 
@@ -564,7 +555,7 @@ CBaseFileSystem::CBaseFileSystem()
 //-----------------------------------------------------------------------------
 CBaseFileSystem::~CBaseFileSystem()
 {
-	m_PathIDInfos.PurgeAndDeleteElements();
+	m_PathIDInfos.clear();
 #if defined( TRACK_BLOCKING_IO )
 	delete m_pBlockingItems;
 #endif
@@ -597,8 +588,8 @@ InitReturnVal_t CBaseFileSystem::Init()
 
 
 	// This is a special tag to allow iterating just the BSP file, it doesn't show up in the list per se, but gets converted to "GAME" in the filter function
-	m_BSPPathID = g_PathIDTable.AddString( "BSP" );
-	m_GamePathID = g_PathIDTable.AddString( "GAME" );
+	m_BSPPathID = PathIDSymbol( "BSP" );
+	m_GamePathID = PathIDSymbol( "GAME" );
 
 	if ( getenv( "fs_debug" ) )
 	{
@@ -699,18 +690,6 @@ inline void CBaseFileSystem::ComputeFullWritePath( char* pDest, int maxlen, cons
 }
 
 
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : src1 - 
-//			src2 - 
-// Output : Returns true on success, false on failure.
-//-----------------------------------------------------------------------------
-bool CBaseFileSystem::OpenedFileLessFunc( COpenedFile const& src1, COpenedFile const& src2 )
-{
-	return src1.m_pFile < src2.m_pFile;
-}
-
-
 void CBaseFileSystem::InstallDirtyDiskReportFunc( FSDirtyDiskReportFunc_t func )
 {
 	m_DirtyDiskReportFunc = func;
@@ -723,14 +702,15 @@ void CBaseFileSystem::InstallDirtyDiskReportFunc( FSDirtyDiskReportFunc_t func )
 //-----------------------------------------------------------------------------
 void CBaseFileSystem::LogAccessToFile( char const *accesstype, char const *fullpath, char const *options )
 {
-	LOCAL_THREAD_LOCK();
+	static std::recursive_mutex logAccessMutex;
+	std::scoped_lock lock( logAccessMutex );
 
 	if ( m_fwLevel >= FILESYSTEM_WARNING_REPORTALLACCESSES )
 	{
 		FileSystemWarning( FILESYSTEM_WARNING_REPORTALLACCESSES, "---FS%s:  %s %s (%.3f)\n", ThreadInMainThread() ? "" : "[a]", accesstype, fullpath, Plat_FloatTime() );
 	}
 
-	int c = m_LogFuncs.Count();
+	int c = std::ssize( m_LogFuncs );
 	if ( !c )
 		return;
 
@@ -749,13 +729,13 @@ void CBaseFileSystem::LogAccessToFile( char const *accesstype, char const *fullp
 //-----------------------------------------------------------------------------
 FILE *CBaseFileSystem::Trace_FOpen( const char *filename, const char *options, unsigned flags, int64 *size, CFileLoadInfo *pInfo )
 {
-	if ( m_NonexistingFilesExtensions.GetNumStrings() )
+	if ( !m_NonexistingFilesExtensions.empty() )
 	{
 		if ( char const *pszExt = V_GetFileExtension( filename ) )
 		{
-			AUTO_LOCK( m_OpenedFilesMutex );
-			UtlSymId_t symFound = m_NonexistingFilesExtensions.Find( pszExt );
-			if ( ( symFound != UTL_INVAL_SYMBOL ) && m_NonexistingFilesExtensions[ symFound ] )
+			std::scoped_lock lock( m_OpenedFilesMutex );
+			bool *pbMissing = ks::find_ptr( m_NonexistingFilesExtensions, pszExt );
+			if ( pbMissing && *pbMissing )
 			{
 				DevWarning( "Known VPK-only extension [%s], file {%s} declared missing. Run with -fullfsvalveds to search filesystem.\n", pszExt, filename );
 				return nullptr;
@@ -769,12 +749,11 @@ FILE *CBaseFileSystem::Trace_FOpen( const char *filename, const char *options, u
 	static bool s_bNeverCheckFS = !CommandLine()->FindParm( "-alwayscheckfs" );
 	if ( s_bNeverCheckFS )
 	{
-		AUTO_LOCK( m_OpenedFilesMutex );
+		std::scoped_lock lock( m_OpenedFilesMutex );
 
-		UtlSymId_t symFound = m_NonexistingFilesCache.Find( filename );
-		if ( symFound != UTL_INVAL_SYMBOL )
+		if ( double *pCacheTime = ks::find_ptr( m_NonexistingFilesCache, filename ) )
 		{
-			double &refCacheTime = m_NonexistingFilesCache[ symFound ];
+			double &refCacheTime = *pCacheTime;
 
 			if ( bReadOnlyRequest )
 			{
@@ -811,7 +790,7 @@ FILE *CBaseFileSystem::Trace_FOpen( const char *filename, const char *options, u
 	{
 		double dblNow = Plat_FloatTime();
 
-		AUTO_LOCK( m_OpenedFilesMutex );
+		std::scoped_lock lock( m_OpenedFilesMutex );
 		m_NonexistingFilesCache[ filename ] = dblNow;
 		Warning( "Trace_FOpen: missing file: %s [will never check again]\n", filename );
 	}
@@ -828,13 +807,13 @@ FILE *CBaseFileSystem::Trace_FOpen( const char *filename, const char *options, u
 			FS_setbufsize(fp, 32*1024 );
 		}
 
-		AUTO_LOCK( m_OpenedFilesMutex );
+		std::scoped_lock lock( m_OpenedFilesMutex );
 		COpenedFile file;
 
 		file.SetName( filename );
 		file.m_pFile = fp;
 
-		m_OpenedFiles.AddToTail( file );
+		m_OpenedFiles.push_back( file );
 
 		LogAccessToFile( "open", filename, options );
 	}
@@ -860,7 +839,7 @@ void CBaseFileSystem::GetFileNameForHandle( FileHandle_t handle, char *buf, size
 		return;
 	}
 
-	AUTO_LOCK( m_OpenedFilesMutex );
+	std::scoped_lock lock( m_OpenedFilesMutex );
 
 	COpenedFile file;
 	file.m_pFile = fh->GetFileHandle();
@@ -886,20 +865,20 @@ void CBaseFileSystem::Trace_FClose( FILE *fp )
 {
 	if ( fp )
 	{
-		m_OpenedFilesMutex.Lock();
+		m_OpenedFilesMutex.lock();
 
 		COpenedFile file;
 		file.m_pFile = fp;
 
-		int result = m_OpenedFiles.Find( file );
+		int result = ks::find_index( m_OpenedFiles, file );
 		if ( result != -1 /*m_OpenedFiles.InvalidIdx()*/ )
 		{
 			COpenedFile found = m_OpenedFiles[ result ];
 			if ( m_fwLevel >= FILESYSTEM_WARNING_REPORTALLACCESSES )
 			{
-				FileSystemWarning( FILESYSTEM_WARNING_REPORTALLACCESSES, "---FS%s:  close %s %p %i (%.3f)\n", ThreadInMainThread() ? "" : "[a]", found.GetName(), fp, m_OpenedFiles.Count(), Plat_FloatTime() );
+				FileSystemWarning( FILESYSTEM_WARNING_REPORTALLACCESSES, "---FS%s:  close %s %p %i (%.3f)\n", ThreadInMainThread() ? "" : "[a]", found.GetName(), fp, std::ssize( m_OpenedFiles ), Plat_FloatTime() );
 			}
-			m_OpenedFiles.Remove( result );
+			m_OpenedFiles.erase( m_OpenedFiles.begin() + result );
 		}
 		else
 		{
@@ -911,7 +890,7 @@ void CBaseFileSystem::Trace_FClose( FILE *fp )
 			}
 		}
 
-		m_OpenedFilesMutex.Unlock();
+		m_OpenedFilesMutex.unlock();
 
 		FS_fclose( fp );
 	}
@@ -923,12 +902,12 @@ void CBaseFileSystem::Trace_FRead( int size, FILE* fp )
 	if ( !fp || m_fwLevel < FILESYSTEM_WARNING_REPORTALLACCESSES_READ )
 		return;
 
-	AUTO_LOCK( m_OpenedFilesMutex );
+	std::scoped_lock lock( m_OpenedFilesMutex );
 
 	COpenedFile file;
 	file.m_pFile = fp;
 
-	int result = m_OpenedFiles.Find( file );
+	int result = ks::find_index( m_OpenedFiles, file );
 
 	if( result != -1 )
 	{
@@ -951,9 +930,9 @@ void CBaseFileSystem::Trace_FWrite( int size, FILE* fp )
 	COpenedFile file;
 	file.m_pFile = fp;
 
-	AUTO_LOCK( m_OpenedFilesMutex );
+	std::scoped_lock lock( m_OpenedFilesMutex );
 
-	int result = m_OpenedFiles.Find( file );
+	int result = ks::find_index( m_OpenedFiles, file );
 
 	if( result != -1 )
 	{
@@ -972,8 +951,8 @@ void CBaseFileSystem::Trace_FWrite( int size, FILE* fp )
 //-----------------------------------------------------------------------------
 void CBaseFileSystem::Trace_DumpUnclosedFiles( void )
 {
-	AUTO_LOCK( m_OpenedFilesMutex );
-	for ( int i = 0 ; i < m_OpenedFiles.Count(); i++ )
+	std::scoped_lock lock( m_OpenedFilesMutex );
+	for ( int i = 0 ; i < std::ssize( m_OpenedFiles ); i++ )
 	{
 		COpenedFile *found = &m_OpenedFiles[ i ];
 
@@ -1013,7 +992,7 @@ void CBaseFileSystem::AddVPKFile( char const *pBasename, SearchPathAdd_t addType
 	Q_MakeAbsolutePath( nameBuf, sizeof( nameBuf ), pBasename );
 	Q_FixSlashes( nameBuf );
 	// see if we already have this vpk file
-	for( int i = 0; i < m_VPKFiles.Count(); i++ )
+	for( int i = 0; i < std::ssize( m_VPKFiles ); i++ )
 	{
 		if ( ! V_strcmp( m_VPKFiles[i]->FullPathName(), nameBuf ) )
 		{
@@ -1031,11 +1010,11 @@ void CBaseFileSystem::AddVPKFile( char const *pBasename, SearchPathAdd_t addType
 	{
 		if ( PATH_ADD_TO_TAIL == addType )
 		{
-			m_VPKFiles.AddToTail( pNew );
+			m_VPKFiles.push_back( pNew );
 		}
 		else
 		{
-			m_VPKFiles.AddToHead( pNew );
+			m_VPKFiles.insert( m_VPKFiles.begin(), pNew );
 		}
 		char szRelativePathName[512];
 		Assert ( V_IsAbsolutePath( pNew->FullPathName() ) );
@@ -1057,24 +1036,24 @@ void CBaseFileSystem::RemoveVPKFile( char const *pBasename )
 	Q_strlower( nameBuf );
 	Q_FixSlashes( nameBuf );
 	// see if we already have this vpk file
-	for( int i = 0; i < m_VPKFiles.Count(); i++ )
+	for( int i = 0; i < std::ssize( m_VPKFiles ); i++ )
 	{
 		if ( ! V_strcmp( m_VPKFiles[i]->FullPathName(), nameBuf ) )
 		{
 			delete m_VPKFiles[i];
-			m_VPKFiles.Remove( i );
+			m_VPKFiles.erase( m_VPKFiles.begin() + i );
 			break;											// already have this one
 		}
 	}
 #endif
 }
 
-void CBaseFileSystem::GetVPKFileNames( CUtlVector<CUtlString> &destVector )
+void CBaseFileSystem::GetVPKFileNames( std::vector< std::string > &destVector )
 {
 #ifdef SUPPORT_VPK
-	for( int i = 0; i < m_VPKFiles.Count(); i++ )
+	for( int i = 0; i < std::ssize( m_VPKFiles ); i++ )
 	{
-		destVector.AddToTail( CUtlString( m_VPKFiles[i]->FullPathName() ) );
+		destVector.push_back( std::string( m_VPKFiles[i]->FullPathName() ) );
 	}
 #endif	
 }
@@ -1149,12 +1128,12 @@ bool CBaseFileSystem::AddPackFileFromPath( const char *pPath, const char *pakfil
 #endif
 
 	// Add this pack file to the search path:
-	CSearchPath *sp = &m_SearchPaths[ m_SearchPaths.AddToTail() ];
+	CSearchPath *sp = &m_SearchPaths.emplace_back();
 	pf->SetPath( sp->GetPath() );
 	pf->m_lPackFileTime = GetFileTime( pakfile );
 
-	sp->SetPath( pPath );
-	sp->m_pPathIDInfo->SetPathID( pathID );
+	sp->SetPath( PathIDSymbol( pPath ) );
+	sp->m_pPathIDInfo->SetPathID( PathIDSymbol( pathID ) );
 	sp->SetPackFile( pf );
 
 	return true;
@@ -1209,7 +1188,7 @@ int CPackFileHandle::Seek( int nOffset, int nWhence )
 //-----------------------------------------------------------------------------
 int CPackFile::ReadFromPack( int nIndex, void* buffer, int nDestBytes, int nBytes, int64 nOffset )
 {
-	m_mutex.Lock();
+	m_mutex.lock();
 
 	if ( fs_monitor_read_from_pack.GetInt() == 1 || ( fs_monitor_read_from_pack.GetInt() == 2 && ThreadInMainThread() ) )
 	{
@@ -1238,7 +1217,7 @@ int CPackFile::ReadFromPack( int nIndex, void* buffer, int nDestBytes, int nByte
 	{
 		Error("Failure in CPackFile::ReadFromPack(): m_hPackFileHandleFS and/or m_hPackFileHandleVPK are uninitialized - The file open call(s) likely failed\n");
 	}
-	m_mutex.Unlock();
+	m_mutex.unlock();
 
 	return nBytesRead;
 }
@@ -1254,7 +1233,7 @@ CFileHandle *CPackFile::OpenFile( const char *pFileName, const char *pOptions )
 	// find the file's location in the pack
 	if ( FindFile( pFileName, nIndex, nPosition, nLength ) )
 	{
-		m_mutex.Lock();
+		m_mutex.lock();
 #ifdef SUPPORT_VPK
 		if ( m_nOpenFiles == 0 && m_hPackFileHandleFS == nullptr && !m_hPackFileHandleVPK )
 #else
@@ -1262,7 +1241,7 @@ CFileHandle *CPackFile::OpenFile( const char *pFileName, const char *pOptions )
 #endif
 		{
 			// Try to open it as a regular file first
-			m_hPackFileHandleFS = m_fs->Trace_FOpen( m_ZipName, "rb", 0, nullptr );
+			m_hPackFileHandleFS = m_fs->Trace_FOpen( m_ZipName.c_str(), "rb", 0, nullptr );
 
 #ifdef SUPPORT_VPK
 			// Try opening from a VPK
@@ -1273,7 +1252,7 @@ CFileHandle *CPackFile::OpenFile( const char *pFileName, const char *pOptions )
 #endif
 		}
 		m_nOpenFiles++;
-		m_mutex.Unlock();
+		m_mutex.unlock();
 		CPackFileHandle* ph = new CPackFileHandle( this, nPosition, nLength, nIndex );
 		CFileHandle *fh = new CFileHandle( m_fs );
 		fh->m_pPackFileHandle = ph;
@@ -1363,11 +1342,10 @@ int CZipPackFile::ReadFromPack( int nEntryIndex, void* pBuffer, int nDestBytes, 
 					}
 			
 					// uncompress into temporary memory
-					CUtlMemory< byte > tempMemory;
-					tempMemory.EnsureCapacity( actualSize );
-					lzma.Uncompress( pPreloadData, tempMemory.Base() );
+					std::vector< byte > tempMemory( actualSize );
+					lzma.Uncompress( pPreloadData, tempMemory.data() );
 					// copy only what caller expects
-					V_memcpy( pBuffer, (byte*)tempMemory.Base() + nLocalOffset, nBytes );
+					V_memcpy( pBuffer, (byte*)tempMemory.data() + nLocalOffset, nBytes );
 					return nBytes;
 				}
 			}
@@ -1408,12 +1386,12 @@ bool CZipPackFile::GetOffsetAndLength( const char *pFileName, int &nBaseIndex, i
 	CZipPackFile::CPackFileEntry lookup;
 	lookup.m_HashName = HashStringCaselessConventional( pFileName );
 
-	int idx = m_PackFiles.Find( lookup );
-	if ( -1 != idx  )
+	auto it = std::ranges::lower_bound( m_PackFiles, lookup.m_HashName, {}, &CZipPackFile::CPackFileEntry::m_HashName );
+	if ( it != m_PackFiles.end() && it->m_HashName == lookup.m_HashName )
 	{
-		nFileOffset = m_PackFiles[idx].m_nPosition;
-		nLength = m_PackFiles[idx].m_nLength;
-		nBaseIndex = idx;
+		nFileOffset = it->m_nPosition;
+		nLength = it->m_nLength;
+		nBaseIndex = (int)( it - m_PackFiles.begin() );
 		return true;
 	}
 
@@ -1474,7 +1452,7 @@ void CZipPackFile::SetupPreloadData()
 	}
 	else
 	{
-		pPreload = malloc( m_nPreloadSectionSize );
+		pPreload = MemAlloc_Alloc( m_nPreloadSectionSize );
 		if ( !pPreload )
 		{
 			return;
@@ -1509,7 +1487,7 @@ void CZipPackFile::DiscardPreloadData()
 	// a section is an alias, the header becomes an alias, not owned memory
 	if ( !m_pSection )
 	{
-		free( m_pPreloadHeader );
+		g_pMemAlloc->Free( m_pPreloadHeader );
 	}
 	m_pPreloadHeader = nullptr;
 }
@@ -1569,17 +1547,16 @@ bool CZipPackFile::Prepare( int64 fileLen, int64 nFileOfs )
 	MEM_ALLOC_CREDIT();
 
 	// read central directory into memory and parse
-	CUtlBuffer zipDirBuff( 0, rec.centralDirectorySize, 0 );
-	zipDirBuff.EnsureCapacity( rec.centralDirectorySize );
-	ReadFromPack( -1, zipDirBuff.Base(), -1, rec.centralDirectorySize, rec.startOfCentralDirOffset );
-	zipDirBuff.SeekPut( CUtlBuffer::SEEK_HEAD, rec.centralDirectorySize );
+	std::vector< std::byte > zipDirData( rec.centralDirectorySize );
+	ReadFromPack( -1, zipDirData.data(), -1, rec.centralDirectorySize, rec.startOfCentralDirOffset );
+	ks::byte_reader zipDirBuff( zipDirData );
 
 	ZIP_FileHeader zipFileHeader;
 	char filename[MAX_PATH];
 
 	// Check for a preload section, expected to be the first file in the zip
-	zipDirBuff.GetObjects( &zipFileHeader );
-	zipDirBuff.Get( filename, zipFileHeader.fileNameLength );
+	zipFileHeader = zipDirBuff.read< ZIP_FileHeader >();
+	zipDirBuff.read_bytes( filename, zipFileHeader.fileNameLength );
 	filename[zipFileHeader.fileNameLength] = '\0';
 	if ( !V_stricmp( filename, PRELOAD_SECTION_NAME ) )
 	{
@@ -1592,14 +1569,14 @@ bool CZipPackFile::Prepare( int64 fileLen, int64 nFileOfs )
 
 		// Set up to extract the remaining files
 		int nextOffset = bCompatibleFormat ? zipFileHeader.extraFieldLength + zipFileHeader.fileCommentLength : 0;
-		zipDirBuff.SeekGet( CUtlBuffer::SEEK_CURRENT, nextOffset );
+		zipDirBuff.skip( nextOffset );
 		firstFileIdx = 1;
 	}
 	else
 	{
 
 		// No preload section, reset buffer pointer
-		zipDirBuff.SeekGet( CUtlBuffer::SEEK_HEAD, 0 );
+		zipDirBuff.seek( 0 );
 	}
 
 	// Parse out central directory and determine absolute file positions of data.
@@ -1608,11 +1585,11 @@ bool CZipPackFile::Prepare( int64 fileLen, int64 nFileOfs )
 	char tmpString[MAX_PATH];		
 	CZipPackFile::CPackFileEntry lookup;
 
-	m_PackFiles.EnsureCapacity( numFilesInZip );
+	m_PackFiles.reserve( numFilesInZip );
 
 	for ( int i = firstFileIdx; i < numFilesInZip; ++i )
 	{
-		zipDirBuff.GetObjects( &zipFileHeader );
+		zipFileHeader = zipDirBuff.read< ZIP_FileHeader >();
 		if ( zipFileHeader.signature != PKID( 1, 2 ) || zipFileHeader.compressionMethod != 0 )
 		{
 			Msg( "Incompatible pack file detected! %s\n", ( zipFileHeader.compressionMethod != 0 ) ? " File is compressed" : "" );
@@ -1621,7 +1598,7 @@ bool CZipPackFile::Prepare( int64 fileLen, int64 nFileOfs )
 		}
 
 		Assert( zipFileHeader.fileNameLength < sizeof( tmpString ) );
-		zipDirBuff.Get( (void *)tmpString, zipFileHeader.fileNameLength );
+		zipDirBuff.read_bytes( tmpString, zipFileHeader.fileNameLength );
 		tmpString[zipFileHeader.fileNameLength] = '\0';
 		Q_FixSlashes( tmpString );
 
@@ -1642,13 +1619,13 @@ bool CZipPackFile::Prepare( int64 fileLen, int64 nFileOfs )
 		{
 			lookup.m_nPreloadIdx = INVALID_PRELOAD_ENTRY;
 		}
-		m_PackFiles.InsertNoSort( lookup );
+		m_PackFiles.push_back( lookup );
 
 		int nextOffset = bCompatibleFormat ? zipFileHeader.extraFieldLength + zipFileHeader.fileCommentLength : 0;
-		zipDirBuff.SeekGet( CUtlBuffer::SEEK_CURRENT, nextOffset );
+		zipDirBuff.skip( nextOffset );
 	}
 
-	m_PackFiles.RedoSort();
+	std::ranges::sort( m_PackFiles, {}, &CZipPackFile::CPackFileEntry::m_HashName );
 
 
 	return bSuccess;
@@ -1661,7 +1638,7 @@ CRC32_t CZipPackFile::GetKVPoolKey()
 
 bool CZipPackFile::GetStringFromKVPool( unsigned int key, char *pOutBuff, int buflen )
 {
-	return m_KVStringPool.String( (FileNameHandle_t)key, pOutBuff, buflen );
+	return m_KVStringPool.string( (FileNameHandle_t)(uintptr_t)key, pOutBuff, buflen );
 }
 
 //-----------------------------------------------------------------------------
@@ -1685,20 +1662,8 @@ CZipPackFile::CZipPackFile( CBaseFileSystem* fs, void *pSection )
 CZipPackFile::~CZipPackFile()
 {
 	DiscardPreloadData();
-	m_KVStringPool.RemoveAll();
+	m_KVStringPool.clear();
 }
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : src1 - 
-//			src2 - 
-// Output : Returns true on success, false on failure.
-//-----------------------------------------------------------------------------
-bool CZipPackFile::CPackFileLessFunc::Less( CZipPackFile::CPackFileEntry const& src1, CZipPackFile::CPackFileEntry const& src2, void *pCtx )
-{
-	return ( src1.m_HashName < src2.m_HashName );
-}
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Search pPath for pak?.pak files and add to search path if found
@@ -1706,7 +1671,7 @@ bool CZipPackFile::CPackFileLessFunc::Less( CZipPackFile::CPackFileEntry const& 
 //-----------------------------------------------------------------------------
 #define PACK_NAME_FORMAT "zip%i.zip"
 
-void CBaseFileSystem::AddPackFiles( const char *pPath, const CUtlSymbol &pathID, SearchPathAdd_t addType, int iForceInsertIndex )
+void CBaseFileSystem::AddPackFiles( const char *pPath, std::string_view pathID, SearchPathAdd_t addType, int iForceInsertIndex )
 {
 	Assert( ThreadInMainThread() );
 	DISK_INTENSIVE();
@@ -1716,9 +1681,9 @@ void CBaseFileSystem::AddPackFiles( const char *pPath, const CUtlSymbol &pathID,
 	// requirements that prevent the simpler ZipN discovery logic.
 
 
-	CUtlVector< CUtlString > pakPaths;
-	CUtlVector< CUtlString > pakNames;
-	CUtlVector< int64 > pakSizes;
+	std::vector< std::string > pakPaths;
+	std::vector< std::string > pakNames;
+	std::vector< int64 > pakSizes;
 
 	// determine pak files, [zip0..zipN]
 	for ( int i = 0; ; i++ )
@@ -1734,31 +1699,31 @@ void CBaseFileSystem::AddPackFiles( const char *pPath, const CUtlSymbol &pathID,
 
 		MEM_ALLOC_CREDIT();
 
-		pakPaths.AddToTail( pPath );
-		pakNames.AddToTail( pakfile );
-		pakSizes.AddToTail( (int64)((unsigned int)buf.st_size) );
+		pakPaths.push_back( ks::nz( pPath ) );
+		pakNames.push_back( pakfile );
+		pakSizes.push_back( (int64)((unsigned int)buf.st_size) );
 	}
 
 
 	// Add any zip files in the format zip1.zip ... zip0.zip
 	// Add them backwards so zip(N) is higher priority than zip(N-1), etc.
-	int pakcount = pakSizes.Count();
+	int pakcount = std::ssize( pakSizes );
 
 	int nCount = 0;
 
 	for ( int i = pakcount-1; i >= 0; i-- )
 	{
 		char fullpath[MAX_PATH];
-		V_ComposeFileName( pakPaths[i].Get(), pakNames[i].Get(), fullpath, sizeof( fullpath ) );
+		V_ComposeFileName( pakPaths[i].data(), pakNames[i].data(), fullpath, sizeof( fullpath ) );
 
 		int nIndex;
 		if ( addType == PATH_ADD_TO_TAIL )
 		{
-			nIndex = m_SearchPaths.AddToTail();
+			nIndex = std::ssize( m_SearchPaths ); m_SearchPaths.emplace_back();
 		}
 		else
 		{
-			nIndex = m_SearchPaths.InsertBefore( nCount );
+			m_SearchPaths.emplace( m_SearchPaths.begin() + nCount ); nIndex = nCount;
 			++nCount;
 		}
 
@@ -1766,12 +1731,12 @@ void CBaseFileSystem::AddPackFiles( const char *pPath, const CUtlSymbol &pathID,
 		
 		sp->m_pPathIDInfo = FindOrAddPathIDInfo( pathID, -1 );
 		sp->m_storeId = g_iNextSearchPathID++;
-		sp->SetPath( g_PathIDTable.AddString( pakPaths[i].Get() ) );
+		sp->SetPath( PathIDSymbol( pakPaths[i].data() ) );
 
 		CPackFile *pf = nullptr;
-		for ( int iPackFile = 0; iPackFile < m_ZipFiles.Count(); iPackFile++ )
+		for ( int iPackFile = 0; iPackFile < std::ssize( m_ZipFiles ); iPackFile++ )
 		{
-			if ( !Q_stricmp( m_ZipFiles[iPackFile]->m_ZipName.Get(), fullpath ) )
+			if ( !Q_stricmp( m_ZipFiles[iPackFile]->m_ZipName.data(), fullpath ) )
 			{
 				pf = m_ZipFiles[iPackFile];
 				sp->SetPackFile( pf );
@@ -1789,7 +1754,7 @@ void CBaseFileSystem::AddPackFiles( const char *pPath, const CUtlSymbol &pathID,
 			pf->SetPath( sp->GetPath() );
 			pf->m_ZipName = fullpath;
 
-			m_ZipFiles.AddToTail( pf );
+			m_ZipFiles.push_back( pf );
 			sp->SetPackFile( pf );
 			pf->m_lPackFileTime = GetFileTime( fullpath );
 
@@ -1811,7 +1776,7 @@ void CBaseFileSystem::AddPackFiles( const char *pPath, const CUtlSymbol &pathID,
 						Trace_FClose( pf->m_hPackFileHandleFS );
 						pf->m_hPackFileHandleFS = nullptr;
 					}
-					m_SearchPaths.Remove( nIndex );
+					m_SearchPaths.erase( m_SearchPaths.begin() + nIndex );
 				}
 			}
 #ifdef SUPPORT_VPK
@@ -1821,7 +1786,7 @@ void CBaseFileSystem::AddPackFiles( const char *pPath, const CUtlSymbol &pathID,
 
 				if ( !pf->m_hPackFileHandleVPK || !pf->Prepare( pakSizes[i] ) )
 				{
-					m_SearchPaths.Remove( nIndex );
+					m_SearchPaths.erase( m_SearchPaths.begin() + nIndex );
 				} 
 			}
 #endif
@@ -1836,7 +1801,7 @@ void CBaseFileSystem::RemoveAllMapSearchPaths( void )
 {
 	AsyncFinishAll();
 
-	int c = m_SearchPaths.Count();
+	int c = std::ssize( m_SearchPaths );
 	for ( int i = c - 1; i >= 0; i-- )
 	{
 		if ( !( m_SearchPaths[i].GetPackFile() && m_SearchPaths[i].GetPackFile()->m_bIsMapPath ) )
@@ -1844,7 +1809,7 @@ void CBaseFileSystem::RemoveAllMapSearchPaths( void )
 			continue;
 		}
 		
-		m_SearchPaths.Remove( i );
+		m_SearchPaths.erase( m_SearchPaths.begin() + i );
 	}
 }
 
@@ -1876,13 +1841,13 @@ void CBaseFileSystem::AddMapPackFile( const char *pPath, const char *pPathID, Se
 		}
 	}
 
-	int c = m_SearchPaths.Count();
+	int c = std::ssize( m_SearchPaths );
 	for ( int i = c - 1; i >= 0; i-- )
 	{
 		if ( !( m_SearchPaths[i].GetPackFile() && m_SearchPaths[i].GetPackFile()->m_bIsMapPath ) )
 			continue;
 		
-		if ( Q_stricmp( m_SearchPaths[i].GetPackFile()->m_ZipName.Get(), fullpath ) == 0 )
+		if ( Q_stricmp( m_SearchPaths[i].GetPackFile()->m_ZipName.data(), fullpath ) == 0 )
 		{
 			// Already set as map path
 			return;
@@ -1933,19 +1898,19 @@ void CBaseFileSystem::AddMapPackFile( const char *pPath, const char *pPathID, Se
 			int nIndex;
 			if ( addType == PATH_ADD_TO_TAIL )
 			{
-				nIndex = m_SearchPaths.AddToTail();	
+				nIndex = std::ssize( m_SearchPaths ); m_SearchPaths.emplace_back();	
 			}
 			else
 			{
-				nIndex = m_SearchPaths.AddToHead();	
+				m_SearchPaths.emplace( m_SearchPaths.begin() ); nIndex = 0;	
 			}
 
 			CSearchPath *sp = &m_SearchPaths[ nIndex ];
 
 			sp->SetPackFile( pf );
 			sp->m_storeId = g_iNextSearchPathID++;
-			sp->SetPath( g_PathIDTable.AddString( newPath ) );
-			sp->m_pPathIDInfo = FindOrAddPathIDInfo( g_PathIDTable.AddString( pPathID ), -1 );
+			sp->SetPath( PathIDSymbol( newPath ) );
+			sp->m_pPathIDInfo = FindOrAddPathIDInfo( PathIDSymbol( pPathID ), -1 );
 
 			if ( IsDvdDevPathString( newPath ) )
 			{
@@ -1956,7 +1921,7 @@ void CBaseFileSystem::AddMapPackFile( const char *pPath, const char *pPathID, Se
 			pf->m_lPackFileTime = GetFileTime( newPath );
 
 			//pf->m_PackFileID = m_FileTracker2.NotePackFileOpened( pPath, pPathID, packfile->filelen );
-			m_ZipFiles.AddToTail( pf );
+			m_ZipFiles.push_back( pf );
 		}
 		else
 		{
@@ -2013,19 +1978,19 @@ void CBaseFileSystem::AddMapPackFile( const char *pPath, const char *pPathID, Se
 			int nIndex;
 			if ( addType == PATH_ADD_TO_TAIL )
 			{
-				nIndex = m_SearchPaths.AddToTail();	
+				nIndex = std::ssize( m_SearchPaths ); m_SearchPaths.emplace_back();	
 			}
 			else
 			{
-				nIndex = m_SearchPaths.AddToHead();	
+				m_SearchPaths.emplace( m_SearchPaths.begin() ); nIndex = 0;	
 			}
 
 			CSearchPath *sp = &m_SearchPaths[ nIndex ];
 
 			sp->SetPackFile( pf );
 			sp->m_storeId = g_iNextSearchPathID++;
-			sp->SetPath( g_PathIDTable.AddString( newPath ) );
-			sp->m_pPathIDInfo = FindOrAddPathIDInfo( g_PathIDTable.AddString( pPathID ), -1 );
+			sp->SetPath( PathIDSymbol( newPath ) );
+			sp->m_pPathIDInfo = FindOrAddPathIDInfo( PathIDSymbol( pPathID ), -1 );
 
 			if ( IsDvdDevPathString( newPath ) )
 			{
@@ -2039,7 +2004,7 @@ void CBaseFileSystem::AddMapPackFile( const char *pPath, const char *pPathID, Se
 			pf->m_hPackFileHandleFS = nullptr;
 
 			//pf->m_PackFileID = m_FileTracker2.NotePackFileOpened( pPath, pPathID, packfile->filelen );
-			m_ZipFiles.AddToTail( pf );
+			m_ZipFiles.push_back( pf );
 		}
 		else
 		{
@@ -2054,7 +2019,7 @@ void CBaseFileSystem::BeginMapAccess()
 
 	if ( m_iMapLoad++ == 0 )
 	{
-		int c = m_SearchPaths.Count();
+		int c = std::ssize( m_SearchPaths );
 		for( int i = 0; i < c; i++ )
 		{
 			CSearchPath *pSearchPath = &m_SearchPaths[i];
@@ -2063,7 +2028,7 @@ void CBaseFileSystem::BeginMapAccess()
 			if ( pPackFile && pPackFile->m_bIsMapPath )
 			{
 				pPackFile->AddRef();
-				pPackFile->m_mutex.Lock();
+				pPackFile->m_mutex.lock();
 #ifdef SUPPORT_VPK
 				if ( pPackFile->m_nOpenFiles == 0 && pPackFile->m_hPackFileHandleFS == nullptr && !pPackFile->m_hPackFileHandleVPK )
 #else
@@ -2071,17 +2036,17 @@ void CBaseFileSystem::BeginMapAccess()
 #endif
 				{
 					// Try opening the file as a regular file 
-					pPackFile->m_hPackFileHandleFS = Trace_FOpen( pPackFile->m_ZipName, "rb", 0, nullptr );
+					pPackFile->m_hPackFileHandleFS = Trace_FOpen( pPackFile->m_ZipName.c_str(), "rb", 0, nullptr );
 
 #ifdef SUPPORT_VPK
 					if ( !pPackFile->m_hPackFileHandleFS )
 					{
-						pPackFile->m_hPackFileHandleVPK = FindFileInVPKs( pPackFile->m_ZipName );
+						pPackFile->m_hPackFileHandleVPK = FindFileInVPKs( pPackFile->m_ZipName.c_str() );
 					}
 #endif
 				}
 				pPackFile->m_nOpenFiles++;
-				pPackFile->m_mutex.Unlock();
+				pPackFile->m_mutex.unlock();
 			}
 		}
 	}
@@ -2092,7 +2057,7 @@ void CBaseFileSystem::EndMapAccess()
 {
 	if ( m_iMapLoad-- == 1 )
 	{
-		int c = m_SearchPaths.Count();
+		int c = std::ssize( m_SearchPaths );
 		for( int i = 0; i < c; i++ )
 		{
 			CSearchPath *pSearchPath = &m_SearchPaths[i];
@@ -2100,7 +2065,7 @@ void CBaseFileSystem::EndMapAccess()
 
 			if ( pPackFile && pPackFile->m_bIsMapPath )
 			{
-				pPackFile->m_mutex.Lock();
+				pPackFile->m_mutex.lock();
 				pPackFile->m_nOpenFiles--;
 				if ( pPackFile->m_nOpenFiles == 0  )
 				{
@@ -2110,7 +2075,7 @@ void CBaseFileSystem::EndMapAccess()
 						pPackFile->m_hPackFileHandleFS = nullptr;
 					}
 				}
-				pPackFile->m_mutex.Unlock();
+				pPackFile->m_mutex.unlock();
 				pPackFile->Release();
 			}
 		}
@@ -2124,7 +2089,7 @@ void CBaseFileSystem::PrintSearchPaths( void )
 	int i;
 	Msg( "---------------\n" );
 	Msg( "%-20s %s\n", "Path ID:", "File Path:" );
-	int c = m_SearchPaths.Count();
+	int c = std::ssize( m_SearchPaths );
 	for( i = 0; i < c; i++ )
 	{
 		CSearchPath *pSearchPath = &m_SearchPaths[i];
@@ -2138,7 +2103,7 @@ void CBaseFileSystem::PrintSearchPaths( void )
 		else if ( pSearchPath->GetPackFile()  )
 		{
 			pszType = "(pack) ";
-			pszPack = pSearchPath->GetPackFile()->m_ZipName;
+			pszPack = pSearchPath->GetPackFile()->m_ZipName.c_str();
 		}
 
 		Msg( "%-20s \"%s\" %s%s\n", (const char *)pSearchPath->GetPathIDString(), pSearchPath->GetPathString(), pszType, pszPack );
@@ -2187,16 +2152,15 @@ void CBaseFileSystem::AddSearchPathInternal( const char *pPath, const char *path
 	}
 
 	// Make sure that it doesn't already exist
-	CUtlSymbol pathSym, pathIDSym;
-	pathSym = g_PathIDTable.AddString( newPath );
-	pathIDSym = g_PathIDTable.AddString( pathID );
+	std::string_view pathSym = PathIDSymbol( newPath );
+	std::string_view pathIDSym = PathIDSymbol( pathID );
 	int i;
-	int c = m_SearchPaths.Count();
+	int c = std::ssize( m_SearchPaths );
 	int id = 0;
 	for ( i = 0; i < c; i++ )
 	{
 		CSearchPath *pSearchPath = &m_SearchPaths[i];
-		if ( pSearchPath->GetPath() == pathSym && pSearchPath->GetPathID() == pathIDSym )
+		if ( pSearchPath->GetPath().data() == pathSym.data() && pSearchPath->GetPathID().data() == pathIDSym.data() )
 		{
 			if ( ( addType == PATH_ADD_TO_HEAD && i == 0 ) || ( addType == PATH_ADD_TO_TAIL ) )
 			{
@@ -2204,12 +2168,12 @@ void CBaseFileSystem::AddSearchPathInternal( const char *pPath, const char *path
 			}
 			else
 			{
-				m_SearchPaths.Remove(i); // remove it from its current position so we can add it back to the head
+				m_SearchPaths.erase( m_SearchPaths.begin() + i ); // remove it from its current position so we can add it back to the head
 				i--;
 				c--;
 			}
 		}
-		if ( !id && pSearchPath->GetPath() == pathSym )
+		if ( !id && pSearchPath->GetPath().data() == pathSym.data() )
 		{
 			// get first found - all reference the same store
 			id = pSearchPath->m_storeId;
@@ -2223,24 +2187,24 @@ void CBaseFileSystem::AddSearchPathInternal( const char *pPath, const char *path
 
 	// Add to list
 	bool bAdded = false;
-	int nIndex = m_SearchPaths.Count();
+	int nIndex = std::ssize( m_SearchPaths );
 
 	if ( bAddPackFiles )
 	{
 		// Add pack files for this path next
-		int lastCount = m_SearchPaths.Count();
+		int lastCount = std::ssize( m_SearchPaths );
 		AddPackFiles( newPath, pathIDSym, addType, iForceInsertIndex );
-		bAdded = m_SearchPaths.Count() != lastCount;
+		bAdded = std::ssize( m_SearchPaths ) != lastCount;
 	}
 
 	if ( addType == PATH_ADD_TO_HEAD )
 	{
-		nIndex = m_SearchPaths.Count() - nIndex;
+		nIndex = std::ssize( m_SearchPaths ) - nIndex;
 		Assert( nIndex >= 0 );
 	}
 
 	// Grab last entry and set the path
-	m_SearchPaths.InsertBefore( nIndex );
+	m_SearchPaths.emplace( m_SearchPaths.begin() + nIndex );
 
 	// setup the 'base' path
 	CSearchPath *sp = &m_SearchPaths[ nIndex ];
@@ -2275,7 +2239,7 @@ void CBaseFileSystem::AddSearchPath( const char *pPath, const char *pathID, Sear
 	{
 #ifdef SUPPORT_VPK
 		// Check if we are running with VPKs?
-		if ( m_VPKFiles.Count() > 0 )
+		if ( !m_VPKFiles.empty() )
 		{
 			char newVPK[ MAX_PATH ] = {};
 			sprintf( newVPK, "%s/pakxv_%s.vpk", pGameName, pPath );
@@ -2364,7 +2328,7 @@ void CBaseFileSystem::AddSearchPath( const char *pPath, const char *pathID, Sear
 		}
 	}
 
-	int currCount = m_SearchPaths.Count();
+	int currCount = std::ssize( m_SearchPaths );
 
 	AddSearchPathInternal( pPath, pathID, addType, true );
 
@@ -2389,7 +2353,7 @@ void CBaseFileSystem::AddSearchPath( const char *pPath, const char *pathID, Sear
 	}
 #endif
 
-	if ( currCount != m_SearchPaths.Count() )
+	if ( currCount != std::ssize( m_SearchPaths ) )
 	{
 #if !defined( DEDICATED )
 #endif
@@ -2430,7 +2394,7 @@ void CBaseFileSystem::SyncDvdDevCache()
 //-----------------------------------------------------------------------------
 int CBaseFileSystem::GetSearchPath( const char *pathID, bool bGetPackFiles, char *pPath, int nMaxLen )
 {
-	AUTO_LOCK( m_SearchPathsMutex );
+	std::scoped_lock lock( m_SearchPathsMutex );
 
 	int nLen = 0;
 	if ( nMaxLen )
@@ -2455,7 +2419,7 @@ int CBaseFileSystem::GetSearchPath( const char *pathID, bool bGetPackFiles, char
 			else
 			{
 				// full path and slash
-				nLen += Q_strlen( pPackFile->m_ZipName.String() ) + 1;
+				nLen += Q_strlen( pPackFile->m_ZipName.c_str() ) + 1;
 			}
 			continue;
 		}
@@ -2473,9 +2437,9 @@ int CBaseFileSystem::GetSearchPath( const char *pathID, bool bGetPackFiles, char
 		else
 		{
 			// full path and slash
-			Q_strncpy( &pPath[nLen], pPackFile->m_ZipName.String(), nMaxLen - nLen );
+			Q_strncpy( &pPath[nLen], pPackFile->m_ZipName.c_str(), nMaxLen - nLen );
 			V_AppendSlash( &pPath[nLen], nMaxLen - nLen );
-			nLen += Q_strlen( pPackFile->m_ZipName.String() ) + 1;
+			nLen += Q_strlen( pPackFile->m_ZipName.c_str() ) + 1;
 		}
 	}
 
@@ -2488,7 +2452,7 @@ int CBaseFileSystem::GetSearchPath( const char *pathID, bool bGetPackFiles, char
 //-----------------------------------------------------------------------------
 int CBaseFileSystem::GetSearchPathID( char *pPath, int nMaxLen )
 {
-	AUTO_LOCK( m_SearchPathsMutex );
+	std::scoped_lock lock( m_SearchPathsMutex );
 
 	if ( nMaxLen )
 	{
@@ -2496,13 +2460,13 @@ int CBaseFileSystem::GetSearchPathID( char *pPath, int nMaxLen )
 	}
 
 	// determine unique PathIDs
-	CUtlVector< CUtlSymbol > list;
-	for ( int i = 0 ; i < m_SearchPaths.Count(); i++ )
+	std::vector< const char * > list;
+	for ( int i = 0 ; i < std::ssize( m_SearchPaths ); i++ )
 	{
-		CUtlSymbol pathID = m_SearchPaths[i].GetPathID();
-		if ( pathID != UTL_INVAL_SYMBOL && list.Find( pathID ) == -1 )
+		const char *pathID = m_SearchPaths[i].GetPathID().data();
+		if ( pathID && ks::find_index( list, pathID ) == -1 )
 		{
-			list.AddToTail( pathID );
+			list.push_back( pathID );
 			V_strncat( pPath, m_SearchPaths[i].GetPathIDString(), nMaxLen );
 			V_strncat( pPath, ";", nMaxLen );
 		}
@@ -2529,19 +2493,19 @@ bool CBaseFileSystem::RemoveSearchPath( const char *pPath, const char *pathID )
 	if ( const char *pActualPathID = pathID ? StringAfterPrefix( pathID, "COMPAT:" ) : nullptr )
 	{
 #ifdef SUPPORT_VPK
-		if ( m_VPKFiles.Count() > 0 )
+		if ( !m_VPKFiles.empty() )
 		{
 			char newVPK[ MAX_PATH ] = {};
 			sprintf( newVPK, "pakxv_%s", pPath );
-			while ( m_VPKFiles.Count() > 0 )
+			while ( !m_VPKFiles.empty() )
 			{
-				CPackedStore *pVPK = m_VPKFiles.Head();
+				CPackedStore *pVPK = m_VPKFiles.front();
 				char szExistingVPKBase[ MAX_PATH ] = {};
 				V_FileBase( pVPK->BaseName(), szExistingVPKBase, sizeof( szExistingVPKBase ) );
 				char const *szAfterRemovedPathVPK = StringAfterPrefix( szExistingVPKBase, newVPK );
 				if ( szAfterRemovedPathVPK && ( *szAfterRemovedPathVPK == 0 || *szAfterRemovedPathVPK == '_' ) )
 				{
-					m_VPKFiles.RemoveMultipleFromHead( 1 );
+					m_VPKFiles.erase( m_VPKFiles.begin(), m_VPKFiles.begin() + 1 );
 					delete pVPK;
 				}
 				else
@@ -2550,7 +2514,7 @@ bool CBaseFileSystem::RemoveSearchPath( const char *pPath, const char *pathID )
 			return true;
 		}
 #endif
-		int c = m_SearchPaths.Count();
+		int c = std::ssize( m_SearchPaths );
 		for ( int i = c - 1; i >= 0; i-- )
 		{
 			char newCompatPath[ MAX_PATH ] = {};
@@ -2558,7 +2522,7 @@ bool CBaseFileSystem::RemoveSearchPath( const char *pPath, const char *pathID )
 			Q_FixSlashes( newCompatPath );
 			if ( V_strstr( m_SearchPaths[ i ].GetPathString(), newCompatPath ) )
 			{
-				m_SearchPaths.Remove( i );
+				m_SearchPaths.erase( m_SearchPaths.begin() + i );
 				return true;
 			}
 		}
@@ -2579,23 +2543,23 @@ bool CBaseFileSystem::RemoveSearchPath( const char *pPath, const char *pathID )
 	}
 	pPath = newPath;
 
-	CUtlSymbol lookup = g_PathIDTable.AddString( pPath );
-	CUtlSymbol id = g_PathIDTable.AddString( pathID );
+	std::string_view lookup = PathIDSymbol( pPath );
+	std::string_view id = PathIDSymbol( pathID );
 
 	bool bret = false;
 
 	// Count backward since we're possibly deleting one or more pack files, too
 	int i;
-	int c = m_SearchPaths.Count();
+	int c = std::ssize( m_SearchPaths );
 	for( i = c - 1; i >= 0; i-- )
 	{
-		if ( newPath && m_SearchPaths[i].GetPath() != lookup )
+		if ( newPath && m_SearchPaths[i].GetPath().data() != lookup.data() )
 			continue;
 
 		if ( FilterByPathID( &m_SearchPaths[i], id ) )
 			continue;
 
-		m_SearchPaths.Remove( i );
+		m_SearchPaths.erase( m_SearchPaths.begin() + i );
 		bret = true;
 	}
 	return bret;
@@ -2610,12 +2574,12 @@ void CBaseFileSystem::RemoveSearchPaths( const char *pathID )
 {
 	AsyncFinishAll();
 
-	int nCount = m_SearchPaths.Count();
+	int nCount = std::ssize( m_SearchPaths );
 	for (int i = nCount - 1; i >= 0; i--)
 	{
-		if (!Q_stricmp(m_SearchPaths.Element(i).GetPathIDString(), pathID))
+		if (!Q_stricmp(m_SearchPaths[ i ].GetPathIDString(), pathID))
 		{
-			m_SearchPaths.FastRemove(i);
+			ks::swap_remove( m_SearchPaths, i );
 		}
 	}
 }
@@ -2626,12 +2590,12 @@ void CBaseFileSystem::RemoveSearchPaths( const char *pathID )
 //-----------------------------------------------------------------------------
 CBaseFileSystem::CSearchPath *CBaseFileSystem::FindWritePath( const char *pFilename, const char *pathID )
 {
-	CUtlSymbol lookup = g_PathIDTable.AddString( pathID );
+	std::string_view lookup = PathIDSymbol( pathID );
 
-	AUTO_LOCK( m_SearchPathsMutex );
+	std::scoped_lock lock( m_SearchPathsMutex );
 
 	// a pathID has been specified, find the first match in the path list
-	int c = m_SearchPaths.Count();
+	int c = std::ssize( m_SearchPaths );
 	for ( int i = 0; i < c; i++ )
 	{
 		// pak files are not allowed to be written to...
@@ -2641,7 +2605,7 @@ CBaseFileSystem::CSearchPath *CBaseFileSystem::FindWritePath( const char *pFilen
 			continue;
 		}
 
-		if ( pathID && ( pSearchPath->GetPathID() != lookup ) )
+		if ( pathID && ( pSearchPath->GetPathID().data() != lookup.data() ) )
 		{
 			// not the right pathID
 			continue;
@@ -2688,106 +2652,61 @@ const char *CBaseFileSystem::GetWritePath( const char *pFilename, const char *pa
 }
 
 //-----------------------------------------------------------------------------
-// Reads/writes files to utlbuffers.  Attempts alignment fixups for optimal read
+// Reads the rest of an open file into memory
 //-----------------------------------------------------------------------------
-CTHREADLOCALPTR(char) g_pszReadFilename;
 
-bool CBaseFileSystem::ReadToBuffer( FileHandle_t fp, CUtlBuffer &buf, int nMaxBytes, FSAllocFunc_t pfnAlloc )
+std::optional< std::vector< std::byte > > CBaseFileSystem::ReadToVector( FileHandle_t fp, int nMaxBytes )
 {
-	SetBufferSize( fp, 0 );  // TODO: what if it's a pack file? restore buffer size?
+	SetBufferSize( fp, 0 );
 
 	int nBytesToRead = Size( fp );
 	if ( nBytesToRead == 0 )
 	{
-		// no data in file
-		return true;
+		return std::vector< std::byte >();
 	}
 
 	if ( nMaxBytes > 0 )
 	{
-		// can't read more than file has
-		nBytesToRead = MIN( nMaxBytes, nBytesToRead );
+		nBytesToRead = std::min( nMaxBytes, nBytesToRead );
 	}
 
-	int nBytesRead = 0;
-	int nBytesOffset = 0;
+	const int iStartPos = Tell( fp );
 
-	int iStartPos = Tell( fp );
+	std::vector< std::byte > data( nBytesToRead );
+	const int nBytesRead = ReadEx( data.data(), nBytesToRead, nBytesToRead, fp );
+	Seek( fp, iStartPos + nBytesRead, FILESYSTEM_SEEK_HEAD );
 
-	if ( nBytesToRead != 0 )
-	{
-		int nBytesDestBuffer = nBytesToRead;
-		unsigned nSizeAlign = 0, nBufferAlign = 0, nOffsetAlign = 0;
+	if ( nBytesRead == 0 )
+		return std::nullopt;
 
-		if ( !pfnAlloc )
-		{
-			buf.EnsureCapacity( nBytesDestBuffer + buf.TellPut() );
-		}
-		else
-		{
-			// caller provided allocator
-			void *pMemory = (*pfnAlloc)( g_pszReadFilename, nBytesDestBuffer );
-			buf.SetExternalBuffer( pMemory, nBytesDestBuffer, 0, buf.GetFlags() & ~CUtlBuffer::EXTERNAL_GROWABLE );
-		}
-
-		int seekGet = -1;
-		if ( nBytesDestBuffer != nBytesToRead )
-		{
-			// doing optimal read, align target pointer
-			int nAlignedBase = AlignValue( (byte *)buf.Base(), nBufferAlign ) - (byte *)buf.Base();
-			buf.SeekPut( CUtlBuffer::SEEK_HEAD, nAlignedBase );
-	
-			// the buffer read position is slid forward to ignore the addtional
-			// starting offset alignment
-			seekGet = nAlignedBase + nBytesOffset;
-		}
-
-		nBytesRead = ReadEx( buf.PeekPut(), nBytesDestBuffer - nBufferAlign, nBytesToRead + nBytesOffset, fp );
-		buf.SeekPut( CUtlBuffer::SEEK_CURRENT, nBytesRead );
-
-		if ( seekGet != -1 )
-		{
-			// can only seek the get after data has been put, otherwise buffer sets overflow error
-			buf.SeekGet( CUtlBuffer::SEEK_HEAD, seekGet );
-		}
-
-		Seek( fp, iStartPos + ( nBytesRead - nBytesOffset ), FILESYSTEM_SEEK_HEAD );
-	}
-
-	return (nBytesRead != 0);
+	data.resize( nBytesRead );
+	return data;
 }
 
 //-----------------------------------------------------------------------------
-// Reads/writes files to utlbuffers
+// Reads/writes whole files
 // NOTE NOTE!! 
 // If you change this implementation, copy it into CBaseVMPIFileSystem::ReadFile
 // in vmpi_filesystem.cpp
 //-----------------------------------------------------------------------------
-bool CBaseFileSystem::ReadFile( const char *pFileName, const char *pPath, CUtlBuffer &buf, int nMaxBytes, int nStartingByte, FSAllocFunc_t pfnAlloc )
+std::optional< std::vector< std::byte > > CBaseFileSystem::ReadFile( const char *pFileName, const char *pPath, int nMaxBytes, int nStartingByte )
 {
 	CHECK_DOUBLE_SLASHES( pFileName );
 
-	bool bBinary = !( buf.IsText() && !buf.ContainsCRLF() );
-
-	FileHandle_t fp = Open( pFileName, ( bBinary ) ? "rb" : "rt", pPath );
+	FileHandle_t fp = Open( pFileName, "rb", pPath );
 	if ( !fp )
-		return false;
+		return std::nullopt;
 
 	if ( nStartingByte != 0 )
 	{
 		Seek( fp, nStartingByte, FILESYSTEM_SEEK_HEAD );
 	}
 
-	if ( pfnAlloc )
-	{
-		g_pszReadFilename = (char *)pFileName;
-	}
-
-	bool bSuccess = ReadToBuffer( fp, buf, nMaxBytes, pfnAlloc );
+	auto data = ReadToVector( fp, nMaxBytes );
 
 	Close( fp );
 
-	return bSuccess;
+	return data;
 }
 
 //-----------------------------------------------------------------------------
@@ -2808,7 +2727,7 @@ int CBaseFileSystem::ReadFileEx( const char *pFileName, const char *pPath, void 
 	int nBytesRead = 0;
 	if ( nMaxBytes > 0 )
 	{
-		nBytesToRead = MIN( nMaxBytes, nBytesToRead );
+		nBytesToRead = std::min( nMaxBytes, nBytesToRead );
 		if ( bNullTerminate )
 		{
 			nBytesToRead--;
@@ -2864,21 +2783,15 @@ int CBaseFileSystem::ReadFileEx( const char *pFileName, const char *pPath, void 
 // If you change this implementation, copy it into CBaseVMPIFileSystem::WriteFile
 // in vmpi_filesystem.cpp
 //-----------------------------------------------------------------------------
-bool CBaseFileSystem::WriteFile( const char *pFileName, const char *pPath, CUtlBuffer &buf )
+bool CBaseFileSystem::WriteFile( const char *pFileName, const char *pPath, std::span< const std::byte > data )
 {
 	CHECK_DOUBLE_SLASHES( pFileName );
 
-	const char *pWriteFlags = "wb";
-	if ( buf.IsText() && !buf.ContainsCRLF() )
-	{
-		pWriteFlags = "wt";
-	}
-
-	FileHandle_t fp = Open( pFileName, pWriteFlags, pPath );
+	FileHandle_t fp = Open( pFileName, "wb", pPath );
 	if ( !fp )
 		return false;
 
-	int nBytesWritten = Write( buf.Base(), buf.TellMaxPut(), fp );
+	int nBytesWritten = Write( data.data(), static_cast< int >( data.size() ), fp );
 
 	Close( fp );
 	return (nBytesWritten != 0);
@@ -2898,22 +2811,22 @@ bool CBaseFileSystem::UnzipFile( const char *pFileName, const char *pPath, const
 //-----------------------------------------------------------------------------
 void CBaseFileSystem::RemoveAllSearchPaths( void )
 {
-	AUTO_LOCK( m_SearchPathsMutex );
+	std::scoped_lock lock( m_SearchPathsMutex );
 	// Sergiy: AaronS said it is a good idea to destroy these paths in reverse order
-	while( m_SearchPaths.Count() )
+	while ( !m_SearchPaths.empty() )
 	{
-		m_SearchPaths.Remove( m_SearchPaths.Count() - 1 );
+		m_SearchPaths.erase( m_SearchPaths.begin() + ( std::ssize( m_SearchPaths ) - 1 ) );
 	}
 	//m_PackFileHandles.Purge();
 
 	// Clean up all VPK files - their destructors will close opened file handles
 #ifdef SUPPORT_VPK
-	for ( int i = 0; i < m_VPKFiles.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_VPKFiles ); i++ )
 	{
 		delete m_VPKFiles[i];
 	}
-	m_VPKFiles.Purge();
-	m_VPKDirectories.Purge();
+	m_VPKFiles.clear(); m_VPKFiles.shrink_to_fit();
+	m_VPKDirectories.clear();
 #endif
 }
 
@@ -2993,7 +2906,7 @@ public:
 		if ( m_ppszResolvedFilename )
 		{
 			Assert( !( *m_ppszResolvedFilename ) );
-			*m_ppszResolvedFilename = strdup( pStr );
+			*m_ppszResolvedFilename = MemAlloc_StrDup( pStr );
 		}
 	}
 
@@ -3091,11 +3004,11 @@ bool CBaseFileSystem::HandleOpenFromZipFile( CFileOpenInfo &openInfo )
 		char *pRelativeFileName = pZipExt + 5;
 
 		// find the zip
-		for ( int i=0; i< m_ZipFiles.Count(); i++ )
+		for ( int i=0; i< std::ssize( m_ZipFiles ); i++ )
 		{
 			CPackFile *pPackFile = m_ZipFiles[i];
 			
-			if ( Q_stricmp( pPackFile->m_ZipName.Get(), openInfo.m_AbsolutePath ) == 0 )
+			if ( Q_stricmp( pPackFile->m_ZipName.data(), openInfo.m_AbsolutePath ) == 0 )
 			{
 				openInfo.m_pFileHandle = pPackFile->OpenFile( pRelativeFileName, openInfo.m_pOptions );
 #ifdef SUPPORT_VPK
@@ -3155,7 +3068,7 @@ void CBaseFileSystem::HandleOpenFromPackFile( CPackFile *pPackFile, CFileOpenInf
 	if ( openInfo.m_pFileHandle )
 	{
 		char tempStr[MAX_PATH*2+2];
-		V_snprintf( tempStr, sizeof( tempStr ), "%s%c%s", pPackFile->m_ZipName.String(), CORRECT_PATH_SEPARATOR, openInfo.m_pFileName );
+		V_snprintf( tempStr, sizeof( tempStr ), "%s%c%s", pPackFile->m_ZipName.c_str(), CORRECT_PATH_SEPARATOR, openInfo.m_pFileName );
 		openInfo.SetResolvedFilename( tempStr );
 	}
 
@@ -3232,7 +3145,7 @@ FileHandle_t CBaseFileSystem::FindFile(
 	if ( bIsAbsolutePath )
 	{
 #ifdef SUPPORT_VPK
-		if ( m_VPKFiles.Count()  && ( ! V_stristr( pFileName, ".vpk" ) ) )
+		if ( std::ssize( m_VPKFiles )  && ( ! V_stristr( pFileName, ".vpk" ) ) )
 		{
 			// FileSystemWarning( FILESYSTEM_WARNING, "***VPK: FindFile Attempting to use full path with VPK file!\n\tFile: %s\n", pFileName );
 		}
@@ -3249,7 +3162,7 @@ FileHandle_t CBaseFileSystem::FindFile(
 	{
 		// check vpk file
 #ifdef SUPPORT_VPK
-		for( int i = 0 ; i < m_VPKFiles.Count(); i++ )
+		for( int i = 0 ; i < std::ssize( m_VPKFiles ); i++ )
 		{
 			CPackedStoreFileHandle fHandle = m_VPKFiles[i]->OpenFile( pFileName );
 			if ( fHandle )
@@ -3442,8 +3355,8 @@ FileHandle_t CBaseFileSystem::OpenEx( const char *pFileName, const char *pOption
 		if ( pTimer != nullptr )
 		{
 			// Need the lock only when adding to the vector, not during construction
-			AUTO_LOCK( m_FileHandleTimersMutex );
-			m_FileHandleTimers.AddToTail( pTimer );
+			std::scoped_lock lock( m_FileHandleTimersMutex );
+			m_FileHandleTimers.push_back( pTimer );
 			pTimer->Start();
 		}
 	}
@@ -3505,8 +3418,8 @@ FileHandle_t CBaseFileSystem::OpenEx( const char *pFileName, const char *pOption
 			// See if we've opened this file before so we can accumulate time spent rereading files
 			FileOpenDuplicateTime_t *pFileOpenDuplicate = nullptr;
 
-			AUTO_LOCK( g_FileOpenDuplicateTimesMutex );
-			for ( int nFileOpenDuplicate = g_FileOpenDuplicateTimes.Count() - 1; nFileOpenDuplicate >= 0; --nFileOpenDuplicate )
+			std::scoped_lock lock( g_FileOpenDuplicateTimesMutex );
+			for ( int nFileOpenDuplicate = std::ssize( g_FileOpenDuplicateTimes ) - 1; nFileOpenDuplicate >= 0; --nFileOpenDuplicate )
 			{
 				FileOpenDuplicateTime_t *pTempFileOpenDuplicate = g_FileOpenDuplicateTimes[ nFileOpenDuplicate ];
 				if ( Q_stricmp( pFileName, pTempFileOpenDuplicate->m_szName ) == 0 )
@@ -3523,7 +3436,7 @@ FileHandle_t CBaseFileSystem::OpenEx( const char *pFileName, const char *pOption
 				pFileOpenDuplicate = new FileOpenDuplicateTime_t;
 				if ( pFileOpenDuplicate != nullptr )
 				{
-					g_FileOpenDuplicateTimes.AddToTail( pFileOpenDuplicate );
+					g_FileOpenDuplicateTimes.push_back( pFileOpenDuplicate );
 					Q_strncpy( pFileOpenDuplicate->m_szName, pFileName, sizeof( pTimer->m_szName ) );
 				}
 			}
@@ -3540,13 +3453,13 @@ FileHandle_t CBaseFileSystem::OpenEx( const char *pFileName, const char *pOption
 			if ( pTimer != nullptr )
 			{
 				// We need the lock only when removing from the vector, deleting the timer does not need it
-				AUTO_LOCK( m_FileHandleTimersMutex );
-				for ( int nTimer = m_FileHandleTimers.Count() - 1; nTimer >= 0; --nTimer )
+				std::scoped_lock lock( m_FileHandleTimersMutex );
+				for ( int nTimer = std::ssize( m_FileHandleTimers ) - 1; nTimer >= 0; --nTimer )
 				{
 					CFileHandleTimer *pLocalTimer = m_FileHandleTimers[ nTimer ];
 					if ( pLocalTimer == pTimer )
 					{
-						m_FileHandleTimers.Remove( nTimer );
+						m_FileHandleTimers.erase( m_FileHandleTimers.begin() + nTimer );
 						break;
 					}
 				}
@@ -3577,15 +3490,15 @@ void CBaseFileSystem::Close( FileHandle_t file )
 		// Let's find the nTimer that matches the file (we assume that we only have to close once 
 		CFileHandleTimer *pTimer = nullptr;
 		{
-			AUTO_LOCK( m_FileHandleTimersMutex );
+			std::scoped_lock lock( m_FileHandleTimersMutex );
 			// Still do from the end to the beginning for consistency with previous code (and make access to Count() only once).
-			for ( int nTimer = m_FileHandleTimers.Count() - 1; nTimer >= 0; --nTimer )
+			for ( int nTimer = std::ssize( m_FileHandleTimers ) - 1; nTimer >= 0; --nTimer )
 			{
 				CFileHandleTimer *pLocalTimer = m_FileHandleTimers[ nTimer ];
 				if ( pLocalTimer && pLocalTimer->m_hFile == file )
 				{
 					pTimer = pLocalTimer;
-					m_FileHandleTimers.Remove( nTimer );
+					m_FileHandleTimers.erase( m_FileHandleTimers.begin() + nTimer );
 					break;
 				}
 			}
@@ -3606,8 +3519,8 @@ void CBaseFileSystem::Close( FileHandle_t file )
 
 			// Accumulate time spent if this file has been opened at least twice
 			{
-				AUTO_LOCK( g_FileOpenDuplicateTimesMutex );
-				for ( int nFileOpenDuplicate = 0; nFileOpenDuplicate < g_FileOpenDuplicateTimes.Count(); nFileOpenDuplicate++ )
+				std::scoped_lock lock( g_FileOpenDuplicateTimesMutex );
+				for ( int nFileOpenDuplicate = 0; nFileOpenDuplicate < std::ssize( g_FileOpenDuplicateTimes ); nFileOpenDuplicate++ )
 				{
 					FileOpenDuplicateTime_t *pFileOpenDuplicate = g_FileOpenDuplicateTimes[ nFileOpenDuplicate ];
 					if ( Q_stricmp( pTimer->m_szName, pFileOpenDuplicate->m_szName ) == 0 )
@@ -3775,7 +3688,7 @@ long CBaseFileSystem::FastFileTime( const CSearchPath *path, const char *pFileNa
 		{
 			Q_strncpy( tempFileName, pFileName, sizeof( tempFileName ) );
 #ifdef SUPPORT_VPK
-			if ( m_VPKFiles.Count() )
+			if ( !m_VPKFiles.empty() )
 			{
 #ifdef _DEBUG
 				FileSystemWarning( FILESYSTEM_WARNING, "***VPK: FastFileTime Attempting to use full path with VPK file!\n\tFile: %s\n", pFileName );
@@ -3787,12 +3700,12 @@ long CBaseFileSystem::FastFileTime( const CSearchPath *path, const char *pFileNa
 		{
 			bool bFileInVpk = false;
 #ifdef SUPPORT_VPK
-			if ( m_VPKFiles.Count() )
+			if ( !m_VPKFiles.empty() )
 			{
 				Q_strncpy( tempFileName, pFileName, sizeof( tempFileName ) );
 				Q_FixSlashes( tempFileName );
 				// check vpk file
-				for ( int i = 0; i < m_VPKFiles.Count(); i++ )
+				for ( int i = 0; i < std::ssize( m_VPKFiles ); i++ )
 				{
 					CPackedStoreFileHandle fHandle = m_VPKFiles[i]->OpenFile( tempFileName );
 					if ( fHandle )
@@ -3861,7 +3774,7 @@ int CBaseFileSystem::FastFindFile( const CSearchPath *path, const char *pFileNam
 
 #ifdef SUPPORT_VPK
 	// NOTE: Pack files need relative paths
-	if ( !bRelativePath && m_VPKFiles.Count() )
+	if ( !bRelativePath && std::ssize( m_VPKFiles ) )
 	{
 #ifdef _DEBUG
 		FileSystemWarning( FILESYSTEM_WARNING, "***VPK: FastFindFile Attempting to use full path with VPK file!\n\tFile: %s\n", pFileName );
@@ -3872,7 +3785,7 @@ int CBaseFileSystem::FastFindFile( const CSearchPath *path, const char *pFileNam
 		Q_strncpy( tempFileName, pFileName, sizeof( tempFileName ) );
 		Q_FixSlashes( tempFileName );
 		// check vpk file
-		for( int i = 0 ; i < m_VPKFiles.Count(); i++ )
+		for( int i = 0 ; i < std::ssize( m_VPKFiles ); i++ )
 		{
 			CPackedStoreFileHandle fHandle = m_VPKFiles[i]->OpenFile( tempFileName );
 			if ( fHandle )
@@ -4063,7 +3976,7 @@ void CBaseFileSystem::SetupPreloadData()
 {
 	int i;
 
-	for ( i = 0; i < m_SearchPaths.Count(); i++ )
+	for ( i = 0; i < std::ssize( m_SearchPaths ); i++ )
 	{
 		CPackFile* pPF = m_SearchPaths[i].GetPackFile();
 		if ( pPF ) 
@@ -4079,7 +3992,7 @@ void CBaseFileSystem::SetupPreloadData()
 void CBaseFileSystem::DiscardPreloadData()
 {
 	int i;
-	for( i = 0; i < m_SearchPaths.Count(); i++ )
+	for( i = 0; i < std::ssize( m_SearchPaths ); i++ )
 	{
 		CPackFile* pf = m_SearchPaths[i].GetPackFile();
 		if ( pf )
@@ -4289,7 +4202,7 @@ long CBaseFileSystem::GetFileTime( const char *pFileName, const char *pPathID )
 		long ft = FastFileTime( pSearchPath, tempFileName );
 		if ( ft != 0L )
 		{
-			if ( !pSearchPath->GetPackFile() && m_LogFuncs.Count() )
+			if ( !pSearchPath->GetPackFile() && std::ssize( m_LogFuncs ) )
 			{
 				char pTmpFileName[ MAX_FILEPATH ]; 
 				if ( strchr( tempFileName, ':' ) ) // 
@@ -4330,7 +4243,7 @@ long CBaseFileSystem::GetPathTime( const char *pFileName, const char *pPathID )
 			pathTime = ft;
 		if ( ft != 0L )
 		{
-			if ( !pSearchPath->GetPackFile() && m_LogFuncs.Count() )
+			if ( !pSearchPath->GetPackFile() && std::ssize( m_LogFuncs ) )
 			{
 				char pTmpFileName[ MAX_FILEPATH ]; 
 				if ( strchr( tempFileName, ':' ) )
@@ -4466,21 +4379,20 @@ void CBaseFileSystem::CacheFileCRCs( const char *pPathname, ECacheCRCType eType,
 {
 
 	// Get a list of the unique search path names (mod, game, platform, etc).
-	CUtlDict<int,int> searchPathNames;
-	m_SearchPathsMutex.Lock();
-	for ( int i = 0; i <  m_SearchPaths.Count(); i++ )
+	std::set< std::string, ks::iless > searchPathNames;
+	m_SearchPathsMutex.lock();
+	for ( int i = 0; i <  std::ssize( m_SearchPaths ); i++ )
 	{
 		CSearchPath *pSearchPath = &m_SearchPaths[i];
-		if ( searchPathNames.Find( pSearchPath->GetPathIDString() ) == searchPathNames.InvalidIndex() )
-			searchPathNames.Insert( pSearchPath->GetPathIDString() );
+		searchPathNames.insert( pSearchPath->GetPathIDString() );
 	}
-	m_SearchPathsMutex.Unlock();
+	m_SearchPathsMutex.unlock();
 
 	CacheFileCRCs_R( pPathname, eType, pFilter, searchPathNames );
 }
 
 
-void CBaseFileSystem::CacheFileCRCs_R( const char *pPathname, ECacheCRCType eType, IFileList *pFilter, CUtlDict<int,int> &searchPathNames )
+void CBaseFileSystem::CacheFileCRCs_R( const char *pPathname, ECacheCRCType eType, IFileList *pFilter, std::set< std::string, ks::iless > &searchPathNames )
 {
 
 	char searchStr[MAX_PATH];
@@ -4517,12 +4429,12 @@ void CBaseFileSystem::CacheFileCRCs_R( const char *pPathname, ECacheCRCType eTyp
 	*/				
 
 	
-	CUtlDict< CUtlVector<CStoreIDEntry>* ,int> filesByStoreID;			// key=filename, value=list of store IDs this filename was found in
-	for ( int i=searchPathNames.First(); i != searchPathNames.InvalidIndex(); i = searchPathNames.Next( i ) )
+	ks::idict< std::vector< CStoreIDEntry > > filesByStoreID;			// key=filename, value=list of store IDs this filename was found in
+	for ( const std::string &searchPathName : searchPathNames )
 	{
 		// Now find all the files..
 		int foundStoreID;
-		const char *pPathIDStr = searchPathNames.GetElementName( i );
+		const char *pPathIDStr = searchPathName.c_str();
 		FileFindHandle_t findHandle;
 		const char *pFilename = FindFirstHelper( searchStr, pPathIDStr, &findHandle, &foundStoreID );
 		while ( pFilename )
@@ -4547,7 +4459,7 @@ void CBaseFileSystem::CacheFileCRCs_R( const char *pPathname, ECacheCRCType eTyp
 							// Ok, we already found this file in an earlier search path with the same storeID (i.e. the exact same disk path)
 							// so rather than recalculate the CRC redundantly, just copy the CRC from the previous one into a record with the new path ID string.
 							// This saves a lot of redundant CRC calculations since logdir, default_write_path, game, and mod all share directories.
-							m_FileTracker.CacheFileCRC_Copy( pPathIDStr, relativeName, pPrevRecord->m_PathIDString.String() );
+							m_FileTracker.CacheFileCRC_Copy( pPathIDStr, relativeName, pPrevRecord->m_PathIDString.c_str() );
 						}
 						else 
 						{
@@ -4566,7 +4478,6 @@ void CBaseFileSystem::CacheFileCRCs_R( const char *pPathname, ECacheCRCType eTyp
 		}
 		FindClose( findHandle );
 	}
-	filesByStoreID.PurgeAndDeleteElements();
 }
 
 
@@ -4595,7 +4506,7 @@ void CBaseFileSystem::EnableWhitelistFileTracking( bool bEnable, bool bCacheAllV
 void CBaseFileSystem::CacheAllVPKFileHashes( bool bCacheAllVPKHashes, bool bRecalculateAndCheckHashes )
 {
 #ifdef SUPPORT_VPK
-	for( int i = 0 ; i < m_VPKFiles.Count(); i++ )
+	for( int i = 0 ; i < std::ssize( m_VPKFiles ); i++ )
 	{
 		if ( !m_VPKFiles[i]->BTestDirectoryHash() )
 		{
@@ -4606,43 +4517,43 @@ void CBaseFileSystem::CacheAllVPKFileHashes( bool bCacheAllVPKHashes, bool bReca
 			Msg( "VPK chunk hash hash does not match. File corrupted or modified.\n" );
 		}
 
-		CUtlVector<ChunkHashFraction_t> &vecChunkHash = m_VPKFiles[i]->AccessPackFileHashes();
+		std::vector< ChunkHashFraction_t > &vecChunkHash = m_VPKFiles[i]->AccessPackFileHashes();
 		CPackedStoreFileHandle fhandle = m_VPKFiles[i]->GetHandleForHashingFiles();
-		CUtlVector<ChunkHashFraction_t> vecChunkHashFractionCopy;
+		std::vector< ChunkHashFraction_t > vecChunkHashFractionCopy;
 		if ( bRecalculateAndCheckHashes )
 		{
-			CUtlString sPackFileErrors;
+			std::string sPackFileErrors;
 			m_VPKFiles[i]->GetPackFileLoadErrorSummary( sPackFileErrors );
 
-			if ( sPackFileErrors.Length() )
+			if ( std::ssize( sPackFileErrors ) )
 			{
 				Msg( "Errors occured loading files.\n" );
-				Msg( "%s", sPackFileErrors.String() );
+				Msg( "%s", sPackFileErrors.c_str() );
 				Msg( "Verify integrity of your game files, perform memory and disk diagnostics on your system.\n" );
 			}
 			else
 				Msg( "No VPK Errors occured loading files.\n" );
 
 			Msg( "Recomputing all VPK file hashes.\n" );
-			vecChunkHashFractionCopy.Swap( vecChunkHash );
+			vecChunkHashFractionCopy.swap( vecChunkHash );
 		}
 		int cFailures = 0;
-		if ( vecChunkHash.Count() == 0 )
+		if ( vecChunkHash.empty() )
 		{
-			if ( vecChunkHashFractionCopy.Count() == 0 )
+			if ( vecChunkHashFractionCopy.empty() )
 				Msg( "File hash information not found: Hashing all VPK files for pure server operation.\n" );
 			m_VPKFiles[i]->HashAllChunkFiles();
-			if ( vecChunkHashFractionCopy.Count() != 0 )
+			if ( !vecChunkHashFractionCopy.empty() )
 			{
-				if ( vecChunkHash.Count() != vecChunkHashFractionCopy.Count() )
+				if ( std::ssize( vecChunkHash ) != std::ssize( vecChunkHashFractionCopy ) )
 				{
 					Msg( "VPK hash count does not match. VPK content may be corrupt.\n" );
 				}
-				else if  ( Q_memcmp( vecChunkHash.Base(), vecChunkHashFractionCopy.Base(), vecChunkHash.Count()*sizeof(vecChunkHash[0])) != 0 )
+				else if  ( Q_memcmp( vecChunkHash.data(), vecChunkHashFractionCopy.data(), std::ssize( vecChunkHash )*sizeof(vecChunkHash[0])) != 0 )
 				{
 					Msg( "VPK hashes do not match. VPK content may be corrupt.\n" );
 					// find the actual mismatch
-					FOR_EACH_VEC( vecChunkHashFractionCopy, iHash )
+					for ( int iHash = 0; iHash < std::ssize( vecChunkHashFractionCopy ); iHash++ )
 					{
 						if ( Q_memcmp( vecChunkHashFractionCopy[iHash].m_md5contents.bits, vecChunkHash[iHash].m_md5contents.bits, sizeof( vecChunkHashFractionCopy[iHash].m_md5contents.bits ) ) != 0 )
 						{
@@ -4656,17 +4567,17 @@ void CBaseFileSystem::CacheAllVPKFileHashes( bool bCacheAllVPKHashes, bool bReca
 		if ( bCacheAllVPKHashes )
 		{
 			Msg( "Loading VPK file hashes for pure server operation.\n" );
-			FOR_EACH_VEC( vecChunkHash, i )
+			for ( auto &chunkHash : vecChunkHash )
 			{
-				m_FileTracker2.AddFileHashForVPKFile( vecChunkHash[i].m_nPackFileNumber, vecChunkHash[i].m_nFileFraction, vecChunkHash[i].m_cbChunkLen, vecChunkHash[i].m_md5contents, fhandle );
+				m_FileTracker2.AddFileHashForVPKFile( chunkHash.m_nPackFileNumber, chunkHash.m_nFileFraction, chunkHash.m_cbChunkLen, chunkHash.m_md5contents, fhandle );
 			}
 		}
 		else
 		{
-			if ( cFailures == 0 && vecChunkHash.Count() == vecChunkHashFractionCopy.Count() )
-				Msg( "File hashes checked. %d matches. no failures.\n", vecChunkHash.Count() );
+			if ( cFailures == 0 && std::ssize( vecChunkHash ) == std::ssize( vecChunkHashFractionCopy ) )
+				Msg( "File hashes checked. %d matches. no failures.\n", (int)std::ssize( vecChunkHash ) );
 			else
-				Msg( "File hashes checked. %d matches. %d failures.\n", vecChunkHash.Count(), cFailures );
+				Msg( "File hashes checked. %d matches. %d failures.\n", (int)std::ssize( vecChunkHash ), cFailures );
 		}
 	}
 #endif
@@ -4676,7 +4587,7 @@ void CBaseFileSystem::CacheAllVPKFileHashes( bool bCacheAllVPKHashes, bool bReca
 bool CBaseFileSystem::CheckVPKFileHash( int PackFileID, int nPackFileNumber, int nFileFraction, MD5Value_t &md5Value )
 {
 #ifdef SUPPORT_VPK
-	for( int i = 0 ; i < m_VPKFiles.Count(); i++ )
+	for( int i = 0 ; i < std::ssize( m_VPKFiles ); i++ )
 	{
 		if ( m_VPKFiles[i]->m_PackFileID == PackFileID )
 		{
@@ -4942,20 +4853,20 @@ bool CBaseFileSystem::IsDirectory( const char *pFileName, const char *pathID )
 	//
 	// Let's see if the directory exists in the VPK file structure
 	//
-	if ( 0 == m_VPKDirectories.Count() )
+	if ( m_VPKDirectories.empty() )
 	{
 		// Populate the directory list
-		CUtlStringList dirNames;
-		CUtlStringList fileNames;
+		std::vector< std::string > dirNames;
+		std::vector< std::string > fileNames;
 
-		for( int i = 0 ; i < m_VPKFiles.Count(); i++ )
+		for( int i = 0 ; i < std::ssize( m_VPKFiles ); i++ )
 		{
 			m_VPKFiles[i]->GetFileAndDirLists( dirNames, fileNames, true );
 		}
 
-		FOR_EACH_VEC( dirNames, j )
+		for ( const auto &dirName : dirNames )
 		{
-			m_VPKDirectories.Insert( dirNames[j], 0 );
+			m_VPKDirectories.insert( dirName );
 		}
 	}
 
@@ -4964,7 +4875,7 @@ bool CBaseFileSystem::IsDirectory( const char *pFileName, const char *pathID )
 	V_strncpy( szPathWithCorrectSlashes, pFileName, sizeof( szPathWithCorrectSlashes ) );
 	V_FixSlashes( szPathWithCorrectSlashes, '/' );
 
-	return ( -1 != m_VPKDirectories.Find( szPathWithCorrectSlashes ) );
+	return m_VPKDirectories.contains( szPathWithCorrectSlashes );
 #else
 	return ( false );
 #endif
@@ -5020,7 +4931,7 @@ void CBaseFileSystem::CreateDirHierarchy( const char *pRelativePath, const char 
 // Purpose: Given an absolute path, do a find first find next on it and build
 // a list of files.  Physical file system only
 //-----------------------------------------------------------------------------
-void CBaseFileSystem::FindFileAbsoluteListHelper( CUtlVector< CUtlString > &outAbsolutePathNames, FindData_t &findData, const char *pAbsoluteFindName )
+void CBaseFileSystem::FindFileAbsoluteListHelper( std::vector< std::string > &outAbsolutePathNames, FindData_t &findData, const char *pAbsoluteFindName )
 {
 	// TODO: figure out what PS3 does without VPKs
 	bool bFixed = false;
@@ -5037,7 +4948,7 @@ void CBaseFileSystem::FindFileAbsoluteListHelper( CUtlVector< CUtlString > &outA
 		char result[MAX_PATH];
 		V_ComposeFileName( path, findData.findData.cFileName, result, sizeof(result) );
 
-		outAbsolutePathNames.AddToTail( result );
+		outAbsolutePathNames.push_back( result );
 
 		if ( !FS_FindNextFile( findData.findHandle, &findData.findData ) )
 		{	
@@ -5052,22 +4963,22 @@ void CBaseFileSystem::FindFileAbsoluteListHelper( CUtlVector< CUtlString > &outA
 // for the file, works in pack files (zip and vpk) too.  Lets you search for 
 // something like sound/sound.cache and get a list of every sound cache
 //-----------------------------------------------------------------------------
-void CBaseFileSystem::FindFileAbsoluteList( CUtlVector< CUtlString > &outAbsolutePathNames, const char *pWildCard, const char *pPathID )
+void CBaseFileSystem::FindFileAbsoluteList( std::vector< std::string > &outAbsolutePathNames, const char *pWildCard, const char *pPathID )
 {
 	// TODO: figure out what PS3 does without VPKs
 	VPROF_BUDGET( "CBaseFileSystem::FindFileAbsoluteList", VPROF_BUDGETGROUP_OTHER_FILESYSTEM );
 
-	outAbsolutePathNames.Purge();
+	outAbsolutePathNames.clear(); outAbsolutePathNames.shrink_to_fit();
 
 	FindData_t findData;
 	if ( pPathID )
 	{
-		findData.m_FilterPathID = g_PathIDTable.AddString( pPathID );
+		findData.m_FilterPathID = PathIDSymbol( pPathID );
 	}
 	int maxlen = strlen( pWildCard ) + 1;
-	findData.wildCardString.AddMultipleToTail( maxlen );
-	Q_strncpy( findData.wildCardString.Base(), pWildCard, maxlen );
-	Q_FixSlashes( findData.wildCardString.Base() );
+	findData.wildCardString.resize( findData.wildCardString.size() + maxlen );
+	Q_strncpy( findData.wildCardString.data(), pWildCard, maxlen );
+	Q_FixSlashes( findData.wildCardString.data() );
 	findData.findHandle = INVALID_HANDLE_VALUE;
 
 	if ( Q_IsAbsolutePath( pWildCard ) )
@@ -5076,7 +4987,7 @@ void CBaseFileSystem::FindFileAbsoluteList( CUtlVector< CUtlString > &outAbsolut
 	}
 	else
 	{
-		int c = m_SearchPaths.Count();
+		int c = std::ssize( m_SearchPaths );
 		for (	findData.currentSearchPathID = 0; 
 			findData.currentSearchPathID < c; 
 			findData.currentSearchPathID++ )
@@ -5094,7 +5005,7 @@ void CBaseFileSystem::FindFileAbsoluteList( CUtlVector< CUtlString > &outAbsolut
 				continue;
 
 			char tempFileName[ MAX_FILEPATH ];
-			Q_snprintf( tempFileName, sizeof( tempFileName ), "%s%s", pSearchPath->GetPathString(), findData.wildCardString.Base() );
+			Q_snprintf( tempFileName, sizeof( tempFileName ), "%s%s", pSearchPath->GetPathString(), findData.wildCardString.data() );
 			Q_FixSlashes( tempFileName );
 
 			FindFileAbsoluteListHelper( outAbsolutePathNames, findData, tempFileName );
@@ -5107,23 +5018,23 @@ void CBaseFileSystem::FindFileAbsoluteList( CUtlVector< CUtlString > &outAbsolut
 	//
 	// Now that we have searched the filesystem let's look in the VPK files
 	//
-	FOR_EACH_VEC( m_VPKFiles, i )
+	for ( auto pVPKFile : m_VPKFiles )
 	{
-		CUtlStringList dirMatchesFromVPK, fileMatchesFromVPK;
-		m_VPKFiles[i]->GetFileAndDirLists( pWildCard, dirMatchesFromVPK, fileMatchesFromVPK, true );
+		std::vector< std::string > dirMatchesFromVPK, fileMatchesFromVPK;
+		pVPKFile->GetFileAndDirLists( pWildCard, dirMatchesFromVPK, fileMatchesFromVPK, true );
 
-		FOR_EACH_VEC( dirMatchesFromVPK, j )
+		for ( const auto &dirMatch : dirMatchesFromVPK )
 		{
 			char result[MAX_PATH];
-			V_ComposeFileName( m_VPKFiles[i]->FullPathName(), dirMatchesFromVPK[j], result, sizeof(result) );
-			outAbsolutePathNames.AddToTail( result );
+			V_ComposeFileName( pVPKFile->FullPathName(), dirMatch.c_str(), result, sizeof(result) );
+			outAbsolutePathNames.push_back( result );
 		}
 
-		FOR_EACH_VEC( fileMatchesFromVPK, j )
+		for ( const auto &fileMatch : fileMatchesFromVPK )
 		{
 			char result[MAX_PATH];
-			V_ComposeFileName( m_VPKFiles[i]->FullPathName(), fileMatchesFromVPK[j], result, sizeof(result) );
-			outAbsolutePathNames.AddToTail( result );
+			V_ComposeFileName( pVPKFile->FullPathName(), fileMatch.c_str(), result, sizeof(result) );
+			outAbsolutePathNames.push_back( result );
 		}
 	}
 #endif
@@ -5149,17 +5060,17 @@ const char *CBaseFileSystem::FindFirstHelper( const char *pWildCard, const char 
  	Assert( pWildCard );
  	Assert( pHandle );
 
-	FileFindHandle_t hTmpHandle = m_FindData.AddToTail();
+	FileFindHandle_t hTmpHandle = m_FindData.emplace();
 	FindData_t *pFindData = &m_FindData[hTmpHandle];
 	Assert( pFindData );
 	if ( pPathID )
 	{
-		pFindData->m_FilterPathID = g_PathIDTable.AddString( pPathID );
+		pFindData->m_FilterPathID = PathIDSymbol( pPathID );
 	}
 	int maxlen = strlen( pWildCard ) + 1;
-	pFindData->wildCardString.AddMultipleToTail( maxlen );
-	Q_strncpy( pFindData->wildCardString.Base(), pWildCard, maxlen );
-	Q_FixSlashes( pFindData->wildCardString.Base() );
+	pFindData->wildCardString.resize( pFindData->wildCardString.size() + maxlen );
+	Q_strncpy( pFindData->wildCardString.data(), pWildCard, maxlen );
+	Q_FixSlashes( pFindData->wildCardString.data() );
 	pFindData->findHandle = INVALID_HANDLE_VALUE;
 
 	if ( Q_IsAbsolutePath( pWildCard ) )
@@ -5172,7 +5083,7 @@ const char *CBaseFileSystem::FindFirstHelper( const char *pWildCard, const char 
 	}
 	else
 	{
-		int c = m_SearchPaths.Count();
+		int c = std::ssize( m_SearchPaths );
 		for (	pFindData->currentSearchPathID = 0; 
 				pFindData->currentSearchPathID < c; 
 				pFindData->currentSearchPathID++ )
@@ -5191,7 +5102,7 @@ const char *CBaseFileSystem::FindFirstHelper( const char *pWildCard, const char 
 				continue;
 
 			char tempFileName[ MAX_FILEPATH ];
-			Q_snprintf( tempFileName, sizeof( tempFileName ), "%s%s", pSearchPath->GetPathString(), pFindData->wildCardString.Base() );
+			Q_snprintf( tempFileName, sizeof( tempFileName ), "%s%s", pSearchPath->GetPathString(), pFindData->wildCardString.data() );
 			Q_FixSlashes( tempFileName );
 
 			bool bFixed = false;
@@ -5209,7 +5120,7 @@ const char *CBaseFileSystem::FindFirstHelper( const char *pWildCard, const char 
 	//
 	// Now that we have searched the filesystem let's look in the VPK files
 	//
-	for( int i = 0 ; i < m_VPKFiles.Count(); i++ )
+	for( int i = 0 ; i < std::ssize( m_VPKFiles ); i++ )
 	{
 		m_VPKFiles[i]->GetFileAndDirLists( pWildCard, pFindData->m_dirMatchesFromVPK, pFindData->m_fileMatchesFromVPK, true );
 	}
@@ -5219,7 +5130,7 @@ const char *CBaseFileSystem::FindFirstHelper( const char *pWildCard, const char 
 	if( pFindData->findHandle != INVALID_HANDLE_VALUE )
 	{
 		// Remember that we visited this file already.
-		pFindData->m_VisitedFiles.Insert( pFindData->findData.cFileName, 0 );
+		pFindData->m_VisitedFiles.insert( pFindData->findData.cFileName );
 
 		if ( pFoundStoreID )
 			*pFoundStoreID = pFindData->m_CurrentStoreID;
@@ -5229,41 +5140,39 @@ const char *CBaseFileSystem::FindFirstHelper( const char *pWildCard, const char 
 	}
 #ifdef SUPPORT_VPK
 	// We have a file result from the VPK file but not the filesystem
-	else if ( pFindData->m_fileMatchesFromVPK.Count() > 0 )
+	else if ( !pFindData->m_fileMatchesFromVPK.empty() )
 	{
 		// Remember that we visited this file already.
-		pFindData->m_VisitedFiles.Insert( V_UnqualifiedFileName( pFindData->m_fileMatchesFromVPK[0] ), 0 );
+		pFindData->m_VisitedFiles.insert( V_UnqualifiedFileName( pFindData->m_fileMatchesFromVPK[0].c_str() ) );
 		*pHandle = hTmpHandle;
 
-		V_strncpy( pFindData->findData.cFileName, V_UnqualifiedFileName( pFindData->m_fileMatchesFromVPK[0] ), sizeof( pFindData->findData.cFileName ) );
+		V_strncpy( pFindData->findData.cFileName, V_UnqualifiedFileName( pFindData->m_fileMatchesFromVPK[0].c_str() ), sizeof( pFindData->findData.cFileName ) );
 
 		pFindData->findData.dwFileAttributes = 0;
 
-		delete pFindData->m_fileMatchesFromVPK.Head();
-		pFindData->m_fileMatchesFromVPK.RemoveMultipleFromHead( 1 );
+		pFindData->m_fileMatchesFromVPK.erase( pFindData->m_fileMatchesFromVPK.begin(), pFindData->m_fileMatchesFromVPK.begin() + 1 );
 
 		return pFindData->findData.cFileName;	
 	}
 	// We have a dir result from the VPK file but not the filesystem
-	else if ( pFindData->m_dirMatchesFromVPK.Count() > 0 )
+	else if ( !pFindData->m_dirMatchesFromVPK.empty() )
 	{
 		// Remember that we visited this file already.
-		pFindData->m_VisitedFiles.Insert( V_UnqualifiedFileName( pFindData->m_dirMatchesFromVPK[0] ), 0 );
+		pFindData->m_VisitedFiles.insert( V_UnqualifiedFileName( pFindData->m_dirMatchesFromVPK[0].c_str() ) );
 		*pHandle = hTmpHandle;
 
-		V_strncpy( pFindData->findData.cFileName, V_UnqualifiedFileName( pFindData->m_dirMatchesFromVPK[0] ), sizeof( pFindData->findData.cFileName ) );
+		V_strncpy( pFindData->findData.cFileName, V_UnqualifiedFileName( pFindData->m_dirMatchesFromVPK[0].c_str() ), sizeof( pFindData->findData.cFileName ) );
 
 		pFindData->findData.dwFileAttributes = FILE_ATTRIBUTE_DIRECTORY;
 
-		delete pFindData->m_dirMatchesFromVPK.Head();
-		pFindData->m_dirMatchesFromVPK.RemoveMultipleFromHead( 1 );
+		pFindData->m_dirMatchesFromVPK.erase( pFindData->m_dirMatchesFromVPK.begin(), pFindData->m_dirMatchesFromVPK.begin() + 1 );
 
 		return pFindData->findData.cFileName;	
 	}
 #endif
 	// Handle failure here
 	pFindData = 0;
-	m_FindData.Remove(hTmpHandle);
+	m_FindData.erase(hTmpHandle);
 	*pHandle = -1;
 
 	return nullptr;
@@ -5301,7 +5210,7 @@ bool CBaseFileSystem::FindNextFileHelper( FindData_t *pFindData, int *pFoundStor
 	}
 	pFindData->findHandle = INVALID_HANDLE_VALUE;
 
-	int c = m_SearchPaths.Count();
+	int c = std::ssize( m_SearchPaths );
 	for( ; pFindData->currentSearchPathID < c; ++pFindData->currentSearchPathID ) 
 	{
 		CSearchPath *pSearchPath = &m_SearchPaths[pFindData->currentSearchPathID];
@@ -5318,7 +5227,7 @@ bool CBaseFileSystem::FindNextFileHelper( FindData_t *pFindData, int *pFoundStor
 			continue;
 
 		char tempFileName[ MAX_FILEPATH ];
-		Q_snprintf( tempFileName, sizeof( tempFileName ), "%s%s", pSearchPath->GetPathString(), pFindData->wildCardString.Base() );
+		Q_snprintf( tempFileName, sizeof( tempFileName ), "%s%s", pSearchPath->GetPathString(), pFindData->wildCardString.data() );
 		Q_FixSlashes( tempFileName );
 
 		bool bFixed = false;
@@ -5337,23 +5246,21 @@ bool CBaseFileSystem::FindNextFileHelper( FindData_t *pFindData, int *pFoundStor
 
 #ifdef SUPPORT_VPK
 	// Return the next one from the list of VPK matches if there is one
-	if ( pFindData->m_fileMatchesFromVPK.Count() > 0 )
+	if ( !pFindData->m_fileMatchesFromVPK.empty() )
 	{
-		V_strncpy( pFindData->findData.cFileName, V_UnqualifiedFileName( pFindData->m_fileMatchesFromVPK[0] ), sizeof( pFindData->findData.cFileName ) );
+		V_strncpy( pFindData->findData.cFileName, V_UnqualifiedFileName( pFindData->m_fileMatchesFromVPK[0].c_str() ), sizeof( pFindData->findData.cFileName ) );
 		pFindData->findData.dwFileAttributes = 0;
-		delete pFindData->m_fileMatchesFromVPK.Head();
-		pFindData->m_fileMatchesFromVPK.RemoveMultipleFromHead( 1 );
+		pFindData->m_fileMatchesFromVPK.erase( pFindData->m_fileMatchesFromVPK.begin(), pFindData->m_fileMatchesFromVPK.begin() + 1 );
 
 		return true;
 	}
 
 	// Return the next one from the list of VPK matches if there is one
-	if ( pFindData->m_dirMatchesFromVPK.Count() > 0 )
+	if ( !pFindData->m_dirMatchesFromVPK.empty() )
 	{
-		V_strncpy( pFindData->findData.cFileName, V_UnqualifiedFileName( pFindData->m_dirMatchesFromVPK[0] ), sizeof( pFindData->findData.cFileName ) );
+		V_strncpy( pFindData->findData.cFileName, V_UnqualifiedFileName( pFindData->m_dirMatchesFromVPK[0].c_str() ), sizeof( pFindData->findData.cFileName ) );
 		pFindData->findData.dwFileAttributes = FILE_ATTRIBUTE_DIRECTORY;
-		delete pFindData->m_dirMatchesFromVPK.Head();
-		pFindData->m_dirMatchesFromVPK.RemoveMultipleFromHead( 1 );
+		pFindData->m_dirMatchesFromVPK.erase( pFindData->m_dirMatchesFromVPK.begin(), pFindData->m_dirMatchesFromVPK.begin() + 1 );
 
 		return true;
 	}
@@ -5376,9 +5283,8 @@ const char *CBaseFileSystem::FindNext( FileFindHandle_t handle )
 	{
 		if( FindNextFileHelper( pFindData, nullptr ) )
 		{
-			if ( pFindData->m_VisitedFiles.Find( pFindData->findData.cFileName ) == -1 )
+			if ( pFindData->m_VisitedFiles.insert( pFindData->findData.cFileName ).second )
 			{
-				pFindData->m_VisitedFiles.Insert( pFindData->findData.cFileName, 0 );
 				return pFindData->findData.cFileName;
 			}
 		}
@@ -5406,7 +5312,7 @@ bool CBaseFileSystem::FindIsDirectory( FileFindHandle_t handle )
 //-----------------------------------------------------------------------------
 void CBaseFileSystem::FindClose( FileFindHandle_t handle )
 {
-	if ( ( handle < 0 ) || ( !m_FindData.IsInList( handle ) ) )
+	if ( ( handle < 0 ) || ( !m_FindData.contains( handle ) ) )
 		return;
 
 	FindData_t *pFindData = &m_FindData[handle];
@@ -5418,12 +5324,12 @@ void CBaseFileSystem::FindClose( FileFindHandle_t handle )
 	}
 	pFindData->findHandle = INVALID_HANDLE_VALUE;
 
-	pFindData->wildCardString.Purge();
+	pFindData->wildCardString.clear(); pFindData->wildCardString.shrink_to_fit();
 #ifdef SUPPORT_VPK
-	pFindData->m_fileMatchesFromVPK.PurgeAndDeleteElements();
-	pFindData->m_dirMatchesFromVPK.PurgeAndDeleteElements();
+	pFindData->m_fileMatchesFromVPK.clear();
+	pFindData->m_dirMatchesFromVPK.clear();
 #endif
-	m_FindData.Remove( handle );
+	m_FindData.erase( handle );
 }
 
 //-----------------------------------------------------------------------------
@@ -5445,7 +5351,7 @@ CPackedStoreFileHandle CBaseFileSystem::FindFileInVPKs( const char *pFileName )
 	CPackedStoreFileHandle retVal;
 
 	// Try to find the path in the mounted VPK files
-	for( int i = 0 ; i < m_VPKFiles.Count(); i++ )
+	for( int i = 0 ; i < std::ssize( m_VPKFiles ); i++ )
 	{
 		retVal = m_VPKFiles[i]->OpenFile( pFileName );
 		if ( retVal )
@@ -5515,7 +5421,7 @@ const char *CBaseFileSystem::RelativePathToFullPath( const char *pFileName, cons
 
 				// form an encoded absolute path that can be decoded by our FS as pak based
 				int len;
-				V_strncpy( pFullPath, pPack->m_ZipName.String(), fullPathBufferSize );
+				V_strncpy( pFullPath, pPack->m_ZipName.c_str(), fullPathBufferSize );
 				len = strlen( pFullPath );
 				V_AppendSlash( pFullPath, fullPathBufferSize - len );
 				len = strlen( pFullPath );				
@@ -5591,13 +5497,9 @@ bool CBaseFileSystem::FullPathToRelativePathEx( const char *pFullPath, const cha
 	Q_strncpy( pInPath, pFullPath, sizeof( pInPath ) );
 	Q_FixSlashes( pInPath );
 
-	CUtlSymbol lookup;
-	if ( pPathId )
-	{
-		lookup = g_PathIDTable.AddString( pPathId );
-	}
+	std::string_view lookup = PathIDSymbol( pPathId );
 
-	int c = m_SearchPaths.Count();
+	int c = std::ssize( m_SearchPaths );
 	for( int i = 0; i < c; i++ )
 	{
 		// FIXME: Should this work with embedded pak files?
@@ -5776,7 +5678,7 @@ void CBaseFileSystem::GetVPKFileStatisticsKV( KeyValues *pKV )
 {
 	if ( pKV && !V_strcmp( pKV->GetName(), "ForceVpkOnlyExtensions" ) )
 	{
-		AUTO_LOCK( m_OpenedFilesMutex );	// this code will force VPK only extensions
+		std::scoped_lock lock( m_OpenedFilesMutex );	// this code will force VPK only extensions
 		FOR_EACH_SUBKEY( pKV, kvExt )
 		{
 			m_NonexistingFilesExtensions[ kvExt->GetName() ] = kvExt->GetBool();
@@ -5784,7 +5686,7 @@ void CBaseFileSystem::GetVPKFileStatisticsKV( KeyValues *pKV )
 		return;
 	}
 
-	for( int i = 0; i < m_VPKFiles.Count(); i++ )
+	for( int i = 0; i < std::ssize( m_VPKFiles ); i++ )
 	{
 		m_VPKFiles[i]->GetPackFileLoadErrorSummaryKV( pKV );
 	}
@@ -5828,81 +5730,12 @@ void CBaseFileSystem::FileSystemWarning( FileWarningLevel_t level, const char *f
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CBaseFileSystem::COpenedFile::COpenedFile( void )
-{
-	m_pFile = nullptr;
-	m_pName = nullptr;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-CBaseFileSystem::COpenedFile::~COpenedFile( void )
-{
-	delete[] m_pName;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : src - 
-//-----------------------------------------------------------------------------
-CBaseFileSystem::COpenedFile::COpenedFile( const COpenedFile& src )
-{
-	m_pFile = src.m_pFile;
-	if ( src.m_pName )
-	{
-		int len = strlen( src.m_pName ) + 1;
-		m_pName = new char[ len ];
-		Q_strncpy( m_pName, src.m_pName, len );
-	}
-	else
-	{
-		m_pName = nullptr;
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : src - 
-// Output : Returns true on success, false on failure.
-//-----------------------------------------------------------------------------
-bool CBaseFileSystem::COpenedFile::operator==( const CBaseFileSystem::COpenedFile& src ) const
-{
-	return src.m_pFile == m_pFile;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : *name - 
-//-----------------------------------------------------------------------------
-void CBaseFileSystem::COpenedFile::SetName( char const *name )
-{
-	delete[] m_pName;
-	int len = strlen( name ) + 1;
-	m_pName = new char[ len ];
-	Q_strncpy( m_pName, name, len );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Output : char
-//-----------------------------------------------------------------------------
-char const *CBaseFileSystem::COpenedFile::GetName( void )
-{
-	return m_pName ? m_pName : "???";
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
 CBaseFileSystem::CSearchPath::CSearchPath( void )
 {
-	m_Path = g_PathIDTable.AddString( "" );
+	m_Path = g_PathIDTable.intern( "" );
 	m_pDebugPath = "";
 
 	m_storeId = 0;
-	m_pPackFile = nullptr;
 	m_pPathIDInfo = nullptr;
 	m_bIsDvdDevPath = false;
 	m_bIsLocalizedPath = false;
@@ -5911,20 +5744,9 @@ CBaseFileSystem::CSearchPath::CSearchPath( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CBaseFileSystem::CSearchPath::~CSearchPath( void )
-{
-	if ( m_pPackFile )
-	{	
-		m_pPackFile->Release();
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
 CBaseFileSystem::CSearchPath *CBaseFileSystem::CSearchPathsIterator::GetFirst()
 {
-	if ( m_SearchPaths.Count() )
+	if ( !m_SearchPaths.empty() )
 	{
 		m_visits.Reset();
 		m_iCurrent = -1;
@@ -5942,7 +5764,7 @@ CBaseFileSystem::CSearchPath *CBaseFileSystem::CSearchPathsIterator::GetNext()
 {
 	CSearchPath *pSearchPath = nullptr;
 
-	for ( m_iCurrent++; m_iCurrent < m_SearchPaths.Count(); m_iCurrent++ )
+	for ( m_iCurrent++; m_iCurrent < std::ssize( m_SearchPaths ); m_iCurrent++ )
 	{
 		pSearchPath = &m_SearchPaths[m_iCurrent];
 
@@ -5964,7 +5786,7 @@ CBaseFileSystem::CSearchPath *CBaseFileSystem::CSearchPathsIterator::GetNext()
 			break;
 	}
 
-	if ( m_iCurrent < m_SearchPaths.Count() )
+	if ( m_iCurrent < std::ssize( m_SearchPaths ) )
 	{
 		return pSearchPath;
 	}
@@ -5996,10 +5818,10 @@ CSysModule *CBaseFileSystem::LoadModule( const char *pFileName, const char *pPat
 	Q_snprintf( szPosixFileName, sizeof(szPosixFileName), "lib%s", pFileName );
 	pFileName = szPosixFileName;
 
-	CUtlSymbol lookup = g_PathIDTable.AddString( pPathID );
+	std::string_view lookup = PathIDSymbol( pPathID );
 
 	// a pathID has been specified, find the first match in the path list
-	int c = m_SearchPaths.Count();
+	int c = std::ssize( m_SearchPaths );
 	for ( int i = 0; i < c; i++ )
 	{
 		// pak files don't have modules
@@ -6046,8 +5868,8 @@ void CBaseFileSystem::UnloadModule( CSysModule *pModule )
 //-----------------------------------------------------------------------------
 void CBaseFileSystem::AddLoggingFunc( FileSystemLoggingFunc_t logFunc )
 {
-	Assert(!m_LogFuncs.IsValidIndex(m_LogFuncs.Find(logFunc)));
-	m_LogFuncs.AddToTail(logFunc);
+	Assert(!ks::is_valid_index( m_LogFuncs, ks::find_index( m_LogFuncs, logFunc ) ));
+	m_LogFuncs.push_back( logFunc );
 }
 
 //-----------------------------------------------------------------------------
@@ -6055,7 +5877,7 @@ void CBaseFileSystem::AddLoggingFunc( FileSystemLoggingFunc_t logFunc )
 //-----------------------------------------------------------------------------
 void CBaseFileSystem::RemoveLoggingFunc( FileSystemLoggingFunc_t logFunc )
 {
-	m_LogFuncs.FindAndRemove(logFunc);
+	ks::erase_first( m_LogFuncs, logFunc );
 }
 
 //-----------------------------------------------------------------------------
@@ -6083,12 +5905,12 @@ static void AddSeperatorAndFixPath( char *str )
 //-----------------------------------------------------------------------------
 FileNameHandle_t CBaseFileSystem::FindOrAddFileName( char const *pFileName )
 {
-	return m_FileNames.FindOrAddFileName( pFileName );
+	return m_FileNames.find_or_add( pFileName );
 }
 
 FileNameHandle_t CBaseFileSystem::FindFileName( char const *pFileName )
 {
-	return m_FileNames.FindFileName( pFileName );
+	return m_FileNames.find( pFileName );
 }
 
 //-----------------------------------------------------------------------------
@@ -6098,20 +5920,20 @@ FileNameHandle_t CBaseFileSystem::FindFileName( char const *pFileName )
 //-----------------------------------------------------------------------------
 bool CBaseFileSystem::String( const FileNameHandle_t& handle, char *buf, int buflen )
 {
-	return m_FileNames.String( handle, buf, buflen );
+	return m_FileNames.string( handle, buf, buflen );
 }
 
 int	CBaseFileSystem::GetPathIndex( const FileNameHandle_t &handle )
 {
-	return m_FileNames.PathIndex(handle);
+	return m_FileNames.path_index( handle );
 }
 
-CBaseFileSystem::CPathIDInfo* CBaseFileSystem::FindOrAddPathIDInfo( const CUtlSymbol &id, int bByRequestOnly )
+CBaseFileSystem::CPathIDInfo* CBaseFileSystem::FindOrAddPathIDInfo( std::string_view id, int bByRequestOnly )
 {
-	for ( int i=0; i < m_PathIDInfos.Count(); i++ )
+	for ( int i=0; i < std::ssize( m_PathIDInfos ); i++ )
 	{
-		CBaseFileSystem::CPathIDInfo *pInfo = m_PathIDInfos[i];
-		if ( pInfo->GetPathID() == id )
+		CBaseFileSystem::CPathIDInfo *pInfo = m_PathIDInfos[i].get();
+		if ( pInfo->GetPathID().data() == id.data() )
 		{
 			if ( bByRequestOnly != -1 )
 			{
@@ -6122,8 +5944,7 @@ CBaseFileSystem::CPathIDInfo* CBaseFileSystem::FindOrAddPathIDInfo( const CUtlSy
 	}
 
 	// Add a new one.
-	CBaseFileSystem::CPathIDInfo *pInfo = new CBaseFileSystem::CPathIDInfo;
-	m_PathIDInfos.AddToTail( pInfo );
+	CBaseFileSystem::CPathIDInfo *pInfo = m_PathIDInfos.emplace_back( std::make_unique< CBaseFileSystem::CPathIDInfo >() ).get();
 	pInfo->SetPathID( id );
 	pInfo->m_bByRequestOnly = (bByRequestOnly == 1);
 	return pInfo;
@@ -6132,7 +5953,7 @@ CBaseFileSystem::CPathIDInfo* CBaseFileSystem::FindOrAddPathIDInfo( const CUtlSy
 
 void CBaseFileSystem::MarkPathIDByRequestOnly( const char *pPathID, bool bRequestOnly )
 {
-	FindOrAddPathIDInfo( g_PathIDTable.AddString( pPathID ), bRequestOnly );
+	FindOrAddPathIDInfo( PathIDSymbol( pPathID ), bRequestOnly );
 }
 
 bool CBaseFileSystem::IsFileInReadOnlySearchPath(const char *pPath, const char *pathID)
@@ -6161,7 +5982,7 @@ IBlockingFileItemList *CBaseFileSystem::RetrieveBlockingFileAccessInfo()
 
 void CBaseFileSystem::RecordBlockingFileAccess( bool synchronous, const FileBlockingItem& item )
 {
-	AUTO_LOCK( m_BlockingFileMutex );
+	std::scoped_lock lock( m_BlockingFileMutex );
 
 	// Not tracking anything
 	if ( !m_bBlockingFileAccessReportingEnabled )
@@ -6183,12 +6004,12 @@ bool CBaseFileSystem::SetAllowSynchronousLogging( bool state )
 
 void CBaseFileSystem::BlockingFileAccess_EnterCriticalSection()
 {
-	m_BlockingFileMutex.Lock();
+	m_BlockingFileMutex.lock();
 }
 
 void CBaseFileSystem::BlockingFileAccess_LeaveCriticalSection()
 {
-	m_BlockingFileMutex.Unlock();
+	m_BlockingFileMutex.unlock();
 }
 
 #endif // TRACK_BLOCKING_IO
@@ -6356,7 +6177,7 @@ int CFileHandle::Read( void* pBuffer, int nDestSize, int nLength )
 	if ( m_VPKHandle )
 	{
 		if ( nDestSize >= 0 )
-			nLength = MIN( nLength, nDestSize );
+			nLength = std::min( nLength, nDestSize );
 		int nLengthRead = m_VPKHandle.Read( pBuffer, nLength );
 		m_fs->m_FileTracker2.NotePackFileRead( m_VPKHandle, pBuffer, nLength );
 		return nLengthRead;
@@ -6510,7 +6331,7 @@ int CBaseFileSystem::IsAnyCorruptDLC()
 {
 	return 0;
 
-	return m_CorruptDLC.Count();
+	return std::ssize( m_CorruptDLC );
 }
 
 bool CBaseFileSystem::GetAnyCorruptDLCInfo( int iCorruptDLC, wchar_t *pTitleBuff, int nOutTitleSize )
@@ -6520,9 +6341,9 @@ bool CBaseFileSystem::GetAnyCorruptDLCInfo( int iCorruptDLC, wchar_t *pTitleBuff
 
 bool CBaseFileSystem::IsSpecificDLCPresent( unsigned int nDLCPackage )
 {
-	for( int i = 0; i < m_DLCContents.Count(); i++ )
+	for ( const DLCContent_t &dlc : m_DLCContents )
 	{
-		if ( m_DLCContents[i].m_bMounted && ( DLC_LICENSE_ID( m_DLCContents[i].m_LicenseMask ) == nDLCPackage ) )
+		if ( dlc.m_bMounted && ( DLC_LICENSE_ID( dlc.m_LicenseMask ) == nDLCPackage ) )
 		{
 			return true;
 		}
@@ -6559,7 +6380,7 @@ public:
 	CBaseFileSystem *m_pFileSystem;
 	CThreadEvent m_hThreadEvent;
 
-	volatile bool m_bThreadShouldExit;
+	std::atomic<bool> m_bThreadShouldExit;
 	// CThread Overrides
 	virtual int Run( void );
 };
@@ -6594,7 +6415,7 @@ int CIODelayAlarmThread::Run( void )
 		{
 			Warning( " %f elapsed w/o i/o\n", flCurTime - m_pFileSystem->m_flLastIOTime );
 			DebuggerBreakIfDebugging();
-			m_pFileSystem->m_flLastIOTime = MAX( Plat_FloatTime(), m_pFileSystem->m_flLastIOTime );
+			m_pFileSystem->m_flLastIOTime = std::max<std::common_type_t<double, float>>( Plat_FloatTime(), m_pFileSystem->m_flLastIOTime );
 		}
 	}
 	return 0;
@@ -6629,8 +6450,8 @@ CON_COMMAND( fs_dump_open_duplicate_times, "Set fs_report_long_reads 1 before lo
 {
 	float flTotalTime = 0.0f, flAccumulatedMilliseconds;
 
-	AUTO_LOCK( g_FileOpenDuplicateTimesMutex );
-	for ( int nFileOpenDuplicate = 0; nFileOpenDuplicate< g_FileOpenDuplicateTimes.Count(); nFileOpenDuplicate++ )
+	std::scoped_lock lock( g_FileOpenDuplicateTimesMutex );
+	for ( int nFileOpenDuplicate = 0; nFileOpenDuplicate< std::ssize( g_FileOpenDuplicateTimes ); nFileOpenDuplicate++ )
 	{
 		FileOpenDuplicateTime_t *pFileOpenDuplicate = g_FileOpenDuplicateTimes[ nFileOpenDuplicate ];
 		if ( pFileOpenDuplicate )
@@ -6651,15 +6472,15 @@ CON_COMMAND( fs_dump_open_duplicate_times, "Set fs_report_long_reads 1 before lo
 
 CON_COMMAND( fs_clear_open_duplicate_times, "Clear the list of files that have been opened." )
 {
-	AUTO_LOCK( g_FileOpenDuplicateTimesMutex );
-	for ( int nFileOpenDuplicate = 0; nFileOpenDuplicate< g_FileOpenDuplicateTimes.Count(); nFileOpenDuplicate++ )
+	std::scoped_lock lock( g_FileOpenDuplicateTimesMutex );
+	for ( int nFileOpenDuplicate = 0; nFileOpenDuplicate< std::ssize( g_FileOpenDuplicateTimes ); nFileOpenDuplicate++ )
 	{
 		FileOpenDuplicateTime_t *pFileOpenDuplicate = g_FileOpenDuplicateTimes[ nFileOpenDuplicate ];
 		delete pFileOpenDuplicate;
 		g_FileOpenDuplicateTimes[ nFileOpenDuplicate ] = nullptr;
 	}
 
-	g_FileOpenDuplicateTimes.RemoveAll();
+	g_FileOpenDuplicateTimes.clear();
 }
 
 

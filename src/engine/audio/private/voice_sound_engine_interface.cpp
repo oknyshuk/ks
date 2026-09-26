@@ -11,9 +11,6 @@
 #include "ivoicecodec.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // ------------------------------------------------------------------------- //
 // CAudioSourceVoice.
 // This feeds the data from an incoming voice channel (a guy on the server
@@ -285,14 +282,14 @@ void VoiceSE_Idle(float frametime)
 
 	if( g_bVoiceOverdriveOn )
 	{
-		g_VoiceOverdriveDuration = MIN( g_VoiceOverdriveDuration+frametime, voice_overdrivefadetime.GetFloat() );
+		g_VoiceOverdriveDuration = std::min( g_VoiceOverdriveDuration+frametime, voice_overdrivefadetime.GetFloat() );
 	}
 	else
 	{
 		if(g_VoiceOverdriveDuration == 0)
 			return;
 
-		g_VoiceOverdriveDuration = MAX(g_VoiceOverdriveDuration-frametime, 0);
+		g_VoiceOverdriveDuration = std::max<std::common_type_t<float, int>>(g_VoiceOverdriveDuration-frametime, 0);
 	}
 
 	float percent = g_VoiceOverdriveDuration / voice_overdrivefadetime.GetFloat();

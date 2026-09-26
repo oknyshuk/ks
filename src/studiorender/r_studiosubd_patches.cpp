@@ -5,9 +5,9 @@
 #define PI 3.14159265
 
 #ifdef _DEBUG
-CUtlVector<Vector4D> g_DebugCornerPositions;
-CUtlVector<Vector4D> g_DebugEdgePositions;
-CUtlVector<Vector4D> g_DebugInteriorPositions;
+std::vector< Vector4D > g_DebugCornerPositions;
+std::vector< Vector4D > g_DebugEdgePositions;
+std::vector< Vector4D > g_DebugInteriorPositions;
 #endif
 
 //----------------------------------------------------------------------------------------------

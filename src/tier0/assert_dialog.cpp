@@ -5,6 +5,7 @@
 //===========================================================================//
 
 #include "tier0/platform.h"
+#include <mutex>
 
 #include "tier0/valve_off.h"
 char *GetCommandLine();
@@ -21,9 +22,6 @@ char *GetCommandLine();
 
 typedef bool ( SDLCALL FUNC_SDL_ShowMessageBox )( const SDL_MessageBoxData *messageboxdata, int *buttonid );
 typedef SDL_Window* ( SDLCALL FUNC_SDL_GetKeyboardFocus )();
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 
 class CDialogInitInfo
@@ -231,7 +229,8 @@ PLATFORM_INTERFACE bool ShouldUseNewAssertDialog()
 
 PLATFORM_INTERFACE bool DoNewAssertDialog( const tchar *pFilename, int line, const tchar *pExpression )
 {
-	LOCAL_THREAD_LOCK();
+	static std::recursive_mutex assertDialogMutex;
+	std::scoped_lock lock( assertDialogMutex );
 
 	if ( AreAssertsDisabled() )
 		return false;

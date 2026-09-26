@@ -10,9 +10,6 @@
 #include "convar_serverbounded.h"
 #include "tier0/icommandline.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 bool g_bForceCLPredictOff = false;
 bool g_bSpectatingForceCLPredictOff = false;
@@ -120,7 +117,7 @@ public:
 
 		  if ( pUpdateRate && pMin && pMin->GetFloat() != -1 )
 		  {
-			  return MAX( flBaseFloatValue, pMin->GetFloat() / pUpdateRate->GetFloat() );
+			  return std::max( flBaseFloatValue, pMin->GetFloat() / pUpdateRate->GetFloat() );
 		  }
 		  else
 		  {

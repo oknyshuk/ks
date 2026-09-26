@@ -15,6 +15,7 @@
 // Forward declarations
 //-----------------------------------------------------------------------------
 class Vector;
+class Vector2D;
 class QAngle;
 class IMaterial;
 struct matrix3x4_t;

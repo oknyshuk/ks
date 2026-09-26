@@ -9,8 +9,9 @@
 #define TOKENREADER_H
 
 #include "tier0/basetypes.h"
-#include "tier2/utlstreambuffer.h"
 #include <assert.h>
+#include <cstddef>
+#include <vector>
 
 
 typedef enum
@@ -57,7 +58,14 @@ private:
 	trtoken_t GetString(char *pszStore, int nSize);
 	bool SkipWhiteSpace(void);
 
-	CUtlStreamBuffer m_file;
+	bool AtEnd() const { return m_nPos >= m_file.size(); }
+	char PeekChar() const { return AtEnd() ? '\0' : static_cast< char >( m_file[m_nPos] ); }
+	char PeekChar( size_t nOffset ) const { return m_nPos + nOffset < m_file.size() ? static_cast< char >( m_file[m_nPos + nOffset] ) : '\0'; }
+	char GetChar() { return AtEnd() ? '\0' : static_cast< char >( m_file[m_nPos++] ); }
+
+	std::vector< std::byte > m_file;
+	size_t m_nPos;
+	bool m_bOpen;
 	int m_nLine;
 	int m_nErrorCount;
 

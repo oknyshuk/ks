@@ -9,9 +9,6 @@
 #include "fx.h"
 #include "c_te_legacytempents.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Client-server neutral effects interface
 //-----------------------------------------------------------------------------

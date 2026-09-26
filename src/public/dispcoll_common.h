@@ -11,23 +11,12 @@
 
 #include "trace.h"
 #include "builddisp.h"
-#include "bitvec.h"
 #ifdef ENGINE_DLL
 #include "../engine/zone.h"
 #endif
 
-#ifdef ENGINE_DLL
-template<typename T>
-class CDispVector : public CUtlVector<T, CHunkMemory<T> >
-{
-};
-#else
-template<typename T>
-class CDispVector : public CUtlVector<T, CUtlMemoryAligned<T,16> >
-{
-};
-#define HUNK_ALLOC_CREDIT_( _x_ )
-#endif
+template < typename T >
+using CDispVector = ks::aligned_vector< T, 16 >;
 
 FORWARD_DECLARE_HANDLE( memhandle_t );
 
@@ -205,9 +194,9 @@ public:
 	inline short GetSurfaceProps( int iProp )						{ return m_nSurfaceProps[iProp]; }
 
 	inline unsigned int GetMemorySize( void )						{ return m_nSize; }
-	inline unsigned int GetCacheMemorySize( void )					{ return ( m_aTrisCache.Count() * sizeof(CDispCollTriCache) + m_aEdgePlanes.Count() * sizeof(Vector) ); }
+	inline unsigned int GetCacheMemorySize( void )					{ return ( std::ssize( m_aTrisCache ) * sizeof(CDispCollTriCache) + std::ssize( m_aEdgePlanes ) * sizeof(Vector) ); }
 
-	inline bool IsCached( void )									{ return m_aTrisCache.Count() == m_aTris.Count(); }
+	inline bool IsCached( void )									{ return std::ssize( m_aTrisCache ) == std::ssize( m_aTris ); }
 
 	void GetVirtualMeshList( struct virtualmeshlist_t *pList );
 	int AABBTree_GetTrisInSphere( const Vector &center, float radius, unsigned short *pIndexOut, int indexMax );
@@ -223,7 +212,7 @@ public:
 	void LockCache();
 	void UnlockCache();
 	void Cache( void );
-	void Uncache()	{ m_aTrisCache.Purge(); m_aEdgePlanes.Purge(); }
+	void Uncache()	{ m_aTrisCache.clear(); m_aTrisCache.shrink_to_fit(); m_aEdgePlanes.clear(); m_aEdgePlanes.shrink_to_fit(); }
 
 #ifdef ENGINE_DLL
 	// Data manager methods
@@ -331,8 +320,8 @@ protected:
 	CDispVector<CDispCollNode>		m_nodes;					// Nodes.
 	CDispVector<CDispCollLeaf>		m_leaves;								// Leaves.
 	// Cache
-	CUtlVector<CDispCollTriCache>	m_aTrisCache;
-	CUtlVector<Vector> m_aEdgePlanes;
+	std::vector< CDispCollTriCache >	m_aTrisCache;
+	std::vector< Vector > m_aEdgePlanes;
 
 	CDispCollHelper					m_Helper;
 
@@ -342,7 +331,7 @@ protected:
 
 FORCEINLINE bool CDispCollTree::IsLeafNode(int iNode) 
 { 
-	return iNode >= m_nodes.Count() ? true : false; 
+	return iNode >= std::ssize( m_nodes ) ? true : false; 
 }
 
 //-----------------------------------------------------------------------------
@@ -356,7 +345,7 @@ inline int CDispCollTree::Nodes_GetChild( int iNode, int nDirection )
 {
 	// node range [0...m_NodeCount)
 	Assert( iNode >= 0 );
-	Assert( iNode < m_nodes.Count() );
+	Assert( iNode < std::ssize( m_nodes ) );
 
     // ( node index * 4 ) + ( direction + 1 )
     return ( ( iNode << 2 ) + ( nDirection + 1 ) );	
@@ -382,7 +371,7 @@ inline int CDispCollTree::Nodes_GetParent( int iNode )
 {
 	// node range [0...m_NodeCount)
 	Assert( iNode >= 0 );
-	Assert( iNode < m_nodes.Count() );
+	Assert( iNode < std::ssize( m_nodes ) );
 
 	// ( node index - 1 ) / 4
 	return ( ( iNode - 1 ) >> 2 );
@@ -396,7 +385,7 @@ inline int CDispCollTree::Nodes_GetLevel( int iNode )
 {
 	// node range [0...m_NodeCount)
 	Assert( iNode >= 0 );
-	Assert( iNode < m_nodes.Count() );
+	Assert( iNode < std::ssize( m_nodes ) );
 
 	// level = 2^n + 1
 	if ( iNode == 0 )  { return 1; }

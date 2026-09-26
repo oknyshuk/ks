@@ -7,20 +7,18 @@
 //=============================================================================//
 
 #include "studio.h"
+#include "tier0/memalloc.h"
 #include "datacache/idatacache.h"
 #include "datacache/imdlcache.h"
 #include "convar.h"
-#include "tier1/utlmap.h"
-#include "tier1/utlbufferstrider.h"
+#include "tier1/map_ops.h"
+#include "tier1/buffer_strider.h"
 #include "tier0/vprof.h"
 #include "mathlib/femodel.h"
 #include "mathlib/femodeldesc.h"
 #include "mathlib/softbody.h"
 #include "mathlib/softbody.inl"
 #include "bone_setup.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 // preload up to 1 second worth of blocks ahead.
 ConVar mod_load_preload( "mod_load_preload", false ? "1.0" : "1.0", 0, "Indicates how far ahead in seconds to preload animations." );
@@ -127,7 +125,7 @@ byte *mstudioanimdesc_t::pAnim( int *piFrame, float &flStall ) const
 	if ( sectionframes != 0 )
 	{
 		// calc how many sections ahead to try looking
-		int maxSection = MIN( section + (mod_load_preload.GetFloat() * fps / sectionframes), (numframes / sectionframes) ) + 1;
+		int maxSection = std::min<std::common_type_t<float, int>>( section + (mod_load_preload.GetFloat() * fps / sectionframes), (numframes / sectionframes) ) + 1;
 		int prevBlock = block;
 
 		for ( int i = section + 1; i <= maxSection; i++ )
@@ -280,7 +278,7 @@ int studiohdr_t::GetNumSeq_Internal( void ) const
 {
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
 	Assert( pVModel );
-	return pVModel->m_seq.Count();
+	return std::ssize( pVModel->m_seq );
 }
 
 //-----------------------------------------------------------------------------
@@ -347,7 +345,7 @@ int	studiohdr_t::GetNumPoseParameters( void ) const
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
 	Assert( pVModel );
 
-	return pVModel->m_pose.Count();
+	return std::ssize( pVModel->m_pose );
 }
 
 
@@ -460,7 +458,7 @@ int	studiohdr_t::GetNumAttachments( void ) const
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
 	Assert( pVModel );
 
-	return pVModel->m_attachment.Count();
+	return std::ssize( pVModel->m_attachment );
 }
 
 
@@ -540,7 +538,7 @@ const char *studiohdr_t::pszNodeName( int iNode )
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
 	Assert( pVModel );
 
-	if ( pVModel->m_node.Count() <= iNode-1 )
+	if ( std::ssize( pVModel->m_node ) <= iNode-1 )
 		return "Invalid node";
 
 	return pVModel->m_group[ pVModel->m_node[iNode-1].group ].GetStudioHdr()->pszLocalNodeName( pVModel->m_node[iNode-1].index );
@@ -582,14 +580,14 @@ int	studiohdr_t::GetActivityListVersion( void )
 	int version = activitylistversion;
 
 	int i;
-	for (i = 1; i < pVModel->m_group.Count(); i++)
+	for (i = 1; i < std::ssize( pVModel->m_group ); i++)
 	{
 		virtualgroup_t *pGroup = &pVModel->m_group[ i ];
 		const studiohdr_t *pStudioHdr = pGroup->GetStudioHdr();
 
 		Assert( pStudioHdr );
 
-		version = MIN( version, pStudioHdr->activitylistversion );
+		version = std::min( version, pStudioHdr->activitylistversion );
 	}
 
 	return version;
@@ -608,7 +606,7 @@ void studiohdr_t::SetActivityListVersion( int version ) const
 	Assert( pVModel );
 
 	int i;
-	for (i = 1; i < pVModel->m_group.Count(); i++)
+	for (i = 1; i < std::ssize( pVModel->m_group ); i++)
 	{
 		virtualgroup_t *pGroup = &pVModel->m_group[ i ];
 		const studiohdr_t *pStudioHdr = pGroup->GetStudioHdr();
@@ -635,7 +633,7 @@ int studiohdr_t::GetNumIKAutoplayLocks( void ) const
 	virtualmodel_t *pVModel = (virtualmodel_t *)GetVirtualModel();
 	Assert( pVModel );
 
-	return pVModel->m_iklock.Count();
+	return std::ssize( pVModel->m_iklock );
 }
 
 const mstudioiklock_t &studiohdr_t::pIKAutoplayLock( int i )
@@ -746,7 +744,7 @@ void CStudioHdr::Init( const studiohdr_t *pStudioHdr, IMDLCache *mdlcache )
 
 	m_pVModel = nullptr;
 	m_pSoftbody = nullptr;
-	m_pStudioHdrCache.RemoveAll();
+	m_pStudioHdrCache.clear();
 
 	if (m_pStudioHdr == nullptr)
 	{
@@ -764,8 +762,8 @@ void CStudioHdr::Init( const studiohdr_t *pStudioHdr, IMDLCache *mdlcache )
 		ResetVModel( m_pStudioHdr->GetVirtualModel() );
 	}
 
-	m_boneFlags.EnsureCount( numbones() );
-	m_boneParent.EnsureCount( numbones() );
+	ks::ensure_size( m_boneFlags, numbones() );
+	ks::ensure_size( m_boneParent, numbones() );
 	for (int i = 0; i < numbones(); i++)
 	{
 		m_boneFlags[i] = pBone( i )->flags;
@@ -817,10 +815,10 @@ const virtualmodel_t * CStudioHdr::ResetVModel( const virtualmodel_t *pVModel ) 
 	if (pVModel != nullptr)
 	{
 		m_pVModel = (virtualmodel_t *)pVModel;
-		m_pStudioHdrCache.SetCount( m_pVModel->m_group.Count() );
+		m_pStudioHdrCache.assign( std::ssize( m_pVModel->m_group ), {} );
 
 		int i;
-		for (i = 0; i < m_pStudioHdrCache.Count(); i++)
+		for (i = 0; i < std::ssize( m_pStudioHdrCache ); i++)
 		{
 			m_pStudioHdrCache[ i ] = nullptr;
 		}
@@ -843,20 +841,20 @@ const studiohdr_t *CStudioHdr::GroupStudioHdr( int i )
 
 	if ( m_nFrameUnlockCounter != *m_pFrameUnlockCounter )
 	{
-		m_FrameUnlockCounterMutex.Lock();
+		m_FrameUnlockCounterMutex.lock();
 		if ( *m_pFrameUnlockCounter != m_nFrameUnlockCounter ) // i.e., this thread got the mutex
 		{
-			memset( m_pStudioHdrCache.Base(), 0, m_pStudioHdrCache.Count() * sizeof(studiohdr_t *) );
+			memset( m_pStudioHdrCache.data(), 0, std::ssize( m_pStudioHdrCache ) * sizeof(studiohdr_t *) );
 			m_nFrameUnlockCounter = *m_pFrameUnlockCounter;
 		}
-		m_FrameUnlockCounterMutex.Unlock();
+		m_FrameUnlockCounterMutex.unlock();
 	}
 
-	if ( !m_pStudioHdrCache.IsValidIndex( i ) )
+	if ( !ks::is_valid_index( m_pStudioHdrCache, i ) )
 	{
 		const char *pszName;
 		pszName = ( m_pStudioHdr ) ? m_pStudioHdr->pszName() : "<<null>>";
-		ExecuteNTimes( 5, Warning( "Invalid index passed to CStudioHdr(%s)::GroupStudioHdr(): %d [%d]\n", pszName, i, m_pStudioHdrCache.Count() ) );
+		ExecuteNTimes( 5, Warning( "Invalid index passed to CStudioHdr(%s)::GroupStudioHdr(): %d [%d]\n", pszName, i, (int)std::ssize( m_pStudioHdrCache ) ) );
 		DebuggerBreakIfDebugging();
 		return m_pStudioHdr; // return something known to probably exist, certainly things will be messed up, but hopefully not crash before the warning is noticed
 	}
@@ -915,7 +913,7 @@ mstudioanimdesc_t &CStudioHdr::pAnimdesc_Internal( int i )
 
 int CStudioHdr::GetNumSeq_Internal( void ) const
 {
-	return m_pVModel->m_seq.Count();
+	return std::ssize( m_pVModel->m_seq );
 }
 
 //-----------------------------------------------------------------------------
@@ -982,7 +980,7 @@ int	CStudioHdr::GetNumPoseParameters( void ) const
 
 	Assert( m_pVModel );
 
-	return m_pVModel->m_pose.Count();
+	return std::ssize( m_pVModel->m_pose );
 }
 
 
@@ -1085,7 +1083,7 @@ int	CStudioHdr::GetNumAttachments( void ) const
 
 	Assert( m_pVModel );
 
-	return m_pVModel->m_attachment.Count();
+	return std::ssize( m_pVModel->m_attachment );
 }
 
 
@@ -1156,7 +1154,7 @@ const char *CStudioHdr::pszNodeName( int iNode )
 		return m_pStudioHdr->pszLocalNodeName( iNode );
 	}
 
-	if ( m_pVModel->m_node.Count() <= iNode-1 )
+	if ( std::ssize( m_pVModel->m_node ) <= iNode-1 )
 		return "Invalid node";
 
 	const studiohdr_t *pStudioHdr = GroupStudioHdr( m_pVModel->m_node[iNode-1].group );
@@ -1200,11 +1198,11 @@ int	CStudioHdr::GetActivityListVersion( void )
 	int version = m_pStudioHdr->activitylistversion;
 
 	int i;
-	for (i = 1; i < m_pVModel->m_group.Count(); i++)
+	for (i = 1; i < std::ssize( m_pVModel->m_group ); i++)
 	{
 		const studiohdr_t *pStudioHdr = GroupStudioHdr( i );
 		Assert( pStudioHdr );
-		version = MIN( version, pStudioHdr->activitylistversion );
+		version = std::min( version, pStudioHdr->activitylistversion );
 	}
 
 	return version;
@@ -1220,7 +1218,7 @@ void CStudioHdr::SetActivityListVersion( int version )
 	}
 
 	int i;
-	for (i = 1; i < m_pVModel->m_group.Count(); i++)
+	for (i = 1; i < std::ssize( m_pVModel->m_group ); i++)
 	{
 		const studiohdr_t *pStudioHdr = GroupStudioHdr( i );
 		Assert( pStudioHdr );
@@ -1243,11 +1241,11 @@ int	CStudioHdr::GetEventListVersion( void )
 	int version = m_pStudioHdr->eventsindexed;
 
 	int i;
-	for (i = 1; i < m_pVModel->m_group.Count(); i++)
+	for (i = 1; i < std::ssize( m_pVModel->m_group ); i++)
 	{
 		const studiohdr_t *pStudioHdr = GroupStudioHdr( i );
 		Assert( pStudioHdr );
-		version = MIN( version, pStudioHdr->eventsindexed );
+		version = std::min( version, pStudioHdr->eventsindexed );
 	}
 
 	return version;
@@ -1263,7 +1261,7 @@ void CStudioHdr::SetEventListVersion( int version )
 	}
 
 	int i;
-	for (i = 1; i < m_pVModel->m_group.Count(); i++)
+	for (i = 1; i < std::ssize( m_pVModel->m_group ); i++)
 	{
 		const studiohdr_t *pStudioHdr = GroupStudioHdr( i );
 		Assert( pStudioHdr );
@@ -1283,7 +1281,7 @@ int CStudioHdr::GetNumIKAutoplayLocks( void ) const
 		return m_pStudioHdr->numlocalikautoplaylocks;
 	}
 
-	return m_pVModel->m_iklock.Count();
+	return std::ssize( m_pVModel->m_iklock );
 }
 
 const mstudioiklock_t &CStudioHdr::pIKAutoplayLock( int i )
@@ -1368,8 +1366,8 @@ void CStudioHdr::RunFlexRulesOld( const float *src, float *dest )
 				k--; 
 				break;
 			case STUDIO_NEG: stack[k-1] = -stack[k-1]; break;
-			case STUDIO_MAX: stack[k-2] = MAX( stack[k-2], stack[k-1] ); k--; break;
-			case STUDIO_MIN: stack[k-2] = MIN( stack[k-2], stack[k-1] ); k--; break;
+			case STUDIO_MAX: stack[k-2] = std::max( stack[k-2], stack[k-1] ); k--; break;
+			case STUDIO_MIN: stack[k-2] = std::min( stack[k-2], stack[k-1] ); k--; break;
 			case STUDIO_CONST: stack[k] = pops->d.value; k++; break;
 			case STUDIO_FETCH1: 
 				{ 
@@ -1581,14 +1579,14 @@ void CStudioHdr::RunFlexRulesNew( const float *src, float *dest )
 					case STUDIO_MAX:
 					{
 						float flNos = *(pSP++);
-						flTOS = MAX( flTOS, flNos );
+						flTOS = std::max( flTOS, flNos );
 						break;
 					}
 
 					case STUDIO_MIN:
 					{
 						float flNos = *(pSP++);
-						flTOS = MIN( flTOS, flNos);
+						flTOS = std::min( flTOS, flNos);
 						break;
 					}
 					case STUDIO_CONST:
@@ -1827,7 +1825,7 @@ void CStudioHdr::clearBoneFlags( int iBone, int flags )
 //-----------------------------------------------------------------------------
 #define iabs(i) (( (i) >= 0 ) ? (i) : -(i) )
 
-CUtlSymbolTable g_ActivityModifiersTable;
+ks::intern_pool_mt g_ActivityModifiersTable;
 
 extern void SetActivityForSequence( CStudioHdr *pstudiohdr, int i );
 void CStudioHdr::CActivityToSequenceMapping::Initialize( const CStudioHdr * __restrict pstudiohdr )
@@ -1872,21 +1870,14 @@ void CStudioHdr::CActivityToSequenceMapping::Initialize( const CStudioHdr * __re
 		{
 			bFoundOne = true;
 
-			// look up if we already have an entry. First we need to make a speculative one --
-			HashValueType entry(seqdesc.activity, 0, 1, iabs(seqdesc.actweight));
-			UtlHashHandle_t handle = m_ActToSeqHash.Find(entry);
-			if ( m_ActToSeqHash.IsValidHandle(handle) )
+			// create the entry, or update an existing one by incrementing count
+			auto [it, bInserted] = m_ActToSeqHash.try_emplace( seqdesc.activity, HashValueType{ 0, 1, iabs(seqdesc.actweight) } );
+			if ( !bInserted )
 			{	
-				// we already have an entry and must update it by incrementing count
-				HashValueType * __restrict toUpdate = &m_ActToSeqHash.Element(handle);
+				HashValueType * __restrict toUpdate = &it->second;
 				toUpdate->count += 1;
 				toUpdate->totalWeight += iabs(seqdesc.actweight);
 				Assert( toUpdate->totalWeight > 0 );
-			}
-			else
-			{
-				// we do not have an entry yet; create one.
-				m_ActToSeqHash.Insert(entry);
 			}
 		}
 	}
@@ -1899,14 +1890,11 @@ void CStudioHdr::CActivityToSequenceMapping::Initialize( const CStudioHdr * __re
 	// the starting index is of course the sum of counts [0..n-1]. 
 	int sequenceCount = 0;
 	int topActivity = 0; // this will store the highest seen activity number (used later to make an ad hoc map on the stack)
-	for ( UtlHashHandle_t handle = m_ActToSeqHash.GetFirstHandle() ; 
-		  m_ActToSeqHash.IsValidHandle(handle) ;
-		  handle = m_ActToSeqHash.GetNextHandle(handle) )
+	for ( auto &[activityIdx, element] : m_ActToSeqHash )
 	{
-		HashValueType &element = m_ActToSeqHash[handle];
 		element.startingIdx = sequenceCount;
 		sequenceCount += element.count;
-		topActivity = MAX(topActivity, element.activityIdx);
+		topActivity = std::max(topActivity, activityIdx);
 	}
 	
 
@@ -1937,7 +1925,7 @@ void CStudioHdr::CActivityToSequenceMapping::Initialize( const CStudioHdr * __re
 		const mstudioseqdesc_t &seqdesc = ((CStudioHdr *)pstudiohdr)->pSeqdesc( i );
 		if (seqdesc.activity >= 0)
 		{
-			const HashValueType &element = m_ActToSeqHash[m_ActToSeqHash.Find(HashValueType(seqdesc.activity, 0, 0, 0))];
+			const HashValueType &element = m_ActToSeqHash.at(seqdesc.activity);
 			
 			// If this assert trips, we've written more sequences per activity than we allocated 
 			// (therefore there must have been a miscount in the first for loop above).
@@ -1947,12 +1935,12 @@ void CStudioHdr::CActivityToSequenceMapping::Initialize( const CStudioHdr * __re
 			if ( seqdesc.numactivitymodifiers > 0 )
 			{
 				// add entries for this model's activity modifiers
-				(tupleList + element.startingIdx + tupleOffset)->pActivityModifiers = new CUtlSymbol[ seqdesc.numactivitymodifiers ];
+				(tupleList + element.startingIdx + tupleOffset)->pActivityModifiers = new ActivityModifierSym_t[ seqdesc.numactivitymodifiers ];
 				(tupleList + element.startingIdx + tupleOffset)->iNumActivityModifiers = seqdesc.numactivitymodifiers;
 
 				for ( int k = 0; k < seqdesc.numactivitymodifiers; k++ )
 				{
-					(tupleList + element.startingIdx + tupleOffset)->pActivityModifiers[ k ] = g_ActivityModifiersTable.AddString( seqdesc.pActivityModifier( k )->pszName() );
+					(tupleList + element.startingIdx + tupleOffset)->pActivityModifiers[ k ] = g_ActivityModifiersTable.intern( seqdesc.pActivityModifier( k )->pszName() ).data();
 				}
 			}
 			else
@@ -1994,10 +1982,10 @@ void CStudioHdr::CActivityToSequenceMapping::Reinitialize( CStudioHdr *pstudiohd
 {
 	if (m_pSequenceTuples)
 	{
-		delete m_pSequenceTuples;
+		delete[] m_pSequenceTuples;
 		m_pSequenceTuples = nullptr;
 	}
-	m_ActToSeqHash.RemoveAll();
+	m_ActToSeqHash.clear();
 
 	Initialize(pstudiohdr);
 }
@@ -2007,14 +1995,9 @@ void CStudioHdr::CActivityToSequenceMapping::Reinitialize( CStudioHdr *pstudiohd
 // is specially implemented.
 const CStudioHdr::CActivityToSequenceMapping::SequenceTuple *CStudioHdr::CActivityToSequenceMapping::GetSequences( int forActivity, int * __restrict outSequenceCount, int * __restrict outTotalWeight )
 {
-	// Construct a dummy entry so we can do a hash lookup (the UtlHash does not divorce keys from values)
-
-	HashValueType entry(forActivity, 0, 0, 0);
-	UtlHashHandle_t handle = m_ActToSeqHash.Find(entry);
-	
-	if (m_ActToSeqHash.IsValidHandle(handle))
+	if (const HashValueType *pElement = ks::find_ptr(m_ActToSeqHash, forActivity))
 	{
-		const HashValueType &element = m_ActToSeqHash[handle];
+		const HashValueType &element = *pElement;
 		const SequenceTuple *retval = m_pSequenceTuples + element.startingIdx;
 		*outSequenceCount = element.count;
 		*outTotalWeight = element.totalWeight;
@@ -2037,11 +2020,9 @@ int CStudioHdr::CActivityToSequenceMapping::NumSequencesForActivity( int forActi
 	if ( m_pSequenceTuples == nullptr )
 		return 0;
 
-	HashValueType entry(forActivity, 0, 0, 0);
-	UtlHashHandle_t handle = m_ActToSeqHash.Find(entry);
-	if (m_ActToSeqHash.IsValidHandle(handle))
+	if (const HashValueType *pElement = ks::find_ptr(m_ActToSeqHash, forActivity))
 	{
-		return m_ActToSeqHash[handle].count;
+		return pElement->count;
 	}
 	else
 	{
@@ -2068,11 +2049,11 @@ struct StudioHdrToActivityMapEntry_t
 	long checksum;
 	char name[64];
 	int	nRefs;
-	CStudioHdr::CActivityToSequenceMapping *pMap;
+	std::unique_ptr<CStudioHdr::CActivityToSequenceMapping> pMap;
 };
 
-CUtlMap<const studiohdr_t *, StudioHdrToActivityMapEntry_t> g_StudioHdrToActivityMaps( DefLessFunc( const studiohdr_t * ) );
-CThreadFastMutex g_StudioHdrToActivityMapsLock;
+std::map<const studiohdr_t *, StudioHdrToActivityMapEntry_t> g_StudioHdrToActivityMaps;
+std::recursive_mutex g_StudioHdrToActivityMapsLock;
 
 CStudioHdr::CActivityToSequenceMapping *CStudioHdr::CActivityToSequenceMapping::FindMapping( const CStudioHdr *pHdr )
 {
@@ -2085,34 +2066,34 @@ CStudioHdr::CActivityToSequenceMapping *CStudioHdr::CActivityToSequenceMapping::
 
 	Assert( !pHdr->m_pActivityToSequence );
 
-	AUTO_LOCK( g_StudioHdrToActivityMapsLock );
+	std::scoped_lock lock( g_StudioHdrToActivityMapsLock );
 	const studiohdr_t *pRealHdr = pHdr->m_pStudioHdr;
-	int i = g_StudioHdrToActivityMaps.Find( pRealHdr );
-	if ( i != g_StudioHdrToActivityMaps.InvalidIndex() )
+	auto it = g_StudioHdrToActivityMaps.find( pRealHdr );
+	if ( it != g_StudioHdrToActivityMaps.end() )
 	{
-		if ( ( g_StudioHdrToActivityMaps[i].checksum != pRealHdr->checksum || Q_strcmp( g_StudioHdrToActivityMaps[i].name, pRealHdr->name ) != 0 ) )
+		StudioHdrToActivityMapEntry_t &entry = it->second;
+		if ( ( entry.checksum != pRealHdr->checksum || Q_strcmp( entry.name, pRealHdr->name ) != 0 ) )
 		{
-			AssertFatal( g_StudioHdrToActivityMaps[i].nRefs == 0 );
-			delete g_StudioHdrToActivityMaps[i].pMap;
-			g_StudioHdrToActivityMaps.RemoveAt( i );
+			AssertFatal( entry.nRefs == 0 );
+			g_StudioHdrToActivityMaps.erase( it );
 		}
 		else
 		{
-			Assert( g_StudioHdrToActivityMaps[i].checksum == pRealHdr->checksum && Q_strcmp( g_StudioHdrToActivityMaps[i].name, pRealHdr->name ) == 0 );
-			g_StudioHdrToActivityMaps[i].nRefs++;
-			return g_StudioHdrToActivityMaps[i].pMap;
+			Assert( entry.checksum == pRealHdr->checksum && Q_strcmp( entry.name, pRealHdr->name ) == 0 );
+			entry.nRefs++;
+			return entry.pMap.get();
 		}
 	}
 
-	i = g_StudioHdrToActivityMaps.Insert( pRealHdr );
+	StudioHdrToActivityMapEntry_t &entry = g_StudioHdrToActivityMaps.try_emplace( pRealHdr ).first->second;
 
-	g_StudioHdrToActivityMaps[i].checksum = pRealHdr->checksum;
-	Q_strncpy( g_StudioHdrToActivityMaps[i].name, pRealHdr->name, 64 );
-	g_StudioHdrToActivityMaps[i].nRefs = 1;
-	g_StudioHdrToActivityMaps[i].pMap = new CStudioHdr::CActivityToSequenceMapping;
-	g_StudioHdrToActivityMaps[i].pMap->Initialize( pHdr );
+	entry.checksum = pRealHdr->checksum;
+	Q_strncpy( entry.name, pRealHdr->name, 64 );
+	entry.nRefs = 1;
+	entry.pMap = std::make_unique<CStudioHdr::CActivityToSequenceMapping>();
+	entry.pMap->Initialize( pHdr );
 
-	return g_StudioHdrToActivityMaps[i].pMap;
+	return entry.pMap.get();
 }
 
 void CStudioHdr::CActivityToSequenceMapping::ReleaseMapping( CActivityToSequenceMapping *pMap )
@@ -2120,12 +2101,11 @@ void CStudioHdr::CActivityToSequenceMapping::ReleaseMapping( CActivityToSequence
 	if ( pMap && pMap != &emptyMapping)
 	{
 		VPROF( "CStudioHdr::CActivityToSequenceMapping::ReleaseMapping" );
-		AUTO_LOCK( g_StudioHdrToActivityMapsLock );
-		int i = g_StudioHdrToActivityMaps.Find( pMap->m_pStudioHdr );
-		if ( i != g_StudioHdrToActivityMaps.InvalidIndex() )
+		std::scoped_lock lock( g_StudioHdrToActivityMapsLock );
+		if ( StudioHdrToActivityMapEntry_t *pEntry = ks::find_ptr( g_StudioHdrToActivityMaps, pMap->m_pStudioHdr ) )
 		{
-			Assert( g_StudioHdrToActivityMaps[i].nRefs > 0 );
-			g_StudioHdrToActivityMaps[i].nRefs--;
+			Assert( pEntry->nRefs > 0 );
+			pEntry->nRefs--;
 		}
 		else
 		{
@@ -2136,20 +2116,18 @@ void CStudioHdr::CActivityToSequenceMapping::ReleaseMapping( CActivityToSequence
 
 void CStudioHdr::CActivityToSequenceMapping::ResetMappings()
 {
-	for ( int i = g_StudioHdrToActivityMaps.FirstInorder(); i != g_StudioHdrToActivityMaps.InvalidIndex(); i = g_StudioHdrToActivityMaps.NextInorder( i ) )
+	for ( auto &[pStudioHdr, entry] : g_StudioHdrToActivityMaps )
 	{
-		if ( g_StudioHdrToActivityMaps[i].nRefs == 0 )
+		if ( entry.nRefs != 0 )
 		{
-			delete g_StudioHdrToActivityMaps[i].pMap;
-		}
-		else
-		{
+			// Still referenced: leak it rather than leave its users dangling.
+			(void)entry.pMap.release();
 			Msg( "****************************************************************\n" );
 			Msg( "****************************************************************\n" );
 			Msg( "*************  DO NOT IGNORE ME  *******************************\n" );
 			Msg( "****************************************************************\n" );
 			Msg( "****************************************************************\n" );
-			Warning( "Studio activity sequence mapping leak! (%s, %d)\n", g_StudioHdrToActivityMaps[i].name, g_StudioHdrToActivityMaps[i].nRefs );
+			Warning( "Studio activity sequence mapping leak! (%s, %d)\n", entry.name, entry.nRefs );
 			Msg( "****************************************************************\n" );
 			Msg( "****************************************************************\n" );
 			Msg( "****************************************************************\n" );
@@ -2157,7 +2135,7 @@ void CStudioHdr::CActivityToSequenceMapping::ResetMappings()
 			Msg( "****************************************************************\n" );
 		}
 	}
-	g_StudioHdrToActivityMaps.RemoveAll();
+	g_StudioHdrToActivityMaps.clear();
 }
 
 
@@ -2170,10 +2148,11 @@ void CStudioHdr::CActivityToSequenceMapping::ResetMappings()
 
 int CStudioHdr::LookupSequence( const char *pszName )
 {
-	int iSequence = m_namedSequence.Find( pszName );
+	auto it = m_namedSequence.find( pszName );
 
-	if ( iSequence == m_namedSequence.InvalidIndex() )
+	if ( it == m_namedSequence.end() )
 	{
+		int iSequence;
 		for (iSequence = 0; iSequence < GetNumSeq(); iSequence++)
 		{
 			if ( V_stricmp( pSeqdesc( iSequence ).pszLabel(), pszName ) == 0)
@@ -2181,18 +2160,18 @@ int CStudioHdr::LookupSequence( const char *pszName )
 		}
 		if ( iSequence == GetNumSeq() )
 		{
-			m_namedSequence.Insert( pszName, -1 );
+			m_namedSequence.emplace( pszName, -1 );
 			return -1;
 		}
 		else
 		{
-			m_namedSequence.Insert( pszName, iSequence );
+			m_namedSequence.emplace( pszName, iSequence );
 			return iSequence;
 		}
 	}
 	else
 	{
-		return m_namedSequence[iSequence];
+		return it->second;
 	}
 }
 

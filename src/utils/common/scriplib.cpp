@@ -51,7 +51,7 @@ typedef struct
 	char *param_lcase;
 } variable_t;
 
-CUtlVector<variable_t> g_definevariable;
+std::vector< variable_t > g_definevariable;
 
 /*
 Callback stuff
@@ -214,7 +214,7 @@ void DefineVariable( char *variablename )
 	
 	v.param_lcase = strlwr( strdup(v.param) );
 
-	for ( int i=0; i<g_definevariable.Count(); i++ )
+	for ( int i=0; i<std::ssize( g_definevariable ); i++ )
 	{
 		if ( !V_strcmp( g_definevariable[i].value, v.value ) )
 		{
@@ -222,7 +222,7 @@ void DefineVariable( char *variablename )
 		}
 	}
 
-	g_definevariable.AddToTail( v );
+	g_definevariable.push_back( v );
 }
 
 void RedefineVariable( char *variablename )
@@ -236,7 +236,7 @@ void RedefineVariable( char *variablename )
 	v.value = strdup( token );
 
 	int nIdx = -1;
-	for ( int i=0; i<g_definevariable.Count(); i++ )
+	for ( int i=0; i<std::ssize( g_definevariable ); i++ )
 	{
 		if ( !V_strcmp( g_definevariable[i].param, v.param ) )
 		{
@@ -337,7 +337,7 @@ bool ExpandSubMacroToken( char *&token_p )
 		token_p = szPotentialVar;
 
 		int index;
-		for (index = 0; index < g_definevariable.Count(); index++)
+		for (index = 0; index < std::ssize( g_definevariable ); index++)
 		{
 			if ( !Q_strcmp( g_definevariable[index].param, szPotentialVar ) )
 			{
@@ -429,7 +429,7 @@ bool ExpandVariableToken( char *&token_p )
 		// lookup macro parameter
 
 		int index;
-		for (index = 0; index < g_definevariable.Count(); index++)
+		for (index = 0; index < std::ssize( g_definevariable ); index++)
 		{
 			// [wills] just strcmp here, this was doing nearest partial comparison before which could result in a false positive variable name match. Bad!
 			if ( !Q_strcmp( g_definevariable[index].param, tp ) )
@@ -437,9 +437,9 @@ bool ExpandVariableToken( char *&token_p )
 		}
 	
 		// if we can't find the variable, try again without case sensitivity, then complain loudly if we find anything
-		if (index >= g_definevariable.Count() )
+		if (index >= std::ssize( g_definevariable ) )
 		{
-			for (index = 0; index < g_definevariable.Count(); index++)
+			for (index = 0; index < std::ssize( g_definevariable ); index++)
 			{
 				char *tp_lower = strlwr(strdup(tp));
 				if ( !Q_strcmp( g_definevariable[index].param_lcase, tp_lower ) )
@@ -450,7 +450,7 @@ bool ExpandVariableToken( char *&token_p )
 			}
 		}
 
-		if (index >= g_definevariable.Count() )
+		if (index >= std::ssize( g_definevariable ) )
 		{
 			Error("unknown variable token \"%s\" in %s\n", tp, script->filename );
 		}
@@ -975,14 +975,13 @@ qboolean GetTokenizerStatus( char **pFilename, int *pLine )
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include "tier1/utlbuffer.h"
 
 class CScriptLib : public IScriptLib
 {
 public:
-	virtual bool ReadFileToBuffer( const char *pSourceName, CUtlBuffer &buffer, bool bText = false, bool bNoOpenFailureWarning = false );
-	virtual bool WriteBufferToFile( const char *pTargetName, CUtlBuffer &buffer, DiskWriteMode_t writeMode );
-	virtual int	FindFiles( char* pFileMask, bool bRecurse, CUtlVector<fileList_t> &fileList );
+	virtual std::optional< std::vector< std::byte > > ReadFileToBuffer( const char *pSourceName, bool bNoOpenFailureWarning = false );
+	virtual bool WriteBufferToFile( const char *pTargetName, std::span< const std::byte > data, DiskWriteMode_t writeMode );
+	virtual int	FindFiles( char* pFileMask, bool bRecurse, std::vector< fileList_t > &fileList );
 	virtual char *MakeTemporaryFilename( char const *pchModPath, char *pPath, int pathSize );
 	virtual void DeleteTemporaryFiles( const char *pFileMask );
 	virtual int CompareFileTime( const char *pFilenameA, const char *pFilenameB );
@@ -990,8 +989,8 @@ public:
 
 private:
 
-	int GetFileList( const char* pDirPath, const char* pPattern, CUtlVector< fileList_t > &fileList );
-	void RecurseFileTree_r( const char* pDirPath, int depth, CUtlVector< CUtlString > &dirList );
+	int GetFileList( const char* pDirPath, const char* pPattern, std::vector< fileList_t > &fileList );
+	void RecurseFileTree_r( const char* pDirPath, int depth, std::vector< std::string > &dirList );
 };
 
 static CScriptLib g_ScriptLib;
@@ -1009,36 +1008,21 @@ bool CScriptLib::DoesFileExist( const char *pFilename )
 //-----------------------------------------------------------------------------
 // Purpose: Helper utility, read file into buffer
 //-----------------------------------------------------------------------------
-bool CScriptLib::ReadFileToBuffer( const char *pSourceName, CUtlBuffer &buffer, bool bText, bool bNoOpenFailureWarning )
+std::optional< std::vector< std::byte > > CScriptLib::ReadFileToBuffer( const char *pSourceName, bool bNoOpenFailureWarning )
 {
-	bool bSuccess = true;
-
-	if ( !g_pFullFileSystem->ReadFile( pSourceName, nullptr, buffer ) )
+	auto data = g_pFullFileSystem->ReadFile( pSourceName, nullptr );
+	if ( !data && !bNoOpenFailureWarning )
 	{
-		if ( !bNoOpenFailureWarning )
-		{
-			Msg( "ReadFileToBuffer(): Error opening %s: %s\n", pSourceName, strerror( errno ) );
-		}
-		return false;
+		Msg( "ReadFileToBuffer(): Error opening %s: %s\n", pSourceName, strerror( errno ) );
 	}
 
-	if ( bText )
-	{
-		// force it into text mode
-		buffer.SetBufferType( true, true );
-	}
-	else
-	{
-		buffer.SetBufferType( false, false );
-	}
-
-	return bSuccess;
+	return data;
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Helper utility, Write buffer to file
 //-----------------------------------------------------------------------------
-bool CScriptLib::WriteBufferToFile( const char *pTargetName, CUtlBuffer &buffer, DiskWriteMode_t writeMode )
+bool CScriptLib::WriteBufferToFile( const char *pTargetName, std::span< const std::byte > data, DiskWriteMode_t writeMode )
 {
 	char*	ptr;
 	char	dirPath[MAX_PATH];
@@ -1075,7 +1059,7 @@ bool CScriptLib::WriteBufferToFile( const char *pTargetName, CUtlBuffer &buffer,
 
 	if ( bDoWrite )
 	{
-		bSuccess = g_pFullFileSystem->WriteFile( pTargetName, nullptr, buffer );
+		bSuccess = g_pFullFileSystem->WriteFile( pTargetName, nullptr, data );
 	}
 
 	return bSuccess;
@@ -1151,11 +1135,11 @@ void CScriptLib::DeleteTemporaryFiles( const char *pFileMask )
 		V_AppendSlash( tempPath, sizeof( tempPath ) );
 		strcat( tempPath, pFileMask );
 
-		CUtlVector<fileList_t> fileList;
+		std::vector< fileList_t > fileList;
 		FindFiles( tempPath, false, fileList );
-		for ( int i=0; i<fileList.Count(); i++ )
+		for ( int i=0; i<std::ssize( fileList ); i++ )
 		{
-			_unlink( fileList[i].fileName.String() );
+			_unlink( fileList[i].fileName.c_str() );
 		}
 	}
 }
@@ -1163,13 +1147,13 @@ void CScriptLib::DeleteTemporaryFiles( const char *pFileMask )
 //-----------------------------------------------------------------------------
 // Purpose: Get list of files from current path that match pattern
 //-----------------------------------------------------------------------------
-int CScriptLib::GetFileList( const char* pDirPath, const char* pPattern, CUtlVector< fileList_t > &fileList )
+int CScriptLib::GetFileList( const char* pDirPath, const char* pPattern, std::vector< fileList_t > &fileList )
 {
 	char	sourcePath[MAX_PATH];
 	char	fullPath[MAX_PATH];
 	bool	bFindDirs;
 
-	fileList.Purge();
+	fileList.clear(); fileList.shrink_to_fit();
 
 	strcpy( sourcePath, pDirPath );
 	int len = (int)strlen( sourcePath );
@@ -1231,8 +1215,8 @@ int CScriptLib::GetFileList( const char* pDirPath, const char* pPattern, CUtlVec
 		strcpy( fileName, sourcePath );
 		strcat( fileName, findData.cFileName );
 
-		int j = fileList.AddToTail();
-		fileList[j].fileName.Set( fileName );
+		int j = std::ssize( fileList ); fileList.emplace_back();
+		fileList[j].fileName.assign( ks::nz( fileName ) );
 		struct stat statbuf;
 		if ( stat( fileName, &statbuf ) )
 			fileList[j].timeWrite = statbuf.st_mtime;
@@ -1245,39 +1229,39 @@ int CScriptLib::GetFileList( const char* pDirPath, const char* pPattern, CUtlVec
 
 	
 
-	return fileList.Count();
+	return std::ssize( fileList );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Recursively determine directory tree
 //-----------------------------------------------------------------------------
-void CScriptLib::RecurseFileTree_r( const char* pDirPath, int depth, CUtlVector< CUtlString > &dirList )
+void CScriptLib::RecurseFileTree_r( const char* pDirPath, int depth, std::vector< std::string > &dirList )
 {
 	// recurse from source directory, get directories only
-	CUtlVector< fileList_t > fileList;
+	std::vector< fileList_t > fileList;
 	int dirCount = GetFileList( pDirPath, "\\", fileList );
 	if ( !dirCount )
 	{
 		// add directory name to search tree
-		int j = dirList.AddToTail();
-		dirList[j].Set( pDirPath );
+		int j = std::ssize( dirList ); dirList.emplace_back();
+		dirList[j].assign( ks::nz( pDirPath ) );
 		return;
 	}
 
 	for ( int i=0; i<dirCount; i++ )
 	{
 		// form new path name, recurse into
-		RecurseFileTree_r( fileList[i].fileName.String(), depth+1, dirList );
+		RecurseFileTree_r( fileList[i].fileName.c_str(), depth+1, dirList );
 	}
 
-	int j = dirList.AddToTail();
-	dirList[j].Set( pDirPath );
+	int j = std::ssize( dirList ); dirList.emplace_back();
+	dirList[j].assign( ks::nz( pDirPath ) );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Generate a list of file matching mask
 //-----------------------------------------------------------------------------
-int CScriptLib::FindFiles( char* pFileMask, bool bRecurse, CUtlVector<fileList_t> &fileList )
+int CScriptLib::FindFiles( char* pFileMask, bool bRecurse, std::vector< fileList_t > &fileList )
 {
 	char	dirPath[MAX_PATH];
 	char	pattern[MAX_PATH];
@@ -1303,24 +1287,24 @@ int CScriptLib::FindFiles( char* pFileMask, bool bRecurse, CUtlVector<fileList_t
 	else
 	{
 		// recurse and get the tree
-		CUtlVector< fileList_t > tempList;
-		CUtlVector< CUtlString > dirList;
+		std::vector< fileList_t > tempList;
+		std::vector< std::string > dirList;
 		RecurseFileTree_r( dirPath, 0, dirList );
-		for ( int i=0; i<dirList.Count(); i++ )
+		for ( int i=0; i<std::ssize( dirList ); i++ )
 		{
 			// iterate each directory found
-			tempList.Purge();
-			tempList.EnsureCapacity( dirList.Count() );
+			tempList.clear(); tempList.shrink_to_fit();
+			tempList.reserve( std::ssize( dirList ) );
 
-			GetFileList( dirList[i].String(), pattern, tempList );
+			GetFileList( dirList[i].c_str(), pattern, tempList );
 
-			int start = fileList.AddMultipleToTail( tempList.Count() );
-			for ( int j=0; j<tempList.Count(); j++ )
+			int start = std::ssize( fileList ); fileList.resize( fileList.size() + ( std::ssize( tempList ) ) );
+			for ( int j=0; j<std::ssize( tempList ); j++ )
 			{
 				fileList[start+j] = tempList[j];
 			}
 		}	
 	}
 
-	return fileList.Count();
+	return std::ssize( fileList );
 }

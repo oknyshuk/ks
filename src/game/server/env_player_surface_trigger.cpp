@@ -10,22 +10,19 @@
 #include "decals.h"
 #include "env_player_surface_trigger.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 LINK_ENTITY_TO_CLASS( env_player_surface_trigger, CEnvPlayerSurfaceTrigger );
 
 IMPLEMENT_REFLECT_DATAMAP( CEnvPlayerSurfaceTrigger )
 
 // Global list of surface triggers
-CUtlVector< CHandle<CEnvPlayerSurfaceTrigger> >	g_PlayerSurfaceTriggers;
+std::vector< CHandle<CEnvPlayerSurfaceTrigger> >	g_PlayerSurfaceTriggers;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 CEnvPlayerSurfaceTrigger::~CEnvPlayerSurfaceTrigger( void )
 {
-	g_PlayerSurfaceTriggers.FindAndRemove( this );
+	ks::erase_first( g_PlayerSurfaceTriggers, this );
 }
 
 //-----------------------------------------------------------------------------
@@ -39,7 +36,7 @@ void CEnvPlayerSurfaceTrigger::Spawn( void )
 	m_iCurrentGameMaterial = 0;
 	m_bDisabled = false;
 
-	g_PlayerSurfaceTriggers.AddToTail( this );
+	g_PlayerSurfaceTriggers.push_back( this );
 }
 
 //-----------------------------------------------------------------------------
@@ -49,7 +46,7 @@ void CEnvPlayerSurfaceTrigger::OnRestore( void )
 {
 	BaseClass::OnRestore();
 
-	g_PlayerSurfaceTriggers.AddToTail( this );
+	g_PlayerSurfaceTriggers.push_back( this );
 }
 
 //-----------------------------------------------------------------------------
@@ -62,7 +59,7 @@ void CEnvPlayerSurfaceTrigger::SetPlayerSurface( CBasePlayer *pPlayer, char game
 		return;
 
 	// Loop through the surface triggers and tell them all about the change
-	int iCount = g_PlayerSurfaceTriggers.Count();
+	int iCount = std::ssize( g_PlayerSurfaceTriggers );
 	for ( int i = 0; i < iCount; i++ )
 	{
 		g_PlayerSurfaceTriggers[i]->PlayerSurfaceChanged( pPlayer, gameMaterial );

@@ -60,7 +60,7 @@ public:
 
 	// Hook for the sound system to tell us when a sound's been played. Returns true if it's to swallow the passed in sound.
 	static bool OnSoundPlayed( int entindex, const char *soundname, soundlevel_t soundlevel, 
-		float flVolume, int iFlags, int iPitch, const Vector *pOrigin, float soundtime, CUtlVector< Vector >& soundorigins );
+		float flVolume, int iFlags, int iPitch, const Vector *pOrigin, float soundtime, std::vector< Vector >& soundorigins );
 
 	static void OnSoundStopped( const char *soundname );
 
@@ -68,7 +68,7 @@ private:
 
 	// Per-microphone notification that a sound has played.
 	MicrophoneResult_t SoundPlayed( int entindex, const char *soundname, soundlevel_t soundlevel, 
-		float flVolume, int iFlags, int iPitch, const Vector *pOrigin, float soundtime, CUtlVector< Vector >& soundorigins );
+		float flVolume, int iFlags, int iPitch, const Vector *pOrigin, float soundtime, std::vector< Vector >& soundorigins );
 
 	void SoundStopped( const char *soundname );
 

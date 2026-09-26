@@ -9,9 +9,6 @@
 #include "BlurFilter_ps20.inc"
 #include "BlurFilter_ps20b.inc"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 BEGIN_VS_SHADER_FLAGS( BlurFilterY, "Help for BlurFilterY", SHADER_NOT_EDITABLE )
 	BEGIN_SHADER_PARAMS
         SHADER_PARAM( BLOOMAMOUNT, SHADER_PARAM_TYPE_FLOAT, "1.0", "" )

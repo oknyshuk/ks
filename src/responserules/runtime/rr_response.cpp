@@ -16,9 +16,7 @@
 #include "engine/IEngineSound.h"
 */
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include <tier0/memdbgon.h>
-
+#include "tier0/memalloc.h"
 using namespace ResponseRules;
 
 //-----------------------------------------------------------------------------
@@ -88,7 +86,7 @@ void CRR_Response::Invalidate()
 void CRR_Response::operator delete(void* p) 
 { 
 	AssertMsg(false, "DO NOT new or delete CRR_Response s.");
-	free(p);
+	g_pMemAlloc->Free(p);
 }
 
 //-----------------------------------------------------------------------------

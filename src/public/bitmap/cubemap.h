@@ -12,7 +12,6 @@
 
 
 #include "tier0/platform.h"
-#include "tier1/utlmemory.h"
 #include "mathlib/mathlib.h"
 
 template<class T, int RES> struct CCubeMap

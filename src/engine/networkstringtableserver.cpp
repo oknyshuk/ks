@@ -10,14 +10,9 @@
 #include "eiface.h"
 #include "server.h"
 #include "framesnapshot.h"
-#include "utlsymbol.h"
-#include "utlrbtree.h"
 #include "host.h"
 #include "LocalNetworkBackdoor.h"
 #include "demo.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 static CNetworkStringTableContainer s_NetworkStringTableServer;
 CNetworkStringTableContainer *networkStringTableContainerServer = &s_NetworkStringTableServer;

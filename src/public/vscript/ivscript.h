@@ -99,7 +99,9 @@
 #include "datamap.h"
 #include "appframework/iappsystem.h"
 #include "tier1/functors.h"
-#include "tier0/memdbgon.h"
+#include <vector>
+#include "tier0/memalloc.h"
+#include "tier1/strtools.h"
 
 
 #ifdef VSCRIPT_DLL_EXPORT
@@ -112,7 +114,7 @@
 #define VSCRIPT_CLASS		DLL_CLASS_IMPORT
 #endif
 
-class CUtlBuffer;
+namespace ks { class byte_writer; class byte_reader; }
 
 //-----------------------------------------------------------------------------
 //
@@ -235,7 +237,7 @@ struct ScriptFuncDescriptor_t
 	const char *m_pszFunction;
 	const char *m_pszDescription;
 	ScriptDataType_t m_ReturnType;
-	CUtlVector<ScriptDataType_t> m_Parameters;
+	std::vector< ScriptDataType_t > m_Parameters;
 };
 
 
@@ -294,7 +296,7 @@ struct ScriptClassDesc_t
 	const char *						m_pszClassname;
 	const char *						m_pszDescription;
 	ScriptClassDesc_t *					m_pBaseDesc;
-	CUtlVector<ScriptFunctionBinding_t> m_FunctionBindings;
+	std::vector< ScriptFunctionBinding_t > m_FunctionBindings;
 
 	void *(*m_pfnConstruct)();
 	void (*m_pfnDestruct)( void *);
@@ -318,8 +320,6 @@ enum SVFlags_t
 	SV_FREE = 0x01,
 };
 
-#pragma warning(push)
-#pragma warning(disable:4800)
 struct ScriptVariant_t
 {
 	ScriptVariant_t() :						m_flags( 0 ), m_type( FIELD_VOID )		{ m_pVector = 0; }
@@ -332,7 +332,7 @@ struct ScriptVariant_t
 
 	ScriptVariant_t( const Vector &val, bool bCopy = false ) :	m_flags( 0 ), m_type( FIELD_VECTOR )	{ if ( !bCopy ) { m_pVector = &val; } else { m_pVector = new Vector( val ); m_flags |= SV_FREE; } }
 	ScriptVariant_t( const Vector *val, bool bCopy = false ) :	m_flags( 0 ), m_type( FIELD_VECTOR )	{ if ( !bCopy ) { m_pVector = val; } else { m_pVector = new Vector( *val ); m_flags |= SV_FREE; } }
-	ScriptVariant_t( const char *val , bool bCopy = false ) :	m_flags( 0 ), m_type( FIELD_CSTRING )	{ if ( !bCopy ) { m_pszString = val; } else { m_pszString = strdup( val ); m_flags |= SV_FREE; } }
+	ScriptVariant_t( const char *val , bool bCopy = false ) :	m_flags( 0 ), m_type( FIELD_CSTRING )	{ if ( !bCopy ) { m_pszString = val; } else { m_pszString = V_strdup( val ); m_flags |= SV_FREE; } }
 
 	bool IsNull() const						{ return (m_type == FIELD_VOID ); }
 
@@ -356,7 +356,20 @@ struct ScriptVariant_t
 	void operator=( bool b ) 				{ m_type = FIELD_BOOLEAN; m_bool = b; }
 	void operator=( HSCRIPT h ) 			{ m_type = FIELD_HSCRIPT; m_hScript = h; }
 
-	void Free()								{ if ( ( m_flags & SV_FREE ) && ( m_type == FIELD_HSCRIPT || m_type == FIELD_VECTOR || m_type == FIELD_CSTRING ) ) delete m_pszString; } // Generally only needed for return results
+	void Free()
+	{
+		if ( !( m_flags & SV_FREE ) )
+			return;
+
+		if ( m_type == FIELD_VECTOR )
+		{
+			delete m_pVector;
+		}
+		else if ( m_type == FIELD_CSTRING )
+		{
+			delete[] m_pszString;
+		}
+	} // Generally only needed for return results
 
 	template <typename T>
 	T Get()
@@ -465,7 +478,7 @@ struct ScriptVariant_t
 		}
 		else if ( m_type == FIELD_CSTRING ) 
 		{
-			pDest->m_pszString = strdup( m_pszString );
+			pDest->m_pszString = V_strdup( m_pszString );
 			pDest->m_flags |= SV_FREE;
 		}
 		else
@@ -494,7 +507,6 @@ private:
 
 #define SCRIPT_VARIANT_NULL ScriptVariant_t()
 
-#pragma warning(pop)
 
 
 
@@ -519,14 +531,14 @@ private:
 #define ScriptInitClassDescNamed_( pClassDesc, class, pBaseClassDesc, scriptName )			do { (pClassDesc)->m_pszScriptName = scriptName; (pClassDesc)->m_pszClassname = #class; (pClassDesc)->m_pBaseDesc = pBaseClassDesc; } while ( 0 )
 
 #define ScriptAddFunctionToClassDesc( pClassDesc, class, func, description  )				ScriptAddFunctionToClassDescNamed( pClassDesc, class, func, #func, description )
-#define ScriptAddFunctionToClassDescNamed( pClassDesc, class, func, scriptName, description ) do { ScriptFunctionBinding_t *pBinding = &((pClassDesc)->m_FunctionBindings[(pClassDesc)->m_FunctionBindings.AddToTail()]); pBinding->m_desc.m_pszDescription = description; ScriptInitMemberFunctionBindingNamed( pBinding, class, func, scriptName );  } while (0)
+#define ScriptAddFunctionToClassDescNamed( pClassDesc, class, func, scriptName, description ) do { ScriptFunctionBinding_t *pBinding = &(pClassDesc)->m_FunctionBindings.emplace_back(); pBinding->m_desc.m_pszDescription = description; ScriptInitMemberFunctionBindingNamed( pBinding, class, func, scriptName );  } while (0)
 
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
 
 #define ScriptRegisterFunction( pVM, func, description )									ScriptRegisterFunctionNamed( pVM, func, #func, description )
-#define ScriptRegisterFunctionNamed( pVM, func, scriptName, description )					do { static ScriptFunctionBinding_t binding; binding.m_desc.m_pszDescription = description; binding.m_desc.m_Parameters.RemoveAll(); ScriptInitFunctionBindingNamed( &binding, func, scriptName ); pVM->RegisterFunction( &binding ); } while (0)
+#define ScriptRegisterFunctionNamed( pVM, func, scriptName, description )					do { static ScriptFunctionBinding_t binding; binding.m_desc.m_pszDescription = description; binding.m_desc.m_Parameters.clear(); ScriptInitFunctionBindingNamed( &binding, func, scriptName ); pVM->RegisterFunction( &binding ); } while (0)
 
 //-----------------------------------------------------------------------------
 // 
@@ -763,8 +775,8 @@ public:
 
 	//----------------------------------------------------------------------------
 
-	virtual void WriteState( CUtlBuffer *pBuffer ) = 0;
-	virtual void ReadState( CUtlBuffer *pBuffer ) = 0;
+	virtual void WriteState( ks::byte_writer *pBuffer ) = 0;
+	virtual void ReadState( ks::byte_reader *pBuffer ) = 0;
 	virtual void RemoveOrphanInstances() = 0;
 
 	virtual void DumpState() = 0;
@@ -951,12 +963,10 @@ public:
 			IScriptVM *pVM = GetVM();
 			if ( pVM )
 			{
-				for ( int i = 0; i < m_FuncHandles.Count(); i++ )
-				{
-					pVM->ReleaseFunction( *m_FuncHandles[i] );
-				}
+				for ( HSCRIPT *pFunc : m_FuncHandles )
+					pVM->ReleaseFunction( *pFunc );
 			}
-			m_FuncHandles.Purge();
+			m_FuncHandles.clear();
 			if ( m_hScope && pVM && !(m_flags & EXTERNAL) )
 			{
 				pVM->ReleaseScope( m_hScope );
@@ -969,13 +979,13 @@ public:
 	void InvalidateCachedValues()
 	{
 		IScriptVM *pVM = GetVM();
-		for ( int i = 0; i < m_FuncHandles.Count(); i++ )
+		for ( HSCRIPT *pFunc : m_FuncHandles )
 		{
-			if ( *m_FuncHandles[i] )
-				pVM->ReleaseFunction( *m_FuncHandles[i] );
-			*m_FuncHandles[i] = INVALID_HSCRIPT;
+			if ( *pFunc )
+				pVM->ReleaseFunction( *pFunc );
+			*pFunc = INVALID_HSCRIPT;
 		}
-		m_FuncHandles.RemoveAll();
+		m_FuncHandles.clear();
 	}
 
 	operator HSCRIPT()
@@ -1323,7 +1333,7 @@ public:
 protected:
 	HSCRIPT m_hScope;
 	int m_flags;
-	CUtlVectorConservative<HSCRIPT *> m_FuncHandles;
+	std::vector<HSCRIPT *> m_FuncHandles;
 };
 
 typedef CScriptScopeT<> CScriptScope;
@@ -1354,7 +1364,7 @@ public:
 		if ( !m_hScriptFunc_##FuncName.IsValid() ) \
 		{ \
 			m_hScriptFunc_##FuncName.hFunction = LookupFunction( #FuncName ); \
-			m_FuncHandles.AddToTail( &m_hScriptFunc_##FuncName.hFunction ); \
+			m_FuncHandles.push_back( &m_hScriptFunc_##FuncName.hFunction ); \
 		} \
 		\
 		if ( !m_hScriptFunc_##FuncName.IsNull() ) \
@@ -1379,7 +1389,7 @@ public:
 		if ( !m_hScriptFunc_##FuncName.IsValid() ) \
 		{ \
 			m_hScriptFunc_##FuncName.hFunction = LookupFunction( #FuncName ); \
-			m_FuncHandles.AddToTail( &m_hScriptFunc_##FuncName.hFunction ); \
+			m_FuncHandles.push_back( &m_hScriptFunc_##FuncName.hFunction ); \
 		} \
 		\
 		if ( !m_hScriptFunc_##FuncName.IsNull() ) \
@@ -1400,7 +1410,7 @@ public:
 		if ( !m_hScriptFunc_##FuncName.IsValid() ) \
 		{ \
 			m_hScriptFunc_##FuncName.hFunction = LookupFunction( #FuncName ); \
-			m_FuncHandles.AddToTail( &m_hScriptFunc_##FuncName.hFunction ); \
+			m_FuncHandles.push_back( &m_hScriptFunc_##FuncName.hFunction ); \
 		} \
 		\
 		if ( !m_hScriptFunc_##FuncName.IsNull() ) \
@@ -1446,7 +1456,5 @@ public:
 #define DEFINE_SCRIPT_PROXY_14V( FuncName ) DEFINE_SCRIPT_PROXY_GUTS_NO_RETVAL( FuncName, 14 )
 
 //-----------------------------------------------------------------------------
-
-#include "tier0/memdbgoff.h"
 
 #endif // IVSCRIPT_H

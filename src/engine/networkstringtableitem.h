@@ -8,7 +8,6 @@
 #ifndef NETWORKSTRINGTABLEITEM_H
 #define NETWORKSTRINGTABLEITEM_H
 
-#include "utlsymbol.h"
 #include "utlvector.h"
 
 //-----------------------------------------------------------------------------
@@ -55,7 +54,7 @@ public:
 
 #ifndef SHARED_NET_STRING_TABLES
 	int				m_nTickCreated;
-	CUtlVector< itemchange_s > *m_pChangeList;	
+	std::vector< itemchange_s > *m_pChangeList;	
 #endif
 };
 

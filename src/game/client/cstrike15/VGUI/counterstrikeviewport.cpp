@@ -275,7 +275,7 @@ void CounterStrikeViewport::UpdateAllPanels( void )
 
 	ACTIVE_SPLITSCREEN_PLAYER_GUARD( 0 );
 
-	for ( int i = 0; i < m_UnorderedPanels.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_UnorderedPanels ); ++i )
 	{
 		IViewPortPanel *p = m_UnorderedPanels[i];
 

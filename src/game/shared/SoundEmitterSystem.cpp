@@ -15,6 +15,7 @@
 #include "tier0/vprof.h"
 #include "checksum_crc.h"
 #include "tier0/icommandline.h"
+#include "tier1/intern_pool.h"
 #ifndef CLIENT_DLL
 #include "envmicrophone.h"
 #include "sceneentity.h"
@@ -28,9 +29,6 @@
 #endif
 
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 BEGIN_DEFINE_LOGGING_CHANNEL( LOG_SND_EMITTERSYSTEM, "SndEmitterSystem", LCF_CONSOLE_ONLY, LS_MESSAGE );
 ADD_LOGGING_CHANNEL_TAG( "SndEmitterSystem" );
@@ -64,8 +62,7 @@ class CCaptionRepeatMgr
 {
 public:
 
-	CCaptionRepeatMgr() :
-	  m_rbCaptionHistory( 0, 0, DefLessFunc( unsigned int ) )
+	CCaptionRepeatMgr()
 	{
 	}
 
@@ -88,14 +85,14 @@ private:
 		}
 	};
 
-	CUtlMap< unsigned int, float > m_rbCaptionHistory;
+	std::map< unsigned int, float > m_rbCaptionHistory;
 };
 
 static CCaptionRepeatMgr g_CaptionRepeats;
 
 void CCaptionRepeatMgr::Clear()
 {
-	m_rbCaptionHistory.Purge();
+	m_rbCaptionHistory.clear();
 }
 
 bool CCaptionRepeatMgr::CanEmitCaption( unsigned int hash )
@@ -108,17 +105,16 @@ bool CCaptionRepeatMgr::CanEmitCaption( unsigned int hash )
 
 	RemoveCaptionsBefore( realtime - cc_norepeat.GetFloat() );
 
-	int idx = m_rbCaptionHistory.Find( hash );
-	if ( idx == m_rbCaptionHistory.InvalidIndex() )
+	auto [it, bInserted] = m_rbCaptionHistory.try_emplace( hash, realtime );
+	if ( bInserted )
 	{
-		m_rbCaptionHistory.Insert( hash, realtime );
 		return true;
 	}
 
-	float flLastEmitted = m_rbCaptionHistory[ idx ];
+	float flLastEmitted = it->second;
 	if ( realtime - flLastEmitted > cc_norepeat.GetFloat() )
 	{
-		m_rbCaptionHistory[ idx ] = realtime;
+		it->second = realtime;
 		return true;
 	}
 
@@ -127,19 +123,7 @@ bool CCaptionRepeatMgr::CanEmitCaption( unsigned int hash )
 
 void CCaptionRepeatMgr::RemoveCaptionsBefore( float t )
 {
-	CUtlVector< unsigned int > toRemove;
-	FOR_EACH_MAP( m_rbCaptionHistory, i )
-	{
-		if ( m_rbCaptionHistory[ i ] < t )
-		{
-			toRemove.AddToTail( m_rbCaptionHistory.Key( i ) );
-		}
-	}
-
-	for ( int i = 0; i < toRemove.Count(); ++i )
-	{
-		m_rbCaptionHistory.Remove( toRemove[ i ] );
-	}
+	std::erase_if( m_rbCaptionHistory, [t]( const auto &entry ) { return entry.second < t; } );
 }
 
 void ClearModelSoundsCache();
@@ -149,14 +133,14 @@ void ClearModelSoundsCache();
 void WaveTrace( char const *wavname, char const *funcname )
 {
 
-	static CUtlSymbolTable s_WaveTrace;
+	static ks::intern_pool s_WaveTrace;
 
 	// Make sure we only show the message once
-	if ( UTL_INVAL_SYMBOL == s_WaveTrace.Find( wavname ) )
+	if ( !s_WaveTrace.contains( wavname ) )
 	{
 		DevMsg( "%s directly referenced wave %s (should use game_sounds.txt system instead)\n", 
 			funcname, wavname );
-		s_WaveTrace.AddString( wavname );
+		s_WaveTrace.intern( wavname );
 	}
 }
 
@@ -227,8 +211,8 @@ public:
 #if !defined( CLIENT_DLL )
 	bool			m_bLogPrecache;
 	FileHandle_t	m_hPrecacheLogFile;
-	CUtlSymbolTable m_PrecachedScriptSounds;
-	CUtlVector< AsyncCaption_t > m_ServerCaptions;
+	ks::intern_pool m_PrecachedScriptSounds;
+	std::vector< AsyncCaption_t > m_ServerCaptions;
 
 public:
 	CSoundEmitterSystem( char const *pszName ) :
@@ -243,7 +227,7 @@ public:
 			return;
 
 		// Make sure we only show the message once
-		if ( UTL_INVAL_SYMBOL != m_PrecachedScriptSounds.Find( soundname ) )
+		if ( m_PrecachedScriptSounds.contains( soundname ) )
 			return;
 
 		if (m_hPrecacheLogFile == FILESYSTEM_INVALID_HANDLE)
@@ -251,7 +235,7 @@ public:
 			StartLog();
 		}
 
-		m_PrecachedScriptSounds.AddString( soundname );
+		m_PrecachedScriptSounds.intern( soundname );
 
 		if (m_hPrecacheLogFile != FILESYSTEM_INVALID_HANDLE)
 		{
@@ -268,7 +252,7 @@ public:
 
 	void StartLog()
 	{
-		m_PrecachedScriptSounds.RemoveAll();
+		m_PrecachedScriptSounds.clear();
 
 		if ( !m_bLogPrecache )
 			return;
@@ -298,7 +282,7 @@ public:
 			m_hPrecacheLogFile = FILESYSTEM_INVALID_HANDLE;
 		}
 
-		m_PrecachedScriptSounds.RemoveAll();
+		m_PrecachedScriptSounds.clear();
 	}
 #else
 	CSoundEmitterSystem( char const *name )
@@ -310,7 +294,7 @@ public:
 #if !defined( CLIENT_DLL )
 	void LoadServerCaptions()
 	{
-		m_ServerCaptions.Purge();
+		m_ServerCaptions.clear(); m_ServerCaptions.shrink_to_fit();
 
 		// Server keys off of english file!!!
 		AddCaptionFile( "resource/closecaption_english.dat" );
@@ -351,11 +335,11 @@ public:
 			Q_strlower( fullpath );
 
 
-			int idx = m_ServerCaptions.AddToTail();
+			int idx = std::ssize( m_ServerCaptions ); m_ServerCaptions.emplace_back();
 			AsyncCaption_t& entry = m_ServerCaptions[ idx  ];
 			if ( !entry.LoadFromFile( fullpath ) )
 			{
-				m_ServerCaptions.Remove( idx );
+				m_ServerCaptions.erase( m_ServerCaptions.begin() + idx );
 			}
 			else
 			{
@@ -540,13 +524,13 @@ public:
 #if !defined( CLIENT_DLL )
 			if ( soundname[ 0 ] )
 			{
-				static CUtlSymbolTable s_PrecacheScriptSoundFailures;
+				static ks::intern_pool s_PrecacheScriptSoundFailures;
 
 				// Make sure we only show the message once
-				if ( UTL_INVAL_SYMBOL == s_PrecacheScriptSoundFailures.Find( soundname ) )
+				if ( !s_PrecacheScriptSoundFailures.contains( soundname ) )
 				{
 					Warning( "PrecacheScriptSound '%s' failed, no such sound script entry\n", soundname );
-					s_PrecacheScriptSoundFailures.AddString( soundname );
+					s_PrecacheScriptSoundFailures.intern( soundname );
 				}
 			}
 #endif
@@ -963,7 +947,7 @@ public:
 		return EmitSoundByHandle( filter, entindex, ep, ep.m_hSoundScriptHash );
 	}
 
-	void EmitCloseCaption( IRecipientFilter& filter, int entindex, bool fromplayer, char const *token, CUtlVector< Vector >& originlist, float duration, bool warnifmissing /*= false*/, bool bForceSubtitle = false )
+	void EmitCloseCaption( IRecipientFilter& filter, int entindex, bool fromplayer, char const *token, std::vector< Vector >& originlist, float duration, bool warnifmissing /*= false*/, bool bForceSubtitle = false )
 	{
 		// Don't use dedicated closecaption ConVar since it will prevent remote clients from getting captions.
 		// Okay to use it in SP, since it's the same ConVar, not the FCVAR_USERINFO one
@@ -1012,7 +996,7 @@ public:
 #if !defined( CLIENT_DLL )
 		{
 			// Defined in sceneentity.cpp
-			bool AttenuateCaption( const char *token, const Vector& listener, CUtlVector< Vector >& soundorigins );
+			bool AttenuateCaption( const char *token, const Vector& listener, std::vector< Vector >& soundorigins );
 
 			if ( filterCopy.GetRecipientCount() > 0 )
 			{
@@ -1257,7 +1241,7 @@ public:
 			filter.AddAllPlayers();
 			filter.MakeReliable();
 
-			CUtlVector< Vector > dummy;
+			std::vector< Vector > dummy;
 			EmitCloseCaption( filter, entindex, false, soundname, dummy, soundduration, false );
 		}
 
@@ -1348,7 +1332,7 @@ public:
 	void EmitAmbientSound( int entindex, const Vector &origin, const char *pSample, float volume, soundlevel_t soundlevel, int flags, int pitch, float soundtime /*= 0.0f*/, float *duration /*=NULL*/ )
 	{
 #if !defined( CLIENT_DLL )
-		CUtlVector< Vector > dummyorigins;
+		std::vector< Vector > dummyorigins;
 
 		// Loop through all registered microphones and tell them the sound was just played
 		// NOTE: This means that pitch shifts/sound changes on the original ambient will not be reflected in the re-broadcasted sound
@@ -1393,32 +1377,30 @@ public:
 	bool GetCaptionHash( char const *pchStringName, bool bWarnIfMissing, unsigned int &hash )
 	{
 		// hash the string, find in dictionary or return 0u if not there!!!
-		CUtlVector< AsyncCaption_t >& directories = m_ServerCaptions;
+		std::vector< AsyncCaption_t >& directories = m_ServerCaptions;
 
 		CaptionLookup_t search;
 		search.SetHash( pchStringName );
 		hash = search.hash;
 
-		int idx = -1;
-		int i;
-		int dc = directories.Count();
-		for ( i = 0; i < dc; ++i )
+		const CaptionLookup_t *pEntry = nullptr;
+		for ( const AsyncCaption_t &directory : directories )
 		{
-			idx = directories[ i ].m_CaptionDirectory.Find( search );
-			if ( idx == directories[ i ].m_CaptionDirectory.InvalidIndex() )
-				continue;
-
-			break;
+			auto it = directory.m_CaptionDirectory.find( search );
+			if ( it != directory.m_CaptionDirectory.end() )
+			{
+				pEntry = &*it;
+				break;
+			}
 		}
 
-		if ( i >= dc || idx == -1 )
+		if ( !pEntry )
 		{
 			if ( bWarnIfMissing && cc_showmissing.GetBool() )
 			{
-				static CUtlRBTree< unsigned int > s_MissingHashes( 0, 0, DefLessFunc( unsigned int ) );
-				if ( s_MissingHashes.Find( hash ) == s_MissingHashes.InvalidIndex() )
+				static std::set< unsigned int > s_MissingHashes;
+				if ( s_MissingHashes.insert( hash ).second )
 				{
-					s_MissingHashes.Insert( hash );
 					Msg( "Missing caption for %s\n", pchStringName );
 				}
 			}
@@ -1426,8 +1408,7 @@ public:
 		}
 
 		// Anything marked as L"" by content folks doesn't need to transmit either!!!
-		CaptionLookup_t &entry  = directories[ i ].m_CaptionDirectory[ idx ];
-		if ( entry.length <= sizeof( wchar_t ) )
+		if ( pEntry->length <= sizeof( wchar_t ) )
 		{
 			return false;
 		}
@@ -2167,7 +2148,7 @@ float CBaseEntity::GetSoundDuration( const char *soundname, char const *actormod
 //			duration - 
 //			warnifmissing - 
 //-----------------------------------------------------------------------------
-void CBaseEntity::EmitCloseCaption( IRecipientFilter& filter, int entindex, char const *token, CUtlVector< Vector >& soundorigin, float duration, bool warnifmissing /*= false*/ )
+void CBaseEntity::EmitCloseCaption( IRecipientFilter& filter, int entindex, char const *token, std::vector< Vector >& soundorigin, float duration, bool warnifmissing /*= false*/ )
 {
 	bool fromplayer = false;
 	CBaseEntity *ent = CBaseEntity::Instance( entindex );

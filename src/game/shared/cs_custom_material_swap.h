@@ -35,7 +35,7 @@ public:
 private:
 	void ClearAllPendingSwaps();
 
-	CUtlVector< CCSPendingCustomMaterialSwap_t > m_pPendingSwaps;
+	std::vector< CCSPendingCustomMaterialSwap_t > m_pPendingSwaps;
 };
 
 extern CCSCustomMaterialSwapManager g_CSCustomMaterialSwapManager;

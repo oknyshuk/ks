@@ -23,10 +23,10 @@ public:
 	{
 		m_flRadiusSquared = radius * radius;
 		m_vecOrigin = vecOrigin;
-		m_Objects.RemoveAll();
+		m_Objects.clear();
 	}
 
-	int	GetObjectCount() { return m_Objects.Count(); }
+	int	GetObjectCount() { return std::ssize( m_Objects ); }
 
 	C_BaseEntity *GetObject( int index )
 	{
@@ -52,7 +52,7 @@ public:
 
 		CHandle< C_BaseEntity > h;
 		h = pEnt;
-		m_Objects.AddToTail( h );
+		m_Objects.push_back( h );
 
 		return ITERATION_CONTINUE;
 	}
@@ -62,7 +62,7 @@ public:
 	float	m_flRadiusSquared;
 	Vector m_vecOrigin;
 
-	CUtlVector< CHandle< C_BaseEntity > > m_Objects;
+	std::vector< CHandle< C_BaseEntity > > m_Objects;
 };
 
 #endif // PLAYERENUMERATOR_H

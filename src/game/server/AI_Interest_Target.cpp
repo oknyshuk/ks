@@ -9,9 +9,6 @@
 #include "cbase.h"
 #include "AI_Interest_Target.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 bool CAI_InterestTarget_t::IsThis( CBaseEntity *pThis )
 {
 	return (pThis == m_hTarget);
@@ -66,17 +63,17 @@ void CAI_InterestTarget::Add( CBaseEntity *pTarget, float flImportance, float fl
 {
 	int i;
 
-	for (i = 0; i < Count(); i++)
+	for (i = 0; i < std::ssize( *this ); i++)
 	{
-		CAI_InterestTarget_t &target = Element( i );
+		CAI_InterestTarget_t &target = (*this)[ i ];
 
 		if (target.m_hTarget == pTarget && target.m_flRamp == 0)
 		{
 			if (target.m_flStartTime == gpGlobals->curtime)
 			{
-				flImportance = MAX( flImportance, target.m_flInterest );
+				flImportance = std::max( flImportance, target.m_flInterest );
 			}
-			Remove( i );
+			this->erase( this->begin() + i );
 			break;
 		}
 	}
@@ -88,13 +85,13 @@ void CAI_InterestTarget::Add( const Vector &vecPosition, float flImportance, flo
 {
 	int i;
 
-	for (i = 0; i < Count(); i++)
+	for (i = 0; i < std::ssize( *this ); i++)
 	{
-		CAI_InterestTarget_t &target = Element( i );
+		CAI_InterestTarget_t &target = (*this)[ i ];
 
 		if (target.m_vecPosition == vecPosition)
 		{
-			Remove( i );
+			this->erase( this->begin() + i );
 			break;
 		}
 	}
@@ -106,17 +103,17 @@ void CAI_InterestTarget::Add( CBaseEntity *pTarget, const Vector &vecPosition, f
 {
 	int i;
 
-	for (i = 0; i < Count(); i++)
+	for (i = 0; i < std::ssize( *this ); i++)
 	{
-		CAI_InterestTarget_t &target = Element( i );
+		CAI_InterestTarget_t &target = (*this)[ i ];
 
 		if (target.m_hTarget == pTarget)
 		{
 			if (target.m_flStartTime == gpGlobals->curtime)
 			{
-				flImportance = MAX( flImportance, target.m_flInterest );
+				flImportance = std::max( flImportance, target.m_flInterest );
 			}
-			Remove( i );
+			this->erase( this->begin() + i );
 			break;
 		}
 	}
@@ -126,8 +123,8 @@ void CAI_InterestTarget::Add( CBaseEntity *pTarget, const Vector &vecPosition, f
 
 void CAI_InterestTarget::Add( CAI_InterestTarget_t::CAI_InterestTarget_e type, CBaseEntity *pTarget, const Vector &vecPosition, float flImportance, float flDuration, float flRamp )
 {
-	int i = AddToTail();
-	CAI_InterestTarget_t &target = Element( i );
+	int i = std::ssize( *this ); emplace_back();
+	CAI_InterestTarget_t &target = (*this)[ i ];
 
 	target.m_eType = type;
 	target.m_hTarget = pTarget;

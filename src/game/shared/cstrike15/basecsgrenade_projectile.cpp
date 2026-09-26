@@ -41,9 +41,6 @@ extern ConVar sv_gravity;
 
 #endif
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 #ifdef CLIENT_DLL
 	extern ConVar spec_show_xray;
@@ -628,15 +625,11 @@ IMPLEMENT_REFLECT_TABLE( CBaseCSGrenadeProjectile, DT_BaseCSGrenadeProjectile );
 
 		CCSPlayer::StartNewBulletGroup();
 
-		SWeaponHitData *pHitData = new SWeaponHitData;
+		auto pHitData = std::make_unique< SWeaponHitData >();
 		if ( pHitData->InitAsGrenadeDetonation( this, CCSPlayer::GetBulletGroup() ) )
 		{
-			CCS_GameStats.RecordWeaponHit( pHitData ); // submission deletes the struct.
+			CCS_GameStats.RecordWeaponHit( std::move( pHitData ) );
 			m_bDetonationRecorded = true;
-		}
-		else
-		{
-			delete pHitData;
 		}
 	}
 

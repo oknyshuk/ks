@@ -10,8 +10,6 @@
 #include "particles_simple.h"
 #include "fx.h"
 
-#include "tier0/memdbgon.h"
-
 class CSplashParticle : public CSimpleEmitter
 {
 public:
@@ -79,7 +77,7 @@ inline void FX_GetSplashLighting( Vector position, Vector *color, float *luminos
 	// Fake a specular highlight (too dim otherwise)
 	if ( luminosity != nullptr )
 	{
-		*luminosity = MIN( 1.0f, (*luminosity) * 4.0f );
+		*luminosity = std::min( 1.0f, (*luminosity) * 4.0f );
 		
 		// Clamp so that we never go completely translucent
 		if ( *luminosity < 0.25f )
@@ -94,7 +92,5 @@ inline void FX_GetSplashLighting( Vector position, Vector *color, float *luminos
 		(*color) = ( (*color) * 0.25f ) + Vector( 0.75f, 0.75f, 0.75f );
 	}
 }
-
-#include "tier0/memdbgoff.h"
 
 #endif // FX_WATER_H

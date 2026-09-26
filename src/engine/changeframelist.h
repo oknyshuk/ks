@@ -8,7 +8,7 @@
 #ifndef CHANGEFRAMELIST_H
 #define CHANGEFRAMELIST_H
 
-#include "mempool.h"
+#include "tier1/fixed_pool.h"
 #include "dt_common.h"
 
 // This class holds the last tick (from host_tickcount) that each property in 
@@ -44,9 +44,9 @@ public:
 	void SetChangeTick( const int nProp, const int iTick )			{ m_ChangeTicks[ nProp ] = iTick; m_ChangeTicks[ m_nNumProps + nProp / knBucketSize ] = iTick; }
 	
 	//given a bucket index, this will determine the lastest tick on that bucket
-	const int	GetNumBuckets() const								{ return m_ChangeTicks.Count() - m_nNumProps; }
-	const int*	GetBucketChangeTicks() const						{ return m_ChangeTicks.Base() + m_nNumProps; }
-	const int*	GetChangeTicks() const								{ return m_ChangeTicks.Base(); }
+	const int	GetNumBuckets() const								{ return std::ssize( m_ChangeTicks ) - m_nNumProps; }
+	const int*	GetBucketChangeTicks() const						{ return m_ChangeTicks.data() + m_nNumProps; }
+	const int*	GetChangeTicks() const								{ return m_ChangeTicks.data(); }
 
 	// Given a tick and a property index, this will determine if it was changed after that time
 	bool DidPropChangeAfterTick( int iTick, int nProp ) const		{ return m_ChangeTicks[ nProp ] > iTick; }
@@ -55,7 +55,7 @@ public:
 
 private:
 	// Change frames for each property. The buckets for the property set are appended onto the end.
-	CUtlVector< int >	m_ChangeTicks;
+	std::vector< int >	m_ChangeTicks;
 	int					m_nNumProps;
 
 	CChangeFrameList &operator=( const CChangeFrameList &rhs );

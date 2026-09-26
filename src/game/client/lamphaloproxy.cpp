@@ -11,8 +11,6 @@
 #include "view.h"
 
 #include "imaterialproxydict.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: Used for halos on lamps, this material fades the sprite IN
@@ -88,7 +86,7 @@ void CLampHaloProxy::OnBind( C_BaseEntity *pEnt )
 	}
 	else
 	{
-		fade = MIN( (fade - 0.25) * 1.35, 1.0f );
+		fade = std::min<std::common_type_t<double, float>>( (fade - 0.25) * 1.35, 1.0f );
 	}
 
 	m_pFadeValue->SetFloatValue( fade );

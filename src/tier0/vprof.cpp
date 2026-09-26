@@ -14,13 +14,9 @@
 #include <assert.h>
 
 
-#pragma warning(push, 1)
-#pragma warning(disable:4786)
-#pragma warning(disable:4530)
 #include <map>
 #include <vector>
 #include <algorithm>
-#pragma warning(pop)
 
 #include "tier0/valve_on.h"
 #include "tier0/vprof.h"
@@ -30,8 +26,6 @@
 #include "tier0/dynfunction.h"
 #include "strtools.h"
 
-
-#include "tier0/memdbgon.h"
 
 // NOTE: Explicitly and intentionally using STL in here to not generate any
 // cyclical dependencies between the low-level debug library and the higher
@@ -1653,7 +1647,7 @@ PLATFORM_INTERFACE void TelemetryTick()
 				}
 				else
 				{
-					Level = MIN( Level, ARRAYSIZE( g_Telemetry.tmContext ) );
+					Level = std::min( Level, ARRAYSIZE( g_Telemetry.tmContext ) );
 					for( unsigned int i = 0; i < Level; i++ )
 					{
 						g_Telemetry.tmContext[i] = g_tmContext;

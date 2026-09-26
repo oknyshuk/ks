@@ -11,10 +11,8 @@
 
 #include "basetypes.h"
 #include "bsptreedata.h"
-#include "utllinkedlist.h"
 #include "utlvector.h"
 #include "tier0/dbg.h"
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // The BSP tree leaf data system
@@ -60,41 +58,32 @@ private:
 	void InsertIntoTree( BSPTreeDataHandle_t handle, Vector const& mins, Vector const& maxs );
 	void RemoveFromTree( BSPTreeDataHandle_t handle );
 
-	// Returns the number of elements in a leaf
-	int CountElementsInLeaf( int leaf );
+	bool IsValidHandle( BSPTreeDataHandle_t handle ) const
+	{
+		return handle < m_Handles.size() && m_Handles[handle].m_bInUse;
+	}
 
 private:
 	// All the information associated with a particular handle
 	struct HandleInfo_t
 	{
 		int					m_UserId;		// Client-defined id
-		unsigned short		m_LeafList;		// What leafs is it in?
+		bool				m_bInUse;
+		std::vector< int >	m_Leaves;		// What leafs is it in?
 	};
 
-	// The leaf contains an index into a list of elements
+	// The leaf keeps the handles it contains; newest last
 	struct Leaf_t
 	{
-		unsigned short	m_FirstElement;
-	};
-
-	// The handle knows about the leaves it lies in
-	struct HandleInLeaf_t
-	{
-		int				m_Leaf;				// what leaf is the handle in?
-		unsigned short	m_LeafElementIndex;	// what's the m_LeafElements index of the entry?
+		std::vector< BSPTreeDataHandle_t >	m_Elements;
 	};
 
 	// Stores data associated with each leaf.
-	CUtlVector< Leaf_t >	m_Leaf;
+	std::vector< Leaf_t >	m_Leaf;
 
-	// Stores all unique handles
-	CUtlLinkedList< HandleInfo_t, unsigned short >		m_Handles;
-
-	// Maintains the list of all handles in a particular leaf
-	CUtlLinkedList< BSPTreeDataHandle_t, unsigned short, true >	m_LeafElements;
-
-	// Maintains the list of all leaves a particular handle spans
-	CUtlLinkedList< HandleInLeaf_t, unsigned short, true >	m_HandleLeafList;
+	// Handle slots; handles are indices, freed slots are reused
+	std::vector< HandleInfo_t >	m_Handles;
+	std::vector< BSPTreeDataHandle_t >	m_FreeHandles;
 
 	// Interface to BSP tree
 	ISpatialQuery*	m_pBSPTree;
@@ -139,28 +128,17 @@ void CBSPTreeData::Init( ISpatialQuery* pBSPTree )
 	Assert( pBSPTree );
 	m_pBSPTree = pBSPTree;
 
-	m_Handles.EnsureCapacity( 1024 );
-	m_LeafElements.EnsureCapacity( 1024 );
-	m_HandleLeafList.EnsureCapacity( 1024 );
+	m_Handles.reserve( 1024 );
 
 	// Add all the leaves we'll need
-	int leafCount = m_pBSPTree->LeafCount();
-	m_Leaf.EnsureCapacity( leafCount );
-
-	Leaf_t newLeaf;
-	newLeaf.m_FirstElement = m_LeafElements.InvalidIndex();
-	while ( --leafCount >= 0 )
-	{
-		m_Leaf.AddToTail( newLeaf );
-	}
+	m_Leaf.resize( m_pBSPTree->LeafCount() );
 }
 
 void CBSPTreeData::Shutdown()
 {
-	m_Handles.Purge();
-	m_LeafElements.Purge();
-	m_HandleLeafList.Purge();
-	m_Leaf.Purge();
+	m_Handles.clear(); m_Handles.shrink_to_fit();
+	m_FreeHandles.clear(); m_FreeHandles.shrink_to_fit();
+	m_Leaf.clear(); m_Leaf.shrink_to_fit();
 }
 
 
@@ -170,9 +148,20 @@ void CBSPTreeData::Shutdown()
 
 BSPTreeDataHandle_t CBSPTreeData::NewHandle( int userId )
 {
-	BSPTreeDataHandle_t handle = m_Handles.AddToTail();
+	BSPTreeDataHandle_t handle;
+	if ( !m_FreeHandles.empty() )
+	{
+		handle = m_FreeHandles.back();
+		m_FreeHandles.pop_back();
+	}
+	else
+	{
+		handle = (BSPTreeDataHandle_t)m_Handles.size();
+		m_Handles.emplace_back();
+	}
 	m_Handles[handle].m_UserId = userId;
-	m_Handles[handle].m_LeafList = m_HandleLeafList.InvalidIndex();
+	m_Handles[handle].m_bInUse = true;
+	Assert( m_Handles[handle].m_Leaves.empty() );
 
 	return handle;
 }
@@ -190,11 +179,12 @@ BSPTreeDataHandle_t CBSPTreeData::Insert( int userId, Vector const& mins, Vector
 
 void CBSPTreeData::Remove( BSPTreeDataHandle_t handle )
 {
-	if (!m_Handles.IsValidIndex(handle))
+	if (!IsValidHandle(handle))
 		return;
 
 	RemoveFromTree( handle );
-	m_Handles.Free( handle );
+	m_Handles[handle].m_bInUse = false;
+	m_FreeHandles.push_back( handle );
 }
 
 
@@ -204,19 +194,10 @@ void CBSPTreeData::Remove( BSPTreeDataHandle_t handle )
 void CBSPTreeData::AddHandleToLeaf( int leaf, BSPTreeDataHandle_t handle )
 {	
 	// Got to a leaf baby! Add the handle to the leaf's list of elements
-	unsigned short leafElement = m_LeafElements.Alloc( true );
-	if (m_Leaf[leaf].m_FirstElement != m_LeafElements.InvalidIndex() )
-		m_LeafElements.LinkBefore( m_Leaf[leaf].m_FirstElement, leafElement );
-	m_Leaf[leaf].m_FirstElement = leafElement;
-	m_LeafElements[leafElement] = handle;
+	m_Leaf[leaf].m_Elements.push_back( handle );
 
 	// Insert the leaf into the handles's list of leaves
-	unsigned short handleElement = m_HandleLeafList.Alloc( true );
-	if (m_Handles[handle].m_LeafList != m_HandleLeafList.InvalidIndex() )
-		m_HandleLeafList.LinkBefore( m_Handles[handle].m_LeafList, handleElement );
-	m_Handles[handle].m_LeafList = handleElement;
-	m_HandleLeafList[handleElement].m_Leaf = leaf;
-	m_HandleLeafList[handleElement].m_LeafElementIndex = leafElement;
+	m_Handles[handle].m_Leaves.push_back( leaf );
 }
 
 
@@ -242,23 +223,14 @@ void CBSPTreeData::InsertIntoTree( BSPTreeDataHandle_t handle, Vector const& min
 void CBSPTreeData::RemoveFromTree( BSPTreeDataHandle_t handle )
 {
 	// Iterate over the list of all leaves the handle is in
-	unsigned short i = m_Handles[handle].m_LeafList;
-	while (i != m_HandleLeafList.InvalidIndex())
+	for ( int leaf : m_Handles[handle].m_Leaves )
 	{
-		int leaf = m_HandleLeafList[i].m_Leaf;
-		unsigned short leafElement = m_HandleLeafList[i].m_LeafElementIndex; 
-
-		// Unhook the handle from the leaf handle list
-		if (leafElement == m_Leaf[leaf].m_FirstElement)
-			m_Leaf[leaf].m_FirstElement = m_LeafElements.Next(leafElement);
-		m_LeafElements.Free(leafElement);
-
-		unsigned short prevNode = i;
-		i = m_HandleLeafList.Next(i);
-		m_HandleLeafList.Free(prevNode);
+		// Unhook the handle from the leaf handle list, keeping the others in order
+		std::vector< BSPTreeDataHandle_t > &elements = m_Leaf[leaf].m_Elements;
+		elements.erase( std::find( elements.begin(), elements.end(), handle ) );
 	}
 
-	m_Handles[handle].m_LeafList = m_HandleLeafList.InvalidIndex();
+	m_Handles[handle].m_Leaves.clear();
 }
 
 
@@ -280,48 +252,32 @@ void CBSPTreeData::ElementMoved( BSPTreeDataHandle_t handle, Vector const& mins,
 //-----------------------------------------------------------------------------
 bool CBSPTreeData::IsElementInTree( BSPTreeDataHandle_t handle ) const
 {
-	return m_Handles[handle].m_LeafList != m_HandleLeafList.InvalidIndex();
+	return !m_Handles[handle].m_Leaves.empty();
 }
 
-
-//-----------------------------------------------------------------------------
-// Enumerate elements in a particular leaf
-//-----------------------------------------------------------------------------
-int CBSPTreeData::CountElementsInLeaf( int leaf )
-{
-	int i;
-	int nCount = 0;
-	for( i = m_Leaf[leaf].m_FirstElement; i != m_LeafElements.InvalidIndex(); i = m_LeafElements.Next(i) )
-	{
-		++nCount;
-	}
-
-	return nCount;
-}
 
 //-----------------------------------------------------------------------------
 // Enumerate elements in a particular leaf
 //-----------------------------------------------------------------------------
 bool CBSPTreeData::EnumerateElementsInLeaf( int leaf, IBSPTreeDataEnumerator* pEnum, intp context )
 {
+	const std::vector< BSPTreeDataHandle_t > &elements = m_Leaf[leaf].m_Elements;
 #ifdef DBGFLAG_ASSERT
 	// The enumeration method better damn well not change this list...
-	int nCount = CountElementsInLeaf(leaf);
+	size_t nCount = elements.size();
 #endif
 
-	unsigned short idx = m_Leaf[leaf].m_FirstElement;
-	while (idx != m_LeafElements.InvalidIndex())
+	// Newest first
+	for ( size_t i = elements.size(); i-- > 0; )
 	{
-		BSPTreeDataHandle_t handle = m_LeafElements[idx];
-		if (!pEnum->EnumerateElement( m_Handles[handle].m_UserId, context ))
+		if (!pEnum->EnumerateElement( m_Handles[elements[i]].m_UserId, context ))
 		{
-			Assert( CountElementsInLeaf(leaf) == nCount );
+			Assert( elements.size() == nCount );
 			return false;
 		}
-		idx = m_LeafElements.Next(idx);
 	}
 
-	Assert( CountElementsInLeaf(leaf) == nCount );
+	Assert( elements.size() == nCount );
 
 	return true;
 }

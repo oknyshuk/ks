@@ -53,11 +53,11 @@ public:
 	/// Select Steam account name / password to use
 	void SetAccount( const char *pszToken )
 	{
-		m_sAccountToken = pszToken;
+		m_sAccountToken = ks::nz( pszToken );
 	}
 
 	/// What account name was selected?
-	const char *GetAccountToken() const { return m_sAccountToken.String(); }
+	const char *GetAccountToken() const { return m_sAccountToken.c_str(); }
 
 private:
 	
@@ -84,7 +84,7 @@ private:
 	uint32		m_unIP;
 	uint16		m_usPort;
     uint16		m_QueryPort;
-	CUtlString m_sAccountToken;
+	std::string m_sAccountToken;
 };
 
 // singleton accessor

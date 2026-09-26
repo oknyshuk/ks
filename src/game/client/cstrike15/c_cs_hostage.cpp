@@ -13,17 +13,14 @@
 #include "c_breakableprop.h"
 #include "cs_shareddefs.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #undef CHostage
 
 //-----------------------------------------------------------------------------
 
 static float HOSTAGE_HEAD_TURN_RATE = 130;
 
-CUtlVector< C_CHostage* > g_Hostages;
-CUtlVector< CHandle<C_BaseAnimating> > g_HostageRagdolls;
+std::vector< C_CHostage* > g_Hostages;
+std::vector< CHandle<C_BaseAnimating> > g_HostageRagdolls;
 
 extern ConVar g_ragdoll_fadespeed;
 ConVar cl_use_hostage_ik("cl_use_hostage_ik", "1");
@@ -143,7 +140,7 @@ void C_HostageCarriableProp::ClientThink()
 		a = 255;
 	}
 
-	a = MAX( 0, a );
+	a = std::max( 0, a );
 	SetRenderAlpha( a );
 }
 
@@ -187,13 +184,13 @@ void C_LowViolenceHostageDeathModel::Interp_Copy( VarMapping_t *pDest, CBaseEnti
 	if ( !pDest || !pSrc )
 		return;
 
-	if ( pDest->m_Entries.Count() != pSrc->m_Entries.Count() )
+	if ( std::ssize( pDest->m_Entries ) != std::ssize( pSrc->m_Entries ) )
 	{
 		Assert( false );
 		return;
 	}
 
-	int c = pDest->m_Entries.Count();
+	int c = std::ssize( pDest->m_Entries );
 	for ( int i = 0; i < c; i++ )
 	{
 		pDest->m_Entries[ i ].watcher->Copy( pSrc->m_Entries[i].watcher );
@@ -262,7 +259,7 @@ void C_LowViolenceHostageDeathModel::ClientThink( void )
 
 	int iAlpha = GetRenderAlpha();
 
-	iAlpha = MAX( iAlpha - ( g_ragdoll_fadespeed.GetInt() * gpGlobals->frametime ), 0 );
+	iAlpha = std::max<std::common_type_t<float, int>>( iAlpha - ( g_ragdoll_fadespeed.GetInt() * gpGlobals->frametime ), 0 );
 
 	SetRenderMode( kRenderTransAlpha );
 	SetRenderAlpha( iAlpha );
@@ -318,7 +315,7 @@ IMPLEMENT_REFLECT_CLIENTCLASS( C_CHostage, DT_CHostage, CHostage )
 //-----------------------------------------------------------------------------
 C_CHostage::C_CHostage()
 {
-	g_Hostages.AddToTail( this );
+	g_Hostages.push_back( this );
 
 	m_flDeadOrRescuedTime = 0.0;
 	m_flLastBodyYaw = 0;
@@ -356,7 +353,7 @@ C_CHostage::C_CHostage()
 //-----------------------------------------------------------------------------
 C_CHostage::~C_CHostage()
 {
-	g_Hostages.FindAndRemove( this );
+	ks::erase_first( g_Hostages, this );
 	m_PlayerAnimState->Release();
 
 	SetClientSideHolidayHatAddon( false );
@@ -425,10 +422,10 @@ C_BaseAnimating * C_CHostage::BecomeRagdollOnClient()
 		if ( m_createdLowViolenceRagdoll )
 		{
 			UpdateVisibility();
-			g_HostageRagdolls.AddToTail( pLowViolenceModel );
+			g_HostageRagdolls.push_back( pLowViolenceModel );
 			m_hRagdollOnClient.Set( pLowViolenceModel );
 			
-			g_HostageRagdolls.AddToTail( m_hHolidayHatAddon );
+			g_HostageRagdolls.push_back( m_hHolidayHatAddon );
 			if ( m_hHolidayHatAddon.Get() )
 			{
 				m_hHolidayHatAddon->FollowEntity( pLowViolenceModel );
@@ -446,8 +443,8 @@ C_BaseAnimating * C_CHostage::BecomeRagdollOnClient()
 	C_BaseAnimating *pRagdoll = BaseClass::BecomeRagdollOnClient();
 	if ( pRagdoll && pRagdoll != this )
 	{
-		g_HostageRagdolls.AddToTail( pRagdoll );
-		g_HostageRagdolls.AddToTail( m_hHolidayHatAddon );
+		g_HostageRagdolls.push_back( pRagdoll );
+		g_HostageRagdolls.push_back( m_hHolidayHatAddon );
 		if ( m_hHolidayHatAddon.Get() )
 		{
 			m_hHolidayHatAddon->FollowEntity( pRagdoll );
@@ -683,7 +680,7 @@ void C_CHostage::ClientThink()
 	else
 		SetRenderMode( kRenderNormal, true );
 
-	a = MAX( 0, a );
+	a = std::max( 0, a );
 
 	RemoveEffects( EF_NODRAW );
 	SetRenderAlpha( a );
@@ -717,12 +714,12 @@ void C_CHostage::SetClientSideHolidayHatAddon( bool bEnable )
 //-----------------------------------------------------------------------------
 void C_CHostage::SetClientSideHoldayHatAddonForAllHostagesAndTheirRagdolls( bool bEnable )
 {
-	FOR_EACH_VEC( g_Hostages, iHostage )
+	for ( C_CHostage *pHostage : g_Hostages )
 	{
-		g_Hostages[iHostage]->SetClientSideHolidayHatAddon( bEnable );
+		pHostage->SetClientSideHolidayHatAddon( bEnable );
 	}
 
-	for ( int k = 0; k < g_HostageRagdolls.Count(); k+=2 )
+	for ( int k = 0; k < std::ssize( g_HostageRagdolls ); k+=2 )
 	{
 		if ( !g_HostageRagdolls[k].Get() )
 		{

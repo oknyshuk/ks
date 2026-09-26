@@ -6,11 +6,12 @@
 //
 //=============================================================================//
 
+#include <bitset>
 #include "tier0/dbg.h"
 #include "tier0/platform.h"
 #include "mathlib/mathlib.h"
 #include "tier0/tslist.h"
-#include "tier1/utlmap.h"
+#include "tier1/map_ops.h"
 #include "tier1/convar.h"
 
 #include "bone_setup.h"
@@ -22,9 +23,6 @@
 #include "posedebugger.h"
 
 #include "iclientnetworkable.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 extern IVEngineClient *engine;
@@ -117,7 +115,7 @@ public:
 		};
 	};
 	
-	CCopyableUtlVector< InfoText > m_arrTxt;
+	std::vector< InfoText > m_arrTxt;
 
 
 public:
@@ -148,7 +146,7 @@ void ModelPoseDebugInfo::AddInfoText( InfoText *x, ModelPoseDebugInfo *pOld )
 		int k = o.m_iCurrentText;
 		if ( x )
 		{
-			for ( ; k < o.m_arrTxt.Count(); ++ k )
+			for ( ; k < std::ssize( o.m_arrTxt ); ++ k )
 			{
 				InfoText &txt = o.m_arrTxt[k];
 				if ( ( txt.m_uiFlags & F_SEEN_THIS_FRAME ) &&
@@ -163,14 +161,14 @@ void ModelPoseDebugInfo::AddInfoText( InfoText *x, ModelPoseDebugInfo *pOld )
 		}
 		else
 		{
-			k = o.m_arrTxt.Count();
+			k = std::ssize( o.m_arrTxt );
 		}
 
 		// Range of finished activities
 		int iFinishedRange[2] = { o.m_iCurrentText, k };
 
 		// Check whether this is a new message
-		if ( k == o.m_arrTxt.Count() )
+		if ( k == std::ssize( o.m_arrTxt ) )
 		{
 			if ( !x )
 			{
@@ -206,7 +204,7 @@ void ModelPoseDebugInfo::AddInfoText( InfoText *x, ModelPoseDebugInfo *pOld )
 			txtFinished.m_flTimeAlive += gpGlobals->frametime;
 
 			if ( txtFinished.m_flTimeToLive >= 0.0f )
-				m_arrTxt.AddToTail( txtFinished );
+				m_arrTxt.push_back( txtFinished );
 		}
 	}
 
@@ -214,7 +212,7 @@ void ModelPoseDebugInfo::AddInfoText( InfoText *x, ModelPoseDebugInfo *pOld )
 	{
 		// Now add it to the array
 		x->m_flTimeToLive = ui_posedebug_fade_out_time.GetFloat();
-		m_arrTxt.AddToTail( *x );
+		m_arrTxt.push_back( *x );
 	}
 }
 
@@ -223,7 +221,7 @@ ModelPoseDebugInfo::InfoText * ModelPoseDebugInfo::LookupInfoText( InfoText *x )
 	int k = m_iCurrentText;
 	if ( x )
 	{
-		for ( ; k < m_arrTxt.Count(); ++ k )
+		for ( ; k < std::ssize( m_arrTxt ); ++ k )
 		{
 			InfoText &txt = m_arrTxt[k];
 			if ( ( txt.m_uiFlags & F_SEEN_THIS_FRAME ) &&
@@ -249,7 +247,7 @@ void ModelPoseDebugInfo::PrintPendingInfoText( int &rnPosPrint )
 	float const flFadeOutTime = ui_posedebug_fade_out_time.GetFloat();
 
 	// Now print all the accumulated spew
-	for ( int k = m_iCurrentText; k < m_arrTxt.Count(); ++ k )
+	for ( int k = m_iCurrentText; k < std::ssize( m_arrTxt ); ++ k )
 	{
 		InfoText &prntxt = m_arrTxt[k];
 
@@ -301,7 +299,7 @@ void ModelPoseDebugInfo::PrintPendingInfoText( int &rnPosPrint )
 		}
 	}
 
-	m_iCurrentText = m_arrTxt.Count();
+	m_iCurrentText = std::ssize( m_arrTxt );
 }
 
 
@@ -333,11 +331,11 @@ public:
 		);
 
 protected:
-	typedef CUtlMap< CStudioHdr const *, ModelPoseDebugInfo > MapModel;
+	typedef std::map< CStudioHdr const *, ModelPoseDebugInfo > MapModel;
 	MapModel m_mapModel, m_mapModelOld;
 	int m_nPosPrint;
 
-	CBitVec< MAX_EDICTS > m_uiMaskShowModels;
+	std::bitset< MAX_EDICTS > m_uiMaskShowModels;
 
 	CStudioHdr const *m_pLastModel;
 };
@@ -352,12 +350,10 @@ static CPoseDebuggerImpl s_PoseDebuggerImpl;
 //////////////////////////////////////////////////////////////////////////
 
 CPoseDebuggerImpl::CPoseDebuggerImpl() :
-	m_mapModel( DefLessFunc( CStudioHdr const * ) ),
-	m_mapModelOld( DefLessFunc( CStudioHdr const * ) ),
 	m_nPosPrint( 0 ),
 	m_pLastModel( nullptr )
 {
-	m_uiMaskShowModels.SetAll();
+	m_uiMaskShowModels.set();
 }
 
 CPoseDebuggerImpl::~CPoseDebuggerImpl()
@@ -367,21 +363,21 @@ CPoseDebuggerImpl::~CPoseDebuggerImpl()
 
 void CPoseDebuggerImpl::ShowAllModels( bool bShow )
 {
-	bShow ? m_uiMaskShowModels.SetAll() : m_uiMaskShowModels.ClearAll();
+	bShow ? m_uiMaskShowModels.set() : m_uiMaskShowModels.reset();
 }
 
 void CPoseDebuggerImpl::ShowModel( int iEntNum, bool bShow )
 {
 	Assert( iEntNum < MAX_EDICTS );
 	if ( iEntNum < MAX_EDICTS )
-		m_uiMaskShowModels.Set( iEntNum, bShow );
+		m_uiMaskShowModels.set( iEntNum, bShow );
 }
 
 bool CPoseDebuggerImpl::IsModelShown( int iEntNum ) const
 {
 	Assert( iEntNum < MAX_EDICTS );
 	if ( iEntNum >= 0 && iEntNum < MAX_EDICTS )
-		return m_uiMaskShowModels.IsBitSet( iEntNum );
+		return m_uiMaskShowModels[iEntNum];
 	else
 		return false;
 }
@@ -401,16 +397,10 @@ void CPoseDebuggerImpl::StartBlending( IClientNetworkable *pEntity, const CStudi
 	// If we are starting a new model then finalize the previous one
 	if ( pStudioHdr != m_pLastModel && m_pLastModel )
 	{
-		MapModel::IndexType_t idx = m_mapModel.Find( m_pLastModel );
-		if ( idx != m_mapModel.InvalidIndex() )
+		if ( ModelPoseDebugInfo *pMpi = ks::find_ptr( m_mapModel, m_pLastModel ) )
 		{
-			ModelPoseDebugInfo &mpi = m_mapModel.Element( idx );
-			ModelPoseDebugInfo *pMpiOld = nullptr;
-			MapModel::IndexType_t idxMapModelOld = m_mapModelOld.Find( m_pLastModel );
-			if ( idxMapModelOld != m_mapModelOld.InvalidIndex() )
-			{
-				pMpiOld = &m_mapModelOld.Element( idxMapModelOld );
-			}
+			ModelPoseDebugInfo &mpi = *pMpi;
+			ModelPoseDebugInfo *pMpiOld = ks::find_ptr( m_mapModelOld, m_pLastModel );
 			mpi.AddInfoText( nullptr, pMpiOld );
 			mpi.PrintPendingInfoText( m_nPosPrint );
 		}
@@ -429,21 +419,18 @@ void CPoseDebuggerImpl::StartBlending( IClientNetworkable *pEntity, const CStudi
 		return;
 
 	// Check if we saw the model
-	if ( m_mapModel.Find( pStudioHdr ) != m_mapModel.InvalidIndex() )
+	if ( m_mapModel.contains( pStudioHdr ) )
 	{
 		// Initialize the printing position
 		m_nPosPrint = 9;
 
 		// Swap the maps
-		m_mapModelOld.RemoveAll();
-		m_mapModelOld.Swap( m_mapModel );
+		m_mapModelOld.clear();
+		m_mapModelOld.swap( m_mapModel );
 
 		// Zero out the text on the old map
-		for ( int k = m_mapModelOld.FirstInorder();
-			  k != m_mapModelOld.InvalidIndex();
-			  k = m_mapModelOld.NextInorder( k ) )
+		for ( auto &[pHdr, mpi] : m_mapModelOld )
 		{
-			ModelPoseDebugInfo &mpi = m_mapModelOld[k];
 			mpi.m_iCurrentText = 0;
 		}
 	}
@@ -455,7 +442,7 @@ void CPoseDebuggerImpl::StartBlending( IClientNetworkable *pEntity, const CStudi
 
 	ModelPoseDebugInfo mpi;
 	mpi.m_iEntNum = iEntNum;
-	m_mapModel.Insert( pStudioHdr, mpi );
+	m_mapModel.emplace( pStudioHdr, mpi );
 
 	con_nprint_s nxPrn = { 0 };
 	nxPrn.index = m_nPosPrint;
@@ -486,20 +473,15 @@ void CPoseDebuggerImpl::AccumulatePose( const CStudioHdr *pStudioHdr, CIKContext
 		 !pRMdl->numincludemodels )
 		return;
 
-	MapModel::IndexType_t idxMapModel = m_mapModel.Find( pStudioHdr );
-	if ( idxMapModel == m_mapModel.InvalidIndex() )
+	ModelPoseDebugInfo *pMpi = ks::find_ptr( m_mapModel, pStudioHdr );
+	if ( !pMpi )
 		return;
 
-	ModelPoseDebugInfo &mpi = m_mapModel.Element( idxMapModel );
+	ModelPoseDebugInfo &mpi = *pMpi;
 	if ( !IsModelShown( mpi.m_iEntNum ) )
 		return;
 
-	ModelPoseDebugInfo *pMpiOld = nullptr;
-	MapModel::IndexType_t idxMapModelOld = m_mapModelOld.Find( pStudioHdr );
-	if ( idxMapModelOld != m_mapModelOld.InvalidIndex() )
-	{
-		pMpiOld = &m_mapModelOld.Element( idxMapModelOld );
-	}
+	ModelPoseDebugInfo *pMpiOld = ks::find_ptr( m_mapModelOld, pStudioHdr );
 
 
 	//
@@ -534,7 +516,7 @@ void CPoseDebuggerImpl::AccumulatePose( const CStudioHdr *pStudioHdr, CIKContext
 	if ( !txt.m_chActivity[0] )
 	{
 		// Try to find the last seen activity and re-use it
-		for ( int iLast = mpi.m_arrTxt.Count(); iLast --> 0; )
+		for ( int iLast = std::ssize( mpi.m_arrTxt ); iLast --> 0; )
 		{
 			ModelPoseDebugInfo::InfoText &lastSeenTxt = mpi.m_arrTxt[iLast];
 			if ( lastSeenTxt.m_uiFlags & ModelPoseDebugInfo::F_SEEN_THIS_FRAME &&

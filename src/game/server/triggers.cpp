@@ -37,16 +37,13 @@
 
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 #define DEBUG_TRANSITIONS_VERBOSE	2
 ConVar g_debug_transitions( "g_debug_transitions", "0", FCVAR_NONE, "Set to 1 and restart the map to be warned if the map has no trigger_transition volumes. Set to 2 to see a dump of all entities & associated results during a transition." );
 
 // Global list of triggers that care about weapon fire
 // Doesn't need saving, the triggers re-add themselves on restore.
-CUtlVector< CHandle<CTriggerMultiple> >	g_hWeaponFireTriggers;
+std::vector< CHandle<CTriggerMultiple> >	g_hWeaponFireTriggers;
 
 extern CServerGameDLL	g_ServerGameDLL;
 extern bool				g_fGameOver;
@@ -240,7 +237,7 @@ void CBaseTrigger::TouchTest( void )
 	// If the trigger is disabled don't test to see if anything is touching it.
 	if ( !m_bDisabled )
 	{
-		if ( m_hTouchingEntities.Count() !=0 )
+		if ( !m_hTouchingEntities.empty() )
 		{
 			
 			m_OnTouching.FireOutput( this, this );
@@ -304,7 +301,7 @@ void CBaseTrigger::InitTrigger( )
 		AddEffects( EF_NODRAW );
 	}
 
-	m_hTouchingEntities.Purge();
+	m_hTouchingEntities.clear(); m_hTouchingEntities.shrink_to_fit();
 
 	if ( HasSpawnFlags( SF_TRIG_TOUCH_DEBRIS ) )
 	{
@@ -423,15 +420,15 @@ void CBaseTrigger::StartTouch(CBaseEntity *pOther)
 		hOther = pOther;
 		
 		bool bAdded = false;
-		if ( m_hTouchingEntities.Find( hOther ) == m_hTouchingEntities.InvalidIndex() )
+		if ( ks::find_index( m_hTouchingEntities, hOther ) == -1 )
 		{
-			m_hTouchingEntities.AddToTail( hOther );
+			m_hTouchingEntities.push_back( hOther );
 			bAdded = true;
 		}
 
 		m_OnStartTouch.FireOutput(pOther, this);
 
-		if ( bAdded && ( m_hTouchingEntities.Count() == 1 ) )
+		if ( bAdded && ( std::ssize( m_hTouchingEntities ) == 1 ) )
 		{
 			// First entity to touch us that passes our filters
 			OnStartTouchAll( pOther );
@@ -450,7 +447,7 @@ void CBaseTrigger::EndTouch(CBaseEntity *pOther)
 	{
 		EHANDLE hOther;
 		hOther = pOther;
-		m_hTouchingEntities.FindAndRemove( hOther );
+		ks::erase_first( m_hTouchingEntities, hOther );
 		
 		//FIXME: Without this, triggers fire their EndTouch outputs when they are disabled!
 		//if ( !m_bDisabled )
@@ -461,7 +458,7 @@ void CBaseTrigger::EndTouch(CBaseEntity *pOther)
 		// If there are no more entities touching this trigger, fire the lost all touches
 		// Loop through the touching entities backwards. Clean out old ones, and look for existing
 		bool bFoundOtherTouchee = false;
-		int iSize = m_hTouchingEntities.Count();
+		int iSize = std::ssize( m_hTouchingEntities );
 		for ( int i = iSize-1; i >= 0; i-- )
 		{
 			EHANDLE hOther;
@@ -469,7 +466,7 @@ void CBaseTrigger::EndTouch(CBaseEntity *pOther)
 
 			if ( !hOther )
 			{
-				m_hTouchingEntities.Remove( i );
+				m_hTouchingEntities.erase( m_hTouchingEntities.begin() + i );
 			}
 			else
 			{
@@ -493,7 +490,7 @@ bool CBaseTrigger::IsTouching( CBaseEntity *pOther )
 {
 	EHANDLE hOther;
 	hOther = pOther;
-	return ( m_hTouchingEntities.Find( hOther ) != m_hTouchingEntities.InvalidIndex() );
+	return ( ks::find_index( m_hTouchingEntities, hOther ) != -1 );
 }
 
 //-----------------------------------------------------------------------------
@@ -501,7 +498,7 @@ bool CBaseTrigger::IsTouching( CBaseEntity *pOther )
 //-----------------------------------------------------------------------------
 CBaseEntity *CBaseTrigger::GetTouchedEntityOfType( const char *sClassName )
 {
-	int iCount = m_hTouchingEntities.Count();
+	int iCount = std::ssize( m_hTouchingEntities );
 	for ( int i = 0; i < iCount; i++ )
 	{
 		CBaseEntity *pEntity = m_hTouchingEntities[i];
@@ -639,9 +636,8 @@ void CTriggerHurt::NavThink( void )
 
 	TheNavMesh->ForAllAreasOverlappingExtent( overlap, extent );
 
-	FOR_EACH_VEC( overlap.m_area, it )
+	for ( CNavArea *area : overlap.m_area )
 	{
-		CNavArea *area = overlap.m_area[ it ];
 		area->MarkAsDamaging( deltaT + 1.0f );
 	}
 }
@@ -722,7 +718,7 @@ bool CTriggerHurt::HurtEntity( CBaseEntity *pOther, float damage )
 	{
 		m_OnHurt.FireOutput(pOther, this);
 	}
-	m_hurtEntities.AddToTail( pOther );
+	m_hurtEntities.push_back( pOther );
 	//NDebugOverlay::Box( pOther->GetAbsOrigin(), pOther->WorldAlignMins(), pOther->WorldAlignMaxs(), 255,0,0,0,0.5 );
 	return true;
 }
@@ -748,7 +744,7 @@ void CTriggerHurt::EndTouch( CBaseEntity *pOther )
 		hOther = pOther;
 
 		// if this guy has never taken damage, hurt him now
-		if ( !m_hurtEntities.HasElement( hOther ) )
+		if ( !ks::contains( m_hurtEntities, hOther ) )
 		{
 			HurtEntity( pOther, m_flDamage * 0.5 );
 		}
@@ -771,7 +767,7 @@ int CTriggerHurt::HurtAllTouchers( float dt )
 	float fldmg = m_flDamage * dt;
 	m_flLastDmgTime = gpGlobals->curtime;
 
-	m_hurtEntities.RemoveAll();
+	m_hurtEntities.clear();
 
 	touchlink_t *root = ( touchlink_t * )GetDataObject( TOUCHLINK );
 	if ( root )
@@ -1168,7 +1164,7 @@ int CTriggerLook::DrawDebugTextOverlays(void)
 		// Print Look time
 		// ----------------
 		char tempstr[255];
-		Q_snprintf(tempstr,sizeof(tempstr),"Time:   %3.2f",m_flLookTime - MAX(0,m_flLookTimeTotal));
+		Q_snprintf(tempstr,sizeof(tempstr),"Time:   %3.2f",m_flLookTime - std::max<std::common_type_t<int, float>>(0,m_flLookTimeTotal));
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 	}
@@ -1682,7 +1678,7 @@ static bool TestEntityTriggerIntersection_Accurate( CBaseEntity *pTrigger, CBase
 				CPhysCollide *pTriggerCollide = modelinfo->GetVCollide( pTrigger->GetModelIndex() )->solids[0];
 				Assert( pTriggerCollide );
 
-				CUtlVector<collidelist_t> collideList;
+				std::vector< collidelist_t > collideList;
 				IPhysicsObject *pList[VPHYSICS_MAX_OBJECT_LIST_COUNT];
 				int physicsCount = pEntity->VPhysicsGetObjectList( pList, ARRAYSIZE(pList) );
 				if ( physicsCount )
@@ -1695,7 +1691,7 @@ static bool TestEntityTriggerIntersection_Accurate( CBaseEntity *pTrigger, CBase
 							collidelist_t element;
 							element.pCollide = pCollide;
 							pList[i]->GetPosition( &element.origin, &element.angles );
-							collideList.AddToTail( element );
+							collideList.push_back( element );
 						}
 					}
 				}
@@ -1708,10 +1704,10 @@ static bool TestEntityTriggerIntersection_Accurate( CBaseEntity *pTrigger, CBase
 						element.pCollide = pVCollide->solids[0];
 						element.origin = pEntity->GetAbsOrigin();
 						element.angles = pEntity->GetAbsAngles();
-						collideList.AddToTail( element );
+						collideList.push_back( element );
 					}
 				}
-				for ( int i = collideList.Count()-1; i >= 0; --i )
+				for ( int i = std::ssize( collideList )-1; i >= 0; --i )
 				{
 					const collidelist_t &element = collideList[i];
 					trace_t tr;
@@ -2136,7 +2132,7 @@ void CTriggerSoftBarrier::Touch( CBaseEntity *pOther )
 		float flDistToBack = GetDistanceToPlane( SOFTPLANE_BACK, pOther->GetAbsOrigin() );
 
 		// get how far between the planes we are (and apply some nonlinear bias)
-		float flDistRatio = Bias( clamp( flDistToFront / MAX( flDistToFront + flDistToBack, 0.0001f ), 0, 1 ), 0.2f );
+		float flDistRatio = Bias( clamp( flDistToFront / std::max( flDistToFront + flDistToBack, 0.0001f ), 0, 1 ), 0.2f );
 
 		Vector vecPushNormal = Lerp( flDistRatio, -m_planes[SOFTPLANE_FRONT].m_plane.normal, m_planes[SOFTPLANE_BACK].m_plane.normal ).Normalized();
 		Vector vecPlayerVel = pOther->GetAbsVelocity();
@@ -3839,7 +3835,7 @@ public:
 	[[= ks::reflect::Input{ .name = "StartMovement", .type = FIELD_VOID } ]] void InputStartMovement( inputdata_t &inputdata );
 
 private:
-	CUtlVector< EHANDLE > m_players;
+	std::vector< EHANDLE > m_players;
 	[[= ks::reflect::Key{ .name = "fov" } ]] float m_fov;
 	[[= ks::reflect::Key{ .name = "fov_rate" } ]] float m_fovSpeed;
 	float m_fMoveTime;
@@ -3924,7 +3920,7 @@ void CTriggerCameraMultiplayer::InputRemovePlayer( inputdata_t &inputdata )
 	if ( pPlayer )
 	{
 		RemovePlayer( pPlayer );
-		m_players.FindAndFastRemove( pPlayer );
+		ks::swap_erase_first( m_players, pPlayer );
 	}	
 }
 
@@ -3932,10 +3928,10 @@ void CTriggerCameraMultiplayer::InputRemovePlayer( inputdata_t &inputdata )
 //--------------------------------------------------------------------------------------------------------
 void CTriggerCameraMultiplayer::AddPlayer( CBasePlayer *player )
 {
-	if ( m_players.HasElement( player ) )
+	if ( ks::contains( m_players, player ) )
 		return;
 
-	m_players.AddToTail( player );
+	m_players.push_back( player );
 
 	player->EnableControl( false );
 	player->m_Local.m_bDrawViewmodel = false;
@@ -3993,7 +3989,7 @@ void CTriggerCameraMultiplayer::Disable( void )
 {
 	BaseClass::Disable();
 
-	for ( int i = 0; i < m_players.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_players ); ++i )
 	{
 		CBasePlayer *player = ToBasePlayer( m_players[i] );
 		if ( !player )
@@ -4002,7 +3998,7 @@ void CTriggerCameraMultiplayer::Disable( void )
 		RemovePlayer( player );
 	}
 
-	m_players.RemoveAll();
+	m_players.clear();
 
 	DispatchUpdateTransmitState();
 }
@@ -5967,6 +5963,11 @@ void CTriggerCallback::StartTouch( CBaseEntity *pOther )
 
 	BaseClass::StartTouch( pOther );
 }
+
+
+LINK_ENTITY_TO_CLASS( trigger_callback, CTriggerCallback );
+
+IMPLEMENT_REFLECT_DATAMAP( CTriggerCallback )
 
 
 bool IsTriggerClass( CBaseEntity *pEntity )

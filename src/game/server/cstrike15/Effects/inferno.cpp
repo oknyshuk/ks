@@ -23,9 +23,6 @@
 #include "smokegrenade_projectile.h"
 #include "improv_locomotor.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 IMPLEMENT_REFLECT_SERVERCLASS( CInferno, DT_Inferno )
 
 
@@ -377,7 +374,7 @@ void CInferno::Spread( const Vector &spreadVelocity )
 	int nextFireOffset = m_fireSpawnOffset + 1;
 	for ( int i = 0; i < m_fireCount && traceCount > 0; i++ )
 	{
-		if ( m_fireCount >= MIN( ( int ) MAX_INFERNO_FIRES, m_nMaxFlames ) )
+		if ( m_fireCount >= std::min( ( int ) MAX_INFERNO_FIRES, m_nMaxFlames ) )
 			break;
 
 		int fireIndex = (i + m_fireSpawnOffset) % m_fireCount;
@@ -531,7 +528,7 @@ bool CInferno::IsFirePosInSmokeCloud( const Vector &pos ) const
  */
 CInferno::ECreateFireResult_t CInferno::CreateFire( const Vector &pos, const Vector &normal, FireInfo *parent, int depth )
 {
-	if ( m_fireCount >= MIN( ( int ) MAX_INFERNO_FIRES, m_nMaxFlames ) )
+	if ( m_fireCount >= std::min( ( int ) MAX_INFERNO_FIRES, m_nMaxFlames ) )
 	{
 		return k_ECreateFireResult_LimitExceeded;
 	}
@@ -813,10 +810,8 @@ void CInferno::MarkCoveredAreaAsDamaging()
 
 	TheNavMesh->ForAllAreasOverlappingExtent( overlap, extent );
 
-	FOR_EACH_VEC( overlap.m_area, it )
+	for ( CNavArea *area : overlap.m_area )
 	{
-		CNavArea *area = overlap.m_area[it];
-
 		if ( IsTouching( area ) )
 		{
 			area->MarkAsDamaging( 1.0f );
@@ -842,7 +837,7 @@ void CInferno::InfernoThink( void )
 			return;
 
 		// the fire grows...
-		if ( m_fireCount > 0 && m_fireCount < MIN( m_nMaxFlames, ( int )MAX_INFERNO_FIRES ) )
+		if ( m_fireCount > 0 && m_fireCount < std::min( m_nMaxFlames, ( int )MAX_INFERNO_FIRES ) )
 		{
 			VPROF_BUDGET( "CInferno::InfernoThink (spread)", "Fire" );
 			Spread( m_splashVelocity );
@@ -925,7 +920,7 @@ void CInferno::InfernoThink( void )
 
 	// Figure out when our next event is and make sure we get a think tick close to it.
 	float nextThink = m_BookkeepingTimer.GetTargetTime();
-	nextThink = MIN( nextThink, m_damageTimer.GetTargetTime() );
+	nextThink = std::min( nextThink, m_damageTimer.GetTargetTime() );
 	SetNextThink( nextThink );
 }
 

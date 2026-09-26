@@ -7,7 +7,7 @@
 #ifndef MM_EXTENSIONS_H
 #define MM_EXTENSIONS_H
 
-#include "UtlStringMap.h"
+#include "tier1/map_ops.h"
 
 #include "localize/ilocalize.h"
 #include "engine/inetsupport.h"
@@ -45,7 +45,7 @@ protected:
 
 		RegisteredInterface_t() : m_nRefCount( 0 ), m_pvInterface( 0 ) {}
 	};
-	typedef CUtlStringMap< RegisteredInterface_t > InterfaceMap_t;
+	typedef ks::idict< RegisteredInterface_t > InterfaceMap_t;
 	InterfaceMap_t m_mapRegisteredInterfaces;
 
 protected:

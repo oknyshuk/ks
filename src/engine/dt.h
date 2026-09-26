@@ -14,7 +14,7 @@
 #include "dt_send_eng.h"
 #include "utlvector.h"
 #include "dt_encode.h"
-#include "utlmap.h"
+#include <map>
 #include "tier1/bitbuf.h"
 #include <algorithm>
 
@@ -144,7 +144,7 @@ public:
 public:
 
 	// Child datatables.
-	CUtlVector<CSendNode*>	m_Children;
+	std::vector< CSendNode* >	m_Children;
 
 	// The datatable property that leads us to this CSendNode.
 	// This indexes the CSendTablePrecalc or CRecvDecoder's m_DatatableProps list.
@@ -175,7 +175,7 @@ public:
 
 inline int CSendNode::GetNumChildren() const
 {
-	return m_Children.Count(); 
+	return std::ssize( m_Children ); 
 }
 
 inline CSendNode* CSendNode::GetChild( int i ) const
@@ -225,11 +225,11 @@ public:
 class CFastLocalTransferInfo
 {
 public:
-	CUtlVector<CFastLocalTransferPropInfo> m_FastInt32;
-	CUtlVector<CFastLocalTransferPropInfo> m_FastInt16;
-	CUtlVector<CFastLocalTransferPropInfo> m_FastInt8;
-	CUtlVector<CFastLocalTransferPropInfo> m_FastVector;
-	CUtlVector<CFastLocalTransferPropInfo> m_OtherProps;	// Props that must be copied slowly (proxies and all).
+	std::vector< CFastLocalTransferPropInfo > m_FastInt32;
+	std::vector< CFastLocalTransferPropInfo > m_FastInt16;
+	std::vector< CFastLocalTransferPropInfo > m_FastInt8;
+	std::vector< CFastLocalTransferPropInfo > m_FastVector;
+	std::vector< CFastLocalTransferPropInfo > m_OtherProps;	// Props that must be copied slowly (proxies and all).
 };
 
 
@@ -277,19 +277,19 @@ public:
 		unsigned short m_nEntries;
 	};
 	
-	CUtlVector<CProxyPathEntry> m_ProxyPathEntries;	// For each proxy index, this is all the DT proxies that generate it.
-	CUtlVector<CProxyPath> m_ProxyPaths;			// CProxyPathEntries lookup into this.
+	std::vector< CProxyPathEntry > m_ProxyPathEntries;	// For each proxy index, this is all the DT proxies that generate it.
+	std::vector< CProxyPath > m_ProxyPaths;			// CProxyPathEntries lookup into this.
 	
 	// These are what CSendNodes reference.
 	// These are actual data properties (ints, floats, etc).
-	CUtlVector<const SendProp*>	m_Props;
+	std::vector< const SendProp* >	m_Props;
 
 	// Each datatable in a SendTable's tree gets a proxy index, and its properties reference that.
-	CUtlVector<unsigned char> m_PropProxyIndices;
+	std::vector< unsigned char > m_PropProxyIndices;
 	
 	// CSendNode::m_iDatatableProp indexes this.
 	// These are the datatable properties (SendPropDataTable).
-	CUtlVector<const SendProp*>	m_DatatableProps;
+	std::vector< const SendProp* >	m_DatatableProps;
 
 	//we need an efficient way to map from a property's byte offset to the property index. To support this,
 	//we have a sorted (on byte offset) list of property index and offset
@@ -299,7 +299,7 @@ public:
 		uint16	m_nOffset;
 		uint16	m_nIndex;
 	};
-	CUtlVector< PropOffset_t >	m_PropOffsetToIndex;
+	std::vector< PropOffset_t >	m_PropOffsetToIndex;
 
 	// This is the property hierarchy, with the nodes indexing m_Props.
 	CSendNode				m_Root;
@@ -319,13 +319,13 @@ public:
 	int						m_nDataTableProxies;
 	
 	// Map prop offsets to indices for properties that can use it.
-	CUtlMap< unsigned short, PropIndicesCollection_t > m_PropOffsetToIndexMap;
+	std::map< unsigned short, PropIndicesCollection_t > m_PropOffsetToIndexMap;
 };
 
 
 inline int CSendTablePrecalc::GetNumProps() const
 {
-	return m_Props.Count(); 
+	return std::ssize( m_Props ); 
 }
 
 inline const SendProp* CSendTablePrecalc::GetProp( int i ) const
@@ -335,7 +335,7 @@ inline const SendProp* CSendTablePrecalc::GetProp( int i ) const
 
 inline int CSendTablePrecalc::GetNumDatatableProps() const
 {
-	return m_DatatableProps.Count();
+	return std::ssize( m_DatatableProps );
 }
 
 inline const SendProp* CSendTablePrecalc::GetDatatableProp( int i ) const
@@ -370,8 +370,8 @@ inline int CSendTablePrecalc::GetPropertyIndexFromOffset( uint16 nOffset, int pr
 	//do a binary search to find the lowest bound of our value (binary search is just a bool, and range does two checks)
 	PropOffset_t Lookup;
 	Lookup.m_nOffset = nOffset;
-	const PropOffset_t* pBegin = m_PropOffsetToIndex.Base();
-	const PropOffset_t* pEnd  = pBegin + m_PropOffsetToIndex.Count();
+	const PropOffset_t* pBegin = m_PropOffsetToIndex.data();
+	const PropOffset_t* pEnd  = pBegin + std::ssize( m_PropOffsetToIndex );
 
 	const PropOffset_t* pProp = std::lower_bound( pBegin, pEnd, Lookup );
 

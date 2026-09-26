@@ -18,8 +18,6 @@
 #include "audio/private/snd_sfx.h"
 #include "cl_splitscreen.h"
 #include "cl_demo.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 // HACK:  expose in sound.h maybe?
 void DSP_FastReset(int dsp);
@@ -47,15 +45,15 @@ public:
 
 	virtual int EmitSound( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH nSoundEntryHash, const char *pSample, 
 		float flVolume, float flAttenuation, int nSeed, int iFlags, int iPitch, 
-		const Vector *pOrigin, const Vector *pDirection, CUtlVector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
+		const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
 
 	virtual int EmitSound( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH nSoundEntryHash, const char *pSample, 
 		float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch, 
-		const Vector *pOrigin, const Vector *pDirection, CUtlVector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
+		const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
 
 	virtual void EmitSentenceByIndex( IRecipientFilter& filter, int iEntIndex, int iChannel, int iSentenceIndex, 
 		float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch,
-		const Vector *pOrigin, const Vector *pDirection, CUtlVector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
+		const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
 
 	virtual void StopSound( int iEntIndex, int iChannel, const char *pSample, HSOUNDSCRIPTHASH nSoundEntryHash = SOUNDEMITTER_INVALID_HASH );
 
@@ -79,7 +77,7 @@ public:
 	virtual float   GetElapsedTimeByGuid( int guid );
 
 	// Retrieves list of all active sounds
-	virtual void	GetActiveSounds( CUtlVector< SndInfo_t >& sndlist );
+	virtual void	GetActiveSounds( std::vector< SndInfo_t >& sndlist );
 
 	virtual void	PrecacheSentenceGroup( const char *pGroupName );
 	virtual void	NotifyBeginMoviePlayback();
@@ -93,7 +91,7 @@ public:
 private:
 	int EmitSoundInternal( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH nSoundEntryHash, const char *pSample, 
 		float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch, 
-		const Vector *pOrigin, const Vector *pDirection, CUtlVector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
+		const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
 
 	bool m_bMoviePlaying;
 };
@@ -189,7 +187,7 @@ extern IBaseClientDLL *g_ClientDLL;
 //-----------------------------------------------------------------------------
 int CEngineSoundClient::EmitSoundInternal( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH nSoundEntryHash, const char *pSample, 
 	float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch, 
-	const Vector *pOrigin, const Vector *pDirection, CUtlVector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime /*= 0.0f*/, int speakerentity /*= -1*/ )
+	const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime /*= 0.0f*/, int speakerentity /*= -1*/ )
 {
 	FORCE_DEFAULT_SPLITSCREEN_PLAYER_GUARD;
 
@@ -277,7 +275,7 @@ int CEngineSoundClient::EmitSoundInternal( IRecipientFilter& filter, int iEntInd
 
 	if ( pUtlVecOrigins )
 	{
-		(*pUtlVecOrigins).AddToTail( *pOrigin );
+		(*pUtlVecOrigins).push_back( *pOrigin );
 	}
 
 	// L4D
@@ -347,7 +345,7 @@ int CEngineSoundClient::EmitSoundInternal( IRecipientFilter& filter, int iEntInd
 //-----------------------------------------------------------------------------
 void CEngineSoundClient::EmitSentenceByIndex( IRecipientFilter& filter, int iEntIndex, int iChannel, 
 	int iSentenceIndex, float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch,
-	const Vector *pOrigin, const Vector *pDirection, CUtlVector< Vector >* pUtlVecOrigins, bool bUpdatePosition, float soundtime /*= 0.0f*/, int speakerentity /*= -1*/ )
+	const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePosition, float soundtime /*= 0.0f*/, int speakerentity /*= -1*/ )
 {
 	if ( iSentenceIndex >= 0 )
 	{
@@ -364,7 +362,7 @@ void CEngineSoundClient::EmitSentenceByIndex( IRecipientFilter& filter, int iEnt
 //-----------------------------------------------------------------------------
 int CEngineSoundClient::EmitSound( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH nSoundEntryHash, const char *pSample, 
 	float flVolume, float flAttenuation, int nSeed, int iFlags, int iPitch, 
-	const Vector *pOrigin, const Vector *pDirection, CUtlVector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime /*= 0.0f*/, int speakerentity /*= -1*/ )
+	const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime /*= 0.0f*/, int speakerentity /*= -1*/ )
 {
 	VPROF( "CEngineSoundClient::EmitSound" );
 	return EmitSound( filter, iEntIndex, iChannel, pSoundEntry, nSoundEntryHash, pSample, flVolume, ATTN_TO_SNDLVL( flAttenuation ), nSeed, iFlags, 
@@ -375,7 +373,7 @@ int CEngineSoundClient::EmitSound( IRecipientFilter& filter, int iEntIndex, int 
 
 int CEngineSoundClient::EmitSound( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH nSoundEntryHash, const char *pSample, 
 	float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch, 
-	const Vector *pOrigin, const Vector *pDirection, CUtlVector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime /*= 0.0f*/, int speakerentity /*= -1*/ )
+	const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime /*= 0.0f*/, int speakerentity /*= -1*/ )
 {
 	VPROF( "CEngineSoundClient::EmitSound" );
 	if ( pSample && TestSoundChar(pSample, CHAR_SENTENCE) )
@@ -514,7 +512,7 @@ void CEngineSoundClient::StopSoundByGuid( int guid, bool bForceSync )
 // Purpose: Retrieves list of all active sounds
 // Input  : sndlist - 
 //-----------------------------------------------------------------------------
-void CEngineSoundClient::GetActiveSounds( CUtlVector< SndInfo_t >& sndlist )
+void CEngineSoundClient::GetActiveSounds( std::vector< SndInfo_t >& sndlist )
 {
 	S_GetActiveSounds( sndlist );
 }

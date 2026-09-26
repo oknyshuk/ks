@@ -7,9 +7,6 @@
 #include "black_ps20.inc"
 #include "black_ps20b.inc"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 BEGIN_VS_SHADER( Black, "Help for Black" )
 	BEGIN_SHADER_PARAMS
 	END_SHADER_PARAMS

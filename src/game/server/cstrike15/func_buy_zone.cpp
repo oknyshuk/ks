@@ -123,34 +123,34 @@ void CBuyZone::EndTouch( CBaseEntity *pOther )
 	{
 		if ( CCSPlayer *pCSPlayer = ToCSPlayer( pOther ) )
 		{
-			CUtlString strEquipment( "[ ");
+			std::string strEquipment( "[ ");
 
 			for ( int i = 0; i < MAX_WEAPONS; ++i )
 			{
 				if ( CBaseCombatWeapon* pWeapon = pCSPlayer->GetWeapon( i ) )
-					strEquipment.Append( CFmtStr( "%s ", pWeapon->GetEconItemView() ? pWeapon->GetEconItemView()->GetItemDefinition()->GetDefinitionName() : pWeapon->GetName() ).Get() );
+					strEquipment.append( CFmtStr( "%s ", pWeapon->GetEconItemView() ? pWeapon->GetEconItemView()->GetItemDefinition()->GetDefinitionName() : pWeapon->GetName() ).Get() );
 			}
 
 			if ( pCSPlayer->HasDefuser() )
-				strEquipment.Append( "defuser " );
+				strEquipment.append( "defuser " );
 
 			if ( pCSPlayer->ArmorValue() > 0 )
-				strEquipment.Append( CFmtStr( "kevlar(%d) ", pCSPlayer->ArmorValue() ).Get() );
+				strEquipment.append( CFmtStr( "kevlar(%d) ", pCSPlayer->ArmorValue() ).Get() );
 
 			if ( pCSPlayer->m_bHasHelmet )
-				strEquipment.Append( "helmet " );
+				strEquipment.append( "helmet " );
 
 			if ( pCSPlayer->HasC4() )
-				strEquipment.Append( "C4 " );
+				strEquipment.append( "C4 " );
 
-			strEquipment.Append( "]" );
+			strEquipment.append( "]" );
 
 			UTIL_LogPrintf( "\"%s<%i><%s><%s>\" left buyzone with %s\n",
 							pCSPlayer->GetPlayerName(),
 							pCSPlayer->GetUserID(),
 							pCSPlayer->GetNetworkIDString(),
 							pCSPlayer->GetTeam()->GetName(),
-							strEquipment.Get() );
+							strEquipment.data() );
 		}
 	}
 }

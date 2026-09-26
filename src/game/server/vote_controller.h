@@ -69,7 +69,7 @@ public:
 	virtual int			GetNumberVoteOptions( void );				// How many choices this vote will have.  i.e. Returns 2 on a Yes/No issue (the default).
 	virtual bool		IsYesNoVote( void );
 	virtual void		SetYesNoVoteCount( int iNumYesVotes, int iNumNoVotes, int iNumPotentialVotes );
-	virtual bool		GetVoteOptions( CUtlVector <const char*> &vecNames );	// We use this to generate options for voting
+	virtual bool		GetVoteOptions( std::vector< const char* > &vecNames );	// We use this to generate options for voting
 	virtual int			GetVoteIssue( void ) { return VOTEISSUE_UNDEFINED; }
 	virtual float		GetFailedVoteLockOutTime( void );			// How long to wait before a failed vote can be resubmitted.
 	virtual vote_create_failed_t MakeVoteFailErrorCodeForClients( vote_create_failed_t eDefaultFailCode ) { return eDefaultFailCode; }
@@ -84,7 +84,7 @@ protected:
 		float	flLockoutTime;					
 	};
 
-	CUtlVector<FailedVote *> m_FailedVotes;
+	std::vector< FailedVote * > m_FailedVotes;
 
 	char				m_szTypeString[MAX_COMMAND_LENGTH];
 	char				m_szDetailsString[MAX_PATH];
@@ -157,13 +157,13 @@ protected:
 	CountdownTimer	m_acceptingVotesTimer;						// How long from vote start until we count the ballots
 	CountdownTimer	m_executeCommandTimer;						// How long after end of vote time until we execute a passed vote
 	CountdownTimer	m_resetVoteTimer;							// when the current vote will end 
-	CUtlVector< uint64 > m_arrVotedUsers;						// SteamIDs of users who voted already
+	std::vector< uint64 > m_arrVotedUsers;						// SteamIDs of users who voted already
 	int				m_nVotesCast[MAX_PLAYERS];					// votes cast by each entity
 	int				m_iEntityHoldingVote;
 	int				m_nHighestCountIndex;
 	
-	CUtlVector <CBaseIssue *> m_potentialIssues;
-	CUtlVector <const char *> m_VoteOptions;
+	std::vector< CBaseIssue * > m_potentialIssues;
+	std::vector< const char * > m_VoteOptions;
 };
 
 

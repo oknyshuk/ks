@@ -173,7 +173,7 @@ private:
 		float			m_flIdealPitch;
 		int				m_nLastCommandAcknowledged;
 		bool			m_bPreviousAckErrorTriggersFullLatchReset;
-		CUtlVector< CHandle< CBaseEntity > > m_EntsWithPredictionErrorsInLastAck;
+		std::vector< CHandle< CBaseEntity > > m_EntsWithPredictionErrorsInLastAck;
 		bool			m_bPerformedTickShift;
 
 #if defined( KEEP_COMMAND_REPREDICTION_COUNT )
@@ -187,7 +187,7 @@ private:
 	CGlobalVarsBase	m_SavedVars;
 
 	bool			m_bPlayerOriginTypedescriptionSearched;
-	CUtlVector< const typedescription_t * >	m_PlayerOriginTypeDescription; // A vector in cases where the .x, .y, and .z are separately listed
+	std::vector< const typedescription_t * >	m_PlayerOriginTypeDescription; // A vector in cases where the .x, .y, and .z are separately listed
 
 };
  

@@ -10,9 +10,6 @@
 #include "dt_encode.h"
 #include "coordsize.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern void DataTable_Warning( const char *pInMessage, ... );
 extern bool ShouldWatchThisProp( const SendTable *pTable, int objectID, const char *pPropName );
 
@@ -985,7 +982,7 @@ int Array_CompareDeltas( const SendProp *pProp, bf_read *p1, bf_read *p2 )
 	int bDifferent = length1 != length2;
 	
 	// Compare deltas on the props that are the same.
-	int nSame = MIN( length1, length2 );
+	int nSame = std::min( length1, length2 );
 	for ( int iElement=0; iElement < nSame; iElement++ )
 	{
 		bDifferent |= g_PropTypeFns[pArrayProp->GetType()].CompareDeltas( pArrayProp, p1, p2 );
@@ -996,7 +993,7 @@ int Array_CompareDeltas( const SendProp *pProp, bf_read *p1, bf_read *p2 )
 	{
 		bf_read *buffer = (length1 > length2) ? p1 : p2;
 
-		int nExtra = MAX( length1, length2 ) - nSame;
+		int nExtra = std::max( length1, length2 ) - nSame;
 		for ( int iEatUp=0; iEatUp < nExtra; iEatUp++ )
 		{
 			SkipPropData( buffer, pArrayProp );
@@ -1056,6 +1053,10 @@ bool Array_IsZero( const unsigned char *pStruct, DVariant *pVar, const SendProp 
 
 void Array_DecodeZero( DecodeInfo *pInfo )
 {
+	// Null base (e.g. a vector slot past the end), as every other DecodeZero handles.
+	if ( !pInfo->m_pRecvProp )
+		return;
+
 	ArrayLengthRecvProxyFn lengthProxy = pInfo->m_pRecvProp->GetArrayLengthProxy();
 	if ( lengthProxy )
 		lengthProxy( pInfo->m_pStruct, pInfo->m_ObjectID, 0 );

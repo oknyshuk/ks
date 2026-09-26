@@ -34,9 +34,6 @@
 #include "cs_entity_spotting.h"
 #include "cs_shareddefs.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define HOSTAGE_THINK_INTERVAL	(1.0f/60.0f)//We increased this from 0.1 in CS:GO so that the hostages don't stutter as much.
 #define HOSTAGE_THINK_CARRIED_INTERVAL	(1.0f/45.0f)
 
@@ -117,15 +114,15 @@ IMPLEMENT_REFLECT_SERVERCLASS( CHostage, DT_CHostage )
 
 
 //-----------------------------------------------------------------------------------------------------
-CUtlVector< CHostage * > g_Hostages;
+std::vector< CHostage * > g_Hostages;
 static CountdownTimer announceTimer;		// used to stop "hostage rescued" announcements from stepping on each other
 
 //-----------------------------------------------------------------------------------------------------
 CHostage::CHostage()
 {
-	if ( g_Hostages.Count() < MAX_HOSTAGES )
+	if ( std::ssize( g_Hostages ) < MAX_HOSTAGES )
 	{
-		g_Hostages.AddToTail( this );
+		g_Hostages.push_back( this );
 		m_bRemove = false;
 	}
 	else
@@ -148,7 +145,7 @@ CHostage::CHostage()
 //-----------------------------------------------------------------------------------------------------
 CHostage::~CHostage()
 {
-	g_Hostages.FindAndRemove( this );
+	ks::erase_first( g_Hostages, this );
 	m_PlayerAnimState->Release();
 	delete m_pExpresser;
 }
@@ -227,18 +224,18 @@ void CHostage::Spawn( void )
 	static int hostageModelIndex = 0;
 
 	bool hostageSet = false;
-	//const CUtlStringList *pTModelNames = g_pGameTypes->GetTModelsForMap( m_mapName );
+	//const std::vector< std::string > *pTModelNames = g_pGameTypes->GetTModelsForMap( m_mapName );
 	const char *mapName = ( gpGlobals ? STRING( gpGlobals->mapname ) : nullptr );
 	if ( mapName )
 	{
-		const CUtlStringList *pHostageModelNames = g_pGameTypes->GetHostageModelsForMap( mapName );
+		const std::vector< std::string > *pHostageModelNames = g_pGameTypes->GetHostageModelsForMap( mapName );
 		if ( nullptr != pHostageModelNames )
 		{
-			int count = pHostageModelNames->Count();
+			int count = std::ssize( *pHostageModelNames );
 			if ( count > 0 )
 			{
 				int whichModel = hostageModelIndex % count;
-				SetModel( (*pHostageModelNames)[ whichModel ] );
+				SetModel( (*pHostageModelNames)[ whichModel ].c_str() );
 				hostageSet = true;
 			}
 		}
@@ -346,13 +343,13 @@ void CHostage::Precache()
 
 	if ( mapName )
 	{
-		const CUtlStringList *pHostageModelNames = g_pGameTypes->GetHostageModelsForMap( mapName );
+		const std::vector< std::string > *pHostageModelNames = g_pGameTypes->GetHostageModelsForMap( mapName );
 		if ( nullptr != pHostageModelNames )
 		{
-			numHostageModelsForMap = pHostageModelNames->Count();
-			FOR_EACH_VEC( *pHostageModelNames, iModel )
+			numHostageModelsForMap = std::ssize( *pHostageModelNames );
+			for ( const auto &hostageModelName : *pHostageModelNames )
 			{
-				const char *modelName = (*pHostageModelNames)[iModel];
+				const char *modelName = hostageModelName.c_str();
 				if ( modelName )
 				{
 					PrecacheModel( modelName );
@@ -407,7 +404,7 @@ void CHostage::ModifyOrAppendCriteria( AI_CriteriaSet& set )
 //-----------------------------------------------------------------------------------------------------
 int CHostage::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 {
-	float actualDamage = MIN( info.GetDamage(), GetHealth() );
+	float actualDamage = std::min<std::common_type_t<float, int>>( info.GetDamage(), GetHealth() );
 
 	// say something
 	if ( hostage_is_silent.GetBool() == false )
@@ -659,8 +656,8 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
 
 		// [dwenger] Hostage rescue achievement processing
 		// Track rescuers
-		if ( CSGameRules()->m_arrRescuers.Find( player ) == CSGameRules()->m_arrRescuers.InvalidIndex() )
-			CSGameRules()->m_arrRescuers.AddToTail( player );
+		if ( ks::find_index( CSGameRules()->m_arrRescuers, player ) == -1 )
+			CSGameRules()->m_arrRescuers.push_back( player );
 
 		bool roundWasAlreadyOver = (CSGameRules()->m_iRoundWinStatus != WINNER_NONE);
 
@@ -704,12 +701,12 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
 		if ( CSGameRules()->CheckWinConditions() && player )
 		{
 			//Check hostage rescue achievements
-			if ( !CSGameRules()->WasHostageKilled() && (!mp_hostages_moveable.GetBool() || ( CSGameRules()->m_arrRescuers.Count() == 1 ) ) )
+			if ( !CSGameRules()->WasHostageKilled() && (!mp_hostages_moveable.GetBool() || ( std::ssize( CSGameRules()->m_arrRescuers ) == 1 ) ) )
 			{
 				//check for unrescued hostages
 				bool allHostagesRescued = true;
 				CHostage* hostage = nullptr;
-				int iNumHostages = g_Hostages.Count();
+				int iNumHostages = std::ssize( g_Hostages );
 
 				for ( int i = 0 ; i < iNumHostages; i++ )
 				{
@@ -724,18 +721,18 @@ void CHostage::HostageRescueZoneTouch( inputdata_t &inputdata )
 
 				if ( allHostagesRescued )
 				{
-					FOR_EACH_VEC( CSGameRules()->m_arrRescuers, iRescuer )
+					for ( const auto &hRescuer : CSGameRules()->m_arrRescuers )
 					{
-						if ( CCSPlayer *pRoundRescuer = CSGameRules()->m_arrRescuers[iRescuer].Get() )
+						if ( CCSPlayer *pRoundRescuer = hRescuer.Get() )
 							pRoundRescuer->AwardAchievement(CSRescueAllHostagesInARound);
 					}
 
 					//[tj] fast version
 					if (gpGlobals->curtime - CSGameRules()->GetRoundStartTime() < AchievementConsts::FastHostageRescue_Time)
 					{
-						FOR_EACH_VEC( CSGameRules()->m_arrRescuers, iRescuer )
+						for ( const auto &hRescuer : CSGameRules()->m_arrRescuers )
 						{
-							if ( CCSPlayer *pRoundRescuer = CSGameRules()->m_arrRescuers[iRescuer].Get() )
+							if ( CCSPlayer *pRoundRescuer = hRescuer.Get() )
 								pRoundRescuer->AwardAchievement(CSFastHostageRescue);
 						}
 					}
@@ -1031,19 +1028,19 @@ void CHostage::AvoidPhysicsProps( void )
 		{
 			mass = pInterface->GetMass();
 		}
-		mass = MIN( mass, maxMass );
+		mass = std::min( mass, maxMass );
 		mass -= minMass;
-		mass = MAX( mass, 0 );
+		mass = std::max<std::common_type_t<float, int>>( mass, 0 );
 		mass /= (maxMass-minMass); // bring into a 0..1 range
 
 		// Push away from the collision point. The closer our center is to the collision point,
 		// the harder we push away.
 		Vector vPushAway = (WorldSpaceCenter() - props[i]->WorldSpaceCenter());
 		float flDist = VectorNormalize( vPushAway );
-		flDist = MAX( flDist, 1 );
+		flDist = std::max<std::common_type_t<float, int>>( flDist, 1 );
 
 		float flForce = sv_pushaway_hostage_force.GetFloat() / flDist * mass;
-		flForce = MIN( flForce, sv_pushaway_max_hostage_force.GetFloat() );
+		flForce = std::min( flForce, sv_pushaway_max_hostage_force.GetFloat() );
 		vPushAway *= flForce;
 
 		ApplyForce( vPushAway );
@@ -1781,7 +1778,7 @@ bool CHostage::GetSimpleGroundHeightWithFloor( const Vector &pos, float *height,
 		// our current nav area also serves as a ground polygon
 		if (m_lastKnownArea && m_lastKnownArea->IsOverlapping( pos ))
 		{
-			*height = MAX( (*height), m_lastKnownArea->GetZ( pos ) );
+			*height = std::max( (*height), m_lastKnownArea->GetZ( pos ) );
 		}
 
 		return true;

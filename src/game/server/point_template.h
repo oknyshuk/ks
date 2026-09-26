@@ -55,8 +55,8 @@ public:
 	int				GetTemplateIndexForTemplate( int iTemplate );
 
 	// Template instancing
-	bool			CreateInstance( const Vector &vecOrigin, const QAngle &vecAngles, CUtlVector<CBaseEntity*> *pEntities, CBaseEntity *pEntityMaker = nullptr, bool bCreateTime = false );
-	void			CreationComplete( const CUtlVector<CBaseEntity*> &entities );
+	bool			CreateInstance( const Vector &vecOrigin, const QAngle &vecAngles, std::vector< CBaseEntity* > *pEntities, CBaseEntity *pEntityMaker = nullptr, bool bCreateTime = false );
+	void			CreationComplete( const std::vector< CBaseEntity* > &entities );
 
 	// Inputs
 	[[= ks::reflect::Input{ .name = "ForceSpawn", .type = FIELD_VOID } ]] void			InputForceSpawn( inputdata_t &inputdata );
@@ -69,10 +69,10 @@ private:
 	// List of map entities this template targets. Built inside our Spawn().
 	// It's only valid between Spawn() & Activate(), because the map entity parsing
 	// code removes all the entities in it once it finishes turning them into templates.
-	CUtlVector< CBaseEntity * >		m_hTemplateEntities;
+	std::vector< CBaseEntity * >		m_hTemplateEntities;
 
 	// List of templates, generated from our template entities.
-	CUtlVector< template_t >		m_hTemplates;
+	std::vector< template_t >		m_hTemplates;
 
 	[[= ks::reflect::Key{ .name = "OnEntitySpawned" } ]] COutputEvent					m_pOutputOnSpawned;
 };

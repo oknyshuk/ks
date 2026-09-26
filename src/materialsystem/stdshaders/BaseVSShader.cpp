@@ -28,9 +28,6 @@
 
 #include "shaderapifast.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // NOTE: This is externed in BaseVSShader.h so it needs to be here
 ConVar r_flashlightbrightness( "r_flashlightbrightness", "0.25", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 

@@ -313,8 +313,8 @@ struct SpatializationInfo_t
 	QAngle				*pAngles;
 	float				*pflRadius;
 
-	CUtlVector< Vector > *m_pUtlVecMultiOrigins;
-	CUtlVector< QAngle > *m_pUtlVecMultiAngles;
+	std::vector< Vector > *m_pUtlVecMultiOrigins;
+	std::vector< QAngle > *m_pUtlVecMultiAngles;
 
 };
 #pragma pack()

@@ -24,13 +24,14 @@
 #include "avi/ibik.h"
 #include "materialsystem/itexture.h"
 #include "Overlay.h"
-#include "utldict.h"
-#include "mempool.h"
+#include "tier1/fixed_pool.h"
 #include "r_decal.h"
 #include "l_studio.h"
 #include "optimize.h"
 #include "gl_drawlights.h"
 #include "tier0/icommandline.h"
+#include "tier1/byte_reader.h"
+#include "tier1/text_reader.h"
 #include "MapReslistGenerator.h"
 #ifndef DEDICATED
 #include "engineui.h"
@@ -48,9 +49,10 @@
 #include "tier2/fileutils.h"
 #include "../utils/common/bsplib.h"
 #include "ibsppack.h"
-#include "utlsortvector.h"
-#include "utlhashtable.h"
-#include "UtlStringMap.h"
+#include <flat_set>
+#include "tier1/map_ops.h"
+#include "tier1/intern_pool.h"
+#include <unordered_map>
 #include "callqueue.h"
 #include "color.h"
 #include "tier1/lzmaDecoder.h"
@@ -63,10 +65,10 @@
 #include "fmtstr.h"
 #include "engine_model_client.h"
 #include "filemapping.h"
+#include <map>
+#include <memory>
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 // Uncomment this line to break down Map_LoadModel into 
 // smaller, individual scopes. 
 // #define MEM_DETAILED_ACCOUNTING_MAP_LOADMODEL
@@ -153,7 +155,7 @@ struct dgamelump_internal_t
 	unsigned int	compressedSize;
 };
 
-static CUtlVector< dgamelump_internal_t > g_GameLumpDict;
+static std::vector< dgamelump_internal_t > g_GameLumpDict;
 static char g_GameLumpFilename[MAX_PATH];
 
 //-----------------------------------------------------------------------------
@@ -196,11 +198,6 @@ void NotifyHunkBeginMapLoad( const char *pszMapName )
 // FIXME/TODO:  Right now Host_FreeToLowMark unloads all models including studio
 //  models that have Cache_Alloc data, too.  This needs to be fixed before shipping
 
-bool Model_LessFunc( FileNameHandle_t const &a, FileNameHandle_t const &b )
-{
-	return a < b;
-}
-
 struct ViewWeaponEntry_t
 {
 	ViewWeaponEntry_t( bool bIsViewModel )
@@ -213,7 +210,7 @@ struct ViewWeaponEntry_t
 		m_hAsyncVVDControl = nullptr;
 	}
 
-	CUtlVector< CUtlString >	m_Materials;
+	std::vector< std::string >	m_Materials;
 	unsigned int				m_nAgeTime;
 	bool						m_bStudioHWDataResident;
 	bool						m_bViewModel;
@@ -232,17 +229,13 @@ class CModelLoader : public IModelLoader
 // Implement IModelLoader interface
 public:
 	CModelLoader() :
-		m_ModelPool( sizeof( model_t ), MAX_KNOWN_MODELS, CUtlMemoryPool::GROW_FAST, "CModelLoader::m_ModelPool" ),
-		m_Models( 0, 0, Model_LessFunc ),
-		m_WeaponModelCache( 0, 0, DefLessFunc( model_t* ) )
+		m_ModelPool( sizeof( model_t ), MAX_KNOWN_MODELS, ks::fixed_pool::grow::fast, "CModelLoader::m_ModelPool", alignof( model_t ) )
 	{
 	}
 
 	void			Init( void );
 	void			Shutdown( void );
 
-	int				GetCount( void );
-	model_t			*GetModelForIndex( int i );
 
 	// Look up name for model
 	const char		*GetName( model_t const *model );
@@ -300,9 +293,6 @@ public:
 
 	modtype_t		GetTypeFromName( const char *pModelName );
 
-	// start with -1, list terminates with -1
-	int				FindNext( int iIndex, model_t **ppModel );
-
 	void			UnloadModel( model_t *pModel );
 
 	virtual void	ReloadFilesInList( IFileList *pFilesToReload );
@@ -315,7 +305,7 @@ public:
 	virtual model_t *GetDynamicModel( const char *name, bool bClientOnly );
 	virtual model_t	*GetDynamicCombinedModel( const char *name, bool bClientOnly );
 	virtual void	UpdateDynamicCombinedModel( model_t *pModel, MDLHandle_t Handle, bool bClientSide );
-	virtual bool	SetCombineModels( model_t* pModel, const CUtlVector< SCombinerModelInput_t > &vecModelsToCombine );
+	virtual bool	SetCombineModels( model_t* pModel, const std::vector< SCombinerModelInput_t > &vecModelsToCombine );
 	virtual bool	FinishCombinedModel( model_t *pModel, CombinedModelLoadedCallback pFunc, void *pUserData );
 	virtual bool	IsDynamicModelLoading( model_t *pModel );
 	virtual void	AddRefDynamicModel( model_t *pModel, bool bClientSideRef );
@@ -354,7 +344,7 @@ private:
 	model_t		*LoadModel( model_t	*model, REFERENCETYPE *referencetype );
 	// Unload models ( won't unload referenced models if checkreferences is true )
 	void		UnloadAllModels( bool checkreference );
-	void		SetupSubModels( model_t	*model, CUtlVector<mmodel_t> &list );
+	void		SetupSubModels( model_t	*model, std::vector< mmodel_t > &list );
 
 	// World/map
 	void		Map_LoadModel( model_t *mod );
@@ -390,8 +380,9 @@ private:
 	void		UpdateDynamicModelLoadQueue();
 	void		FinishDynamicModelLoadIfReady( CDynamicModelInfo *dyn, model_t *mod );
 
-	void		EvictWeaponModel( int CacheIndex, bool bForce );
-	void		RestoreWeaponModel( int CacheIndex );
+	typedef std::map< model_t *, std::unique_ptr< ViewWeaponEntry_t > > WeaponModelCache_t;
+	void		EvictWeaponModel( WeaponModelCache_t::iterator nCacheIndex, bool bForce );
+	void		RestoreWeaponModel( WeaponModelCache_t::iterator nCacheIndex );
 	
 	// Internal data
 private:
@@ -405,11 +396,11 @@ private:
 		model_t *modelpointer;
 	};
 
-	CUtlMap< FileNameHandle_t, ModelEntry_t >	m_Models;
+	std::map< FileNameHandle_t, ModelEntry_t >	m_Models;
 
-	CUtlMemoryPool		m_ModelPool;
+	ks::fixed_pool		m_ModelPool;
 
-	CUtlVector<model_t>	m_InlineModels;
+	std::vector< model_t >	m_InlineModels;
 
 	model_t				*m_pWorldModel;
 
@@ -443,31 +434,31 @@ private:
 		int16 m_iClientRefCount; // also doublecounted in m_iRefCount
 		uint32 m_nLoadFlags : 8;
 		uint32 m_uLastTouchedMS_Div256 : 24;
-		CUtlVector< IModelLoadCallback * > m_Callbacks;
+		std::vector< IModelLoadCallback * > m_Callbacks;
 	};
-	CUtlHashtable< model_t * , CDynamicModelInfo > m_DynamicModels;
-	CUtlHashtable< IModelLoadCallback * , int > m_RegisteredDynamicCallbacks;
+	std::unordered_map< model_t *, CDynamicModelInfo > m_DynamicModels;
+	std::unordered_map< IModelLoadCallback *, int > m_RegisteredDynamicCallbacks;
 
 	// Dynamic model load queue
-	CUtlVector< model_t* > m_DynamicModelLoadQueue;
+	std::vector< model_t* > m_DynamicModelLoadQueue;
 	bool m_bDynamicLoadQueueHeadActive;
 
-	CUtlVector<byte>	m_LightStyleList;
+	std::vector< byte >	m_LightStyleList;
 
 	CMemoryStack		m_WorldLightingDataStack;
 
 	bool										m_bAllowWeaponModelCache;
 	bool										m_bAllowWeaponVertexEviction;
 	bool										m_bAllowWorldWeaponEviction;
-	CUtlMap< model_t *, ViewWeaponEntry_t * >	m_WeaponModelCache;
+	WeaponModelCache_t							m_WeaponModelCache;
 	int											m_nNumWeaponsPartialResident;
 
 	struct compatibility_path_t
 	{
-		CUtlString mPath;
-		CUtlString mPathId;
+		std::string mPath;
+		std::string mPathId;
 	};
-	CUtlVector< compatibility_path_t >	m_vecSzCompatibilityPaths;
+	std::vector< compatibility_path_t >	m_vecSzCompatibilityPaths;
 
 };
 
@@ -1039,7 +1030,7 @@ void CMapLoadHelper::UncompressLump( void *pExternalBuffer )
 	}
 	else
 	{
-		m_pUncompressedData = (unsigned char *)malloc( m_nUncompressedLumpSize );
+		m_pUncompressedData = (unsigned char *)MemAlloc_Alloc( m_nUncompressedLumpSize );
 		m_bUncompressedDataExternal = false;
 	}
 	// Copy into the dest buffer
@@ -1256,7 +1247,7 @@ static void AllocateLightingData( worldbrushdata_t *pBrushData, int nSize )
 	{
 		// Specifically *not* adding it to the hunk.
 		// If this malloc changes, also change the free in CacheAndUnloadLightmapData()
-		pBrushData->lightdata = (ColorRGBExp32 *)malloc( nSize );
+		pBrushData->lightdata = (ColorRGBExp32 *)MemAlloc_Alloc( nSize );
 	}
 
 	pBrushData->m_nLightingDataSize = nSize;
@@ -1276,7 +1267,7 @@ void DeallocateLightingData( worldbrushdata_t *pBrushData )
 			}
 			else
 			{
-				free( pBrushData->lightdata );
+				g_pMemAlloc->Free( pBrushData->lightdata );
 			}
 		}
 
@@ -1518,7 +1509,7 @@ static float RadiusFromBounds (Vector& mins, Vector& maxs)
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void Mod_LoadSubmodels( CUtlVector<mmodel_t> &submodelList )
+void Mod_LoadSubmodels( std::vector< mmodel_t > &submodelList )
 {
 	dmodel_t	*in;
 	int			i, j, count;
@@ -1530,7 +1521,7 @@ void Mod_LoadSubmodels( CUtlVector<mmodel_t> &submodelList )
 		Host_Error("Mod_LoadSubmodels: funny lump size in %s", lh.GetMapPathName());
 	count = lh.LumpSize() / sizeof(*in);
 
-	submodelList.SetCount( count );
+	submodelList.assign( count, {} );
 	lh.GetMap()->numsubmodels = count;
 	// first submodel is the world, copy out the face count
 	lh.GetMap()->nWorldFaceCount = in->numfaces;
@@ -1602,41 +1593,41 @@ void Mod_LoadOcclusion( void )
 		return;
 	}
 
-	CUtlBuffer buf( lh.LumpBase(), lh.LumpSize(), CUtlBuffer::READ_ONLY );
+	ks::byte_reader buf( lh.LumpBase(), lh.LumpSize() );
 
 	switch( lh.LumpVersion() )
 	{
 	case LUMP_OCCLUSION_VERSION:
 		{
-			b->numoccluders = buf.GetInt();
+			b->numoccluders = buf.read< int >();
 			if (b->numoccluders)
 			{
 				int nSize = b->numoccluders * sizeof(doccluderdata_t);
 				b->occluders = (doccluderdata_t*)Hunk_AllocName( nSize, "occluder data" );
-				buf.Get( b->occluders, nSize );
+				buf.read_bytes( b->occluders, nSize );
 			}
 
-			b->numoccluderpolys = buf.GetInt();
+			b->numoccluderpolys = buf.read< int >();
 			if (b->numoccluderpolys)
 			{
 				int nSize = b->numoccluderpolys * sizeof(doccluderpolydata_t);
 				b->occluderpolys = (doccluderpolydata_t*)Hunk_AllocName( nSize, "occluder poly data" );
-				buf.Get( b->occluderpolys, nSize );
+				buf.read_bytes( b->occluderpolys, nSize );
 			}
 
-			b->numoccludervertindices = buf.GetInt();
+			b->numoccludervertindices = buf.read< int >();
 			if (b->numoccludervertindices)
 			{
 				int nSize = b->numoccludervertindices * sizeof(int);
 				b->occludervertindices = (int*)Hunk_AllocName( nSize, "occluder vertices" );
-				buf.Get( b->occludervertindices, nSize );
+				buf.read_bytes( b->occludervertindices, nSize );
 			}
 		}
 		break;
 
 	case 1:
 		{
-			b->numoccluders = buf.GetInt();
+			b->numoccluders = buf.read< int >();
 			if (b->numoccluders)
 			{
 				int nSize = b->numoccluders * sizeof(doccluderdata_t);
@@ -1645,26 +1636,26 @@ void Mod_LoadOcclusion( void )
 				doccluderdataV1_t temp;
 				for ( int i = 0; i < b->numoccluders; ++i )
 				{
-					buf.Get( &temp, sizeof(doccluderdataV1_t) );
+					buf.read_bytes( &temp, sizeof(doccluderdataV1_t) );
 					memcpy( &b->occluders[i], &temp, sizeof(doccluderdataV1_t) );
 					b->occluders[i].area = 1;
 				}
 			}
 
-			b->numoccluderpolys = buf.GetInt();
+			b->numoccluderpolys = buf.read< int >();
 			if (b->numoccluderpolys)
 			{
 				int nSize = b->numoccluderpolys * sizeof(doccluderpolydata_t);
 				b->occluderpolys = (doccluderpolydata_t*)Hunk_AllocName( nSize, "occluder poly data" );
-				buf.Get( b->occluderpolys, nSize );
+				buf.read_bytes( b->occluderpolys, nSize );
 			}
 
-			b->numoccludervertindices = buf.GetInt();
+			b->numoccludervertindices = buf.read< int >();
 			if (b->numoccludervertindices)
 			{
 				int nSize = b->numoccludervertindices * sizeof(int);
 				b->occludervertindices = (int*)Hunk_AllocName( nSize, "occluder vertices" );
-				buf.Get( b->occludervertindices, nSize );
+				buf.read_bytes( b->occludervertindices, nSize );
 			}
 		}
 		break;
@@ -2979,7 +2970,7 @@ void Mod_LoadPlanes( void )
 //-----------------------------------------------------------------------------
 int Mod_GameLumpVersion( int lumpId )
 {
-	for ( int i = g_GameLumpDict.Count(); --i >= 0; )
+	for ( int i = std::ssize( g_GameLumpDict ); --i >= 0; )
 	{
 		if ( g_GameLumpDict[i].id == lumpId )
 		{
@@ -2996,7 +2987,7 @@ int Mod_GameLumpVersion( int lumpId )
 //-----------------------------------------------------------------------------
 int Mod_GameLumpSize( int lumpId )
 {
-	for ( int i = g_GameLumpDict.Count(); --i >= 0; )
+	for ( int i = std::ssize( g_GameLumpDict ); --i >= 0; )
 	{
 		if ( g_GameLumpDict[i].id == lumpId )
 		{
@@ -3014,7 +3005,7 @@ int Mod_GameLumpSize( int lumpId )
 bool Mod_LoadGameLump( int lumpId, void *pOutBuffer, int size )
 {
 	int i;
-	for ( i = g_GameLumpDict.Count(); --i >= 0; )
+	for ( i = std::ssize( g_GameLumpDict ); --i >= 0; )
 	{
 		if ( g_GameLumpDict[i].id == lumpId )
 		{
@@ -3087,12 +3078,12 @@ bool Mod_LoadGameLump( int lumpId, void *pOutBuffer, int size )
 		else
 		{
 			// data is compressed, read into temporary
-			pData = (byte *)malloc( dataLength );
+			pData = (byte *)MemAlloc_Alloc( dataLength );
 			bool bOK = ( g_pFileSystem->Read( pData, dataLength, fileHandle ) > 0 );
 			g_pFileSystem->Close( fileHandle );
 			if ( !bOK )
 			{
-				free( pData );
+				g_pMemAlloc->Free( pData );
 				return false;
 			}
 		}
@@ -3116,7 +3107,7 @@ bool Mod_LoadGameLump( int lumpId, void *pOutBuffer, int size )
 	if ( !bFromMemory )
 	{
 		// done with temporary buffer
-		free( pData );
+		g_pMemAlloc->Free( pData );
 	}
 
 	return bResult;
@@ -3137,7 +3128,7 @@ void Mod_LoadGameLumpDict( void )
 	// FIXME: This is brittle. If we ever try to load two game lumps
 	// (say, in multiple BSP files), the dictionary info I store here will get whacked
 
-	g_GameLumpDict.RemoveAll();
+	g_GameLumpDict.clear();
 	Q_strncpy( g_GameLumpFilename, lh.GetMapPathName(), sizeof( g_GameLumpFilename ) );
 
 	unsigned int lhSize = (unsigned int)Max( lh.LumpSize(), 0 );
@@ -3176,7 +3167,7 @@ void Mod_LoadGameLumpDict( void )
 					{
 						compressedSize = ( unsigned int ) lh.LumpOffset() + lhSize - ( unsigned int ) pGameLump[ i ].fileofs;
 					}
-					g_GameLumpDict.AddToTail( { pGameLump[ i ], compressedSize } );
+					g_GameLumpDict.push_back( { pGameLump[ i ], compressedSize } );
 				}
 			}
 		}
@@ -3202,7 +3193,7 @@ void Mod_TouchAllData( model_t *pModel, int nServerCount )
 		// ensure all sub models get current count to avoid purge
 		// mark first to prevent re-entrant issues during possible reload
 		// skip self, start at children
-		for ( int i=1; i<pVirtualModel->m_group.Count(); ++i )
+		for ( int i=1; i<std::ssize( pVirtualModel->m_group ); ++i )
 		{
 			MDLHandle_t childHandle = VoidPtrToMDLHandle( pVirtualModel->m_group[i].cache );
 			model_t *pChildModel = (model_t *)g_pMDLCache->GetUserData( childHandle );
@@ -3390,10 +3381,10 @@ void CMDLCacheNotify::OnDataLoaded( MDLCacheDataType_t type, MDLHandle_t handle 
 #if !defined( DEDICATED )
 			if ( g_ModelLoader.m_bAllowWeaponModelCache )
 			{
-				int nMapIndex = g_ModelLoader.m_WeaponModelCache.Find( pModel );
-				if ( nMapIndex != g_ModelLoader.m_WeaponModelCache.InvalidIndex() )
+				auto nMapIndex = g_ModelLoader.m_WeaponModelCache.find( pModel );
+				if ( nMapIndex != g_ModelLoader.m_WeaponModelCache.end() )
 				{
-					g_ModelLoader.m_WeaponModelCache[nMapIndex]->m_bStudioHWDataResident = true;
+					nMapIndex->second->m_bStudioHWDataResident = true;
 				}
 			}
 #endif
@@ -3435,10 +3426,10 @@ void CMDLCacheNotify::OnDataUnloaded( MDLCacheDataType_t type, MDLHandle_t handl
 		model_t *pModel = (model_t*)g_pMDLCache->GetUserData( handle );
 		if ( pModel )
 		{
-			int nMapIndex = g_ModelLoader.m_WeaponModelCache.Find( pModel );
-			if ( nMapIndex != g_ModelLoader.m_WeaponModelCache.InvalidIndex() )
+			auto nMapIndex = g_ModelLoader.m_WeaponModelCache.find( pModel );
+			if ( nMapIndex != g_ModelLoader.m_WeaponModelCache.end() )
 			{
-				g_ModelLoader.m_WeaponModelCache[nMapIndex]->m_bStudioHWDataResident = false;
+				nMapIndex->second->m_bStudioHWDataResident = false;
 			}
 		}
 	}
@@ -3455,8 +3446,8 @@ bool CMDLCacheNotify::ShouldSupressLoadWarning( MDLHandle_t handle )
 		model_t *pModel = (model_t*)g_pMDLCache->GetUserData( handle );
 		if ( pModel )
 		{
-			int nMapIndex = g_ModelLoader.m_WeaponModelCache.Find( pModel );
-			if ( nMapIndex != g_ModelLoader.m_WeaponModelCache.InvalidIndex() )
+			auto nMapIndex = g_ModelLoader.m_WeaponModelCache.find( pModel );
+			if ( nMapIndex != g_ModelLoader.m_WeaponModelCache.end() )
 			{
 				// model is part of weapon model cache
 				// any QL load warnings are benign and should be suppressed
@@ -3514,8 +3505,8 @@ bool ProcessWeaponModelCacheOperations()
 //-----------------------------------------------------------------------------
 void CModelLoader::Init( void )
 {
-	m_Models.RemoveAll();
-	m_InlineModels.Purge();
+	m_Models.clear();
+	m_InlineModels.clear(); m_InlineModels.shrink_to_fit();
 
 	m_pWorldModel = nullptr;
 	m_bMapRenderInfoLoaded = false;
@@ -3555,7 +3546,7 @@ void CModelLoader::Init( void )
 
 	// now invalid due to m_Models purge
 	m_nNumWeaponsPartialResident = 0;
-	m_WeaponModelCache.PurgeAndDeleteElements();
+	m_WeaponModelCache.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -3569,24 +3560,9 @@ void CModelLoader::Shutdown( void )
 
 	g_pMDLCache->UnloadQueuedHardwareData();
 
-	m_ModelPool.Clear();
+	m_ModelPool.clear();
 
 
-}
-
-int CModelLoader::GetCount( void )
-{
-	return m_Models.Count();
-}
-
-model_t *CModelLoader::GetModelForIndex( int i )
-{
-	if ( i < 0 || (unsigned)i >= m_Models.Count() )
-	{
-		return nullptr;
-	}
-
-	return m_Models[i].modelpointer;
 }
 
 //-----------------------------------------------------------------------------
@@ -3640,10 +3616,10 @@ model_t *CModelLoader::FindModel( const char *pName )
 	// handles are insensitive to case and slashes
 	FileNameHandle_t fnHandle = g_pFileSystem->FindOrAddFileName( pName );
 
-	int i = m_Models.Find( fnHandle );
-	if ( i == m_Models.InvalidIndex() )
+	auto i = m_Models.find( fnHandle );
+	if ( i == m_Models.end() )
 	{
-		pModel = (model_t *)m_ModelPool.Alloc();
+		pModel = (model_t *)m_ModelPool.alloc();
 		Assert( pModel );
 		memset( pModel, 0, sizeof( model_t ) );
 
@@ -3669,33 +3645,32 @@ model_t *CModelLoader::FindModel( const char *pName )
 				bLoadBannedWords |= !!CommandLine()->FindParm( "-usebanlist" );
 				if ( bLoadBannedWords )
 				{
-					CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
-					if ( g_pFullFileSystem->ReadFile( "banmdls.res", "MOD", buf ) )
+					if ( auto banData = g_pFullFileSystem->ReadFile( "banmdls.res", "MOD" ) )
 					{
-						while ( buf.IsValid() )
+						ks::text_reader buf( ks::text_view( *banData ) );
+						while ( buf.ok() )
 						{
-							char chModel[ 256 ] = {};
-							buf.GetString( chModel, sizeof( chModel ) - 1 );
-							if ( chModel[0] )
+							std::string_view chModel = buf.read_word().substr( 0, 255 );
+							if ( !chModel.empty() )
 							{
-								m_map.AddString( chModel );
+								m_map.intern( chModel );
 #ifdef _DEBUG
-								DevMsg( "Banned MDL: %s\n", chModel );
+								DevMsg( "Banned MDL: %.*s\n", (int)chModel.size(), chModel.data() );
 #endif
 							}
 						}
 					}
 				}
 			}
-			CUtlSymbolTable m_map;
+			ks::intern_pool m_map;
 		} s_BannedMDLs;
 
 		//
 		// Check the banlist and flag models as render disabled
 		//
-		if ( s_BannedMDLs.m_map.GetNumStrings() > 0 )
+		if ( s_BannedMDLs.m_map.size() > 0 )
 		{
-			if ( s_BannedMDLs.m_map.Find( pModel->szPathName ).IsValid() )
+			if ( s_BannedMDLs.m_map.contains( pModel->szPathName ) )
 			{
 				COMPILE_TIME_ASSERT( MODELFLAG_RENDER_DISABLED == ENGINE_MODEL_CLIENT_MODELFLAG_RENDER_DISABLED );
 				Assert( offsetof( model_t, flags ) == ENGINE_MODEL_CLIENT_MODELT_OFFSET_FLAGS );
@@ -3712,7 +3687,7 @@ model_t *CModelLoader::FindModel( const char *pName )
 		//
 		ModelEntry_t entry;
 		entry.modelpointer = pModel;
-		m_Models.Insert( fnHandle, entry );
+		m_Models.emplace( fnHandle, entry );
 
 #if !defined( DEDICATED )
 		if ( m_bAllowWeaponModelCache )
@@ -3722,22 +3697,20 @@ model_t *CModelLoader::FindModel( const char *pName )
 			if ( V_stristr( pModel->szPathName, "weapons/v_" ) != nullptr )
 			{
 				// track weapon view models
-				int nMapIndex = m_WeaponModelCache.Find( pModel );
-				if ( nMapIndex == m_WeaponModelCache.InvalidIndex() )
+				auto nMapIndex = m_WeaponModelCache.find( pModel );
+				if ( nMapIndex == m_WeaponModelCache.end() )
 				{
-					nMapIndex = m_WeaponModelCache.Insert( pModel );
-					m_WeaponModelCache[nMapIndex] = new ViewWeaponEntry_t( true );
+					m_WeaponModelCache.emplace( pModel, std::make_unique< ViewWeaponEntry_t >( true ) );
 					pModel->flags |= MODELFLAG_VIEW_WEAPON_MODEL;
 				}
 			}
 			else if ( V_stristr( pModel->szPathName, "weapons/w_" ) != nullptr )
 			{
 				// track weapon world models
-				int nMapIndex = m_WeaponModelCache.Find( pModel );
-				if ( nMapIndex == m_WeaponModelCache.InvalidIndex() )
+				auto nMapIndex = m_WeaponModelCache.find( pModel );
+				if ( nMapIndex == m_WeaponModelCache.end() )
 				{
-					nMapIndex = m_WeaponModelCache.Insert( pModel );
-					m_WeaponModelCache[nMapIndex] = new ViewWeaponEntry_t( false );
+					m_WeaponModelCache.emplace( pModel, std::make_unique< ViewWeaponEntry_t >( false ) );
 				}
 			}
 		}
@@ -3745,7 +3718,7 @@ model_t *CModelLoader::FindModel( const char *pName )
 	}
 	else
 	{
-		pModel = m_Models[i].modelpointer;
+		pModel = i->second.modelpointer;
 	}
 
 	// notify the reslist generator that this model may be referenced later in the level 
@@ -4052,26 +4025,23 @@ void CModelLoader::UnreferenceModel( model_t *model, REFERENCETYPE referencetype
 //-----------------------------------------------------------------------------
 void CModelLoader::UnreferenceAllModels( REFERENCETYPE referencetype )
 {
-	int				i;
 	model_t			*mod;
 
 	// UNDONE: If we ever free a studio model, write code to free the collision data
 	// UNDONE: Reference count collision data?
 
-	int c = m_Models.Count();
-	for ( i=0 ; i < c ; i++ )
+	for ( auto &[fnHandle, entry] : m_Models )
 	{
-		mod = m_Models[ i ].modelpointer;
+		mod = entry.modelpointer;
 		UnreferenceModel( mod, referencetype );
 	}
 }
 
 void CModelLoader::ReloadFilesInList( IFileList *pFilesToReload )
 {
-	int c = m_Models.Count();
-	for ( int i=0 ; i < c ; i++ )
+	for ( auto &[fnHandle, entry] : m_Models )
 	{
-		model_t	*pModel = m_Models[i].modelpointer;
+		model_t	*pModel = entry.modelpointer;
 		
 		if ( pModel->type != mod_studio )
 			continue;
@@ -4129,13 +4099,11 @@ void CModelLoader::ReloadFilesInList( IFileList *pFilesToReload )
 //-----------------------------------------------------------------------------
 void CModelLoader::UnloadAllModels( bool bCheckReference )
 {
-	int				i;
 	model_t			*model;
 
-	int c = m_Models.Count();
-	for ( i=0 ; i < c ; i++ )
+	for ( auto &[fnHandle, entry] : m_Models )
 	{
-		model = m_Models[ i ].modelpointer;
+		model = entry.modelpointer;
 		if ( bCheckReference )
 		{
 			if ( model->nLoadFlags & FMODELLOADER_REFERENCEMASK )
@@ -4176,18 +4144,18 @@ void CModelLoader::AddCompatibilityPath( const char* szNewCompatibilityPath )
 {
 	g_pFullFileSystem->AddSearchPath( szNewCompatibilityPath, "COMPAT:GAME", PATH_ADD_TO_HEAD );
 	compatibility_path_t tNewCompatibilityPath;
-	tNewCompatibilityPath.mPath = szNewCompatibilityPath;
+	tNewCompatibilityPath.mPath = ks::nz( szNewCompatibilityPath );
 	tNewCompatibilityPath.mPathId = "COMPAT:GAME";
-	m_vecSzCompatibilityPaths.AddToTail( tNewCompatibilityPath );
+	m_vecSzCompatibilityPaths.push_back( tNewCompatibilityPath );
 }
 
 void CModelLoader::UnMountCompatibilityPaths( void )
 {
-	FOR_EACH_VEC_BACK( m_vecSzCompatibilityPaths, i )
+	for ( int i = (int)std::ssize( m_vecSzCompatibilityPaths ) - 1; i >= 0; i-- )
 	{
-		DevWarning( "UnMounting content compatibility path [%s] %s.\n", m_vecSzCompatibilityPaths[i].mPathId.Get(), m_vecSzCompatibilityPaths[i].mPath.Get() );
-		g_pFullFileSystem->RemoveSearchPath( m_vecSzCompatibilityPaths[i].mPath.Get(), m_vecSzCompatibilityPaths[i].mPathId.Get() );
-		m_vecSzCompatibilityPaths.Remove(i);
+		DevWarning( "UnMounting content compatibility path [%s] %s.\n", m_vecSzCompatibilityPaths[i].mPathId.data(), m_vecSzCompatibilityPaths[i].mPath.data() );
+		g_pFullFileSystem->RemoveSearchPath( m_vecSzCompatibilityPaths[i].mPath.data(), m_vecSzCompatibilityPaths[i].mPathId.data() );
+		m_vecSzCompatibilityPaths.erase( m_vecSzCompatibilityPaths.begin() + i );
 	}
 }
 
@@ -4199,10 +4167,9 @@ void CModelLoader::UnMountCompatibilityPaths( void )
 void CModelLoader::PurgeUnusedModels( void )
 {
 	int nServerCount = Host_GetServerCount();
-	int count = m_Models.Count();
-	for ( int i = 0; i < count; i++ )
+	for ( auto &[fnHandle, entry] : m_Models )
 	{
-		model_t *pModel = m_Models[i].modelpointer;
+		model_t *pModel = entry.modelpointer;
 		// Don't purge the simple world model here; it's managed separately
 		if ( ( pModel->nLoadFlags & FMODELLOADER_LOADED ) && ( pModel->nServerCount != nServerCount ) && !( pModel->nLoadFlags & FMODELLOADER_SIMPLEWORLD ) )
 		{
@@ -4231,10 +4198,10 @@ byte *CModelLoader::GetLightstyles( model_t *pModel )
 
 void CModelLoader::AllocateLightstyles( model_t *pModel, byte *pStyles, int nStyleCount )
 {
-	unsigned short nLast = m_LightStyleList.Count();
+	unsigned short nLast = std::ssize( m_LightStyleList );
 	for ( int i = 0; i < nStyleCount; i++ )
 	{
-		m_LightStyleList.AddToTail( pStyles[i] );
+		m_LightStyleList.push_back( pStyles[i] );
 	}
 	pModel->brush.nLightstyleCount = nStyleCount;
 	pModel->brush.nLightstyleIndex = nLast;
@@ -4275,7 +4242,7 @@ static void Mod_ComputeBrushModelFlags( model_t *mod )
 	mod->brush.nLightstyleIndex = 0;
 	mod->brush.nLightstyleCount = 0;
 
-	CUtlVector<byte> lightStyles;
+	std::vector< byte > lightStyles;
 	
 	for ( i = 0; i < scount; ++i )
 	{
@@ -4329,9 +4296,9 @@ static void Mod_ComputeBrushModelFlags( model_t *mod )
 		for (int maps = 0; maps < MAXLIGHTMAPS && pLighting->m_nStyles[maps] != 255 ; ++maps )
 		{
 			byte nStyle = pLighting->m_nStyles[maps];
-			if ( lightStyles.Find(nStyle) == -1 )
+			if ( ks::find_index( lightStyles, nStyle ) == -1 )
 			{
-				lightStyles.AddToTail( nStyle );
+				lightStyles.push_back( nStyle );
 			}
 		}
 	}
@@ -4340,10 +4307,10 @@ static void Mod_ComputeBrushModelFlags( model_t *mod )
 	{
 		mod->flags |= MODELFLAG_TRANSLUCENT_TWOPASS;
 	}
-	if ( lightStyles.Count() )
+	if ( !lightStyles.empty() )
 	{
 		mod->brush.nLightstyleLastComputedFrame = 0;
-		g_ModelLoader.AllocateLightstyles( mod, lightStyles.Base(), lightStyles.Count() );
+		g_ModelLoader.AllocateLightstyles( mod, lightStyles.data(), std::ssize( lightStyles ) );
 	}
 }
 
@@ -4400,7 +4367,7 @@ int Mod_GetMaterialCount( model_t* mod )
 	{
 	case mod_brush:
 		{
-			CUtlVector<IMaterial*> uniqueMaterials( 0, 32 );
+			std::vector< IMaterial* > uniqueMaterials; uniqueMaterials.reserve( 32 );
 
 			for (int i = 0; i < mod->brush.nummodelsurfaces; ++i)
 			{
@@ -4413,11 +4380,11 @@ int Mod_GetMaterialCount( model_t* mod )
 
 				// Try to find the material in the unique list of materials
 				// if it's not there, then add it
-				if (uniqueMaterials.Find(pMaterial) < 0)
-					uniqueMaterials.AddToTail(pMaterial);
+				if (ks::find_index( uniqueMaterials, pMaterial ) < 0)
+					uniqueMaterials.push_back( pMaterial );
 			}
 
-			return uniqueMaterials.Count();
+			return std::ssize( uniqueMaterials );
 		}
 		break;
 
@@ -4969,7 +4936,7 @@ void CModelLoader::Map_LoadModelGuts( model_t *mod )
 	{
 		MEM_ALLOC_CREDIT_("Mod_LoadSubmodels");
 		COM_TimestampedLog( "  Mod_LoadSubmodels" );
-		CUtlVector<mmodel_t> submodelList;
+		std::vector< mmodel_t > submodelList;
 		Mod_LoadSubmodels( submodelList );
 
 #ifndef DEDICATED
@@ -5051,11 +5018,11 @@ void CModelLoader::RecomputeSurfaceFlags( model_t *mod )
 //-----------------------------------------------------------------------------
 // Setup sub models
 //-----------------------------------------------------------------------------
-void CModelLoader::SetupSubModels( model_t *mod, CUtlVector<mmodel_t> &list )
+void CModelLoader::SetupSubModels( model_t *mod, std::vector< mmodel_t > &list )
 {
 	int	i;
 
-	m_InlineModels.SetCount( m_worldBrushData.numsubmodels );
+	m_InlineModels.assign( m_worldBrushData.numsubmodels, {} );
 
 	for (i=0 ; i<m_worldBrushData.numsubmodels ; i++)
 	{
@@ -5308,10 +5275,9 @@ void CModelLoader::Studio_ReloadModels( CModelLoader::ReloadType_t reloadType )
 
 	// Load the critical pieces now
 	// The model cache will re-populate as models render
-	int c = m_Models.Count();
-	for ( int i=0 ; i < c ; i++ )
+	for ( auto &[fnHandle, entry] : m_Models )
 	{
-		model_t *pModel = m_Models[ i ].modelpointer;
+		model_t *pModel = entry.modelpointer;
 		if ( !IsLoaded( pModel ) )
 			continue;
 
@@ -5334,10 +5300,9 @@ struct modelsize_t
 	int			size;
 };
 
-class CModelsize_Less
+struct CModelsize_Less
 {
-public:
-	bool Less( const modelsize_t& src1, const modelsize_t& src2, void *pCtx )
+	bool operator()( const modelsize_t& src1, const modelsize_t& src2 ) const
 	{
 		return ( src1.size < src2.size );
 	}
@@ -5346,10 +5311,10 @@ public:
 void CModelLoader::DumpVCollideStats()
 {
 	int i;
-	CUtlSortVector< modelsize_t, CModelsize_Less > list;
-	for ( i = m_Models.Count(); --i >= 0; )
+	std::flat_multiset< modelsize_t, CModelsize_Less > list;
+	for ( auto it = m_Models.rbegin(); it != m_Models.rend(); ++it )
 	{
-		model_t *pModel = m_Models[ i ].modelpointer;
+		model_t *pModel = it->second.modelpointer;
 		if ( pModel && pModel->type == mod_studio )
 		{
 			int size = 0;
@@ -5359,11 +5324,11 @@ void CModelLoader::DumpVCollideStats()
 				modelsize_t elem;
 				elem.pName = pModel->szPathName;
 				elem.size = size;
-				list.Insert( elem );
+				list.insert( elem );
 			}
 		}
 	}
-	for ( i = m_InlineModels.Count(); --i >= 0; )
+	for ( i = std::ssize( m_InlineModels ); --i >= 0; )
 	{
 		vcollide_t *pCollide = CM_VCollideForModel( i+1, &m_InlineModels[i] );
 		if ( pCollide )
@@ -5379,17 +5344,17 @@ void CModelLoader::DumpVCollideStats()
 				modelsize_t elem;
 				elem.pName = m_InlineModels[i].szPathName;
 				elem.size = size;
-				list.Insert( elem );
+				list.insert( elem );
 			}
 		}
 	}
 
-	Msg("VCollides loaded: %d\n", list.Count() );
+	Msg("VCollides loaded: %d\n", (int)std::ssize( list ) );
 	int totalVCollideMemory = 0;
-	for ( i = 0; i < list.Count(); i++ )
+	for ( const modelsize_t &elem : list )
 	{
-		Msg("%8d bytes:%s\n", list[i].size, list[i].pName);
-		totalVCollideMemory += list[i].size;
+		Msg("%8d bytes:%s\n", elem.size, elem.pName);
+		totalVCollideMemory += elem.size;
 	}
 	int bboxCount, bboxSize;
 	physcollision->GetBBoxCacheSize( &bboxSize, &bboxCount );
@@ -5500,15 +5465,15 @@ void CModelLoader::Studio_LoadModel( model_t *pModel, bool bTouchAllData )
 	}
 
 	// track weapon models and their materials
-	int nMapIndex = m_WeaponModelCache.Find( pModel );
-	if ( nMapIndex != m_WeaponModelCache.InvalidIndex() )
+	auto nMapIndex = m_WeaponModelCache.find( pModel );
+	if ( nMapIndex != m_WeaponModelCache.end() )
 	{	
-		if ( nMaterials > 0 && !m_WeaponModelCache[nMapIndex]->m_Materials.Count() )
+		if ( nMaterials > 0 && !std::ssize( nMapIndex->second->m_Materials ) )
 		{
-			m_WeaponModelCache[nMapIndex]->m_Materials.AddMultipleToTail( nMaterials );
+			nMapIndex->second->m_Materials.resize( nMapIndex->second->m_Materials.size() + nMaterials );
 			for ( int i = 0; i < nMaterials; i++ )
 			{
-				m_WeaponModelCache[nMapIndex]->m_Materials[i] = pMaterials[i]->GetName();
+				nMapIndex->second->m_Materials[i] = pMaterials[i]->GetName();
 			}
 		}
 
@@ -5571,7 +5536,7 @@ void CModelLoader::ClearWorldModel( void )
 {
 	m_pWorldModel = nullptr;
 
-	m_InlineModels.Purge();
+	m_InlineModels.clear(); m_InlineModels.shrink_to_fit();
 
 	// zero out the world brush data and restore any embedded pointers
 	memset( &m_worldBrushData, 0, sizeof( m_worldBrushData ) );
@@ -5688,10 +5653,10 @@ void CModelLoader::Map_LoadDisplacements( model_t *pModel, bool bRestoring )
 void CModelLoader::Print( void )
 {
 	ConMsg( "Models:\n" );
-	int c = m_Models.Count();
-	for ( int i = 0; i < c; i++ )
+	int i = 0;
+	for ( auto &[fnHandle, entry] : m_Models )
 	{
-		model_t *pModel = m_Models[i].modelpointer;
+		model_t *pModel = entry.modelpointer;
 		if ( pModel->type == mod_studio || pModel->type == mod_bad )
 		{
 			// studio models have ref counts
@@ -5703,6 +5668,7 @@ void CModelLoader::Print( void )
 		{
 			ConMsg( "%4d: Flags:0x%8.8x %s\n", i, pModel->nLoadFlags, pModel->szPathName );
 		}
+		i++;
 	}
 }
 
@@ -5796,10 +5762,10 @@ bool CModelLoader::Map_IsValid( char const *pBaseMapName, bool bQuiet /* = false
 model_t *CModelLoader::FindModelNoCreate( const char *pModelName )
 {
 	FileNameHandle_t fnHandle = g_pFileSystem->FindOrAddFileName( pModelName );
-	int i = m_Models.Find( fnHandle );
-	if ( i != m_Models.InvalidIndex() )
+	auto i = m_Models.find( fnHandle );
+	if ( i != m_Models.end() )
 	{
-		return m_Models[i].modelpointer;
+		return i->second.modelpointer;
 	}
 
 	// not found
@@ -5827,30 +5793,6 @@ modtype_t CModelLoader::GetTypeFromName( const char *pModelName )
 	}
 
 	return mod_bad;
-}
-
-int	CModelLoader::FindNext( int iIndex, model_t **ppModel )
-{
-	if ( iIndex == -1 && m_Models.Count() )
-	{
-		iIndex = m_Models.FirstInorder();
-	}
-	else if ( !m_Models.Count() || !m_Models.IsValidIndex( iIndex ) )
-	{
-		*ppModel = nullptr;
-		return -1;
-	}
-
-	*ppModel = m_Models[iIndex].modelpointer;
-	
-	iIndex = m_Models.NextInorder( iIndex );
-	if ( iIndex == m_Models.InvalidIndex() )
-	{
-		// end of list
-		iIndex = -1;
-	}
-
-	return iIndex;
 }
 
 void CModelLoader::UnloadModel( model_t *pModel )
@@ -5890,8 +5832,8 @@ bool CModelLoader::IsModelInWeaponCache( const model_t *pModel )
 #if !defined( DEDICATED )
 	if ( m_bAllowWeaponModelCache )
 	{
-		int nMapIndex = m_WeaponModelCache.Find( (model_t*)pModel );
-		return ( nMapIndex != g_ModelLoader.m_WeaponModelCache.InvalidIndex() );
+		auto nMapIndex = m_WeaponModelCache.find( (model_t*)pModel );
+		return ( nMapIndex != g_ModelLoader.m_WeaponModelCache.end() );
 	}
 #endif
 	return false;
@@ -5903,10 +5845,10 @@ bool CModelLoader::IsViewWeaponModelResident( const model_t *pModel )
 	if ( m_bAllowWeaponModelCache && ( pModel->flags & MODELFLAG_VIEW_WEAPON_MODEL ) )
 	{
 		// only view weapon models might have their verts evicted
-		int nMapIndex = m_WeaponModelCache.Find( (model_t*)pModel );
-		if ( nMapIndex != g_ModelLoader.m_WeaponModelCache.InvalidIndex() )
+		auto nMapIndex = m_WeaponModelCache.find( (model_t*)pModel );
+		if ( nMapIndex != g_ModelLoader.m_WeaponModelCache.end() )
 		{
-			return g_ModelLoader.m_WeaponModelCache[nMapIndex]->m_bStudioHWDataResident;
+			return nMapIndex->second->m_bStudioHWDataResident;
 		}
 	}
 #endif
@@ -5921,16 +5863,16 @@ void CModelLoader::EvictAllWeaponsFromModelCache( bool bLoadingComplete )
 
 	// for reliability, ensure the studiohwdata presence is accurate
 	// only need to do this once as the baseline eviction state is established
-	for ( int i = m_WeaponModelCache.FirstInorder(); i != m_WeaponModelCache.InvalidIndex(); i = m_WeaponModelCache.NextInorder( i ) )
+	for ( auto i = m_WeaponModelCache.begin(); i != m_WeaponModelCache.end(); ++i )
 	{
-		if ( !m_WeaponModelCache[i]->m_bViewModel )
+		if ( !i->second->m_bViewModel )
 			continue;
 
-		m_WeaponModelCache[i]->m_bStudioHWDataResident = g_pMDLCache->IsDataLoaded( m_WeaponModelCache.Key( i )->studio, MDLCACHE_STUDIOHWDATA );
+		i->second->m_bStudioHWDataResident = g_pMDLCache->IsDataLoaded( i->first->studio, MDLCACHE_STUDIOHWDATA );
 	}
 
 	// forcefully evict all the known weapon models
-	for ( int i = m_WeaponModelCache.FirstInorder(); i != m_WeaponModelCache.InvalidIndex(); i = m_WeaponModelCache.NextInorder( i ) )
+	for ( auto i = m_WeaponModelCache.begin(); i != m_WeaponModelCache.end(); ++i )
 	{
 		EvictWeaponModel( i, true );
 	}
@@ -5940,9 +5882,9 @@ void CModelLoader::EvictAllWeaponsFromModelCache( bool bLoadingComplete )
 	if ( bLoadingComplete && !m_bAllowWorldWeaponEviction )
 	{
 		// loading is complete, put all the world weapons back
-		for ( int i = m_WeaponModelCache.FirstInorder(); i != m_WeaponModelCache.InvalidIndex(); i = m_WeaponModelCache.NextInorder( i ) )
+		for ( auto i = m_WeaponModelCache.begin(); i != m_WeaponModelCache.end(); ++i )
 		{
-			if ( m_WeaponModelCache[i]->m_bViewModel )
+			if ( i->second->m_bViewModel )
 			{
 				// ignore non-desired model type
 				continue;
@@ -5965,23 +5907,23 @@ void CModelLoader::UpdateViewWeaponModelCache( const char **ppWeaponModels, int 
 	// owned view models will have their age reset below
 	int nNumResident = 0;
 	m_nNumWeaponsPartialResident = 0;
-	for ( int i = m_WeaponModelCache.FirstInorder(); i != m_WeaponModelCache.InvalidIndex(); i = m_WeaponModelCache.NextInorder( i ) )
+	for ( auto i = m_WeaponModelCache.begin(); i != m_WeaponModelCache.end(); ++i )
 	{
-		if ( !m_WeaponModelCache[i]->m_bViewModel )
+		if ( !i->second->m_bViewModel )
 			continue;
 
-		if ( m_WeaponModelCache[i]->m_nAgeTime == UINT_MAX )
+		if ( i->second->m_nAgeTime == UINT_MAX )
 		{
 			// one time age tag
 			// the oldest will be the smallest and identify a LRU (i.e. thrown out from the player's inventory)
-			m_WeaponModelCache[i]->m_nAgeTime = Plat_MSTime();
+			i->second->m_nAgeTime = Plat_MSTime();
 		}
 
-		if ( m_WeaponModelCache[i]->m_nAgeTime )
+		if ( i->second->m_nAgeTime )
 		{
 			nNumResident++;
 		}
-		else if ( m_WeaponModelCache[i]->m_bStudioHWDataResident )
+		else if ( i->second->m_bStudioHWDataResident )
 		{
 			// not resident, but hw mesh is and it should not be
 			// retry eviction after any weapons have been restored
@@ -5997,10 +5939,10 @@ void CModelLoader::UpdateViewWeaponModelCache( const char **ppWeaponModels, int 
 			continue;
 
 		// find view model
-		int nIndex = m_WeaponModelCache.Find( pModel );
-		if ( nIndex != m_WeaponModelCache.InvalidIndex() )
+		auto nIndex = m_WeaponModelCache.find( pModel );
+		if ( nIndex != m_WeaponModelCache.end() )
 		{
-			if ( !m_WeaponModelCache[nIndex]->m_bViewModel )
+			if ( !nIndex->second->m_bViewModel )
 				continue;
 
 			RestoreWeaponModel( nIndex );
@@ -6009,7 +5951,7 @@ void CModelLoader::UpdateViewWeaponModelCache( const char **ppWeaponModels, int 
 			// all view model's currently within primary player's inventory do not age AT ALL
 			// marked uniquely to not be subject to any LRU eviction
 			// this ensures that weapon switching avoids any restore latency
-			m_WeaponModelCache[nIndex]->m_nAgeTime = UINT_MAX;
+			nIndex->second->m_nAgeTime = UINT_MAX;
 		}
 	}
 
@@ -6019,17 +5961,17 @@ void CModelLoader::UpdateViewWeaponModelCache( const char **ppWeaponModels, int 
 		// find suitable candidates for discard
 		// will NOT consider view model's in the primary inventory (i.e at UINT_MAX)
 		unsigned int nOldestTime = UINT_MAX;
-		int nOldestIndex = m_WeaponModelCache.InvalidIndex();
-		for ( int i = m_WeaponModelCache.FirstInorder(); i != m_WeaponModelCache.InvalidIndex(); i = m_WeaponModelCache.NextInorder( i ) )
+		auto nOldestIndex = m_WeaponModelCache.end();
+		for ( auto i = m_WeaponModelCache.begin(); i != m_WeaponModelCache.end(); ++i )
 		{
-			if ( m_WeaponModelCache[i]->m_bViewModel && m_WeaponModelCache[i]->m_nAgeTime && nOldestTime > m_WeaponModelCache[i]->m_nAgeTime )
+			if ( i->second->m_bViewModel && i->second->m_nAgeTime && nOldestTime > i->second->m_nAgeTime )
 			{
 				nOldestIndex = i;
-				nOldestTime = m_WeaponModelCache[i]->m_nAgeTime;
+				nOldestTime = i->second->m_nAgeTime;
 			}
 		}
 
-		if ( nOldestIndex == m_WeaponModelCache.InvalidIndex() )
+		if ( nOldestIndex == m_WeaponModelCache.end() )
 		{
 			// there was no suitable oldest candidate this frame
 			break;
@@ -6057,25 +5999,25 @@ void CModelLoader::TouchWorldWeaponModelCache( const char **ppWeaponModels, int 
 			continue;
 
 		// touch world model
-		int nIndex = m_WeaponModelCache.Find( pModel );
-		if ( nIndex != m_WeaponModelCache.InvalidIndex() )
+		auto nIndex = m_WeaponModelCache.find( pModel );
+		if ( nIndex != m_WeaponModelCache.end() )
 		{
-			if ( m_WeaponModelCache[nIndex]->m_bViewModel )
+			if ( nIndex->second->m_bViewModel )
 				continue;
 
 			RestoreWeaponModel( nIndex );
 
-			m_WeaponModelCache[nIndex]->m_nAgeTime = nCurrentTime;
+			nIndex->second->m_nAgeTime = nCurrentTime;
 		}
 	}
 
 	int nNumResident = 0;
-	for ( int i = m_WeaponModelCache.FirstInorder(); i != m_WeaponModelCache.InvalidIndex(); i = m_WeaponModelCache.NextInorder( i ) )
+	for ( auto i = m_WeaponModelCache.begin(); i != m_WeaponModelCache.end(); ++i )
 	{
-		if ( m_WeaponModelCache[i]->m_bViewModel )
+		if ( i->second->m_bViewModel )
 			continue;
 
-		if ( m_WeaponModelCache[i]->m_nAgeTime )
+		if ( i->second->m_nAgeTime )
 		{
 			nNumResident++;
 		}
@@ -6086,24 +6028,24 @@ void CModelLoader::TouchWorldWeaponModelCache( const char **ppWeaponModels, int 
 	{
 		// find suitable candidates for discard
 		unsigned int nOldestTime = UINT_MAX;
-		int nOldestIndex = m_WeaponModelCache.InvalidIndex();
-		for ( int i = m_WeaponModelCache.FirstInorder(); i != m_WeaponModelCache.InvalidIndex(); i = m_WeaponModelCache.NextInorder( i ) )
+		auto nOldestIndex = m_WeaponModelCache.end();
+		for ( auto i = m_WeaponModelCache.begin(); i != m_WeaponModelCache.end(); ++i )
 		{
-			if ( m_WeaponModelCache[i]->m_bViewModel )
+			if ( i->second->m_bViewModel )
 				continue;
 
-			if ( m_WeaponModelCache[i]->m_nAgeTime && nOldestTime > m_WeaponModelCache[i]->m_nAgeTime )
+			if ( i->second->m_nAgeTime && nOldestTime > i->second->m_nAgeTime )
 			{
 				// prevent world model thrashing by only considering for purging aged world models beyond a minimum age
-				if ( nCurrentTime - m_WeaponModelCache[i]->m_nAgeTime >= (unsigned int)mod_weaponworldmodelminage.GetInt() )
+				if ( nCurrentTime - i->second->m_nAgeTime >= (unsigned int)mod_weaponworldmodelminage.GetInt() )
 				{
 					nOldestIndex = i;
-					nOldestTime = m_WeaponModelCache[i]->m_nAgeTime;
+					nOldestTime = i->second->m_nAgeTime;
 				}
 			}
 		}
 
-		if ( nOldestIndex == m_WeaponModelCache.InvalidIndex() )
+		if ( nOldestIndex == m_WeaponModelCache.end() )
 		{
 			// there was no suitable oldest candidate this frame
 			break;
@@ -6115,34 +6057,34 @@ void CModelLoader::TouchWorldWeaponModelCache( const char **ppWeaponModels, int 
 #endif
 }
 
-void CModelLoader::EvictWeaponModel( int nCacheIndex, bool bForce )
+void CModelLoader::EvictWeaponModel( WeaponModelCache_t::iterator nCacheIndex, bool bForce )
 {
 #if !defined( DEDICATED )
-	if ( !m_bAllowWeaponModelCache || !m_WeaponModelCache.IsValidIndex( nCacheIndex ) )
+	if ( !m_bAllowWeaponModelCache || nCacheIndex == m_WeaponModelCache.end() )
 		return;
 
-	if ( !bForce && !m_WeaponModelCache[nCacheIndex]->m_nAgeTime )
+	if ( !bForce && !nCacheIndex->second->m_nAgeTime )
 	{
 		// already evicted
 		return;
 	}
 
-	if ( m_WeaponModelCache.Key( nCacheIndex )->studio == MDLHANDLE_INVALID )
+	if ( nCacheIndex->first->studio == MDLHANDLE_INVALID )
 	{
 		// this model was explicitly unloaded
 		// ignore this model until the model loader restores it
 		return;
 	}
 
-	DevMsg( "Evicting: %s\n", m_WeaponModelCache.Key( nCacheIndex )->szPathName );
+	DevMsg( "Evicting: %s\n", nCacheIndex->first->szPathName );
 
-	for ( int i = 0; i < m_WeaponModelCache[nCacheIndex]->m_Materials.Count(); i++ )
+	for ( int i = 0; i < std::ssize( nCacheIndex->second->m_Materials ); i++ )
 	{
-		IMaterial *pMaterial = materials->FindMaterial( m_WeaponModelCache[nCacheIndex]->m_Materials[i].Get(), TEXTURE_GROUP_OTHER, false );
+		IMaterial *pMaterial = materials->FindMaterial( nCacheIndex->second->m_Materials[i].data(), TEXTURE_GROUP_OTHER, false );
 		if ( !pMaterial || pMaterial->IsErrorMaterial() )
 		{
 			// cannot evict the material that should have been there
-			AssertMsg( false, CFmtStr( "EvictWeaponModel( %s ): Could not find expected valid material %s\n", m_WeaponModelCache.Key( nCacheIndex )->szPathName, m_WeaponModelCache[nCacheIndex]->m_Materials[i].Get() ).Access() );
+			AssertMsg( false, CFmtStr( "EvictWeaponModel( %s ): Could not find expected valid material %s\n", nCacheIndex->first->szPathName, nCacheIndex->second->m_Materials[i].c_str() ).Access() );
 			continue;
 		}
 
@@ -6153,7 +6095,7 @@ void CModelLoader::EvictWeaponModel( int nCacheIndex, bool bForce )
 	}
 
 	// mark as evicted, the actual mesh eviction is deferred until frame boundary in ProcessWeaponModelCacheOperations()
-	m_WeaponModelCache[nCacheIndex]->m_nAgeTime = 0;
+	nCacheIndex->second->m_nAgeTime = 0;
 
 	if ( bForce )
 	{
@@ -6165,34 +6107,34 @@ void CModelLoader::EvictWeaponModel( int nCacheIndex, bool bForce )
 #endif
 }
 
-void CModelLoader::RestoreWeaponModel( int nCacheIndex )
+void CModelLoader::RestoreWeaponModel( WeaponModelCache_t::iterator nCacheIndex )
 {
 #if !defined( DEDICATED )
-	if ( !m_bAllowWeaponModelCache || !m_WeaponModelCache.IsValidIndex( nCacheIndex ) )
+	if ( !m_bAllowWeaponModelCache || nCacheIndex == m_WeaponModelCache.end() )
 		return;
 
-	if ( m_WeaponModelCache[nCacheIndex]->m_nAgeTime )
+	if ( nCacheIndex->second->m_nAgeTime )
 	{
 		// already restored
 		return;
 	}
 
-	if ( m_WeaponModelCache.Key( nCacheIndex )->studio == MDLHANDLE_INVALID )
+	if ( nCacheIndex->first->studio == MDLHANDLE_INVALID )
 	{
 		// this model was explicitly unloaded
 		// ignore this model until the model loader restores it
 		return;
 	}
 
-	DevMsg( "Restoring: %s\n", m_WeaponModelCache.Key( nCacheIndex )->szPathName );
+	DevMsg( "Restoring: %s\n", nCacheIndex->first->szPathName );
 
-	for ( int i = 0; i < m_WeaponModelCache[nCacheIndex]->m_Materials.Count(); i++ )
+	for ( int i = 0; i < std::ssize( nCacheIndex->second->m_Materials ); i++ )
 	{
-		IMaterial *pMaterial = materials->FindMaterial( m_WeaponModelCache[nCacheIndex]->m_Materials[i].Get(), TEXTURE_GROUP_OTHER, false );
+		IMaterial *pMaterial = materials->FindMaterial( nCacheIndex->second->m_Materials[i].data(), TEXTURE_GROUP_OTHER, false );
 		if ( !pMaterial || pMaterial->IsErrorMaterial() )
 		{
 			// cannot restore the material that should have been there
-			AssertMsg( false, CFmtStr( "RestoreWeaponModel( %s ): Could not find expected valid material %s\n", m_WeaponModelCache.Key( nCacheIndex )->szPathName, m_WeaponModelCache[nCacheIndex]->m_Materials[i].Get() ).Access() );
+			AssertMsg( false, CFmtStr( "RestoreWeaponModel( %s ): Could not find expected valid material %s\n", nCacheIndex->first->szPathName, nCacheIndex->second->m_Materials[i].c_str() ).Access() );
 			continue;
 		}
 
@@ -6201,13 +6143,13 @@ void CModelLoader::RestoreWeaponModel( int nCacheIndex )
 	}
 
 	// only view model weapons could have had their vertexes evicted
-	if ( m_bAllowWeaponVertexEviction && m_WeaponModelCache[nCacheIndex]->m_bViewModel && !m_WeaponModelCache[nCacheIndex]->m_bStudioHWDataResident )
+	if ( m_bAllowWeaponVertexEviction && nCacheIndex->second->m_bViewModel && !nCacheIndex->second->m_bStudioHWDataResident )
 	{
-		g_pMDLCache->RestoreHardwareData( m_WeaponModelCache.Key( nCacheIndex )->studio, &m_WeaponModelCache[nCacheIndex]->m_hAsyncVTXControl, &m_WeaponModelCache[nCacheIndex]->m_hAsyncVVDControl );
+		g_pMDLCache->RestoreHardwareData( nCacheIndex->first->studio, &nCacheIndex->second->m_hAsyncVTXControl, &nCacheIndex->second->m_hAsyncVVDControl );
 	}
 
 	// mark as restored
-	m_WeaponModelCache[nCacheIndex]->m_nAgeTime = Plat_MSTime();
+	nCacheIndex->second->m_nAgeTime = Plat_MSTime();
 #endif
 }
 
@@ -6232,53 +6174,53 @@ bool CModelLoader::ProcessWeaponModelCacheOperations()
 		{
 			// It's possible that the hw mesh eviction could not occur due to frame lock or
 			// it was accessed by code that was unaware of this violation and restored it.
-			for ( int i = m_WeaponModelCache.FirstInorder(); i != m_WeaponModelCache.InvalidIndex(); i = m_WeaponModelCache.NextInorder( i ) )
+			for ( auto i = m_WeaponModelCache.begin(); i != m_WeaponModelCache.end(); ++i )
 			{
-				if ( !m_WeaponModelCache[i]->m_bViewModel )
+				if ( !i->second->m_bViewModel )
 					continue;
 
-				if ( !m_WeaponModelCache[i]->m_nAgeTime && m_WeaponModelCache[i]->m_bStudioHWDataResident )
+				if ( !i->second->m_nAgeTime && i->second->m_bStudioHWDataResident )
 				{
 					// expect model to be evicted but hw mesh is still resident and it should not be
-					DevMsg( "*** Evicting: %s\n", m_WeaponModelCache.Key( i )->szPathName );
+					DevMsg( "*** Evicting: %s\n", i->first->szPathName );
 
 					// ensure any outstanding prior async hwdata restore is complete
 					// cannot have an outstanding async restore operation in-flight while trying to evict
-					if ( m_WeaponModelCache[i]->m_hAsyncVTXControl || m_WeaponModelCache[i]->m_hAsyncVVDControl )
+					if ( i->second->m_hAsyncVTXControl || i->second->m_hAsyncVVDControl )
 					{
 						// do the sync finish in sequence to ensure the io callback completes
 						// if the async operation have already completed, these will do nothing as expected
-						g_pFullFileSystem->AsyncFinish( m_WeaponModelCache[i]->m_hAsyncVTXControl, true );
-						g_pFullFileSystem->AsyncFinish( m_WeaponModelCache[i]->m_hAsyncVVDControl, true );
+						g_pFullFileSystem->AsyncFinish( i->second->m_hAsyncVTXControl, true );
+						g_pFullFileSystem->AsyncFinish( i->second->m_hAsyncVVDControl, true );
 
-						if ( m_WeaponModelCache[i]->m_hAsyncVTXControl )
+						if ( i->second->m_hAsyncVTXControl )
 						{
 							// further safety to ensure the async i/o operation completed as requested
-							FSAsyncStatus_t status = g_pFullFileSystem->AsyncStatus( m_WeaponModelCache[i]->m_hAsyncVTXControl );
+							FSAsyncStatus_t status = g_pFullFileSystem->AsyncStatus( i->second->m_hAsyncVTXControl );
 							if ( status != FSASYNC_STATUS_PENDING && status != FSASYNC_STATUS_INPROGRESS && status != FSASYNC_STATUS_UNSERVICED )
 							{
 								// operation was completed
 								// release the handle to avoid leak
-								g_pFullFileSystem->AsyncRelease( m_WeaponModelCache[i]->m_hAsyncVTXControl );
-								m_WeaponModelCache[i]->m_hAsyncVTXControl = nullptr;
+								g_pFullFileSystem->AsyncRelease( i->second->m_hAsyncVTXControl );
+								i->second->m_hAsyncVTXControl = nullptr;
 							}
 						}
 
-						if ( m_WeaponModelCache[i]->m_hAsyncVVDControl )
+						if ( i->second->m_hAsyncVVDControl )
 						{
 							// further safety to ensure the async i/o operation completed as requested
-							FSAsyncStatus_t status = g_pFullFileSystem->AsyncStatus( m_WeaponModelCache[i]->m_hAsyncVVDControl );
+							FSAsyncStatus_t status = g_pFullFileSystem->AsyncStatus( i->second->m_hAsyncVVDControl );
 							if ( status != FSASYNC_STATUS_PENDING && status != FSASYNC_STATUS_INPROGRESS && status != FSASYNC_STATUS_UNSERVICED )
 							{
 								// operation was completed
 								// release the handle to avoid leak
-								g_pFullFileSystem->AsyncRelease( m_WeaponModelCache[i]->m_hAsyncVVDControl );
-								m_WeaponModelCache[i]->m_hAsyncVVDControl = nullptr;
+								g_pFullFileSystem->AsyncRelease( i->second->m_hAsyncVVDControl );
+								i->second->m_hAsyncVVDControl = nullptr;
 							}
 						}
 					}
 
-					if ( !m_WeaponModelCache[i]->m_hAsyncVTXControl && !m_WeaponModelCache[i]->m_hAsyncVVDControl )
+					if ( !i->second->m_hAsyncVTXControl && !i->second->m_hAsyncVVDControl )
 					{
 						// This is unfortunate and ideally is a no-op. The AsyncFinish() only finished the i/o and not the actual mesh restore.
 						// The mesh must be restored for the evict logic to work properly. ALL the pending restores must be drained to ensure this
@@ -6290,7 +6232,7 @@ bool CModelLoader::ProcessWeaponModelCacheOperations()
 						// the expected contract is that an evicted viewmodel won't be rendering anytime soon
 						// it's possible that the eviction does not occur due to frame locks or some other preventing condition
 						// the next UpdateViewWeaponModelCache() will catch these for another retry
-						g_pMDLCache->Flush( m_WeaponModelCache.Key( i )->studio, MDLCACHE_FLUSH_STUDIOHWDATA|MDLCACHE_FLUSH_ANIMBLOCK|MDLCACHE_FLUSH_VIRTUALMODEL|MDLCACHE_FLUSH_AUTOPLAY|MDLCACHE_FLUSH_VERTEXES );
+						g_pMDLCache->Flush( i->first->studio, MDLCACHE_FLUSH_STUDIOHWDATA|MDLCACHE_FLUSH_ANIMBLOCK|MDLCACHE_FLUSH_VIRTUALMODEL|MDLCACHE_FLUSH_AUTOPLAY|MDLCACHE_FLUSH_VERTEXES );
 					}
 				}
 			}
@@ -6326,42 +6268,42 @@ void CModelLoader::DumpWeaponModelCache( bool bViewModelsOnly )
 			Con_ColorPrintf( Color( 0, 255, 255, 255 ), "\nResident:-------------------------------\n" );
 		}
 
-		for ( int i = m_WeaponModelCache.FirstInorder(); i != m_WeaponModelCache.InvalidIndex(); i = m_WeaponModelCache.NextInorder( i ) )
+		for ( auto i = m_WeaponModelCache.begin(); i != m_WeaponModelCache.end(); ++i )
 		{
-			if ( bViewModelsOnly != m_WeaponModelCache[i]->m_bViewModel )
+			if ( bViewModelsOnly != i->second->m_bViewModel )
 			{
 				// ignore non-desired model type
 				continue;
 			}
 
-			if ( !nPass && m_WeaponModelCache[i]->m_nAgeTime )
+			if ( !nPass && i->second->m_nAgeTime )
 			{
 				// ignore resident
 				continue;
 			}
-			else if ( nPass && !m_WeaponModelCache[i]->m_nAgeTime )
+			else if ( nPass && !i->second->m_nAgeTime )
 			{
 				// ignore evicted
 				continue;
 			}
 			
 			Color color = defaultColor;
-			if ( bViewModelsOnly && !m_WeaponModelCache[i]->m_nAgeTime && m_WeaponModelCache[i]->m_bStudioHWDataResident )
+			if ( bViewModelsOnly && !i->second->m_nAgeTime && i->second->m_bStudioHWDataResident )
 			{
 				color = anomalyColor;
 			}
-			Con_ColorPrintf( color, "\nModel: %s\n", m_WeaponModelCache.Key( i )->szPathName );
+			Con_ColorPrintf( color, "\nModel: %s\n", i->first->szPathName );
 			
-			Con_ColorPrintf( defaultColor, "  Age: %u\n", m_WeaponModelCache[i]->m_nAgeTime );
+			Con_ColorPrintf( defaultColor, "  Age: %u\n", i->second->m_nAgeTime );
 			if ( bViewModelsOnly )
 			{
-				Con_ColorPrintf( defaultColor, "  %sStudioHWData\n", m_WeaponModelCache[i]->m_bStudioHWDataResident ? "+" : "-");
+				Con_ColorPrintf( defaultColor, "  %sStudioHWData\n", i->second->m_bStudioHWDataResident ? "+" : "-");
 			}
 
-			for ( int j = 0; j < m_WeaponModelCache[i]->m_Materials.Count(); j++ )
+			for ( int j = 0; j < std::ssize( i->second->m_Materials ); j++ )
 			{
-				IMaterial *pMaterial = materials->FindMaterial( m_WeaponModelCache[i]->m_Materials[j].Get(), TEXTURE_GROUP_OTHER, false );
-				Con_ColorPrintf( defaultColor, "  Material: %s (Ref: %d)\n", m_WeaponModelCache[i]->m_Materials[j].Get(), pMaterial->GetReferenceCount() );
+				IMaterial *pMaterial = materials->FindMaterial( i->second->m_Materials[j].data(), TEXTURE_GROUP_OTHER, false );
+				Con_ColorPrintf( defaultColor, "  Material: %s (Ref: %d)\n", i->second->m_Materials[j].data(), pMaterial->GetReferenceCount() );
 
 				int nMatParamCount = pMaterial->ShaderParamCount();
 				IMaterialVar **ppMatVars = pMaterial->GetShaderParams();
@@ -6401,7 +6343,7 @@ model_t *CModelLoader::GetDynamicModel( const char *name, bool bClientOnly )
 	model_t *pModel = FindModel( name );
 	Assert( pModel );
 
-	CDynamicModelInfo &dyn = m_DynamicModels[ m_DynamicModels.Insert( pModel ) ]; // Insert returns existing if key is already set
+	CDynamicModelInfo &dyn = m_DynamicModels[ pModel ];
 	if ( dyn.m_nLoadFlags == CDynamicModelInfo::INVALIDFLAG )
 	{
 		dyn.m_nLoadFlags = 0;
@@ -6418,7 +6360,7 @@ model_t *CModelLoader::GetDynamicCombinedModel( const char *name, bool bClientOn
 	model_t *pModel = FindModel( name );
 	Assert( pModel );
 
-	CDynamicModelInfo &dyn = m_DynamicModels[ m_DynamicModels.Insert( pModel ) ]; // Insert returns existing if key is already set
+	CDynamicModelInfo &dyn = m_DynamicModels[ pModel ];
 	if ( dyn.m_nLoadFlags == CDynamicModelInfo::INVALIDFLAG )
 	{
 		dyn.m_nLoadFlags = CDynamicModelInfo::COMBINED | CDynamicModelInfo::READY;
@@ -6453,7 +6395,7 @@ void CModelLoader::UpdateDynamicCombinedModel( model_t *pModel, MDLHandle_t Hand
 }
 
 
-bool CModelLoader::SetCombineModels( model_t *pModel, const CUtlVector< SCombinerModelInput_t > &vecModelsToCombine )
+bool CModelLoader::SetCombineModels( model_t *pModel, const std::vector< SCombinerModelInput_t > &vecModelsToCombine )
 {
 	if ( !pModel )
 		return false;
@@ -6478,7 +6420,7 @@ void CModelLoader::UpdateDynamicModelLoadQueue()
 
 	if ( m_bDynamicLoadQueueHeadActive )
 	{
-		Assert( m_DynamicModelLoadQueue.Count() >= 1 );
+		Assert( std::ssize( m_DynamicModelLoadQueue ) >= 1 );
 		MaterialLock_t matLock = g_pMaterialSystem->Lock(); // ASDFADFASFASEGAafliejsfjaslaslgsaigas
 		bool bComplete = true;
 		//bool bComplete = g_pQueuedLoader->CompleteDynamicLoad();
@@ -6487,7 +6429,7 @@ void CModelLoader::UpdateDynamicModelLoadQueue()
 		if ( bComplete )
 		{
 			model_t *pModel = m_DynamicModelLoadQueue[0];
-			m_DynamicModelLoadQueue.Remove(0);
+			m_DynamicModelLoadQueue.erase( m_DynamicModelLoadQueue.begin() + 0 );
 			m_bDynamicLoadQueueHeadActive = false;
 
 			Assert( pModel->nLoadFlags & FMODELLOADER_DYNAMIC );
@@ -6495,11 +6437,11 @@ void CModelLoader::UpdateDynamicModelLoadQueue()
 			(void) LoadModel( pModel, nullptr );
 			Assert( pModel->type == mod_studio );
 
-			UtlHashHandle_t hDyn = m_DynamicModels.Find( pModel );
-			Assert( hDyn != m_DynamicModels.InvalidHandle() );
-			if ( hDyn != m_DynamicModels.InvalidHandle() )
+			CDynamicModelInfo *pDyn = ks::find_ptr( m_DynamicModels, pModel );
+			Assert( pDyn );
+			if ( pDyn )
 			{
-				CDynamicModelInfo &dyn = m_DynamicModels[hDyn];
+				CDynamicModelInfo &dyn = *pDyn;
 				Assert( dyn.m_nLoadFlags & CDynamicModelInfo::QUEUED );
 				Assert( dyn.m_nLoadFlags & CDynamicModelInfo::LOADING );
 
@@ -6518,16 +6460,16 @@ void CModelLoader::UpdateDynamicModelLoadQueue()
 	}
 
 	// If we're not working, and we have work to do, and the queued loader is open for business...
-	if ( !m_bDynamicLoadQueueHeadActive && m_DynamicModelLoadQueue.Count() > 0 )
+	if ( !m_bDynamicLoadQueueHeadActive && std::ssize( m_DynamicModelLoadQueue ) > 0 )
 	{
 		model_t *pModel = m_DynamicModelLoadQueue[0];
-		UtlHashHandle_t hDyn = m_DynamicModels.Find( pModel );
-		Assert( hDyn != m_DynamicModels.InvalidHandle() );
-		if ( hDyn != m_DynamicModels.InvalidHandle() )
+		CDynamicModelInfo *pDyn = ks::find_ptr( m_DynamicModels, pModel );
+		Assert( pDyn );
+		if ( pDyn )
 		{
 			m_bDynamicLoadQueueHeadActive = true;
 
-			CDynamicModelInfo &dyn = m_DynamicModels[hDyn];
+			CDynamicModelInfo &dyn = *pDyn;
 			Assert( dyn.m_nLoadFlags & CDynamicModelInfo::QUEUED );
 			Assert( !(dyn.m_nLoadFlags & CDynamicModelInfo::LOADING) );
 			Assert( !(dyn.m_nLoadFlags & CDynamicModelInfo::LOCKED) );
@@ -6547,7 +6489,7 @@ void CModelLoader::UpdateDynamicModelLoadQueue()
 		}
 		else
 		{
-			m_DynamicModelLoadQueue.Remove(0);
+			m_DynamicModelLoadQueue.erase( m_DynamicModelLoadQueue.begin() + 0 );
 		}
 	}
 }
@@ -6571,9 +6513,9 @@ void CModelLoader::FinishDynamicModelLoadIfReady( CDynamicModelInfo *pDyn, model
 		DynamicModelDebugMsg( "model %p [%s] loaded\n", pModel, pModel->szPathName );
 
 		dyn.m_nLoadFlags |= CDynamicModelInfo::READY;
-		while ( dyn.m_Callbacks.Count() > 0 )
+		while ( !dyn.m_Callbacks.empty() )
 		{
-			IModelLoadCallback* pCallback = dyn.m_Callbacks.Tail();
+			IModelLoadCallback* pCallback = dyn.m_Callbacks.back();
 			UnregisterModelLoadCallback( pModel, pCallback );
 			pCallback->OnModelLoadComplete( pModel );
 		}
@@ -6582,12 +6524,12 @@ void CModelLoader::FinishDynamicModelLoadIfReady( CDynamicModelInfo *pDyn, model
 
 bool CModelLoader::RegisterModelLoadCallback( model_t *pModel, IModelLoadCallback *pCallback, bool bCallImmediatelyIfLoaded )
 {
-	UtlHashHandle_t hDyn = m_DynamicModels.Find( pModel );
-	Assert( hDyn != m_DynamicModels.InvalidHandle() );
-	if ( hDyn == m_DynamicModels.InvalidHandle() )
+	CDynamicModelInfo *pDyn = ks::find_ptr( m_DynamicModels, pModel );
+	Assert( pDyn );
+	if ( !pDyn )
 		return false;
 
-	CDynamicModelInfo &dyn = m_DynamicModels[ hDyn ];
+	CDynamicModelInfo &dyn = *pDyn;
 	AssertMsg( dyn.m_iRefCount > 0, "RegisterModelLoadCallback requires non-zero model refcount" );
 	if ( dyn.m_nLoadFlags & CDynamicModelInfo::READY )
 	{
@@ -6598,11 +6540,11 @@ bool CModelLoader::RegisterModelLoadCallback( model_t *pModel, IModelLoadCallbac
 	}
 	else
 	{
-		if ( !dyn.m_Callbacks.HasElement( pCallback ) )
+		if ( !ks::contains( dyn.m_Callbacks, pCallback ) )
 		{
-			dyn.m_Callbacks.AddToTail( pCallback );
+			dyn.m_Callbacks.push_back( pCallback );
 			// Set registration count for callback pointer
-			m_RegisteredDynamicCallbacks[ m_RegisteredDynamicCallbacks.Insert( pCallback, 0 ) ]++;
+			m_RegisteredDynamicCallbacks[ pCallback ]++;
 		}
 	}
 
@@ -6612,11 +6554,11 @@ bool CModelLoader::RegisterModelLoadCallback( model_t *pModel, IModelLoadCallbac
 bool CModelLoader::IsDynamicModelLoading( model_t *pModel )
 {
 	Assert( pModel->nLoadFlags & FMODELLOADER_DYNAMIC );
-	UtlHashHandle_t hDyn = m_DynamicModels.Find( pModel );
-	Assert( hDyn != m_DynamicModels.InvalidHandle() );
-	if ( hDyn != m_DynamicModels.InvalidHandle() )
+	CDynamicModelInfo *pDyn = ks::find_ptr( m_DynamicModels, pModel );
+	Assert( pDyn );
+	if ( pDyn )
 	{
-		CDynamicModelInfo &dyn = m_DynamicModels[ hDyn ];
+		CDynamicModelInfo &dyn = *pDyn;
 		AssertMsg( dyn.m_iRefCount > 0, "dynamic model state cannot be queried with zero refcount" );
 		if ( dyn.m_iRefCount > 0 )
 		{
@@ -6630,8 +6572,7 @@ void CModelLoader::AddRefDynamicModel( model_t *pModel, bool bClientSideRef  )
 {
 	extern IVModelInfo* modelinfo;
 
-	UtlHashHandle_t hDyn = m_DynamicModels.Insert( pModel );
-	CDynamicModelInfo& dyn = m_DynamicModels[ hDyn ];
+	CDynamicModelInfo& dyn = m_DynamicModels[ pModel ];
 	dyn.m_iRefCount++;
 	dyn.m_iClientRefCount += ( bClientSideRef ? 1 : 0 );
 	Assert( dyn.m_iRefCount > 0 );
@@ -6653,10 +6594,10 @@ void CModelLoader::AddRefDynamicModel( model_t *pModel, bool bClientSideRef  )
 void CModelLoader::ReleaseDynamicModel( model_t *pModel, bool bClientSideRef )
 {
 	Assert( pModel->nLoadFlags & FMODELLOADER_DYNAMIC );
-	UtlHashHandle_t hDyn = m_DynamicModels.Find( pModel );
-	if ( hDyn != m_DynamicModels.InvalidHandle() )
+	CDynamicModelInfo *pDyn = ks::find_ptr( m_DynamicModels, pModel );
+	if ( pDyn )
 	{
-		CDynamicModelInfo &dyn = m_DynamicModels[ hDyn ];
+		CDynamicModelInfo &dyn = *pDyn;
 		Assert( dyn.m_iRefCount > 0 );
 		if ( dyn.m_iRefCount > 0 )
 		{
@@ -6673,23 +6614,22 @@ void CModelLoader::ReleaseDynamicModel( model_t *pModel, bool bClientSideRef )
 
 void CModelLoader::UnregisterModelLoadCallback( model_t *pModel, IModelLoadCallback *pCallback )
 {
-	if ( int *pCallbackRegistrationCount = m_RegisteredDynamicCallbacks.GetPtr( pCallback ) )
+	if ( int *pCallbackRegistrationCount = ks::find_ptr( m_RegisteredDynamicCallbacks, pCallback ) )
 	{
 		if ( pModel )
 		{
-			UtlHashHandle_t i = m_DynamicModels.Find( pModel );
-			if ( i != m_DynamicModels.InvalidHandle() )
+			if ( CDynamicModelInfo *pDyn = ks::find_ptr( m_DynamicModels, pModel ) )
 			{
-				CDynamicModelInfo &dyn = m_DynamicModels[ i ];
-				if ( dyn.m_Callbacks.FindAndFastRemove( pCallback ) )
+				CDynamicModelInfo &dyn = *pDyn;
+				if ( ks::swap_erase_first( dyn.m_Callbacks, pCallback ) )
 				{
-					if ( dyn.m_Callbacks.Count() == 0 )
+					if ( dyn.m_Callbacks.empty() )
 					{
-						dyn.m_Callbacks.Purge();
+						dyn.m_Callbacks.clear(); dyn.m_Callbacks.shrink_to_fit();
 					}
 					if ( --(*pCallbackRegistrationCount) == 0 )
 					{
-						m_RegisteredDynamicCallbacks.Remove( pCallback );
+						m_RegisteredDynamicCallbacks.erase( pCallback );
 						return;
 					}
 				}
@@ -6697,18 +6637,17 @@ void CModelLoader::UnregisterModelLoadCallback( model_t *pModel, IModelLoadCallb
 		}
 		else
 		{
-			for ( UtlHashHandle_t i = m_DynamicModels.FirstHandle(); i != m_DynamicModels.InvalidHandle(); i = m_DynamicModels.NextHandle(i) )
+			for ( auto &[pDynModel, dyn] : m_DynamicModels )
 			{
-				CDynamicModelInfo &dyn = m_DynamicModels[ i ];
-				if ( dyn.m_Callbacks.FindAndFastRemove( pCallback ) )
+				if ( ks::swap_erase_first( dyn.m_Callbacks, pCallback ) )
 				{
-					if ( dyn.m_Callbacks.Count() == 0 )
+					if ( dyn.m_Callbacks.empty() )
 					{
-						dyn.m_Callbacks.Purge();
+						dyn.m_Callbacks.clear(); dyn.m_Callbacks.shrink_to_fit();
 					}
 					if ( --(*pCallbackRegistrationCount) == 0 )
 					{
-						m_RegisteredDynamicCallbacks.Remove( pCallback );
+						m_RegisteredDynamicCallbacks.erase( pCallback );
 						return;
 					}
 				}
@@ -6722,13 +6661,13 @@ void CModelLoader::QueueDynamicModelLoad( CDynamicModelInfo *dyn, model_t *mod )
 	Assert( !(dyn->m_nLoadFlags & CDynamicModelInfo::QUEUED) );
 	// Client-side entities have priority over server-side entities
 	// because they are more likely to be used in UI elements. --henryg
-	if ( dyn->m_iClientRefCount > 0 && m_DynamicModelLoadQueue.Count() > 1 )
+	if ( dyn->m_iClientRefCount > 0 && std::ssize( m_DynamicModelLoadQueue ) > 1 )
 	{
-		m_DynamicModelLoadQueue.InsertAfter( 0, mod );
+		m_DynamicModelLoadQueue.insert( m_DynamicModelLoadQueue.begin() + 0 + 1, mod );
 	}
 	else
 	{
-		m_DynamicModelLoadQueue.AddToTail( mod );
+		m_DynamicModelLoadQueue.push_back( mod );
 	}
 	dyn->m_nLoadFlags |= CDynamicModelInfo::QUEUED;
 	mod->nLoadFlags |= ( dyn->m_iClientRefCount > 0 ? FMODELLOADER_DYNCLIENT : FMODELLOADER_DYNSERVER );
@@ -6736,7 +6675,7 @@ void CModelLoader::QueueDynamicModelLoad( CDynamicModelInfo *dyn, model_t *mod )
 
 bool CModelLoader::CancelDynamicModelLoad( CDynamicModelInfo *dyn, model_t *mod )
 {
-	int i = m_DynamicModelLoadQueue.Find( mod );
+	int i = ks::find_index( m_DynamicModelLoadQueue, mod );
 	Assert( (i < 0) == !(dyn->m_nLoadFlags & CDynamicModelInfo::QUEUED) );
 	if ( i >= 0 )
 	{
@@ -6748,7 +6687,7 @@ bool CModelLoader::CancelDynamicModelLoad( CDynamicModelInfo *dyn, model_t *mod 
 		else
 		{
 			Assert( dyn->m_nLoadFlags & CDynamicModelInfo::QUEUED );
-			m_DynamicModelLoadQueue.Remove( i );
+			m_DynamicModelLoadQueue.erase( m_DynamicModelLoadQueue.begin() + i );
 			dyn->m_nLoadFlags &= ~CDynamicModelInfo::QUEUED;
 			mod->nLoadFlags &= ~FMODELLOADER_DYNAMIC;
 			return true;
@@ -6770,11 +6709,11 @@ void CModelLoader::InternalUpdateDynamicModels( bool bForceFlushUnreferenced )
 #endif
 
 	// Scan for models to unload. TODO: accelerate with a "models to potentially unload" list?
-	UtlHashHandle_t i = m_DynamicModels.FirstHandle();
-	while ( i != m_DynamicModels.InvalidHandle() )
+	auto i = m_DynamicModels.begin();
+	while ( i != m_DynamicModels.end() )
 	{
-		model_t *pModel = m_DynamicModels.Key( i );
-		CDynamicModelInfo& dyn = m_DynamicModels[ i ];
+		model_t *pModel = i->first;
+		CDynamicModelInfo& dyn = i->second;
 
 		// UNLOAD THIS MODEL if zero refcount and not currently loading, and either timed out or never loaded
 		if ( dyn.m_iRefCount <= 0 && !(dyn.m_nLoadFlags & CDynamicModelInfo::LOADING) &&
@@ -6786,7 +6725,7 @@ void CModelLoader::InternalUpdateDynamicModels( bool bForceFlushUnreferenced )
 				if ( !CancelDynamicModelLoad( &dyn, pModel ) )
 				{
 					// Couldn't remove from queue, advance to next entry and do not remove
-					i = m_DynamicModels.NextHandle(i);
+					++i;
 					continue;
 				}
 			}
@@ -6837,12 +6776,12 @@ void CModelLoader::InternalUpdateDynamicModels( bool bForceFlushUnreferenced )
 			}
 
 			// Remove from table, advance to next entry
-			i = m_DynamicModels.RemoveAndAdvance(i);
+			i = m_DynamicModels.erase(i);
 			continue;
 		}
 
 		// Advance to next entry in table
-		i = m_DynamicModels.NextHandle(i);
+		++i;
 	}
 
 #ifdef _DEBUG
@@ -6857,10 +6796,9 @@ void CModelLoader::Client_OnServerModelStateChanged( model_t *pModel, bool bServ
 	if ( sv.IsActive() ) 
 		return;
 
-	UtlHashHandle_t i = m_DynamicModels.Find( pModel );
-	if ( i != m_DynamicModels.InvalidHandle() )
+	if ( CDynamicModelInfo *pDyn = ks::find_ptr( m_DynamicModels, pModel ) )
 	{
-		CDynamicModelInfo &dyn = m_DynamicModels[i];
+		CDynamicModelInfo &dyn = *pDyn;
 		if ( !bServerLoaded )
 		{
 			if ( dyn.m_nLoadFlags & CDynamicModelInfo::READY )
@@ -6886,12 +6824,9 @@ void CModelLoader::Client_OnServerModelStateChanged( model_t *pModel, bool bServ
 
 void CModelLoader::ForceUnloadNonClientDynamicModels()
 {
-	UtlHashHandle_t i = m_DynamicModels.FirstHandle();
-	while ( i != m_DynamicModels.InvalidHandle() )
+	for ( auto &[pModel, dyn] : m_DynamicModels )
 	{
-		CDynamicModelInfo &dyn = m_DynamicModels[i];
 		dyn.m_iRefCount = dyn.m_iClientRefCount;
-		i = m_DynamicModels.NextHandle( i );
 	}
 
 	// Flush everything
@@ -6989,15 +6924,14 @@ void CModelLoader::DebugPrintDynamicModels()
 	extern IVModelInfo *modelinfo;
 	extern IVModelInfoClient *modelinfoclient;
 	Msg( "\ndynamic models:\n" );
-	for ( UtlHashHandle_t h = m_DynamicModels.FirstHandle(); h != m_DynamicModels.InvalidHandle(); h = m_DynamicModels.NextHandle(h) )
+	for ( auto &[pModel, dyn] : m_DynamicModels )
 	{
-		CDynamicModelInfo &dyn = m_DynamicModels[h];
-		int idx = modelinfo->GetModelIndex( m_DynamicModels.Key(h)->szPathName );
+		int idx = modelinfo->GetModelIndex( pModel->szPathName );
 #ifndef DEDICATED
-		if ( idx == -1 ) idx = modelinfoclient->GetModelIndex( m_DynamicModels.Key(h)->szPathName );
+		if ( idx == -1 ) idx = modelinfoclient->GetModelIndex( pModel->szPathName );
 #endif
 		Msg( "%d (%d%c): %s [ref: %d (%dc)] %s%s%s%s%s\n", idx, ((-2 - idx) >> 1), (idx & 1) ? 'c' : 's',
-			m_DynamicModels.Key(h)->szPathName, dyn.m_iRefCount, dyn.m_iClientRefCount,
+			pModel->szPathName, dyn.m_iRefCount, dyn.m_iClientRefCount,
 			(dyn.m_nLoadFlags & CDynamicModelInfo::QUEUED) ? " QUEUED" : "",
 			(dyn.m_nLoadFlags & CDynamicModelInfo::LOADING) ? " LOADING" : "",
 			(dyn.m_nLoadFlags & CDynamicModelInfo::LOCKED) ? " LOCKED" : "",
@@ -7018,20 +6952,19 @@ void CModelLoader::DebugCombinerInfo()
 	extern IVModelInfoClient	*modelinfoclient;
 
 	Msg( "Dynamic Combined Models:\n" );
-	for ( UtlHashHandle_t h = m_DynamicModels.FirstHandle(); h != m_DynamicModels.InvalidHandle(); h = m_DynamicModels.NextHandle(h) )
+	for ( auto &[pModel, dyn] : m_DynamicModels )
 	{
-		CDynamicModelInfo &dyn = m_DynamicModels[h];
 		if ( ( dyn.m_nLoadFlags & CDynamicModelInfo::COMBINED ) == 0 )
 		{
 			continue;
 		}
 
-		int idx = modelinfo->GetModelIndex( m_DynamicModels.Key( h )->szPathName );
+		int idx = modelinfo->GetModelIndex( pModel->szPathName );
 #ifndef DEDICATED
-		if ( idx == -1 ) idx = modelinfoclient->GetModelIndex( m_DynamicModels.Key( h )->szPathName );
+		if ( idx == -1 ) idx = modelinfoclient->GetModelIndex( pModel->szPathName );
 #endif
 		Msg( "%d ( %d : %s ): %s [ reference count: %d / %d client ] %s%s%s%s%s\n", idx, ((-2 - idx) >> 1), (idx & 1) ? "client" : "server",
-			m_DynamicModels.Key(h)->szPathName, dyn.m_iRefCount, dyn.m_iClientRefCount,
+			pModel->szPathName, dyn.m_iRefCount, dyn.m_iClientRefCount,
 			(dyn.m_nLoadFlags & CDynamicModelInfo::QUEUED) ? " QUEUED" : "",
 			(dyn.m_nLoadFlags & CDynamicModelInfo::LOADING) ? " LOADING" : "",
 			(dyn.m_nLoadFlags & CDynamicModelInfo::LOCKED) ? " LOCKED" : "",

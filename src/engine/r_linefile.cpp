@@ -10,22 +10,19 @@
 #include "server.h"
 #include "filesystem.h"
 #include "filesystem_engine.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/text_reader.h"
 #include "tier1/utlvector.h"
 #include "tier2/renderutils.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
-CUtlVector< Vector >	g_Points;
+std::vector< Vector >	g_Points;
 //-----------------------------------------------------------------------------
 // Purpose: Draw the currently loaded line file
 // Input  : g_Points - list of points
 //-----------------------------------------------------------------------------
 void Linefile_Draw( void )
 {
-	Vector *points = g_Points.Base();
-	int pointCount = g_Points.Count();
+	Vector *points = g_Points.data();
+	int pointCount = std::ssize( g_Points );
 
 	for ( int i = 0; i < pointCount-1; i++ )
 	{
@@ -46,28 +43,29 @@ void Linefile_Read_f( void )
 	int		c;
 	char	name[MAX_OSPATH];
 
-	g_Points.Purge();
+	g_Points.clear(); g_Points.shrink_to_fit();
 
 	Q_snprintf( name, sizeof( name ), "maps/%s.lin", sv.GetMapName() );
 
-	CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
-	if ( !g_pFileSystem->ReadFile( name, nullptr, buf ) )
+	auto data = g_pFileSystem->ReadFile( name, nullptr );
+	if ( !data )
 	{
 		ConMsg ("couldn't open %s\n", name);
 		return;
 	}
+	ks::text_reader buf( ks::text_view( *data ) );
 	
 	ConMsg ("Reading %s...\n", name);
 	c = 0;
 
 	for ( ;; )
 	{
-		r = buf.Scanf ("%f %f %f\n", &org[0], &org[1], &org[2]);
+		r = buf.scanf ("%f %f %f\n", &org[0], &org[1], &org[2]);
 		if (r != 3)
 			break;
 		c++;
 		
-		g_Points.AddToTail( org );
+		g_Points.push_back( org );
 	}
 
 	ConMsg ("%i lines read\n", c);

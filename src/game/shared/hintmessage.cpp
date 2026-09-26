@@ -13,9 +13,6 @@
 	#include "util.h"
 #endif
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 //--------------------------------------------------------------------------------------------------------
 /**
@@ -35,16 +32,16 @@ enum { HMQ_SIZE = 8 };	// Maximum number of messages queue can hold
 						// added.
 
 //--------------------------------------------------------------------------------------------------------------
-CHintMessage::CHintMessage( const char * hintString, CUtlVector< const char * > * args, float duration )
+CHintMessage::CHintMessage( const char * hintString, std::vector< const char * > * args, float duration )
 {
 	m_hintString = hintString;
 	m_duration = duration;
 
 	if ( args )
 	{
-		for ( int i=0; i<args->Count(); ++i )
+		for ( int i=0; i<std::ssize( *args ); ++i )
 		{
-			m_args.AddToTail( CloneString( (*args)[i] ) );
+			m_args.push_back( CloneString( (*args)[i] ) );
 		}
 	}
 }
@@ -52,19 +49,19 @@ CHintMessage::CHintMessage( const char * hintString, CUtlVector< const char * > 
 //--------------------------------------------------------------------------------------------------------------
 CHintMessage::~CHintMessage()
 {
-	for ( int i=0; i<m_args.Count(); ++i )
+	for ( int i=0; i<std::ssize( m_args ); ++i )
 	{
 		delete[] m_args[i];
 	}
-	m_args.RemoveAll();
+	m_args.clear();
 }
 
 //--------------------------------------------------------------------------------------------------------------
-bool CHintMessage::IsEquivalent( const char *hintString, CUtlVector< const char * > * args ) const
+bool CHintMessage::IsEquivalent( const char *hintString, std::vector< const char * > * args ) const
 {
 	if ( FStrEq( hintString, m_hintString ) )
 	{
-		if ( !args && !m_args.Count() )
+		if ( !args && !std::ssize( m_args ) )
 		{
 			return true;
 		}
@@ -72,10 +69,10 @@ bool CHintMessage::IsEquivalent( const char *hintString, CUtlVector< const char 
 		if ( !args )
 			return false;
 
-		if ( args->Count() != m_args.Count() )
+		if ( std::ssize( *args ) != std::ssize( m_args ) )
 			return false;
 
-		for ( int i=0; i<args->Count(); ++i )
+		for ( int i=0; i<std::ssize( *args ); ++i )
 		{
 			if ( !FStrEq( (*args)[i], m_args[i] ) )
 			{
@@ -117,11 +114,11 @@ CHintMessageQueue::CHintMessageQueue( CBasePlayer *pPlayer )
 void CHintMessageQueue::Reset()
 {
 	m_tmMessageEnd = 0;
-	for ( int i=0; i<m_messages.Count(); ++i )
+	for ( int i=0; i<std::ssize( m_messages ); ++i )
 	{
 		delete m_messages[i];
 	}
-	m_messages.RemoveAll();
+	m_messages.clear();
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -134,24 +131,24 @@ void CHintMessageQueue::Update()
 	// just stomp the old message
 	//if ( gpGlobals->curtime > m_tmMessageEnd )
 	{
-		if ( m_messages.Count() )
+		if ( !m_messages.empty() )
 		{
 			CHintMessage *msg = m_messages[0];
 			m_tmMessageEnd = gpGlobals->curtime + msg->GetDuration();
 			msg->Send( m_pPlayer );
 			delete msg;
-			m_messages.Remove( 0 );
+			m_messages.erase( m_messages.begin() + 0 );
 		}
 	}
 }
 
 //--------------------------------------------------------------------------------------------------------------
-bool CHintMessageQueue::AddMessage( const char* message, float duration, CUtlVector< const char * > * args )
+bool CHintMessageQueue::AddMessage( const char* message, float duration, std::vector< const char * > * args )
 {
 	if ( !m_pPlayer )
 		return false;
 
-	for ( int i=0; i<m_messages.Count(); ++i )
+	for ( int i=0; i<std::ssize( m_messages ); ++i )
 	{
 		// weed out duplicates
 		if ( m_messages[i]->IsEquivalent( message, args ) )
@@ -162,7 +159,7 @@ bool CHintMessageQueue::AddMessage( const char* message, float duration, CUtlVec
 
 	// 'message' is not copied, so the pointer must remain valid forever
 	CHintMessage *msg = new CHintMessage( message, args, duration );
-	m_messages.AddToTail( msg );
+	m_messages.push_back( msg );
 	return true;
 }
 
@@ -183,11 +180,11 @@ CHintMessageTimers::CHintMessageTimers( CHintSystem *pSystem, CHintMessageQueue 
 //-----------------------------------------------------------------------------
 void CHintMessageTimers::Reset()
 {
-	for ( int i=0; i<m_Timers.Count(); ++i )
+	for ( int i=0; i<std::ssize( m_Timers ); ++i )
 	{
 		delete m_Timers[i];
 	}
-	m_Timers.RemoveAll();
+	m_Timers.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -198,7 +195,7 @@ void CHintMessageTimers::Update()
 	if ( !m_pHintSystem )
 		return;
 
-	for ( int i = 0; i < m_Timers.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Timers ); i++ )
 	{
 		if ( m_Timers[i]->timer.Expired() )
 		{
@@ -228,9 +225,9 @@ void CHintMessageTimers::Update()
 //			message_duration - the duration passed into the hint message system when the hint fires
 //			args - the arguments passed into the hint message system when the hint fires
 //-----------------------------------------------------------------------------
-void CHintMessageTimers::AddTimer( int iHintID, float timer_duration, float message_duration, CUtlVector< const char * > * args )
+void CHintMessageTimers::AddTimer( int iHintID, float timer_duration, float message_duration, std::vector< const char * > * args )
 {
-	if ( GetTimerIndex(iHintID) != m_Timers.InvalidIndex() )
+	if ( GetTimerIndex(iHintID) != -1 )
 		return;
 
 	// 'message' is not copied, so the pointer must remain valid forever
@@ -239,12 +236,12 @@ void CHintMessageTimers::AddTimer( int iHintID, float timer_duration, float mess
 	newTimer->flMessageDuration = message_duration;
 	if ( args )
 	{
-		for ( int i=0; i<args->Count(); ++i )
+		for ( int i=0; i<std::ssize( *args ); ++i )
 		{
-			newTimer->args.AddToTail( CloneString( (*args)[i] ) );
+			newTimer->args.push_back( CloneString( (*args)[i] ) );
 		}
 	}
-	m_Timers.AddToTail( newTimer );
+	m_Timers.push_back( newTimer );
 
 	//Warning("TIMER ADDED: %s\n", m_pszHintMessages[iHintID] );
 }
@@ -255,10 +252,10 @@ void CHintMessageTimers::AddTimer( int iHintID, float timer_duration, float mess
 void CHintMessageTimers::RemoveTimer( int iHintID )
 {
 	int iIndex = GetTimerIndex(iHintID);
-	if ( iIndex != m_Timers.InvalidIndex() )
+	if ( iIndex != -1 )
 	{
 		//Warning("TIMER REMOVED: %s\n", m_pszHintMessages[iHintID] );
-		m_Timers.Remove( iIndex );
+		m_Timers.erase( m_Timers.begin() + iIndex );
 	}
 }
 
@@ -268,7 +265,7 @@ void CHintMessageTimers::RemoveTimer( int iHintID )
 void CHintMessageTimers::StartTimer( int iHintID )
 {
 	int iIndex = GetTimerIndex(iHintID);
-	if ( iIndex != m_Timers.InvalidIndex() )
+	if ( iIndex != -1 )
 	{
 		//Warning("TIMER STARTED: %s\n", m_pszHintMessages[iHintID] );
 		m_Timers[iIndex]->timer.Start();
@@ -281,7 +278,7 @@ void CHintMessageTimers::StartTimer( int iHintID )
 void CHintMessageTimers::StopTimer( int iHintID )
 {
 	int iIndex = GetTimerIndex(iHintID);
-	if ( iIndex != m_Timers.InvalidIndex() )
+	if ( iIndex != -1 )
 	{
 		//Warning("TIMER STOPPED: %s\n", m_pszHintMessages[iHintID] );
 		m_Timers[iIndex]->timer.Stop();
@@ -293,11 +290,11 @@ void CHintMessageTimers::StopTimer( int iHintID )
 //-----------------------------------------------------------------------------
 int CHintMessageTimers::GetTimerIndex( int iHintID )
 {
-	for ( int i = 0; i < m_Timers.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Timers ); i++ )
 	{
 		if ( m_Timers[i]->iHintID == iHintID )
 			return i;
 	}
 
-	return m_Timers.InvalidIndex();
+	return -1;
 }

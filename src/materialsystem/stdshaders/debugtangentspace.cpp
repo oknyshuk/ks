@@ -12,9 +12,6 @@
 #include "unlitgeneric_notexture_ps20.inc"
 #include "unlitgeneric_notexture_ps20b.inc"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 BEGIN_SHADER( DebugTangentSpace, "Help for DebugTangentSpace" )
 	BEGIN_SHADER_PARAMS
 		SHADER_PARAM_OVERRIDE( BASETEXTURE, SHADER_PARAM_TYPE_TEXTURE, "shadertest/basetexture", "unused", SHADER_PARAM_NOT_EDITABLE )

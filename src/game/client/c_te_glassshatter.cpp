@@ -16,9 +16,6 @@
 #include "tier0/vprof.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define PI 3.14159265359
 #define GLASS_SHARD_MIN_LIFE 2
 #define GLASS_SHARD_MAX_LIFE 5
@@ -155,7 +152,7 @@ void C_TEShatterSurface::PostDataUpdate( DataUpdateType_t updateType )
 
 	RecordShatterSurface();
 
-	CSmartPtr<CSimple3DEmitter> pGlassEmitter = CSimple3DEmitter::Create( "C_TEShatterSurface 1" );
+	ks::intrusive_ptr<CSimple3DEmitter> pGlassEmitter = CSimple3DEmitter::Create( "C_TEShatterSurface 1" );
 	pGlassEmitter->SetSortOrigin( m_vecOrigin );
 
 	Vector vecColor;

@@ -17,9 +17,9 @@
 #endif
 
 #include "tier0/dbg.h"
+#include <atomic>
 #include "tier0/threadtools.h"
 #include "tier0/memalloc.h"
-#include "tier0/memdbgoff.h"
 
 
 //-----------------------------------------------------------------------------
@@ -934,7 +934,7 @@ private:
 	NodeLink_t m_Head;
 	NodeLink_t m_Tail;
 
-	CInterlockedInt m_Count;
+	std::atomic<int> m_Count;
 
 	CTSListBase m_FreeNodes;
 } TSLIST_NODE_ALIGN_POST;

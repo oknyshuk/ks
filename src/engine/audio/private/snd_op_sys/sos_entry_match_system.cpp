@@ -8,9 +8,6 @@
 #include "sos_system.h"
 #include "sos_entry_match_system.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern ConVar snd_sos_show_block_debug;
 ConVar snd_sos_show_entry_match_free( "snd_sos_show_entry_match_free", "0" );
 
@@ -194,7 +191,7 @@ void CSosEntryMatchList::FreeEntry( int nIndex, bool bForce /* = false */ )
 	if ( !m_vEntryMatchList[ nIndex ]->m_bTimed || bForce )
 	{
 		m_vEntryMatchList[ nIndex ]->Reset();
-		m_Free |= GetBitForBitnum( nIndex );
+		m_Free |= ( 1 << nIndex );
 	}
 }
 

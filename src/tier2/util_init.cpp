@@ -12,9 +12,6 @@
 #include "tier0/progressbar.h"
 #include "tier1/strtools.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 static void PrintFReportHandler(char const *job_name, int total_units_to_do, int n_units_completed)
 {

@@ -13,9 +13,6 @@
 #include "mathlib/vector.h"
 #include "mathlib/spherical_geometry.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 float s_flFactorials[]={
 	1.,
 	1.,

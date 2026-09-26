@@ -19,9 +19,6 @@
 #include "fx_line.h"
 #include "fx_water.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define	__EXPLOSION_DEBUG	0
 
 PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffectExplosion )
@@ -240,7 +237,7 @@ void C_BaseExplosionEffect::CreateCore( void )
 
 	SimpleParticle	*pParticle;
 
-	CSmartPtr<CExplosionParticle> pSimple = CExplosionParticle::Create( "exp_smoke" );
+	ks::intrusive_ptr<CExplosionParticle> pSimple = CExplosionParticle::Create( "exp_smoke" );
 	pSimple->SetSortOrigin( m_vecOrigin );
 	pSimple->SetNearClip( 64, 128 );
 
@@ -569,7 +566,7 @@ void C_BaseExplosionEffect::CreateDebris( void )
 	// Sparks
 	//
 
-	CSmartPtr<CTrailParticles> pSparkEmitter	= CTrailParticles::Create( "CreateDebris 1" );
+	ks::intrusive_ptr<CTrailParticles> pSparkEmitter	= CTrailParticles::Create( "CreateDebris 1" );
 	if ( pSparkEmitter == nullptr )
 	{
 		assert(0);
@@ -626,7 +623,7 @@ void C_BaseExplosionEffect::CreateDebris( void )
 	//
 
 	Vector	offset;
-	CSmartPtr<CFleckParticles> fleckEmitter = CFleckParticles::Create( "CreateDebris 2", m_vecOrigin, Vector(128,128,128) * m_flScale );
+	ks::intrusive_ptr<CFleckParticles> fleckEmitter = CFleckParticles::Create( "CreateDebris 2", m_vecOrigin, Vector(128,128,128) * m_flScale );
 	if ( !fleckEmitter )
 		return;
 
@@ -673,9 +670,9 @@ void C_BaseExplosionEffect::CreateDebris( void )
 		pParticle->m_flRollDelta	= random->RandomFloat( 0, 360 );
 
 		float colorRamp = random->RandomFloat( 0.5f, 1.5f );
-		pParticle->m_uchColor[0] = MIN( 1.0f, 0.25f*colorRamp )*255.0f;
-		pParticle->m_uchColor[1] = MIN( 1.0f, 0.25f*colorRamp )*255.0f;
-		pParticle->m_uchColor[2] = MIN( 1.0f, 0.25f*colorRamp )*255.0f;
+		pParticle->m_uchColor[0] = std::min( 1.0f, 0.25f*colorRamp )*255.0f;
+		pParticle->m_uchColor[1] = std::min( 1.0f, 0.25f*colorRamp )*255.0f;
+		pParticle->m_uchColor[2] = std::min( 1.0f, 0.25f*colorRamp )*255.0f;
 	}
 }
 
@@ -1083,7 +1080,7 @@ void C_WaterExplosionEffect::CreateDebris( void )
 
 	SimpleParticle	*pParticle;
 
-	CSmartPtr<CWaterExplosionParticle> pSimple = CWaterExplosionParticle::Create( "waterexp_bubbles" );
+	ks::intrusive_ptr<CWaterExplosionParticle> pSimple = CWaterExplosionParticle::Create( "waterexp_bubbles" );
 	pSimple->SetSortOrigin( m_vecOrigin );
 	pSimple->SetNearClip( 64, 128 );
 
@@ -1168,7 +1165,7 @@ void C_WaterExplosionEffect::CreateMisc( void )
 
 	TrailParticle	*tParticle;
 
-	CSmartPtr<CTrailParticles> sparkEmitter = CTrailParticles::Create( "splash" );
+	ks::intrusive_ptr<CTrailParticles> sparkEmitter = CTrailParticles::Create( "splash" );
 
 	if ( !sparkEmitter )
 		return;
@@ -1203,7 +1200,7 @@ void C_WaterExplosionEffect::CreateMisc( void )
 
 		colorRamp = random->RandomFloat( 1.5f, 2.0f );
 
-		FloatToColor32( tParticle->m_color, MIN( 1.0f, m_vecColor[0] * colorRamp ), MIN( 1.0f, m_vecColor[1] * colorRamp ), MIN( 1.0f, m_vecColor[2] * colorRamp ), m_flLuminosity );
+		FloatToColor32( tParticle->m_color, std::min( 1.0f, m_vecColor[0] * colorRamp ), std::min( 1.0f, m_vecColor[1] * colorRamp ), std::min( 1.0f, m_vecColor[2] * colorRamp ), m_flLuminosity );
 	}
 
 	//Dump out drops
@@ -1231,10 +1228,10 @@ void C_WaterExplosionEffect::CreateMisc( void )
 
 		colorRamp = random->RandomFloat( 1.5f, 2.0f );
 
-		FloatToColor32( tParticle->m_color, MIN( 1.0f, m_vecColor[0] * colorRamp ), MIN( 1.0f, m_vecColor[1] * colorRamp ), MIN( 1.0f, m_vecColor[2] * colorRamp ), m_flLuminosity );
+		FloatToColor32( tParticle->m_color, std::min( 1.0f, m_vecColor[0] * colorRamp ), std::min( 1.0f, m_vecColor[1] * colorRamp ), std::min( 1.0f, m_vecColor[2] * colorRamp ), m_flLuminosity );
 	}
 
-	CSmartPtr<CSplashParticle> pSimple = CSplashParticle::Create( "splish" );
+	ks::intrusive_ptr<CSplashParticle> pSimple = CSplashParticle::Create( "splish" );
 	pSimple->SetSortOrigin( m_vecWaterSurface );
 	pSimple->SetClipHeight( m_vecWaterSurface.z );
 	pSimple->GetBinding().SetBBox( m_vecWaterSurface-(Vector(32.0f, 32.0f, 32.0f)*flScale), m_vecWaterSurface+(Vector(32.0f, 32.0f, 32.0f)*flScale) );
@@ -1260,12 +1257,12 @@ void C_WaterExplosionEffect::CreateMisc( void )
 		
 		colorRamp = random->RandomFloat( 0.75f, 1.25f );
 
-		pParticle->m_uchColor[0]	= MIN( 1.0f, m_vecColor[0] * colorRamp ) * 255.0f;
-		pParticle->m_uchColor[1]	= MIN( 1.0f, m_vecColor[1] * colorRamp ) * 255.0f;
-		pParticle->m_uchColor[2]	= MIN( 1.0f, m_vecColor[2] * colorRamp ) * 255.0f;
+		pParticle->m_uchColor[0]	= std::min( 1.0f, m_vecColor[0] * colorRamp ) * 255.0f;
+		pParticle->m_uchColor[1]	= std::min( 1.0f, m_vecColor[1] * colorRamp ) * 255.0f;
+		pParticle->m_uchColor[2]	= std::min( 1.0f, m_vecColor[2] * colorRamp ) * 255.0f;
 		
 		pParticle->m_uchStartSize	= 24 * flScale * RemapValClamped( i, 7, 0, 1, 0.5f );
-		pParticle->m_uchEndSize		= MIN( 255, pParticle->m_uchStartSize * 2 );
+		pParticle->m_uchEndSize		= std::min( 255, pParticle->m_uchStartSize * 2 );
 		
 		pParticle->m_uchStartAlpha	= RemapValClamped( i, 7, 0, 255, 32 ) * m_flLuminosity;
 		pParticle->m_uchEndAlpha	= 0;
@@ -1338,7 +1335,7 @@ void C_MegaBombExplosionEffect::CreateCore( void )
 
 	float spread = 1.0f - (0.15f*force);
 
-	CSmartPtr<CExplosionParticle> pSimple = CExplosionParticle::Create( "exp_smoke" );
+	ks::intrusive_ptr<CExplosionParticle> pSimple = CExplosionParticle::Create( "exp_smoke" );
 	pSimple->SetSortOrigin( m_vecOrigin );
 	pSimple->SetNearClip( 32, 64 );
 

@@ -7,6 +7,9 @@
 #ifndef AI_NETWORKMANAGER_H
 #define AI_NETWORKMANAGER_H
 
+#include <atomic>
+#include <mutex>
+#include <vector>
 #include "utlvector.h"
 #include "bitstring.h"
 #include "threadtools.h"
@@ -82,9 +85,9 @@ private:
 	/// affinity should be the second hardware thread on the server core
 	struct ThreadedGraphBuildData
 	{
-		CThreadMutex  mutex;
+		std::recursive_mutex  mutex;
 		CAI_Network  *pBuildingNetwork;
-		CInterlockedInt  nBuildStage;
+		std::atomic<int>  nBuildStage;
 		ThreadHandle_t job; ///< hopefully will replace w/ real job
 
 		enum { BUILD_NOT_STARTED, BUILD_UNDERWAY, BUILD_DONE, };
@@ -131,8 +134,8 @@ private:
 	void 			BeginBuild();
 	void			EndBuild();
 
-	CUtlVector<CVarBitVec>	m_NeighborsTable;
-	CVarBitVec				m_DidSetNeighborsTable;
+	std::vector< std::vector< bool > >	m_NeighborsTable;
+	std::vector< bool >		m_DidSetNeighborsTable;
 	CAI_TestHull *			m_pTestHull;
 };
 

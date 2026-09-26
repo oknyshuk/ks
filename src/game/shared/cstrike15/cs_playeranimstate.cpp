@@ -12,7 +12,7 @@
 #include "weapon_csbase.h"
 #include "studio.h"
 #include "apparent_velocity_helper.h"
-#include "utldict.h"
+#include "tier1/map_ops.h"
 #include "weapon_basecsgrenade.h"
 #include "datacache/imdlcache.h"
 
@@ -28,9 +28,6 @@
 	#include "cs_simple_hostage.h"
 	#include "cs_gamestats.h"
 #endif
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 #define ANIM_TOPSPEED_WALK			100
 #define ANIM_TOPSPEED_RUN			250
@@ -566,10 +563,9 @@ int CCSPlayerAnimState::CalcSequenceIndex( PRINTF_FORMAT_STRING const char *pBas
 	// Show warnings if we can't find anything here.
 	if ( iSequence == -1 )
 	{
-		static CUtlDict<int,int> dict;
-		if ( dict.Find( szFullName ) == dict.InvalidIndex() )
+		static std::set< std::string, ks::iless > warned;
+		if ( warned.emplace( szFullName ).second )
 		{
-			dict.Insert( szFullName, 0 );
 			Warning( "CalcSequenceIndex: can't find '%s'.\n", szFullName );
 		}
 
@@ -1402,7 +1398,7 @@ void CCSPlayerAnimState::ComputeFlashedSequence( CStudioHdr *pStudioHdr )
 	
 	float flCurrentFlashDuration = pPlayer->m_flFlashDuration.Get();
 	if ( flCurrentFlashDuration != m_flLastFlashDuration )
-		m_flFlashedAmount = MAX( 0.0f, flCurrentFlashDuration - 1.25f );
+		m_flFlashedAmount = std::max( 0.0f, flCurrentFlashDuration - 1.25f );
 
 	bool bFlashed = m_flFlashedAmount > 0;
 
@@ -1943,7 +1939,7 @@ void CCSPlayerAnimState::ComputeFireSequence( CStudioHdr *pStudioHdr )
 		{
 			Vector vel;
 			GetOuterAbsVelocity( vel );
-			flPortionOfMaxSpeed = MIN( vel.Length2D() / flMaxSpeed, 1.0f );
+			flPortionOfMaxSpeed = std::min( vel.Length2D() / flMaxSpeed, 1.0f );
 		}	
 
 		if ( flPortionOfMaxSpeed < 1.0f && m_iIdleFireSequence != -1 )

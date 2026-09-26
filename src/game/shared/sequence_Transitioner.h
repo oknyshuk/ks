@@ -37,10 +37,10 @@ public:
 		float flCurTime
 		);
 
-	void RemoveAll( void ) { m_animationQueue.RemoveAll(); };
+	void RemoveAll( void ) { m_animationQueue.clear(); };
 
 public:
-	CUtlVector< CAnimationLayer >	m_animationQueue;
+	std::vector< CAnimationLayer >	m_animationQueue;
 };
 
 #endif // SEQUENCE_TRANSITIONER_H

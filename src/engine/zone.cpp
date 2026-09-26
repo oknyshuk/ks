@@ -17,16 +17,13 @@
 #include "zone.h"
 #include "host.h"
 #include "tier1/strtools.h"
-#include "tier1/utldict.h"
+#include "tier1/map_ops.h"
 #include "tier0/icommandline.h"
 #include "memstack.h"
 #include "datacache/idatacache.h"
 #include "sys_dll.h"
 #include "tier3/tier3.h"
 #include "tier0/memalloc.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 #define KB (1024)
 #define MB (1024*1024)
@@ -45,12 +42,10 @@ static bool g_bWarnedOverflow;
 
 const int HUNK_COMMIT_FLOOR = ( 40 )*MB;
 
-const char *CHunkAllocCredit::s_DbgInfoStack[ DBG_INFO_STACK_DEPTH ];
-int			CHunkAllocCredit::s_DbgInfoStackDepth = -1;
 
 ConVar hunk_track_allocation_types( "hunk_track_allocation_types", "1", FCVAR_CHEAT );
-CUtlDict<int, int> g_HunkAllocationsByName;
-struct hunkalloc_t { int index, size; };
+ks::idict< int > g_HunkAllocationsByName;
+struct hunkalloc_t { const char *name; int size; };
 int HunkAllocSortFunc( const void *a, const void *b )
 {
 	const hunkalloc_t *A = (const hunkalloc_t *)a, *B = (const hunkalloc_t *)b;
@@ -59,13 +54,13 @@ int HunkAllocSortFunc( const void *a, const void *b )
 CON_COMMAND_F( hunk_print_allocations, "", FCVAR_CLIENTCMD_CAN_EXECUTE )
 {
 	Msg( "Hunk allocations:\n");
-	hunkalloc_t *items = new hunkalloc_t[ g_HunkAllocationsByName.Count() ];
+	hunkalloc_t *items = new hunkalloc_t[ g_HunkAllocationsByName.size() ];
 	int numItems = 0, total = 0;
-	for ( int i = g_HunkAllocationsByName.First(); i != g_HunkAllocationsByName.InvalidIndex(); i = g_HunkAllocationsByName.Next( i ) )
+	for ( const auto &[name, size] : g_HunkAllocationsByName )
 	{
-		if ( !g_HunkAllocationsByName.Element( i ) )
+		if ( !size )
 			continue;
-		hunkalloc_t item = { i, g_HunkAllocationsByName.Element( i ) };
+		hunkalloc_t item = { name.c_str(), size };
 		items[numItems++] = item;
 		total += item.size;
 	}
@@ -73,7 +68,7 @@ CON_COMMAND_F( hunk_print_allocations, "", FCVAR_CLIENTCMD_CAN_EXECUTE )
 	Msg( "    %55s:%10d\n", "TOTAL:", total );
 	for ( int i = 0; i < numItems; i++ )
 	{
-		Msg( "    %55s:%10d\n", g_HunkAllocationsByName.GetElementName( items[i].index ), items[i].size );
+		Msg( "    %55s:%10d\n", items[i].name, items[i].size );
 	}
 	delete [] items;
 	
@@ -107,15 +102,14 @@ void *Hunk_AllocName(int size, const char *name, bool bClear)
 			name = "unknown";
 		}
 
-		int i = g_HunkAllocationsByName.Find( name );
-		if ( i == g_HunkAllocationsByName.InvalidIndex() )
+		auto it = g_HunkAllocationsByName.find( name );
+		if ( it == g_HunkAllocationsByName.end() )
 		{
-			i = g_HunkAllocationsByName.Insert( name );
-			g_HunkAllocationsByName[i] = size;
+			g_HunkAllocationsByName.emplace( name, size );
 		}
 		else
 		{
-			g_HunkAllocationsByName[i] += size;
+			it->second += size;
 		}
 	}
 	void *p = g_HunkMemoryStack.Alloc( size, bClear );
@@ -155,7 +149,7 @@ void Hunk_FreeToLowMark(int mark)
 	g_bWarnedOverflow = false;
 #endif
 	g_HunkMemoryStack.FreeToAllocPoint( mark, false );
-	g_HunkAllocationsByName.RemoveAll();
+	g_HunkAllocationsByName.clear();
 }
 
 int Hunk_MallocSize()
@@ -191,7 +185,7 @@ void Hunk_Print()
 
 void Hunk_OnMapStart( int nEstimatedBytes )
 {
-	int nToCommit = MAX( nEstimatedBytes, HUNK_COMMIT_FLOOR );
+	int nToCommit = std::max( nEstimatedBytes, HUNK_COMMIT_FLOOR );
 
 #ifndef HUNK_USE_16MB_PAGE
 	CMemoryStack *pStack = &g_HunkMemoryStack;
@@ -220,7 +214,7 @@ void Memory_Init( void )
 	int nMaxBytes = 128*MB;
 	const int commitIncrement = 64*KB;
 #ifndef HUNK_USE_16MB_PAGE
-	const int nInitialCommit = MIN( HUNK_COMMIT_FLOOR, nMaxBytes );
+	const int nInitialCommit = std::min( HUNK_COMMIT_FLOOR, nMaxBytes );
 	while ( !g_HunkMemoryStack.Init( "g_HunkMemoryStack", nMaxBytes, commitIncrement, nInitialCommit ) )	 
 	{
 		Warning( "Unable to allocate %d MB of memory, trying %d MB instead\n", nMaxBytes, nMaxBytes/2 );

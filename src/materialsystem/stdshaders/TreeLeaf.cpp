@@ -12,9 +12,6 @@
 #include "treeleaf_ps20b.inc"
 #include "treeleaf_vs20.inc"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 BEGIN_VS_SHADER_FLAGS( TreeLeaf, "Help for TreeLeaf", SHADER_NOT_EDITABLE )
 

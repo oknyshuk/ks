@@ -26,7 +26,7 @@
 #include "tier0/memalloc.h"
 #include "datacache/iresourceaccesscontrol.h"
 #include "filesystem.h"
-#include "tier1/utlrbtree.h"
+#include "tier1/map_ops.h"
 #include "materialsystem/imaterialsystem.h"
 #include "istudiorender.h"
 #include "datacache/idatacache.h"
@@ -44,6 +44,7 @@
 #include "inputsystem/iinputstacksystem.h"
 #include "reslistgenerator.h"
 #include "tier1/fmtstr.h"
+#include "tier1/text_writer.h"
 #include "steam/steam_api.h"
 #include "vscript/ivscript.h"
 #include "tier0/miniprofiler.h"
@@ -63,9 +64,6 @@ int MessageBox( HWND hWnd, const char *message, const char *header, unsigned uTy
 #if defined( DEVELOPMENT_ONLY ) || defined( ALLOW_TEXT_MODE )
 #define ALLOW_MULTI_CLIENTS_PER_MACHINE 1
 #endif
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 #define DEFAULT_HL2_GAMEDIR	"csgo"
@@ -254,21 +252,15 @@ private:
 	char		m_szCurrentDir[_MAX_PATH];
 
 	// persistent across restarts
-	CUtlRBTree< CUtlString, int > m_Logged;
-	CUtlString	m_sResListDir;
-	CUtlString	m_sFullGamePath;
+	std::set< std::string, ks::iless > m_Logged;
+	std::string	m_sResListDir;
+	std::string	m_sFullGamePath;
 };
 
 static CLogAllFiles g_LogFiles;
 
-static bool AllLogLessFunc( CUtlString const &pLHS, CUtlString const &pRHS )
-{
-	return CaselessStringLessThan( pLHS.Get(), pRHS.Get() );
-}
-
 CLogAllFiles::CLogAllFiles() :
-	m_bActive( false ),
-	m_Logged( 0, 0, AllLogLessFunc )
+	m_bActive( false )
 {
 	MEM_ALLOC_CREDIT();
 	m_sResListDir = "reslists";
@@ -311,15 +303,15 @@ void CLogAllFiles::Init()
 
 	// create file to dump out to
 	char szDir[ MAX_PATH ];
-	V_snprintf( szDir, sizeof( szDir ), "%s\\%s", m_sFullGamePath.String(), m_sResListDir.String() );
+	V_snprintf( szDir, sizeof( szDir ), "%s\\%s", m_sFullGamePath.c_str(), m_sResListDir.c_str() );
 	g_pFullFileSystem->CreateDirHierarchy( szDir, "GAME" );
 
 	g_pFullFileSystem->AddLoggingFunc( &LogAllFilesFunc );
 
 	if ( !CommandLine()->FindParm( "-startmap" ) && !CommandLine()->FindParm( "-startstage" ) )
 	{
-		m_Logged.RemoveAll();
-		g_pFullFileSystem->RemoveFile( CFmtStr( "%s\\%s\\%s", m_sFullGamePath.String(), m_sResListDir.String(), ALL_RESLIST_FILE ), "GAME" );
+		m_Logged.clear();
+		g_pFullFileSystem->RemoveFile( CFmtStr( "%s\\%s\\%s", m_sFullGamePath.c_str(), m_sResListDir.c_str(), ALL_RESLIST_FILE ), "GAME" );
 	}
 
 	getcwd( m_szCurrentDir, sizeof(m_szCurrentDir) );
@@ -339,17 +331,17 @@ void CLogAllFiles::Shutdown()
 	}
 
 	// Now load and sort all.lst
-	SortResList( CFmtStr( "%s\\%s\\%s", m_sFullGamePath.String(), m_sResListDir.String(), ALL_RESLIST_FILE ), "GAME" );
+	SortResList( CFmtStr( "%s\\%s\\%s", m_sFullGamePath.c_str(), m_sResListDir.c_str(), ALL_RESLIST_FILE ), "GAME" );
 	// Now load and sort engine.lst
-	SortResList( CFmtStr( "%s\\%s\\%s", m_sFullGamePath.String(), m_sResListDir.String(), ENGINE_RESLIST_FILE ), "GAME" );
+	SortResList( CFmtStr( "%s\\%s\\%s", m_sFullGamePath.c_str(), m_sResListDir.c_str(), ENGINE_RESLIST_FILE ), "GAME" );
 
-	m_Logged.Purge();
+	m_Logged.clear();
 }
 
 void CLogAllFiles::LogToAllReslist( char const *line )
 {
 	// Open for append, write data, close.
-	FileHandle_t fh = g_pFullFileSystem->Open( CFmtStr( "%s\\%s\\%s", m_sFullGamePath.String(), m_sResListDir.String(), ALL_RESLIST_FILE ), "at", "GAME" );
+	FileHandle_t fh = g_pFullFileSystem->Open( CFmtStr( "%s\\%s\\%s", m_sFullGamePath.c_str(), m_sResListDir.c_str(), ALL_RESLIST_FILE ), "at", "GAME" );
 	if ( fh != FILESYSTEM_INVALID_HANDLE )
 	{
 		g_pFullFileSystem->Write("\"", 1, fh);
@@ -370,13 +362,10 @@ void CLogAllFiles::LogFile(const char *fullPathFileName, const char *options)
 	// write out to log file
 	Assert( fullPathFileName[1] == ':' );
 
-	int idx = m_Logged.Find( fullPathFileName );
-	if ( idx != m_Logged.InvalidIndex() )
+	if ( !m_Logged.insert( ks::nz( fullPathFileName ) ).second )
 	{
 		return;
 	}
-
-	m_Logged.Insert( fullPathFileName );
 
 	// make it relative to our root directory
 	const char *relative = Q_stristr( fullPathFileName, GetBaseDirectory() );
@@ -789,8 +778,8 @@ static char const *Cmd_TranslateFileAssociation(char const *param )
 //-----------------------------------------------------------------------------
 static const char *BuildCommand()
 {
-	static CUtlBuffer build( 0, 0, CUtlBuffer::TEXT_BUFFER );
-	build.Clear();
+	static ks::text_writer build;
+	build.clear();
 
 	// arg[0] is the executable name
 	for ( int i=1; i < CommandLine()->ParmCount(); i++ )
@@ -811,13 +800,13 @@ static const char *BuildCommand()
 			const char *szValue = CommandLine()->ParmValue(szParm);
 			if (szValue)
 			{
-				build.PutString(CFmtStr("%s %s;", szParm+1, szValue));
+				build.printf("%s %s;", szParm+1, szValue);
 				i++;
 			}
 			else
 			{
-				build.PutString(szParm+1);
-				build.PutChar(';');
+				build.put(szParm+1);
+				build.put(';');
 			}
 		}
 		else
@@ -826,15 +815,13 @@ static const char *BuildCommand()
 			char const *translated = Cmd_TranslateFileAssociation( CommandLine()->GetParm( i ) );
 			if (translated)
 			{
-				build.PutString(translated);
-				build.PutChar(';');
+				build.put(translated);
+				build.put(';');
 			}
 		}
 	}
 
-	build.PutChar( '\0' );
-
-	return (const char *)build.Base();
+	return build.c_str();
 }
 
 DLL_IMPORT CLinkedMiniProfiler *g_pPhysicsMiniProfilers;

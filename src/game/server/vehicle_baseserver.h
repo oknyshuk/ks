@@ -91,8 +91,8 @@ public:
 private:
 	string_t								m_strSeatName;			// Used for save/load fixup
 	int										m_nAttachmentID;		// Goal attachment
-	CUtlVector<CPassengerSeatTransition>	m_EntryTransitions;		// Entry information
-	CUtlVector<CPassengerSeatTransition>	m_ExitTransitions;		// Exit information
+	std::vector< CPassengerSeatTransition >	m_EntryTransitions;		// Entry information
+	std::vector< CPassengerSeatTransition >	m_ExitTransitions;		// Exit information
 
 	friend class CBaseServerVehicle;
 };
@@ -108,7 +108,7 @@ public:
 
 private:
 	string_t						m_strName;			// Name of the set
-	CUtlVector<CPassengerSeat>		m_PassengerSeats;	// Passenger info
+	std::vector< CPassengerSeat >		m_PassengerSeats;	// Passenger info
 
 	friend class CBaseServerVehicle;
 };
@@ -222,8 +222,8 @@ protected:
 
 	CPassengerRole *FindOrCreatePassengerRole( string_t strName, int *nIndex = nullptr );
 
-	CUtlVector< CPassengerInfo >	m_PassengerInfo;
-	CUtlVector< CPassengerRole >	m_PassengerRoles;	// Not save/restored
+	std::vector< CPassengerInfo >	m_PassengerInfo;
+	std::vector< CPassengerRole >	m_PassengerRoles;	// Not save/restored
 
 	// ----------------------------------------------------------------------------
 	void	ReloadScript();	// debug/tuning
@@ -275,7 +275,7 @@ public:
 		int		iHitboxGroup;
 		char	szAnimName[128];
 	};
-	CUtlVector< entryanim_t >		m_EntryAnimations;
+	std::vector< entryanim_t >		m_EntryAnimations;
 
 	struct exitanim_t
 	{
@@ -286,7 +286,7 @@ public:
 		QAngle	vecExitAnglesLocal;
 	};
 
-	CUtlVector< exitanim_t >		m_ExitAnimations;
+	std::vector< exitanim_t >		m_ExitAnimations;
 	bool							m_bParsedAnimations;
 	bool							m_bUseLegacyExitChecks;	// HACK: Choreo vehicles use non-sensical setups to move the player, we need to poll their attachment point positions
 	int								m_iCurrentExitAnim;

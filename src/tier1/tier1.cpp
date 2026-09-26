@@ -8,9 +8,6 @@
 #include "tier0/dbg.h"
 #include "interfaces/interfaces.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 
 

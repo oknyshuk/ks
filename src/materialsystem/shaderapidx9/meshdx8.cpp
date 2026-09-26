@@ -15,7 +15,7 @@
 #include "tier0/platform.h"
 #include "tier0/systeminformation.h"
 
-#include "smartptr.h"
+#include <memory>
 
 // fixme - stick this in a header file.
 #if defined( _DEBUG )
@@ -41,9 +41,7 @@
 #include "convar.h"
 #include "shaderdevicedx8.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 
 //-----------------------------------------------------------------------------
 
@@ -501,7 +499,7 @@ protected:
 	int			m_nColorMeshVertOffsetInBytes;
 
 	VertexFormat_t m_fmtStreamSpec;
-	CArrayAutoPtr< VertexStreamSpec_t > m_pVertexStreamSpec;
+	std::unique_ptr< VertexStreamSpec_t[] > m_pVertexStreamSpec;
 	CVertexBuffer *m_pVbTexCoord1;
 	LPDIRECT3DVERTEXBUFFER m_arrRawHardwareDataStreams[1];
 
@@ -693,8 +691,8 @@ private:
 
 	CDynamicMeshDX8 *GetDynamicMesh();
 
-	CUtlVector< unsigned char, CUtlMemoryAligned< unsigned char, 32 > > m_VertexData;
-	CUtlVector< unsigned short > m_IndexData;
+	ks::aligned_vector< unsigned char, 32 > m_VertexData;
+	std::vector< unsigned short > m_IndexData;
 
 	unsigned short m_VertexSize;
 	MaterialPrimitiveType_t m_Type;
@@ -907,7 +905,7 @@ private:
 	CVertexBuffer *m_pPreTessPatchVertexBuffer[ MAX_TESS_DIVISIONS_PER_SIDE ];
 
 	// The dynamic vertex buffers
-	CUtlVector< VertexBufferLookup_t >	m_DynamicVertexBuffers;
+	std::vector< VertexBufferLookup_t >	m_DynamicVertexBuffers;
 
 	// The current dynamic mesh
 	CDynamicMeshDX8 m_DynamicMesh;
@@ -1320,7 +1318,7 @@ bool CIndexBufferDx8::Lock( int nMaxIndexCount, bool bAppend, IndexDesc_t &desc 
 
 	// FIXME: Why do we need to sync matrices now?
 	ShaderUtil()->SyncMatrices();
-	g_ShaderMutex.Lock();
+	g_ShaderMutex.lock();
 
 	VPROF( "CIndexBufferX8::Lock" );		
 
@@ -1430,7 +1428,7 @@ bool CIndexBufferDx8::Lock( int nMaxIndexCount, bool bAppend, IndexDesc_t &desc 
 	return true;
 
 indexBufferLockFailed:
-	g_ShaderMutex.Unlock();
+	g_ShaderMutex.unlock();
 
 	// Set up a bogus index descriptor
 	desc.m_pIndices = (unsigned short*)( g_pScratchIndexBuffer );
@@ -1464,7 +1462,7 @@ void CIndexBufferDx8::Unlock( int nWrittenIndexCount, IndexDesc_t &desc )
 
 	m_nFirstUnwrittenOffset += nWrittenIndexCount * IndexSize();
 	m_bIsLocked = false;
-	g_ShaderMutex.Unlock();
+	g_ShaderMutex.unlock();
 }
 
 
@@ -1740,7 +1738,7 @@ bool CVertexBufferDx8::Lock( int nMaxVertexCount, bool bAppend, VertexDesc_t &de
 
 	// FIXME: Why do we need to sync matrices now?
 	ShaderUtil()->SyncMatrices();
-	g_ShaderMutex.Lock();
+	g_ShaderMutex.lock();
 
 	VPROF( "CVertexBufferDx8::Lock" );		
 
@@ -1871,7 +1869,7 @@ void CVertexBufferDx8::Unlock( int nWrittenVertexCount, VertexDesc_t &desc )
 
 	m_nFirstUnwrittenOffset += nWrittenVertexCount * VertexSize();
 	m_bIsLocked = false;
-	g_ShaderMutex.Unlock();
+	g_ShaderMutex.unlock();
 }
 
 
@@ -2542,12 +2540,12 @@ void CMeshDX8::GetColorMesh( const IVertexBuffer** pMesh, int *pMeshVertexOffset
 
 VertexStreamSpec_t *CMeshDX8::GetVertexStreamSpec() const
 {
-	return m_pVertexStreamSpec.Get();
+	return m_pVertexStreamSpec.get();
 }
 
 void CMeshDX8::SetVertexStreamSpec( VertexStreamSpec_t *pStreamSpec )
 {
-	m_pVertexStreamSpec.Delete();
+	m_pVertexStreamSpec.reset();
 	m_fmtStreamSpec = 0;
 
 	int numSpecs = 0;
@@ -2562,8 +2560,8 @@ void CMeshDX8::SetVertexStreamSpec( VertexStreamSpec_t *pStreamSpec )
 	if ( !numSpecs )
 		return;
 
-	m_pVertexStreamSpec.Attach( new VertexStreamSpec_t[ numSpecs + 1 ] );
-	memcpy( m_pVertexStreamSpec.Get(), pStreamSpec, (numSpecs + 1)*sizeof( VertexStreamSpec_t ) );
+	m_pVertexStreamSpec.reset( new VertexStreamSpec_t[ numSpecs + 1 ] );
+	memcpy( m_pVertexStreamSpec.get(), pStreamSpec, (numSpecs + 1)*sizeof( VertexStreamSpec_t ) );
 }
 
 
@@ -2593,7 +2591,7 @@ bool CMeshDX8::Lock( int nVertexCount, bool bAppend, VertexDesc_t &desc )
 			MemOutOfMemory( sizeof(CVertexBuffer) );
 		}
 
-		if ( VertexStreamSpec_t *pTexCoord1 = FindVertexStreamSpec( VERTEX_TEXCOORD_SIZE( 1, 2 ), m_pVertexStreamSpec.Get() ) )
+		if ( VertexStreamSpec_t *pTexCoord1 = FindVertexStreamSpec( VERTEX_TEXCOORD_SIZE( 1, 2 ), m_pVertexStreamSpec.get() ) )
 		{
 			// TODO: actually create a full stream and allow modifications by the clients
 			DWORD dwVertexFormat = VERTEX_TEXCOORD_SIZE( 1, 2 );
@@ -2775,7 +2773,7 @@ void CMeshDX8::LockMesh( int nVertexCount, int nIndexCount, MeshDesc_t& desc, Me
 {
 	ShaderUtil()->SyncMatrices();
 
-	g_ShaderMutex.Lock();
+	g_ShaderMutex.lock();
 	VPROF( "CMeshDX8::LockMesh" );		
 	Lock( nVertexCount, false, *static_cast<VertexDesc_t*>( &desc ) );
 	if ( m_Type != MATERIAL_POINTS )
@@ -2809,7 +2807,7 @@ void CMeshDX8::UnlockMesh( int nVertexCount, int nIndexCount, MeshDesc_t& desc )
 	m_NumIndices = nIndexCount;
 
 	CBaseMeshDX8::m_bMeshLocked = false;
-	g_ShaderMutex.Unlock();
+	g_ShaderMutex.unlock();
 }
 
  
@@ -3257,11 +3255,11 @@ void CMeshDX8::SetCustomStreamsState()
 		g_pLastRawHardwareDataStream = arrRawStreams;
 	}
 
-	if ( m_pVertexStreamSpec.Get() != g_pLastStreamSpec )
+	if ( m_pVertexStreamSpec.get() != g_pLastStreamSpec )
 	{
 		if ( m_pVbTexCoord1 )
 		{
-			VertexStreamSpec_t *pTexCoord1 = FindVertexStreamSpec( VERTEX_TEXCOORD_SIZE( 1, 2 ), m_pVertexStreamSpec.Get() );
+			VertexStreamSpec_t *pTexCoord1 = FindVertexStreamSpec( VERTEX_TEXCOORD_SIZE( 1, 2 ), m_pVertexStreamSpec.get() );
 			VertexStreamSpec_t::StreamSpec_t iStream = pTexCoord1 ? pTexCoord1->iStreamSpec : VertexStreamSpec_t::STREAM_UNIQUE_A;
 
 			RECORD_COMMAND( DX8_SET_STREAM_SOURCE, 4 );
@@ -3277,7 +3275,7 @@ void CMeshDX8::SetCustomStreamsState()
 		}
 		else
 		{
-			VertexStreamSpec_t *pTexCoord1 = FindVertexStreamSpec( VERTEX_TEXCOORD_SIZE( 1, 2 ), m_pVertexStreamSpec.Get() );
+			VertexStreamSpec_t *pTexCoord1 = FindVertexStreamSpec( VERTEX_TEXCOORD_SIZE( 1, 2 ), m_pVertexStreamSpec.get() );
 			VertexStreamSpec_t::StreamSpec_t iStream = pTexCoord1 ? pTexCoord1->iStreamSpec : VertexStreamSpec_t::STREAM_UNIQUE_A;
 
 			RECORD_COMMAND( DX8_SET_STREAM_SOURCE, 4 );
@@ -3289,7 +3287,7 @@ void CMeshDX8::SetCustomStreamsState()
 			D3DSetStreamSource( iStream, 0, 0, 0 );
 			g_bCustomStreamsSet[ iStream ] = false;
 		}
-		g_pLastStreamSpec = m_pVertexStreamSpec.Get();
+		g_pLastStreamSpec = m_pVertexStreamSpec.get();
 	}
 }
 
@@ -3468,7 +3466,7 @@ bool CMeshDX8::SetRenderState( int nVertexOffsetInBytes, int nFirstVertexIdx, in
 		mat_tessellationlevel.SetValue( 1 );
 	}
 
-	iSubdivLevel = MIN( MAX_TESS_DIVISIONS_PER_SIDE, MAX( 1, iSubdivLevel ) );
+	iSubdivLevel = std::min<int>( MAX_TESS_DIVISIONS_PER_SIDE, std::max( 1, iSubdivLevel ) );
 
 	SetVertexIDStreamState( nIDOffsetBytes );
 	SetColorStreamState();
@@ -3916,7 +3914,7 @@ void CDynamicMeshDX8::LockMesh( int nVertexCount, int nIndexCount, MeshDesc_t& d
 {
 	ShaderUtil()->SyncMatrices();
 
-	g_ShaderMutex.Lock();
+	g_ShaderMutex.lock();
 
 	// Yes, this may well also be called from BufferedMesh but that's ok
 	PreLock();
@@ -4174,7 +4172,7 @@ void CTempMeshDX8::SetVertexFormat( VertexFormat_t format, bool bHasVertexOverri
 //-----------------------------------------------------------------------------
 int CTempMeshDX8::VertexCount() const
 {
-	return m_VertexSize ? m_VertexData.Count() / m_VertexSize : 0;
+	return m_VertexSize ? std::ssize( m_VertexData ) / m_VertexSize : 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -4182,7 +4180,7 @@ int CTempMeshDX8::VertexCount() const
 //-----------------------------------------------------------------------------
 int CTempMeshDX8::IndexCount( ) const
 {
-	return m_IndexData.Count();
+	return std::ssize( m_IndexData );
 }
 
 void CTempMeshDX8::ModifyBeginEx( bool bReadOnly, int nFirstVertex, int nVertexCount, int nFirstIndex, int nIndexCount, MeshDesc_t& desc )
@@ -4248,7 +4246,7 @@ void CTempMeshDX8::LockMesh( int nVertexCount, int nIndexCount, MeshDesc_t& desc
 {
 	ShaderUtil()->SyncMatrices();
 
-	g_ShaderMutex.Lock();
+	g_ShaderMutex.lock();
 
 	Assert( !m_Locked );
 
@@ -4257,7 +4255,7 @@ void CTempMeshDX8::LockMesh( int nVertexCount, int nIndexCount, MeshDesc_t& desc
 
 	if( nVertexCount > 0 )
 	{
-		int vertexByteOffset = m_VertexData.AddMultipleToTail( m_VertexSize * nVertexCount );
+		int vertexByteOffset = std::ssize( m_VertexData ); m_VertexData.resize( m_VertexData.size() + ( m_VertexSize * nVertexCount ) );
 		
 		// Lock it baby
 		unsigned char* pVertexMemory = &m_VertexData[vertexByteOffset];
@@ -4277,7 +4275,7 @@ void CTempMeshDX8::LockMesh( int nVertexCount, int nIndexCount, MeshDesc_t& desc
 
 	if (m_Type != MATERIAL_POINTS && nIndexCount > 0 )
 	{
-		int nFirstIndex = m_IndexData.AddMultipleToTail( nIndexCount );
+		int nFirstIndex = std::ssize( m_IndexData ); m_IndexData.resize( m_IndexData.size() + nIndexCount );
 		desc.m_pIndices = &m_IndexData[nFirstIndex];
 		desc.m_nIndexSize = 1;
 	}
@@ -4302,13 +4300,13 @@ void CTempMeshDX8::UnlockMesh( int nVertexCount, int nIndexCount, MeshDesc_t& de
 	int verticesToRemove = m_LockedVerts - nVertexCount;
 	if( verticesToRemove != 0 )
 	{
-		m_VertexData.RemoveMultiple( m_VertexData.Count() - verticesToRemove, verticesToRemove );
+		m_VertexData.resize( m_VertexData.size() - verticesToRemove );
 	}
 
 	int indicesToRemove = m_LockedIndices - nIndexCount;
 	if( indicesToRemove != 0 )
 	{
-		m_IndexData.RemoveMultiple( m_IndexData.Count() - indicesToRemove, indicesToRemove );
+		m_IndexData.resize( m_IndexData.size() - indicesToRemove );
 	}
 
 #ifdef DBGFLAG_ASSERT
@@ -4317,7 +4315,7 @@ void CTempMeshDX8::UnlockMesh( int nVertexCount, int nIndexCount, MeshDesc_t& de
 
 	CBaseMeshDX8::m_bMeshLocked = false;
 
-	g_ShaderMutex.Unlock();
+	g_ShaderMutex.unlock();
 }
 
 //-----------------------------------------------------------------------------
@@ -4354,7 +4352,7 @@ void CTempMeshDX8::DrawInternal( const Vector4D *pVecDiffuseModulation, int nFir
 		return;
 	}
 
-	if (m_VertexData.Count() > 0)
+	if (std::ssize( m_VertexData ) > 0)
 	{
 		if ( !g_pShaderDeviceDx8->IsDeactivated() )
 		{
@@ -4382,8 +4380,8 @@ void CTempMeshDX8::DrawInternal( const Vector4D *pVecDiffuseModulation, int nFir
 		// Clear out the data if this temp mesh is a dynamic one...
 		if (m_IsDynamic)
 		{
-			m_VertexData.RemoveAll();
-			m_IndexData.RemoveAll();
+			m_VertexData.clear();
+			m_IndexData.clear();
 		}
 	}
 }
@@ -4409,8 +4407,8 @@ void CTempMeshDX8::CopyToMeshBuilder(
 {
 	int startOffset = iStartVert * m_VertexSize;
 	int endOffset = (iStartVert + nVerts) * m_VertexSize;
-	Assert( startOffset >= 0 && startOffset <= m_VertexData.Count() );
-	Assert( endOffset >= 0 && endOffset <= m_VertexData.Count() && endOffset >= startOffset );
+	Assert( startOffset >= 0 && startOffset <= std::ssize( m_VertexData ) );
+	Assert( endOffset >= 0 && endOffset <= std::ssize( m_VertexData ) && endOffset >= startOffset );
 	if ( endOffset > startOffset )
 	{
 		// FIXME: make this a method of CMeshBuilder (so the 'Position' pointer accessor can be removed)
@@ -4658,9 +4656,9 @@ void CTempMeshDX8::TestSelection()
 
 	int numTriangles;
 	if (m_Type == MATERIAL_TRIANGLES)
-		numTriangles = m_IndexData.Count() / 3;
+		numTriangles = std::ssize( m_IndexData ) / 3;
 	else
-		numTriangles = m_IndexData.Count() - 2;
+		numTriangles = std::ssize( m_IndexData ) - 2;
 
 	float cullFactor = ComputeCullFactor();
 
@@ -4669,13 +4667,13 @@ void CTempMeshDX8::TestSelection()
 		cullFactor *= -1.0f;
 
 	// We'll need some temporary memory to tell us if we're transformed the vert
-	int nVertexCount = m_VertexData.Count() / m_VertexSize;
-	static CUtlVector< unsigned char > transformedVert;
+	int nVertexCount = std::ssize( m_VertexData ) / m_VertexSize;
+	static std::vector< unsigned char > transformedVert;
 	int transformedVertSize = (nVertexCount + 7) >> 3;
-	transformedVert.RemoveAll();
-	transformedVert.EnsureCapacity( transformedVertSize );
-	transformedVert.AddMultipleToTail( transformedVertSize );
-	memset( transformedVert.Base(), 0, transformedVertSize );
+	transformedVert.clear();
+	transformedVert.reserve( transformedVertSize );
+	transformedVert.resize( transformedVert.size() + transformedVertSize );
+	memset( transformedVert.data(), 0, transformedVertSize );
 
 	int indexPos;
 	for (int i = 0; i < numTriangles; ++i)
@@ -4749,7 +4747,7 @@ void CTempMeshDX8::BeginPass( )
 	int nFirstIndex;
 	if ((s_FirstIndex == -1) && (s_NumIndices == 0))
 	{
-		nIndexCount = m_IndexData.Count();
+		nIndexCount = std::ssize( m_IndexData );
 		nFirstIndex = 0;
 	}
 	else
@@ -4759,15 +4757,15 @@ void CTempMeshDX8::BeginPass( )
 	}
 	
 	int i;
-	int nVertexCount = m_VertexData.Count() / m_VertexSize;
+	int nVertexCount = std::ssize( m_VertexData ) / m_VertexSize;
 	pMeshBuilder->Begin( pMesh, m_Type, nVertexCount, nIndexCount );
 
 	// Copy in the vertex data...
 	// Note that since we pad the vertices, it's faster for us to simply
 	// copy the fields we're using...
 	Assert( pMeshBuilder->BaseVertexData() );
-	memcpy( pMeshBuilder->BaseVertexData(), m_VertexData.Base(), m_VertexData.Count() );
-	pMeshBuilder->AdvanceVertices( m_VertexData.Count() / m_VertexSize );
+	memcpy( pMeshBuilder->BaseVertexData(), m_VertexData.data(), std::ssize( m_VertexData ) );
+	pMeshBuilder->AdvanceVertices( std::ssize( m_VertexData ) / m_VertexSize );
 
 	for ( i = 0; i < nIndexCount; ++i )
 	{
@@ -5251,8 +5249,8 @@ void CMeshMgr::MarkUnusedVertexFields( unsigned int nFlags, int nTexCoordCount, 
 // Allocate temporary arrays either on the stack, or from the heap. 
 // Prevents using all the stack when *lots* of objects are rendered to CSM's.
 //-----------------------------------------------------------------------------
-#define STUDIORENDER_TEMP_DATA_MALLOC( typeName, p, n ) const int nTempDataSize##p = (n); void *pvFree##p = nullptr; typeName *p = (typeName *) ( ( nTempDataSize##p < 64*1024 ) ? stackalloc( nTempDataSize##p ) : ( pvFree##p = malloc( nTempDataSize##p ) ) );
-#define STUDIORENDER_TEMP_DATA_FREE( p ) free( pvFree##p )
+#define STUDIORENDER_TEMP_DATA_MALLOC( typeName, p, n ) const int nTempDataSize##p = (n); void *pvFree##p = nullptr; typeName *p = (typeName *) ( ( nTempDataSize##p < 64*1024 ) ? stackalloc( nTempDataSize##p ) : ( pvFree##p = MemAlloc_Alloc( nTempDataSize##p ) ) );
+#define STUDIORENDER_TEMP_DATA_FREE( p ) g_pMemAlloc->Free( pvFree##p )
 
 
 //-----------------------------------------------------------------------------
@@ -5275,7 +5273,7 @@ void CMeshMgr::DrawInstances( int nInstanceCount, const MeshInstanceData_t *pIns
 
 	// NOTE: on the 360/PS3, we can't do too many instances at the same time because
 	// we overflow the stack in the compiled state allocation.
-	int nBatchSize = false ? MIN( nInstanceCount, CONSOLE_MAX_MODEL_FAST_PATH_BATCH_SIZE ) : nInstanceCount;
+	int nBatchSize = false ? std::min( nInstanceCount, CONSOLE_MAX_MODEL_FAST_PATH_BATCH_SIZE ) : nInstanceCount;
 
 	// Compute info necessary for the entire render
 	const int nCompiledStateSize = nBatchSize * sizeof(CompiledLightingState_t);
@@ -5312,7 +5310,7 @@ void CMeshMgr::DrawInstances( int nInstanceCount, const MeshInstanceData_t *pIns
 
 		nInstanceCount -= nBatchSize;
 		pInstanceData += nBatchSize;
-		nBatchSize = MIN( nInstanceCount, CONSOLE_MAX_MODEL_FAST_PATH_BATCH_SIZE ); 
+		nBatchSize = std::min( nInstanceCount, CONSOLE_MAX_MODEL_FAST_PATH_BATCH_SIZE ); 
 	}
 
 	g_pInstanceCompiledState = nullptr;
@@ -5355,7 +5353,7 @@ void CMeshMgr::DiscardVertexBuffers()
 
 	if ( !g_pShaderDeviceDx8->IsDeactivated() )
 	{
-		for (int i = m_DynamicVertexBuffers.Count(); --i >= 0; )
+		for (int i = std::ssize( m_DynamicVertexBuffers ); --i >= 0; )
 		{
 			m_DynamicVertexBuffers[i].m_pBuffer->FlushAtFrameStart();
 		}
@@ -5414,14 +5412,14 @@ void CMeshMgr::DestroyVertexBuffers()
 	RECORD_INT( 0 );
 	D3DSetStreamSource( 3, 0, 0, 0 );
 
-	for (int i = m_DynamicVertexBuffers.Count(); --i >= 0; )
+	for (int i = std::ssize( m_DynamicVertexBuffers ); --i >= 0; )
 	{
 		if (m_DynamicVertexBuffers[i].m_pBuffer)
 		{
 			delete m_DynamicVertexBuffers[i].m_pBuffer;
 		}
 	}
-	m_DynamicVertexBuffers.RemoveAll();
+	m_DynamicVertexBuffers.clear();
 	m_DynamicMesh.Reset();
 	m_DynamicFlexMesh.Reset();
 }
@@ -5644,7 +5642,7 @@ VertexFormat_t CMeshMgr::ComputeVertexFormat( unsigned int flags,
 
 	// NOTE: If pTexCoordDimensions isn't specified, then nTexCoordArraySize
 	// is interpreted as meaning that we have n 2D texcoords in the first N texcoord slots
-	nTexCoordArraySize = MIN( nTexCoordArraySize, VERTEX_MAX_TEXTURE_COORDINATES );
+	nTexCoordArraySize = std::min<int>( nTexCoordArraySize, VERTEX_MAX_TEXTURE_COORDINATES );
 	for ( int i = 0; i < nTexCoordArraySize; ++i )
 	{
 		if ( pTexCoordDimensions )
@@ -5762,7 +5760,7 @@ CVertexBuffer *CMeshMgr::FindOrCreateVertexBuffer( int nDynamicBufferId, VertexF
 {
 	int vertexSize = VertexFormatSize( vertexFormat );
 
-	while ( m_DynamicVertexBuffers.Count() <= nDynamicBufferId )
+	while ( std::ssize( m_DynamicVertexBuffers ) <= nDynamicBufferId )
 	{
 		// Track VB allocations (override any prior allocator string set higher up on the callstack)
 		g_VBAllocTracker->TrackMeshAllocations( nullptr );
@@ -5773,7 +5771,7 @@ CVertexBuffer *CMeshMgr::FindOrCreateVertexBuffer( int nDynamicBufferId, VertexF
 		// creates an undesirably large buffer - instead create the buffer we want, and fix consumers that bork
 		// NOTE: GetCurrentDynamicVBSize returns a smaller value during level transitions
 		int nBufferMemory = ShaderAPI()->GetCurrentDynamicVBSize();
-		int nIndex = m_DynamicVertexBuffers.AddToTail();
+		int nIndex = std::ssize( m_DynamicVertexBuffers ); m_DynamicVertexBuffers.emplace_back();
 		m_DynamicVertexBuffers[nIndex].m_VertexSize = 0;
 		m_DynamicVertexBuffers[nIndex].m_pBuffer = new CVertexBuffer( Dx9Device(), 0, 0, 
 			nBufferMemory / VERTEX_BUFFER_SIZE, VERTEX_BUFFER_SIZE, TEXTURE_GROUP_STATIC_VERTEX_BUFFER_OTHER, ShaderAPI()->UsingSoftwareVertexProcessing(), true ); 

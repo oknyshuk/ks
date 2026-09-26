@@ -13,6 +13,7 @@
 #include "choreoactor.h"
 #include "choreochannel.h"
 #include "choreoscene.h"
+#include "tier1/byte_reader.h"
 #include "filesystem.h"
 #include "ichoreoeventcallback.h"
 #include "scenefilecache/ISceneFileCache.h"
@@ -22,9 +23,6 @@
 #include "../../common/blackbox_helper.h"
 
 #include "c_sceneentity.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: Decodes animtime and notes when it changes
@@ -281,7 +279,7 @@ void C_SceneEntity::SetupClientOnlyScene( const char *pszFilename, C_BaseFlex *p
 	}
 	else
 	{
-		for( int i = 0; i < m_hActorList.Count() ; ++i )
+		for( int i = 0; i < std::ssize( m_hActorList ) ; ++i )
 		{
 			C_BaseFlex *actor = m_hActorList[ i ].Get();
 			if ( !actor )
@@ -368,7 +366,7 @@ void C_SceneEntity::PostDataUpdate( DataUpdateType_t updateType )
 	// Playback state changed...
 	if ( m_bWasPlaying != m_bIsPlayingBack )
 	{
-		for(int i = 0; i < m_hActorList.Count() ; ++i )
+		for(int i = 0; i < std::ssize( m_hActorList ) ; ++i )
 		{
 			C_BaseFlex *actor = m_hActorList[ i ].Get();
 			if ( !actor )
@@ -436,7 +434,7 @@ C_BaseFlex *C_SceneEntity::FindNamedActor( CChoreoActor *pChoreoActor )
 	}
 
 	int idx = m_pScene->FindActorIndex( pChoreoActor );
-	if ( idx < 0 || idx >= m_hActorList.Count() )
+	if ( idx < 0 || idx >= std::ssize( m_hActorList ) )
 		return nullptr;
 
 	return m_hActorList[ idx ].Get();
@@ -750,7 +748,7 @@ CChoreoScene *C_SceneEntity::LoadScene( const char *filename )
 	if ( IsBufferBinaryVCD( pBuffer, bufsize ) )
 	{
 		pScene = new CChoreoScene( this );
-		CUtlBuffer buf( pBuffer, bufsize, CUtlBuffer::READ_ONLY );
+		ks::byte_reader buf( pBuffer, bufsize );
 		if ( !pScene->RestoreFromBinaryBuffer( buf, loadfile, &g_ChoreoStringPool ) )
 		{
 			Warning( "Unable to restore binary scene '%s'\n", loadfile );
@@ -980,11 +978,11 @@ void C_SceneEntity::ClientThink()
 void C_SceneEntity::CheckQueuedEvents()
 {
 // Check for duplicates
-	CUtlVector< QueuedEvents_t > events;
+	std::vector< QueuedEvents_t > events;
 	events = m_QueuedEvents;
-	m_QueuedEvents.RemoveAll();
+	m_QueuedEvents.clear();
 
-	int c = events.Count();
+	int c = std::ssize( events );
 	for ( int i = 0; i < c; ++i )
 	{
 		const QueuedEvents_t& check = events[ i ];
@@ -996,13 +994,13 @@ void C_SceneEntity::CheckQueuedEvents()
 
 void C_SceneEntity::WipeQueuedEvents()
 {
-	m_QueuedEvents.Purge();
+	m_QueuedEvents.clear(); m_QueuedEvents.shrink_to_fit();
 }
 
 void C_SceneEntity::QueueStartEvent( float starttime, CChoreoScene *scene, CChoreoEvent *event )
 {
 	// Check for duplicates
-	int c = m_QueuedEvents.Count();
+	int c = std::ssize( m_QueuedEvents );
 	for ( int i = 0; i < c; ++i )
 	{
 		const QueuedEvents_t& check = m_QueuedEvents[ i ];
@@ -1015,7 +1013,7 @@ void C_SceneEntity::QueueStartEvent( float starttime, CChoreoScene *scene, CChor
 	qe.scene = scene;
 	qe.event = event;
 	qe.starttime = starttime;
-	m_QueuedEvents.AddToTail( qe );
+	m_QueuedEvents.push_back( qe );
 }
 
 //-----------------------------------------------------------------------------
@@ -1039,7 +1037,7 @@ void C_SceneEntity::PrefetchAnimBlocks( CChoreoScene *pScene )
 		return;
 
 	// Build a fast lookup, too
-	CUtlMap<CChoreoActor*,CBaseFlex*> actorMap( 0, 0, DefLessFunc( CChoreoActor* ) );
+	std::map<CChoreoActor*,CBaseFlex*> actorMap;
 
 	int nSpew = 0;
 	int nResident = 0;
@@ -1064,15 +1062,15 @@ void C_SceneEntity::PrefetchAnimBlocks( CChoreoScene *pScene )
 				if ( pActor )
 				{
 					CBaseFlex *pFlex = nullptr;
-					int idx = actorMap.Find( pActor );
-					if ( idx == actorMap.InvalidIndex() )
+					auto idx = actorMap.find( pActor );
+					if ( idx == actorMap.end() )
 					{
 						pFlex = FindNamedActor( pActor );
-						idx = actorMap.Insert( pActor, pFlex );
+						actorMap.emplace( pActor, pFlex );
 					}
 					else
 					{
-						pFlex = actorMap[ idx ];
+						pFlex = idx->second;
 					}
 
 					if ( pFlex )

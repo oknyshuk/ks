@@ -11,9 +11,6 @@
 #include "../game/shared/iscenetokenprocessor.h"
 #include "characterset.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Helper for parsing scene data file

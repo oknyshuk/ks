@@ -8,9 +8,6 @@
 //-----------------------------------------------------------------------------
 // Includes
 //-----------------------------------------------------------------------------
-#include "utlbuffer.h"
-#include "utllinkedlist.h"
-#include <tier2/utlstreambuffer.h>
 #include "interface.h"
 #include "demofile/demoformat.h"
 
@@ -22,10 +19,10 @@ struct DemoBufferInitParams_t
 
 struct StreamDemoBufferInitParams_t : public DemoBufferInitParams_t
 {
-	StreamDemoBufferInitParams_t( char const* filename, char const* path, int flags, int openfileflags ) : pFilename( filename ), pszPath( path ), nFlags( flags ), nOpenFileFlags( openfileflags ) {}
+	StreamDemoBufferInitParams_t( char const* filename, char const* path, bool readOnly, int openfileflags ) : pFilename( filename ), pszPath( path ), bReadOnly( readOnly ), nOpenFileFlags( openfileflags ) {}
 	char const*	pFilename;
 	char const*	pszPath;
-	int			nFlags;
+	bool		bReadOnly;
 	int			nOpenFileFlags;
 };
 

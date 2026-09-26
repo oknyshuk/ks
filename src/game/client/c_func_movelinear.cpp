@@ -9,9 +9,6 @@
 #include "reflect_annotations.h"
 #include "c_basedoor.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // ------------------------------------------------------------------------
 class [[= ks::reflect::NetTable{ .name = "DT_FuncMoveLinear" } ]]
       [[= ks::reflect::From<"m_vecVelocity", ks::reflect::Net{}, RecvProxy_LocalVelocity>{} ]]

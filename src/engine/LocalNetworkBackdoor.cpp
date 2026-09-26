@@ -11,9 +11,6 @@
 #include "cdll_engine_int.h"
 #include "dt_localtransfer.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 CLocalNetworkBackdoor *g_pLocalNetworkBackdoor = nullptr;
 
 #ifndef DEDICATED
@@ -64,7 +61,7 @@ void CLocalNetworkBackdoor::InitFastCopy()
 
 void CLocalNetworkBackdoor::StartEntityStateUpdate()
 {
-	m_EntsAlive.ClearAll();
+	m_EntsAlive.reset();
 	m_nEntsCreated = 0;
 	m_nEntsChanged = 0;
 
@@ -100,13 +97,13 @@ void CLocalNetworkBackdoor::EndEntityStateUpdate()
 	ClientDLL_FrameStageNotify( FRAME_NET_UPDATE_POSTDATAUPDATE_END );
 
 	// Handle entities removed (= SV_WriteDeletions() in normal mode)
-	int nDWords = m_PrevEntsAlive.GetNumDWords();
+	int nDWords = ks::word_count<MAX_EDICTS>;
 
 	// Handle entities removed.
 	for ( i=0; i < nDWords; i++ )
 	{
-		unsigned long prevEntsAlive = m_PrevEntsAlive.GetDWord( i );
-		unsigned long entsAlive = m_EntsAlive.GetDWord( i );
+		unsigned long prevEntsAlive = ks::get_word( m_PrevEntsAlive, i );
+		unsigned long entsAlive = ks::get_word( m_EntsAlive, i );
 		unsigned long toDelete = (prevEntsAlive ^ entsAlive) & prevEntsAlive;
 
 		if ( toDelete )
@@ -179,7 +176,7 @@ void CLocalNetworkBackdoor::EntityDormant( int iEnt, int iSerialNum )
 		Assert( pCached->m_iSerialNumber == pNet->GetIClientUnknown()->GetRefEHandle().GetSerialNumber() );
 		if ( pCached->m_iSerialNumber == iSerialNum )
 		{
-			m_EntsAlive.Set( iEnt );
+			m_EntsAlive.set( iEnt );
 
 			// Tell the game code that this guy is now dormant.
 			Assert( pCached->m_bDormant == pNet->IsDormant() );
@@ -193,7 +190,7 @@ void CLocalNetworkBackdoor::EntityDormant( int iEnt, int iSerialNum )
 		{
 			pNet->Release();
 			pCached->m_pNetworkable = nullptr;
-			m_PrevEntsAlive.Clear( iEnt ); 
+			m_PrevEntsAlive.reset( iEnt ); 
 		}
 	}
 }
@@ -205,13 +202,13 @@ void CLocalNetworkBackdoor::AddToPendingDormantEntityList( unsigned short iEdict
 	if ( !( e->m_fStateFlags & FL_EDICT_PENDING_DORMANT_CHECK ) )
 	{
 		e->m_fStateFlags |= FL_EDICT_PENDING_DORMANT_CHECK;
-		m_PendingDormantEntities.AddToTail( iEdict );
+		m_PendingDormantEntities.push_back( iEdict );
 	}
 }		
 
 void CLocalNetworkBackdoor::ProcessDormantEntities()
 {
-	FOR_EACH_LL( m_PendingDormantEntities, i )
+	for ( size_t i = 0; i < m_PendingDormantEntities.size(); ++i )
 	{
 		int iEdict = m_PendingDormantEntities[i];
 		edict_t *e = &sv.edicts[iEdict];
@@ -226,7 +223,7 @@ void CLocalNetworkBackdoor::ProcessDormantEntities()
 		EntityDormant( iEdict, e->m_NetworkSerialNumber );
 		e->m_fStateFlags &= ~FL_EDICT_PENDING_DORMANT_CHECK;
 	}
-	m_PendingDormantEntities.Purge();
+	m_PendingDormantEntities.clear();
 }
 
 void CLocalNetworkBackdoor::EntState( 
@@ -242,7 +239,7 @@ void CLocalNetworkBackdoor::EntState(
 	CCachedEntState *pCached = &m_CachedEntState[iEnt];
 
 	// Remember that this ent is alive.
-	m_EntsAlive.Set(iEnt);
+	m_EntsAlive.set( iEnt );
 
 	ClientClass *pClientClass = GetBaseLocalClient().GetClientClass(iClass);
 	if ( !pClientClass )
@@ -272,13 +269,13 @@ void CLocalNetworkBackdoor::EntState(
 				pNet = nullptr;
 				pCached->m_pNetworkable = nullptr;
 				// Since we set this above, need to clear it now to avoid assertion in EndEntityStateUpdate()
-				m_EntsAlive.Clear(iEnt);
-				m_PrevEntsAlive.Clear( iEnt ); 
+				m_EntsAlive.reset( iEnt );
+				m_PrevEntsAlive.reset( iEnt ); 
 			}
 		}
 		else
 		{
-			m_EntsAlive.Clear( iEnt );
+			m_EntsAlive.reset( iEnt );
 		}
 		return;
 	}
@@ -296,7 +293,7 @@ void CLocalNetworkBackdoor::EntState(
 		{
 			pNet->Release();
 			pNet = nullptr;
-			m_PrevEntsAlive.Clear(iEnt);
+			m_PrevEntsAlive.reset( iEnt );
 		}
 	}
 
@@ -369,7 +366,7 @@ void CLocalNetworkBackdoor::ClearState()
 		ces.m_pDataPointer = nullptr;
 	}
 
-	m_PrevEntsAlive.ClearAll();
+	m_PrevEntsAlive.reset();
 }
 
 void CLocalNetworkBackdoor::StartBackdoorMode() 
@@ -388,7 +385,7 @@ void CLocalNetworkBackdoor::StartBackdoorMode()
 			ces.m_iSerialNumber = pNet->GetIClientUnknown()->GetRefEHandle().GetSerialNumber();
 			ces.m_bDormant = pNet->IsDormant();
 			ces.m_pDataPointer = pNet->GetDataTableBasePtr();
-			m_PrevEntsAlive.Set( i );
+			m_PrevEntsAlive.set( i );
 		}
 	}
 }

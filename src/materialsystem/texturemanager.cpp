@@ -16,20 +16,20 @@
 #include "materialsystem/IColorCorrection.h"
 #include "tier1/strtools.h"
 #include "utlvector.h"
-#include "utldict.h"
+#include "tier1/map_ops.h"
 #include "itextureinternal.h"
 #include "vtf/vtf.h"
 #include "pixelwriter.h"
 #include "basetypes.h"
-#include "utlbuffer.h"
 #include "filesystem.h"
 #include "materialsystem/imesh.h"
 #include "materialsystem/ishaderapi.h"
 #include "vstdlib/random.h"
 #include "imorphinternal.h"
 #include "isubdinternal.h"
-#include "tier1/utlrbtree.h"
 #include "ctype.h"
+#include "tier1/text_reader.h"
+#include <algorithm>
 #include "tier0/icommandline.h"
 
 // Need lightmaps access here
@@ -37,8 +37,6 @@
 #include "cmatlightmaps.h"
 #include "cmaterialsystem.h"
 #undef MATSYS_INTERNAL
-
-#include "tier0/memdbgon.h"
 
 #define ERROR_TEXTURE_SIZE				32
 #define WHITE_TEXTURE_SIZE				1
@@ -476,7 +474,6 @@ public:
 	virtual void ReloadFilesInList( IFileList *pFilesToReload );
 
 	// start with -1, list terminates with -1
-	virtual int FindNext( int iIndex, ITextureInternal **ppTexture );
 
 	virtual void ReleaseTempRenderTargetBits( void );
 
@@ -487,9 +484,10 @@ protected:
 	// Restores a single texture
 	void RestoreTexture( ITextureInternal* pTex );
 
-	CUtlDict< ITextureInternal *, unsigned short > m_TextureList;
-	CUtlDict< const char *, unsigned short > m_TextureAliases;
-	CUtlDict< int, unsigned short > m_TextureExcludes;	
+	// Names may repeat (procedural textures); every texture must stay tracked.
+	std::multimap< std::string, ITextureInternal *, ks::iless > m_TextureList;
+	ks::idict< std::string > m_TextureAliases;
+	ks::idict< int > m_TextureExcludes;	
 
 	bool m_bUsingWeaponModelCache;
 
@@ -533,7 +531,7 @@ ITextureManager *g_pTextureManager = &s_TextureManager;
 //-----------------------------------------------------------------------------
 // Texture manager
 //-----------------------------------------------------------------------------
-CTextureManager::CTextureManager( void ) : m_TextureList( true ), m_TextureAliases( true ), m_TextureExcludes( true )
+CTextureManager::CTextureManager( void )
 {
 	m_pErrorTexture = nullptr;
 	m_pBlackTexture = nullptr;
@@ -728,19 +726,15 @@ void CTextureManager::Shutdown()
 		m_pErrorRegen = nullptr;
 	}
 
-	for ( int i = m_TextureList.First(); i != m_TextureList.InvalidIndex(); i = m_TextureList.Next( i ) )
+	for ( auto &[name, pTex] : m_TextureList )
 	{
-		ITextureInternal::Destroy( m_TextureList[i] );
+		ITextureInternal::Destroy( pTex );
 	}
-	m_TextureList.RemoveAll();
+	m_TextureList.clear();
 
-	for( int i = m_TextureAliases.First(); i != m_TextureAliases.InvalidIndex(); i = m_TextureAliases.Next( i ) )
-	{
-		delete []m_TextureAliases[i];
-	}
-	m_TextureAliases.RemoveAll();
+	m_TextureAliases.clear();
 
-	m_TextureExcludes.RemoveAll();
+	m_TextureExcludes.clear();
 }
 
 
@@ -839,12 +833,12 @@ void CTextureManager::ReleaseTextures( bool bReleaseManaged /*= true*/ )
 {
 	g_pShaderAPI->SetFullScreenTextureHandle( INVALID_SHADERAPI_TEXTURE_HANDLE );
 
-	for ( int i = m_TextureList.First(); i != m_TextureList.InvalidIndex(); i = m_TextureList.Next( i ) )
+	for ( auto &[name, pTex] : m_TextureList )
 	{
-		if ( bReleaseManaged || m_TextureList[i]->IsRenderTarget() || m_TextureList[i]->IsDefaultPool() )
+		if ( bReleaseManaged || pTex->IsRenderTarget() || pTex->IsDefaultPool() )
 		{
 			// Release the texture...
-			m_TextureList[i]->Release();
+			pTex->Release();
 		}
 	}
 }
@@ -884,11 +878,11 @@ void CTextureManager::RestoreNonRenderTargetTextures()
 {
 	// 360 should not have gotten here
 
-	for ( int i = m_TextureList.First(); i != m_TextureList.InvalidIndex(); i = m_TextureList.Next( i ) )
+	for ( auto &[name, pTex] : m_TextureList )
 	{
-		if ( !m_TextureList[i]->IsRenderTarget() )
+		if ( !pTex->IsRenderTarget() )
 		{
-			RestoreTexture( m_TextureList[i] );
+			RestoreTexture( pTex );
 		}
 	}
 }
@@ -900,11 +894,11 @@ void CTextureManager::RestoreRenderTargets()
 {
 	// 360 should not have gotten here
 
-	for ( int i = m_TextureList.First(); i != m_TextureList.InvalidIndex(); i = m_TextureList.Next( i ) )
+	for ( auto &[name, pTex] : m_TextureList )
 	{
-		if ( m_TextureList[i]->IsRenderTarget() )
+		if ( pTex->IsRenderTarget() )
 		{
-			RestoreTexture( m_TextureList[i] );
+			RestoreTexture( pTex );
 		}
 	}
 
@@ -922,10 +916,10 @@ void CTextureManager::RestoreRenderTargets()
 //-----------------------------------------------------------------------------
 void CTextureManager::ReloadTextures()
 {
-	for ( int i = m_TextureList.First(); i != m_TextureList.InvalidIndex(); i = m_TextureList.Next( i ) )
+	for ( auto &[name, pTex] : m_TextureList )
 	{
 		// Put the texture back onto the board
-		m_TextureList[i]->Download();
+		pTex->Download();
 	}
 }
 
@@ -981,10 +975,10 @@ void CTextureManager::ForceAllTexturesIntoHardware( void )
 		return;
 	}
 
-	for ( int i = m_TextureList.First(); i != m_TextureList.InvalidIndex(); i = m_TextureList.Next( i ) )
+	for ( auto &[name, pTex] : m_TextureList )
 	{
 		// Put the texture back onto the board
-		ForceTextureIntoHardware( m_TextureList[i], pMaterial, pBaseTextureVar );
+		ForceTextureIntoHardware( pTex, pMaterial, pBaseTextureVar );
 	}
 }
 
@@ -1048,7 +1042,7 @@ ITextureInternal *CTextureManager::CreateProceduralTexture(
 		return nullptr;
 
 	// Add it to the list of textures so it can be restored, etc.
-	m_TextureList.Insert( pNewTexture->GetName(), pNewTexture );
+	m_TextureList.emplace( pNewTexture->GetName(), pNewTexture );
 
 	if ( ( nFlags & TEXTUREFLAGS_SKIP_INITIAL_DOWNLOAD ) != TEXTUREFLAGS_SKIP_INITIAL_DOWNLOAD )
 	{
@@ -1069,11 +1063,10 @@ ITextureInternal *CTextureManager::LoadTexture( const char *pTextureName, const 
 	ITextureInternal *pNewTexture = ITextureInternal::CreateFileTexture( pTextureName, pTextureGroupName );
 	if ( pNewTexture )
 	{
-		int iIndex = m_TextureExcludes.Find( pNewTexture->GetName() );
-		if ( m_TextureExcludes.IsValidIndex( iIndex ) )
+		if ( int *pDimensionsLimit = ks::find_ptr( m_TextureExcludes, pNewTexture->GetName() ) )
 		{
 			// mark the new texture as excluded
-			int nDimensionsLimit = m_TextureExcludes[iIndex];
+			int nDimensionsLimit = *pDimensionsLimit;
 			pNewTexture->MarkAsExcluded( ( nDimensionsLimit == 0 ), nDimensionsLimit );
 		}
 
@@ -1094,16 +1087,15 @@ ITextureInternal *CTextureManager::FindTexture( const char *pTextureName )
 	char szCleanName[MAX_PATH];
 	NormalizeTextureName( pTextureName, szCleanName, sizeof( szCleanName ) );
 
-	int i = m_TextureList.Find( szCleanName );
-	if ( i != m_TextureList.InvalidIndex() )
+	auto it = m_TextureList.find( szCleanName );
+	if ( it != m_TextureList.end() )
 	{
-		return m_TextureList[i];
+		return it->second;
 	}
 
-	i = m_TextureAliases.Find( szCleanName );
-	if ( i != m_TextureAliases.InvalidIndex() )
+	if ( std::string *pRealName = ks::find_ptr( m_TextureAliases, szCleanName ) )
 	{
-		return FindTexture( m_TextureAliases[i] );
+		return FindTexture( pRealName->c_str() );
 	}
 
 	// Special handling: lightmaps
@@ -1120,7 +1112,7 @@ ITextureInternal *CTextureManager::FindTexture( const char *pTextureName )
 			{
 				// Establish the lookup linking in the dictionary
 				ITextureInternal *pTxInt = ITextureInternal::CreateReferenceTextureFromHandle( pTextureName, TEXTURE_GROUP_LIGHTMAP, hTex );
-				m_TextureList.Insert( pTextureName, pTxInt );
+				m_TextureList.emplace( pTextureName, pTxInt );
 				return pTxInt;
 			}
 		}
@@ -1135,19 +1127,15 @@ void CTextureManager::AddTextureAlias( const char *pAlias, const char *pRealName
 		return; //invalid alias
 
 	char szCleanName[MAX_PATH];
-	int index = m_TextureAliases.Find( NormalizeTextureName( pAlias, szCleanName, sizeof( szCleanName ) ) );
+	auto it = m_TextureAliases.find( NormalizeTextureName( pAlias, szCleanName, sizeof( szCleanName ) ) );
 
-	if	( index != m_TextureAliases.InvalidIndex() )
+	if	( it != m_TextureAliases.end() )
 	{
-		AssertMsg( Q_stricmp( pRealName, m_TextureAliases[index] ) == 0, "Trying to use one name to alias two different textures." );
-		RemoveTextureAlias( pAlias ); //remove the old alias to make room for the new one.
+		AssertMsg( Q_stricmp( pRealName, it->second.c_str() ) == 0, "Trying to use one name to alias two different textures." );
 	}
 
-	size_t iRealNameLength = strlen( pRealName ) + 1;
-	char *pRealNameCopy = new char [iRealNameLength];
-	memcpy( pRealNameCopy, pRealName, iRealNameLength );
-
-	m_TextureAliases.Insert( szCleanName, pRealNameCopy );
+	// replaces any old alias
+	m_TextureAliases.insert_or_assign( szCleanName, pRealName );
 }
 
 void CTextureManager::RemoveTextureAlias( const char *pAlias )
@@ -1156,12 +1144,7 @@ void CTextureManager::RemoveTextureAlias( const char *pAlias )
 		return;
 
 	char szCleanName[MAX_PATH];
-	int index = m_TextureAliases.Find( NormalizeTextureName( pAlias, szCleanName, sizeof( szCleanName ) ) );
-	if ( index == m_TextureAliases.InvalidIndex() )
-		return; //not found
-
-	delete []m_TextureAliases[index];
-	m_TextureAliases.RemoveAt( index );
+	m_TextureAliases.erase( NormalizeTextureName( pAlias, szCleanName, sizeof( szCleanName ) ) );
 }
 
 bool CTextureManager::ParseTextureExcludeScript( const char *pScriptName )
@@ -1170,9 +1153,10 @@ bool CTextureManager::ParseTextureExcludeScript( const char *pScriptName )
 	if ( !pScriptName || !pScriptName[0] )
 		return false;
 
-	CUtlBuffer excludeBuffer( 0, 0, CUtlBuffer::TEXT_BUFFER );
-	if ( !g_pFullFileSystem->ReadFile( pScriptName, nullptr, excludeBuffer ) )
+	auto excludeData = g_pFullFileSystem->ReadFile( pScriptName, nullptr );
+	if ( !excludeData )
 		return false;
+	ks::text_reader excludeBuffer( ks::text_view( *excludeData ) );
 
 	char szToken[MAX_PATH];
 	while ( 1 )
@@ -1181,14 +1165,17 @@ bool CTextureManager::ParseTextureExcludeScript( const char *pScriptName )
 		// have to brute force parse up to a valid line
 		while ( 1 )
 		{
-			excludeBuffer.EatWhiteSpace();
-			if ( !excludeBuffer.EatCPPComment() )
+			excludeBuffer.skip_whitespace();
+			if ( !excludeBuffer.skip_cpp_comment() )
 			{
 				// not a comment
 				break;
 			}
 		}
-		excludeBuffer.GetLine( szToken, sizeof( szToken ) );
+		const std::string_view line = excludeBuffer.read_line();
+		const size_t nLineChars = std::min( line.size(), sizeof( szToken ) - 1 );
+		memcpy( szToken, line.data(), nLineChars );
+		szToken[nLineChars] = '\0';
 		int tokenLength = strlen( szToken );
 		if ( !tokenLength )
 		{
@@ -1229,16 +1216,8 @@ bool CTextureManager::ParseTextureExcludeScript( const char *pScriptName )
 		char szCleanName[MAX_PATH];
 		NormalizeTextureName( pTextureName, szCleanName, sizeof( szCleanName ) );
 
-		int iIndex = m_TextureExcludes.Find( szCleanName );
-		if ( m_TextureExcludes.IsValidIndex( iIndex ) )
-		{
-			// do not duplicate, override existing entry
-			m_TextureExcludes[iIndex] = nDimensionsLimit;
-		}
-		else
-		{
-			m_TextureExcludes.Insert( szCleanName, nDimensionsLimit );
-		}
+		// do not duplicate, override existing entry
+		m_TextureExcludes.insert_or_assign( szCleanName, nDimensionsLimit );
 	}
 
 	return true;
@@ -1251,15 +1230,15 @@ void CTextureManager::SetExcludedTextures( const char *pScriptName, bool bUsingW
 	m_bUsingWeaponModelCache = false;
 
 	// clear all existing texture's exclusion
-	for ( int i = m_TextureExcludes.First(); i != m_TextureExcludes.InvalidIndex(); i = m_TextureExcludes.Next( i ) )
+	for ( auto &[name, nDimensionsLimit] : m_TextureExcludes )
 	{
-		ITextureInternal *pTexture = FindTexture( m_TextureExcludes.GetElementName( i ) );
+		ITextureInternal *pTexture = FindTexture( name.c_str() );
 		if ( pTexture )
 		{
 			pTexture->MarkAsExcluded( false, 0 );
 		}
 	}
-	m_TextureExcludes.RemoveAll();
+	m_TextureExcludes.clear();
 
 	// run through exclusions, build final aggregate list
 	// optional global script first
@@ -1268,14 +1247,13 @@ void CTextureManager::SetExcludedTextures( const char *pScriptName, bool bUsingW
 	ParseTextureExcludeScript( pScriptName );
 
 	// perform exclusions
-	for ( int i = m_TextureExcludes.First(); i != m_TextureExcludes.InvalidIndex(); i = m_TextureExcludes.Next( i ) )
+	for ( auto &[name, nDimensionsLimit] : m_TextureExcludes )
 	{
 		// set any existing texture's exclusion
 		// textures that don't exist yet will get caught during their creation path
-		ITextureInternal *pTexture = FindTexture( m_TextureExcludes.GetElementName( i ) );
+		ITextureInternal *pTexture = FindTexture( name.c_str() );
 		if ( pTexture )
 		{
-			int nDimensionsLimit = m_TextureExcludes[i];
 			pTexture->MarkAsExcluded( ( nDimensionsLimit == 0 ), nDimensionsLimit );
 		}
 	}
@@ -1283,9 +1261,9 @@ void CTextureManager::SetExcludedTextures( const char *pScriptName, bool bUsingW
 
 void CTextureManager::UpdateExcludedTextures( void )
 {
-	for ( int i = m_TextureList.First(); i != m_TextureList.InvalidIndex(); i = m_TextureList.Next( i ) )
+	for ( auto &[name, pTex] : m_TextureList )
 	{
-		m_TextureList[i]->UpdateExcludedState();
+		pTex->UpdateExcludedState();
 	}
 }
 
@@ -1297,11 +1275,11 @@ void CTextureManager::ClearForceExcludes( void )
 		return;
 	}
 
-	for ( int i = m_TextureList.First(); i != m_TextureList.InvalidIndex(); i = m_TextureList.Next( i ) )
+	for ( auto &[name, pTex] : m_TextureList )
 	{
-		if ( m_TextureList[i]->IsForceExcluded() )
+		if ( pTex->IsForceExcluded() )
 		{
-			m_TextureList[i]->ClearForceExclusion();
+			pTex->ClearForceExclusion();
 		}
 	}
 }
@@ -1323,7 +1301,7 @@ ITextureInternal *CTextureManager::FindOrLoadTexture( const char *pTextureName, 
 		if ( pTexture )
 		{
 			// insert into the dictionary using the processed texture name
-			m_TextureList.Insert( pTexture->GetName(), pTexture );
+			m_TextureList.emplace( pTexture->GetName(), pTexture );
 		}
 	}
 
@@ -1389,7 +1367,7 @@ ITextureInternal *CTextureManager::CreateRenderTargetTexture(
 
 	// Add the render target to the list of textures
 	// that way it'll get cleaned up correctly in case of a task switch
-	m_TextureList.Insert( pTexture->GetName(), pTexture );
+	m_TextureList.emplace( pTexture->GetName(), pTexture );
 
 	// NOTE: This will download the texture only if the shader api is ready
 	{
@@ -1401,30 +1379,33 @@ ITextureInternal *CTextureManager::CreateRenderTargetTexture(
 
 void CTextureManager::ResetTextureFilteringState( )
 {
-	for ( int i = m_TextureList.First(); i != m_TextureList.InvalidIndex(); i = m_TextureList.Next( i ) )
+	for ( auto &[name, pTex] : m_TextureList )
 	{
-		m_TextureList[i]->SetFilteringAndClampingMode();
+		pTex->SetFilteringAndClampingMode();
 	}
 }
 
 
 void CTextureManager::RemoveUnusedTextures( void )
 {
-	int iNext;
-	for ( int i = m_TextureList.First(); i != m_TextureList.InvalidIndex(); i = iNext )
+	for ( auto it = m_TextureList.begin(); it != m_TextureList.end(); )
 	{
-		iNext = m_TextureList.Next( i );
+		ITextureInternal *pTex = it->second;
 
 #ifdef _DEBUG
-		if ( m_TextureList[i]->GetReferenceCount() < 0 )
+		if ( pTex->GetReferenceCount() < 0 )
 		{
-			Warning( "RemoveUnusedTextures: pTexture->m_referenceCount < 0 for %s\n", m_TextureList[i]->GetName() );
+			Warning( "RemoveUnusedTextures: pTexture->m_referenceCount < 0 for %s\n", pTex->GetName() );
 		}
 #endif
-		if ( m_TextureList[i]->GetReferenceCount() <= 0 )
+		if ( pTex->GetReferenceCount() <= 0 )
 		{
-			ITextureInternal::Destroy( m_TextureList[i] );
-			m_TextureList.RemoveAt( i );
+			ITextureInternal::Destroy( pTex );
+			it = m_TextureList.erase( it );
+		}
+		else
+		{
+			++it;
 		}
 	}
 }
@@ -1433,13 +1414,13 @@ void CTextureManager::RemoveTexture( ITextureInternal *pTexture )
 {
 	Assert( pTexture->GetReferenceCount() <= 0 );
 
-	for ( int i = m_TextureList.First(); i != m_TextureList.InvalidIndex(); i = m_TextureList.Next( i ) )
+	for ( auto it = m_TextureList.begin(); it != m_TextureList.end(); ++it )
 	{
 		// search by object
-		if ( m_TextureList[i] == pTexture )
+		if ( it->second == pTexture )
 		{
-			ITextureInternal::Destroy( m_TextureList[i] );
-			m_TextureList.RemoveAt( i );
+			ITextureInternal::Destroy( it->second );
+			m_TextureList.erase( it );
 			break;
 		}
 	}
@@ -1447,10 +1428,8 @@ void CTextureManager::RemoveTexture( ITextureInternal *pTexture )
 
 void CTextureManager::ReloadFilesInList( IFileList *pFilesToReload )
 {
-	for ( int i=m_TextureList.First(); i != m_TextureList.InvalidIndex(); i=m_TextureList.Next( i ) )
+	for ( auto &[name, pTex] : m_TextureList )
 	{
-		ITextureInternal *pTex = m_TextureList[i];
-
 		pTex->ReloadFilesInList( pFilesToReload );
 	}
 }
@@ -1461,21 +1440,19 @@ void CTextureManager::ReleaseTempRenderTargetBits( void )
 
 void CTextureManager::DebugPrintUsedTextures( void )
 {
-	for ( int i = m_TextureList.First(); i != m_TextureList.InvalidIndex(); i = m_TextureList.Next( i ) )
+	for ( auto &[name, pTexture] : m_TextureList )
 	{
-		ITextureInternal *pTexture;
-		pTexture = m_TextureList[i];
 		Msg( "Texture: '%s' RefCount: %d\n", pTexture->GetName(), pTexture->GetReferenceCount() );
 	}
 
-	if ( m_TextureExcludes.Count() )
+	if ( !m_TextureExcludes.empty() )
 	{
-		Msg( "\nExcluded Textures: (%d)\n", m_TextureExcludes.Count() );
-		for ( int i = m_TextureExcludes.First(); i != m_TextureExcludes.InvalidIndex(); i = m_TextureExcludes.Next( i ) )
+		Msg( "\nExcluded Textures: (%d)\n", (int)m_TextureExcludes.size() );
+		for ( auto &[name, nDimensionsLimit] : m_TextureExcludes )
 		{
 			char buff[256];
-			const char *pName = m_TextureExcludes.GetElementName( i );
-			V_snprintf( buff, sizeof( buff ), "Excluded: %d '%s' \n", m_TextureExcludes[i], pName );
+			const char *pName = name.c_str();
+			V_snprintf( buff, sizeof( buff ), "Excluded: %d '%s' \n", nDimensionsLimit, pName );
 	
 			// an excluded texture is valid, but forced tiny
 			if ( IsTextureLoaded( pName ) )
@@ -1491,26 +1468,3 @@ void CTextureManager::DebugPrintUsedTextures( void )
 	}
 }
 
-int CTextureManager::FindNext( int iIndex, ITextureInternal **pTexInternal )
-{
-	if ( iIndex == -1 && m_TextureList.Count() )
-	{
-		iIndex = m_TextureList.First();
-	}
-	else if ( !m_TextureList.Count() || !m_TextureList.IsValidIndex( iIndex ) )
-	{
-		*pTexInternal = nullptr;
-		return -1;
-	}
-
-	*pTexInternal = m_TextureList[iIndex];
-
-	iIndex = m_TextureList.Next( iIndex );
-	if ( iIndex == m_TextureList.InvalidIndex() )
-	{
-		// end of list
-		iIndex = -1;
-	}
-
-	return iIndex;
-}

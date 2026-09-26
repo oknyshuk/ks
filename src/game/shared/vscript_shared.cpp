@@ -7,8 +7,9 @@
 #include "cbase.h"
 #include "vscript_shared.h"
 #include "icommandline.h"
-#include "tier1/utlbuffer.h"
 #include "tier1/fmtstr.h"
+#include "tier1/byte_reader.h"
+#include <string>
 #include "filesystem.h"
 #include "characterset.h"
 #include "gamerules.h"
@@ -69,7 +70,7 @@ HSCRIPT VScriptCompileScript( const char *pszScriptName, bool bWarnMissing )
 	}
 
 	const char *pBase;
-	CUtlBuffer bufferScript;
+	std::string scriptText;
 
 	if ( g_pScriptVM->GetLanguage() == SL_PYTHON )
 	{
@@ -78,15 +79,19 @@ HSCRIPT VScriptCompileScript( const char *pszScriptName, bool bWarnMissing )
 	}
 	else
 	{
-		bool bResult = filesystem->ReadFile( scriptPath, "GAME", bufferScript );
+		auto scriptData = filesystem->ReadFile( scriptPath, "GAME" );
 
-		if( !bResult )
+		if( !scriptData )
 		{
 			Log_Warning( LOG_VScript, "Script not found (%s) \n", scriptPath.operator const char *() );
 			Assert( "Error running script" );
 		}
 
-		pBase = (const char *) bufferScript.Base();
+		if ( scriptData )
+		{
+			scriptText.assign( ks::text_view( *scriptData ) );
+		}
+		pBase = scriptText.empty() ? nullptr : scriptText.c_str();
 
 		if ( !pBase || !*pBase )
 		{

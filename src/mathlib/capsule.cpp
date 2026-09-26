@@ -211,7 +211,7 @@ void CastCapsuleRay( CShapeCastResult& out, const Vector& vRayStart, const Vecto
 	#ifdef _DEBUG
 			// z must be orthogonal to capsule and ray (it's a cross product of the two); if it's not, we need to handle this case as parallel
 			float flOrthogonality[2] = { DotProduct( zUnit, s ), DotProduct( zUnit, vRayDelta ) };
-			Assert( fabsf( flOrthogonality[0] ) < 1e-3f * MAX( 1, MAX( zLen, sLen ) ) && fabsf( flOrthogonality[1] ) < 1e-3f * MAX( 1, MAX( zLen, dLen ) ) );
+			Assert( fabsf( flOrthogonality[0] ) < 1e-3f * std::max( 1, std::max( zLen, sLen ) ) && fabsf( flOrthogonality[1] ) < 1e-3f * std::max( 1, std::max( zLen, dLen ) ) );
 	#endif
 			float mzUnit = DotProduct( m, zUnit ), rr = Sqr( flRadius ) - Sqr( mzUnit );
 			if( rr <= 0 )

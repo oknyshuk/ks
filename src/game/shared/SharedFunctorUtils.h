@@ -102,7 +102,7 @@ public:
 		return m_target;
 	}
 
-	const CUtlVector< PlayerType * > &GetAllTargets( void ) const
+	const std::vector< PlayerType * > &GetAllTargets( void ) const
 	{
 		return m_allTargets;
 	}
@@ -149,7 +149,7 @@ protected:
 	bool m_debug;
 
 	PlayerType *m_target;
-	CUtlVector< PlayerType * > m_allTargets;
+	std::vector< PlayerType * > m_allTargets;
 };
 
 

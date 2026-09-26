@@ -17,10 +17,15 @@ class CCustomMaterialOwner
 {
 public:
 	virtual ~CCustomMaterialOwner()	{ ClearCustomMaterials( true ); }
+	CCustomMaterialOwner() = default;
+	CCustomMaterialOwner( const CCustomMaterialOwner & ) = delete;	// holds references; see DuplicateCustomMaterialsToOther
+	CCustomMaterialOwner &operator=( const CCustomMaterialOwner & ) = delete;
+	CCustomMaterialOwner( CCustomMaterialOwner && ) = default;
+	CCustomMaterialOwner &operator=( CCustomMaterialOwner && ) = default;
 	ICustomMaterial *GetCustomMaterial( int nIndex = 0 ) const; // returns NULL if the index is out of range
 	virtual void SetCustomMaterial( ICustomMaterial* pCustomMaterial, int nIndex = 0 );	// either replaces and existing material (releasing the old one), or adds one to the vector
 	bool IsCustomMaterialValid( int nIndex = 0 ) const;
-	int GetCustomMaterialCount() const { return m_ppCustomMaterials.Count(); }
+	int GetCustomMaterialCount() const { return std::ssize( m_ppCustomMaterials ); }
 	void ClearCustomMaterials( bool bPurge = false );
 	virtual void OnCustomMaterialsUpdated() {}
 	virtual void DuplicateCustomMaterialsToOther( CCustomMaterialOwner *pOther ) const;
@@ -28,19 +33,19 @@ public:
 private:
 	// Pointers to custom materials owned by the mat system for this entity. Index
 	// in this vector corresponds to the model material index to override with the custom material.
-	CUtlVector< ICustomMaterial* > m_ppCustomMaterials;
+	std::vector< ICustomMaterial* > m_ppCustomMaterials;
 };
 
 inline ICustomMaterial *CCustomMaterialOwner::GetCustomMaterial( int nIndex ) const
 { 
-	return ( m_ppCustomMaterials.Count() > nIndex ) ? m_ppCustomMaterials[ nIndex ] : nullptr; 
+	return ( std::ssize( m_ppCustomMaterials ) > nIndex ) ? m_ppCustomMaterials[ nIndex ] : nullptr; 
 }
 
 inline void CCustomMaterialOwner::SetCustomMaterial( ICustomMaterial* pCustomMaterial, int nIndex )
 {
-	while ( m_ppCustomMaterials.Count() <= nIndex )
+	while ( std::ssize( m_ppCustomMaterials ) <= nIndex )
 	{
-		m_ppCustomMaterials.AddToTail( nullptr );
+		m_ppCustomMaterials.push_back( nullptr );
 	}
 
 	pCustomMaterial->AddRef();
@@ -52,12 +57,12 @@ inline void CCustomMaterialOwner::SetCustomMaterial( ICustomMaterial* pCustomMat
 
 inline bool CCustomMaterialOwner::IsCustomMaterialValid( int nIndex ) const
 {
-	return ( m_ppCustomMaterials.Count() > nIndex && m_ppCustomMaterials[ nIndex ] != nullptr ) ? m_ppCustomMaterials[ nIndex ]->IsValid() : false;
+	return ( std::ssize( m_ppCustomMaterials ) > nIndex && m_ppCustomMaterials[ nIndex ] != nullptr ) ? m_ppCustomMaterials[ nIndex ]->IsValid() : false;
 }
 
 inline void CCustomMaterialOwner::ClearCustomMaterials( bool bPurge )
 {
-	for ( int i = 0; i < m_ppCustomMaterials.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_ppCustomMaterials ); i++ )
 	{
 		if ( m_ppCustomMaterials[ i ] != nullptr )
 		{ 
@@ -68,18 +73,18 @@ inline void CCustomMaterialOwner::ClearCustomMaterials( bool bPurge )
 
 	if ( bPurge )
 	{
-		m_ppCustomMaterials.Purge();
+		m_ppCustomMaterials.clear(); m_ppCustomMaterials.shrink_to_fit();
 	}
 	else
 	{
-		m_ppCustomMaterials.RemoveAll();
+		m_ppCustomMaterials.clear();
 	}
 }
 
 inline void CCustomMaterialOwner::DuplicateCustomMaterialsToOther( CCustomMaterialOwner *pOther ) const
 {
 	pOther->ClearCustomMaterials();
-	for ( int i = 0; i < CCustomMaterialOwner::m_ppCustomMaterials.Count(); i++ )
+	for ( int i = 0; i < std::ssize( CCustomMaterialOwner::m_ppCustomMaterials ); i++ )
 	{
 		if ( m_ppCustomMaterials[ i ] == nullptr )
 			continue;

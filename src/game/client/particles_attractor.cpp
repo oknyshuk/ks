@@ -7,8 +7,6 @@
 #include "cbase.h"
 #include "particles_attractor.h"
 
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : &center - 

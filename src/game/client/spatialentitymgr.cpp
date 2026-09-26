@@ -14,12 +14,12 @@
 // Gets called each frame
 void CSpatialEntityMgr::Update( float frametime )
 {
-	if ( m_SpatialEntities.Count() <= 0 )
+	if ( std::ssize( m_SpatialEntities ) <= 0 )
 		return;
 
 	m_SpatialEntities[ 0 ]->ResetAccumulation();
 
-	for ( int i = 0; i < m_SpatialEntities.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_SpatialEntities ); ++i )
 	{
 		m_SpatialEntities[ i ]->Accumulate();
 	}
@@ -32,10 +32,10 @@ void CSpatialEntityMgr::Update( float frametime )
 //------------------------------------------------------------------------------
 void CSpatialEntityMgr::AddSpatialEntity( C_SpatialEntity *pSpatialEntity )
 {
-	m_SpatialEntities.AddToTail( pSpatialEntity );
+	m_SpatialEntities.push_back( pSpatialEntity );
 }
 
 void CSpatialEntityMgr::RemoveSpatialEntity( C_SpatialEntity *pSpatialEntity )
 {
-	m_SpatialEntities.FindAndRemove( pSpatialEntity );
+	ks::erase_first( m_SpatialEntities, pSpatialEntity );
 }

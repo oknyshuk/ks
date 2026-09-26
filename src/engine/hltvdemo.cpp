@@ -22,9 +22,7 @@
 #include "server.h"
 #include "networkstringtableclient.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 
 extern CNetworkStringTableContainer *networkStringTableContainerServer;
 
@@ -247,9 +245,8 @@ void CHLTVDemoRecorder::RecordServerClasses( ServerClass *pClasses )
 	Assert( HasRecordingActuallyStarted() );
 
 	// to big for stack
-	CUtlBuffer bigBuff;
-	bigBuff.EnsureCapacity( DEMO_RECORD_BUFFER_SIZE );
-	bf_write buf( bigBuff.Base(), DEMO_RECORD_BUFFER_SIZE );
+	std::vector< std::byte > bigBuff( DEMO_RECORD_BUFFER_SIZE );
+	bf_write buf( bigBuff.data(), DEMO_RECORD_BUFFER_SIZE );
 
 	// Send SendTable info.
 	DataTable_WriteSendTablesBuffer( pClasses, &buf );
@@ -278,7 +275,7 @@ void CHLTVDemoRecorder::RecordStringTables()
 {
 	Assert( HasRecordingActuallyStarted() );
 
-	void *data = malloc( DEMO_RECORD_BUFFER_SIZE );
+	void *data = MemAlloc_Alloc( DEMO_RECORD_BUFFER_SIZE );
 	bf_write buf( data, DEMO_RECORD_BUFFER_SIZE );
 
 	networkStringTableContainerServer->WriteStringTables( buf );
@@ -286,7 +283,7 @@ void CHLTVDemoRecorder::RecordStringTables()
 	// Now write the buffer into the demo file
 	m_DemoFile.WriteStringTables( &buf, GetRecordingTick() );
 
-	free( data );
+	g_pMemAlloc->Free( data );
 }
 
 int CHLTVDemoRecorder::WriteSignonData()
@@ -323,9 +320,9 @@ int CHLTVDemoRecorder::WriteSignonData()
 	msg.Reset();
 
 	// Dump all accumulated avatar data messages into signon portion of the demo file
-	FOR_EACH_MAP_FAST( hltv->m_mapPlayerAvatarData, iData )
+	for ( auto &[accountid, pData] : hltv->m_mapPlayerAvatarData )
 	{
-		CNETMsg_PlayerAvatarData_t &msgPlayerAvatarData = * hltv->m_mapPlayerAvatarData.Element( iData );
+		CNETMsg_PlayerAvatarData_t &msgPlayerAvatarData = *pData;
 		msgPlayerAvatarData.WriteToBuffer( msg );
 		WriteMessages( dem_signon, msg );
 		msg.Reset();
@@ -390,7 +387,7 @@ void CHLTVDemoRecorder::WriteFrame( CHLTVFrame *pFrame, bf_write *additionaldata
 
 #ifndef SHARED_NET_STRING_TABLES
 	// Update shared client/server string tables. Must be done before sending entities
-	hltv->m_StringTables->WriteUpdateMessage( nullptr, MAX( m_nStartTick, m_nDeltaTick ), msg );
+	hltv->m_StringTables->WriteUpdateMessage( nullptr, std::max( m_nStartTick, m_nDeltaTick ), msg );
 #endif
 
 	// get delta frame

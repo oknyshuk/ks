@@ -128,9 +128,6 @@
 #include "flesh_interior_blended_pass_ps20.inc"
 #include "flesh_interior_blended_pass_ps20b.inc"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 void InitParamsFleshInteriorBlendedPass( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, FleshInteriorBlendedPassVars_t &info )
 {

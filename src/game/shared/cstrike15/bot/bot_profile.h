@@ -10,11 +10,12 @@
 #ifndef _BOT_PROFILE_H_
 #define _BOT_PROFILE_H_
 
-#pragma warning( disable : 4786 )	// long STL names get truncated in browse info.
 
 #include "bot_constants.h"
 #include "bot_util.h"
 #include "cs_weapon_parse.h"
+#include <memory>
+#include <vector>
 
 enum
 {
@@ -116,7 +117,7 @@ public:
 	void Clone( const BotProfile* source_profile );
 	void SetName( const char* name );
 	void SetVoicePitch( int pitch );
-	int GetTemplatesCount( void ) const							{ return m_templates.Count(); }
+	int GetTemplatesCount( void ) const							{ return std::ssize( m_templates ); }
 	const BotProfile* GetTemplate( int index ) const;
 
 private:
@@ -159,9 +160,9 @@ private:
 	float m_lookAngleStiffnessAttacking;	// Stiffness of look angle spring under attack conditions
 	float m_lookAngleDampingAttacking;		// Damping of look angle spring under attack conditions
 
-	CUtlVector< const BotProfile * > m_templates;							///< List of templates we inherit from
+	std::vector< const BotProfile * > m_templates;							///< List of templates we inherit from
 };
-typedef CUtlLinkedList<BotProfile *> BotProfileList;
+typedef std::vector<std::unique_ptr<BotProfile>> BotProfileList;
 
 
 inline int BotProfile::GetMaxDifficulty() const
@@ -342,7 +343,7 @@ inline void BotProfile::Inherit( const BotProfile *parent, const BotProfile *bas
 	if (parent->m_voiceBank != baseline->m_voiceBank)
 		m_voiceBank = parent->m_voiceBank;
 
-	m_templates.AddToTail( parent );
+	m_templates.push_back( parent );
 }
 
 
@@ -363,9 +364,9 @@ public:
 	/// given a name, return a profile
 	const BotProfile *GetProfile( const char *name, int team ) const
 	{
-		FOR_EACH_LL( m_profileList, it )
+		for ( const auto &pProfile : m_profileList )
 		{
-			BotProfile *profile = m_profileList[ it ];
+			const BotProfile *profile = pProfile.get();
 	
 			if ( !stricmp( name, profile->GetName() ) && profile->IsValidForTeam( team ) )
 				return profile;
@@ -377,9 +378,9 @@ public:
 	/// given a template name and difficulty, return a profile
 	const BotProfile *GetProfileMatchingTemplate( const char *profileName, int team, BotDifficultyType difficulty, BotProfileDevice_t device, bool bAllowDupeNames = false ) const
 	{
-		FOR_EACH_LL( m_profileList, it )
+		for ( const auto &pProfile : m_profileList )
 		{
-			BotProfile *profile = m_profileList[ it ];
+			const BotProfile *profile = pProfile.get();
 
 			if ( !profile->InheritsFrom( profileName ) )
 				continue;
@@ -408,7 +409,7 @@ public:
 	const char * GetCustomSkinFname( int index );			///< Returns custom skin filename at a particular index
 	int GetCustomSkinIndex( const char *name, const char *filename = nullptr );	///< Looks up a custom skin index by name
 
-	typedef CUtlVector<char *> VoiceBankList;
+	typedef std::vector< char * > VoiceBankList;
 	const VoiceBankList *GetVoiceBanks( void ) const		{ return &m_voiceBanks; }
 	int FindVoiceBankIndex( const char *filename );		///< return index of the (custom) bot phrase db, inserting it if needed
 

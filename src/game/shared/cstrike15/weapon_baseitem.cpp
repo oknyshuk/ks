@@ -24,9 +24,6 @@
 #include "cs_player.h"
 #endif // CLIENT_DLL
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 IMPLEMENT_NETWORKCLASS_ALIASED( WeaponBaseItem, DT_WeaponBaseItem )
 
 IMPLEMENT_REFLECT_TABLE( CWeaponBaseItem, DT_WeaponBaseItem );

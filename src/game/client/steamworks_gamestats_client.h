@@ -158,7 +158,7 @@ public:
 	void SubmitStat( T* pStat )
 	{
 		// Get the static stat table for this type and add the stat to it
-		GetStatTable<T>()->AddToTail( pStat );
+		GetStatTable<T>()->push_back( pStat );
 	}
 
 	//-----------------------------------------------------------------------------
@@ -185,7 +185,7 @@ protected:
 	};
 
 	// Defines a list of stat containers.
-	typedef CUtlVector< IStatContainer* > StatContainerList_t;
+	typedef std::vector< IStatContainer* > StatContainerList_t;
 
 	//-----------------------------------------------------------------------------
 	// Used to get a list of all stats containers being tracked by the deriving class
@@ -199,7 +199,7 @@ private:
 	// Templatized list of stats submitted
 	//
 	template < typename T >
-	class CGameStatList : public IStatContainer, public CUtlVector< T* >
+	class CGameStatList : public IStatContainer, public std::vector< T* >
 	{
 	public:
 		//-----------------------------------------------------------------------------
@@ -210,7 +210,7 @@ private:
 			//ASSERT( pKV != NULL );
 
 			// Duplicate the master KeyValue for each stat instance
-			for( int i=0; i < this->m_Size; ++i )
+			for( int i=0; i < (int)this->size(); ++i )
 			{
 				// Make a copy of the master key value and build the stat table
 				KeyValues *pKVCopy = this->operator [](i)->m_bUseGlobalData ? pKV->MakeCopy() : new KeyValues( "" );
@@ -226,7 +226,7 @@ private:
 		//-----------------------------------------------------------------------------
 		virtual void Clear( void )
 		{
-			this->Purge();
+			this->clear(); this->shrink_to_fit();
 		}
 
 		//-----------------------------------------------------------------------------
@@ -234,11 +234,11 @@ private:
 		//-----------------------------------------------------------------------------
 		virtual void PrintMemoryUsage( void )
 		{
-			if( this->m_Size == 0 )
+			if( (int)this->size() == 0 )
 				return;
 
 			// Compute the memory used as the size of type times the list count
-			unsigned uMemoryUsed = this->m_Size * ( sizeof( T ) );
+			unsigned uMemoryUsed = (int)this->size() * ( sizeof( T ) );
 
 			Msg( " %d\tbytes used by %s table\n", uMemoryUsed, T::GetStatTableName() );
 		}
@@ -254,7 +254,7 @@ private:
 		if( s_vecOfType == 0 )
 		{
 			s_vecOfType = new CGameStatList< T >();
-			GetStatContainerList()->AddToTail( s_vecOfType );
+			GetStatContainerList()->push_back( s_vecOfType );
 		}
 		return s_vecOfType;
 	}

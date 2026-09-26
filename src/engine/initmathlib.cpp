@@ -12,9 +12,6 @@
 #include "cmd.h" // Cmd_*
 #include "console.h"  // ConMsg
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static bool s_bAllowSSE2 = true;
 
 static void OnEnableFastMathChanged( IConVar *var = nullptr, const char *pOldValue = nullptr, float flOldValue = 0.0f);

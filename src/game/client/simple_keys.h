@@ -40,7 +40,7 @@ public:
 	int		Insert( const CSimpleKeyInterp &key );
 	bool	Interp( Vector &out, float t );
 
-	CUtlVector<CSimpleKeyInterp>	m_list;
+	std::vector< CSimpleKeyInterp >	m_list;
 };
 
 #endif // SIMPLE_KEYS_H

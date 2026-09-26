@@ -18,9 +18,6 @@
 #include "bot_util.h"
 #include "improv_locomotor.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 
 #define DrawLine( from, to, duration, red, green, blue )		NDebugOverlay::Line( from, to, red, green, blue, true, 0.1f )
@@ -99,7 +96,7 @@ bool CCSNavPath::ComputePathPositions( void )
 			// find our ladder
 			const NavLadderConnectVector *ladders = from->area->GetLadders( CNavLadder::LADDER_UP );
 			int it;
-			for( it=0; it<ladders->Count(); ++it )
+			for( it=0; it<std::ssize( *ladders ); ++it )
 			{
 				CNavLadder *ladder = (*ladders)[ it ].ladder;
 
@@ -114,7 +111,7 @@ bool CCSNavPath::ComputePathPositions( void )
 				}
 			}
 
-			if (it == ladders->Count())
+			if (it == std::ssize( *ladders ))
 			{
 				//PrintIfWatched( "ERROR: Can't find ladder in path\n" );
 				return false;
@@ -125,7 +122,7 @@ bool CCSNavPath::ComputePathPositions( void )
 			// find our ladder
 			const NavLadderConnectVector *ladders = from->area->GetLadders( CNavLadder::LADDER_DOWN );
 			int it;
-			for( it=0; it<ladders->Count(); ++it )
+			for( it=0; it<std::ssize( *ladders ); ++it )
 			{
 				CNavLadder *ladder = (*ladders)[ it ].ladder;
 
@@ -138,7 +135,7 @@ bool CCSNavPath::ComputePathPositions( void )
 				}
 			}
 
-			if (it == ladders->Count())
+			if (it == std::ssize( *ladders ))
 			{
 				//PrintIfWatched( "ERROR: Can't find ladder in path\n" );
 				return false;

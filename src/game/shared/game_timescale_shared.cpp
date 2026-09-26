@@ -7,9 +7,6 @@
 	#include "c_user_message_register.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 CGameTimescale g_GameTimescale;
 CGameTimescale* GameTimescale() { return &g_GameTimescale; }
@@ -86,7 +83,7 @@ void CGameTimescale::SetCurrentTimescale( float flTimescale )
 
 void CGameTimescale::SetDesiredTimescaleAtTime( float flDesiredTimescale, float flDurationRealTimeSeconds /*= 0.0f*/, Interpolators_e nInterpolatorType /*= INTERPOLATOR_LINEAR*/, float flStartBlendTime /*= 0.0f*/ )
 {
-	SetDesiredTimescale( flDesiredTimescale, flDurationRealTimeSeconds, nInterpolatorType, MAX( 0.0f, flStartBlendTime - gpGlobals->curtime ) );
+	SetDesiredTimescale( flDesiredTimescale, flDurationRealTimeSeconds, nInterpolatorType, std::max( 0.0f, flStartBlendTime - gpGlobals->curtime ) );
 }
 
 void CGameTimescale::SetDesiredTimescale( float flDesiredTimescale, float flDurationRealTimeSeconds /*= 0.0f*/, Interpolators_e nInterpolatorType /*= INTERPOLATOR_LINEAR*/, float flDelayRealtime /*= 0.0f*/ )
@@ -142,7 +139,7 @@ void CGameTimescale::UpdateTimescale( void )
 
 			if ( m_flDurationRealTimeSeconds > 0.0f )
 			{
-				flInterp = MIN( 1.0f, ( gpGlobals->realtime - m_flStartBlendRealtime ) / m_flDurationRealTimeSeconds );
+				flInterp = std::min( 1.0f, ( gpGlobals->realtime - m_flStartBlendRealtime ) / m_flDurationRealTimeSeconds );
 			}
 
 			switch ( m_nInterpolatorType )

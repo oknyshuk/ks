@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2022 Joshua Ashton and Josh Dowell (Slartibarty)
+
 //=================================================================================================
 //
 // Interface to a physics scene
@@ -6,21 +9,28 @@
 
 #pragma once
 
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
 #include "vjolt_interface.h"
 #include "vjolt_object.h"
 #include "vjolt_constraints.h"
 #include "vjolt_listener_contact.h"
 
-// StateRecorder implementation that saves to a fixed buffer
-class VJoltStateRecorder final : public JPH::StateRecorder, public CUtlBuffer
+// StateRecorder implementation that saves to or restores from a fixed buffer
+class VJoltStateRecorder final : public JPH::StateRecorder
 {
 public:
-	using CUtlBuffer::CUtlBuffer;
+	struct read_only_t {};
+	static constexpr read_only_t read_only{};
+
+	VJoltStateRecorder( void* pBuffer, size_t bufferSize ) : m_Writer( pBuffer, bufferSize ) {}
+	VJoltStateRecorder( const void* pBuffer, size_t bufferSize, read_only_t ) : m_Reader( pBuffer, bufferSize ) {}
 
 	// StreamIn
 	void ReadBytes( void* outData, size_t inNumBytes ) override
 	{
-		Get( outData, static_cast<int>( inNumBytes ) );
+		if ( m_Reader.ok() )
+			m_Reader.read_bytes( outData, inNumBytes );
 	}
 
 	bool IsEOF() const override { return false; }
@@ -28,11 +38,16 @@ public:
 	// StreamOut
 	void WriteBytes( const void* inData, size_t inNumBytes ) override
 	{
-		Put( inData, static_cast<int>( inNumBytes ) );
+		if ( m_Writer.ok() )
+			m_Writer.write_bytes( inData, inNumBytes );
 	}
 
 	// Both
 	bool IsFailed() const override { return false; }
+
+private:
+	ks::byte_writer m_Writer;
+	ks::byte_reader m_Reader;
 };
 
 class JoltPhysicsEnvironment final : public IPhysicsEnvironment

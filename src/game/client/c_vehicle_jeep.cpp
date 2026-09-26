@@ -15,9 +15,6 @@
 #include "c_te_effect_dispatch.h"
 #include "fx.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern ConVar default_fov;
 
 ConVar r_JeepViewBlendTo( "r_JeepViewBlendTo", "1", FCVAR_CHEAT );
@@ -261,7 +258,7 @@ void C_PropJeep::OnEnteredVehicle( C_BasePlayer *pPlayer )
 //-----------------------------------------------------------------------------
 void WheelDustCallback( const CEffectData &data )
 {
-	CSmartPtr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "dust" );
+	ks::intrusive_ptr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "dust" );
 	pSimple->SetSortOrigin( data.m_vOrigin );
 	pSimple->SetNearClip( 32, 64 );
 

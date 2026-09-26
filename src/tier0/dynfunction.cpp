@@ -20,9 +20,6 @@ static inline void dbgdynfn(const char *fmt, ...) {}
 #define dbgdynfn printf
 #endif
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 class CSharedLibraryCache
 {
 public:

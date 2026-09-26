@@ -10,20 +10,16 @@
 #include "c_baseplayer.h"
 #include "hud.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 WeaponsResource gWR;
 
-void FreeHudTextureList( CUtlDict< CHudTexture *, int >& list );
-
-static CHudTexture *FindHudTextureInDict( CUtlDict< CHudTexture *, int >& list, const char *psz )
+static CHudTexture *FindHudTextureInDict( CHudTextureList& list, const char *psz )
 {
-	int idx = list.Find( psz );
-	if ( idx == list.InvalidIndex() )
+	// a repeated name resolves to the first loaded
+	auto it = list.lower_bound( psz );
+	if ( it == list.end() || ks::iless()( psz, it->first ) )
 		return nullptr;
 
-	return list[ idx ];
+	return it->second.get();
 }
 
 //-----------------------------------------------------------------------------
@@ -103,11 +99,11 @@ void WeaponsResource::LoadWeaponSprites( WEAPON_FILE_INFO_HANDLE hWeaponFileInfo
 	char sz[128];
 	Q_snprintf(sz, sizeof( sz ), "scripts/%s", pWeaponInfo->szClassName);
 
-	CUtlDict< CHudTexture *, int > tempList;
+	CHudTextureList tempList;
 
 	LoadHudTextures( tempList, sz, g_pGameRules->GetEncryptionKey() );
 
-	if ( !tempList.Count() )
+	if ( tempList.empty() )
 	{
 		// no sprite description file for weapon, use default small blocks
 		pWeaponInfo->iconActive = HudIcons().GetIcon( "selection" );
@@ -198,8 +194,6 @@ void WeaponsResource::LoadWeaponSprites( WEAPON_FILE_INFO_HANDLE hWeaponFileInfo
 			pWeaponInfo->iconAmmo2->Precache();
 		}
 	}
-
-	FreeHudTextureList( tempList );
 }
 
 //-----------------------------------------------------------------------------

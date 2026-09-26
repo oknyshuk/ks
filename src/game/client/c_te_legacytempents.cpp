@@ -34,9 +34,6 @@
 #include "effect_dispatch_data.h"
 #include "c_te_effect_dispatch.h"
 
-// NOTE: Always include this last!
-#include "tier0/memdbgon.h"
-
 extern ConVar muzzleflash_light;
 
 #define TENT_WIND_ACCEL 50
@@ -207,8 +204,8 @@ int	C_LocalTempEntity::DrawModel( int flags, const RenderableInstance_t &instanc
 		float flDot = DotProduct( m_vecNormal, vecDelta );
 		if ( flDot > 0 )
 		{
-			float flAlpha = RemapVal( MIN(flDot,0.3), 0, 0.3, 0, 1 );
-			flAlpha = MAX( 1.0, tempent_renderamt - (tempent_renderamt * flAlpha) );
+			float flAlpha = RemapVal( std::min<std::common_type_t<float, double>>(flDot,0.3), 0, 0.3, 0, 1 );
+			flAlpha = std::max<std::common_type_t<double, float>>( 1.0, tempent_renderamt - (tempent_renderamt * flAlpha) );
 			SetRenderAlpha( flAlpha );
 		}
 	}
@@ -658,7 +655,7 @@ private:
 		C_LocalTempEntity	*entity;
 	};
 
-	CUtlLinkedList< BreakableList_t, unsigned short >	m_Breakables;
+	std::vector< BreakableList_t >	m_Breakables;
 	unsigned int			m_nCurrentContext;
 };
 
@@ -679,7 +676,7 @@ void CBreakableHelper::Insert( C_LocalTempEntity *entity, bool isSlave )
 	entry.context = m_nCurrentContext;
 	entry.entity = entity;
 
-	m_Breakables.AddToTail( entry );
+	m_Breakables.push_back( entry );
 }
 
 //-----------------------------------------------------------------------------
@@ -688,17 +685,7 @@ void CBreakableHelper::Insert( C_LocalTempEntity *entity, bool isSlave )
 //-----------------------------------------------------------------------------
 void CBreakableHelper::Remove( C_LocalTempEntity *entity )
 {
-	for ( unsigned short i = m_Breakables.Head(); i != m_Breakables.InvalidIndex() ; )
-	{
-		unsigned short n = m_Breakables.Next( i );
-
-		if ( m_Breakables[ i ].entity == entity )
-		{
-			m_Breakables.Remove( i );
-		}
-
-		i = n;
-	}
+	std::erase_if( m_Breakables, [entity]( const BreakableList_t &e ) { return e.entity == entity; } );
 }
 
 //-----------------------------------------------------------------------------
@@ -711,10 +698,8 @@ const Vector *CBreakableHelper::GetLightingOrigin( C_LocalTempEntity *entity )
 {
 	unsigned int nCurContext = 0;
 	C_LocalTempEntity *head = nullptr;
-	FOR_EACH_LL( m_Breakables, i )
+	for ( BreakableList_t &e : m_Breakables )
 	{
-		BreakableList_t& e = m_Breakables[ i ];
-
 		if ( e.context != nCurContext )
 		{
 			nCurContext = e.context;
@@ -736,7 +721,7 @@ const Vector *CBreakableHelper::GetLightingOrigin( C_LocalTempEntity *entity )
 //-----------------------------------------------------------------------------
 void CBreakableHelper::Clear()
 {
-	m_Breakables.RemoveAll();
+	m_Breakables.clear();
 	m_nCurrentContext = 0;
 }
 
@@ -755,7 +740,7 @@ void C_LocalTempEntity::OnRemoveTempEntity()
 // Purpose: 
 //-----------------------------------------------------------------------------
 CTempEnts::CTempEnts( void ) :
-	m_TempEntsPool( ( MAX_TEMP_ENTITIES / 20 ), CUtlMemoryPool::GROW_SLOW, 16 )
+	m_TempEntsPool( ( MAX_TEMP_ENTITIES / 20 ), ks::fixed_pool::grow::slow, 16 )
 {
 }
 
@@ -764,8 +749,8 @@ CTempEnts::CTempEnts( void ) :
 //-----------------------------------------------------------------------------
 CTempEnts::~CTempEnts( void )
 {
-	m_TempEntsPool.Clear();
-	m_TempEnts.RemoveAll();
+	m_TempEntsPool.clear();
+	m_TempEnts.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -1482,10 +1467,8 @@ void CTempEnts::KillAttachedTents( int client )
 		return;
 	}
 
-	FOR_EACH_LL( m_TempEnts, i )
+	for ( C_LocalTempEntity *pTemp : m_TempEnts )
 	{
-		C_LocalTempEntity *pTemp = m_TempEnts[ i ];
-
 		if ( pTemp->flags & FTENT_PLYRATTACHMENT )
 		{
 			// this TENT is player attached.
@@ -1883,23 +1866,20 @@ enum
 //-----------------------------------------------------------------------------
 void CTempEnts::Clear( void )
 {
-	FOR_EACH_LL( m_TempEnts, i )
+	for ( C_LocalTempEntity *p : m_TempEnts )
 	{
-		C_LocalTempEntity *p = m_TempEnts[ i ];
-
-		m_TempEntsPool.Free( p );
+		m_TempEntsPool.free( p );
 	}
 
-	m_TempEnts.RemoveAll();
+	m_TempEnts.clear();
 	g_BreakableHelper.Clear();
 }
 
 C_LocalTempEntity *CTempEnts::FindTempEntByID( int nID, int nSubID )
 {
 	// HACK HACK: We're using skin and hitsounds as a hacky way to store an ID and sub-ID for later identification
-	FOR_EACH_LL( m_TempEnts, i )
+	for ( C_LocalTempEntity *p : m_TempEnts )
 	{
-		C_LocalTempEntity *p = m_TempEnts[ i ];
 		if ( p && p->m_nSkin == nID && p->hitSound == nSubID )
 		{
 			return p;
@@ -1932,7 +1912,7 @@ C_LocalTempEntity *CTempEnts::TempEntAlloc( const Vector& org, model_t *model )
 		return nullptr;
 	}
 
-	m_TempEnts.AddToTail( pTemp );
+	m_TempEnts.push_back( pTemp );
 
 	pTemp->Prepare( model, gpGlobals->curtime );
 
@@ -1963,21 +1943,21 @@ C_LocalTempEntity *CTempEnts::TempEntAlloc( const Vector& org, model_t *model )
 //-----------------------------------------------------------------------------
 C_LocalTempEntity *CTempEnts::TempEntAlloc()
 {
-	if ( m_TempEnts.Count() >= MAX_TEMP_ENTITIES )
+	if ( (int)m_TempEnts.size() >= MAX_TEMP_ENTITIES )
 		return nullptr;
 
 	MEM_ALLOC_CREDIT();
-	C_LocalTempEntity *pTemp = m_TempEntsPool.AllocZero();
+	C_LocalTempEntity *pTemp = m_TempEntsPool.alloc_zero();
 	return pTemp;
 }
 
-void CTempEnts::TempEntFree( int index )
+void CTempEnts::TempEntFree( std::list< C_LocalTempEntity * >::iterator it )
 {
-	C_LocalTempEntity *pTemp = m_TempEnts[ index ];
+	C_LocalTempEntity *pTemp = *it;
 	if ( pTemp )
 	{
 		// Remove from the active list.
-		m_TempEnts.Remove( index );
+		m_TempEnts.erase( it );
 
 		// Cleanup its data.
 		pTemp->RemoveFromLeafSystem();
@@ -1995,7 +1975,7 @@ void CTempEnts::TempEntFree( int index )
 
 		pTemp->OnRemoveTempEntity();
 	
-		m_TempEntsPool.Free( pTemp );
+		m_TempEntsPool.free( pTemp );
 	}
 }
 
@@ -2003,16 +1983,13 @@ void CTempEnts::TempEntFree( int index )
 // Free the first low priority tempent it finds.
 bool CTempEnts::FreeLowPriorityTempEnt()
 {
-	int next = 0;
-	for( int i = m_TempEnts.Head(); i != m_TempEnts.InvalidIndex(); i = next )
+	for ( auto it = m_TempEnts.begin(); it != m_TempEnts.end(); ++it )
 	{
-		next = m_TempEnts.Next( i );
-
-		C_LocalTempEntity *pActive = m_TempEnts[ i ];
+		C_LocalTempEntity *pActive = *it;
 
 		if ( pActive->priority == TENTPRIORITY_LOW )
 		{
-			TempEntFree( i );
+			TempEntFree( it );
 			return true;
 		}
 	}
@@ -2057,7 +2034,7 @@ C_LocalTempEntity *CTempEnts::TempEntAllocHigh( const Vector& org, model_t *mode
 		return nullptr;
 	}
 
-	m_TempEnts.AddToTail( pTemp );
+	m_TempEnts.push_back( pTemp );
 
 	pTemp->Prepare( model, gpGlobals->curtime );
 
@@ -2191,11 +2168,11 @@ void CTempEnts::PlaySound ( C_LocalTempEntity *pTemp, float damp )
 		
 		if ( isshellcasing )
 		{
-			fvol *= MIN(1.0, ((float)zvel) / 350.0); 
+			fvol *= std::min(1.0, ((float)zvel) / 350.0); 
 		}
 		else
 		{
-			fvol *= MIN(1.0, ((float)zvel) / 450.0); 
+			fvol *= std::min(1.0, ((float)zvel) / 450.0); 
 		}
 		
 		if ( !random->RandomInt(0,3) && !isshellcasing )
@@ -2269,7 +2246,7 @@ void CTempEnts::Update(void)
 	float		frametime;
 
 	// Don't simulate while loading
-	if ( ( m_TempEnts.Count() == 0 ) || !engine->IsInGame() )		
+	if ( m_TempEnts.empty() || !engine->IsInGame() )		
 	{
 		return;
 	}
@@ -2287,26 +2264,23 @@ void CTempEnts::Update(void)
 	// !!! Don't simulate while paused....  This is sort of a hack, revisit.
 	if ( frametime == 0 )
 	{
-		FOR_EACH_LL( m_TempEnts, i )
+		for ( C_LocalTempEntity *current : m_TempEnts )
 		{
-			C_LocalTempEntity *current = m_TempEnts[ i ];
-
 			AddVisibleTempEntity( current );
 		}
 	}
 	else
 	{
-		int next = 0;
-		for( int i = m_TempEnts.Head(); i != m_TempEnts.InvalidIndex(); i = next )
+		for ( auto it = m_TempEnts.begin(); it != m_TempEnts.end(); )
 		{
-			next = m_TempEnts.Next( i );
+			auto cur = it++;
 
-			C_LocalTempEntity *current = m_TempEnts[ i ];
+			C_LocalTempEntity *current = *cur;
 
 			// Kill it
 			if ( !current->IsActive() || !current->Frame( frametime, gTempEntFrame ) )
 			{
-				TempEntFree( i );
+				TempEntFree( cur );
 			}
 			else
 			{
@@ -2320,7 +2294,7 @@ void CTempEnts::Update(void)
 						// Don't fade out, just die
 						current->flags &= ~FTENT_FADEOUT;
 
-						TempEntFree( i );
+						TempEntFree( cur );
 					}
 				}
 			}
@@ -2434,7 +2408,7 @@ inline void CTempEnts::CacheMuzzleFlashes( void )
 void CTempEnts::MuzzleFlash_Combine_Player( ClientEntityHandle_t hEntity, int attachmentIndex )
 {
 	VPROF_BUDGET( "MuzzleFlash_Combine_Player", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
-	CSmartPtr<CLocalSpaceEmitter> pSimple = CLocalSpaceEmitter::Create( "MuzzleFlash", hEntity, attachmentIndex, FLE_VIEWMODEL );
+	ks::intrusive_ptr<CLocalSpaceEmitter> pSimple = CLocalSpaceEmitter::Create( "MuzzleFlash", hEntity, attachmentIndex, FLE_VIEWMODEL );
 
 	CacheMuzzleFlashes();
 
@@ -2507,7 +2481,7 @@ void CTempEnts::MuzzleFlash_Combine_Player( ClientEntityHandle_t hEntity, int at
 void CTempEnts::MuzzleFlash_Combine_NPC( ClientEntityHandle_t hEntity, int attachmentIndex )
 {
 	VPROF_BUDGET( "MuzzleFlash_Combine_NPC", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
-	CSmartPtr<CLocalSpaceEmitter> pSimple = CLocalSpaceEmitter::Create( "MuzzleFlash_Combine_NPC", hEntity, attachmentIndex );
+	ks::intrusive_ptr<CLocalSpaceEmitter> pSimple = CLocalSpaceEmitter::Create( "MuzzleFlash_Combine_NPC", hEntity, attachmentIndex );
 
 	SimpleParticle *pParticle;
 	Vector			forward(1,0,0), offset; //NOTENOTE: All coords are in local space
@@ -2725,7 +2699,7 @@ void CTempEnts::MuzzleFlash_SMG1_NPC( ClientEntityHandle_t hEntity, int attachme
 void CTempEnts::MuzzleFlash_SMG1_Player( ClientEntityHandle_t hEntity, int attachmentIndex )
 {
 	VPROF_BUDGET( "MuzzleFlash_SMG1_Player", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
-	CSmartPtr<CLocalSpaceEmitter> pSimple = CLocalSpaceEmitter::Create( "MuzzleFlash_SMG1_Player", hEntity, attachmentIndex, FLE_VIEWMODEL );
+	ks::intrusive_ptr<CLocalSpaceEmitter> pSimple = CLocalSpaceEmitter::Create( "MuzzleFlash_SMG1_Player", hEntity, attachmentIndex, FLE_VIEWMODEL );
 
 	CacheMuzzleFlashes();
 
@@ -2773,7 +2747,7 @@ void CTempEnts::MuzzleFlash_SMG1_Player( ClientEntityHandle_t hEntity, int attac
 void CTempEnts::MuzzleFlash_Shotgun_Player( ClientEntityHandle_t hEntity, int attachmentIndex )
 {
 	VPROF_BUDGET( "MuzzleFlash_Shotgun_Player", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
-	CSmartPtr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "MuzzleFlash_Shotgun_Player" );
+	ks::intrusive_ptr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "MuzzleFlash_Shotgun_Player" );
 
 	pSimple->SetDrawBeforeViewModel( true );
 
@@ -2852,7 +2826,7 @@ void CTempEnts::MuzzleFlash_Shotgun_NPC( ClientEntityHandle_t hEntity, int attac
 	if ( random->RandomInt( 0, 2 ) == 0 )
 	{
 		//Embers
-		CSmartPtr<CEmberEffect> pEmbers = CEmberEffect::Create( "muzzle_embers" );
+		ks::intrusive_ptr<CEmberEffect> pEmbers = CEmberEffect::Create( "muzzle_embers" );
 		pEmbers->SetSortOrigin( origin );
 
 		SimpleParticle	*pParticle;
@@ -2894,7 +2868,7 @@ void CTempEnts::MuzzleFlash_Shotgun_NPC( ClientEntityHandle_t hEntity, int attac
 	// Trails
 	//
 	
-	CSmartPtr<CTrailParticles> pTrails = CTrailParticles::Create( "MuzzleFlash_Shotgun_NPC" );
+	ks::intrusive_ptr<CTrailParticles> pTrails = CTrailParticles::Create( "MuzzleFlash_Shotgun_NPC" );
 	pTrails->SetSortOrigin( origin );
 
 	TrailParticle	*pTrailParticle;
@@ -2940,7 +2914,7 @@ void CTempEnts::MuzzleFlash_Shotgun_NPC( ClientEntityHandle_t hEntity, int attac
 void CTempEnts::MuzzleFlash_357_Player( ClientEntityHandle_t hEntity, int attachmentIndex )
 {
 	VPROF_BUDGET( "MuzzleFlash_357_Player", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
-	CSmartPtr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "MuzzleFlash_357_Player" );
+	ks::intrusive_ptr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "MuzzleFlash_357_Player" );
 
 	pSimple->SetDrawBeforeViewModel( true );
 
@@ -3027,7 +3001,7 @@ void CTempEnts::MuzzleFlash_357_Player( ClientEntityHandle_t hEntity, int attach
 void CTempEnts::MuzzleFlash_Pistol_Player( ClientEntityHandle_t hEntity, int attachmentIndex )
 {
 	VPROF_BUDGET( "MuzzleFlash_Pistol_Player", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
-	CSmartPtr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "MuzzleFlash_Pistol_Player" );
+	ks::intrusive_ptr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "MuzzleFlash_Pistol_Player" );
 	pSimple->SetDrawBeforeViewModel( true );
 
 	CacheMuzzleFlashes();

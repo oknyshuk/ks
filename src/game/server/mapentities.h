@@ -68,7 +68,7 @@ private:
 
 	HierarchicalSpawnMapData_t *m_pSpawnMapData;
 	HierarchicalSpawn_t *m_pSpawnList;
-	CUtlVector< CPointTemplate* > m_PointTemplates;
+	std::vector< CPointTemplate* > m_PointTemplates;
 	int m_nEntities;
 };
 

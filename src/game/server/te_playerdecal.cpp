@@ -17,9 +17,6 @@
 #include "cstrike15/cs_gamerules.h"
 #include "playerdecals_signature.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches decal tempentity
@@ -83,15 +80,15 @@ public:
 		SetNextThink( gpGlobals->curtime + PLAYERDECALS_DURATION_SOLID + PLAYERDECALS_DURATION_FADE2 );
 
 		// Add us to the list
-		s_arrFEPlayerDecals.AddToTail( this );
+		s_arrFEPlayerDecals.push_back( this );
 
 		// If we have too many then force expire older ones
-		while ( s_arrFEPlayerDecals.Count() >
+		while ( std::ssize( s_arrFEPlayerDecals ) >
 			PLAYERDECALS_LIMIT_COUNT
 			)
 		{
-			CFEPlayerDecal *pOther = s_arrFEPlayerDecals.Head();
-			s_arrFEPlayerDecals.RemoveMultipleFromHead( 1 );
+			CFEPlayerDecal *pOther = s_arrFEPlayerDecals.front();
+			s_arrFEPlayerDecals.erase( s_arrFEPlayerDecals.begin(), s_arrFEPlayerDecals.begin() + 1 );
 			pOther->SetNextThink( gpGlobals->curtime );	// must be SUB_Remove
 		}
 	}
@@ -100,7 +97,7 @@ public:
 		// Remove us from the list
 		// Normally we would be first in the list anyways,
 		// and even if we are not it's a small number of entries to scan
-		( void ) s_arrFEPlayerDecals.FindAndRemove( this );
+		( void ) ks::erase_first( s_arrFEPlayerDecals, this );
 	}
 
 	// Make sure clients get all the spray entities in the same order
@@ -126,9 +123,9 @@ public:
 	CNetworkArray( uint8, m_ubSignature, PLAYERDECALS_SIGNATURE_BYTELEN, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 
 private:
-	static CUtlVector< CFEPlayerDecal * > s_arrFEPlayerDecals;
+	static std::vector< CFEPlayerDecal * > s_arrFEPlayerDecals;
 };
-CUtlVector< CFEPlayerDecal * > CFEPlayerDecal::s_arrFEPlayerDecals;
+std::vector< CFEPlayerDecal * > CFEPlayerDecal::s_arrFEPlayerDecals;
 
 //-----------------------------------------------------------------------------
 // Purpose: 

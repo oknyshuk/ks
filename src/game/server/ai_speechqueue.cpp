@@ -11,8 +11,6 @@
 #include "ai_baseactor.h"
 #include "ai_speech.h"
 #include "flex_expresser.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include <tier0/memdbgon.h>
 
 extern ConVar ai_debug_speech;
 #define DebuggingSpeech() ai_debug_speech.GetBool()
@@ -24,7 +22,7 @@ ConVar rr_followup_maxdist( "rr_followup_maxdist", "1800", FCVAR_CHEAT, "'then A
 //   RESPONSE QUEUE DATA STRUCTURE
 ///////////////////////////////////////////////////////////////////////////////
 
-CResponseQueue::CResponseQueue( int queueSize ) : m_Queue(queueSize), m_ExpresserTargets(8,8)
+CResponseQueue::CResponseQueue( int queueSize )
 {};
 
 /// Add a deferred response.
@@ -36,9 +34,8 @@ void CResponseQueue::Add( const AIConcept_t &conc,  ///< concept to dispatch
 		 )
 {
 	// Add a response.
-	AssertMsg( m_Queue.Count() < AI_RESPONSE_QUEUE_SIZE, "AI Response queue overfilled." );
-	QueueType_t::IndexLocalType_t idx = m_Queue.AddToTail();
-	m_Queue[idx].Init( conc, contexts, time, targetspec, pIssuer );
+	AssertMsg( (int)m_Queue.size() < AI_RESPONSE_QUEUE_SIZE, "AI Response queue overfilled." );
+	m_Queue.emplace_back().Init( conc, contexts, time, targetspec, pIssuer );
 }
 
 
@@ -48,17 +45,17 @@ void CResponseQueue::Remove( const AIConcept_t &conc,  ///< concept to dispatch
 			) RESTRICT
 {
 	// walk through the queue until we find a response matching the concept and issuer, then strike it.
-	QueueType_t::IndexLocalType_t idx = m_Queue.Head();
-	while (idx != m_Queue.InvalidIndex())
+	QueueType_t::iterator idx = m_Queue.begin();
+	while (idx != m_Queue.end())
 	{
-		CDeferredResponse &response = m_Queue[idx];
-		QueueType_t::IndexLocalType_t previdx = idx; // advance the index immediately because we may be deleting the "current" element
-		idx = m_Queue.Next(idx); // is now the next index
+		CDeferredResponse &response = *idx;
+		QueueType_t::iterator previdx = idx; // advance the index immediately because we may be deleting the "current" element
+		idx = std::next(idx); // is now the next index
 		if ( CompareConcepts( response.m_concept, conc ) && // if concepts match and
 			( !pIssuer || ( response.m_hIssuer.Get() == pIssuer ) ) // issuer is null, or matches the one in the response
 			)
 		{
-			m_Queue.Remove(previdx);
+			m_Queue.erase(previdx);
 		}
 	}
 }
@@ -71,11 +68,11 @@ void CResponseQueue::RemoveSpeechQueuedFor( const CBaseEntity *pSpeaker )
 	// queue, it's not safe to actually remove the elements. Instead, quash it by replacing it
 	// with a null event.
 	
-	for ( QueueType_t::IndexLocalType_t idx = m_Queue.Head() ;
-		  idx != m_Queue.InvalidIndex() ;
-		  idx = m_Queue.Next(idx) ) // is now the next index
+	for ( QueueType_t::iterator idx = m_Queue.begin() ;
+		  idx != m_Queue.end() ;
+		  idx = std::next(idx) ) // is now the next index
 	{
-		CDeferredResponse &response = m_Queue[idx];
+		CDeferredResponse &response = *idx;
 		if ( response.m_Target.m_hHandle.Get() == pSpeaker )
 		{
 			response.Quash();
@@ -97,39 +94,39 @@ void CResponseQueue::PerFrameDispatch()
 {
 failsafe:
 	// Walk through the list, find any messages whose time has come, and dispatch them. Then remove them.
-	QueueType_t::IndexLocalType_t idx = m_Queue.Head();
-	while (idx != m_Queue.InvalidIndex())
+	QueueType_t::iterator idx = m_Queue.begin();
+	while (idx != m_Queue.end())
 	{
 		// do we need to dispatch this concept?
-		CDeferredResponse &response = m_Queue[idx];
-		QueueType_t::IndexLocalType_t previdx = idx; // advance the index immediately because we may be deleting the "current" element
+		CDeferredResponse &response = *idx;
+		QueueType_t::iterator previdx = idx; // advance the index immediately because we may be deleting the "current" element
 		
 
 		if ( response.IsQuashed() )
 		{
-			idx = m_Queue.Next(idx); // is now the next index
+			idx = std::next(idx); // is now the next index
 			// we can delete this entry now
-			m_Queue.Remove(previdx);
+			m_Queue.erase(previdx);
 		}
 		else if ( response.m_fDispatchTime <= gpGlobals->curtime )
 		{
 			// dispatch. we've had bugs where dispatches removed things from inside the queue; 
 			// so, as a failsafe, if the queue length changes as a result, start over.
-			int oldLength = m_Queue.Count();
+			size_t oldLength = m_Queue.size();
 			DispatchOneResponse(response);
-			if ( m_Queue.Count() < oldLength )
+			if ( m_Queue.size() < oldLength )
 			{
 				AssertMsg( false, "Response queue length changed in non-reentrant way! FAILSAFE TRIGGERED" );
 				goto failsafe; // ick
 			}
 
-			idx = m_Queue.Next(idx); // is now the next index
+			idx = std::next(idx); // is now the next index
 			// we can delete this entry now
-			m_Queue.Remove(previdx);
+			m_Queue.erase(previdx);
 		}
 		else
 		{
-			idx = m_Queue.Next(idx); // is now the next index
+			idx = std::next(idx); // is now the next index
 		}
 	}
 }
@@ -140,14 +137,14 @@ void CResponseQueue::AddExpresserHost(CBaseEntity *host)
 {
 	EHANDLE ehost = host;
 	// see if it's in there already
-	if (m_ExpresserTargets.HasElement(ehost))
+	if (ks::contains( m_ExpresserTargets, ehost ))
 	{
 		AssertMsg1(false, "Tried to add %s to response queue when it was already in there.", host->GetDebugName());
 	}
 	else
 	{
 		// zip through the queue front to back, first see if there's any invalid handles to replace
-		int count = m_ExpresserTargets.Count();
+		int count = std::ssize( m_ExpresserTargets );
 		for (int i = 0 ; i < count ; ++i )
 		{
 			if ( !m_ExpresserTargets[i].Get() )
@@ -158,21 +155,21 @@ void CResponseQueue::AddExpresserHost(CBaseEntity *host)
 		}
 
 		// if we're down here we didn't find one to replace, so append the host to the end.
-		m_ExpresserTargets.AddToTail(ehost);
+		m_ExpresserTargets.push_back( ehost );
 	}
 }
 
 /// Remove an expresser host from this queue.
 void CResponseQueue::RemoveExpresserHost(CBaseEntity *host)
 {
-	int idx = m_ExpresserTargets.Find( host );
+	int idx = ks::find_index( m_ExpresserTargets, host );
 	if (idx == -1)
 	{
 		// AssertMsg1(false, "Tried to remove %s from response queue, but it's not in there to begin with!", host->GetDebugName() );
 	}
 	else
 	{
-		m_ExpresserTargets.FastRemove(idx);
+		ks::swap_remove( m_ExpresserTargets, idx );
 	}
 }
 
@@ -430,7 +427,7 @@ bool CResponseQueue::DispatchOneResponse_ThenANY( CDeferredResponse &response, A
 
 void CResponseQueue::Evacuate()
 {
-	m_Queue.RemoveAll();
+	m_Queue.clear();
 }
 
 #undef EXARRAYMAX

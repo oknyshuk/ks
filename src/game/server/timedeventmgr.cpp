@@ -7,9 +7,7 @@
 #include "cbase.h"
 #include "timedeventmgr.h"
 #include "tier0/vprof.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier1/vector_ops.h"
 
 // ------------------------------------------------------------------------------------------ //
 // CEventRegister.
@@ -95,23 +93,20 @@ bool TimedEventMgr_LessFunc( CEventRegister* const &a, CEventRegister* const &b 
 }
 
 
-CTimedEventMgr::CTimedEventMgr()
-{
-	m_Events.SetLessFunc( TimedEventMgr_LessFunc );
-}
+CTimedEventMgr::CTimedEventMgr() = default;
 
 
 void CTimedEventMgr::FireEvents()
 {
 	VPROF( "CTimedEventMgr::FireEvents" );
-	while ( m_Events.Count() )
+	while ( !m_Events.empty() )
 	{
 		// Fire the top element, then break out.
-		CEventRegister *pEvent = m_Events.ElementAtHead();
+		CEventRegister *pEvent = m_Events.front();
 		if ( gpGlobals->curtime >= pEvent->m_flNextEventTime )
 		{
 			// Reregister for the timed event, then fire the callback for the event.
-			m_Events.RemoveAtHead();
+			ks::heap_pop( m_Events, TimedEventMgr_LessFunc );
 			pEvent->m_bRegistered = false;
 			pEvent->Reregister();
 
@@ -128,7 +123,7 @@ void CTimedEventMgr::FireEvents()
 void CTimedEventMgr::RegisterForNextEvent( CEventRegister *pEvent )
 {
 	RemoveEvent( pEvent );
-	m_Events.Insert( pEvent );
+	ks::heap_push( m_Events, pEvent, TimedEventMgr_LessFunc );
 	pEvent->m_bRegistered = true;
 }
 
@@ -138,14 +133,8 @@ void CTimedEventMgr::RemoveEvent( CEventRegister *pEvent )
 	if ( pEvent->m_bRegistered )
 	{
 		// Find the event in the list and remove it.
-		int cnt = m_Events.Count();
-		for ( int i=0; i < cnt; i++ )
-		{
-			if ( m_Events.Element( i ) == pEvent )
-			{
-				m_Events.RemoveAt( i );
-				break;
-			}
-		}
+		int i = ks::find_index( m_Events, pEvent );
+		if ( i >= 0 )
+			ks::heap_erase( m_Events, i, TimedEventMgr_LessFunc );
 	}
 }

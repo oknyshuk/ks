@@ -10,10 +10,9 @@
 
 
 #include "igamesystem.h"
-#include "utllinkedlist.h"
+#include "tier1/slot_pool.h"
 #include "cliententitylist.h"
 #include "iclientthinkable.h"
-#include "utlrbtree.h"
 
 
 #define CLIENT_THINK_ALWAYS	-1293
@@ -95,10 +94,11 @@ private:
 	void			AddEntityToFrameThinkList( ThinkEntry_t *pEntry, bool bAlwaysChain, int &nCount, ThinkEntry_t **ppFrameThinkList );
 
 private:
-	CUtlLinkedList<ThinkEntry_t, unsigned short>	m_ThinkEntries;
+	// Linked: list order is the think order; slot handles are handed out as ClientThinkHandle_t
+	ks::linked_slot_pool<ThinkEntry_t, unsigned short>	m_ThinkEntries;
 
-	CUtlVector<ClientEntityHandle_t>	m_aDeleteList;
-	CUtlVector<ThinkListChanges_t>		m_aChangeList;
+	std::vector< ClientEntityHandle_t >	m_aDeleteList;
+	std::vector< ThinkListChanges_t >		m_aChangeList;
 
 	// Makes sure the entries are thinked once per frame in the face of hierarchy
 	int m_nIterEnum;
@@ -112,13 +112,13 @@ private:
 
 inline ClientThinkHandle_t CClientThinkList::GetInvalidThinkHandle()
 {
-	return (ClientThinkHandle_t)(uintp)m_ThinkEntries.InvalidIndex();
+	return (ClientThinkHandle_t)(uintp)m_ThinkEntries.invalid;
 }
 
 
 inline CClientThinkList::ThinkEntry_t* CClientThinkList::GetThinkEntry( ClientThinkHandle_t hThink )
 {
-	return &m_ThinkEntries[ (unsigned long)hThink ];
+	return &m_ThinkEntries[ (unsigned short)(uintp)hThink ];
 }
 
 

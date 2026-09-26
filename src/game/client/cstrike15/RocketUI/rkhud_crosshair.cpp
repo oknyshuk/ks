@@ -43,7 +43,7 @@ struct CrosshairData
     int x0, y0;             // top-left of the vertical/horizontal bars
     int cx, cy;             // aim centre, recoil included
     int gap, bar, thick, ol;
-    Rml::String color, outline_color;
+    Rml::String color = "rgba(0,255,0,255)", outline_color = "rgba(0,0,0,255)";
     bool outlined, dotted;
 
     bool operator==( const CrosshairData & ) const = default;
@@ -171,7 +171,7 @@ void RkHudCrosshair::UpdateCrosshair()
     // Original uses YRES() macro which scales based on 480 base height
     float scale = dimensions.y / 480.0f;
     int iBarSize = (int)( size * scale );
-    int iBarThickness = MAX( 1, (int)( thickness * scale ) );
+    int iBarThickness = std::max( 1, (int)( thickness * scale ) );
     int iGap = (int)( gap * scale );
     // Outline thickness is NOT scaled in the original - it's raw pixels
     int iOutline = (int)( outlineThickness + 0.5f );

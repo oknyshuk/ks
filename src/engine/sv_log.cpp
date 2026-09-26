@@ -19,9 +19,6 @@
 #include "netadr.h"
 #include "sv_steamauth.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static ConVar sv_logsdir( "sv_logsdir", "logs", FCVAR_ARCHIVE, "Folder in the game directory where server logs will be stored." );
 static ConVar sv_logfile( "sv_logfile", "1", FCVAR_ARCHIVE, "Log server information in the log file." );
 static ConVar sv_logflush( "sv_logflush", "0", FCVAR_ARCHIVE, "Flush the log file to disk on each write (slow)." );
@@ -331,7 +328,7 @@ CLog::~CLog()
 
 void CLog::Reset( void )	// reset all logging streams
 {
-	m_LogAddrDestinations.RemoveAll();
+	m_LogAddrDestinations.clear();
 	m_hLogFile = FILESYSTEM_INVALID_HANDLE;
 	m_bActive = false;
 	m_flLastLogFlush = realtime;
@@ -379,20 +376,20 @@ void CLog::RunFrame()
 
 bool CLog::AddLogAddress( netadr_t addr, uint64 ullToken )
 {
-	for ( int i = 0; i < m_LogAddrDestinations.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_LogAddrDestinations ); ++i )
 	{
-		if ( m_LogAddrDestinations.Element(i).m_adr.CompareAdr(addr, false) )
+		if ( m_LogAddrDestinations[ i ].m_adr.CompareAdr(addr, false) )
 		{
-			if ( m_LogAddrDestinations.Element( i ).m_ullToken == ullToken )
+			if ( m_LogAddrDestinations[ i ].m_ullToken == ullToken )
 				return false;
 
-			m_LogAddrDestinations.Element( i ).m_ullToken = ullToken;
+			m_LogAddrDestinations[ i ].m_ullToken = ullToken;
 			return true;
 		}
 	}
 
 	LogAddressDestination_t dest = { addr, ullToken };
-	m_LogAddrDestinations.AddToTail( dest );
+	m_LogAddrDestinations.push_back( dest );
 	return true;
 }
 
@@ -400,18 +397,18 @@ bool CLog::DelLogAddress(netadr_t addr)
 {
 	int i = 0;
 	
-	for ( i = 0; i < m_LogAddrDestinations.Count(); ++i )
+	for ( i = 0; i < std::ssize( m_LogAddrDestinations ); ++i )
 	{
-		if ( m_LogAddrDestinations.Element(i).m_adr.CompareAdr(addr, false) )
+		if ( m_LogAddrDestinations[ i ].m_adr.CompareAdr(addr, false) )
 		{
 			// found!
 			break;
 		}
 	}
 
-	if ( i < m_LogAddrDestinations.Count() )
+	if ( i < std::ssize( m_LogAddrDestinations ) )
 	{
-		m_LogAddrDestinations.Remove(i);
+		m_LogAddrDestinations.erase( m_LogAddrDestinations.begin() + i );
 		return true;
 	}
 
@@ -421,7 +418,7 @@ bool CLog::DelLogAddress(netadr_t addr)
 void CLog::ListLogAddress( void )
 {
 	LogAddressDestination_t *pElement;
-	int count = m_LogAddrDestinations.Count();
+	int count = std::ssize( m_LogAddrDestinations );
 
 	if ( count <= 0 )
 	{
@@ -440,7 +437,7 @@ void CLog::ListLogAddress( void )
 
 		for ( int i = 0 ; i < count ; ++i )
 		{
-			pElement = &m_LogAddrDestinations.Element(i);
+			pElement = &m_LogAddrDestinations[ i ];
 			if ( pElement->m_ullToken )
 				ConMsg( "%s [%016llX]\n", pElement->m_adr.ToString(), pElement->m_ullToken );
 			else
@@ -451,15 +448,15 @@ void CLog::ListLogAddress( void )
 
 bool CLog::UsingLogAddress( void )
 {
-	return ( m_LogAddrDestinations.Count() > 0 );
+	return ( !m_LogAddrDestinations.empty() );
 }
 
 void CLog::DelAllLogAddress( void )
 {
-	if ( m_LogAddrDestinations.Count() > 0 )
+	if ( !m_LogAddrDestinations.empty() )
 	{
 		ConMsg( "logaddress_delall:  all addresses cleared\n" );
-		m_LogAddrDestinations.RemoveAll();
+		m_LogAddrDestinations.clear();
 	}
 	else
 	{
@@ -568,29 +565,29 @@ void CLog::Print( const char * text )
 	}
 
 	// Echo to UDP port
-	if ( m_LogAddrDestinations.Count() > 0 )
+	if ( !m_LogAddrDestinations.empty() )
 	{
 		// out of band sending
-		for ( int i = 0 ; i < m_LogAddrDestinations.Count() ; i++ )
+		for ( int i = 0 ; i < std::ssize( m_LogAddrDestinations ) ; i++ )
 		{
 			int nSocketFrom = sv_logsocket.GetInt();
 			if ( sv_logsocket2_substr.GetString()[0] )
 			{
 				// Check if we should use secondary outgoing socket?
-				if ( V_strstr( m_LogAddrDestinations.Element( i ).m_adr.ToString(), sv_logsocket2_substr.GetString() ) )
+				if ( V_strstr( m_LogAddrDestinations[ i ].m_adr.ToString(), sv_logsocket2_substr.GetString() ) )
 					nSocketFrom = sv_logsocket2.GetInt();
 			}
 			
 			char chTokenBuffer[64] = {};
-			if ( m_LogAddrDestinations.Element( i ).m_ullToken )
-				V_sprintf_safe( chTokenBuffer, "T%016llX ", m_LogAddrDestinations.Element( i ).m_ullToken );
+			if ( m_LogAddrDestinations[ i ].m_ullToken )
+				V_sprintf_safe( chTokenBuffer, "T%016llX ", m_LogAddrDestinations[ i ].m_ullToken );
 			else
 				chTokenBuffer[0] = 0;
 
 			if ( sv_logsecret.GetInt() != 0 )
-				NET_OutOfBandPrintf( nSocketFrom, m_LogAddrDestinations.Element(i).m_adr, "%c%s%s%s", S2A_LOGSTRING2, sv_logsecret.GetString(), chTokenBuffer, string );
+				NET_OutOfBandPrintf( nSocketFrom, m_LogAddrDestinations[ i ].m_adr, "%c%s%s%s", S2A_LOGSTRING2, sv_logsecret.GetString(), chTokenBuffer, string );
 			else
-				NET_OutOfBandPrintf( nSocketFrom, m_LogAddrDestinations.Element(i).m_adr, "%c%s%s", S2A_LOGSTRING, chTokenBuffer, string );
+				NET_OutOfBandPrintf( nSocketFrom, m_LogAddrDestinations[ i ].m_adr, "%c%s%s", S2A_LOGSTRING, chTokenBuffer, string );
 		}
 	}
 }

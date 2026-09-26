@@ -9,9 +9,6 @@
 #include "reflect_annotations.h"
 #include "c_func_brush.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 class [[= ks::reflect::NetTable{ .name = "DT_FuncMonitor" } ]]
       C_FuncMonitor : public C_FuncBrush
 {

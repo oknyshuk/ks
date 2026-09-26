@@ -31,7 +31,9 @@
 #include "Overlay.h"
 #include "vmodes.h"
 #include "gl_cvars.h"
-#include "utlbuffer.h"
+#include "tier1/byte_writer.h"
+#include "tier1/text_writer.h"
+#include "tier1/intern_pool.h"
 #include "vtf/vtf.h"
 #include "bitmap/imageformat.h"
 #include "cbenchmark.h"
@@ -44,9 +46,6 @@
 #include "tier2/tier2.h"
 #include "../utils/common/bsplib.h"
 #include "ibsppack.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 // putting this here so that it is replicated to the client.dll and materialsystem.dll
 ConVar dynamic_tonemap( "mat_dynamic_tonemapping", "1", FCVAR_CHEAT );
@@ -222,7 +221,7 @@ static void TakeCubemapSnapshot( const Vector &origin, const char *pFileNameBase
 								if ( texel > 0.98 )
 									bOverExposedTexels = true;
 								texel *= scale;
-								hdr_map.Pixel( x, y, 0, c ) = MAX( hdr_map.Pixel( x, y, 0, c ), texel );
+								hdr_map.Pixel( x, y, 0, c ) = std::max( hdr_map.Pixel( x, y, 0, c ), texel );
 							}
 					exposure *= 0.75;
 					materials->SwapBuffers();
@@ -301,10 +300,10 @@ class CCubemapCollection
 {
 public:
 	bool Add( char const *szCubemapFile );
-	void Purge() { m_arrEntries.RemoveAll(); }
+	void Purge() { m_arrEntries.clear(); }
 
 protected:
-	CUtlSymbolTable m_arrEntries;
+	ks::intern_pool m_arrEntries;
 };
 
 //
@@ -314,13 +313,13 @@ protected:
 //
 bool CCubemapCollection::Add( char const *szCubemapFile )
 {
-	if ( m_arrEntries.Find( szCubemapFile ) != CUtlSymbol() )
+	if ( m_arrEntries.contains( szCubemapFile ) )
 	{
 		return false;
 	}
 	else
 	{
-		m_arrEntries.AddString( szCubemapFile );
+		m_arrEntries.intern( szCubemapFile );
 		return true;
 	}
 }
@@ -435,21 +434,21 @@ static void WriteLightProbe( const char *pBasePath, const LightingState_t& state
 	}
 
 	CDmxAttribute *pAmbientCube = pLightProbe->AddAttribute( "ambientCube" );
-	CUtlVector< Vector >& vec = pAmbientCube->GetArrayForEdit<Vector>();
+	std::vector< Vector >& vec = pAmbientCube->GetArrayForEdit<Vector>();
 	for ( int i = 0; i < 6 ; ++i )
 	{
-		vec.AddToTail( state.r_boxcolor[i] );
+		vec.push_back( state.r_boxcolor[i] );
 	}
 
 	CDmxAttribute *pLocalLightList = pLightProbe->AddAttribute( "localLights" );
-	CUtlVector< CDmxElement* >& lights = pLocalLightList->GetArrayForEdit<CDmxElement*>();
+	std::vector< CDmxElement* >& lights = pLocalLightList->GetArrayForEdit<CDmxElement*>();
 
 	modify.Release();
 
 	for ( int i = 0; i < state.numlights; ++i )
 	{
 		CDmxElement* pLight = CreateDmxElement( "DmeElement" );
-		lights.AddToTail( pLight );
+		lights.push_back( pLight );
 
 		CDmxElementModifyScope modify( pLight );
 
@@ -494,10 +493,10 @@ static void WriteLightProbe( const char *pBasePath, const LightingState_t& state
 		}
 	}
 
-	CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
+	ks::text_writer buf;
 	if ( SerializeDMX( buf, pLightProbe, pFullPath ) )
 	{
-		g_pFullFileSystem->WriteFile( pFullPath, "MOD", buf );
+		g_pFullFileSystem->WriteFile( pFullPath, "MOD", buf.bytes() );
 	}
 
 	CleanupDMX( pLightProbe );
@@ -580,10 +579,11 @@ static bool LoadSrcVTFFiles( IVTFTexture *pSrcVTFTextures[6], const char *pSkybo
 			char srcVTFFileName[1024];
 			Q_snprintf( srcVTFFileName, sizeof( srcVTFFileName ), "materials/skybox/%s%s.vtf", pSkyboxBaseName, facingName[i] );
 
-			CUtlBuffer buf;
-			if ( !g_pFileSystem->ReadFile( srcVTFFileName, nullptr, buf ) )
+			auto data = g_pFileSystem->ReadFile( srcVTFFileName, nullptr );
+			if ( !data )
 				return false;
 
+			ks::byte_reader buf( *data );
 			pSrcVTFTextures[i] = CreateVTFTexture();
 			if (!pSrcVTFTextures[i]->Unserialize(buf))
 			{
@@ -769,7 +769,7 @@ void Cubemap_CreateDefaultCubemap( const char *pMapName, IBSPPack *iBSPPack )
 	char dstVTFFileName[1024];
 	Q_snprintf( dstVTFFileName, sizeof( dstVTFFileName ), "materials/maps/%s/cubemapdefault.vtf", pMapName );
 
-	CUtlBuffer outputBuf;
+	ks::byte_writer outputBuf;
 	if (!pDstCubemap->Serialize( outputBuf ))
 	{
 		Warning( "Error serializing default cubemap %s\n", dstVTFFileName );
@@ -777,7 +777,7 @@ void Cubemap_CreateDefaultCubemap( const char *pMapName, IBSPPack *iBSPPack )
 	}
 
 	// spit out the default one.
-	iBSPPack->AddBufferToPack( dstVTFFileName, outputBuf.Base(), outputBuf.TellPut(), false );
+	iBSPPack->AddBufferToPack( dstVTFFileName, outputBuf.data(), int( outputBuf.tell() ), false );
 
 	// Clean up the textures
 	for( i = 0; i < 6; i++ )

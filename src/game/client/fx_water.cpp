@@ -17,9 +17,6 @@
 #include "fx.h"
 #include "fx_water.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffectSplash )
 PRECACHE( MATERIAL, "effects/splash1" )
 PRECACHE( MATERIAL, "effects/splash2" )
@@ -66,7 +63,7 @@ void UTIL_GetNormalizedColorTintAndLuminosity( const Vector &color, Vector *tint
 		}
 		else
 		{
-			float maxComponent = MAX( color.x, MAX( color.y, color.z ) );
+			float maxComponent = std::max( color.x, std::max( color.y, color.z ) );
 			*tint = color / maxComponent;
 		}
 	}

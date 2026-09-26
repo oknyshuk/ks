@@ -21,9 +21,6 @@
 #include "bitstring.h"
 #include "tier0/vprof.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 
 LINK_ENTITY_TO_CLASS(info_node_link_controller, CAI_DynamicLinkController);
@@ -32,7 +29,7 @@ IMPLEMENT_REFLECT_DATAMAP( CAI_DynamicLinkController )
 
 void CAI_DynamicLinkController::GenerateLinksFromVolume()
 {
-	Assert( m_ControlledLinks.Count() == 0 );
+	Assert( std::ssize( m_ControlledLinks ) == 0 );
 
 	int nNodes = g_pBigAINet->NumNodes();
 	CAI_Node **ppNodes = g_pBigAINet->AccessNodes();
@@ -90,19 +87,19 @@ void CAI_DynamicLinkController::GenerateLinksFromVolume()
 			pDynamicLink->m_nPriority = m_nPriority;
 
 			pDynamicLink->Spawn();
-			m_ControlledLinks.AddToTail( pDynamicLink );
+			m_ControlledLinks.push_back( pDynamicLink );
 		}
 	}
 }
 
 void CAI_DynamicLinkController::InputTurnOn( inputdata_t &inputdata )
 {
-	for ( int i = 0; i < m_ControlledLinks.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_ControlledLinks ); i++ )
 	{
 		if ( m_ControlledLinks[i] == nullptr )
 		{
-			m_ControlledLinks.FastRemove(i);
-			if ( i >= m_ControlledLinks.Count() )
+			ks::swap_remove( m_ControlledLinks, i );
+			if ( i >= std::ssize( m_ControlledLinks ) )
 				break;
 		}
 		m_ControlledLinks[i]->InputTurnOn( inputdata );
@@ -113,12 +110,12 @@ void CAI_DynamicLinkController::InputTurnOn( inputdata_t &inputdata )
 
 void CAI_DynamicLinkController::InputTurnOff( inputdata_t &inputdata )
 {
-	for ( int i = 0; i < m_ControlledLinks.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_ControlledLinks ); i++ )
 	{
 		if ( m_ControlledLinks[i] == nullptr )
 		{
-			m_ControlledLinks.FastRemove(i);
-			if ( i >= m_ControlledLinks.Count() )
+			ks::swap_remove( m_ControlledLinks, i );
+			if ( i >= std::ssize( m_ControlledLinks ) )
 				break;
 		}
 		m_ControlledLinks[i]->InputTurnOff( inputdata );
@@ -130,12 +127,12 @@ void CAI_DynamicLinkController::InputTurnOff( inputdata_t &inputdata )
 void CAI_DynamicLinkController::InputSetAllowed( inputdata_t &inputdata )
 {
 	m_strAllowUse = inputdata.value.StringID();
-	for ( int i = 0; i < m_ControlledLinks.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_ControlledLinks ); i++ )
 	{
 		if ( m_ControlledLinks[i] == nullptr )
 		{
-			m_ControlledLinks.FastRemove(i);
-			if ( i >= m_ControlledLinks.Count() )
+			ks::swap_remove( m_ControlledLinks, i );
+			if ( i >= std::ssize( m_ControlledLinks ) )
 				break;
 		}
 		m_ControlledLinks[i]->m_strAllowUse = m_strAllowUse;
@@ -145,12 +142,12 @@ void CAI_DynamicLinkController::InputSetAllowed( inputdata_t &inputdata )
 void CAI_DynamicLinkController::InputSetInvert( inputdata_t &inputdata )
 {
 	m_bInvertAllow = inputdata.value.Bool();
-	for ( int i = 0; i < m_ControlledLinks.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_ControlledLinks ); i++ )
 	{
 		if ( m_ControlledLinks[i] == nullptr )
 		{
-			m_ControlledLinks.FastRemove(i);
-			if ( i >= m_ControlledLinks.Count() )
+			ks::swap_remove( m_ControlledLinks, i );
+			if ( i >= std::ssize( m_ControlledLinks ) )
 				break;
 		}
 		m_ControlledLinks[i]->m_bInvertAllow = m_bInvertAllow;

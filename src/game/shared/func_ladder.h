@@ -71,10 +71,10 @@ public:
 
 	static int GetLadderCount();
 	static CFuncLadder *GetLadder( int index );
-	static CUtlVector< CFuncLadder * >	s_Ladders;
+	static std::vector< CFuncLadder * >	s_Ladders;
 public:
 
-	void FindNearbyDismountPoints( const Vector& origin, float radius, CUtlVector< CInfoLadderDismountHandle >& list );
+	void FindNearbyDismountPoints( const Vector& origin, float radius, std::vector< CInfoLadderDismountHandle >& list );
 	const char *GetSurfacePropName();
 
 private:
@@ -86,7 +86,7 @@ private:
 	CNetworkVector( m_vecLadderDir, [[= ks::reflect::Net{ .bits = SPROP_COORD, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
 
 	// Dismount points near top/bottom of ladder, precomputed
-	CUtlVector< CInfoLadderDismountHandle > m_Dismounts;
+	std::vector< CInfoLadderDismountHandle > m_Dismounts;
 
 	// Endpoints for checking for mount/dismount
 	CNetworkVector( m_vecPlayerMountPositionTop, [[= ks::reflect::Net{ .bits = SPROP_COORD, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] [[= ks::reflect::Key{ .name = "point0" } ]] );

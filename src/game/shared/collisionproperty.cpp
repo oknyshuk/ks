@@ -6,6 +6,8 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include <shared_mutex>
+#include <mutex>
 #include "reflect_predmap.h"
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
@@ -42,9 +44,6 @@
 
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //#define DEBUG_SNC_TYPE_PUN_BUG
 
 
@@ -75,7 +74,7 @@ public:
 		int nThreadId = g_nThreadID;
 		if ( m_nReadLockCount[nThreadId] == 0 )
 		{
-			m_partitionMutex.LockForRead();
+			m_partitionMutex.lock_shared();
 		}
 		m_nReadLockCount[nThreadId]++;
 	}
@@ -85,14 +84,14 @@ public:
 		m_nReadLockCount[nThreadId]--;
 		if ( m_nReadLockCount[nThreadId] == 0 )
 		{
-			m_partitionMutex.UnlockRead();
+			m_partitionMutex.unlock_shared();
 		}
 	}
 
 
 private:
 	CTSListWithFreeList<CBaseHandle> m_DirtyEntities;
-	CThreadSpinRWLock	 m_partitionMutex;
+	std::shared_mutex	 m_partitionMutex;
 	int			 m_partitionWriteId;
 	int m_nReadLockCount[MAX_THREADS_SUPPORTED];
 };
@@ -204,8 +203,8 @@ void CDirtySpatialPartitionEntityList::OnPreQuery( SpatialPartitionListMask_t li
 	// trace was requested or was unable to be resolved in a previous attempt (still dirty).
 	if ( m_DirtyEntities.Count() && !m_nReadLockCount[nThreadID] )
 	{
-		CUtlVector< CBaseHandle > vecStillDirty;
-		m_partitionMutex.LockForWrite();
+		std::vector< CBaseHandle > vecStillDirty;
+		std::scoped_lock writeLock( m_partitionMutex );
 		m_partitionWriteId = nThreadID + 1;
 		CTSListWithFreeList<CBaseHandle>::Node_t *pCurrent, *pNext;
 		while ( ( pCurrent = m_DirtyEntities.Detach() ) != nullptr )
@@ -234,20 +233,19 @@ void CDirtySpatialPartitionEntityList::OnPreQuery( SpatialPartitionListMask_t li
 					}
 					else
 					{
-						vecStillDirty.AddToTail( handle );
+						vecStillDirty.push_back( handle );
 					}
 				}
 			}
 		}
-		if ( vecStillDirty.Count() > 0 )
+		if ( !vecStillDirty.empty() )
 		{
-			for ( int i = 0; i < vecStillDirty.Count(); i++ )
+			for ( int i = 0; i < std::ssize( vecStillDirty ); i++ )
 			{
 				m_DirtyEntities.PushItem( vecStillDirty[i] );
 			}
 		}
 		m_partitionWriteId = 0;
-		m_partitionMutex.UnlockWrite();
 	}
 	LockPartitionForRead();
 }
@@ -515,9 +513,9 @@ void CCollisionProperty::SetSolid( SolidType_t val )
 		{
 			// NOTE: This assumes things don't change back from SOLID_BSP
 			// NOTE: This is 100% true for HL2 - need to support removing the flag to support changing from SOLID_BSP
-			CUtlVector<CBaseEntity *> list;
+			std::vector< CBaseEntity * > list;
 			GetAllChildren( GetOuter(), list );
-			for ( int i = list.Count()-1; i>=0; --i )
+			for ( int i = std::ssize( list )-1; i>=0; --i )
 			{
 				list[i]->AddSolidFlags( FSOLID_ROOT_PARENT_ALIGNED );
 			}
@@ -1004,8 +1002,8 @@ void CCollisionProperty::ComputeRotationExpandedSequenceBounds( Vector *pVecWorl
 	Vector mins, maxs;
 	pAnim->ExtractBbox( pAnim->GetSequence(), mins, maxs );
 
-	float flRadius = MAX( MAX( FloatMakePositive( mins.x ), FloatMakePositive( maxs.x ) ),
-					      MAX( FloatMakePositive( mins.y ), FloatMakePositive( maxs.y ) ) );
+	float flRadius = std::max( std::max( FloatMakePositive( mins.x ), FloatMakePositive( maxs.x ) ),
+					      std::max( FloatMakePositive( mins.y ), FloatMakePositive( maxs.y ) ) );
 	mins.x = mins.y = -flRadius;
 	maxs.x = maxs.y = flRadius;
 
@@ -1054,15 +1052,15 @@ void CCollisionProperty::ComputeRotationExpandedBounds( Vector *pVecWorldMins, V
 	else
 	{
 		float flMaxVal;
-		flMaxVal = MAX( FloatMakePositive(m_vecMins.Get().x), FloatMakePositive(m_vecMaxs.Get().x) );
+		flMaxVal = std::max( FloatMakePositive(m_vecMins.Get().x), FloatMakePositive(m_vecMaxs.Get().x) );
 		pVecWorldMins->x = -flMaxVal;
 		pVecWorldMaxs->x = flMaxVal;
 
-		flMaxVal = MAX( FloatMakePositive(m_vecMins.Get().y), FloatMakePositive(m_vecMaxs.Get().y) );
+		flMaxVal = std::max( FloatMakePositive(m_vecMins.Get().y), FloatMakePositive(m_vecMaxs.Get().y) );
 		pVecWorldMins->y = -flMaxVal;
 		pVecWorldMaxs->y = flMaxVal;
 
-		flMaxVal = MAX( FloatMakePositive(m_vecMins.Get().z), FloatMakePositive(m_vecMaxs.Get().z) );
+		flMaxVal = std::max( FloatMakePositive(m_vecMins.Get().z), FloatMakePositive(m_vecMaxs.Get().z) );
 		pVecWorldMins->z = -flMaxVal;
 		pVecWorldMaxs->z = flMaxVal;
 	}
@@ -1191,11 +1189,11 @@ void CCollisionProperty::ComputeSurroundingBox( Vector *pVecWorldMins, Vector *p
 			Vector vecDelta2 = vecTestMaxs - *pVecWorldMaxs;
 			if ( vecDelta.x > 0.0f || vecDelta2.x > 0.0f || vecDelta.y > 0.0f || vecDelta2.y > 0.0f )
 			{
-				Msg( "Outside X/Y by %.2f ", MAX( MAX( vecDelta.x, vecDelta2.x ), MAX( vecDelta.y, vecDelta2.y ) ) );
+				Msg( "Outside X/Y by %.2f ", std::max( std::max( vecDelta.x, vecDelta2.x ), std::max( vecDelta.y, vecDelta2.y ) ) );
 			}
 			if ( vecDelta.z > 0.0f || vecDelta2.z > 0.0f )
 			{
-				Msg( "Outside Z by (below) %.2f, (above) %.2f ", MAX( vecDelta.z, 0.0f ), MAX( vecDelta2.z, 0.0f ) );
+				Msg( "Outside Z by (below) %.2f, (above) %.2f ", std::max( vecDelta.z, 0.0f ), std::max( vecDelta2.z, 0.0f ) );
 			}
 			Msg( "\n" );
 

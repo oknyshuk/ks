@@ -8,6 +8,7 @@
 
 
 #include "render_pch.h"
+#include <mutex>
 #include "brushbatchrender.h"
 #include "icliententity.h"
 #include "r_decal.h"
@@ -39,7 +40,7 @@ FORCEINLINE void UnModulateMaterial( IMaterial *pMaterial, float *pOldColor )
 	}
 }
 
-int __cdecl CBrushBatchRender::SurfaceCmp(const surfacelist_t *s0, const surfacelist_t *s1 )
+int CBrushBatchRender::SurfaceCmp(const surfacelist_t *s0, const surfacelist_t *s1 )
 {
 	int sortID0 = MSurf_MaterialSortID( s0->surfID );
 	int sortID1 = MSurf_MaterialSortID( s1->surfID );
@@ -134,7 +135,7 @@ void CBrushBatchRender::BuildTransLists_r( transrender_t &render, model_t *model
 	BuildTransLists_r(render, model, node->children[!side]);
 
 	// emit all surfaces on node
-	CUtlVectorFixed<surfacelist_t, 256> sortList;
+	std::inplace_vector< surfacelist_t, 256 > sortList;
 	SurfaceHandle_t surfID = SurfaceHandleFromIndex( node->firstsurface, model->brush.pShared );
 	for ( int i = 0; i < node->numsurfaces; i++, surfID++ )
 	{
@@ -157,23 +158,23 @@ void CBrushBatchRender::BuildTransLists_r( transrender_t &render, model_t *model
 			else
 			{
 				// save it off for sorting, then a later append
-				int sortIndex = sortList.AddToTail();
+				int sortIndex = std::ssize( sortList ); sortList.emplace_back();
 				sortList[sortIndex].surfID = surfID;
 			}
 		}
 	}
 
 	// We've got surfaces on this node that can't be added to the previous node
-	if ( sortList.Count() )
+	if ( std::ssize( sortList ) )
 	{
 		// sort by material
-		sortList.Sort( SurfaceCmp );
+		ks::qsort( sortList, SurfaceCmp );
 
 		// add a new sort group
 		AddTransNode( render );
 		int lastSortID = -1;
 		// now add the optimal number of batches to that group
-		for ( int i = 0; i < sortList.Count(); i++ )
+		for ( int i = 0; i < std::ssize( sortList ); i++ )
 		{
 			surfID = sortList[i].surfID;
 			int sortID = MSurf_MaterialSortID( surfID );
@@ -287,16 +288,16 @@ void CBrushBatchRender::DrawTransLists( IMatRenderContext *pRenderContext, trans
 		}
 		if ( g_ShaderDebug.anydebug )
 		{
-			CUtlVector<msurface2_t *> brushList;
+			std::vector< msurface2_t * > brushList;
 			for ( j = 0; j < node.batchCount; j++ )
 			{
 				const transbatch_t &batch = render.batches[node.firstBatch+j];
 				for ( int k = 0; k < batch.surfaceCount; k++ )
 				{
-					brushList.AddToTail( render.surfaces[batch.firstSurface + k] );
+					brushList.push_back( render.surfaces[batch.firstSurface + k] );
 				}
 			}
-			DrawDebugInformation( pRenderContext, brushList.Base(), brushList.Count() );
+			DrawDebugInformation( pRenderContext, brushList.data(), std::ssize( brushList ) );
 		}
 	}
 }
@@ -314,16 +315,10 @@ void R_BrushBatchInit( void )
 
 void CBrushBatchRender::LevelInit()
 {
-	AUTO_LOCK( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 
-	unsigned short iNext;
-	for( unsigned short i=m_renderList.Head(); i != m_renderList.InvalidIndex(); i=iNext )
-	{
-		iNext = m_renderList.Next(i);
-		delete m_renderList.Element(i);
-	}
-
-	m_renderList.Purge();
+	m_renderList.clear();
+	m_renderList.shrink_to_fit();
 	ClearRenderHandles();
 }
 
@@ -348,14 +343,15 @@ CBrushBatchRender::brushrender_t *CBrushBatchRender::FindOrCreateRenderBatch( mo
 	if ( !pModel->brush.nummodelsurfaces )
 		return nullptr;
 
-	AUTO_LOCK( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 
 	unsigned short index = pModel->brush.renderHandle - 1;
-	if ( m_renderList.IsValidIndex( index ) )
-		return m_renderList.Element(index);
+	if ( index < m_renderList.size() )
+		return m_renderList[index].get();
 
 	brushrender_t *pRender = new brushrender_t;
-	index = m_renderList.AddToTail( pRender );
+	index = m_renderList.size();
+	m_renderList.emplace_back( pRender );
 	pModel->brush.renderHandle = index + 1;
 	brushrender_t &render = *pRender; 
 
@@ -366,8 +362,8 @@ CBrushBatchRender::brushrender_t *CBrushBatchRender::FindOrCreateRenderBatch( mo
 	render.totalIndexCount = 0;
 	render.totalVertexCount = 0;
 
-	CUtlVector<cplane_t *>	planeList;
-	CUtlVector<surfacelist_t> surfaceList;
+	std::vector< cplane_t * >	planeList;
+	std::vector< surfacelist_t > surfaceList;
 
 	int i;
 
@@ -380,23 +376,23 @@ CBrushBatchRender::brushrender_t *CBrushBatchRender::FindOrCreateRenderBatch( mo
 
 		cplane_t *plane = surfID->plane;
 
-		int planeIndex = planeList.Find(plane);
+		int planeIndex = ks::find_index( planeList, plane );
 		if ( planeIndex == -1 )
 		{
-			planeIndex = planeList.AddToTail( plane );
+			planeIndex = std::ssize( planeList ); planeList.push_back( plane );
 		}
 		surfacelist_t tmp;
 		tmp.surfID = surfID;
 		tmp.surfaceIndex = i;
 		tmp.planeIndex = planeIndex;
-		surfaceList.AddToTail( tmp );
+		surfaceList.push_back( tmp );
 	}
-	surfaceList.Sort( SurfaceCmp );
-	render.pPlanes = new cplane_t *[planeList.Count()];
-	render.planeCount = planeList.Count();
-	memcpy( render.pPlanes, planeList.Base(), sizeof(cplane_t *)*planeList.Count() );
-	render.pSurfaces = new brushrendersurface_t[surfaceList.Count()];
-	render.surfaceCount = surfaceList.Count();
+	ks::qsort( surfaceList, SurfaceCmp );
+	render.pPlanes = new cplane_t *[std::ssize( planeList )];
+	render.planeCount = std::ssize( planeList );
+	memcpy( render.pPlanes, planeList.data(), sizeof(cplane_t *)*std::ssize( planeList ) );
+	render.pSurfaces = new brushrendersurface_t[std::ssize( surfaceList )];
+	render.surfaceCount = std::ssize( surfaceList );
 
 	int meshCount = 0;
 	int batchCount = 0;
@@ -408,7 +404,7 @@ CBrushBatchRender::brushrender_t *CBrushBatchRender::FindOrCreateRenderBatch( mo
 	brushrenderbatch_t *pBatch = nullptr;
 	brushrenderbatch_t tmpBatch[128];
 
-	for ( i = 0; i < surfaceList.Count(); i++ )
+	for ( i = 0; i < std::ssize( surfaceList ); i++ )
 	{
 		render.pSurfaces[i].surfaceIndex = surfaceList[i].surfaceIndex;
 		render.pSurfaces[i].planeIndex = surfaceList[i].planeIndex;
@@ -502,18 +498,18 @@ void CBrushBatchRender::DrawOpaqueBrushModel( IMatRenderContext *pRenderContext,
 	float pOldColor[4];
 
 	// PORTAL 2 PAINT RENDERING
-	CUtlVectorFixedGrowable< SurfaceHandle_t, 64 > paintableSurfaces;
-	CUtlVectorFixedGrowable< int, 16 > batchPaintableSurfaceCount;
-	CUtlVectorFixedGrowable< int, 16 > batchPaintableSurfaceIndexCount;
+	ks::small_vector< SurfaceHandle_t, 64 > paintableSurfaces;
+	ks::small_vector< int, 16 > batchPaintableSurfaceCount;
+	ks::small_vector< int, 16 > batchPaintableSurfaceIndexCount;
 
 	for ( i = 0; i < pRender->meshCount; i++ )
 	{
 		brushrendermesh_t &mesh = pRender->pMeshes[i];
 		for ( int j = 0; j < mesh.batchCount; j++ )
 		{
-			int nBatchIndex = batchPaintableSurfaceCount.Count();
-			batchPaintableSurfaceCount.AddToTail( 0 );
-			batchPaintableSurfaceIndexCount.AddToTail( 0 );
+			int nBatchIndex = std::ssize( batchPaintableSurfaceCount );
+			batchPaintableSurfaceCount.push_back( 0 );
+			batchPaintableSurfaceIndexCount.push_back( 0 );
 
 			brushrenderbatch_t &batch = pRender->pBatches[mesh.firstBatch + j];
 
@@ -609,7 +605,7 @@ void CBrushBatchRender::DrawOpaqueBrushModel( IMatRenderContext *pRenderContext,
 				// PORTAL 2 PAINT RENDERING
 				if ( (DepthMode == DEPTH_MODE_NORMAL) && ( MSurf_Flags( surfID ) & SURFDRAW_PAINTED ) )
 				{
-					paintableSurfaces.AddToTail( surfID );
+					paintableSurfaces.push_back( surfID );
 					++ batchPaintableSurfaceCount[ nBatchIndex ];
 
 					int nVertCount, nIndexCount;
@@ -653,7 +649,7 @@ void CBrushBatchRender::DrawOpaqueBrushModel( IMatRenderContext *pRenderContext,
 		return;
 
 	// PORTAL 2 PAINT RENDERING
-	if ( paintableSurfaces.Count() )
+	if ( std::ssize( paintableSurfaces ) )
 	{
 		pRenderContext->SetRenderingPaint( true );
 		PIXEVENT( pRenderContext, "Paint" );
@@ -702,7 +698,7 @@ void CBrushBatchRender::DrawOpaqueBrushModel( IMatRenderContext *pRenderContext,
 		for ( i = 0; i < pRender->meshCount; i++ )
 		{
 			brushrendermesh_t &mesh = pRender->pMeshes[i];
-			CUtlVector<msurface2_t *> brushList;
+			std::vector< msurface2_t * > brushList;
 			for ( int j = 0; j < mesh.batchCount; j++ )
 			{
 				brushrenderbatch_t &batch = pRender->pBatches[mesh.firstBatch + j];
@@ -712,11 +708,11 @@ void CBrushBatchRender::DrawOpaqueBrushModel( IMatRenderContext *pRenderContext,
 					if ( backface[surface.planeIndex] )
 						continue;
 					SurfaceHandle_t surfID = firstSurfID + surface.surfaceIndex;
-					brushList.AddToTail(surfID);
+					brushList.push_back( surfID );
 				}
 			}
 			// now draw debug for each drawn surface
-			DrawDebugInformation( pRenderContext, brushList.Base(), brushList.Count() );
+			DrawDebugInformation( pRenderContext, brushList.data(), std::ssize( brushList ) );
 		}
 	}
 }
@@ -794,7 +790,7 @@ void CBrushBatchRender::DrawBrushModelShadow( IMatRenderContext *pRenderContext,
 
 
 
-inline bool __cdecl CBrushBatchRender::BatchSortLessFunc( const BrushBatchRenderData_t &left, const BrushBatchRenderData_t &right )
+inline bool CBrushBatchRender::BatchSortLessFunc( const BrushBatchRenderData_t &left, const BrushBatchRenderData_t &right )
 {
 	brushrenderbatch_t &leftBatch = left.m_pBrushRender->pBatches[ left.m_nBatchIndex ];
 	brushrenderbatch_t &rightBatch = right.m_pBrushRender->pBatches[ right.m_nBatchIndex ];
@@ -815,7 +811,7 @@ inline bool __cdecl CBrushBatchRender::BatchSortLessFunc( const BrushBatchRender
 // Builds the lists of stuff to draw
 //-----------------------------------------------------------------------------
 void CBrushBatchRender::BuildBatchListToDraw( int nCount, const BrushArrayInstanceData_t *pInstanceData, 
-	CUtlVectorFixedGrowable< BrushBatchRenderData_t, 1024 > &batchesToRender, brushrender_t **ppBrushRender )
+	ks::small_vector< BrushBatchRenderData_t, 1024 > &batchesToRender, brushrender_t **ppBrushRender )
 {
 	for ( int i = 0; i < nCount; ++i )
 	{
@@ -831,7 +827,7 @@ void CBrushBatchRender::BuildBatchListToDraw( int nCount, const BrushArrayInstan
 			int nBatchIndex = mesh.firstBatch;
 			for ( int j = 0; j < mesh.batchCount; ++j, ++nBatchIndex )
 			{
-				int nIndex = batchesToRender.AddToTail();
+				int nIndex = std::ssize( batchesToRender ); batchesToRender.emplace_back();
 				BrushBatchRenderData_t &batch = batchesToRender[nIndex];
 				batch.m_pMaterial = pRender->pBatches[nBatchIndex].pMaterial;
 				batch.m_pInstanceData = &instance;
@@ -855,7 +851,7 @@ void CBrushBatchRender::ComputeLightmapPages( int nCount, BrushBatchRenderData_t
 		{
 			brushrenderbatch_t &batch = pRenderData[i].m_pBrushRender->pBatches[ pRenderData[i].m_nBatchIndex ];
 			int nSortID = batch.sortID;
-			Assert( nSortID >= 0 && nSortID < g_WorldStaticMeshes.Count() );
+			Assert( nSortID >= 0 && nSortID < std::ssize( g_WorldStaticMeshes ) );
 			pRenderData[i].m_nLightmapPage = materialSortInfoArray[ nSortID ].lightmapPageID;
 		}
 		return;
@@ -872,7 +868,7 @@ void CBrushBatchRender::ComputeLightmapPages( int nCount, BrushBatchRenderData_t
 //-----------------------------------------------------------------------------
 // Computes the # of indices in an instance group
 //-----------------------------------------------------------------------------
-int CBrushBatchRender::ComputeInstanceGroups( IMatRenderContext *pRenderContext, int nCount, BrushBatchRenderData_t *pRenderData, CUtlVectorFixedGrowable< BrushInstanceGroup_t, 512 > &instanceGroups )
+int CBrushBatchRender::ComputeInstanceGroups( IMatRenderContext *pRenderContext, int nCount, BrushBatchRenderData_t *pRenderData, ks::small_vector< BrushInstanceGroup_t, 512 > &instanceGroups )
 {
 	int nMaxIndices = pRenderContext->GetMaxIndicesToRender();
 
@@ -894,7 +890,7 @@ int CBrushBatchRender::ComputeInstanceGroups( IMatRenderContext *pRenderContext,
 		{
 			if ( nInstanceCount > 0 )
 			{
-				int nIndex = instanceGroups.AddToTail();
+				int nIndex = std::ssize( instanceGroups ); instanceGroups.emplace_back();
 				instanceGroups[nIndex].m_pRenderData = pFirstInstance;
 				instanceGroups[nIndex].m_nCount = nInstanceCount;
 				instanceGroups[nIndex].m_nIndexCount = nIndexCount;
@@ -924,7 +920,7 @@ int CBrushBatchRender::ComputeInstanceGroups( IMatRenderContext *pRenderContext,
 
 	if ( nInstanceCount > 0 )
 	{
-		int nIndex = instanceGroups.AddToTail();
+		int nIndex = std::ssize( instanceGroups ); instanceGroups.emplace_back();
 		instanceGroups[nIndex].m_pRenderData = pFirstInstance;
 		instanceGroups[nIndex].m_nCount = nInstanceCount;
 		instanceGroups[nIndex].m_nIndexCount = nIndexCount;
@@ -1180,7 +1176,7 @@ void CBrushBatchRender::DrawArrayDebugInformation( IMatRenderContext *pRenderCon
 		Vector vecModelSpaceViewOrigin;
 		VectorITransform( vecViewOrigin, *renderData.m_pInstanceData->m_pBrushToWorld, vecModelSpaceViewOrigin ); 
 
-		CUtlVectorFixedGrowable< msurface2_t *, 512 > surfaceList;
+		ks::small_vector< msurface2_t *, 512 > surfaceList;
 		for ( int k = 0; k < batch.surfaceCount; k++ )
 		{
 			brushrendersurface_t &surface = renderData.m_pBrushRender->pSurfaces[batch.firstSurface + k];
@@ -1200,11 +1196,11 @@ void CBrushBatchRender::DrawArrayDebugInformation( IMatRenderContext *pRenderCon
 					continue;
 			}
 
-			surfaceList.AddToTail( surfID );
+			surfaceList.push_back( surfID );
 		}
 
 		// now draw debug for each drawn surface
-		DrawDebugInformation( pRenderContext, *renderData.m_pInstanceData->m_pBrushToWorld, surfaceList.Base(), surfaceList.Count() );
+		DrawDebugInformation( pRenderContext, *renderData.m_pInstanceData->m_pBrushToWorld, surfaceList.data(), std::ssize( surfaceList ) );
 	}
 }
 
@@ -1216,24 +1212,24 @@ void CBrushBatchRender::DrawBrushModelArray( IMatRenderContext* pRenderContext, 
 	const BrushArrayInstanceData_t *pInstanceData )
 {
 	brushrender_t **ppBrushRender = (brushrender_t**)stackalloc( nCount * sizeof(brushrender_t*) );
-	CUtlVectorFixedGrowable< BrushBatchRenderData_t, 1024 > batchesToRender;
+	ks::small_vector< BrushBatchRenderData_t, 1024 > batchesToRender;
 	BuildBatchListToDraw( nCount, pInstanceData, batchesToRender, ppBrushRender );
 
-	int nBatchCount = batchesToRender.Count();
-	BrushBatchRenderData_t *pBatchData = batchesToRender.Base();
+	int nBatchCount = std::ssize( batchesToRender );
+	BrushBatchRenderData_t *pBatchData = batchesToRender.data();
 
 	ComputeLightmapPages( nBatchCount, pBatchData );
 
 	std::make_heap( pBatchData, pBatchData + nBatchCount, BatchSortLessFunc ); 
 	std::sort_heap( pBatchData, pBatchData + nBatchCount, BatchSortLessFunc );
 
-	CUtlVectorFixedGrowable< BrushInstanceGroup_t, 512 > instanceGroups;
+	ks::small_vector< BrushInstanceGroup_t, 512 > instanceGroups;
 	int nMaxInstanceCount = ComputeInstanceGroups( pRenderContext, nBatchCount, pBatchData, instanceGroups );
 
-	bool bHasPaintedSurfaces = DrawSortedBatchList( pRenderContext, instanceGroups.Count(), instanceGroups.Base(), nMaxInstanceCount );
+	bool bHasPaintedSurfaces = DrawSortedBatchList( pRenderContext, std::ssize( instanceGroups ), instanceGroups.data(), nMaxInstanceCount );
 	if ( bHasPaintedSurfaces )
 	{
-		DrawPaintForBatches( pRenderContext, instanceGroups.Count(), instanceGroups.Base(), nMaxInstanceCount );
+		DrawPaintForBatches( pRenderContext, std::ssize( instanceGroups ), instanceGroups.data(), nMaxInstanceCount );
 	}
 
 	DrawDecalsForBatches( pRenderContext, nCount, pInstanceData, ppBrushRender );
@@ -1246,7 +1242,7 @@ void CBrushBatchRender::DrawBrushModelArray( IMatRenderContext* pRenderContext, 
 // Builds the lists of shadow batches to draw
 //-----------------------------------------------------------------------------
 void CBrushBatchRender::BuildShadowBatchListToDraw( int nCount, const BrushArrayInstanceData_t *pInstanceData, 
-	CUtlVectorFixedGrowable< BrushBatchRenderData_t, 1024 > &batchesToRender, int  nModelTypeFlags )
+	ks::small_vector< BrushBatchRenderData_t, 1024 > &batchesToRender, int  nModelTypeFlags )
 {
 	for ( int i = 0; i < nCount; ++i )
 	{
@@ -1277,7 +1273,7 @@ void CBrushBatchRender::BuildShadowBatchListToDraw( int nCount, const BrushArray
 					pDepthWriteMaterial = g_pMaterialDepthWrite[ nAlphaTest ][ nNoCull ];
 				}
 
-				int nIndex = batchesToRender.AddToTail();
+				int nIndex = std::ssize( batchesToRender ); batchesToRender.emplace_back();
 				BrushBatchRenderData_t &batch = batchesToRender[nIndex];
 				batch.m_pInstanceData = &instance;
 				batch.m_pBrushRender = pRender;
@@ -1293,7 +1289,7 @@ void CBrushBatchRender::BuildShadowBatchListToDraw( int nCount, const BrushArray
 //-----------------------------------------------------------------------------
 // Sorts shadows
 //-----------------------------------------------------------------------------
-inline bool __cdecl CBrushBatchRender::ShadowSortLessFunc( const BrushBatchRenderData_t &left, const BrushBatchRenderData_t &right )
+inline bool CBrushBatchRender::ShadowSortLessFunc( const BrushBatchRenderData_t &left, const BrushBatchRenderData_t &right )
 {
 	if ( left.m_pMaterial != right.m_pMaterial )
 		return left.m_pMaterial < right.m_pMaterial;
@@ -1410,17 +1406,17 @@ void CBrushBatchRender::DrawShadowBatchList( IMatRenderContext* pRenderContext, 
 void CBrushBatchRender::DrawBrushModelShadowArray( IMatRenderContext* pRenderContext, int nCount, 
 	const BrushArrayInstanceData_t *pInstanceData, int nModelTypeFlags )
 {
-	CUtlVectorFixedGrowable< BrushBatchRenderData_t, 1024 > batchesToRender;
+	ks::small_vector< BrushBatchRenderData_t, 1024 > batchesToRender;
 	BuildShadowBatchListToDraw( nCount, pInstanceData, batchesToRender, nModelTypeFlags );
 
-	int nBatchCount = batchesToRender.Count();
-	BrushBatchRenderData_t *pBatchData = batchesToRender.Base();
+	int nBatchCount = std::ssize( batchesToRender );
+	BrushBatchRenderData_t *pBatchData = batchesToRender.data();
 
 	std::make_heap( pBatchData, pBatchData + nBatchCount, ShadowSortLessFunc ); 
 	std::sort_heap( pBatchData, pBatchData + nBatchCount, ShadowSortLessFunc );
 
-	CUtlVectorFixedGrowable< BrushInstanceGroup_t, 512 > instanceGroups;
+	ks::small_vector< BrushInstanceGroup_t, 512 > instanceGroups;
 	int nMaxInstanceCount = ComputeInstanceGroups( pRenderContext, nBatchCount, pBatchData, instanceGroups );
 
-	DrawShadowBatchList( pRenderContext, instanceGroups.Count(), instanceGroups.Base(), nMaxInstanceCount );
+	DrawShadowBatchList( pRenderContext, std::ssize( instanceGroups ), instanceGroups.data(), nMaxInstanceCount );
 }

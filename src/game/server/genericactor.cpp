@@ -20,9 +20,6 @@
 #include "vstdlib/random.h"
 #include "engine/IEngineSound.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar flex_looktime( "flex_looktime", "5" );
 
 //---------------------------------------------------------

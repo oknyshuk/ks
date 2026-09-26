@@ -7,7 +7,8 @@
 #undef fopen
 #include "bitmap/imageformat.h"
 #include "cvtf.h"
-#include "utlbuffer.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
 #include "tier0/dbg.h"
 #include "mathlib/vector.h"
 #include "mathlib/mathlib.h"
@@ -15,9 +16,6 @@
 #include "tier0/mem.h"
 #include "s3tc_decode.h"
 #include "utlvector.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 // byteswap data descriptions
 // stub functions
@@ -231,9 +229,9 @@ CVTFTexture::CVTFTexture()
 	m_pLowResImageData = nullptr;
 	m_nLowResImageAllocSize = 0;
 
-	Assert( m_arrResourcesInfo.Count() == 0 );
-	Assert( m_arrResourcesData.Count() == 0 );
-	Assert( m_arrResourcesData_ForReuse.Count() == 0 );
+	Assert( std::ssize( m_arrResourcesInfo ) == 0 );
+	Assert( std::ssize( m_arrResourcesData ) == 0 );
+	Assert( std::ssize( m_arrResourcesData_ForReuse ) == 0 );
 
 	memset( &m_Options, 0, sizeof( m_Options ) );
 	m_Options.cbSize = sizeof( m_Options );
@@ -445,21 +443,21 @@ void CVTFTexture::SetAlphaTestThreshholds( float flBase, float flHighFreq )
 //-----------------------------------------------------------------------------
 void CVTFTexture::ReleaseResources()
 {
-	m_arrResourcesInfo.RemoveAll();
+	m_arrResourcesInfo.clear();
 
-	for ( ResourceMemorySection *pRms = m_arrResourcesData.Base(),
-		 *pRmsEnd = pRms + m_arrResourcesData.Count(); pRms < pRmsEnd; ++pRms )
+	for ( ResourceMemorySection *pRms = m_arrResourcesData.data(),
+		 *pRmsEnd = pRms + std::ssize( m_arrResourcesData ); pRms < pRmsEnd; ++pRms )
 	{
 		delete [] pRms->m_pData;
 	}
-	m_arrResourcesData.RemoveAll();
+	m_arrResourcesData.clear();
 
-	for ( ResourceMemorySection *pRms = m_arrResourcesData_ForReuse.Base(),
-		 *pRmsEnd = pRms + m_arrResourcesData_ForReuse.Count(); pRms < pRmsEnd; ++pRms )
+	for ( ResourceMemorySection *pRms = m_arrResourcesData_ForReuse.data(),
+		 *pRmsEnd = pRms + std::ssize( m_arrResourcesData_ForReuse ); pRms < pRmsEnd; ++pRms )
 	{
 		delete [] pRms->m_pData;
 	}
-	m_arrResourcesData_ForReuse.RemoveAll();
+	m_arrResourcesData_ForReuse.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -579,15 +577,15 @@ int CVTFTexture::FileSize( int nMipSkipCount ) const
 //-----------------------------------------------------------------------------
 // Unserialization of low-res data
 //-----------------------------------------------------------------------------
-bool CVTFTexture::LoadLowResData( CUtlBuffer &buf )
+bool CVTFTexture::LoadLowResData( ks::byte_reader &buf )
 {
 	// Allocate low-res bits
 	InitLowResImage( m_nLowResImageWidth, m_nLowResImageHeight, m_LowResImageFormat );
 	int nLowResImageSize = ImageLoader::GetMemRequired( m_nLowResImageWidth, 
 		m_nLowResImageHeight, 1, m_LowResImageFormat, false );
-	buf.Get( m_pLowResImageData, nLowResImageSize );
+	buf.read_bytes( m_pLowResImageData, nLowResImageSize );
 
-	bool bValid = buf.IsValid();
+	bool bValid = buf.ok();
 
 	return bValid;
 }
@@ -595,7 +593,7 @@ bool CVTFTexture::LoadLowResData( CUtlBuffer &buf )
 //-----------------------------------------------------------------------------
 // Unserialization of image data
 //-----------------------------------------------------------------------------
-bool CVTFTexture::LoadImageData( CUtlBuffer &buf, const VTFFileHeader_t &header, int nSkipMipLevels )
+bool CVTFTexture::LoadImageData( ks::byte_reader &buf, const VTFFileHeader_t &header, int nSkipMipLevels )
 {
 	// Fix up the mip count + size based on how many mip levels we skip...
 	if (nSkipMipLevels > 0)
@@ -629,7 +627,7 @@ bool CVTFTexture::LoadImageData( CUtlBuffer &buf, const VTFFileHeader_t &header,
 	bool bNoSkip = false;
 	if ( IsCubeMap() && ( header.version[0] == 7 ) && ( header.version[1] == 4 ) )
 	{
-		int nBytesRemaining = buf.TellMaxPut() - buf.TellGet();
+		int nBytesRemaining = buf.remaining();
 		int nFileSize = ComputeFaceSize( nSkipMipLevels ) * m_nFaceCount * m_nFrameCount;
 		if ( nBytesRemaining == nFileSize )
 		{
@@ -637,7 +635,7 @@ bool CVTFTexture::LoadImageData( CUtlBuffer &buf, const VTFFileHeader_t &header,
 		}
 	}
 
-	int nGet = buf.TellGet();
+	const size_t nGet = buf.tell();
 
 retryCubemapLoad:
 	for (int iMip = m_nMipCount; --iMip >= 0; )
@@ -652,26 +650,26 @@ retryCubemapLoad:
 		{
 			for (int iFace = 0; iFace < m_nFaceCount; ++iFace)
 			{
-				// printf("\n tex %p mip %i frame %i face %i  size %i  buf offset %i", this, iMip, iFrame, iFace, iMipSize, buf.TellGet() );
+				// printf("\n tex %p mip %i frame %i face %i  size %i  buf offset %i", this, iMip, iFrame, iFace, iMipSize, buf.tell() );
 				unsigned char *pMipBits = ImageData( iFrame, iFace, iMip );
-				buf.Get( pMipBits, iMipSize );
+				buf.read_bytes( pMipBits, iMipSize );
 			}
 
 			// Strip out the spheremap in older versions
 			if ( IsCubeMap() && !bNoSkip && ( header.version[0] == 7 ) && ( header.version[1] >= 1 ) && ( header.version[1] < 5 ) )
 			{
-				buf.SeekGet( CUtlBuffer::SEEK_CURRENT, iMipSize );
+				buf.skip( iMipSize );
 			}
 		}
 	}
 
-	bool bOk = buf.IsValid();
+	bool bOk = buf.ok();
 	if ( !bOk && IsCubeMap() && ( header.version[0] == 7 ) && ( header.version[1] <= 4 ) )
 	{
 		if ( !bNoSkip )
 		{
 			bNoSkip = true;
-			buf.SeekGet( CUtlBuffer::SEEK_HEAD, nGet );
+			buf.seek( nGet );
 			goto retryCubemapLoad;
 		}
 		Warning( "** Encountered stale cubemap! Please rebuild the following vtf:\n" );
@@ -690,7 +688,7 @@ void *CVTFTexture::SetResourceData( uint32 eType, void const *pData, size_t nNum
 	if ( nNumBytes )
 	{
 		ResourceEntryInfo *pInfo = FindOrCreateResourceEntryInfo( eType );
-		int idx = pInfo - m_arrResourcesInfo.Base();
+		int idx = pInfo - m_arrResourcesInfo.data();
 		ResourceMemorySection &rms = m_arrResourcesData[ idx ];
 
 		if ( nNumBytes == sizeof( pInfo->resData ) )
@@ -731,7 +729,7 @@ void *CVTFTexture::GetResourceData( uint32 eType, size_t *pDataSize ) const
 	{
 		if ( ( pInfo->eType & RSRCF_HAS_NO_DATA_CHUNK ) == 0 )
 		{
-			int idx = pInfo - m_arrResourcesInfo.Base();
+			int idx = pInfo - m_arrResourcesInfo.data();
 			ResourceMemorySection const &rms = m_arrResourcesData[ idx ];
 			if ( pDataSize )
 			{
@@ -764,80 +762,80 @@ bool CVTFTexture::HasResourceEntry( uint32 eType ) const
 
 unsigned int CVTFTexture::GetResourceTypes( unsigned int *arrTypesBuffer, int numTypesBufferElems ) const
 {
-	for ( ResourceEntryInfo const *pInfo = m_arrResourcesInfo.Base(),
-		  *pInfoEnd = pInfo + m_arrResourcesInfo.Count();
+	for ( ResourceEntryInfo const *pInfo = m_arrResourcesInfo.data(),
+		  *pInfoEnd = pInfo + std::ssize( m_arrResourcesInfo );
 		  numTypesBufferElems-- > 0 && pInfo < pInfoEnd; )
 	{
 		*( arrTypesBuffer++ ) = ( ( pInfo++ )->eType & ~RSRCF_MASK );
 	}
 
-	return m_arrResourcesInfo.Count();
+	return std::ssize( m_arrResourcesInfo );
 }
 
 
 //-----------------------------------------------------------------------------
 // Serialization/Unserialization of resource data
 //-----------------------------------------------------------------------------
-bool CVTFTexture::ResourceMemorySection::LoadData( CUtlBuffer &buf )
+bool CVTFTexture::ResourceMemorySection::LoadData( ks::byte_reader &buf )
 {
 	// Read the size
 	int iDataSize = 0;
-	buf.Get( &iDataSize, sizeof( iDataSize ) );
+	buf.read_bytes( &iDataSize, sizeof( iDataSize ) );
 
 	// Read the actual data
 	if ( !AllocateData( iDataSize ) )
 		return false;
 
-	buf.Get( m_pData, iDataSize );
+	buf.read_bytes( m_pData, iDataSize );
 
 	// Test valid
-	bool bValid = buf.IsValid();
+	bool bValid = buf.ok();
 
 	return bValid;
 }
 
-bool CVTFTexture::ResourceMemorySection::WriteData( CUtlBuffer &buf ) const
+bool CVTFTexture::ResourceMemorySection::WriteData( ks::byte_writer &buf ) const
 {
 	Assert( m_nDataLength && m_pData );
 	int iBufSize = m_nDataLength;
 	
-	buf.Put( &iBufSize, sizeof( iBufSize ) );
-	buf.Put( m_pData, m_nDataLength );
+	buf.write_bytes( &iBufSize, sizeof( iBufSize ) );
+	buf.write_bytes( m_pData, m_nDataLength );
 
-	return buf.IsValid();
+	return buf.ok();
 }
 
 
 //-----------------------------------------------------------------------------
 // Unserialization
 //-----------------------------------------------------------------------------
-static bool ReadHeaderFromBufferPastBaseHeader( CUtlBuffer &buf, VTFFileHeader_t &header )
+static bool ReadHeaderFromBufferPastBaseHeader( ks::byte_reader &buf, VTFFileHeader_t &header )
 {
 	unsigned char *pBuf = (unsigned char*)(&header) + sizeof(VTFFileBaseHeader_t);
 	if ( header.version[1] <= VTF_MINOR_VERSION && header.version[1] >= 4 )
 	{
-		buf.Get( pBuf, sizeof(VTFFileHeader_t) - sizeof(VTFFileBaseHeader_t) );
+		buf.read_bytes( pBuf, sizeof(VTFFileHeader_t) - sizeof(VTFFileBaseHeader_t) );
 	}
 	else if ( header.version[1] == 3 )
 	{
-		buf.Get( pBuf, sizeof(VTFFileHeaderV7_3_t) - sizeof(VTFFileBaseHeader_t) );
+		buf.read_bytes( pBuf, sizeof(VTFFileHeaderV7_3_t) - sizeof(VTFFileBaseHeader_t) );
 	}
 	else if ( header.version[1] == 2 )
 	{
-		buf.Get( pBuf, sizeof(VTFFileHeaderV7_2_t) - sizeof(VTFFileBaseHeader_t) );
+		buf.read_bytes( pBuf, sizeof(VTFFileHeaderV7_2_t) - sizeof(VTFFileBaseHeader_t) );
 
 			// read 15 dummy bytes to be properly positioned with 7.2 PC data
 			byte dummy[15];
-			buf.Get( dummy, 15 );
+			buf.read_bytes( dummy, 15 );
 	}
 	else if ( header.version[1] == 1 || header.version[1] == 0 )
 	{
 		// previous version 7.0 or 7.1
-		buf.Get( pBuf, sizeof(VTFFileHeaderV7_1_t) - sizeof(VTFFileBaseHeader_t) );
+		buf.read_bytes( pBuf, sizeof(VTFFileHeaderV7_1_t) - sizeof(VTFFileBaseHeader_t) );
 
 			// read a dummy byte to be properly positioned with 7.0/1 PC data
 			byte dummy;
-			buf.Get( &dummy, 1 );
+			buf.read_bytes( &dummy, 1 );
 	}
 	else
 	{
@@ -845,15 +843,15 @@ static bool ReadHeaderFromBufferPastBaseHeader( CUtlBuffer &buf, VTFFileHeader_t
 		return false;
 	}
 
-	return buf.IsValid();
+	return buf.ok();
 }
 
-bool CVTFTexture::ReadHeader( CUtlBuffer &buf, VTFFileHeader_t &header )
+bool CVTFTexture::ReadHeader( ks::byte_reader &buf, VTFFileHeader_t &header )
 {
 
 	memset( &header, 0, sizeof(VTFFileHeader_t) );
-	buf.Get( &header, sizeof(VTFFileBaseHeader_t) );
-	if ( !buf.IsValid() )
+	buf.read_bytes( &header, sizeof(VTFFileBaseHeader_t) );
+	if ( !buf.ok() )
 	{
 		Warning( "*** Error unserializing VTF file... is the file empty?\n" );
 		return false;
@@ -903,7 +901,7 @@ bool CVTFTexture::ReadHeader( CUtlBuffer &buf, VTFFileHeader_t &header )
 //-----------------------------------------------------------------------------
 // Unserialization
 //-----------------------------------------------------------------------------
-bool CVTFTexture::Unserialize( CUtlBuffer &buf, bool bHeaderOnly, int nSkipMipLevels )
+bool CVTFTexture::Unserialize( ks::byte_reader &buf, bool bHeaderOnly, int nSkipMipLevels )
 {
 	// When unserializing, we can skip a certain number of mip levels,
 	// and we also can just load everything but the image data
@@ -964,29 +962,29 @@ bool CVTFTexture::Unserialize( CUtlBuffer &buf, bool bHeaderOnly, int nSkipMipLe
 	m_LowResImageFormat = header.lowResImageFormat;
 
 	// Keep the allocated memory chunks of data
-	if ( int( header.numResources ) < m_arrResourcesData.Count() )
+	if ( int( header.numResources ) < std::ssize( m_arrResourcesData ) )
 	{
-		m_arrResourcesData_ForReuse.EnsureCapacity( m_arrResourcesData_ForReuse.Count() + m_arrResourcesData.Count() - header.numResources );
+		m_arrResourcesData_ForReuse.reserve( std::ssize( m_arrResourcesData_ForReuse ) + std::ssize( m_arrResourcesData ) - header.numResources );
 		for ( ResourceMemorySection const *pRms = &m_arrResourcesData[ header.numResources ],
-			*pRmsEnd = m_arrResourcesData.Base() + m_arrResourcesData.Count(); pRms < pRmsEnd; ++ pRms )
+			*pRmsEnd = m_arrResourcesData.data() + std::ssize( m_arrResourcesData ); pRms < pRmsEnd; ++ pRms )
 		{
 			if ( pRms->m_pData )
 			{
-				int idxReuse = m_arrResourcesData_ForReuse.AddToTail( *pRms );
+				int idxReuse = std::ssize( m_arrResourcesData_ForReuse ); m_arrResourcesData_ForReuse.push_back( *pRms );
 				m_arrResourcesData_ForReuse[ idxReuse ].m_nDataLength = 0; // Data for reuse shouldn't have length set
 			}
 		}
 	}
-	m_arrResourcesData.SetCount( header.numResources );
+	m_arrResourcesData.assign( header.numResources, {} );
 
 	// Read the dictionary of resources info
 	if ( header.numResources > 0 )
 	{
-		m_arrResourcesInfo.RemoveAll();
-		m_arrResourcesInfo.SetCount( header.numResources );
+		m_arrResourcesInfo.clear();
+		m_arrResourcesInfo.assign( header.numResources, {} );
 		
-		buf.Get( m_arrResourcesInfo.Base(), m_arrResourcesInfo.Count() * sizeof( ResourceEntryInfo ) );
-		if ( !buf.IsValid() )
+		buf.read_bytes( m_arrResourcesInfo.data(), std::ssize( m_arrResourcesInfo ) * sizeof( ResourceEntryInfo ) );
+		if ( !buf.ok() )
 			return false;
 
 	}
@@ -995,7 +993,7 @@ bool CVTFTexture::Unserialize( CUtlBuffer &buf, bool bHeaderOnly, int nSkipMipLe
 		// Older version (7.0 - 7.2):
 		//	- low-res image data first (optional)
 		//	- then image data
-		m_arrResourcesInfo.RemoveAll();
+		m_arrResourcesInfo.clear();
 
 		// Low-res image data
 		int nLowResImageSize = ImageLoader::GetMemRequired( m_nLowResImageWidth, 
@@ -1003,12 +1001,12 @@ bool CVTFTexture::Unserialize( CUtlBuffer &buf, bool bHeaderOnly, int nSkipMipLe
 		if ( nLowResImageSize )
 		{
 			ResourceEntryInfo &rei = *FindOrCreateResourceEntryInfo( VTF_LEGACY_RSRC_LOW_RES_IMAGE );
-			rei.resData = buf.TellGet();
+			rei.resData = static_cast< uint32 >( buf.tell() );
 		}
 		
 		// Image data
 		ResourceEntryInfo &rei = *FindOrCreateResourceEntryInfo( VTF_LEGACY_RSRC_IMAGE );
-		rei.resData = buf.TellGet() + nLowResImageSize;
+		rei.resData = static_cast< uint32 >( buf.tell() + nLowResImageSize );
 	}
 
 	// Caller wants the header component only, avoids reading large image data sets
@@ -1018,7 +1016,7 @@ bool CVTFTexture::Unserialize( CUtlBuffer &buf, bool bHeaderOnly, int nSkipMipLe
 	// Load the low res image
 	if ( ResourceEntryInfo const *pLowResDataInfo = FindResourceEntryInfo( VTF_LEGACY_RSRC_LOW_RES_IMAGE ) )
 	{
-		buf.SeekGet( CUtlBuffer::SEEK_HEAD, pLowResDataInfo->resData );
+		buf.seek( pLowResDataInfo->resData );
 		if ( !LoadLowResData( buf ) )
 			return false;
 	}
@@ -1032,7 +1030,7 @@ bool CVTFTexture::Unserialize( CUtlBuffer &buf, bool bHeaderOnly, int nSkipMipLe
 	// Load the image data
 	if ( ResourceEntryInfo const *pImageDataInfo = FindResourceEntryInfo( VTF_LEGACY_RSRC_IMAGE ) )
 	{
-		buf.SeekGet( CUtlBuffer::SEEK_HEAD, pImageDataInfo->resData );
+		buf.seek( pImageDataInfo->resData );
 		if ( !LoadImageData( buf, header, nSkipMipLevels ) )
 			return false;
 	}
@@ -1045,10 +1043,10 @@ bool CVTFTexture::Unserialize( CUtlBuffer &buf, bool bHeaderOnly, int nSkipMipLe
 	return true;
 }
 
-bool CVTFTexture::LoadNewResources( CUtlBuffer &buf )
+bool CVTFTexture::LoadNewResources( ks::byte_reader &buf )
 {
 	// Load the new resources
-	for ( int idxRsrc = 0; idxRsrc < m_arrResourcesInfo.Count(); ++idxRsrc )
+	for ( int idxRsrc = 0; idxRsrc < std::ssize( m_arrResourcesInfo ); ++idxRsrc )
 	{
 		ResourceEntryInfo &rei = m_arrResourcesInfo[ idxRsrc ];
 		ResourceMemorySection &rms = m_arrResourcesData[ idxRsrc ];
@@ -1063,7 +1061,7 @@ bool CVTFTexture::LoadNewResources( CUtlBuffer &buf )
 				continue;
 
 			default:
-				buf.SeekGet( CUtlBuffer::SEEK_HEAD, rei.resData );
+				buf.seek( rei.resData );
 				if ( !rms.LoadData( buf ) )
 					return false;
 			}
@@ -1078,8 +1076,8 @@ ResourceEntryInfo const *CVTFTexture::FindResourceEntryInfo( uint32 eType ) cons
 	Assert( ( eType & RSRCF_MASK ) == 0 );
 
 	ResourceEntryInfo const *pRange[2];
-	pRange[0] = m_arrResourcesInfo.Base();
-	pRange[1] = pRange[0] + m_arrResourcesInfo.Count();
+	pRange[0] = m_arrResourcesInfo.data();
+	pRange[1] = pRange[0] + std::ssize( m_arrResourcesInfo );
 
 	// Quick-search in a sorted array
 	ResourceEntryInfo const *pMid;
@@ -1113,7 +1111,7 @@ ResourceEntryInfo * CVTFTexture::FindOrCreateResourceEntryInfo( uint32 eType )
 	Assert( ( eType & RSRCF_MASK ) == 0 );
 
 	int k = 0;
-	for ( ; k < m_arrResourcesInfo.Count(); ++ k )
+	for ( ; k < std::ssize( m_arrResourcesInfo ); ++ k )
 	{
 		uint32 rsrcType = ( m_arrResourcesInfo[ k ].eType & ~RSRCF_MASK );
 		if ( rsrcType == eType )
@@ -1132,17 +1130,17 @@ ResourceEntryInfo * CVTFTexture::FindOrCreateResourceEntryInfo( uint32 eType )
 	rei.eType = eType;
 
 	// Inserting before "k"
-	if ( m_arrResourcesData_ForReuse.Count() )
+	if ( !m_arrResourcesData_ForReuse.empty() )
 	{
-		m_arrResourcesData.InsertBefore( k, m_arrResourcesData_ForReuse[ m_arrResourcesData_ForReuse.Count() - 1 ] );
-		m_arrResourcesData_ForReuse.FastRemove( m_arrResourcesData_ForReuse.Count() - 1 );
+		m_arrResourcesData.insert( m_arrResourcesData.begin() + k, m_arrResourcesData_ForReuse[ std::ssize( m_arrResourcesData_ForReuse ) - 1 ] );
+		ks::swap_remove( m_arrResourcesData_ForReuse, std::ssize( m_arrResourcesData_ForReuse ) - 1 );
 	}
 	else
 	{
-		m_arrResourcesData.InsertBefore( k );
+		m_arrResourcesData.emplace( m_arrResourcesData.begin() + k );
 	}
 
-	m_arrResourcesInfo.InsertBefore( k, rei );
+	m_arrResourcesInfo.insert( m_arrResourcesInfo.begin() + k, rei );
 	return &m_arrResourcesInfo[k];
 }
 
@@ -1150,19 +1148,19 @@ bool CVTFTexture::RemoveResourceEntryInfo( uint32 eType )
 {
 	Assert( ( eType & RSRCF_MASK ) == 0 );
 
-	for ( int k = 0; k < m_arrResourcesInfo.Count(); ++ k )
+	for ( int k = 0; k < std::ssize( m_arrResourcesInfo ); ++ k )
 	{
 		if ( ( m_arrResourcesInfo[ k ].eType & ~RSRCF_MASK ) == eType )
 		{
-			m_arrResourcesInfo.Remove( k );
+			m_arrResourcesInfo.erase( m_arrResourcesInfo.begin() + k );
 
 			if ( m_arrResourcesData[k].m_pData )
 			{
-				int idxReuse = m_arrResourcesData_ForReuse.AddToTail( m_arrResourcesData[k] );
+				int idxReuse = std::ssize( m_arrResourcesData_ForReuse ); m_arrResourcesData_ForReuse.push_back( m_arrResourcesData[k] );
 				m_arrResourcesData_ForReuse[ idxReuse ].m_nDataLength = 0; // Data for reuse shouldn't have length set
 			}
 
-			m_arrResourcesData.Remove( k );
+			m_arrResourcesData.erase( m_arrResourcesData.begin() + k );
 
 			return true;
 		}
@@ -1175,7 +1173,7 @@ bool CVTFTexture::RemoveResourceEntryInfo( uint32 eType )
 //-----------------------------------------------------------------------------
 // Serialization of image data
 //-----------------------------------------------------------------------------
-bool CVTFTexture::WriteImageData( CUtlBuffer &buf )
+bool CVTFTexture::WriteImageData( ks::byte_writer &buf )
 {
 	// NOTE: We load the bits this way because we store the bits in memory
 	// differently that the way they are stored on disk; we store on disk
@@ -1190,28 +1188,22 @@ bool CVTFTexture::WriteImageData( CUtlBuffer &buf )
 			for (int iFace = 0; iFace < m_nFaceCount; ++iFace)
 			{
 				unsigned char *pMipBits = ImageData( iFrame, iFace, iMip );
-				buf.Put( pMipBits, iMipSize );
+				buf.write_bytes( pMipBits, iMipSize );
 			}
 		}
 	}
 
-	return buf.IsValid();
+	return buf.ok();
 }
 
 // Inserts padding to have a multiple of "iAlignment" bytes in the buffer
 // Returns number of pad bytes written
-static int PadBuffer( CUtlBuffer &buf, int iAlignment )
+static int PadBuffer( ks::byte_writer &buf, int iAlignment )
 {
-	unsigned int uiCurrentBytes = buf.TellPut();
+	unsigned int uiCurrentBytes = buf.tell();
 	int iPadBytes = AlignValue( uiCurrentBytes, iAlignment ) - uiCurrentBytes;
 
-	// Fill data
-	for ( int i=0; i<iPadBytes; i++ )
-	{
-		buf.PutChar( '\0' );
-	}
-
-	buf.SeekPut( CUtlBuffer::SEEK_HEAD, uiCurrentBytes + iPadBytes );
+	buf.fill( iPadBytes );
 
 	return iPadBytes;
 }
@@ -1219,7 +1211,7 @@ static int PadBuffer( CUtlBuffer &buf, int iAlignment )
 //-----------------------------------------------------------------------------
 // Serialization
 //-----------------------------------------------------------------------------
-bool CVTFTexture::Serialize( CUtlBuffer &buf )
+bool CVTFTexture::Serialize( ks::byte_writer &buf )
 {
 
 	if ( !m_pImageData )
@@ -1233,7 +1225,7 @@ bool CVTFTexture::Serialize( CUtlBuffer &buf )
 	Q_strncpy( header.fileTypeString, "VTF", 4 );
 	header.version[0] = VTF_MAJOR_VERSION;
 	header.version[1] = VTF_MINOR_VERSION;
-	header.headerSize = sizeof(VTFFileHeader_t) + m_arrResourcesInfo.Count() * sizeof( ResourceEntryInfo );
+	header.headerSize = sizeof(VTFFileHeader_t) + std::ssize( m_arrResourcesInfo ) * sizeof( ResourceEntryInfo );
 
 	header.width = m_nWidth;
 	header.height = m_nHeight;
@@ -1263,33 +1255,33 @@ bool CVTFTexture::Serialize( CUtlBuffer &buf )
 	header.lowResImageHeight = m_nLowResImageHeight;
 	header.lowResImageFormat = m_LowResImageFormat;
 
-	header.numResources = m_arrResourcesInfo.Count();
+	header.numResources = std::ssize( m_arrResourcesInfo );
 
-	buf.Put( &header, sizeof(VTFFileHeader_t) );
-	if ( !buf.IsValid() )
+	buf.write_bytes( &header, sizeof(VTFFileHeader_t) );
+	if ( !buf.ok() )
 		return false;
 
 	// Write the dictionary of resource entry infos
-	int iSeekOffsetResInfoFixup = buf.TellPut();
-	buf.Put( m_arrResourcesInfo.Base(), m_arrResourcesInfo.Count() * sizeof( ResourceEntryInfo ) );
-	if ( !buf.IsValid() )
+	const size_t iSeekOffsetResInfoFixup = buf.tell();
+	buf.write_bytes( m_arrResourcesInfo.data(), std::ssize( m_arrResourcesInfo ) * sizeof( ResourceEntryInfo ) );
+	if ( !buf.ok() )
 		return false;
 
 	// Write the low res image first
 	if ( ResourceEntryInfo *pRei = FindResourceEntryInfo( VTF_LEGACY_RSRC_LOW_RES_IMAGE ) )
 	{
-		pRei->resData = buf.TellPut();
+		pRei->resData = static_cast< uint32 >( buf.tell() );
 
 		Assert( m_pLowResImageData );
 		int iLowResImageSize = ImageLoader::GetMemRequired( m_nLowResImageWidth, 
 			m_nLowResImageHeight, 1, m_LowResImageFormat, false );
-		buf.Put( m_pLowResImageData, iLowResImageSize );
-		if ( !buf.IsValid() )
+		buf.write_bytes( m_pLowResImageData, iLowResImageSize );
+		if ( !buf.ok() )
 			return false;
 	}
 
 	// Serialize the new resources
-	for ( int iRsrc = 0; iRsrc < m_arrResourcesInfo.Count(); ++ iRsrc )
+	for ( int iRsrc = 0; iRsrc < std::ssize( m_arrResourcesInfo ); ++ iRsrc )
 	{
 		ResourceEntryInfo &rei = m_arrResourcesInfo[ iRsrc ];
 
@@ -1304,7 +1296,7 @@ bool CVTFTexture::Serialize( CUtlBuffer &buf )
 			{
 				if ( rei.eType & RSRCF_HAS_NO_DATA_CHUNK )
 					continue;
-				rei.resData = buf.TellPut();
+				rei.resData = static_cast< uint32 >( buf.tell() );
 				ResourceMemorySection &rms = m_arrResourcesData[ iRsrc ];
 				if ( !rms.WriteData( buf ) )
 					return false;
@@ -1315,20 +1307,20 @@ bool CVTFTexture::Serialize( CUtlBuffer &buf )
 	// Write image data last
 	if ( ResourceEntryInfo *pRei = FindResourceEntryInfo( VTF_LEGACY_RSRC_IMAGE ) )
 	{
-		pRei->resData = buf.TellPut();
+		pRei->resData = static_cast< uint32 >( buf.tell() );
 		WriteImageData( buf );
 	}
 	else
 		return false;
 
 	// Now fixup the resources dictionary
-	int iTotalBytesPut = buf.TellPut();
-	buf.SeekPut( CUtlBuffer::SEEK_HEAD, iSeekOffsetResInfoFixup );
-	buf.Put( m_arrResourcesInfo.Base(), m_arrResourcesInfo.Count() * sizeof( ResourceEntryInfo ) );
-	buf.SeekPut( CUtlBuffer::SEEK_HEAD, iTotalBytesPut );
+	const size_t iTotalBytesPut = buf.tell();
+	buf.seek( iSeekOffsetResInfoFixup );
+	buf.write_bytes( m_arrResourcesInfo.data(), std::ssize( m_arrResourcesInfo ) * sizeof( ResourceEntryInfo ) );
+	buf.seek( iTotalBytesPut );
 
 	// Return if the buffer is valid
-	return buf.IsValid();
+	return buf.ok();
 }
 
 //-----------------------------------------------------------------------------
@@ -2450,8 +2442,8 @@ void CVTFTexture::GenerateMipmaps()
 	int numMipsClampedLod = 0;
 	if ( TextureLODControlSettings_t const *pLodSettings = ( TextureLODControlSettings_t const * ) GetResourceData( VTF_RSRC_TEXTURE_LOD_SETTINGS, nullptr ) )
 	{
-		int iClampX = 1 << MIN( pLodSettings->m_ResolutionClampX, pLodSettings->m_ResolutionClampX_360 );
-		int iClampY = 1 << MIN( pLodSettings->m_ResolutionClampX, pLodSettings->m_ResolutionClampX_360 );
+		int iClampX = 1 << std::min( pLodSettings->m_ResolutionClampX, pLodSettings->m_ResolutionClampX_360 );
+		int iClampY = 1 << std::min( pLodSettings->m_ResolutionClampX, pLodSettings->m_ResolutionClampX_360 );
 
 		while ( iClampX < m_nWidth || iClampY < m_nHeight )
 		{
@@ -2816,7 +2808,7 @@ void CVTFTexture::PostProcess( bool bGenerateSpheremap, LookDir_t lookDir, bool 
 void CVTFTexture::SetPostProcessingSettings( VtfProcessingOptions const *pOptions )
 {
 	memset( &m_Options, 0, sizeof( m_Options ) );
-	memcpy( &m_Options, pOptions, MIN( sizeof( m_Options ), pOptions->cbSize ) );
+	memcpy( &m_Options, pOptions, std::min<std::common_type_t<long unsigned int, uint32>>( sizeof( m_Options ), pOptions->cbSize ) );
 	m_Options.cbSize = sizeof( m_Options );
 
 	// Optionally perform the fixups
@@ -2835,12 +2827,11 @@ bool CVTFTexture::ConstructLowResImage()
 	Assert( m_Format == IMAGE_FORMAT_RGBA8888 );
 	Assert( m_pLowResImageData );
 
-	CUtlMemory<unsigned char> lowResSizeImage;
-	lowResSizeImage.EnsureCapacity( m_nLowResImageWidth * m_nLowResImageHeight * 4 );
+	std::vector<unsigned char> lowResSizeImage( m_nLowResImageWidth * m_nLowResImageHeight * 4 );
 
 	ImageLoader::ResampleInfo_t info;
 	info.m_pSrc = ImageData(0, 0, 0);
-	info.m_pDest = lowResSizeImage.Base();
+	info.m_pDest = lowResSizeImage.data();
 	info.m_nSrcWidth = m_nWidth;
 	info.m_nSrcHeight = m_nHeight;
 	info.m_nDestWidth = m_nLowResImageWidth;
@@ -2853,7 +2844,7 @@ bool CVTFTexture::ConstructLowResImage()
 		return false;
 	
 	// convert to the low-res size version with the correct image format
-	unsigned char *tmpImage = lowResSizeImage.Base();
+	unsigned char *tmpImage = lowResSizeImage.data();
 	return ImageLoader::ConvertImageFormat( tmpImage, IMAGE_FORMAT_RGBA8888, 
 		m_pLowResImageData, m_LowResImageFormat, m_nLowResImageWidth, m_nLowResImageHeight ); 
 }
@@ -3273,8 +3264,8 @@ void CVTFTexture::MatchCubeMapBorders( int iStage, ImageFormat finalFormat, bool
 			// because we can use that while matching the S3 compressed edges (we have to do some tricky
 			// repalettizing).
 			int nTotalBytes = ComputeTotalSize();
-			m_OriginalData.SetSize( nTotalBytes / 4 );
-			memcpy( m_OriginalData.Base(), ImageData(), nTotalBytes );
+			m_OriginalData.assign( nTotalBytes / 4, {} );
+			memcpy( m_OriginalData.data(), ImageData(), nTotalBytes );
 			
 			// Swap R and B in these because IMAGE_FORMAT_RGBA8888 is swapped from the way S3RGBAs are.
 			for ( int i=0; i < nTotalBytes/4; i++ )
@@ -3347,7 +3338,7 @@ it was once.
 	int nMipWidth, nMipHeight;
 	ComputeMipLevelDimensions( 0, &nMipWidth, &nMipHeight );
 
-	CUtlVector<unsigned char> data;
+	std::vector< unsigned char > data;
 	data.SetSize( nMipWidth*nMipHeight );
 
 	float cubeSize = 200;

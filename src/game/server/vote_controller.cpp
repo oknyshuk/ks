@@ -18,9 +18,6 @@
 
 #include "EventLog.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // Datatable
 IMPLEMENT_REFLECT_SERVERCLASS( CVoteController, DT_VoteController )
 
@@ -169,7 +166,7 @@ CVoteController::~CVoteController()
 	else if ( g_voteControllerT == this ) 	{	g_voteControllerT = nullptr; }
 
 
-	for( int issueIndex = 0; issueIndex < m_potentialIssues.Count(); ++issueIndex )
+	for( int issueIndex = 0; issueIndex < std::ssize( m_potentialIssues ); ++issueIndex )
 	{
 		delete m_potentialIssues[issueIndex];
 	}
@@ -198,7 +195,7 @@ void CVoteController::ResetData( void )
 	{
 		m_nVotesCast[voteIndex] = VOTE_UNCAST;
 	}
-	m_arrVotedUsers.RemoveAll();
+	m_arrVotedUsers.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -245,14 +242,14 @@ bool CVoteController::SetupVote( int iEntIndex )
 		return false;
 
 	bool bAllowVotes = sv_allow_votes.GetBool();
-	if ( bAllowVotes && m_potentialIssues.Count() )
+	if ( bAllowVotes && std::ssize( m_potentialIssues ) )
 	{
 		CSingleUserRecipientFilter filter( pVoteCaller );
 		filter.MakeReliable();
 		
 		ks::net::CCSUsrMsg_VoteSetup msg;
 		
-		for( int iIndex = 0; iIndex < m_potentialIssues.Count(); ++iIndex )
+		for( int iIndex = 0; iIndex < std::ssize( m_potentialIssues ); ++iIndex )
 		{
 			CBaseIssue *pCurrentIssue = m_potentialIssues[iIndex];
 			
@@ -308,7 +305,7 @@ bool CVoteController::CreateVote( int iEntIndex, const char *pszTypeString, cons
 	}
 	
 	// Find the issue the user is asking for
-	for( int issueIndex = 0; issueIndex < m_potentialIssues.Count(); ++issueIndex )
+	for( int issueIndex = 0; issueIndex < std::ssize( m_potentialIssues ); ++issueIndex )
 	{
 		CBaseIssue *pCurrentIssue = m_potentialIssues[issueIndex];
 		if ( !pCurrentIssue )
@@ -387,9 +384,9 @@ bool CVoteController::CreateVote( int iEntIndex, const char *pszTypeString, cons
 					m_iOnlyTeamToVote = GetVoterTeam( pVoteCaller );
 				
 				// Now get our choices
-				m_VoteOptions.RemoveAll();
+				m_VoteOptions.clear();
 				pCurrentIssue->GetVoteOptions( m_VoteOptions );
-				int nNumVoteOptions = m_VoteOptions.Count();
+				int nNumVoteOptions = std::ssize( m_VoteOptions );
 				if ( nNumVoteOptions >= 2 )
 				{
 					IGameEvent *event = gameeventmanager->CreateEvent( "vote_options" );
@@ -584,9 +581,9 @@ CVoteController::TryCastVoteResult CVoteController::TryCastVote( int iEntIndex, 
 	{
 		if ( uint64 uiSteamID = pBasePlayerVoter->GetSteamIDAsUInt64() )
 		{
-			if ( m_arrVotedUsers.Find( uiSteamID ) == m_arrVotedUsers.InvalidIndex() )
+			if ( ks::find_index( m_arrVotedUsers, uiSteamID ) == -1 )
 			{
-				m_arrVotedUsers.AddToTail( uiSteamID );	// remember that this user already voted
+				m_arrVotedUsers.push_back( uiSteamID );	// remember that this user already voted
 			}
 			else
 			{
@@ -652,7 +649,7 @@ void CVoteController::VoteChoice_Decrement( int nVoteChoice )
 //-----------------------------------------------------------------------------
 void CVoteController::VoteControllerThink( void )
 {
-	if ( !m_potentialIssues.IsValidIndex( m_iActiveIssueIndex ) )
+	if ( !ks::is_valid_index( m_potentialIssues, m_iActiveIssueIndex ) )
 	{
 		SetNextThink( gpGlobals->curtime + 0.5f );
 
@@ -662,9 +659,9 @@ void CVoteController::VoteControllerThink( void )
 	CBaseIssue *pActiveIssue = m_potentialIssues[m_iActiveIssueIndex];
 
 	int nWinningVoteOption = GetWinningVoteOption();
-	if ( !pActiveIssue->IsYesNoVote() || nWinningVoteOption >= m_VoteOptions.Count() )
+	if ( !pActiveIssue->IsYesNoVote() || nWinningVoteOption >= std::ssize( m_VoteOptions ) )
 	{
-		Assert( nWinningVoteOption >= 0 && nWinningVoteOption < m_VoteOptions.Count() );
+		Assert( nWinningVoteOption >= 0 && nWinningVoteOption < std::ssize( m_VoteOptions ) );
 		Msg( "Trying to resolve a vote that is not a YES/NO vote, YES/NO votes aren't currently supported! \n");
 		return;
 	}
@@ -833,7 +830,7 @@ bool CVoteController::IsValidVoter( CBasePlayer *pWhom )
 //-----------------------------------------------------------------------------
 void CVoteController::RegisterIssue( CBaseIssue *pszNewIssue )
 {
-	m_potentialIssues.AddToTail( pszNewIssue );
+	m_potentialIssues.push_back( pszNewIssue );
 }
 
 //-----------------------------------------------------------------------------
@@ -846,7 +843,7 @@ void CVoteController::ListIssues( CBasePlayer *pForWhom )
 
 	ClientPrint( pForWhom, HUD_PRINTCONSOLE, "---Vote commands---\n" );
 
-	for( int issueIndex = 0; issueIndex < m_potentialIssues.Count(); ++issueIndex )
+	for( int issueIndex = 0; issueIndex < std::ssize( m_potentialIssues ); ++issueIndex )
 	{
 		CBaseIssue *pCurrentIssue = m_potentialIssues[issueIndex];
 		pCurrentIssue->ListIssueDetails( pForWhom );
@@ -865,7 +862,7 @@ int CVoteController::GetWinningVoteOption( void )
 	}
 	else
 	{
-		CUtlVector <int> pVoteCounts;
+		std::vector< int > pVoteCounts;
 
 		// Which option had the most votes?
 		// driller:  Need to handle ties
@@ -873,7 +870,7 @@ int CVoteController::GetWinningVoteOption( void )
 		for ( int iIndex = 0; iIndex < m_nVoteOptionCount.Count(); iIndex ++ )
 		{
 			nHighest = ( ( nHighest < m_nVoteOptionCount[iIndex] ) ? m_nVoteOptionCount[iIndex] : nHighest );
-			pVoteCounts.AddToTail( m_nVoteOptionCount[iIndex] );
+			pVoteCounts.push_back( m_nVoteOptionCount[iIndex] );
 		}
 		
 		m_nHighestCountIndex = -1;
@@ -898,7 +895,7 @@ int CVoteController::GetWinningVoteOption( void )
 
 bool CVoteController::HasIssue( const char *pszIssue )
 {
-	for ( int issueIndex = 0; issueIndex < m_potentialIssues.Count( ); ++issueIndex )
+	for ( int issueIndex = 0; issueIndex < std::ssize( m_potentialIssues ); ++issueIndex )
 	{
 		CBaseIssue *pCurrentIssue = m_potentialIssues[ issueIndex ];
 		if ( !pCurrentIssue )
@@ -957,7 +954,7 @@ CBaseIssue::CBaseIssue( const char *pszTypeString, CVoteController *pVoteControl
 //-----------------------------------------------------------------------------
 CBaseIssue::~CBaseIssue()
 {
-	for ( int index = 0; index < m_FailedVotes.Count(); index++ )
+	for ( int index = 0; index < std::ssize( m_FailedVotes ); index++ )
 	{
 		FailedVote *pFailedVote = m_FailedVotes[index];
 		delete pFailedVote;
@@ -1015,11 +1012,11 @@ int CBaseIssue::GetVotesRequiredToPass( void )
 	// Unanimous votes require all attending humans (which might be less than 10 players)
 	else if ( IsUnanimousVoteToPass() )
 	{
-		nVotesToSucceed = MAX( 1, nPotentialVoters );
+		nVotesToSucceed = std::max( 1, nPotentialVoters );
 	}
 	else
 	{
-		float flnVotesToSucceed = ( CSGameRules() && CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() ) ? MAX( 1, nPotentialVoters - 1 ) : ( ( float )nPotentialVoters * sv_vote_quorum_ratio.GetFloat() );
+		float flnVotesToSucceed = ( CSGameRules() && CSGameRules()->IsPlayingAnyCompetitiveStrictRuleset() ) ? std::max( 1, nPotentialVoters - 1 ) : ( ( float )nPotentialVoters * sv_vote_quorum_ratio.GetFloat() );
 		nVotesToSucceed = ceil( flnVotesToSucceed );
 	}
 
@@ -1045,7 +1042,7 @@ float CBaseIssue::GetFailedVoteLockOutTime( void )
 void CBaseIssue::OnVoteFailed( void )
 {
 	// Check for an existing match
-	for ( int index = 0; index < m_FailedVotes.Count(); index++ )
+	for ( int index = 0; index < std::ssize( m_FailedVotes ); index++ )
 	{
 		FailedVote *pFailedVote = m_FailedVotes[index];
 		if ( Q_strncmp( pFailedVote->szFailedVoteParameter, GetDetailsString(), Q_ARRAYSIZE( pFailedVote->szFailedVoteParameter ) - 1 ) == 0 )
@@ -1058,7 +1055,7 @@ void CBaseIssue::OnVoteFailed( void )
 
 	// Need to create a new one
 	FailedVote *pNewFailedVote = new FailedVote;
-	int iIndex = m_FailedVotes.AddToTail( pNewFailedVote );
+	int iIndex = std::ssize( m_FailedVotes ); m_FailedVotes.push_back( pNewFailedVote );
 	V_strcpy_safe( m_FailedVotes[iIndex]->szFailedVoteCommand, GetTypeString() );
 	V_strcpy_safe( m_FailedVotes[iIndex]->szFailedVoteParameter, GetDetailsString() );
 	m_FailedVotes[iIndex]->flLockoutTime = gpGlobals->curtime + GetFailedVoteLockOutTime();
@@ -1133,7 +1130,7 @@ bool CBaseIssue::CanCallVote( int iEntIndex, const char *pszCommand, const char 
 	}
 
 	// Did this fail recently?
-	for( int iIndex = 0; iIndex < m_FailedVotes.Count(); iIndex++ )
+	for( int iIndex = 0; iIndex < std::ssize( m_FailedVotes ); iIndex++ )
 	{
 		FailedVote *pCurrentFailure = m_FailedVotes[iIndex];
 		int nTimeRemaining = pCurrentFailure->flLockoutTime - gpGlobals->curtime;
@@ -1258,11 +1255,11 @@ void CBaseIssue::ListStandardNoArgCommand( CBasePlayer *forWhom, const char *iss
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-bool CBaseIssue::GetVoteOptions( CUtlVector <const char*> &vecNames )
+bool CBaseIssue::GetVoteOptions( std::vector< const char* > &vecNames )
 {
 	// The default vote issue is a Yes/No vote
-	vecNames.AddToHead( "Yes" );
-	vecNames.AddToTail( "No" );
+	vecNames.insert( vecNames.begin(), "Yes" );
+	vecNames.push_back( "No" );
 
 	return true;
 }

@@ -10,7 +10,6 @@
 #ifndef CS_BOT_CHATTER_H
 #define CS_BOT_CHATTER_H
 
-#pragma warning( disable : 4786 )	// long STL names get truncated in browse info.
 
 #include "nav_mesh.h"
 #include "cs_gamestate.h"
@@ -206,8 +205,8 @@ public:
 	PlaceCriteria m_place;
 	CountCriteria m_count;
 };
-typedef CUtlVector< BotSpeakable * > BotSpeakableVector;
-typedef CUtlVector< BotSpeakableVector * > BotVoiceBankVector;
+typedef std::vector< BotSpeakable * > BotSpeakableVector;
+typedef std::vector< BotSpeakableVector * > BotVoiceBankVector;
 
 
 //----------------------------------------------------------------------------------------------------
@@ -249,8 +248,8 @@ private:
 	bool m_isImportant;										///< mission-critical statement
 
 	mutable BotVoiceBankVector m_voiceBank;					///< array of voice banks (arrays of speakables)
-	CUtlVector< int > m_count;								///< number of speakables
-	mutable CUtlVector< int > m_index;						///< index of next speakable to return
+	std::vector< int > m_count;								///< number of speakables
+	mutable std::vector< int > m_index;						///< index of next speakable to return
 	int m_numVoiceBanks;									///< number of voice banks that have been initialized
 	void InitVoiceBank( int bankIndex );					///< sets up the vector of voice banks for the first bankIndex voice banks
 
@@ -258,7 +257,7 @@ private:
 	mutable CountCriteria m_countCriteria;
 	mutable AI_CriteriaSet m_contexts;
 };
-typedef CUtlVector<BotPhrase *> BotPhraseList;
+typedef std::vector< BotPhrase * > BotPhraseList;
 
 inline void BotPhrase::ClearCriteria( void ) const
 {
@@ -287,7 +286,7 @@ enum BotChatterOutputType
 	BOT_CHATTER_RADIO,
 	BOT_CHATTER_VOICE
 };
-typedef CUtlVector<BotChatterOutputType> BotOutputList;
+typedef std::vector< BotChatterOutputType > BotOutputList;
 
 //----------------------------------------------------------------------------------------------------
 /**

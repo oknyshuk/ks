@@ -18,7 +18,6 @@
 //-----------------------------------------------------------------------------
 // Color structures
 //-----------------------------------------------------------------------------
-#pragma warning ( disable : 4293 )
 template< int nBitCount > FORCEINLINE int ConvertTo10Bit( int x )
 {
 	switch ( nBitCount )
@@ -32,10 +31,9 @@ template< int nBitCount > FORCEINLINE int ConvertTo10Bit( int x )
 	case 4:
 		return ( x << 6 ) | ( x << 2 ) | ( x >> 2 );
 	default:
-		return ( x << ( 10 - nBitCount ) ) | ( x >> MAX( 0, MIN( 32, ( nBitCount - ( 10 - nBitCount ) ) ) ) );
+		return ( x << ( 10 - nBitCount ) ) | ( x >> std::max( 0, std::min( 32, ( nBitCount - ( 10 - nBitCount ) ) ) ) );
 	}
 }
-#pragma warning ( default : 4293 )
 
 template< int nBitCount > FORCEINLINE int ConvertFrom10Bit( int x )
 {

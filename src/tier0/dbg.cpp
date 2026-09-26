@@ -31,13 +31,8 @@
 #define PvAlloc malloc
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #if defined( ENABLE_RUNTIME_STACK_TRANSLATION )
-#pragma optimize( "g", off ) //variable argument functions seem to screw up stack walking unless this optimization is disabled
 // Disable this warning: dbg.cpp(479): warning C4748: /GS can not protect parameters and local variables from local buffer overrun because optimizations are disabled in function
-#pragma warning( disable : 4748 )
 #endif
 
 DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_LOADING, "LOADING" );

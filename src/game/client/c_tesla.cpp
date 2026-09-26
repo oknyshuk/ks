@@ -11,9 +11,6 @@
 #include "fx.h"
 #include <bitbuf.h>
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 IMPLEMENT_REFLECT_CLIENTCLASS( C_Tesla, DT_Tesla, CTesla )
 
 
@@ -46,18 +43,18 @@ void C_Tesla::ReceiveMessage( int classID, bf_read &msg )
 
 	EmitSound( m_SoundName );
 
-	m_QueuedCommands.AddToTail( teslaInfo );
+	m_QueuedCommands.push_back( teslaInfo );
 	SetNextClientThink( CLIENT_THINK_ALWAYS );
 }
 
 
 void C_Tesla::ClientThink()
 {
-	FOR_EACH_LL( m_QueuedCommands, i )
+	for ( const CTeslaInfo &info : m_QueuedCommands )
 	{
-		FX_Tesla( m_QueuedCommands[i] );
+		FX_Tesla( info );
 	}
-	m_QueuedCommands.Purge();
+	m_QueuedCommands.clear();
 	SetNextClientThink( CLIENT_THINK_NEVER );
 }
 

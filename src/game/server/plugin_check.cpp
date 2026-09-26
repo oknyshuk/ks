@@ -10,9 +10,6 @@
 #include "cbase.h"
 #include "eiface.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: An implementation 

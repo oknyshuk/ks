@@ -76,7 +76,7 @@ bool CCSPhysicsPushEntities::SpeculativelyCheckRotPush( const RotatingPushMove_t
 
 	Vector vecAbsPush( 0.0f, 0.0f, 0.0f );
 	m_nBlocker = -1;
-	int nMovedCount = m_rgMoved.Count();
+	int nMovedCount = std::ssize( m_rgMoved );
 	for ( int i = ( nMovedCount - 1 ); i >= 0; --i )
 	{
 		// Is the entity and CS Player?
@@ -120,7 +120,7 @@ bool CCSPhysicsPushEntities::SpeculativelyCheckLinearPush( const Vector &vecAbsP
 	TM_ZONE_DEFAULT( TELEMETRY_LEVEL0 );
 
 	m_nBlocker = -1;
-	int nMovedCount = m_rgMoved.Count();
+	int nMovedCount = std::ssize( m_rgMoved );
 	for ( int i = ( nMovedCount - 1 ); i >= 0; --i )
 	{
 		// Is the entity and CS Player?
@@ -215,7 +215,7 @@ bool CCSPhysicsPushEntities::RotationCheckPush( PhysicsPushedInfo_t &info, bool 
 	if ( !pBlocker || !pRootEntity )
 		return true;
 
-	int *pPusherHandles = ( int* )stackalloc( m_rgPusher.Count() * sizeof( int ) );
+	int *pPusherHandles = ( int* )stackalloc( std::ssize( m_rgPusher ) * sizeof( int ) );
 	UnlinkPusherList( pPusherHandles );
 	for ( int iPushTry = 0; iPushTry < 3; ++iPushTry )
 	{
@@ -307,7 +307,7 @@ bool CCSPhysicsPushEntities::LinearCheckPush( PhysicsPushedInfo_t &info, bool bI
 		return true;
 
 	// Unlink the pusher from the spatial partition and attempt a player move.
-	int *pPusherHandles = ( int* )stackalloc( m_rgPusher.Count() * sizeof( int ) );
+	int *pPusherHandles = ( int* )stackalloc( std::ssize( m_rgPusher ) * sizeof( int ) );
 	UnlinkPusherList( pPusherHandles );
 	MovePlayer( pBlocker, info, 1.0f, pRootEntity->IsBaseTrain(), bIgnoreTeammates );
 	RelinkPusherList( pPusherHandles );

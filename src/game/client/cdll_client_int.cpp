@@ -54,6 +54,7 @@
 #include "datacache/imdlcache.h"
 #include "kbutton.h"
 #include "tier0/icommandline.h"
+#include "tier1/intern_pool.h"
 #include "vstdlib/jobthread.h"
 #include "gamerules_register.h"
 #include "game/client/iviewport.h"
@@ -133,16 +134,13 @@
 
 #include "clientsteamcontext.h"
 
-#include "tier1/utldict.h"
+#include "tier1/map_ops.h"
 #include "keybindinglistener.h"
 
 
 #include "viewrender.h"
 
 #include "irendertorthelperobject.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 extern IClientMode *GetClientModeNormal();
 
@@ -281,8 +279,14 @@ public:
 };
 
 
-CUtlLinkedList<CDataChangedEvent, unsigned short> g_DataChangedEvents;
-CUtlLinkedList<CDataChangedEvent, unsigned short> g_DataChangedPostEvents;
+// Stored event ids are indices; cleared events become tombstones so ids stay valid until the list is flushed.
+std::vector<CDataChangedEvent> g_DataChangedEvents;
+std::vector<CDataChangedEvent> g_DataChangedPostEvents;
+
+static int CountPendingDataChangedEvents()
+{
+	return (int)std::ranges::count_if( g_DataChangedEvents, []( const CDataChangedEvent &e ) { return e.m_pStoredEvent != nullptr; } );
+}
 bool g_bDataChangedPostEventsAllowed = false;
 
 
@@ -360,13 +364,13 @@ CSetActiveSplitScreenPlayerGuard::~CSetActiveSplitScreenPlayerGuard()
 	engine->SetLocalPlayerIsResolvable( m_pchContext, m_nLine, m_bSaveGetLocalPlayerAllowed );
 }
 
-static CUtlRBTree< const char *, int > g_Hacks( 0, 0, DefLessFunc( char const * ) );
+static std::set< const char *, ks::cstr_less > g_Hacks;
 
 CON_COMMAND( cl_dumpsplithacks, "Dump split screen workarounds." )
 {
-	for ( int i = g_Hacks.FirstInorder(); i != g_Hacks.InvalidIndex(); i = g_Hacks.NextInorder( i ) )
+	for ( const char *pszHack : g_Hacks )
 	{
-		Msg( "%s\n", g_Hacks[ i ] );
+		Msg( "%s\n", pszHack );
 	}
 }
 
@@ -380,10 +384,7 @@ CHackForGetLocalPlayerAccessAllowedGuard::CHackForGetLocalPlayerAccessAllowedGua
 
 	m_bChanged = true;
 	m_pszContext = pszContext;
-	if ( g_Hacks.Find( pszContext ) == g_Hacks.InvalidIndex() )
-	{
-		g_Hacks.Insert( pszContext );
-	}
+	g_Hacks.insert( pszContext );
 	m_bSaveGetLocalPlayerAllowed = engine->SetLocalPlayerIsResolvable( pszContext, 0, true );
 }
 
@@ -518,7 +519,7 @@ public:
 
 	virtual int	Count()
 	{
-		return m_Systems.Count();
+		return std::ssize( m_Systems );
 	}
 	virtual char const *GetDllName( int idx )
 	{
@@ -534,10 +535,10 @@ private:
 		AppSystemInfo_t sys;
 		sys.m_pModuleName = moduleName;
 		sys.m_pInterfaceName = interfaceName;
-		m_Systems.AddToTail( sys );
+		m_Systems.push_back( sys );
 	}
 
-	CUtlVector< AppSystemInfo_t >	m_Systems;
+	std::vector< AppSystemInfo_t >	m_Systems;
 };
 
 EXPOSE_SINGLE_INTERFACE( CClientDLLSharedAppSystems, IClientDLLSharedAppSystems, CLIENT_DLL_SHARED_APPSYSTEMS );
@@ -579,12 +580,7 @@ public:
 	int m_Count;
 };
 
-bool BoneSetupCompare( const CBoneSetupEnt &a, const CBoneSetupEnt &b )
-{
-	return a.m_Index < b.m_Index;
-}
-
-CUtlRBTree<CBoneSetupEnt> g_BoneSetupEnts( BoneSetupCompare );
+std::map< int, CBoneSetupEnt > g_BoneSetupEnts;	// keyed by m_Index
 
 
 void TrackBoneSetupEnt( C_BaseAnimating *pEnt )
@@ -595,16 +591,16 @@ void TrackBoneSetupEnt( C_BaseAnimating *pEnt )
 
 	CBoneSetupEnt ent;
 	ent.m_Index = pEnt->entindex();
-	unsigned short i = g_BoneSetupEnts.Find( ent );
-	if ( i == g_BoneSetupEnts.InvalidIndex() )
+	auto i = g_BoneSetupEnts.find( ent.m_Index );
+	if ( i == g_BoneSetupEnts.end() )
 	{
 		Q_strncpy( ent.m_ModelName, modelinfo->GetModelName( pEnt->GetModel() ), sizeof( ent.m_ModelName ) );
 		ent.m_Count = 1;
-		g_BoneSetupEnts.Insert( ent );
+		g_BoneSetupEnts.emplace( ent.m_Index, ent );
 	}
 	else
 	{
-		g_BoneSetupEnts[i].m_Count++;
+		i->second.m_Count++;
 	}
 #endif
 }
@@ -615,10 +611,9 @@ void DisplayBoneSetupEnts()
 	if ( !cl_ShowBoneSetupEnts.GetInt() )
 		return;
 
-	unsigned short i;
-	int nElements = 0;
-	for ( i=g_BoneSetupEnts.FirstInorder(); i != g_BoneSetupEnts.LastInorder(); i=g_BoneSetupEnts.NextInorder( i ) )
-		++nElements;
+	// the last entry is not shown
+	auto itEnd = g_BoneSetupEnts.empty() ? g_BoneSetupEnts.end() : std::prev( g_BoneSetupEnts.end() );
+	int nElements = (int)std::distance( g_BoneSetupEnts.begin(), itEnd );
 		
 	engine->Con_NPrintf( 0, "%d bone setup ents (name/count/entindex) ------------", nElements );
 
@@ -628,9 +623,9 @@ void DisplayBoneSetupEnts()
 	printInfo.color[0] = printInfo.color[1] = printInfo.color[2] = 1;
 	
 	printInfo.index = 2;
-	for ( i=g_BoneSetupEnts.FirstInorder(); i != g_BoneSetupEnts.LastInorder(); i=g_BoneSetupEnts.NextInorder( i ) )
+	for ( auto i = g_BoneSetupEnts.begin(); i != itEnd; ++i )
 	{
-		CBoneSetupEnt *pEnt = &g_BoneSetupEnts[i];
+		CBoneSetupEnt *pEnt = &i->second;
 		
 		if ( pEnt->m_Count >= 3 )
 		{
@@ -651,7 +646,7 @@ void DisplayBoneSetupEnts()
 		printInfo.index++;
 	}
 
-	g_BoneSetupEnts.RemoveAll();
+	g_BoneSetupEnts.clear();
 #endif
 }
 
@@ -815,9 +810,9 @@ public:
 
 	virtual bool			IsBuildWRThreaded( void );
 	virtual void			QueueBuildWorldListJob( CJob* pJob );
-	virtual void			CacheFrustumData( const Frustum_t& frustum, const CUtlVector< Frustum_t, CUtlMemoryAligned< Frustum_t,16 > >& aeraFrustums );
+	virtual void			CacheFrustumData( const Frustum_t& frustum, const std::vector< Frustum_t >& aeraFrustums );
 	virtual const Frustum_t* GetBuildViewFrustum( void ) const;
-	virtual const CUtlVector< Frustum_t, CUtlMemoryAligned< Frustum_t,16 > >* GetBuildViewAeraFrustums( void ) const;
+	virtual const std::vector< Frustum_t >* GetBuildViewAeraFrustums( void ) const;
 
 	virtual bool IsSubscribedMap( const char *pchMapName, bool bOnlyOnDisk );
 	virtual bool IsFeaturedMap( const char *pchMapName, bool bOnlyOnDisk );
@@ -858,8 +853,8 @@ private:
 	void					UncacheAllMovies();
 	void					ResetStringTablePointers();
 
-	CUtlRBTree< IMaterial * >	m_CachedMaterials;
-	CUtlSymbolTable				m_CachedMovies;
+	std::set< IMaterial * >	m_CachedMaterials;
+	ks::intern_pool				m_CachedMovies;
 };
 
 
@@ -1020,8 +1015,6 @@ CHLClient::CHLClient()
 {
 	// Kinda bogus, but the logic in the engine is too convoluted to put it there
 	g_bLevelInitialized = false;
-
-	SetDefLessFunc( m_CachedMaterials );
 }
 
 
@@ -2418,11 +2411,9 @@ void CHLClient::PrecacheMaterial( const char *pMaterialName )
 	IMaterial *pMaterial = materials->FindMaterial( pTempBuf, TEXTURE_GROUP_PRECACHED );
 	if ( !IsErrorMaterial( pMaterial ) )
 	{
-		int idx = m_CachedMaterials.Find( pMaterial );
-		if ( idx == m_CachedMaterials.InvalidIndex() )
+		if ( m_CachedMaterials.insert( pMaterial ).second )
 		{
 			pMaterial->IncrementReferenceCount();
-			m_CachedMaterials.Insert( pMaterial );
 		}
 	}
 	else
@@ -2432,11 +2423,11 @@ void CHLClient::PrecacheMaterial( const char *pMaterialName )
 
 void CHLClient::UncacheAllMaterials()
 {
-	for ( int i = m_CachedMaterials.FirstInorder(); i != m_CachedMaterials.InvalidIndex(); i = m_CachedMaterials.NextInorder( i ) )
+	for ( IMaterial *pMaterial : m_CachedMaterials )
 	{
-		m_CachedMaterials[i]->DecrementReferenceCount();
+		pMaterial->DecrementReferenceCount();
 	}
-	m_CachedMaterials.RemoveAll();
+	m_CachedMaterials.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -2444,14 +2435,14 @@ void CHLClient::UncacheAllMaterials()
 //-----------------------------------------------------------------------------
 void CHLClient::PrecacheMovie( const char *pMovieName )
 {
-	if ( m_CachedMovies.Find( pMovieName ) != UTL_INVAL_SYMBOL )
+	if ( m_CachedMovies.contains( pMovieName ) )
 	{
 		// already precached
 		return;
 	}
 	
 	// hint the movie system to precache our movie resource
-	m_CachedMovies.AddString( pMovieName );
+	m_CachedMovies.intern( pMovieName );
 #if defined( BINK_VIDEO )
 	g_pBIK->PrecacheMovie( pMovieName );
 #endif
@@ -2460,12 +2451,12 @@ void CHLClient::PrecacheMovie( const char *pMovieName )
 void CHLClient::UncacheAllMovies()
 {
 #if defined( BINK_VIDEO )
-	for ( int i = 0; i < m_CachedMovies.GetNumStrings(); i++ )
+	for ( const std::string &movie : m_CachedMovies )
 	{
-		g_pBIK->EvictPrecachedMovie( m_CachedMovies.String( i ) );
+		g_pBIK->EvictPrecachedMovie( movie.c_str() );
 	}
 #endif
-	m_CachedMovies.RemoveAll();
+	m_CachedMovies.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -2502,14 +2493,15 @@ bool AddDataChangeEvent( IClientNetworkable *ent, DataUpdateType_t updateType, i
 	if ( updateType == DATA_UPDATE_POST_UPDATE )
 	{
 		Assert( g_bDataChangedPostEventsAllowed );
-		*pStoredEvent = g_DataChangedPostEvents.AddToTail( CDataChangedEvent( ent, updateType, pStoredEvent ) );
+		*pStoredEvent = (int)g_DataChangedPostEvents.size();
+		g_DataChangedPostEvents.emplace_back( ent, updateType, pStoredEvent );
 		return true;
 	}
 
 	// Make sure we don't already have an event queued for this guy.
 	if ( *pStoredEvent >= 0 )
 	{
-		if ( uint( *pStoredEvent ) < uint( g_DataChangedEvents.Count() ) )
+		if ( uint( *pStoredEvent ) < uint( g_DataChangedEvents.size() ) )
 		{
 			Assert( g_DataChangedEvents[ *pStoredEvent ].GetEntity() == ent );
 
@@ -2522,7 +2514,8 @@ bool AddDataChangeEvent( IClientNetworkable *ent, DataUpdateType_t updateType, i
 	}
 	else
 	{
-		*pStoredEvent = g_DataChangedEvents.AddToTail( CDataChangedEvent( ent, updateType, pStoredEvent ) );
+		*pStoredEvent = (int)g_DataChangedEvents.size();
+		g_DataChangedEvents.emplace_back( ent, updateType, pStoredEvent );
 		return true;
 	}
 }
@@ -2530,8 +2523,12 @@ bool AddDataChangeEvent( IClientNetworkable *ent, DataUpdateType_t updateType, i
 
 void ClearDataChangedEvent( int iStoredEvent )
 {
-	if ( iStoredEvent != -1 )
-		g_DataChangedEvents.Remove( iStoredEvent );
+	if ( iStoredEvent != -1 && size_t( iStoredEvent ) < g_DataChangedEvents.size() )
+	{
+		CDataChangedEvent &event = g_DataChangedEvents[iStoredEvent];
+		event.m_nEntityIndex = -1;
+		event.m_pStoredEvent = nullptr;
+	}
 }
 
 
@@ -2542,9 +2539,12 @@ void ProcessOnDataChangedEvents()
 	bool bSaveAccess = engine->SetLocalPlayerIsResolvable( __FILE__, __LINE__, false );
 
 	g_bDataChangedPostEventsAllowed = true;
-	FOR_EACH_LL( g_DataChangedEvents, i )
+	// Indexed: OnDataChanged may queue more events
+	for ( size_t i = 0; i < g_DataChangedEvents.size(); i++ )
 	{
 		CDataChangedEvent *pEvent = &g_DataChangedEvents[i];
+		if ( !pEvent->m_pStoredEvent )
+			continue;
 
 		// Reset their stored event identifier.		
 		*pEvent->m_pStoredEvent = -1;
@@ -2558,7 +2558,7 @@ void ProcessOnDataChangedEvents()
 	}
 	g_bDataChangedPostEventsAllowed = false;
 
-	FOR_EACH_LL( g_DataChangedPostEvents, i )
+	for ( size_t i = 0; i < g_DataChangedPostEvents.size(); i++ )
 	{
 		CDataChangedEvent *pEvent = &g_DataChangedPostEvents[ i ];
 
@@ -2574,7 +2574,7 @@ void ProcessOnDataChangedEvents()
 	}
 
 	//now run through the list again and initialize any predictables that are ready
-	FOR_EACH_LL( g_DataChangedEvents, i )
+	for ( size_t i = 0; i < g_DataChangedEvents.size(); i++ )
 	{
 		IClientNetworkable *pNetworkable = g_DataChangedEvents[i].GetEntity();
 		if ( !pNetworkable )
@@ -2591,8 +2591,8 @@ void ProcessOnDataChangedEvents()
 		pEntity->CheckInitPredictable( "ProcessOnDataChangedEvents()" );
 	}
 
-	g_DataChangedEvents.Purge();
-	g_DataChangedPostEvents.Purge();
+	g_DataChangedEvents.clear();
+	g_DataChangedPostEvents.clear();
 
 	engine->SetActiveSplitScreenPlayerSlot( nSave );
 	engine->SetLocalPlayerIsResolvable( __FILE__, __LINE__, bSaveAccess );
@@ -2600,11 +2600,11 @@ void ProcessOnDataChangedEvents()
 
 void PurgeOnDataChangedEvents()
 {
-	if ( int nPurging = g_DataChangedEvents.Count() )
+	if ( int nPurging = CountPendingDataChangedEvents() )
 	{
 		DevMsg( "Purging %d data change events without processing\n", nPurging );
 	}
-	g_DataChangedEvents.Purge();
+	g_DataChangedEvents.clear();
 }
 
 void UpdateClientRenderableInPVSStatus()
@@ -2612,10 +2612,10 @@ void UpdateClientRenderableInPVSStatus()
 	// Vis for this view should already be setup at this point.
 
 	// For each client-only entity, notify it if it's newly coming into the PVS.
-	CUtlLinkedList<CClientEntityList::CPVSNotifyInfo,unsigned short> &theList = ClientEntityList().GetPVSNotifiers();
-	FOR_EACH_LL( theList, i )
+	std::list<CClientEntityList::CPVSNotifyInfo> &theList = ClientEntityList().GetPVSNotifiers();
+	for ( CClientEntityList::CPVSNotifyInfo &info : theList )
 	{
-		CClientEntityList::CPVSNotifyInfo *pInfo = &theList[i];
+		CClientEntityList::CPVSNotifyInfo *pInfo = &info;
 
 		if ( pInfo->m_InPVSStatus & INPVS_YES )
 		{
@@ -2647,10 +2647,10 @@ void UpdatePVSNotifiers()
 
 	// At this point, all the entities that were rendered in the previous frame have INPVS_THISFRAME set
 	// so we can tell the entities that aren't in the PVS anymore so.
-	CUtlLinkedList<CClientEntityList::CPVSNotifyInfo,unsigned short> &theList = ClientEntityList().GetPVSNotifiers();
-	FOR_EACH_LL( theList, i )
+	std::list<CClientEntityList::CPVSNotifyInfo> &theList = ClientEntityList().GetPVSNotifiers();
+	for ( CClientEntityList::CPVSNotifyInfo &info : theList )
 	{
-		CClientEntityList::CPVSNotifyInfo *pInfo = &theList[i];
+		CClientEntityList::CPVSNotifyInfo *pInfo = &info;
 
 		// If this entity thinks it's in the PVS, but it wasn't in the PVS this frame, tell it so.
 		if ( pInfo->m_InPVSStatus & INPVS_YES )
@@ -2872,7 +2872,7 @@ void CHLClient::FrameStageNotify( ClientFrameStage_t curStage )
 	case FRAME_NET_FULL_FRAME_UPDATE_ON_REMOVE:
 		{
 			ParticleMgr()->RemoveAllNewEffects(); // new effects linger past entity recreation, creating a flurry of asserts, that's not good
-			Assert( g_DataChangedEvents.Count() == 0 );	// this may only happen when we didn't render anything between getting an update and then a full frame update 
+			Assert( CountPendingDataChangedEvents() == 0 );	// this may only happen when we didn't render anything between getting an update and then a full frame update 
 			// NOTE: There are no entities at this point if it's a full frame update! 
 			PurgeOnDataChangedEvents();
 		}
@@ -2957,19 +2957,19 @@ void CHLClient::FrameStageNotify( ClientFrameStage_t curStage )
 	}
 }
 
-static CUtlVector<EHANDLE> g_RestoredEntities;
+static std::vector< EHANDLE > g_RestoredEntities;
 
 void AddRestoredEntity( C_BaseEntity *pEntity )
 {
 	if ( !pEntity )
 		return;
 
-	g_RestoredEntities.AddToTail( pEntity );
+	g_RestoredEntities.push_back( pEntity );
 }
 
 void CHLClient::DispatchOnRestore()
 {
-	for ( int i = 0; i < g_RestoredEntities.Count(); i++ )
+	for ( int i = 0; i < std::ssize( g_RestoredEntities ); i++ )
 	{
 		if ( g_RestoredEntities[i] != nullptr )
 		{
@@ -2977,7 +2977,7 @@ void CHLClient::DispatchOnRestore()
 			g_RestoredEntities[i]->OnRestore();
 		}
 	}
-	g_RestoredEntities.RemoveAll();
+	g_RestoredEntities.clear();
 }
 
 void CHLClient::WriteSaveGameScreenshot( const char *pFilename )
@@ -3319,48 +3319,42 @@ public:
 
 		BindingListeners_t( const BindingListeners_t &other )
 		{
-			m_List.CopyArray( other.m_List.Base(), other.m_List.Count() );
+			m_List.assign( other.m_List.begin(), other.m_List.end() );
 		}
 
-		CUtlVector< IKeyBindingListener * > m_List;
+		std::vector< IKeyBindingListener * > m_List;
 	};
 
 	// Callback when button is bound
 	virtual void AddListenerForCode( IKeyBindingListener *pListener, ButtonCode_t buttonCode )
 	{
-		CUtlVector< IKeyBindingListener * > &list = m_CodeListeners[ buttonCode ];
-		if ( list.Find( pListener ) != list.InvalidIndex() )
+		std::vector< IKeyBindingListener * > &list = m_CodeListeners[ buttonCode ];
+		if ( ks::find_index( list, pListener ) != -1 )
 			return;
-		list.AddToTail( pListener );
+		list.push_back( pListener );
 	}
 
 	// Callback whenver binding is set to a button
 	virtual void AddListenerForBinding( IKeyBindingListener *pListener, char const *pchBindingString )
 	{
-		int idx = m_BindingListeners.Find( pchBindingString );
-		if ( idx == m_BindingListeners.InvalidIndex() )
-		{
-			idx = m_BindingListeners.Insert( pchBindingString );
-		}
-
-		CUtlVector< IKeyBindingListener * > &list = m_BindingListeners[ idx ].m_List;
-		if ( list.Find( pListener ) != list.InvalidIndex() )
+		std::vector< IKeyBindingListener * > &list = m_BindingListeners[ pchBindingString ].m_List;
+		if ( ks::find_index( list, pListener ) != -1 )
 			return;
-		list.AddToTail( pListener );
+		list.push_back( pListener );
 	}
 
 	virtual void RemoveListener( IKeyBindingListener *pListener )
 	{
 		for ( int i = 0; i < ARRAYSIZE( m_CodeListeners ); ++i )
 		{
-			CUtlVector< IKeyBindingListener * > &list = m_CodeListeners[ i ];
-			list.FindAndRemove( pListener );
+			std::vector< IKeyBindingListener * > &list = m_CodeListeners[ i ];
+			ks::erase_first( list, pListener );
 		}
 
-		for ( int i = m_BindingListeners.First(); i != m_BindingListeners.InvalidIndex(); i = m_BindingListeners.Next( i ) )
+		for ( auto &[binding, listeners] : m_BindingListeners )
 		{
-			CUtlVector< IKeyBindingListener * > &list = m_BindingListeners[ i ].m_List;
-			list.FindAndRemove( pListener );
+			std::vector< IKeyBindingListener * > &list = listeners.m_List;
+			ks::erase_first( list, pListener );
 		}
 	}
 
@@ -3368,17 +3362,17 @@ public:
 	{
 		int nSplitScreenSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
 
-		CUtlVector< IKeyBindingListener * > &list = m_CodeListeners[ buttonCode ];
-		for ( int i = 0 ; i < list.Count(); ++i )
+		std::vector< IKeyBindingListener * > &list = m_CodeListeners[ buttonCode ];
+		for ( int i = 0 ; i < std::ssize( list ); ++i )
 		{
 			list[ i ]->OnKeyBindingChanged( nSplitScreenSlot, buttonCode, pchKeyName, pchNewBinding );
 		}
 
-		int idx = m_BindingListeners.Find( pchNewBinding );
-		if ( idx != m_BindingListeners.InvalidIndex() )
+		auto idx = m_BindingListeners.find( pchNewBinding );
+		if ( idx != m_BindingListeners.end() )
 		{
-			CUtlVector< IKeyBindingListener * > &list = m_BindingListeners[ idx ].m_List;
-			for ( int i = 0 ; i < list.Count(); ++i )
+			std::vector< IKeyBindingListener * > &list = idx->second.m_List;
+			for ( int i = 0 ; i < std::ssize( list ); ++i )
 			{
 				list[ i ]->OnKeyBindingChanged( nSplitScreenSlot, buttonCode, pchKeyName, pchNewBinding );
 			}
@@ -3386,8 +3380,8 @@ public:
 	}
 
 private:
-	CUtlVector< IKeyBindingListener * > m_CodeListeners[ BUTTON_CODE_COUNT ];
-	CUtlDict< BindingListeners_t, int > m_BindingListeners;
+	std::vector< IKeyBindingListener * > m_CodeListeners[ BUTTON_CODE_COUNT ];
+	ks::idict< BindingListeners_t > m_BindingListeners;
 };
 
 static CKeyBindingListenerMgr g_KeyBindingListenerMgr;
@@ -3473,7 +3467,7 @@ void CHLClient::QueueBuildWorldListJob( CJob* pJob )
 	g_viewBuilder.QueueBuildWorldListJob( pJob );
 }
 
-void CHLClient::CacheFrustumData( const Frustum_t& frustum, const CUtlVector< Frustum_t, CUtlMemoryAligned< Frustum_t,16 > >& aeraFrustums )
+void CHLClient::CacheFrustumData( const Frustum_t& frustum, const std::vector< Frustum_t >& aeraFrustums )
 {
 	g_viewBuilder.CacheFrustumData( frustum, aeraFrustums );
 }
@@ -3483,7 +3477,7 @@ const Frustum_t* CHLClient::GetBuildViewFrustum( void ) const
 	return g_viewBuilder.GetBuildViewFrustum();
 }
 
-const CUtlVector< Frustum_t, CUtlMemoryAligned< Frustum_t,16 > >* CHLClient::GetBuildViewAeraFrustums( void ) const
+const std::vector< Frustum_t >* CHLClient::GetBuildViewAeraFrustums( void ) const
 {
 	return g_viewBuilder.GetBuildViewAeraFrustums();
 }
@@ -3902,13 +3896,13 @@ char const * CHLClient::GetRichPresenceStatusString()
 	if ( bCanInvite && szConnectAddress )
 	{
 		uint32 uiRandomThing = RandomInt( 1, INT_MAX );
-		CUtlString strConnectHash;
+		std::string strConnectHash;
 		ns_address adr;
 		if ( adr.SetFromString( szConnectAddress ) && adr.GetAddressType() == NSAT_PROXIED_GAMESERVER )
-			strConnectHash.Format( "%u:%u:%llu", uiRandomThing, steamapicontext->SteamUser()->GetSteamID().GetAccountID(), adr.m_steamID.GetSteamID().ConvertToUint64() );
+			strConnectHash = ks::format_printf( "%u:%u:%llu", uiRandomThing, steamapicontext->SteamUser()->GetSteamID().GetAccountID(), adr.m_steamID.GetSteamID().ConvertToUint64() );
 		else
-			strConnectHash.Format( "%u:%u:%s", uiRandomThing, steamapicontext->SteamUser()->GetSteamID().GetAccountID(), szConnectAddress );
-		CRC32_t crcConnectHash = CRC32_ProcessSingleBuffer( strConnectHash.Access(), strConnectHash.Length() );
+			strConnectHash = ks::format_printf( "%u:%u:%s", uiRandomThing, steamapicontext->SteamUser()->GetSteamID().GetAccountID(), szConnectAddress );
+		CRC32_t crcConnectHash = CRC32_ProcessSingleBuffer( strConnectHash.data(), std::ssize( strConnectHash ) );
 
 		bool bPublicConnect = false;
 		if ( !Q_strcmp( szServerType, "community" ) )

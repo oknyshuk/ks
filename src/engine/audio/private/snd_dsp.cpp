@@ -10,14 +10,13 @@
 
 #include "audio_pch.h"
 
+#include "tier0/memalloc.h"
 #include "iprediction.h"
 #include "../../common.h"		// for parsing routines
 #include "vstdlib/random.h"
 #include "tier0/cache_hints.h"
 #include "sound.h"
 #include "client.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 #define SIGN(d)				((d)<0?-1:1)
@@ -281,7 +280,7 @@ inline int IIRFilter_Update_OrderN ( int cdenom, int *denom, int cnumer, int *nu
 	out = 0;
 	in0 = in;
 
-	cmax = MAX ( cdenom, cnumer );				
+	cmax = std::max( cdenom, cnumer );				
 	
 	// add input values
 
@@ -2057,7 +2056,7 @@ flt_t * FLT_Params ( prc_t *pprc )
 	// make sure we alloc at least 2 filters
 
 	if (bpass)
-		N = MAX(N, 1);
+		N = std::max(N, 1);
 
 	flt_t *pf0 = nullptr;
 	flt_t *pf1 = nullptr;
@@ -2611,7 +2610,7 @@ dly_t * DLY_AllocLP ( int D, int a, int b, int type, int M, int L, int *fa, int 
 	pdly->D0 = D;
 	pdly->p = w;		// init circular pointer to head of buffer
 	pdly->w = w;
-	pdly->a = MIN( a, PMAX - 1 );		// do not allow 100% feedback
+	pdly->a = std::min( a, PMAX - 1 );		// do not allow 100% feedback
 	pdly->b = b;
 	pdly->fused = true;
 
@@ -2660,7 +2659,7 @@ void DLY_Print( const dly_t & delay, int nIndentation )
 	DevMsg( "%st1: %d - t2: %d - t3: %d\n", pIndent, delay.t1, delay.t2, delay.t3 );
 	DevMsg( "%sa1: %d - a2: %d - a3: %d\n", pIndent, delay.a1, delay.a2, delay.a3 );
 	DevMsg( "%sD0: %d\n", pIndent, delay.D0 );
-	DevMsg( "%sw: %d\n", pIndent, delay.p - delay.w );		// Put the index and not the address
+	DevMsg( "%sw: %d\n", pIndent, (int)( delay.p - delay.w ) );		// Put the index and not the address
 
 	// See if we can reduce the output if possible
 	CircularBufferSample_t nFirstValue = delay.w[0];
@@ -3054,10 +3053,10 @@ void DLY_ChangeTaps ( dly_t *pdly, int t0, int t1, int t2, int t3 )
 		if (t2 > t3) SWAP(t2, t3, temp);
 	}
 
-	pdly->t		= MIN ( t0, pdly->D0 );
-	pdly->t1	= MIN ( t1, pdly->D0 );
-	pdly->t2	= MIN ( t2, pdly->D0 );
-	pdly->t3	= MIN ( t3, pdly->D0 );
+	pdly->t		= std::min( t0, pdly->D0 );
+	pdly->t1	= std::min( t1, pdly->D0 );
+	pdly->t2	= std::min( t2, pdly->D0 );
+	pdly->t3	= std::min( t3, pdly->D0 );
 
 }
 
@@ -3068,7 +3067,7 @@ void DLY_ChangeVal ( dly_t *pdly, int t )
 {
 	// never set delay > original delay
 
-	pdly->t = MIN ( t, pdly->D0 );
+	pdly->t = std::min( t, pdly->D0 );
 }
 
 // ignored - use MDY_ for modulatable delay
@@ -3127,7 +3126,7 @@ void RMP_Init( rmp_t *prmp, float ramptime, int initval, int targetval, bool bEn
 	prmp->initval = initval;
 	prmp->target = targetval;
 	prmp->sign = SIGN( rise );
-	float fMinRampTime = MAX( ramptime, 0.016f );								// At minimum we are going to wait for 16 ms (a 60 Hz frame, to avoid issue with ramping at the sample level).
+	float fMinRampTime = std::max( ramptime, 0.016f );								// At minimum we are going to wait for 16 ms (a 60 Hz frame, to avoid issue with ramping at the sample level).
 	prmp->nEndRampTimeInMs = Plat_MSTime() + (int)( fMinRampTime * 1000.0f );	// Time when we know it is safe to not cross-fade anymore (time is expired).
 	prmp->bEndAtTime = bEndAtTime;
 }
@@ -3394,7 +3393,7 @@ void MDY_ChangeVal ( mdy_t *pmdy, int t )
 {
 	// if D > original delay value, cap at original value
 
-	t = MIN (pmdy->pdly->D0, t);
+	t = std::min(pmdy->pdly->D0, t);
 	
 	pmdy->fchanging = true;
 
@@ -3807,9 +3806,9 @@ rva_t * RVA_Alloc ( int *D, int *a, int *b, int m, flt_t *pflt, int fparallel, f
 			
 			// value of ftaps is the seed for all tap values 
 
-			float t1 = MAX(MSEC_TO_SAMPS(5), D[i] * (1.0 - ftaps * 3.141592) );	
-			float t2 = MAX(MSEC_TO_SAMPS(7), D[i] * (1.0 - ftaps * 1.697043) );	
-			float t3 = MAX(MSEC_TO_SAMPS(10), D[i] * (1.0 - ftaps * 0.96325) ); 
+			float t1 = std::max<std::common_type_t<int, double>>(MSEC_TO_SAMPS(5), D[i] * (1.0 - ftaps * 3.141592) );	
+			float t2 = std::max<std::common_type_t<int, double>>(MSEC_TO_SAMPS(7), D[i] * (1.0 - ftaps * 1.697043) );	
+			float t3 = std::max<std::common_type_t<int, double>>(MSEC_TO_SAMPS(10), D[i] * (1.0 - ftaps * 0.96325) ); 
 
 			DLY_ChangeTaps( prva->pdlys[i], (int)t1, (int)t2, (int)t3, D[i] );
 		}
@@ -4642,12 +4641,12 @@ void RVA_ConstructDelays( float *rgd, float *rgf, int m, int *D, int *a, int *b,
 		// re-use predelay values as reverb values:
 
 		if (rgf[j] < 0 && !bpredelay)
-			d = MAX((int)(rgd[j] / 4.0), RVA_MIN_SEPARATION);
+			d = std::max((int)(rgd[j] / 4.0), RVA_MIN_SEPARATION);
 
 		if (i < 3)
 			dm = 0.0;
 		else
-			dm = MAX( RVA_MIN_SEPARATION * (i/3), ((i/3) * ((float)d * 0.18)) );
+			dm = std::max<std::common_type_t<int, double>>( RVA_MIN_SEPARATION * (i/3), ((i/3) * ((float)d * 0.18)) );
 
 		d += (int)dm;
 		D[i] = MSEC_TO_SAMPS(d);		
@@ -4656,7 +4655,7 @@ void RVA_ConstructDelays( float *rgd, float *rgf, int m, int *D, int *a, int *b,
 		
 		// feedback - due to wall/floor/ceiling reflectivity
 		
-		a[i] = (int) MIN (0.999 * PMAX, (float)PMAX * r);
+		a[i] = (int) std::min<std::common_type_t<double, float>>(0.999 * PMAX, (float)PMAX * r);
 
 		if (bpredelay)
 			a[i] = -a[i];		// flag delay as predelay
@@ -4795,13 +4794,13 @@ rva_t * RVA_Params ( prc_t *pprc )
 			{
 				// set feedback for smallest delay
 
-				a[i] = (int) MIN (0.999 * PMAX, (float)PMAX * feedback );
+				a[i] = (int) std::min<std::common_type_t<double, float>>(0.999 * PMAX, (float)PMAX * feedback );
 			}
 			else
 			{
 				// adjust feedback down for larger delays so that decay time is constant
 
-				a[i] = (int) MIN (0.999 * PMAX, (float)PMAX * DLY_NormalizeFeedback( D[0], feedback, D[i] ) );
+				a[i] = (int) std::min<std::common_type_t<double, float>>(0.999 * PMAX, (float)PMAX * DLY_NormalizeFeedback( D[0], feedback, D[i] ) );
 			}
 			
 			b[i] = (int) ((float)(gain * PMAX) / (float)m);
@@ -5495,7 +5494,7 @@ dfr_t * DFR_Params ( prc_t *pprc )
 
 		// feedback and gain of diffusor
 
-		a[i] = MIN (0.999 * PMAX, dfrfbs[i] * PMAX * feedback);
+		a[i] = std::min<std::common_type_t<double, float>>(0.999 * PMAX, dfrfbs[i] * PMAX * feedback);
 		b[i] = (int) ( (float)(gain * (float)PMAX) );
 	}
 
@@ -5709,7 +5708,7 @@ inline float LFO_HzToStep ( float freqHz )
 lfo_t * LFO_Alloc( int wtype, float freqHz, bool foneshot, float gain )
 {
 	int i;
-	int type = MIN ( CLFOWAV - 1, wtype );
+	int type = std::min( CLFOWAV - 1, wtype );
 	float lfostep;
 	
 	for (i = 0; i < CLFO; i++)
@@ -6013,12 +6012,12 @@ ptc_t * PTC_Alloc( float timeslice, float timexfade, float fstep )
 
 	// make sure timeslice is greater than cut/dup time
 	
-	tslice = MAX ( tslice, 1.1 * tcutdup);
+	tslice = std::max<std::common_type_t<float, double>>( tslice, 1.1 * tcutdup);
 
 	// make sure xfade time smaller than cut/dup time, and smaller than (timeslice-cutdup) time
 
-	txfade = MIN ( txfade, 0.9 * tcutdup );
-	txfade = MIN ( txfade, 0.9 * (tslice - tcutdup));
+	txfade = std::min<std::common_type_t<float, double>>( txfade, 0.9 * tcutdup );
+	txfade = std::min<std::common_type_t<float, double>>( txfade, 0.9 * (tslice - tcutdup));
 
 	pptc->cxfade =		MSEC_TO_SAMPS( txfade );
 	pptc->ccut =		MSEC_TO_SAMPS( tcutdup );
@@ -6656,7 +6655,7 @@ efo_t *EFO_Alloc ( float threshold, float attack_sec, float decay_sec, bool bexp
 				RMP_SetEnd( &pefo->rmp_decay );
 
 				pefo->thresh = threshold;
-				pefo->thresh_off = MAX(1, threshold - EFO_HYST_AMP);
+				pefo->thresh_off = std::max<std::common_type_t<int, float>>(1, threshold - EFO_HYST_AMP);
 				pefo->bgateon = false;
 				pefo->bexp = bexp;
 			}
@@ -7320,7 +7319,7 @@ inline int AMP_GetNext( amp_t *pamp, int x )
 
 		if (pamp->brand)
 		{
-			gain_new = LocalRandomInt( MIN(G1,G2), MAX(G1,G2) );
+			gain_new = LocalRandomInt( std::min(G1,G2), std::max(G1,G2) );
 		}
 		else
 		{
@@ -7428,7 +7427,7 @@ amp_t * AMP_Params ( prc_t *pprc )
 	if (pprc->prm[amp_imodrate] > 0.0)
 	{
 		ramptime = pprc->prm[amp_imodglide] / 1000.0;			// get ramp time in seconds
-		modtime = 1.0 / MAX(pprc->prm[amp_imodrate], 0.01);		// time between modulations in seconds
+		modtime = 1.0 / std::max<std::common_type_t<float, double>>(pprc->prm[amp_imodrate], 0.01);		// time between modulations in seconds
 		depth = pprc->prm[amp_imoddepth];						// depth of modulations 0-1.0
 	}
 
@@ -11699,7 +11698,7 @@ void DSP_ReleaseMemory( void )
 bool DSP_LoadPresetFile( void )
 {
 	char szFile[ MAX_OSPATH ];
-	char *pbuffer;
+	const char *pbuffer;
 	const char *pstart;
 	bool bResult = false;
 	int cpresets;	
@@ -11719,14 +11718,15 @@ bool DSP_LoadPresetFile( void )
 
 	MEM_ALLOC_CREDIT();
 
-	CUtlBuffer buf;
+	auto fileData = g_pFullFileSystem->ReadFile( szFile, "GAME" );
 
-	if ( !g_pFullFileSystem->ReadFile( szFile, "GAME", buf ) )
+	if ( !fileData )
 	{
 		Error( "DSP_LoadPresetFile: unable to open '%s'\n", szFile );
 		return bResult;
 	}
-	pbuffer = (char *)buf.PeekGet(); // Use malloc - free at end of this routine
+	const std::string fileText( ks::text_view( *fileData ) );
+	pbuffer = fileText.c_str();
 
 	pstart = pbuffer;
 
@@ -11858,13 +11858,13 @@ bool DSP_LoadPresetFile( void )
 				
 				// cap at max params
 
-				ip = MIN(ip, CPRCPARAMS);
+				ip = std::min(ip, CPRCPARAMS);
 			}
 			
 			cproc++;
 			if (cproc > CPSET_PRCS)
 				DevMsg("DSP PARSE ERROR!!! dsp_presets.txt: missing } or too many processors in preset #: %3.0f \n", (float)ipreset);
-			cproc = MIN(cproc, CPSET_PRCS); // don't overflow # procs
+			cproc = std::min(cproc, CPSET_PRCS); // don't overflow # procs
 		}
 		
 		// if cproc == 1, type is always SIMPLE

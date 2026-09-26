@@ -7,9 +7,6 @@
 #include "cbase.h"
 #include "simple_keys.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Simple key interpolations
 //-----------------------------------------------------------------------------
@@ -58,13 +55,13 @@ void CSimpleKeyInterp::Interp( Vector &out, float t, const CSimpleKeyInterp &sta
 //-----------------------------------------------------------------------------
 int CSimpleKeyList::Insert( const CSimpleKeyInterp &key )
 {
-	for ( int i = 0; i < m_list.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_list ); i++ )
 	{
 		if ( key.GetTime() < m_list[i].GetTime() )
-			return m_list.InsertBefore( i, key );
+			m_list.insert( m_list.begin() + i, key ); return i;
 	}
 
-	return m_list.AddToTail( key );
+	m_list.push_back( key ); return (int)std::ssize( m_list ) - 1;
 }
 
 //-----------------------------------------------------------------------------
@@ -78,7 +75,7 @@ bool CSimpleKeyList::Interp( Vector &out, float t )
 	int startIndex = -1;
 
 	out.Init();
-	for ( int i = 0; i < m_list.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_list ); i++ )
 	{
 		if ( t < m_list[i].GetTime() )
 		{

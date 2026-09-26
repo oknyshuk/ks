@@ -7,6 +7,7 @@
 #ifndef BASEANIMATING_H
 #define BASEANIMATING_H
 
+#include <mutex>
 #include "reflect_annotations.h"
 #include "const.h"
 #include "shareddefs.h"
@@ -123,7 +124,7 @@ public:
 	void    ResetEventIndexes ( void );
 	int		SelectWeightedSequence ( Activity activity );
 	int		SelectWeightedSequence ( Activity activity, int curSequence );
-	int		SelectWeightedSequenceFromModifiers( Activity activity, CUtlSymbol *pActivityModifiers, int iModifierCount );
+	int		SelectWeightedSequenceFromModifiers( Activity activity, const ActivityModifierSym_t *pActivityModifiers, int iModifierCount );
 	int		SelectHeaviestSequence ( Activity activity );
 	int		LookupActivity( const char *label );
 	int		LookupSequence ( const char *label );
@@ -240,7 +241,7 @@ public:
 	int CountBodyGroupVariants( int group );
 	int FindBodyGroupVariant( int group, int variant );	///< Find undamaged bodygroup part index
 	int FindDamagedBodyGroupVariant( int group );		///< Find a damaged version of the current part for the given bodygroup
-	void RandomizeBodygroups( CUtlVector< const char * >& groups );
+	void RandomizeBodygroups( std::vector< const char * >& groups );
 
 	void					SetHitboxSet( int setnum );
 	void					SetHitboxSetByName( const char *setname );
@@ -478,8 +479,8 @@ public:
 
 private:
 	CStudioHdr			*m_pStudioHdr;
-	CThreadFastMutex	m_StudioHdrInitLock;
-	CThreadFastMutex	m_BoneSetupMutex;
+	std::recursive_mutex	m_StudioHdrInitLock;
+	std::recursive_mutex	m_BoneSetupMutex;
 
 // FIXME: necessary so that cyclers can hack m_bSequenceFinished
 friend class CBaseAnimatingOverlay;

@@ -16,9 +16,6 @@
 #include "ai_route.h"
 #include "ndebugoverlay.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 
 const float PLANE_SOLVER_THINK_FREQUENCY[2] = { 0.0f, 0.2f };
@@ -48,7 +45,7 @@ inline float cube( float f )
 	return ( f * f * f );
 }
 
-CUtlFixedLinkedList<CAI_PlaneSolver::CircleObstacles_t> CAI_PlaneSolver::s_GlobalObstacles;
+std::list<CAI_PlaneSolver::CircleObstacles_t> CAI_PlaneSolver::s_GlobalObstacles;
 
 
 //-----------------------------------------------------------------------------
@@ -738,29 +735,28 @@ float CAI_PlaneSolver::CalcProbeDist( float speed )
 
 void CAI_PlaneSolver::AddObstacle( const Vector &center, float radius, CBaseEntity *pEntity, AI_MoveSuggType_t type )
 {
-	m_Obstacles.AddToTail( CircleObstacles_t( center, radius, pEntity, type ) );
+	m_Obstacles.push_back( CircleObstacles_t( center, radius, pEntity, type ) );
 }
 
 Obstacle_t CAI_PlaneSolver::AddGlobalObstacle( const Vector &center, float radius, CBaseEntity *pEntity, AI_MoveSuggType_t type )
 {
-	return (Obstacle_t)s_GlobalObstacles.AddToTail( CircleObstacles_t( center, radius, pEntity, type ) );
+	return (Obstacle_t)&s_GlobalObstacles.emplace_back( center, radius, pEntity, type );
 }
 
 void CAI_PlaneSolver::RemoveGlobalObstacle( Obstacle_t hObstacle )
 {
-	s_GlobalObstacles.Remove( (intp)hObstacle );
+	s_GlobalObstacles.remove_if( [hObstacle]( const CircleObstacles_t &o ) { return (Obstacle_t)&o == hObstacle; } );
 }
 
 void CAI_PlaneSolver::RemoveGlobalObstacles( void )
 {
-	s_GlobalObstacles.RemoveAll();
+	s_GlobalObstacles.clear();
 }
 
 bool CAI_PlaneSolver::IsSegmentBlockedByGlobalObstacles( const Vector &vecStart, const Vector &vecEnd )
 {
-	for ( intp i = s_GlobalObstacles.Head(); i != s_GlobalObstacles.InvalidIndex(); i = s_GlobalObstacles.Next( i ) )
+	for ( const CircleObstacles_t& obstacle : s_GlobalObstacles )
 	{
-		const CircleObstacles_t& obstacle = s_GlobalObstacles[i];
 		if ( obstacle.type == AIMST_MOVE )
 			continue;
 
@@ -885,19 +881,19 @@ bool CAI_PlaneSolver::GenerateCircleObstacleSuggestions( const AILocalMoveGoal_t
 	m_pNpc->CollisionProp()->WorldSpaceSurroundingBounds( &mins, &maxs );
 	float radiusNpc = (mins.AsVector2D() - maxs.AsVector2D()).Length() * 0.5;
 	
-	for ( int i = 0; i < m_Obstacles.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Obstacles ); i++ )
 	{
 		if ( GenerateCircleObstacleSuggestion( m_Obstacles[i], moveGoal, probeDist, npcLoc, radiusNpc ) )
 		{
 			result = true;
 		}
 	}
-	m_Obstacles.RemoveAll();
+	m_Obstacles.clear();
 
 	// Global obstacles
-	for ( intp i = s_GlobalObstacles.Head(); i != s_GlobalObstacles.InvalidIndex(); i = s_GlobalObstacles.Next( i ) )
+	for ( const CircleObstacles_t &obstacle : s_GlobalObstacles )
 	{
-		if ( GenerateCircleObstacleSuggestion( s_GlobalObstacles[i], moveGoal, probeDist, npcLoc, radiusNpc ) )
+		if ( GenerateCircleObstacleSuggestion( obstacle, moveGoal, probeDist, npcLoc, radiusNpc ) )
 		{
 			result = true;
 		}
@@ -929,7 +925,7 @@ bool CAI_PlaneSolver::Solve( const AILocalMoveGoal_t &goal, float distClear, Vec
 	
 	if ( goal.flags & ( AILMG_TARGET_IS_TRANSITION | AILMG_TARGET_IS_GOAL ) )
 	{
-		probeDist = MIN( goal.maxDist, probeDist );
+		probeDist = std::min( goal.maxDist, probeDist );
 	}
 
 	if ( GenerateObstacleSuggestions( goal, goal.directTrace, distClear, probeDist, degreesPositiveArc, NUM_PROBES ) != SR_FAIL )

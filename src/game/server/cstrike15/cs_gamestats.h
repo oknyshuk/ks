@@ -14,6 +14,7 @@
 #include "GameEventListener.h"
 #include "weapon_csbase.h"
 #include "steamworks_gamestats_server.h"
+#include "tier1/map_ops.h"
 
 // forward declares
 class CBreakableProp;
@@ -229,7 +230,7 @@ struct SWeaponHitData : public BaseStatData
 
 	void CompactBulletID()
 	{
-		m_uiBulletID = (m_uiBulletID & BULLET_ID_GROUP_MASK) | (SUB_BULLET_BIT_SHIFT(m_uiSubBulletID) & BULLET_SUB_GROUP_MASK) | (RECOIL_BIT_SHIFT(MIN(m_uiRecoilIndex, 255)) & BULLET_RECOIL_MASK);
+		m_uiBulletID = (m_uiBulletID & BULLET_ID_GROUP_MASK) | (SUB_BULLET_BIT_SHIFT(m_uiSubBulletID) & BULLET_SUB_GROUP_MASK) | (RECOIL_BIT_SHIFT( ( std::min<std::common_type_t<uint8, int>>(m_uiRecoilIndex, 255) ) ) & BULLET_RECOIL_MASK);
 	}
 
 	// Data that gets sent to OGS
@@ -303,7 +304,7 @@ struct SWeaponMissData : public BaseStatData
 
 	void CompactBulletID()
 	{
-		m_uiBulletID = (m_uiBulletID & BULLET_ID_GROUP_MASK) | (SUB_BULLET_BIT_SHIFT(m_uiSubBulletID) & BULLET_SUB_GROUP_MASK) | (RECOIL_BIT_SHIFT(MIN(m_uiRecoilIndex, 255)) & BULLET_RECOIL_MASK);
+		m_uiBulletID = (m_uiBulletID & BULLET_ID_GROUP_MASK) | (SUB_BULLET_BIT_SHIFT(m_uiSubBulletID) & BULLET_SUB_GROUP_MASK) | (RECOIL_BIT_SHIFT( ( std::min<std::common_type_t<uint8, int>>(m_uiRecoilIndex, 255) ) ) & BULLET_RECOIL_MASK);
 	}
 
 	uint8	m_ui8WeaponID;
@@ -375,10 +376,10 @@ struct SMarketPurchases : public BaseStatData
 		END_STAT_TABLE()
 };
 
-typedef CUtlVector< SWeaponHitData* > CSGOWeaponHitData;
-typedef CUtlVector< SWeaponMissData* > CSGOWeaponMissData;
-typedef CUtlVector< SWeaponShotData* > CSGOWeaponShotsData;
-typedef CUtlVector< SMarketPurchases* > CSGOMarketPurchaseData;
+typedef std::vector< std::unique_ptr< SWeaponHitData > > CSGOWeaponHitData;
+typedef std::vector< std::unique_ptr< SWeaponMissData > > CSGOWeaponMissData;
+typedef std::vector< std::unique_ptr< SWeaponShotData > > CSGOWeaponShotsData;
+typedef std::vector< std::unique_ptr< SMarketPurchases > > CSGOMarketPurchaseData;
 
 
 //=============================================================================
@@ -428,7 +429,7 @@ public:
 	void Event_MVPEarned( CCSPlayer* pPlayer );	
 	void Event_KnifeUse( CCSPlayer* pPlayer, bool bStab, int iDamage );
 
-	void RecordWeaponHit( SWeaponHitData* pHitData );
+	void RecordWeaponHit( std::unique_ptr< SWeaponHitData > pHitData );
 	
 	// Steamworks Gamestats
 	void UploadRoundStats( void );
@@ -477,7 +478,7 @@ private:
 	int							m_numberOfTerroristEntriesForDirectAverages;
 	int							m_numberOfCounterTerroristEntriesForDirectAverages;
 
-	CUtlDict< CSStatType_t, short >	m_PropStatTable;
+	ks::idict< CSStatType_t >	m_PropStatTable;
 
 	WeaponStats					m_weaponStats[WEAPON_MAX][WeaponMode_MAX];
 

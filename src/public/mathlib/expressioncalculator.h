@@ -4,7 +4,7 @@
 #define MATHLIB_EXPRESSION_CALCULATOR_H
 
 #include "tier1/utlstring.h"
-#include "tier1/utlstack.h"
+#include <vector>
 #include "tier1/utlvector.h"
 
 
@@ -23,7 +23,7 @@
 class CExpressionCalculator
 {
 public:
-	CExpressionCalculator( const char *expr = nullptr ) : m_expr( expr ) {}
+	CExpressionCalculator( const char *expr = nullptr ) : m_expr( ks::nz( expr ) ) {}
 
 	CExpressionCalculator( const CExpressionCalculator& x );
 	CExpressionCalculator& operator=( const CExpressionCalculator& x );
@@ -31,7 +31,7 @@ public:
 public:
 	void SetExpression( const char *expr ) 
 	{
-		m_expr = expr;
+		m_expr = ks::nz( expr );
 	}
 
 	void SetVariable( const char *var, float value );
@@ -66,10 +66,10 @@ private:
 	//	bool Parse4ArgFunc	 ( const char *&expr );
 	bool Parse5ArgFunc	 ( const char *&expr );
 
-	CUtlString m_expr;
-	CUtlVector< CUtlString > m_varNames;
-	CUtlVector<float> m_varValues;
-	CUtlStack<float> m_stack;
+	std::string m_expr;
+	std::vector< std::string > m_varNames;
+	std::vector< float > m_varValues;
+	std::vector<float> m_stack;
 	bool m_bIsBuildingArgumentList;
 };
 

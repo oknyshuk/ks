@@ -88,7 +88,7 @@ enum OverlapTest_t
 // these are on by default
 #define FCOLLISION_FUNC_DEFAULT		(FCOLLISION_FUNC_ENABLE_SOLID_CONTACT | FCOLLISION_FUNC_ENABLE_TRACE_QUERY | FCOLLISION_FUNC_ENABLE_TOUCH_EVENT)
 
-extern CUtlString IntersectionPairFlagsToString( uint16 nPairFlags );
+extern std::string IntersectionPairFlagsToString( uint16 nPairFlags );
 
 // TODO:  Currently these flags are stored in a table as 16-bits per-pair.  Once we have
 // TODO:  identified the desired permutations of flags, the per-pair data will be

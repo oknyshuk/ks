@@ -136,9 +136,6 @@ CSteamGameServerAPIContext *steamgameserverapicontext = &s_SteamGameServerAPICon
 
 IUploadGameStats *gamestatsuploader = nullptr;
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_CONSOLE, "Console" );
 
@@ -146,7 +143,7 @@ DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_CONSOLE, "Console" );
 CTimedEventMgr g_NetworkPropertyEventMgr;
 
 
-CUtlLinkedList<CMapEntityRef, unsigned short> g_MapEntityRefs;
+std::vector<CMapEntityRef> g_MapEntityRefs;
 
 // Engine interfaces.
 IVEngineServer	*engine = nullptr;
@@ -853,7 +850,7 @@ void Game_SetOneWayTransition( void )
 	g_OneWayTransition = true;
 }
 
-static CUtlVector<EHANDLE> g_RestoredEntities;
+static std::vector< EHANDLE > g_RestoredEntities;
 // just for debugging, assert that this is the only time this function is called
 static bool g_InRestore = false;
 
@@ -863,7 +860,7 @@ void AddRestoredEntity( CBaseEntity *pEntity )
 	if ( !pEntity )
 		return;
 
-	g_RestoredEntities.AddToTail( pEntity );
+	g_RestoredEntities.push_back( pEntity );
 }
 
 void EndRestoreEntities()
@@ -875,7 +872,7 @@ void EndRestoreEntities()
 	//CBaseEntity::SetAbsQueriesValid( true );
 
 	// Call all entities' OnRestore handlers
-	for ( int i = g_RestoredEntities.Count()-1; i >=0; --i )
+	for ( int i = std::ssize( g_RestoredEntities )-1; i >=0; --i )
 	{
 		CBaseEntity *pEntity = g_RestoredEntities[i].Get();
 		if ( pEntity && !pEntity->IsDormant() )
@@ -885,7 +882,7 @@ void EndRestoreEntities()
 		}
 	}
 
-	g_RestoredEntities.Purge();
+	g_RestoredEntities.clear(); g_RestoredEntities.shrink_to_fit();
 
 	IGameSystem::OnRestoreAllSystems();
 
@@ -904,7 +901,7 @@ void BeginRestoreEntities()
 		DevMsg( "BeginRestoreEntities without previous EndRestoreEntities.\n" );
 		gEntList.CleanupDeleteList();
 	}
-	g_RestoredEntities.Purge();
+	g_RestoredEntities.clear(); g_RestoredEntities.shrink_to_fit();
 	g_InRestore = true;
 
 	CBaseEntity::SetAllowPrecache( true );
@@ -991,7 +988,7 @@ bool CServerGameDLL::LevelInit( const char *pMapName, char const *pMapEntities, 
 		}
 
 		// Clear out entity references, and parse the entities into it.
-		g_MapEntityRefs.Purge();
+		g_MapEntityRefs = {};
 		CMapLoadEntityFilter filter;
 		MapEntity_ParseAllEntities( pMapEntities, &filter );
 
@@ -1025,12 +1022,6 @@ bool CServerGameDLL::LevelInit( const char *pMapName, char const *pMapEntities, 
 
 	// ask for the latest game rules
 	GameRules()->UpdateGameplayStatsFromSteam();
-
-	if ( gpGlobals->eLoadType == MapLoad_Transition )
-	{
-		static ConVarRef map_wants_save_disable( "map_wants_save_disable" );
-		map_wants_save_disable.SetValue( 0 );
-	}
 
 	return true;
 }
@@ -1635,11 +1626,11 @@ KeyValues*	CServerGameDLL::GetExtendedServerInfoForNewClient()
 		s_pExtendedServerInfo->SetString( "ct_arms", g_pGameTypes->GetCTViewModelArmsForMap( gpGlobals->mapname.ToCStr() ) );
 		s_pExtendedServerInfo->SetString( "t_arms", g_pGameTypes->GetTViewModelArmsForMap( gpGlobals->mapname.ToCStr() ) );
 
-		if ( const CUtlStringList *pCTModelNames = g_pGameTypes->GetCTModelsForMap( gpGlobals->mapname.ToCStr() ) )
+		if ( const std::vector< std::string > *pCTModelNames = g_pGameTypes->GetCTModelsForMap( gpGlobals->mapname.ToCStr() ) )
 		{
-			FOR_EACH_VEC( *pCTModelNames, iModel )
+			for ( const std::string &sModelName : *pCTModelNames )
 			{
-				const char *modelName = (*pCTModelNames)[iModel];
+				const char *modelName = sModelName.c_str();
 				if ( modelName )
 				{
 					KeyValues *val = new KeyValues( "" );
@@ -1648,11 +1639,11 @@ KeyValues*	CServerGameDLL::GetExtendedServerInfoForNewClient()
 				}
 			}
 		}
-		if ( const CUtlStringList *pTModelNames = g_pGameTypes->GetTModelsForMap( gpGlobals->mapname.ToCStr() ) )
+		if ( const std::vector< std::string > *pTModelNames = g_pGameTypes->GetTModelsForMap( gpGlobals->mapname.ToCStr() ) )
 		{
-			FOR_EACH_VEC( *pTModelNames, iModel )
+			for ( const std::string &sModelName : *pTModelNames )
 			{
-				const char *modelName = (*pTModelNames)[iModel];
+				const char *modelName = sModelName.c_str();
 				if ( modelName )
 				{
 					KeyValues *val = new KeyValues( "" );
@@ -1662,11 +1653,11 @@ KeyValues*	CServerGameDLL::GetExtendedServerInfoForNewClient()
 			}
 		}
 		
-		if ( const CUtlStringList* mapsInGroup = g_pGameTypes->GetMapGroupMapList( mapGroupName ) )
+		if ( const std::vector< std::string >* mapsInGroup = g_pGameTypes->GetMapGroupMapList( mapGroupName ) )
 		{
-			FOR_EACH_VEC( *mapsInGroup, i )
+			for ( const std::string &sMapName : *mapsInGroup )
 			{
-				const char *sz = (*mapsInGroup)[i];
+				const char *sz = sMapName.c_str();
 				if ( sz )
 				{
 					KeyValues *val = new KeyValues( "" );
@@ -1962,13 +1953,13 @@ void PrecacheParticleFileAndSystems( const char *pParticleSystemFile )
 	Assert( pParticleSystemFile && pParticleSystemFile[0] );
 	g_pStringTableExtraParticleFiles->AddString( CBaseEntity::IsServer(), pParticleSystemFile );
 
-	CUtlVector<CUtlString> systems;
+	std::vector< std::string > systems;
 	g_pParticleSystemMgr->GetParticleSystemsInFile( pParticleSystemFile, &systems );
 
-	int nCount = systems.Count();
+	int nCount = std::ssize( systems );
 	for ( int i = 0; i < nCount; ++i )
 	{
-		PrecacheParticleSystem( systems[i] );
+		PrecacheParticleSystem( systems[i].c_str() );
 	}
 }
 
@@ -2179,7 +2170,7 @@ ConVar sv_occlude_players( "sv_occlude_players", "1", FCVAR_RELEASE /*, "Do addi
 // A bitmap which records whether players were occluded under sv_occlude_players
 // rules. This is so other code areas which are interested in player-player
 // PVS can also check what the occlusion rules said.
-static CBitVec< (MAX_PLAYERS+1)*(MAX_PLAYERS+1) > g_occludePlayersCacheBitVec;
+static std::bitset< (MAX_PLAYERS+1)*(MAX_PLAYERS+1) > g_occludePlayersCacheBitVec;
 
 bool WasPlayerOccluded( int fromplayer, int toplayer )
 {
@@ -2190,7 +2181,7 @@ bool WasPlayerOccluded( int fromplayer, int toplayer )
 	}
 
 	const int index = fromplayer*( MAX_PLAYERS + 1 )+ toplayer;
-	return g_occludePlayersCacheBitVec.IsBitSet(index) ;
+	return g_occludePlayersCacheBitVec[index];
 }
 
 void SetPlayerOccluded( int index, bool newvalue )
@@ -2201,7 +2192,7 @@ void SetPlayerOccluded( int index, bool newvalue )
 		return;
 	}
 
-	g_occludePlayersCacheBitVec.Set( index, newvalue );
+	g_occludePlayersCacheBitVec.set( index, newvalue );
 
 }
 
@@ -2294,7 +2285,7 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 		PREFETCH360(pEdict->GetUnknown(),0);
 
 		// entity is already marked for sending
-		if ( pInfo->m_pTransmitEdict->Get( iEdict ) )
+		if ( (*pInfo->m_pTransmitEdict)[ iEdict ] )
 			continue;
 		
 		if ( nFlags & FL_EDICT_ALWAYS )
@@ -2304,11 +2295,11 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 			while ( true )
 			{
 				// mark entity for sending
-				pInfo->m_pTransmitEdict->Set( iEdict );
+				pInfo->m_pTransmitEdict->set( iEdict );
 	
 				if ( bIsHLTV || bIsReplay )
 				{
-					pInfo->m_pTransmitAlways->Set( iEdict );
+					pInfo->m_pTransmitAlways->set( iEdict );
 				}
 				CServerNetworkProperty *pEnt = static_cast<CServerNetworkProperty*>( pEdict->GetNetworkable() );
 				if ( !pEnt )
@@ -2425,7 +2416,7 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 						if ( pParent->IsPlayer() )
 						{
 							// Is the parent-owner-player marked or not market for transmission? If not, let's not transmit its children
-							if ( !pInfo->m_pTransmitEdict->Get( pParent->entindex() ) )
+							if ( !(*pInfo->m_pTransmitEdict)[ pParent->entindex() ] )
 							{
 								bInPVS = false;
 								check = nullptr; // don't check anything, just don't transmit this entity
@@ -2480,7 +2471,7 @@ void CServerGameEnts::CheckTransmit( CCheckTransmitInfo *pInfo, const unsigned s
 			int checkIndex = check->entindex();
 
 			// Parent already being sent
-			if ( pInfo->m_pTransmitEdict->Get( checkIndex ) )
+			if ( (*pInfo->m_pTransmitEdict)[ checkIndex ] )
 			{
 				orig->SetTransmit( pInfo, true );
 				break;
@@ -2756,7 +2747,7 @@ void CServerGameClients::ClientSettingsChanged( edict_t *pEdict )
 				flLerpRatio = 1.0f;
 		}
 		// #define FIXME_INTERP_RATIO
-		player->m_fLerpTime = MAX( flLerpAmount, flLerpRatio / flUpdateRateValue );
+		player->m_fLerpTime = std::max( flLerpAmount, flLerpRatio / flUpdateRateValue );
 	}
 	else
 	{
@@ -2785,8 +2776,8 @@ void CServerGameClients::ClientSettingsChanged( edict_t *pEdict )
 	//	It's probably a better idea in the long run to have CBaseClient::ProcessSetConVar() in engine better handle splitscreen. But for now we're going for a surgical fix
 	{
 		//stomp attached splitscreen players to have the same prediction settings as the primary player
-		CUtlVector< CHandle<CBasePlayer> > &splitscreenPlayers = player->GetSplitScreenPlayers();
-		for( int i = 0; i < splitscreenPlayers.Count(); ++i )
+		std::vector< CHandle<CBasePlayer> > &splitscreenPlayers = player->GetSplitScreenPlayers();
+		for( int i = 0; i < std::ssize( splitscreenPlayers ); ++i )
 		{
 			CBasePlayer *pAttachedPlayer = splitscreenPlayers[i];
 			if( pAttachedPlayer )
@@ -2843,7 +2834,7 @@ void CServerGameClients::ClientSetupVisibility( edict_t *pViewEntity, edict_t *p
 
 	float fovDistanceAdjustFactor = 1;
 
-	CUtlVector< Vector > areaPortalOrigins;
+	std::vector< Vector > areaPortalOrigins;
 
 	CBasePlayer *pPlayer = ( CBasePlayer * )GetContainingEntity( pClient );
 	if ( pPlayer )
@@ -2856,12 +2847,12 @@ void CServerGameClients::ClientSetupVisibility( edict_t *pViewEntity, edict_t *p
 		UTIL_SetClientVisibilityPVS( pClient, pvs, pvssize );
 		fovDistanceAdjustFactor = pPlayer->GetFOVDistanceAdjustFactorForNetworking();
 
-		areaPortalOrigins.AddToTail( org );
+		areaPortalOrigins.push_back( org );
 
 		// Merge in areaportal "window" states from from split screen players by passing in the extra PVS origins!!!
 
-		CUtlVector< CHandle< CBasePlayer > > &list = pPlayer->GetSplitScreenAndPictureInPicturePlayers();
-		for ( int i = 0; i < list.Count(); ++i )
+		std::vector< CHandle< CBasePlayer > > &list = pPlayer->GetSplitScreenAndPictureInPicturePlayers();
+		for ( int i = 0; i < std::ssize( list ); ++i )
 		{
 			CBasePlayer *pl = list[ i ];
 			if ( !pl )
@@ -2870,13 +2861,13 @@ void CServerGameClients::ClientSetupVisibility( edict_t *pViewEntity, edict_t *p
 			}
 
 			org = pl->EyePosition();
-			areaPortalOrigins.AddToTail( org );
+			areaPortalOrigins.push_back( org );
 		}
 	}
 	else
 	{
 		Warning( "ClientSetupVisibility: No entity for edict!\n" );
-		areaPortalOrigins.AddToTail( org );
+		areaPortalOrigins.push_back( org );
 	}
 
 	unsigned char portalBits[MAX_AREA_PORTAL_STATE_BYTES];
@@ -2886,9 +2877,8 @@ void CServerGameClients::ClientSetupVisibility( edict_t *pViewEntity, edict_t *p
 	int isOpen[512];
 	int iOutPortal = 0;
 
-	for( unsigned short i = g_AreaPortals.Head(); i != g_AreaPortals.InvalidIndex(); i = g_AreaPortals.Next(i) )
+	for( CFuncAreaPortalBase *pCur : g_AreaPortals )
 	{
-		CFuncAreaPortalBase *pCur = g_AreaPortals[i];
 
 		bool bIsOpenOnClient = true;
 		
@@ -3416,7 +3406,7 @@ public:
 
 	virtual int	Count()
 	{
-		return m_Systems.Count();
+		return std::ssize( m_Systems );
 	}
 	virtual char const *GetDllName( int idx )
 	{
@@ -3432,10 +3422,10 @@ private:
 		AppSystemInfo_t sys;
 		sys.m_pModuleName = moduleName;
 		sys.m_pInterfaceName = interfaceName;
-		m_Systems.AddToTail( sys );
+		m_Systems.push_back( sys );
 	}
 
-	CUtlVector< AppSystemInfo_t >	m_Systems;
+	std::vector< AppSystemInfo_t >	m_Systems;
 };
 
 EXPOSE_SINGLE_INTERFACE( CServerDLLSharedAppSystems, IServerDLLSharedAppSystems, SERVER_DLL_SHARED_APPSYSTEMS );

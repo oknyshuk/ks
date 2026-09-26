@@ -9,7 +9,7 @@
 
 #include "reflect_annotations.h"
 
-#include "smartptr.h"
+#include "tier1/intrusive_ptr.h"
 #include "globalvars_base.h"
 #include "particles_new.h"
 #include "particle_parse.h"
@@ -53,8 +53,8 @@ struct ParticleEffectList_t
 		pParticleEffect = nullptr;
 	}
 
-	CUtlVector<ParticleControlPoint_t>	pControlPoints;
-	CSmartPtr<CNewParticleEffect>		pParticleEffect;
+	std::vector< ParticleControlPoint_t >	pControlPoints;
+	ks::intrusive_ptr<CNewParticleEffect>		pParticleEffect;
 };
 
 extern int GetAttachTypeFromString( const char *pszString );
@@ -123,7 +123,7 @@ private:
 
 private:
 	CBaseEntity *m_pOuter;
-	CUtlVector<ParticleEffectList_t>	m_ParticleEffects;
+	std::vector< ParticleEffectList_t >	m_ParticleEffects;
 	int			m_iDormancyChangedAtFrame;
 
 	friend class CBaseEntity;

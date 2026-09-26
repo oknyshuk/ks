@@ -10,9 +10,6 @@
 #include "snd_mp3_source.h"
 #include "vaudio/ivaudio.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern IVAudio *vaudio;
 
 static const int MP3_BUFFER_SIZE = 16384;

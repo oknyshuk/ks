@@ -24,12 +24,10 @@
 #include "changeframelist.h"
 #include "GameEventManager.h"
 #include "dt_recv_decoder.h"
-#include "utllinkedlist.h"
+#include <memory>
+#include <vector>
 #include "cl_demo.h"
 #include "sv_steamauth.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 // copy message data from in to out buffer
 #define CopyDataInToOut(msg)									\
@@ -46,7 +44,7 @@ static void HLTV_Callback_InstanceBaseline( void *object, INetworkStringTable *s
 	pHLTV->LinkInstanceBaselines();
 }
 
-extern CUtlLinkedList< CRecvDecoder *, unsigned short > g_RecvDecoders;
+extern std::vector< std::unique_ptr< CRecvDecoder > > g_RecvDecoders;
 
 extern	ConVar tv_autorecord;
 static	ConVar tv_autoretry( "tv_autoretry", "1", FCVAR_RELEASE, "Relay proxies retry connection after network timeout" );
@@ -131,7 +129,7 @@ void CHLTVClientState::CopyNewEntity(
 	// Make space for the baseline data.
 	SerializedEntityHandle_t newbaseline = g_pSerializedEntities->AllocateSerializedEntity(__FILE__, __LINE__);
 
-	CUtlVector< int > changedProps;
+	std::vector< int > changedProps;
 
 	RecvTable_ReadFieldList( pClientClass->m_pRecvTable, *u.m_pBuf, u.m_DecodeEntity, -1, false );
 
@@ -141,7 +139,7 @@ void CHLTVClientState::CopyNewEntity(
 	// update change tick in ChangeFrameList
 	if ( pChangeFrame )
 	{
-		pChangeFrame->SetChangeTick( changedProps.Base(), changedProps.Count(), pSnapshot->m_nTickCount );
+		pChangeFrame->SetChangeTick( changedProps.data(), std::ssize( changedProps ), pSnapshot->m_nTickCount );
 	}
 
 	if ( u.m_bUpdateBaselines )
@@ -154,7 +152,7 @@ void CHLTVClientState::CopyNewEntity(
 	// If ent doesn't think it's in PVS, signal that it is
 	Assert( u.m_pTo->last_entity <= ent );
 	u.m_pTo->last_entity = ent;
-	u.m_pTo->transmit_entity.Set( ent );
+	u.m_pTo->transmit_entity.set( ent );
 }
 
 static inline void HLTV_CopyExitingEnt( CEntityReadInfo &u )
@@ -189,7 +187,7 @@ static inline void HLTV_CopyExitingEnt( CEntityReadInfo &u )
 	
 	// mark flags as received
 	u.m_pTo->last_entity = ent;
-	u.m_pTo->transmit_entity.Set( ent );
+	u.m_pTo->transmit_entity.set( ent );
 }
 
 
@@ -299,7 +297,7 @@ void CHLTVClientState::SendPacket()
 	{
 		// use full update rate when active
 		float commandInterval = (2.0f/3.0f) / m_pHLTV->GetSnapshotRate();
-		float maxDelta = MIN( host_state.interval_per_tick, commandInterval );
+		float maxDelta = std::min( host_state.interval_per_tick, commandInterval );
 		float delta = clamp( net_time - m_flNextCmdTime, 0.0f, maxDelta );
 		m_flNextCmdTime = net_time + commandInterval - delta;
 	}
@@ -659,7 +657,7 @@ bool CHLTVClientState::SVCMsg_PacketEntities( const ks::net::CSVCMsg_PacketEntit
 	CClientFrame *oldFrame = nullptr;
 
 #ifdef _HLTVTEST
-	if ( g_RecvDecoders.Count() == 0 )
+	if ( g_RecvDecoders.empty() )
 		return false;
 #endif
 
@@ -770,7 +768,7 @@ void CHLTVClientState::ReadEnterPVS( CEntityReadInfo &u )
 void CHLTVClientState::ReadLeavePVS( CEntityReadInfo &u )
 {
 	// do nothing, this entity was removed
-	Assert( !u.m_pTo->transmit_entity.Get(u.m_nOldEntity) );
+	Assert( !u.m_pTo->transmit_entity[u.m_nOldEntity] );
 
 	if ( u.m_UpdateFlags & FHDR_DELETE )
 	{
@@ -813,7 +811,7 @@ void CHLTVClientState::ReadDeltaEnt( CEntityReadInfo &u )
 
 	SerializedEntityHandle_t outEntity = g_pSerializedEntities->AllocateSerializedEntity(__FILE__, __LINE__);
 
-	CUtlVector< int > changedProps;
+	std::vector< int > changedProps;
 
 	RecvTable_ReadFieldList( pToPackedEntity->m_pClientClass->m_pRecvTable, *u.m_pBuf, u.m_DecodeEntity, -1, false );
 
@@ -824,14 +822,14 @@ void CHLTVClientState::ReadDeltaEnt( CEntityReadInfo &u )
 	// update change tick in ChangeFrameList
 	if ( pChangeFrame )
 	{
-		pChangeFrame->SetChangeTick( changedProps.Base(), changedProps.Count(), pSnapshot->m_nTickCount );
+		pChangeFrame->SetChangeTick( changedProps.data(), std::ssize( changedProps ), pSnapshot->m_nTickCount );
 	}
 
 	// store as normal
 	pToPackedEntity->SetPackedData( outEntity );
 
 	u.m_pTo->last_entity = u.m_nNewEntity;
-	u.m_pTo->transmit_entity.Set( u.m_nNewEntity );
+	u.m_pTo->transmit_entity.set( u.m_nNewEntity );
 
 	u.NextOldEntity();
 }
@@ -858,7 +856,7 @@ void CHLTVClientState::ReadDeletions( CEntityReadInfo &u )
 		int nDelta = u.m_pBuf->ReadUBitVar();
 		int nSlot = nBase + nDelta;
 
-		Assert( !u.m_pTo->transmit_entity.Get( nSlot ) );
+		Assert( !u.m_pTo->transmit_entity[nSlot] );
 
 		CFrameSnapshot *pSnapshot = u.m_pTo->GetSnapshot();
 		CFrameSnapshotEntry *pEntry = &pSnapshot->m_pEntities[nSlot];
@@ -1035,7 +1033,7 @@ void CHLTVClientState::ConnectionCrashed(const char *reason)
 
 	if ( tv_autoretry.GetBool() && m_Remote.Count() > 0 )
 	{
-		Cbuf_AddText( Cbuf_GetCurrentPlayer(), va( "tv_relay %s\n", m_Remote.Get( 0 ).m_szRetryAddress.String() ) );
+		Cbuf_AddText( Cbuf_GetCurrentPlayer(), va( "tv_relay %s\n", m_Remote.Get( 0 ).m_szRetryAddress.c_str() ) );
 	}
 }
 
@@ -1045,7 +1043,7 @@ void CHLTVClientState::ConnectionClosing( const char *reason )
 
 	if ( tv_autoretry.GetBool() && m_Remote.Count() > 0 )
 	{
-		Cbuf_AddText( Cbuf_GetCurrentPlayer(), va( "tv_relay %s\n", m_Remote.Get( 0 ).m_szRetryAddress.String() ) );
+		Cbuf_AddText( Cbuf_GetCurrentPlayer(), va( "tv_relay %s\n", m_Remote.Get( 0 ).m_szRetryAddress.c_str() ) );
 	}
 }
 
@@ -1093,7 +1091,7 @@ void CHLTVClientState::SetLocalInfoConvarsForUpstreamConnection( ks::net::CMsg_C
 	}
 	if ( tv_maxclients_relayreserved.GetInt() > 0 )
 		numSlots -= tv_maxclients_relayreserved.GetInt();
-	numSlots = MAX( 0, numSlots );
+	numSlots = std::max( 0, numSlots );
 
 	int numClients = m_pHLTV->GetNumClients();
 	if ( numClients > numSlots )

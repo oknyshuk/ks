@@ -10,9 +10,6 @@
 #include <stdarg.h>
 #include "uicenterprint.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static ConVar		scr_centertime( "scr_centertime", "4" );
 
 //-----------------------------------------------------------------------------

@@ -27,9 +27,6 @@
 #include "bone_setup.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar debug_physimpact("debug_physimpact", "0" );
 
 const char *GetMassEquivalent(float flMass);
@@ -1589,7 +1586,7 @@ void CPhysMagnet::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 	if ( pPhysics && pOther->GetMoveType() == MOVETYPE_VPHYSICS && pPhysics->IsMoveable() )
 	{
 		// Make sure we haven't already got this sucker on the magnet
-		int iCount = m_MagnettedEntities.Count();
+		int iCount = std::ssize( m_MagnettedEntities );
 		for ( int i = 0; i < iCount; i++ )
 		{
 			if ( m_MagnettedEntities[i].hEntity == pOther )
@@ -1639,7 +1636,7 @@ void CPhysMagnet::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 		}
 
 		newEntityOnMagnet.pConstraint->SetGameData( (void *) this );
-		m_MagnettedEntities.AddToTail( newEntityOnMagnet );
+		m_MagnettedEntities.push_back( newEntityOnMagnet );
 
 		m_flTotalMass += pPhysics->GetMass();
 	}
@@ -1745,7 +1742,7 @@ void CPhysMagnet::InputToggle( inputdata_t &inputdata )
 void CPhysMagnet::ConstraintBroken( IPhysicsConstraint *pConstraint )
 {
 	// Find the entity that was constrained and release it
-	int iCount = m_MagnettedEntities.Count();
+	int iCount = std::ssize( m_MagnettedEntities );
 	for ( int i = 0; i < iCount; i++ )
 	{
 		if ( m_MagnettedEntities[i].hEntity.Get() != nullptr && m_MagnettedEntities[i].pConstraint == pConstraint )
@@ -1757,7 +1754,7 @@ void CPhysMagnet::ConstraintBroken( IPhysicsConstraint *pConstraint )
 				m_flTotalMass -= pPhysObject->GetMass();
 			}
 
-			m_MagnettedEntities.Remove(i);
+			m_MagnettedEntities.erase( m_MagnettedEntities.begin() + i );
 			break;
 		}
 	}
@@ -1773,7 +1770,7 @@ void CPhysMagnet::ConstraintBroken( IPhysicsConstraint *pConstraint )
 void CPhysMagnet::DetachAll( void )
 {
 	// Make sure we haven't already got this sucker on the magnet
-	int iCount = m_MagnettedEntities.Count();
+	int iCount = std::ssize( m_MagnettedEntities );
 	for ( int i = 0; i < iCount; i++ )
 	{
 		// Delay a couple seconds to reset to the default shadow cast behavior
@@ -1785,7 +1782,7 @@ void CPhysMagnet::DetachAll( void )
 		physenv->DestroyConstraint( m_MagnettedEntities[i].pConstraint  );
 	}
 
-	m_MagnettedEntities.Purge();
+	m_MagnettedEntities.clear(); m_MagnettedEntities.shrink_to_fit();
 	m_flTotalMass = 0;
 }
 
@@ -1794,7 +1791,7 @@ void CPhysMagnet::DetachAll( void )
 //-----------------------------------------------------------------------------
 int CPhysMagnet::GetNumAttachedObjects( void )
 {
-	return m_MagnettedEntities.Count();
+	return std::ssize( m_MagnettedEntities );
 }
 
 //-----------------------------------------------------------------------------

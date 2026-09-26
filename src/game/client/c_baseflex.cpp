@@ -23,9 +23,7 @@
 #include "choreoactor.h"
 #include "toolframework_client.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 bool UseHWMorphVCDs();
 
 ConVar g_CV_PhonemeDelay("phonemedelay", "0", 0, "Phoneme delay to account for sound system latency." );
@@ -93,8 +91,7 @@ bool GetHWMExpressionFileName( const char *pFilename, char *pHWMFilename )
 
 C_BaseFlex::C_BaseFlex() : 
 	m_iv_viewtarget( "C_BaseFlex::m_iv_viewtarget" ), 
-	m_iv_flexWeight("C_BaseFlex:m_iv_flexWeight" ),
-	m_LocalToGlobal( 0, 0, FlexSettingLessFunc )
+	m_iv_flexWeight("C_BaseFlex:m_iv_flexWeight" )
 {
 #ifdef _DEBUG
 	((Vector&)m_viewtarget).Init();
@@ -122,8 +119,8 @@ C_BaseFlex::~C_BaseFlex()
 		delete[] m_flFlexDelayedWeight;
 		m_flFlexDelayedWeight = nullptr;
 	}
-	m_SceneEvents.RemoveAll();
-	m_LocalToGlobal.RemoveAll();
+	m_SceneEvents.clear();
+	m_LocalToGlobal.clear();
 }
 
 
@@ -196,14 +193,14 @@ CStudioHdr *C_BaseFlex::OnNewModel()
 	if (hdr)
 	{
 		int nFlexDescCount = hdr->numflexdesc();
-		m_CachedFlexWeights.SetCount( nFlexDescCount );
-		m_CachedDelayedFlexWeights.SetCount( nFlexDescCount );
+		m_CachedFlexWeights.assign( nFlexDescCount, {} );
+		m_CachedDelayedFlexWeights.assign( nFlexDescCount, {} );
 		if ( nFlexDescCount )
 		{
 			m_flFlexDelayedWeight = new float[ nFlexDescCount ];
 			memset( m_flFlexDelayedWeight, 0, nFlexDescCount * sizeof(float) );
-			memset( m_CachedFlexWeights.Base(), 0, nFlexDescCount * sizeof(float) );
-			memset( m_CachedDelayedFlexWeights.Base(), 0, nFlexDescCount * sizeof(float) );
+			memset( m_CachedFlexWeights.data(), 0, nFlexDescCount * sizeof(float) );
+			memset( m_CachedDelayedFlexWeights.data(), 0, nFlexDescCount * sizeof(float) );
 		}
 
 		m_iv_flexWeight.SetMaxCount( gpGlobals->curtime, hdr->numflexcontrollers() );
@@ -395,7 +392,7 @@ public:
 
 		// See if it's already loaded
 		int i;
-		for ( i = 0; i < m_FileList.Count(); i++ )
+		for ( i = 0; i < std::ssize( m_FileList ); i++ )
 		{
 			CFlexSceneFile *file = m_FileList[ i ];
 			if ( file && !V_stricmp( file->filename, szFilename ) )
@@ -425,7 +422,7 @@ public:
 		// Remember data pointer
 		pfile->buffer = buffer;
 		// Add to list
-		m_FileList.AddToTail( pfile );
+		m_FileList.push_back( pfile );
 
 		// Swap the entire file
 
@@ -440,16 +437,16 @@ private:
 
 	void DeleteSceneFiles()
 	{
-		while ( m_FileList.Count() > 0 )
+		while ( !m_FileList.empty() )
 		{
 			CFlexSceneFile *file = m_FileList[ 0 ];
-			m_FileList.Remove( 0 );
-			free( file->buffer );
+			m_FileList.erase( m_FileList.begin() + 0 );
+			delete[] ( byte * )file->buffer;
 			delete file;
 		}
 	}
 
-	CUtlVector< CFlexSceneFile * > m_FileList;
+	std::vector< CFlexSceneFile * > m_FileList;
 };
 
 CFlexSceneFileManager g_FlexSceneFileManager;
@@ -640,7 +637,7 @@ void C_BaseFlex::ComputeBlendedSetting( Emphasized_Phoneme *classes, float empha
 		}
 		else
 		{
-			emphasis_intensity = MIN( emphasis_intensity, STRONG_CROSSFADE_START );
+			emphasis_intensity = std::min( emphasis_intensity, STRONG_CROSSFADE_START );
 			classes[ PHONEME_CLASS_NORMAL ].amount = 2.0f * emphasis_intensity;
 		}
 	}
@@ -657,7 +654,7 @@ void C_BaseFlex::ComputeBlendedSetting( Emphasized_Phoneme *classes, float empha
 		}
 		else
 		{
-			emphasis_intensity = MAX( emphasis_intensity, WEAK_CROSSFADE_START );
+			emphasis_intensity = std::max( emphasis_intensity, WEAK_CROSSFADE_START );
 			classes[ PHONEME_CLASS_NORMAL ].amount = 2.0f * emphasis_intensity;
 		}
 	}
@@ -831,18 +828,18 @@ void C_BaseFlex::AddVisemesForSentence( float *pGlobalFlexWeight, Emphasized_Pho
 						if (next->GetStartTime() == phoneme->GetEndTime() )
 						{
 							// no gap, so increase the blend length to the end of the next phoneme, as long as it's not longer than the current phoneme
-							dt = MAX( dt, MIN( next->GetEndTime() - t, phoneme->GetEndTime() - phoneme->GetStartTime() ) );
+							dt = std::max( dt, std::min( next->GetEndTime() - t, phoneme->GetEndTime() - phoneme->GetStartTime() ) );
 						}
 						else
 						{
 							// dead space, so increase the blend length to the start of the next phoneme, as long as it's not longer than the current phoneme
-							dt = MAX( dt, MIN( next->GetStartTime() - t, phoneme->GetEndTime() - phoneme->GetStartTime() ) );
+							dt = std::max( dt, std::min( next->GetStartTime() - t, phoneme->GetEndTime() - phoneme->GetStartTime() ) );
 						}
 					}
 					else
 					{
 						// last phoneme in list, increase the blend length to the length of the current phoneme
-						dt = MAX( dt, phoneme->GetEndTime() - phoneme->GetStartTime() );
+						dt = std::max( dt, phoneme->GetEndTime() - phoneme->GetStartTime() );
 					}
 				}
 			}
@@ -1144,14 +1141,14 @@ void C_BaseFlex::SetupWeights( const matrix3x4_t *pBoneToWorld, int nFlexWeightC
 	}
 
 	int nFlexDescCount = hdr->numflexdesc();
-	Assert( nFlexDescCount == m_CachedFlexWeights.Count() );
+	Assert( nFlexDescCount == std::ssize( m_CachedFlexWeights ) );
 	if ( IsFlexCacheValid() )
 	{
-		int nCount = MIN( nFlexWeightCount, nFlexDescCount );
-		memcpy( pFlexWeights, m_CachedFlexWeights.Base(), nCount * sizeof(float) );
+		int nCount = std::min( nFlexWeightCount, nFlexDescCount );
+		memcpy( pFlexWeights, m_CachedFlexWeights.data(), nCount * sizeof(float) );
 		if ( pFlexDelayedWeights )
 		{
-			memcpy( pFlexDelayedWeights, m_CachedDelayedFlexWeights.Base(), nCount * sizeof(float) );
+			memcpy( pFlexDelayedWeights, m_CachedDelayedFlexWeights.data(), nCount * sizeof(float) );
 		}
 
 		modelrender->SetViewTarget( GetModelPtr(), GetBody(), m_CachedViewTarget );
@@ -1243,8 +1240,8 @@ void C_BaseFlex::SetupWeights( const matrix3x4_t *pBoneToWorld, int nFlexWeightC
 
 	// Cache off results
 	m_iMostRecentFlexCounter = g_iFlexCounter;
-	memcpy( m_CachedFlexWeights.Base(), pFlexWeights, nFlexDescCount * sizeof(float) );
-	memcpy( m_CachedDelayedFlexWeights.Base(), m_flFlexDelayedWeight, nFlexDescCount * sizeof(float) );
+	memcpy( m_CachedFlexWeights.data(), pFlexWeights, nFlexDescCount * sizeof(float) );
+	memcpy( m_CachedDelayedFlexWeights.data(), m_flFlexDelayedWeight, nFlexDescCount * sizeof(float) );
 
 	/*
 	for (i = 0; i < hdr->numflexdesc; i++)
@@ -1281,7 +1278,7 @@ int C_BaseFlex::AddGlobalFlexController( const char *szName )
 
 	if ( g_numflexcontrollers < MAXSTUDIOFLEXCTRL * 4 )
 	{
-		g_flexcontroller[g_numflexcontrollers++] = strdup( szName );
+		g_flexcontroller[g_numflexcontrollers++] = MemAlloc_StrDup( szName );
 	}
 	else
 	{
@@ -1330,12 +1327,12 @@ const flexsetting_t *C_BaseFlex::FindNamedSetting( const flexsettinghdr_t *pSett
 //-----------------------------------------------------------------------------
 void C_BaseFlex::StartChoreoScene( CChoreoScene *scene )
 {
-	if ( m_ActiveChoreoScenes.Find( scene ) != m_ActiveChoreoScenes.InvalidIndex() )
+	if ( ks::find_index( m_ActiveChoreoScenes, scene ) != -1 )
 	{
 		return;
 	}
 
-	m_ActiveChoreoScenes.AddToTail( scene );
+	m_ActiveChoreoScenes.push_back( scene );
 }
 
 
@@ -1346,7 +1343,7 @@ void C_BaseFlex::RemoveChoreoScene( CChoreoScene *scene )
 {
 	// Assert( m_ActiveChoreoScenes.Find( scene ) != m_ActiveChoreoScenes.InvalidIndex() );
 
-	m_ActiveChoreoScenes.FindAndRemove( scene );
+	ks::erase_first( m_ActiveChoreoScenes, scene );
 }
 
 //-----------------------------------------------------------------------------
@@ -1356,11 +1353,11 @@ void C_BaseFlex::ClearSceneEvents( CChoreoScene *scene, bool canceled )
 {
 	if ( !scene )
 	{
-		m_SceneEvents.RemoveAll();
+		m_SceneEvents.clear();
 		return;
 	}
 
-	for ( int i = m_SceneEvents.Count() - 1; i >= 0; i-- )
+	for ( int i = std::ssize( m_SceneEvents ) - 1; i >= 0; i-- )
 	{
 		CSceneEventInfo *info = &m_SceneEvents[ i ];
 
@@ -1382,7 +1379,7 @@ void C_BaseFlex::ClearSceneEvents( CChoreoScene *scene, bool canceled )
 		info->m_pScene		= nullptr;
 		info->m_bStarted	= false;
 
-		m_SceneEvents.Remove( i );
+		m_SceneEvents.erase( m_SceneEvents.begin() + i );
 	}
 }
 
@@ -1435,7 +1432,7 @@ void C_BaseFlex::AddSceneEvent( CChoreoScene *scene, CChoreoEvent *event, CBaseE
 
 	if (StartSceneEvent( &info, scene, event, actor, pTarget ))
 	{
-		m_SceneEvents.AddToTail( info );
+		m_SceneEvents.push_back( info );
 	}
 	else
 	{
@@ -1503,7 +1500,7 @@ void C_BaseFlex::RemoveSceneEvent( CChoreoScene *scene, CChoreoEvent *event, boo
 {
 	Assert( event );
 
-	for ( int i = 0 ; i < m_SceneEvents.Count(); i++ )
+	for ( int i = 0 ; i < std::ssize( m_SceneEvents ); i++ )
 	{
 		CSceneEventInfo *info = &m_SceneEvents[ i ];
 
@@ -1523,7 +1520,7 @@ void C_BaseFlex::RemoveSceneEvent( CChoreoScene *scene, CChoreoEvent *event, boo
 			info->m_pScene		= nullptr;
 			info->m_bStarted	= false;
 
-			m_SceneEvents.Remove( i );
+			m_SceneEvents.erase( m_SceneEvents.begin() + i );
 			return;
 		}
 	}
@@ -1536,7 +1533,7 @@ void C_BaseFlex::RemoveSceneEvent( CChoreoScene *scene, CChoreoEvent *event, boo
 //-----------------------------------------------------------------------------
 bool C_BaseFlex::CheckSceneEvent( float currenttime, CChoreoScene *scene, CChoreoEvent *event )
 {
-	for ( int i = 0 ; i < m_SceneEvents.Count(); i++ )
+	for ( int i = 0 ; i < std::ssize( m_SceneEvents ); i++ )
 	{
 		CSceneEventInfo *info = &m_SceneEvents[ i ];
 
@@ -1636,7 +1633,7 @@ void C_BaseFlex::ProcessSceneEvents( bool bFlexEvents, float *pGlobalFlexWeight 
 	}
 
 	// Iterate SceneEvents and look for active slots
-	for ( int i = 0; i < m_SceneEvents.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_SceneEvents ); i++ )
 	{
 		CSceneEventInfo *info = &m_SceneEvents[ i ];
 		Assert( info );
@@ -1703,18 +1700,6 @@ bool C_BaseFlex::ProcessFlexSettingSceneEvent( float *pGlobalFlexWeight, CSceneE
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Each CBaseFlex maintains a UtlRBTree of mappings, one for each loaded flex scene file it uses.  This is used to
-//  sort the entries in the RBTree
-// Input  : lhs - 
-//			rhs - 
-// Output : Returns true on success, false on failure.
-//-----------------------------------------------------------------------------
-bool C_BaseFlex::FlexSettingLessFunc( const FS_LocalToGlobal_t& lhs, const FS_LocalToGlobal_t& rhs )
-{
-	return lhs.m_Key < rhs.m_Key;
-}
-
-//-----------------------------------------------------------------------------
 // Purpose: Since everyone shared a pSettinghdr now, we need to set up the localtoglobal mapping per entity, but 
 //  we just do this in memory with an array of integers (could be shorts, I suppose)
 // Input  : *pSettinghdr - 
@@ -1723,20 +1708,18 @@ void C_BaseFlex::EnsureTranslations( const flexsettinghdr_t *pSettinghdr )
 {
 	Assert( pSettinghdr );
 
-	FS_LocalToGlobal_t entry( pSettinghdr );
-
-	unsigned short idx = m_LocalToGlobal.Find( entry );
-	if ( idx != m_LocalToGlobal.InvalidIndex() )
+	if ( m_LocalToGlobal.contains( pSettinghdr ) )
 		return;
 
-	entry.SetCount( pSettinghdr->numkeys );
+	Assert( pSettinghdr->numkeys > 0 );
+	std::vector< int > mapping( pSettinghdr->numkeys );
 
 	for ( int i = 0; i < pSettinghdr->numkeys; ++i )
 	{
-		entry.m_Mapping[ i ] = AddGlobalFlexController( pSettinghdr->pLocalName( i ) );
+		mapping[ i ] = AddGlobalFlexController( pSettinghdr->pLocalName( i ) );
 	}
 
-	m_LocalToGlobal.Insert( entry );
+	m_LocalToGlobal.emplace( pSettinghdr, std::move( mapping ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -1747,26 +1730,24 @@ void C_BaseFlex::EnsureTranslations( const flexsettinghdr_t *pSettinghdr )
 //-----------------------------------------------------------------------------
 int C_BaseFlex::FlexControllerLocalToGlobal( const flexsettinghdr_t *pSettinghdr, int key )
 {
-	FS_LocalToGlobal_t entry( pSettinghdr );
-
-	int idx = m_LocalToGlobal.Find( entry );
-	if ( idx == m_LocalToGlobal.InvalidIndex() )
+	auto idx = m_LocalToGlobal.find( pSettinghdr );
+	if ( idx == m_LocalToGlobal.end() )
 	{
 		// This should never happen!!!
 		Assert( 0 );
 		Warning( "Unable to find mapping for flexcontroller %i, settings %p on %i/%s\n", key, pSettinghdr, entindex(), GetClassname() );
 		EnsureTranslations( pSettinghdr );
-		idx = m_LocalToGlobal.Find( entry );
-		if ( idx == m_LocalToGlobal.InvalidIndex() )
+		idx = m_LocalToGlobal.find( pSettinghdr );
+		if ( idx == m_LocalToGlobal.end() )
 		{
 			Error( "CBaseFlex::FlexControllerLocalToGlobal failed!\n" );
 		}
 	}
 
-	FS_LocalToGlobal_t& result = m_LocalToGlobal[ idx ];
+	const std::vector< int >& result = idx->second;
 	// Validate lookup
-	Assert( result.m_nCount != 0 && key < result.m_nCount );
-	int index = result.m_Mapping[ key ];
+	Assert( !result.empty() && key < std::ssize( result ) );
+	int index = result[ key ];
 	return index;
 }
 
@@ -1907,16 +1888,16 @@ void C_BaseFlex::AddFlexAnimation( CSceneEventInfo *info )
 				Q_strncpy( name, "right_" ,sizeof(name));
 				Q_strncat( name, track->GetFlexControllerName(),sizeof(name), COPY_ALL_CHARACTERS );
 
-				track->SetFlexControllerIndex( MAX( FindFlexController( name ), LocalFlexController_t(0) ), 0, 0 );
+				track->SetFlexControllerIndex( std::max( FindFlexController( name ), LocalFlexController_t(0) ), 0, 0 );
 
 				Q_strncpy( name, "left_" ,sizeof(name));
 				Q_strncat( name, track->GetFlexControllerName(),sizeof(name), COPY_ALL_CHARACTERS );
 
-				track->SetFlexControllerIndex( MAX( FindFlexController( name ), LocalFlexController_t(0) ), 0, 1 );
+				track->SetFlexControllerIndex( std::max( FindFlexController( name ), LocalFlexController_t(0) ), 0, 1 );
 			}
 			else
 			{
-				track->SetFlexControllerIndex( MAX( FindFlexController( (char *)track->GetFlexControllerName() ), LocalFlexController_t(0)), 0 );
+				track->SetFlexControllerIndex( std::max( FindFlexController( (char *)track->GetFlexControllerName() ), LocalFlexController_t(0)), 0 );
 			}
 		}
 
@@ -1991,7 +1972,7 @@ void CSceneEventInfo::InitWeight( C_BaseFlex *pActor )
 
 float CSceneEventInfo::UpdateWeight( C_BaseFlex *pActor )
 {
-	m_flWeight = MIN( m_flWeight + 0.1, 1.0 );
+	m_flWeight = std::min( m_flWeight + 0.1, 1.0 );
 	return m_flWeight;
 }
 

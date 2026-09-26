@@ -22,7 +22,4 @@
 #define BITSTRING_H
 #pragma once
 
-#include "bitvec.h"
-
-
 #endif // BITSTRING_H

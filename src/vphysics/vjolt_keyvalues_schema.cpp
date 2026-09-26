@@ -1,12 +1,13 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2022 Joshua Ashton and Josh Dowell (Slartibarty)
+
 
 #include "cbase.h"
 
 #include "vjolt_surfaceprops.h"
 
 #include "vjolt_keyvalues_schema.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier1/text_writer.h"
 
 //-------------------------------------------------------------------------------------------------
 
@@ -217,18 +218,14 @@ void ParseJoltKVCustom( KeyValues *pKV, void *pUnknownKeyObj, IVPhysicsKeyHandle
 
 KeyValues *HeaderlessKVBufferToKeyValues( const char *pszBuffer, const char *pszSetName )
 {
-	CUtlBuffer buffer;
-	buffer.SetBufferType( true, true );
-
-	buffer.SeekPut( CUtlBuffer::SEEK_HEAD, 0 );
-	buffer.PutString( "\"PhysProps\"\r\n{" );
-	buffer.PutString( pszBuffer );
-	buffer.PutString( "\r\n}" );
-	buffer.PutChar( '\0' );
+	ks::text_writer buffer;
+	buffer.put( "\"PhysProps\"\r\n{" );
+	buffer.put( pszBuffer );
+	buffer.put( "\r\n}" );
 
 	KeyValues *pszKV = new KeyValues( pszSetName );
 
-	if ( !pszKV->LoadFromBuffer( pszSetName, buffer ) )
+	if ( !pszKV->LoadFromBuffer( pszSetName, buffer.view() ) )
 	{
 		pszKV->deleteThis();
 		pszKV = nullptr;

@@ -9,9 +9,6 @@
 #include "proto_oob.h"
 #include "protocol.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //
 // Convars
 //
@@ -58,25 +55,22 @@ KeyValues * CConnectionlessLanMgr::UnpackPacket( netpacket_t *packet )
 	MEM_ALLOC_CREDIT();
 	int nDataLen = packet->message.ReadLong();
 
-	m_buffer.Clear();
-	m_buffer.EnsureCapacity( nDataLen );
-	packet->message.ReadBytes( m_buffer.Base(), nDataLen );
-	m_buffer.SeekPut( CUtlBuffer::SEEK_HEAD, nDataLen );
+	m_buffer.assign( nDataLen, std::byte{} );
+	packet->message.ReadBytes( m_buffer.data(), nDataLen );
 
 	// Unpack key values
 	KeyValues *pMsg = new KeyValues( "" );
-	if ( pMsg->ReadAsBinary( m_buffer ) )
+	ks::byte_reader reader( m_buffer );
+	if ( pMsg->ReadAsBinary( reader ) )
 	{
 		// Read binary data as well
 		if ( int nBinarySize = packet->message.ReadLong() )
 		{
-			m_buffer.Clear();
-			m_buffer.EnsureCapacity( nBinarySize );
-			packet->message.ReadBytes( m_buffer.Base(), nBinarySize );
-			m_buffer.SeekPut( CUtlBuffer::SEEK_HEAD, nBinarySize );
+			m_buffer.assign( nBinarySize, std::byte{} );
+			packet->message.ReadBytes( m_buffer.data(), nBinarySize );
 
 			// set the ptr to point to our buffer
-			pMsg->SetPtr( "binary/ptr", m_buffer.Base() );
+			pMsg->SetPtr( "binary/ptr", m_buffer.data() );
 		}
 
 		return pMsg;	// "pMsg" is deleted by caller
@@ -115,11 +109,11 @@ void CConnectionlessLanMgr::SendPacket( KeyValues *pMsg, char const *szAddress /
 	msg.WriteLong( 0 );
 	msg.WriteLong( g_pMatchExtensions->GetINetSupport()->GetEngineBuildNumber() );
 
-	CUtlBuffer data;
+	ks::byte_writer data;
 	pMsg->WriteAsBinary( data );
 
-	msg.WriteLong( data.TellMaxPut() );
-	msg.WriteBytes( data.Base(), data.TellMaxPut() );
+	msg.WriteLong( data.size() );
+	msg.WriteBytes( data.data(), data.size() );
 	Assert( !msg.IsOverflowed() );
 
 	// Special case when encoding binary data

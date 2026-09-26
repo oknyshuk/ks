@@ -9,7 +9,6 @@
 #define AI_SENSES_H
 
 #include "tier1/utlvector.h"
-#include "tier1/utlmap.h"
 #include "simtimer.h"
 #include "ai_component.h"
 #include "soundent.h"
@@ -106,7 +105,7 @@ protected:
 
 	void			BeginGather();
 	void 			NoteSeenEntity( CBaseEntity *pSightEnt );
-	void			EndGather( int nSeen, CUtlVector<EHANDLE> *pResult );
+	void			EndGather( int nSeen, std::vector< EHANDLE > *pResult );
 	
 	bool 			Look( CBaseEntity *pSightEnt );
 
@@ -123,11 +122,11 @@ private:
 	
 	int				m_iAudibleList;				// first index of a linked list of sounds that the npc can hear.
 	
-	CUtlVector<EHANDLE> m_SeenHighPriority;
-	CUtlVector<EHANDLE> m_SeenNPCs;
-	CUtlVector<EHANDLE> m_SeenMisc;
+	std::vector< EHANDLE > m_SeenHighPriority;
+	std::vector< EHANDLE > m_SeenNPCs;
+	std::vector< EHANDLE > m_SeenMisc;
 	
-	CUtlVector<EHANDLE> *m_SeenArrays[3];
+	std::vector< EHANDLE > *m_SeenArrays[3];
 	
 	float			m_TimeLastLookHighPriority;
 	float			m_TimeLastLookNPCs;
@@ -153,7 +152,7 @@ private:
 	virtual void 	OnEntitySpawned( CBaseEntity *pEntity );
 	virtual void 	OnEntityDeleted( CBaseEntity *pEntity );
 
-	CUtlVector<EHANDLE> m_SensedObjects;
+	std::vector< EHANDLE > m_SensedObjects;
 };
 
 extern CAI_SensedObjectsManager g_AI_SensedObjectsManager;

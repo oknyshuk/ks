@@ -24,9 +24,6 @@
 #include "materialsystem/itexture.h"
 #include "tier2/tier2.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Singleton instance
 //-----------------------------------------------------------------------------
@@ -51,14 +48,11 @@ static ConVar r_lod_switch_scale( "r_lod_switch_scale", "1", FCVAR_HIDDEN );
 static ConVar mat_rendered_faces_count( "mat_rendered_faces_count", "0", FCVAR_CHEAT, "Set to N to count how many faces each model draws each frame and spew the top N offenders from the last 150 frames (use 'mat_rendered_faces_spew' to spew all models rendered in the current frame)" );
 static ConVar mat_print_top_model_vert_counts( "mat_print_top_model_vert_counts", "0", 0, "Constantly print to screen the top N models as measured by total faces rendered this frame");
 
-bool ModelFaceCountHashCompareFunc( studiohwdata_t *const &a, studiohwdata_t *const &b ) { return a == b; }
-uint32 ModelFaceCountHashKeyFunc( studiohwdata_t *const &a ) { return HashIntConventional( (int32)(intp)a ); }
-
 //-----------------------------------------------------------------------------
 // Constructor
 //-----------------------------------------------------------------------------
 CStudioRender::CStudioRender()
- :	m_ModelFaceCountHash( 1024, 0, 0, ModelFaceCountHashCompareFunc, ModelFaceCountHashKeyFunc )
+ :	m_ModelFaceCountHash( 1024 )
 {
 	m_pRC = nullptr;
 	m_pBoneToWorld = nullptr;
@@ -427,7 +421,7 @@ void CStudioRender::BeginFrame( void )
 {
 	// Clear the model face count hash table for the coming frame
 	if ( mat_rendered_faces_count.GetBool() || mat_print_top_model_vert_counts.GetBool() )
-		m_ModelFaceCountHash.RemoveAll();
+		m_ModelFaceCountHash.clear();
 
 	PrecacheGlint();
 }
@@ -468,7 +462,7 @@ void CStudioRender::SetLightingRenderState()
 //-----------------------------------------------------------------------------
 void CStudioRender::AddShadow( IMaterial* pMaterial, void* pProxyData, FlashlightState_t *pFlashlightState, VMatrix *pWorldToTexture, ITexture *pFlashlightDepthTexture )
 {
-	int i = m_ShadowState.AddToTail();
+	int i = std::ssize( m_ShadowState ); m_ShadowState.emplace_back();
 	ShadowState_t& state = m_ShadowState[i];
 	state.m_pMaterial = pMaterial;
 	state.m_pProxyData = pProxyData;
@@ -479,7 +473,7 @@ void CStudioRender::AddShadow( IMaterial* pMaterial, void* pProxyData, Flashligh
 
 void CStudioRender::ClearAllShadows()
 {
-	m_ShadowState.RemoveAll();
+	m_ShadowState.clear();
 }
 
 void CStudioRender::GetFlexStats( )
@@ -1204,8 +1198,8 @@ void CStudioRender::RestoreMeshes( int nCount, BaseMeshRenderData_t *pRenderData
 // Allocate temporary arrays either on the stack, or from the heap. 
 // Prevents using all the stack when *lots* of objects are rendered to CSM's.
 //-----------------------------------------------------------------------------
-	#define STUDIORENDER_TEMP_DATA_MALLOC( typeName, p, n ) const int nTempDataSize##p = (n); void *pvFree##p = nullptr; typeName *p = (typeName *) ( ( nTempDataSize##p < 64*1024 ) ? stackalloc( nTempDataSize##p ) : ( pvFree##p = malloc( nTempDataSize##p ) ) );
-	#define STUDIORENDER_TEMP_DATA_FREE( p ) free( pvFree##p )
+	#define STUDIORENDER_TEMP_DATA_MALLOC( typeName, p, n ) const int nTempDataSize##p = (n); void *pvFree##p = nullptr; typeName *p = (typeName *) ( ( nTempDataSize##p < 64*1024 ) ? stackalloc( nTempDataSize##p ) : ( pvFree##p = MemAlloc_Alloc( nTempDataSize##p ) ) );
+	#define STUDIORENDER_TEMP_DATA_FREE( p ) g_pMemAlloc->Free( pvFree##p )
 
 //-----------------------------------------------------------------------------
 // Draws meshes
@@ -1289,7 +1283,7 @@ void CStudioRender::DrawMeshRenderData( IMatRenderContext *pRenderContext,
 
 			instance.m_bColorBufferHasIndirectLightingOnly = ( drawInfo.m_pStudioHdr->flags & STUDIOHDR_BAKED_VERTEX_LIGHTING_IS_INDIRECT_ONLY ) ? true : false;
 
-			nMaxBoneCount = MAX( nMaxBoneCount, pStrip->numBones );
+			nMaxBoneCount = std::max<std::common_type_t<int, short int>>( nMaxBoneCount, pStrip->numBones );
 		}
 	}
 
@@ -1391,7 +1385,7 @@ void CStudioRender::DrawMeshRenderData( IMatRenderContext *pRenderContext,
 
 			instance.m_bColorBufferHasIndirectLightingOnly = pCurrInstance->m_bColorMeshHasIndirectLightingOnly;
 
-			nMaxBoneCount = MAX( nMaxBoneCount, pStrip->numBones );
+			nMaxBoneCount = std::max<std::common_type_t<int, short int>>( nMaxBoneCount, pStrip->numBones );
 
 		}
 
@@ -1596,12 +1590,8 @@ int CStudioRender::CountDecalMeshesToDraw( int nCount, StudioArrayInstanceData_t
 		if ( handle == STUDIORENDER_DECAL_INVALID )
 			continue;
 
-		const DecalModelList_t& list = m_DecalList[(intp)handle];
-		unsigned short mat = list.m_pLod[pCurInstance->m_nLOD].m_FirstMaterial;
-		for ( ; mat != m_DecalMaterial.InvalidIndex(); mat = m_DecalMaterial.Next(mat))
-		{
-			++nDecalMeshCount;
-		}
+		const DecalModelList_t& list = DecalListFromHandle( handle );
+		nDecalMeshCount += std::ssize( list.m_pLod[pCurInstance->m_nLOD].m_Materials );
 	}
 	return nDecalMeshCount;
 }
@@ -1654,14 +1644,13 @@ int CStudioRender::BuildSortedDecalRenderList( DecalRenderData_t *pDecalRenderDa
 		if ( handle == STUDIORENDER_DECAL_INVALID )
 			continue;
 
-		const DecalModelList_t& list = m_DecalList[(intp)handle];
-		unsigned short mat = list.m_pLod[pCurInstance->m_nLOD].m_FirstMaterial;
-		for ( ; mat != m_DecalMaterial.InvalidIndex(); mat = m_DecalMaterial.Next(mat))
+		DecalModelList_t& list = DecalListFromHandle( handle );
+		for ( DecalMaterial_t &decalMaterial : list.m_pLod[pCurInstance->m_nLOD].m_Materials )
 		{
-			DecalMaterial_t *pDecalMaterial = &m_DecalMaterial[mat];
+			DecalMaterial_t *pDecalMaterial = &decalMaterial;
 
 			// It's possible for the index count to become zero due to decal retirement
-			int indexCount = pDecalMaterial->m_Indices.Count();
+			int indexCount = std::ssize( pDecalMaterial->m_Indices );
 			if ( indexCount == 0 )
 				continue;
 
@@ -2183,7 +2172,7 @@ void CStudioRender::DrawShadowMeshRenderData( IMatRenderContext *pRenderContext,
 			instance.m_DiffuseModulation.Init( 1.0f, 1.0f, 1.0f, 1.0f );
 			instance.m_nLightmapPageId = MATERIAL_SYSTEM_LIGHTMAP_PAGE_INVALID;
 			instance.m_bColorBufferHasIndirectLightingOnly = false;
-			nMaxBoneCount = MAX( nMaxBoneCount, pStrip->numBones );
+			nMaxBoneCount = std::max<std::common_type_t<int, short int>>( nMaxBoneCount, pStrip->numBones );
 		}
 	}
 
@@ -2388,16 +2377,13 @@ void CStudioRender::DrawModelArrayStaticProp( const DrawModelInfo_t& info,
 
 
 
-bool FacesRenderedInfoCompareFunc( IStudioRender::FacesRenderedInfo_t const &a, IStudioRender::FacesRenderedInfo_t const &b ) { return a.pStudioHdr == b.pStudioHdr; }
-uint32 FacesRenderedInfoKeyFunc( IStudioRender::FacesRenderedInfo_t const &a ) { return HashIntConventional( (int32)(intp)a.pStudioHdr ); }
-
 int FacesRenderedInfoSort( const void *a, const void *b )
 {
 	IStudioRender::FacesRenderedInfo_t *A = (IStudioRender::FacesRenderedInfo_t *)a, *B = (IStudioRender::FacesRenderedInfo_t *)b;
 	return ( A->nFaceCount > B->nFaceCount ) ? -1 : +1;
 }
 
-void UpdateAndSpewFacesRenderedHistory( CUtlVector< IStudioRender::FacesRenderedInfo_t > &newItems, int nTotal, int nSpewFromCurrentFrame, int nSpewFromHistory, bool bClearHistory )
+void UpdateAndSpewFacesRenderedHistory( std::vector< IStudioRender::FacesRenderedInfo_t > &newItems, int nTotal, int nSpewFromCurrentFrame, int nSpewFromHistory, bool bClearHistory )
 {
 	static const int NUM_ITEMS_TO_TRACK  = 20;
 	static const int NUM_FRAMES_TO_TRACK = 20;
@@ -2417,13 +2403,13 @@ void UpdateAndSpewFacesRenderedHistory( CUtlVector< IStudioRender::FacesRendered
 	int nCurItem = ( nOldestItem + nItems ) % NUM_FRAMES_TO_TRACK;
 	if ( nItems == NUM_FRAMES_TO_TRACK )
 		nOldestItem = ( nOldestItem + 1 ) % NUM_FRAMES_TO_TRACK;
-	nItems = MIN( ( nItems + 1 ), NUM_FRAMES_TO_TRACK );
+	nItems = std::min( ( nItems + 1 ), NUM_FRAMES_TO_TRACK );
 	for ( int i = 0; i < NUM_ITEMS_TO_TRACK; i++ )
 	{
-		history[ nCurItem ][ i ] = ( i < newItems.Count() ) ? newItems[ i ] : emptyItem;
+		history[ nCurItem ][ i ] = ( i < std::ssize( newItems ) ) ? newItems[ i ] : emptyItem;
 	}
 
-	nSpewFromCurrentFrame = MIN( nSpewFromCurrentFrame, newItems.Count() );
+	nSpewFromCurrentFrame = std::min<int>( nSpewFromCurrentFrame, std::ssize( newItems ) );
 	if ( nSpewFromCurrentFrame )
 	{
 		// Spew the top N offenders from this frame to the console
@@ -2441,7 +2427,7 @@ void UpdateAndSpewFacesRenderedHistory( CUtlVector< IStudioRender::FacesRendered
 		lastSpewTime = Plat_FloatTime();
 
 		// Spew the N most expensive models over the last 'NUM_FRAMES_TO_TRACK' frames:
-		CUtlHash< IStudioRender::FacesRenderedInfo_t > topItemHash( 64, 0, 0, FacesRenderedInfoCompareFunc, FacesRenderedInfoKeyFunc );
+		std::unordered_map< studiohdr_t *, IStudioRender::FacesRenderedInfo_t > topItemHash( 64 );
 		for ( int i = 0; i < nItems; i++ )
 		{
 			IStudioRender::FacesRenderedInfo_t *items = history[ ( nOldestItem + i ) % NUM_FRAMES_TO_TRACK ];
@@ -2449,54 +2435,51 @@ void UpdateAndSpewFacesRenderedHistory( CUtlVector< IStudioRender::FacesRendered
 			{
 				if ( !items[ j ].nFaceCount )
 					continue;
-				UtlHashHandle_t h = topItemHash.Find( items[ j ] );
-				if ( h != topItemHash.InvalidHandle() )
+				auto [it, bInserted] = topItemHash.try_emplace( items[ j ].pStudioHdr, items[ j ] );
+				if ( !bInserted )
 				{
-					IStudioRender::FacesRenderedInfo_t &topItem = topItemHash[ h ];
-					topItem.nFaceCount = MAX( items[ j ].nFaceCount, topItem.nFaceCount );
-					continue;
+					IStudioRender::FacesRenderedInfo_t &topItem = it->second;
+					topItem.nFaceCount = std::max( items[ j ].nFaceCount, topItem.nFaceCount );
 				}
-				topItemHash.Insert( items[ j ] );
 			}
 		}
-		CUtlVector< IStudioRender::FacesRenderedInfo_t > topItems;
-		for ( UtlHashHandle_t h = topItemHash.GetFirstHandle(); h != topItemHash.InvalidHandle(); h = topItemHash.GetNextHandle( h ) )
+		std::vector< IStudioRender::FacesRenderedInfo_t > topItems;
+		for ( const auto &[pStudioHdr, topItem] : topItemHash )
 		{
-			topItems.AddToTail( topItemHash[ h ] );
+			topItems.push_back( topItem );
 		}
-		qsort( topItems.Base(), topItems.Count(), sizeof( topItems[0] ), FacesRenderedInfoSort );
-		for ( int j = 0; j < MIN( nSpewFromHistory, NUM_ITEMS_TO_TRACK ); j++ )
+		qsort( topItems.data(), std::ssize( topItems ), sizeof( topItems[0] ), FacesRenderedInfoSort );
+		for ( int j = 0; j < std::min( nSpewFromHistory, NUM_ITEMS_TO_TRACK ); j++ )
 		{
-			if ( j < topItems.Count() )
+			if ( j < std::ssize( topItems ) )
 				ConMsg( "%-7d (%-3d times, %-7d avg) %s\n", topItems[ j ].nFaceCount, topItems[ j ].nRenderCount, ( int )( ( float )topItems[ j ].nFaceCount / ( float )topItems[ j ].nRenderCount ), topItems[ j ].pStudioHdr->name );
 		}
 		ConMsg( "%-7d total model faces rendered this frame (mat_rendered_faces_count)\n", nTotal );
 	}
 }
 
-int BuildFacesRenderedInfoListForMostRecentFrame( CUtlVector< IStudioRender::FacesRenderedInfo_t > &items, CUtlHash< studiohwdata_t * > &hash )
+int BuildFacesRenderedInfoListForMostRecentFrame( std::vector< IStudioRender::FacesRenderedInfo_t > &items, std::unordered_set< studiohwdata_t * > &hash )
 {
 	int nTotal = 0;
-	for ( UtlHashHandle_t h = hash.GetFirstHandle(); h != hash.InvalidHandle(); h = hash.GetNextHandle( h ) )
+	for ( studiohwdata_t *pHwData : hash )
 	{
-		studiohwdata_t *pHwData = hash[ h ];
 		if ( pHwData->m_pStudioHdr )
 		{
 			IStudioRender::FacesRenderedInfo_t item = { pHwData->m_pStudioHdr, pHwData->m_NumFacesRenderedThisFrame, pHwData->m_NumTimesRenderedThisFrame };
-			items.AddToTail( item );
+			items.push_back( item );
 			nTotal += pHwData->m_NumFacesRenderedThisFrame;
 		}
 	}
 
 	// Sort models by face count (biggest first)
-	qsort( items.Base(), items.Count(), sizeof( items[0] ), FacesRenderedInfoSort );
+	qsort( items.data(), std::ssize( items ), sizeof( items[0] ), FacesRenderedInfoSort );
 
 	return nTotal;
 }
 
 void CStudioRender::UpdateModelFaceCounts( int nSpewFromCurrentFrame, bool bClearHistory )
 {
-	CUtlVector< IStudioRender::FacesRenderedInfo_t > items;
+	std::vector< IStudioRender::FacesRenderedInfo_t > items;
 	if ( bClearHistory )
 	{
 		UpdateAndSpewFacesRenderedHistory( items, 0, 0, 0, bClearHistory );
@@ -2532,13 +2515,13 @@ void CStudioRender::GatherRenderedFaceInfo( IStudioRender::FaceInfoCallbackFunc_
 
 	if ( nTopN )
 	{
-		CUtlVector< IStudioRender::FacesRenderedInfo_t > items;
+		std::vector< IStudioRender::FacesRenderedInfo_t > items;
 		int nTotal = BuildFacesRenderedInfoListForMostRecentFrame( items, m_ModelFaceCountHash );
 
-		if ( items.Count() > 0 )
+		if ( !items.empty() )
 		{
-			nTopN = MIN( nTopN, items.Count());
-			pFunc( nTopN, items.Base(), nTotal );
+			nTopN = std::min<int>( nTopN, std::ssize( items ));
+			pFunc( nTopN, items.data(), nTotal );
 		}
 	}
 }

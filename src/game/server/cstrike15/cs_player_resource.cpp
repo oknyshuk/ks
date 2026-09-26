@@ -233,7 +233,7 @@ void CCSPlayerResource::UpdatePlayerData( void )
 		m_bEndMatchNextMapAllVoted = false;
 	}
 
-	int numHostages = g_Hostages.Count();
+	int numHostages = std::ssize( g_Hostages );
 
 	for ( i = 0; i < MAX_HOSTAGES; i++ )
 	{
@@ -634,11 +634,11 @@ void CCSPlayerResource::UpdateAssassinationTargets( const CEconQuestDefinition *
 		return;
 
 	// 1 out of X players is an assassination target, no less than 1 and more more than MAX_ASSASSINATION_TARGETS.
-	CUtlVector<CCSPlayer*> vecCandiates;
+	std::vector< CCSPlayer* > vecCandiates;
 	auto iTargetsNeeded = Min( Max( 1, pTeam->GetHumanMembers( &vecCandiates ) / Max( 1, sv_assassination_target_ratio.GetInt() ) ), 3 );
 
-	CUtlVector< CCSPlayer* > vecNotIdealPlayers;
-	FOR_EACH_VEC_BACK( vecCandiates, iter )
+	std::vector< CCSPlayer* > vecNotIdealPlayers;
+	for ( int iter = (int)std::ssize( vecCandiates ) - 1; iter >= 0; iter-- )
 	{
 		CCSPlayer* pCur = vecCandiates[ iter ];
 		// Validate current assassination targets, remove from candidate list
@@ -653,23 +653,23 @@ void CCSPlayerResource::UpdateAssassinationTargets( const CEconQuestDefinition *
 			{
 				// Prefer not to pick recently invalidated players
 				m_bIsAssassinationTarget.GetForModify( pCur->entindex() ) = false;
-				vecNotIdealPlayers.AddToHead( pCur );
+				vecNotIdealPlayers.insert( vecNotIdealPlayers.begin(), pCur );
 			}
-			vecCandiates.Remove( iter );
+			vecCandiates.erase( vecCandiates.begin() + iter );
 		}
 		else if ( Helper_DoesPlayerHaveAssassinateQuestForTeam( pCur, GetTeamNumber() ) )
 		{
 			// Prefer not to pick players with this quest 
-			vecCandiates.Remove( iter );
-			vecNotIdealPlayers.AddToTail( pCur );
+			vecCandiates.erase( vecCandiates.begin() + iter );
+			vecNotIdealPlayers.push_back( pCur );
 		}
 	}
 
 	while ( iTargetsNeeded-- > 0 )
 	{
-		CUtlVector< CCSPlayer* > &vecBucket = vecCandiates.Count() > 0 ? vecCandiates : vecNotIdealPlayers;
-		CCSPlayer *pTarget = vecBucket[ RandomInt( 0, vecBucket.Count() - 1 ) ];
-		vecBucket.FindAndFastRemove( pTarget );
+		std::vector< CCSPlayer* > &vecBucket = !vecCandiates.empty() ? vecCandiates : vecNotIdealPlayers;
+		CCSPlayer *pTarget = vecBucket[ RandomInt( 0, std::ssize( vecBucket ) - 1 ) ];
+		ks::swap_erase_first( vecBucket, pTarget );
 		m_bIsAssassinationTarget.GetForModify( pTarget->entindex() ) = true;
 	}
 }

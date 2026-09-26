@@ -10,8 +10,6 @@
 
 #include "particles_simple.h"
 
-#include "tier0/memdbgon.h"
-
 //==================================================
 // CLitSmokeEmitter
 //==================================================
@@ -35,7 +33,7 @@ public:
 	virtual	void	SetDirectionalLight( Vector position, Vector color, float intensity );
 	virtual	void	SetLight( Vector position, Vector color, float intensity );
 
-	static CSmartPtr<CLitSmokeEmitter> Create( const char *pDebugName )
+	static ks::intrusive_ptr<CLitSmokeEmitter> Create( const char *pDebugName )
 	{
 		return new CLitSmokeEmitter( pDebugName );
 	}
@@ -68,7 +66,5 @@ inline PMaterialHandle	CLitSmokeEmitter::GetSmokeMaterial() const
 {
 	return m_hSmokeMaterial;
 }
-
-#include "tier0/memdbgoff.h"
 
 #endif // PARTICLE_LITSMOKEEMITTER_H

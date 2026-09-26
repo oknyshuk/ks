@@ -16,8 +16,6 @@
 #include "tier0/vprof.h"
 //#define _VPROF_MATHLIB
 
-#pragma warning(disable:4244)   // "conversion from 'const int' to 'float', possible loss of data"
-#pragma warning(disable:4730)	// "mixing _m64 and floating point expressions may result in incorrect code"
 
 #include "mathlib/mathlib.h"
 #include "mathlib/vector.h"
@@ -28,9 +26,6 @@
 
 #include "mathlib/ssemath.h"
 #include "mathlib/ssequaternion.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 bool s_bMathlibInitialized = false;
 #ifdef PARANOID
@@ -883,7 +878,7 @@ BoxOnPlaneSide
 Returns 1, 2, or 1 + 2
 ==================
 */
-int __cdecl BoxOnPlaneSide (const float *emins, const float *emaxs, const cplane_t *p)
+int BoxOnPlaneSide (const float *emins, const float *emaxs, const cplane_t *p)
 {
 	Assert( s_bMathlibInitialized );
 	float	dist1, dist2;
@@ -1720,7 +1715,7 @@ float QuaternionAngleDiff( const Quaternion &p, const Quaternion &q )
 
 	// Note if the quaternion is slightly non-normalized the square root below may be more than 1,
 	// the value is clamped to one otherwise it may result in asin() returning an undefined result.
-	float sinang = MIN( 1.0f, sqrt( diff.x * diff.x + diff.y * diff.y + diff.z * diff.z ) );
+	float sinang = std::min( 1.0f, sqrt( diff.x * diff.x + diff.y * diff.y + diff.z * diff.z ) );
 	float angle = RAD2DEG( 2 * asin( sinang ) );
 	return angle;
 }
@@ -1800,7 +1795,7 @@ void QuaternionScale( const Quaternion &p, float t, Quaternion &q )
 	// FIXME: nick, this isn't overly sensitive to accuracy, and it may be faster to 
 	// use the cos part (w) of the quaternion (sin(omega)*N,cos(omega)) to figure the new scale.
 	float sinom = sqrt( DotProduct( &p.x, &p.x ) );
-	sinom = MIN( sinom, 1.f );
+	sinom = std::min( sinom, 1.f );
 
 	float sinsom = sin( asin( sinom ) * t );
 
@@ -2894,7 +2889,6 @@ void Hermite_SplineBasis( float t, float basis[4] )
 //-----------------------------------------------------------------------------
 
 // BUG: the VectorSubtract()'s calls go away if the global optimizer is enabled
-#pragma optimize( "g", off )
 
 void Hermite_Spline( const Vector &p0, const Vector &p1, const Vector &p2, float t, Vector& output )
 {
@@ -2904,7 +2898,6 @@ void Hermite_Spline( const Vector &p0, const Vector &p1, const Vector &p2, float
 	Hermite_Spline( p1, p2, e10, e21, t, output );
 }
 
-#pragma optimize( "", on )
 
 float Hermite_Spline( float p0, float p1, float p2,	float t )
 {
@@ -3304,7 +3297,6 @@ float RangeCompressor( float flValue, float flMin, float flMax, float flBase )
 }
 
 
-//#pragma optimize( "", on )
 
 //-----------------------------------------------------------------------------
 // Transforms a AABB into another space; which will inherently grow the box.
@@ -3703,13 +3695,11 @@ bool CalcLineToLineIntersectionSegment(
    return true;
 }
 
-#pragma optimize( "", off )
 
 #ifndef EXCEPTION_EXECUTE_HANDLER
 #define EXCEPTION_EXECUTE_HANDLER       1
 #endif
 
-#pragma optimize( "", on )
 
 
 #ifndef NDEBUG
@@ -5183,10 +5173,10 @@ void CalcTriangleTangentSpace( const Vector &p0, const Vector &p1, const Vector 
 //-----------------------------------------------------------------------------
 void RGBtoHSV( const Vector &rgb, Vector &hsv )
 {
-	float flMax = MAX( rgb.x, rgb.y );
-	flMax = MAX( flMax, rgb.z );
-	float flMin = MIN( rgb.x, rgb.y );
-	flMin = MIN( flMin, rgb.z );
+	float flMax = std::max( rgb.x, rgb.y );
+	flMax = std::max( flMax, rgb.z );
+	float flMin = std::min( rgb.x, rgb.y );
+	flMin = std::min( flMin, rgb.z );
 
 	// hsv.z is the value
 	hsv.z = flMax;

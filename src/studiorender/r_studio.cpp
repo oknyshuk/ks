@@ -18,9 +18,6 @@
 #include "tier3/tier3.h"
 #include "datacache/imdlcache.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Figures out what kind of lighting we're gonna want
 //-----------------------------------------------------------------------------

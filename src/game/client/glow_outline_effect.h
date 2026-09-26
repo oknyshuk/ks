@@ -39,7 +39,7 @@ public:
 		  int nIndex;
 		  if ( m_nFirstFreeSlot == GlowObjectDefinition_t::END_OF_FREE_LIST )
 		  {
-			  nIndex = m_GlowObjectDefinitions.AddToTail();
+			  nIndex = std::ssize( m_GlowObjectDefinitions ); m_GlowObjectDefinitions.emplace_back();
 		  }
 		  else
 		  {
@@ -67,7 +67,7 @@ public:
 
 	  int AddGlowBox( Vector vecOrigin, QAngle angOrientation, Vector mins, Vector maxs, Color colColor, float flLifetime )
 	  {
-		  int nIndex = m_GlowBoxDefinitions.AddToTail();
+		  int nIndex = std::ssize( m_GlowBoxDefinitions ); m_GlowBoxDefinitions.emplace_back();
 		  m_GlowBoxDefinitions[nIndex].m_vPosition = vecOrigin;
 		  m_GlowBoxDefinitions[nIndex].m_angOrientation = angOrientation;
 		  m_GlowBoxDefinitions[nIndex].m_vMins = mins;
@@ -89,7 +89,7 @@ public:
 
 	  void UnregisterGlowObject( C_BaseEntity *pEntity )
 	  {
-		  for ( int i=0; i<m_GlowObjectDefinitions.Count(); i++ )
+		  for ( int i=0; i<std::ssize( m_GlowObjectDefinitions ); i++ )
 		  {
 			  if ( m_GlowObjectDefinitions[i].m_pEntity == pEntity )
 			  {
@@ -107,7 +107,7 @@ public:
 
 	  void UnregisterAllGlowBoxes()
 	  {
-		  m_GlowBoxDefinitions.RemoveAll();
+		  m_GlowBoxDefinitions.clear();
 	  }
 
 	  void SetGlowAlphaCappedByRenderAlpha( int nGlowObjectHandle, bool bGlowAlphaCappedByRenderAlpha )
@@ -221,11 +221,11 @@ private:
 		static const int ENTRY_IN_USE = -2;
 	};
 
-	void RenderGlowModels( const CViewSetup *pSetup, int nSplitScreenSlot, CMatRenderContextPtr &pRenderContext, CUtlVector<GlowObjectDefinition_t> &vecGlowObjects );
+	void RenderGlowModels( const CViewSetup *pSetup, int nSplitScreenSlot, CMatRenderContextPtr &pRenderContext, std::vector< GlowObjectDefinition_t > &vecGlowObjects );
 
 	void DownSampleAndBlurRT( const CViewSetup *pSetup, CMatRenderContextPtr &pRenderContext, float flBloomScale, ITexture *pRtFullFrame, ITexture *pRtQuarterSize0, ITexture *pRtQuarterSize1 );
 
-	CUtlVector< GlowObjectDefinition_t > m_GlowObjectDefinitions;
+	std::vector< GlowObjectDefinition_t > m_GlowObjectDefinitions;
 	int m_nFirstFreeSlot;
 
 	struct GlowBoxDefinition_t
@@ -239,7 +239,7 @@ private:
 		Color m_colColor;
 	};
 
-	CUtlVector< GlowBoxDefinition_t > m_GlowBoxDefinitions;
+	std::vector< GlowBoxDefinition_t > m_GlowBoxDefinitions;
 
 };
 

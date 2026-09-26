@@ -153,7 +153,7 @@ typedef void* VD3DHANDLE;
 			#endif
 		};
 		
-		ULONG __stdcall	Release( int which=0, char *comment = nullptr )
+		ULONG Release( int which=0, char *comment = nullptr )
 		{
 			Assert( which >= 0 );
 			Assert( which < 2 );
@@ -1968,7 +1968,7 @@ struct IDirect3DVertexShader9 : public IDirect3DResource9	//was IUnknown
 struct ID3DXMatrixStack : public IUnknown
 {
 //public:
-	CUtlVector<D3DMATRIX>	m_stack;
+	std::vector< D3DMATRIX >	m_stack;
 	int						m_stackTop;	// top of stack is at the highest index, this is that index.  push increases, pop decreases.
 	
 	HRESULT	Create( void );

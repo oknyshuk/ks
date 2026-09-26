@@ -12,8 +12,6 @@
 #include "fmtstr.h"
 #include "gametypes/igametypes.h"
 #include "netmessages_signon.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 extern IGameTypes *g_pGameTypes;
 

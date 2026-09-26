@@ -15,9 +15,6 @@
 #include "edict.h"
 #include "collisionutils.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define COLLISION_PLANE_OFFSET 6.0f
 		  
 //-----------------------------------------------------------------------------
@@ -79,7 +76,7 @@ void CSheetSimulator::Init( int w, int h, int fixedPointCount )
 
 void CSheetSimulator::AddSpring( int p1, int p2, float restLength )
 {
-	int spring = m_Springs.AddToTail();
+	int spring = std::ssize( m_Springs ); m_Springs.emplace_back();
 	m_Springs[spring].m_Particle1 = p1;
 	m_Springs[spring].m_Particle2 = p2;
 	m_Springs[spring].m_RestLength = restLength;
@@ -88,7 +85,7 @@ void CSheetSimulator::AddSpring( int p1, int p2, float restLength )
 void CSheetSimulator::AddFixedPointSpring( int fixedPoint, int p, float restLength )
 {
 	Assert( fixedPoint < m_FixedPointCount );
-	int spring = m_Springs.AddToTail();
+	int spring = std::ssize( m_Springs ); m_Springs.emplace_back();
 	m_Springs[spring].m_Particle1 = p;
 	m_Springs[spring].m_Particle2 = -(fixedPoint+1);
 	m_Springs[spring].m_RestLength = restLength;
@@ -105,7 +102,7 @@ void CSheetSimulator::SetGravityConstant( float g )
 
 void CSheetSimulator::AddGravityForce( int particle )
 {
-	m_Gravity.AddToTail( particle );
+	m_Gravity.push_back( particle );
 }
 
 //-----------------------------------------------------------------------------
@@ -278,7 +275,7 @@ void CSheetSimulator::ComputeForces()
 
 	float springConstant;
 	int i;
-	for ( i = 0; i < m_Springs.Count(); ++i )
+	for ( i = 0; i < std::ssize( m_Springs ); ++i )
 	{
 		// Hook's law for a damped spring:
 		// got two particles, a and b with positions xa and xb and velocities va and vb
@@ -326,7 +323,7 @@ void CSheetSimulator::ComputeForces()
 	}
 
 	// gravity term
-	for (i = 0; i < m_Gravity.Count(); ++i)
+	for (i = 0; i < std::ssize( m_Gravity ); ++i)
 	{
 		m_Particle[m_Gravity[i]].m_Force.z -= m_Particle[m_Gravity[i]].m_Mass * m_GravityConstant;
 	}

@@ -18,6 +18,14 @@ enum RoundStyle_t
 	ROUND_UP,
 };
 
+namespace ks
+{
+	class byte_reader;
+	class byte_writer;
+	class text_reader;
+	class text_writer;
+}
+
 class DmeTime_t;
 
 class DmeFramerate_t
@@ -162,9 +170,10 @@ private:
 float GetFractionOfTimeBetween( DmeTime_t t, DmeTime_t start, DmeTime_t end, bool bClamp = false );
 float GetFractionOfTime( DmeTime_t t, DmeTime_t duration, bool bClamp = false );
 
-class CUtlBuffer;
-bool Serialize( CUtlBuffer &buf, const DmeTime_t &src );
-bool Unserialize( CUtlBuffer &buf, DmeTime_t &dest );
+bool Serialize( ks::byte_writer &buf, const DmeTime_t &src );
+bool Unserialize( ks::byte_reader &buf, DmeTime_t &dest );
+bool Serialize( ks::text_writer &buf, const DmeTime_t &src );
+bool Unserialize( ks::text_reader &buf, DmeTime_t &dest );
 
 
 #endif // TIMEUTILS_H

@@ -19,14 +19,16 @@
 #include "tier0/threadtools.h"
 #include "mathlib/mathlib.h"
 #include "utlvector.h"
-#include "utlhash.h"
 #include "datamap.h"
 #include "generichash.h"
 #include "localflexcontroller.h"
-#include "utlsymbol.h"
-#include "utldict.h"
+#include "tier1/intern_pool.h"
+#include "tier1/map_ops.h"
 #include "convar.h"
 #include "resourcefile/resourcestream.h"
+#include <unordered_map>
+#include <unordered_set>
+#include <mutex>
 
 #define STUDIO_ENABLE_PERF_COUNTERS
 
@@ -1861,14 +1863,13 @@ struct studiohwdata_t
 	}
 
 	// Each model counts how many rendered faces it accounts for each frame:
-	inline void UpdateFacesRenderedCount( studiohdr_t *pStudioHdr, CUtlHash< studiohwdata_t * > &hwDataHash, int nLOD, int nInstances, int nFacesOverride = -1 )
+	inline void UpdateFacesRenderedCount( studiohdr_t *pStudioHdr, std::unordered_set< studiohwdata_t * > &hwDataHash, int nLOD, int nInstances, int nFacesOverride = -1 )
 	{
-		if ( hwDataHash.Find( this ) == hwDataHash.InvalidHandle() )
+		if ( hwDataHash.insert( this ).second )
 		{
 			m_NumFacesRenderedThisFrame = 0;
 			m_NumTimesRenderedThisFrame = 0;
 			m_pStudioHdr = pStudioHdr;
-			hwDataHash.Insert( this );
 		}
 		Assert( m_pStudioHdr && ( m_pStudioHdr == pStudioHdr ) );
 		if ( nFacesOverride == -1 ) 
@@ -1955,13 +1956,13 @@ public:
 	// converts cache entry into a usable studiohdr_t *
 	const studiohdr_t *GetStudioHdr( void ) const;
 
-	CUtlVector< int > boneMap;				// maps global bone to local bone
-	CUtlVector< int > masterBone;			// maps local bone to global bone
-	CUtlVector< int > masterSeq;			// maps local sequence to master sequence
-	CUtlVector< int > masterAnim;			// maps local animation to master animation
-	CUtlVector< int > masterAttachment;	// maps local attachment to global
-	CUtlVector< int > masterPose;			// maps local pose parameter to global
-	CUtlVector< int > masterNode;			// maps local transition nodes to global
+	std::vector< int > boneMap;				// maps global bone to local bone
+	std::vector< int > masterBone;			// maps local bone to global bone
+	std::vector< int > masterSeq;			// maps local sequence to master sequence
+	std::vector< int > masterAnim;			// maps local animation to master animation
+	std::vector< int > masterAttachment;	// maps local attachment to global
+	std::vector< int > masterPose;			// maps local pose parameter to global
+	std::vector< int > masterNode;			// maps local transition nodes to global
 };
 
 struct virtualsequence_t
@@ -1995,16 +1996,16 @@ struct virtualmodel_t
 	virtualgroup_t *pAnimGroup( int animation ) { return &m_group[ m_anim[ animation ].group ]; }; // Note: user must manage mutex for this
 	virtualgroup_t *pSeqGroup( int sequence ) { return &m_group[ m_seq[ sequence ].group ]; }; // Note: user must manage mutex for this
 
-    CThreadFastMutex m_Lock;
+    std::recursive_mutex m_Lock;
 
-	CUtlVector< virtualsequence_t > m_seq;
-	CUtlVector< virtualgeneric_t > m_anim;
-	CUtlVector< virtualgeneric_t > m_attachment;
-	CUtlVector< virtualgeneric_t > m_pose;
-	CUtlVector< virtualgroup_t > m_group;
-	CUtlVector< virtualgeneric_t > m_node;
-	CUtlVector< virtualgeneric_t > m_iklock;
-	CUtlVector< unsigned short > m_autoplaySequences;
+	std::vector< virtualsequence_t > m_seq;
+	std::vector< virtualgeneric_t > m_anim;
+	std::vector< virtualgeneric_t > m_attachment;
+	std::vector< virtualgeneric_t > m_pose;
+	std::vector< virtualgroup_t > m_group;
+	std::vector< virtualgeneric_t > m_node;
+	std::vector< virtualgeneric_t > m_iklock;
+	std::vector< unsigned short > m_autoplaySequences;
 };
 
 // 'thin' vertex data, used to do model decals (see Studio_CreateThinVertexes())
@@ -2042,7 +2043,7 @@ struct thinModelVertices_t
 	{
 		Assert( ( m_numBoneInfluences  >= 1 ) && ( m_numBoneInfluences  <= 3 ) );
 		Assert( ( boneWeights.numbones >= 1 ) && ( boneWeights.numbones <= m_numBoneInfluences ) );
-		int    numStoredWeights = MAX( 0, ( m_numBoneInfluences - 1 ) );
+		int    numStoredWeights = std::max( 0, ( m_numBoneInfluences - 1 ) );
 		float *pBaseWeight	= m_boneWeights + vertIndex*numStoredWeights;
 		byte  *pBaseIndex	= m_boneIndices + vertIndex*m_numBoneInfluences;
 		for ( int i = 0; i < m_numBoneInfluences; i++ )
@@ -2112,7 +2113,7 @@ private:
 		Assert( pBoneWeights );
 		Assert( ( m_numBoneInfluences <= 1 ) || ( m_boneWeights != nullptr ) );
 		Assert( ( m_numBoneInfluences <= 0 ) || ( m_boneIndices != nullptr ) );
-		int    numStoredWeights = MAX( 0, ( m_numBoneInfluences - 1 ) );
+		int    numStoredWeights = std::max( 0, ( m_numBoneInfluences - 1 ) );
 		float * RESTRICT pBaseWeight	= m_boneWeights + vertIndex*numStoredWeights;
 		byte  * RESTRICT pBaseIndex	= m_boneIndices + vertIndex*m_numBoneInfluences;
 		float  sum			= 0.0f;
@@ -2793,6 +2794,10 @@ class CFeModel;
 class CSoftbody;
 class CSoftbodyEnvironment;
 
+// Activity modifier names pooled in g_ActivityModifiersTable, so == on the pointer is identity.
+typedef const char *ActivityModifierSym_t;
+extern ks::intern_pool_mt g_ActivityModifiersTable;
+
 class CStudioHdr
 {
 public:
@@ -2823,11 +2828,11 @@ private:
 
 	const virtualmodel_t * ResetVModel( const virtualmodel_t *pVModel ) const;
 	const studiohdr_t *GroupStudioHdr( int group );
-	mutable CUtlVector< const studiohdr_t * > m_pStudioHdrCache;
+	mutable std::vector< const studiohdr_t * > m_pStudioHdrCache;
 
 	mutable int			m_nFrameUnlockCounter;
 	int	*				m_pFrameUnlockCounter;
-	CThreadFastMutex	m_FrameUnlockCounterMutex;
+	std::recursive_mutex	m_FrameUnlockCounterMutex;
 
 public:
 	inline int			numbones( void ) const { return m_pStudioHdr->numbones; };
@@ -2985,8 +2990,8 @@ public:
 	inline int boneParent( int iBone ) const { return m_boneParent[ iBone ]; }
 
 private:
-	CUtlVector< int >  m_boneFlags;
-	CUtlVector< int >  m_boneParent;
+	std::vector< int >  m_boneFlags;
+	std::vector< int >  m_boneParent;
 
 public:
 
@@ -3007,70 +3012,27 @@ public:
 		{
 			short		seqnum;
 			short		weight; // the absolute value of the weight from the sequence header
-			CUtlSymbol	*pActivityModifiers;		// list of activity modifier symbols
+			ActivityModifierSym_t	*pActivityModifiers;		// list of activity modifier symbols
 			int			iNumActivityModifiers;
 		};
 
-		// The type of the hash's stored data, a composite of both key and value
-		// (because that's how CUtlHash works):
-		// key: an int, the activity #
-		// values: an index into the m_pSequenceTuples array, a count of the
-		// total sequences present for an activity, and the sum of their
-		// weights.
-		// Note this struct is 128-bits wide, exactly coincident to a PowerPC 
-		// cache line and VMX register. Please consider very carefully the
-		// performance implications before adding any additional fields to this.
-		// You could probably do away with totalWeight if you really had to.
+		// An activity's slice of m_pSequenceTuples: its starting index, the number of
+		// sequences present for the activity, and the sum of their weights.
 		struct HashValueType
 		{
-			// KEY (hashed)
-			int activityIdx; 
-
-			// VALUE (not hashed)
 			int startingIdx;
 			int count;
 			int totalWeight;
-
-			HashValueType(int _actIdx, int _stIdx, int _ct, int _tW) : 
-			activityIdx(_actIdx), startingIdx(_stIdx), count(_ct), totalWeight(_tW) {}
-
-			// default constructor (ought not to be actually used)
-			HashValueType() : activityIdx(-1), startingIdx(-1), count(-1), totalWeight(-1) 
-				{ AssertMsg(false, "Don't use default HashValueType()!"); }
-
-
-			class HashFuncs
-			{
-			public:
-				// dummy constructor (gndn)
-				HashFuncs( int ) {}
-
-				// COMPARE
-				// compare two entries for uniqueness. We should never have two different
-				// entries for the same activity, so we only compare the activity index;
-				// this allows us to use the utlhash as a dict by constructing dummy entries
-				// as hash lookup keys.
-				bool operator()( const HashValueType &lhs, const HashValueType &rhs ) const
-				{
-					return lhs.activityIdx == rhs.activityIdx;
-				}
-
-				// HASH
-				// We only hash on the activity index; everything else is data.
-				unsigned int operator()( const HashValueType &item ) const
-				{
-					return HashInt( item.activityIdx );
-				}
-			};
 		};
 
-		typedef CUtlHash<HashValueType, HashValueType::HashFuncs, HashValueType::HashFuncs> ActivityToValueIdxHash;
+		// activity # -> its sequences
+		typedef std::unordered_map<int, HashValueType> ActivityToValueIdxHash;
 
 		// These must be here because IFM does not compile/link studio.cpp (?!?)
 
 		// ctor
 		CActivityToSequenceMapping( void ) 
-			: m_pSequenceTuples(nullptr), m_iSequenceTuplesCount(0), m_ActToSeqHash(8,0,0), m_expectedVModel(nullptr), m_pStudioHdr(nullptr)
+			: m_pSequenceTuples(nullptr), m_iSequenceTuplesCount(0), m_expectedVModel(nullptr), m_pStudioHdr(nullptr)
 		{};
 
 		// dtor -- not virtual because this class has no inheritors
@@ -3113,7 +3075,7 @@ public:
 		int SelectWeightedSequence( CStudioHdr *pstudiohdr, int activity, int curSequence );
 
 		// selects the sequence with the most matching modifiers
-		int SelectWeightedSequenceFromModifiers( CStudioHdr *pstudiohdr, int activity, CUtlSymbol *pActivityModifiers, int iModifierCount );
+		int SelectWeightedSequenceFromModifiers( CStudioHdr *pstudiohdr, int activity, const ActivityModifierSym_t *pActivityModifiers, int iModifierCount );
 
 		// Actually a big array, into which the hash values index.
 		SequenceTuple *m_pSequenceTuples;
@@ -3159,7 +3121,7 @@ public:
 		return m_pActivityToSequence->SelectWeightedSequence( this, activity, curSequence );
 	}
 
-	inline int SelectWeightedSequenceFromModifiers( int activity, CUtlSymbol *pActivityModifiers, int iModifierCount )
+	inline int SelectWeightedSequenceFromModifiers( int activity, const ActivityModifierSym_t *pActivityModifiers, int iModifierCount )
 	{
 		InitActivityToSequence();
 		return m_pActivityToSequence->SelectWeightedSequenceFromModifiers( this, activity, pActivityModifiers, iModifierCount );
@@ -3187,7 +3149,7 @@ public:
 	int LookupSequence( const char *pszName );
 
 private:
-	CUtlDict<int,int> m_namedSequence;
+	ks::idict<int> m_namedSequence;
 
 #ifdef STUDIO_ENABLE_PERF_COUNTERS
 public:

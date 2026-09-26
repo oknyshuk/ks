@@ -10,9 +10,6 @@
 #include "filesystem.h"
 #include "filesystem_engine.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: For proxy protecting
 // Turns the passed data into a 
@@ -128,7 +125,7 @@ bool CRC_File(CRC32_t *crcvalue, const char *pszFileName)
 
 static BSPHeader_t *g_pMapHeader = nullptr;
 
-int __cdecl LumpCompare( const void *pElem0, const void *pElem1 )
+int LumpCompare( const void *pElem0, const void *pElem1 )
 {
 	const int *pLump0 = (const int *)pElem0;
 	const int *pLump1 = (const int *)pElem1;

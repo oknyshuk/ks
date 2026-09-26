@@ -11,9 +11,6 @@
 #include "c_te_particlesystem.h"
 #include "movevars_shared.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 int		ramp1[][3] =
 {
 	{ 255, 243, 227 },
@@ -96,7 +93,7 @@ CTEParticleRenderer::~CTEParticleRenderer()
 }
 
 
-CSmartPtr<CTEParticleRenderer> CTEParticleRenderer::Create( const char *pDebugName, const Vector &vOrigin )
+ks::intrusive_ptr<CTEParticleRenderer> CTEParticleRenderer::Create( const char *pDebugName, const Vector &vOrigin )
 {
 	CTEParticleRenderer *pRet = new CTEParticleRenderer( pDebugName );
 	if( pRet )

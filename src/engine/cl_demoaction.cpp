@@ -8,9 +8,6 @@
 #include "cl_demoaction.h"
 #include "cl_demoactionmanager.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -100,8 +97,6 @@ bool CBaseDemoAction::HasActionFinished( void ) const
 	return m_bActionFinished;
 }
 
-#include "tier0/memdbgoff.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : sz - 
@@ -124,8 +119,6 @@ void CBaseDemoAction::operator delete( void *pMem )
 	// get the engine to free the memory
 	free( pMem );
 }
-
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -380,7 +373,7 @@ static bool g_bSaveChained = false;
 //			*fmt - 
 //			... - 
 //-----------------------------------------------------------------------------
-void CBaseDemoAction::BufPrintf( int depth, CUtlBuffer& buf, char const *fmt, ... )
+void CBaseDemoAction::BufPrintf( int depth, ks::text_writer& buf, char const *fmt, ... )
 {
 	va_list		argptr;
 	char		string[1024];
@@ -390,17 +383,17 @@ void CBaseDemoAction::BufPrintf( int depth, CUtlBuffer& buf, char const *fmt, ..
 
 	while ( depth-- > 0 )
 	{
-		buf.Printf( "\t" );
+		buf.put( '\t' );
 	}
 
-	buf.Printf( "%s", string );
+	buf.put( string );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : buf - 
 //-----------------------------------------------------------------------------
-void CBaseDemoAction::SaveKeysToBuffer( int depth, CUtlBuffer& buf )
+void CBaseDemoAction::SaveKeysToBuffer( int depth, ks::text_writer& buf )
 {
 	// All derived actions will need to do a BaseClass::SaveKeysToBuffer call
 	g_bSaveChained = true;
@@ -432,7 +425,7 @@ void CBaseDemoAction::SaveKeysToBuffer( int depth, CUtlBuffer& buf )
 // Purpose: 
 // Input  : buf - 
 //-----------------------------------------------------------------------------
-void CBaseDemoAction::SaveToBuffer( int depth, int index, CUtlBuffer& buf )
+void CBaseDemoAction::SaveToBuffer( int depth, int index, ks::text_writer& buf )
 {
 	// Store index
 	BufPrintf( depth, buf, "\"%i\"\n", index );

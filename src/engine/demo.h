@@ -13,7 +13,6 @@
 #include "demofile/demoformat.h"
 #include "netmessages_signon.h"
 
-class CUtlBuffer;
 class CDemoFile;
 class ServerClass;
 class CGameInfo;

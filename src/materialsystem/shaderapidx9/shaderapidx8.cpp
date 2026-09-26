@@ -35,7 +35,8 @@ mat_fullbright 1 doesn't work properly on alpha materials in testroom_standards
 #include "locald3dtypes.h"												   
 #include "utlvector.h"
 #include "IHardwareConfigInternal.h"
-#include "utlstack.h"
+#include <vector>
+#include <mutex>
 #include "shaderapi/ishaderutil.h"
 #include "shaderapi/commandbuffer.h"
 #include "shaderapi/gpumemorystats.h"
@@ -50,8 +51,6 @@ mat_fullbright 1 doesn't work properly on alpha materials in testroom_standards
 #include "textureheap.h"
 #include <malloc.h>
 #include "interface.h"
-#include "utlrbtree.h"
-#include "utlsymbol.h"
 #include "tier1/strtools.h"
 #include "recording.h"
 #include <crtmemdebug.h>
@@ -64,7 +63,6 @@ mat_fullbright 1 doesn't work properly on alpha materials in testroom_standards
 #include "tier0/perfstats.h"
 #include "tier0/vprof.h"
 #include "tier1/tier1.h"
-#include "tier1/utlbuffer.h"
 #include "vertexdecl.h"
 #include "tier0/icommandline.h"
 #include "materialsystem/ishadersystem.h"
@@ -79,7 +77,7 @@ mat_fullbright 1 doesn't work properly on alpha materials in testroom_standards
 #include "keyvalues.h"
 #include "bitmap/imageformat.h"
 #include "materialsystem/idebugtextureinfo.h"
-#include "tier1/utllinkedlist.h"
+#include <deque>
 #include "vtf/vtf.h"
 #include "datacache/idatacache.h"
 #include "renderparm.h"
@@ -95,7 +93,6 @@ mat_fullbright 1 doesn't work properly on alpha materials in testroom_standards
 #include "tier0/tslist.h"
 #include "wmi.h"
 #include "shaderdevicedx8.h"
-#include "utldict.h"
 
 
 // Define this if you want to use a stubbed d3d.
@@ -114,9 +111,10 @@ mat_fullbright 1 doesn't work properly on alpha materials in testroom_standards
 
 #include "winutils.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier1/intern_pool.h"
+#include "tier1/string_ops.h"
 
+#include "tier0/memalloc.h"
 
 #if ( ( defined( _WIN32 ) || defined( LINUX ) ) && ( !defined( DYNAMIC_SHADER_COMPILE ) ) )
 
@@ -539,8 +537,8 @@ private:
 public:
 	int						m_CreationFlags;
 
-	CUtlSymbol				m_DebugName;
-	CUtlSymbol				m_TextureGroupName;
+	std::string_view		m_DebugName = "";			// global_symbols(), so .data() is a C string
+	std::string_view		m_TextureGroupName = "";
 	int						*m_pTextureGroupCounterGlobal;	// Global counter for this texture's group.
 	int						*m_pTextureGroupCounterFrame;	// Per-frame global counter for this texture's group.
 
@@ -918,7 +916,7 @@ public:
 	bool IsTextureResident( ShaderAPITextureHandle_t textureHandle );
 	FORCEINLINE bool TextureIsAllocated( ShaderAPITextureHandle_t hTexture )
 	{
-		return m_Textures.IsValidIndex( hTexture ) && ( GetTexture( hTexture ).m_Flags & Texture_t::IS_ALLOCATED );
+		return IsValidTextureHandle( hTexture ) && ( GetTexture( hTexture ).m_Flags & Texture_t::IS_ALLOCATED );
 	}
 	FORCEINLINE void AssertValidTextureHandle( ShaderAPITextureHandle_t textureHandle )
 	{
@@ -1327,9 +1325,19 @@ public:
 												 int nMaximumDeformations,
 												 int *pNumDefsOut ) const ;
 
+	// Texture handles are the addresses of m_Textures entries
 	inline Texture_t &GetTexture( ShaderAPITextureHandle_t hTexture )
 	{
-		return m_Textures[hTexture];
+		return *(Texture_t *)hTexture;
+	}
+	static ShaderAPITextureHandle_t TextureHandle( Texture_t &tex )
+	{
+		return (ShaderAPITextureHandle_t)&tex;
+	}
+	// Entries are never freed individually, so any non-null handle we gave out is valid
+	static bool IsValidTextureHandle( ShaderAPITextureHandle_t hTexture )
+	{
+		return hTexture != INVALID_SHADERAPI_TEXTURE_HANDLE;
 	}
 
 	// Gets the texture 
@@ -1358,7 +1366,7 @@ private:
 	bool m_bDebugGetAllTextures;
 	bool m_bDebugTexturesRendering;
 	KeyValues *m_pDebugTextureList;
-	CThreadFastMutex m_DebugTextureListLock;
+	std::recursive_mutex m_DebugTextureListLock;
 
 	int m_nTextureMemoryUsedLastFrame, m_nTextureMemoryUsedTotal;
 	int m_nTextureMemoryUsedPicMip1, m_nTextureMemoryUsedPicMip2;
@@ -1724,7 +1732,7 @@ private:
 
 	// "normal" back buffer and depth buffer.  Need to keep this around so that we
 	// know what to set the render target to when we are done rendering to a texture.
-	CUtlVector<IDirect3DSurface*> m_pBackBufferSurfaces;
+	std::vector< IDirect3DSurface* > m_pBackBufferSurfaces;
 	IDirect3DSurface	*m_pBackBufferSurfaceSRGB;
 	IDirect3DSurface	*m_pZBufferSurface;
 
@@ -1768,7 +1776,7 @@ private:
 
 	// A list of state commit functions to run as per-draw call commit time
 	unsigned char m_pCommitFlags[COMMIT_FUNC_TYPE_COUNT][ COMMIT_FUNC_BYTE_COUNT ];
-	CUtlVector< StateCommitFunc_t >	m_CommitFuncs[COMMIT_FUNC_TYPE_COUNT];
+	std::vector< StateCommitFunc_t >	m_CommitFuncs[COMMIT_FUNC_TYPE_COUNT];
 
 	// Render data
 	CMeshBase *m_pRenderMesh;
@@ -1807,8 +1815,8 @@ private:
 	static CTHREADLOCALINT m_ModifyTextureLockedLevel;
 	static CTHREADLOCALINT m_ModifyTextureLockedFace;
 
-	// Stores all textures
-	CUtlFixedLinkedList< Texture_t >	m_Textures;
+	// Stores all textures; a deque so entries never move
+	std::deque< Texture_t >	m_Textures;
 
 	float			m_VertexShaderFogParams[2];
 	float			m_flFogMaxDensity;
@@ -1828,7 +1836,7 @@ private:
 	bool	m_bBuffer2FramesAhead;
 
 	// Selection name stack
-	CUtlStack< int >	m_SelectionNames;
+	std::vector< int >	m_SelectionNames;
 	bool				m_InSelectionMode;
 	unsigned int*		m_pSelectionBufferEnd;
 	unsigned int*		m_pSelectionBuffer;
@@ -1906,18 +1914,17 @@ private:
 
 	void EnableShaderShaderMutex( bool b )
 	{
-		Assert( g_ShaderMutex.GetOwnerId() == 0 );
 		g_bUseShaderMutex = b;
 	}
 
 	void ShaderLock()
 	{
-		g_ShaderMutex.Lock();
+		g_ShaderMutex.lock();
 	}
 
 	void ShaderUnlock()
 	{
-		g_ShaderMutex.Unlock();
+		g_ShaderMutex.unlock();
 	}
 
 	//The idea behind a delayed constant is this.
@@ -2047,7 +2054,6 @@ void PIXifyName( char *pDest, const char *pSrc )
 // Constructor, destructor
 //-----------------------------------------------------------------------------
 CShaderAPIDx8::CShaderAPIDx8() :
-	m_Textures( 32 ),
 	m_CurrStack( -1 ),
 	m_pRenderMesh( 0 ),
 	m_nDynamicVBSize( DYNAMIC_VERTEX_BUFFER_MEMORY ),
@@ -2121,7 +2127,7 @@ CShaderAPIDx8::CShaderAPIDx8() :
 	m_MaxIntegerPixelShaderConstant = 0;
 
 	// init to cover "real" backbuffer and HDR backbuffer
-	m_pBackBufferSurfaces.SetCount( 2 );
+	m_pBackBufferSurfaces.assign( 2, {} );
 	m_pBackBufferSurfaces[0] = nullptr;
 	m_pBackBufferSurfaces[1] = nullptr;
 
@@ -2182,10 +2188,10 @@ CShaderAPIDx8::~CShaderAPIDx8()
 
 	if ( m_pDebugTextureList )
 	{
-		m_DebugTextureListLock.Lock();
+		m_DebugTextureListLock.lock();
 		m_pDebugTextureList->deleteThis();
 		m_pDebugTextureList = nullptr;
-		m_DebugTextureListLock.Unlock();
+		m_DebugTextureListLock.unlock();
 	}
 }
 
@@ -2235,14 +2241,14 @@ void CShaderAPIDx8::AcquireInternalRenderTargets()
 		Warning( "mat_debugalttab: CShaderAPIDx8::AcquireInternalRenderTargets\n" );
 	}
 
-	Assert( m_pBackBufferSurfaces.Count() > BACK_BUFFER_INDEX_DEFAULT );
+	Assert( std::ssize( m_pBackBufferSurfaces ) > BACK_BUFFER_INDEX_DEFAULT );
 	if ( m_pBackBufferSurfaces[BACK_BUFFER_INDEX_DEFAULT] == nullptr )
 	{
 		Dx9Device()->GetRenderTarget( 0, &m_pBackBufferSurfaces[BACK_BUFFER_INDEX_DEFAULT] );
 		Assert( m_pBackBufferSurfaces[BACK_BUFFER_INDEX_DEFAULT] );
 	}
 
-	Assert( m_pBackBufferSurfaces.Count() > BACK_BUFFER_INDEX_HDR );
+	Assert( std::ssize( m_pBackBufferSurfaces ) > BACK_BUFFER_INDEX_HDR );
 	if( ( g_pHardwareConfigDx8->GetHDRType() == HDR_TYPE_FLOAT ) &&
 		( m_pBackBufferSurfaces[BACK_BUFFER_INDEX_HDR] == nullptr ) )
 	{
@@ -2294,7 +2300,7 @@ void CShaderAPIDx8::ReleaseInternalRenderTargets( )
 
 	// Note: This function does not release renderable textures created elsewhere
 	//       Those should be released separately via the texure manager
-	FOR_EACH_VEC( m_pBackBufferSurfaces, i )
+	for ( int i = 0; i < std::ssize( m_pBackBufferSurfaces ); i++ )
 	{
 		if ( m_pBackBufferSurfaces[i] != nullptr )
 		{
@@ -2605,7 +2611,7 @@ void CShaderAPIDx8::MarkCommitFuncInUse( CommitFuncType_t func, int nFunc )
 
 void CShaderAPIDx8::AddCommitFunc( CommitFuncType_t func, StateCommitFunc_t f )
 {
-	m_CommitFuncs[func].AddToTail( f );
+	m_CommitFuncs[func].push_back( f );
 }
 
 
@@ -2615,7 +2621,7 @@ void CShaderAPIDx8::AddCommitFunc( CommitFuncType_t func, StateCommitFunc_t f )
 void CShaderAPIDx8::ClearAllCommitFuncs( CommitFuncType_t func )
 {
 	memset( m_pCommitFlags[func], 0, COMMIT_FUNC_BYTE_COUNT );
-	m_CommitFuncs[func].RemoveAll();
+	m_CommitFuncs[func].clear();
 }
 
 
@@ -2628,8 +2634,8 @@ void CShaderAPIDx8::CallCommitFuncs( CommitFuncType_t func, bool bForce )
 	if ( IsDeactivated() )
 		return;
 
-	CUtlVector< StateCommitFunc_t > &funcList =	m_CommitFuncs[func];
-	int nCount = funcList.Count();
+	std::vector< StateCommitFunc_t > &funcList =	m_CommitFuncs[func];
+	int nCount = std::ssize( funcList );
 	if ( nCount == 0 )
 		return;
 
@@ -3058,7 +3064,7 @@ static void CommitVertexTextures( D3DDeviceWrapper *pDevice, const DynamicState_
 		Texture_t *pTexture = ( textureHandle != INVALID_SHADERAPI_TEXTURE_HANDLE ) ? &g_ShaderAPIDX8.GetTexture( textureHandle ) : nullptr;
 //		if ( pTexture && ( pTexture->m_Flags & Texture_t::IS_VERTEX_TEXTURE ) == 0 )
 //		{
-//			Warning( "Attempting to bind a vertex texture (%s) which was not created as a vertex texture!\n", pTexture->m_DebugName.String() );
+//			Warning( "Attempting to bind a vertex texture (%s) which was not created as a vertex texture!\n", pTexture->m_DebugName.data() );
 //		}
 
 		if ( bForce || ( currentVTState.m_BoundVertexTexture != textureHandle ) )
@@ -4487,7 +4493,7 @@ void CShaderAPIDx8::AddBufferToTextureList( const char *pName, D3DSURFACE_DESC &
 	pSubKey->SetString( "TexGroup", TEXTURE_GROUP_RENDER_TARGET );
 	pSubKey->SetInt( "Size", 
 //		ImageLoader::SizeInBytes( imageFormat ) * desc.Width * desc.Height );
-		nBpp * desc.Width * desc.Height * MAX( 1, desc.MultiSampleType ) / 8 );
+		nBpp * desc.Width * desc.Height * std::max<std::common_type_t<int, D3DMULTISAMPLE_TYPE>>( 1, desc.MultiSampleType ) / 8 );
 	char pTmpBuf[64];
 	sprintf( pTmpBuf, "%d bit buffer", nBpp );
 	pSubKey->SetString( "Format", pTmpBuf );//ImageLoader::GetName( imageFormat ) );
@@ -4507,7 +4513,7 @@ void CShaderAPIDx8::ExportTextureList()
 		// Device vanished...
 		return;
 
-	m_DebugTextureListLock.Lock();
+	m_DebugTextureListLock.lock();
 
 	m_nDebugDataExportFrame = m_CurrentFrame;
 
@@ -4519,9 +4525,9 @@ void CShaderAPIDx8::ExportTextureList()
 	m_nTextureMemoryUsedTotal = 0;
 	m_nTextureMemoryUsedPicMip1 = 0;
 	m_nTextureMemoryUsedPicMip2 = 0;
-	for ( ShaderAPITextureHandle_t hTexture = m_Textures.Head() ; hTexture != m_Textures.InvalidIndex(); hTexture = m_Textures.Next( hTexture ) )
+	for ( Texture_t &tex : m_Textures )
 	{
-		Texture_t &tex = m_Textures[hTexture];
+		ShaderAPITextureHandle_t hTexture = TextureHandle( tex );
 	
 		if ( !( tex.m_Flags & Texture_t::IS_ALLOCATED ) )
 			continue;
@@ -4572,8 +4578,8 @@ void CShaderAPIDx8::ExportTextureList()
 			tex.m_nTimesBoundThisFrame = 0;
 
 		KeyValues *pSubKey = m_pDebugTextureList->CreateNewKey();
-		pSubKey->SetString( "Name", tex.m_DebugName.String() );
-		pSubKey->SetString( "TexGroup", tex.m_TextureGroupName.String() );
+		pSubKey->SetString( "Name", tex.m_DebugName.data() );
+		pSubKey->SetString( "TexGroup", tex.m_TextureGroupName.data() );
 		pSubKey->SetInt( "Size", tex.GetMemUsage() );
 		if ( tex.GetCount() > 1 )
 			pSubKey->SetInt( "Count", tex.GetCount() );
@@ -4596,7 +4602,7 @@ void CShaderAPIDx8::ExportTextureList()
 		VPROF_INCREMENT_GROUP_COUNTER( "TexGroup_frame_" TEXTURE_GROUP_RENDER_TARGET, 
 			COUNTER_GROUP_TEXTURE_PER_FRAME, 
 //			ImageLoader::SizeInBytes( imageFormat ) * desc.Width * desc.Height );
-			4 * desc.Width * desc.Height * ( 1 + MAX( 1, desc.MultiSampleType ) ) ); // hack (front-buffer (single-sampled) + back-buffer (multi-sampled) )
+			4 * desc.Width * desc.Height * ( 1 + std::max<std::common_type_t<int, D3DMULTISAMPLE_TYPE>>( 1, desc.MultiSampleType ) ) ); // hack (front-buffer (single-sampled) + back-buffer (multi-sampled) )
 	}
 
 	m_pZBufferSurface->GetDesc( &desc );
@@ -4607,7 +4613,7 @@ void CShaderAPIDx8::ExportTextureList()
 		VPROF_INCREMENT_GROUP_COUNTER( "TexGroup_frame_" TEXTURE_GROUP_RENDER_TARGET, 
 			COUNTER_GROUP_TEXTURE_PER_FRAME, 
 //			ImageLoader::SizeInBytes( imageFormat ) * desc.Width * desc.Height );
-			4 * desc.Width * desc.Height * MAX( 1, desc.MultiSampleType ) ); // hack
+			4 * desc.Width * desc.Height * ( std::max<std::common_type_t<int, D3DMULTISAMPLE_TYPE>>( 1, desc.MultiSampleType ) ) ); // hack
 	}
 
 	if( m_pBackBufferSurfaces[BACK_BUFFER_INDEX_HDR] != nullptr )
@@ -4617,12 +4623,12 @@ void CShaderAPIDx8::ExportTextureList()
 		{
 			VPROF_INCREMENT_GROUP_COUNTER( "TexGroup_frame_" TEXTURE_GROUP_RENDER_TARGET, 
 				COUNTER_GROUP_TEXTURE_PER_FRAME, 
-				8 * desc.Width * desc.Height * MAX( 1, desc.MultiSampleType ) ); // hack
+				8 * desc.Width * desc.Height * ( std::max<std::common_type_t<int, D3DMULTISAMPLE_TYPE>>( 1, desc.MultiSampleType ) ) ); // hack
 		}
 	}
 
 
-	m_DebugTextureListLock.Unlock();
+	m_DebugTextureListLock.unlock();
 }
 
 
@@ -4641,13 +4647,14 @@ void CShaderAPIDx8::ReleaseShaderObjects( bool bReleaseManagedResources /*= true
 	if ( TextureCount() > 0 && bReleaseManagedResources )
 	{
 		ShaderAPITextureHandle_t hTexture;
-		for ( hTexture = m_Textures.Head(); hTexture != m_Textures.InvalidIndex(); hTexture = m_Textures.Next( hTexture ) )
+		for ( Texture_t &tex : m_Textures )
 		{
+			hTexture = TextureHandle( tex );
 			if ( GetTexture( hTexture ).m_NumCopies == 1 )
 			{
 				if ( GetTexture( hTexture ).GetTexture() )
 				{
-					Warning( "Didn't correctly clean up texture 0x%8.8x (%s)\n", hTexture, GetTexture( hTexture ).m_DebugName.String() ); 
+					Warning( "Didn't correctly clean up texture 0x%8.8x (%s)\n", hTexture, GetTexture( hTexture ).m_DebugName.data() ); 
 				}
 			}
 			else
@@ -4656,7 +4663,7 @@ void CShaderAPIDx8::ReleaseShaderObjects( bool bReleaseManagedResources /*= true
 				{
 					if ( GetTexture( hTexture ).GetTexture( k ) != 0 )
 					{
-						Warning( "Didn't correctly clean up texture 0x%8.8x (%s)\n", hTexture, GetTexture( hTexture ).m_DebugName.String() ); 
+						Warning( "Didn't correctly clean up texture 0x%8.8x (%s)\n", hTexture, GetTexture( hTexture ).m_DebugName.data() ); 
 						break;
 					}
 				}
@@ -4844,7 +4851,7 @@ void CShaderAPIDx8::ComputeFillRate()
 									IMAGE_FORMAT_RGB888, 
 									false ) + 4;
 
-		pBuf = (unsigned char*)malloc( memSize );
+		pBuf = (unsigned char*)MemAlloc_Alloc( memSize );
 	}
 
 	ReadPixels( 
@@ -6307,9 +6314,9 @@ D3DCOLOR CShaderAPIDx8::ComputeGammaCorrectedFogColor( unsigned char r, unsigned
 		fb *= m_ToneMappingScale.w;			//
 	}
 
-	fr = MIN( fr, 1.0f );
-	fg = MIN( fg, 1.0f );
-	fb = MIN( fb, 1.0f );
+	fr = std::min( fr, 1.0f );
+	fg = std::min( fg, 1.0f );
+	fb = std::min( fb, 1.0f );
 	r = (int)( fr * 255 );
 	g = (int)( fg * 255 );
 	b = (int)( fb * 255 );
@@ -7638,7 +7645,7 @@ void CShaderAPIDx8::SetTextureState( Sampler_t sampler, TextureBindFlags_t nBind
 	if ( !m_bDebugTexturesRendering )
 		++tex.m_nTimesBoundThisFrame;
 
-	tex.m_nTimesBoundMax = MAX( tex.m_nTimesBoundMax, tex.m_nTimesBoundThisFrame );
+	tex.m_nTimesBoundMax = std::max( tex.m_nTimesBoundMax, tex.m_nTimesBoundThisFrame );
 	
 	MaterialSystem_Config_t &config = ShaderUtil()->GetConfig();
 	bool noFilter = config.bFilterTextures == 0;
@@ -7871,7 +7878,7 @@ ShaderAPITextureHandle_t CShaderAPIDx8::CreateDepthTexture(
 		pTexture->m_Flags |= Texture_t::IS_DEPTH_STENCIL;
 	}
 
-	pTexture->m_DebugName = pDebugName;
+	pTexture->m_DebugName = ks::global_symbols().intern( ks::nz( pDebugName ) );
 	pTexture->m_Width = width;
 	pTexture->m_Height = height;
 	pTexture->m_Depth = 1;			// fake
@@ -7956,7 +7963,7 @@ void CShaderAPIDx8::CreateTextureHandles( ShaderAPITextureHandle_t *pHandles, in
 		{
 			// prior handles were freed and caller wants them back
 			hTexture = pHandles[i];
-			if ( m_Textures.IsValidIndex( hTexture) && !( m_Textures[hTexture].m_Flags & Texture_t::IS_ALLOCATED ) )
+			if ( IsValidTextureHandle( hTexture ) && !( GetTexture( hTexture ).m_Flags & Texture_t::IS_ALLOCATED ) )
 			{
 				nValid++;
 			}
@@ -7970,9 +7977,10 @@ void CShaderAPIDx8::CreateTextureHandles( ShaderAPITextureHandle_t *pHandles, in
 	}
 
 	int idxCreating = 0;
-	for ( hTexture = m_Textures.Head(); hTexture != m_Textures.InvalidIndex(); hTexture = m_Textures.Next( hTexture ) )
+	for ( Texture_t &tex : m_Textures )
 	{
-		if ( !( m_Textures[hTexture].m_Flags & Texture_t::IS_ALLOCATED ) )
+		hTexture = TextureHandle( tex );
+		if ( !( tex.m_Flags & Texture_t::IS_ALLOCATED ) )
 		{
 			pHandles[ idxCreating++ ] = hTexture;
 			if ( idxCreating >= nCount )
@@ -7982,7 +7990,7 @@ void CShaderAPIDx8::CreateTextureHandles( ShaderAPITextureHandle_t *pHandles, in
 
 	while ( idxCreating < nCount )
 	{
-		pHandles[ idxCreating++ ] = m_Textures.AddToTail();
+		pHandles[ idxCreating++ ] = TextureHandle( m_Textures.emplace_back() );
 	}
 }
 
@@ -8054,7 +8062,7 @@ void CShaderAPIDx8::CreateTextures(
 		arrTxp[ idxFrame ] = &GetTexture( pHandles[ idxFrame ] );
 		Texture_t *pTexture = arrTxp[ idxFrame ];
 		pTexture->m_Flags = Texture_t::IS_ALLOCATED;
-		pTexture->m_DebugName = pDebugName;
+		pTexture->m_DebugName = ks::global_symbols().intern( ks::nz( pDebugName ) );
 		pTexture->m_Width = width;
 		pTexture->m_Height = height;
 		pTexture->m_Depth = depth;
@@ -8148,7 +8156,7 @@ void CShaderAPIDx8::SetupTextureGroup( ShaderAPITextureHandle_t hTexture, const 
 	// Setup the texture group stuff.
 	if ( pTextureGroupName && pTextureGroupName[0] != 0 )
 	{
-		pTexture->m_TextureGroupName = pTextureGroupName;
+		pTexture->m_TextureGroupName = ks::global_symbols().intern( pTextureGroupName );
 	}
 	else
 	{
@@ -8158,10 +8166,10 @@ void CShaderAPIDx8::SetupTextureGroup( ShaderAPITextureHandle_t hTexture, const 
 	// 360 cannot vprof due to multicore loading until vprof is reentrant and these counters are real.
 #if defined( VPROF_ENABLED )
 	char counterName[256];
-	Q_snprintf( counterName, sizeof( counterName ), "TexGroup_global_%s", pTexture->m_TextureGroupName.String() );
+	Q_snprintf( counterName, sizeof( counterName ), "TexGroup_global_%s", pTexture->m_TextureGroupName.data() );
 	pTexture->m_pTextureGroupCounterGlobal = g_VProfCurrentProfile.FindOrCreateCounter( counterName, COUNTER_GROUP_TEXTURE_GLOBAL );
 
-	Q_snprintf( counterName, sizeof( counterName ), "TexGroup_frame_%s", pTexture->m_TextureGroupName.String() );
+	Q_snprintf( counterName, sizeof( counterName ), "TexGroup_frame_%s", pTexture->m_TextureGroupName.data() );
 	pTexture->m_pTextureGroupCounterFrame = g_VProfCurrentProfile.FindOrCreateCounter( counterName, COUNTER_GROUP_TEXTURE_PER_FRAME );
 #else
 	pTexture->m_pTextureGroupCounterGlobal = nullptr;
@@ -8381,8 +8389,9 @@ void CShaderAPIDx8::ReleaseAllTextures()
 {
 	ClearStdTextureHandles();
 	ShaderAPITextureHandle_t hTexture;
-	for ( hTexture = m_Textures.Head(); hTexture != m_Textures.InvalidIndex(); hTexture = m_Textures.Next( hTexture ) )
+	for ( Texture_t &tex : m_Textures )
 	{
+		hTexture = TextureHandle( tex );
 		if ( TextureIsAllocated( hTexture ) )
 		{
 			// Delete it baby
@@ -8401,7 +8410,7 @@ void CShaderAPIDx8::ReleaseAllTextures()
 void CShaderAPIDx8::DeleteAllTextures()
 {
 	ReleaseAllTextures();
-	m_Textures.Purge();
+	m_Textures.clear();
 }
 
 bool CShaderAPIDx8::IsTexture( ShaderAPITextureHandle_t textureHandle )
@@ -8445,7 +8454,7 @@ IDirect3DSurface* CShaderAPIDx8::GetTextureSurface( ShaderAPITextureHandle_t tex
 	//right now the 360 is getting invalid texture hadles here
 	// <sergiy> 5/20/2015: There's significant number of crashes in Windows NT - Crash Reports for CShaderAPIDx8::ReadPixelsAsync(int, int, int, int, unsigned char*, ImageFormat, ITexture*, CThreadEvent*)
 	//                     due to this handle being invalid. It may have to do with losing D3D device. Robustifying this code to check if the crashes will end.
-	if ( !m_Textures.IsValidIndex( textureHandle ) )
+	if ( !IsValidTextureHandle( textureHandle ) )
 	{
 		return nullptr;
 	}
@@ -8507,7 +8516,7 @@ void CShaderAPIDx8::SetRenderTargetEx( int nRenderTargetID, ShaderAPITextureHand
 		else if ( colorTextureHandle != SHADER_RENDERTARGET_BACKBUFFER )
 		{
 			Texture_t &tex = GetTexture( colorTextureHandle );
-			pRT = tex.m_DebugName.String();
+			pRT = tex.m_DebugName.data();
 		}
 		
 		if ( depthTextureHandle == SHADER_RENDERTARGET_NONE )
@@ -8517,7 +8526,7 @@ void CShaderAPIDx8::SetRenderTargetEx( int nRenderTargetID, ShaderAPITextureHand
 		else if ( depthTextureHandle != SHADER_RENDERTARGET_DEPTHBUFFER )
 		{
 			Texture_t &tex = GetTexture( depthTextureHandle );
-			pDS = tex.m_DebugName.String();
+			pDS = tex.m_DebugName.data();
 		}
 
 		char buf[256];
@@ -8807,7 +8816,7 @@ bool CShaderAPIDx8::TexLock( int level, int cubeFaceID, int xOffset, int yOffset
 	Assert( m_ModifyTextureLockedLevel < 0 );
 
 	ShaderAPITextureHandle_t hTexture = GetModifyTextureHandle();
-	if ( !m_Textures.IsValidIndex( hTexture ) )
+	if ( !IsValidTextureHandle( hTexture ) )
 		return false;
 
 	// This test here just makes sure we don't try to download mipmap levels
@@ -8867,7 +8876,7 @@ void CShaderAPIDx8::TexImage2D(
 	Assert( pSrcData );
 	AssertValidTextureHandle( GetModifyTextureHandle() );
 
-	if ( !m_Textures.IsValidIndex( GetModifyTextureHandle() ) )
+	if ( !IsValidTextureHandle( GetModifyTextureHandle() ) )
 		return;
 
 	Assert( (width <= g_pHardwareConfigDx8->Caps().m_MaxTextureWidth) && (height <= g_pHardwareConfigDx8->Caps().m_MaxTextureHeight) );
@@ -8921,7 +8930,7 @@ void CShaderAPIDx8::TexSubImage2D(
 	Assert( pSrcData );
 	AssertValidTextureHandle( GetModifyTextureHandle() );
 
-	if ( !m_Textures.IsValidIndex( GetModifyTextureHandle() ) )
+	if ( !IsValidTextureHandle( GetModifyTextureHandle() ) )
 		return;
 
 	// NOTE: This can only be done with procedural textures if this method is
@@ -8975,11 +8984,11 @@ void CShaderAPIDx8::UpdateTexture( int xOffset, int yOffset, int w, int h, Shade
 	LOCK_SHADERAPI();
 
 	AssertValidTextureHandle( hDstTexture );
-	if ( !m_Textures.IsValidIndex( hDstTexture ) )
+	if ( !IsValidTextureHandle( hDstTexture ) )
 		return;
 
 	AssertValidTextureHandle( hSrcTexture );
-	if ( !m_Textures.IsValidIndex( hSrcTexture ) )
+	if ( !IsValidTextureHandle( hSrcTexture ) )
 		return;
 
 	IDirect3DTexture *pDstTexture = (IDirect3DTexture *) g_ShaderAPIDX8.GetTexture( hDstTexture ).GetTexture();
@@ -9067,15 +9076,15 @@ void CShaderAPIDx8::SetAnisotropicLevel( int nAnisotropyLevel )
 		int nAnisotropyLevelOverride = 1;
 		{
 			// Set it to 1/2 the max but at least 2
-			nAnisotropyLevelOverride = MAX( 2, g_pHardwareConfigDx8->Caps().m_nMaxAnisotropy / 2 );
+			nAnisotropyLevelOverride = std::max( 2, g_pHardwareConfigDx8->Caps().m_nMaxAnisotropy / 2 );
 		}
 
 		// Use the larger value
-		nAnisotropyLevel = MAX( nAnisotropyLevel, nAnisotropyLevelOverride );
+		nAnisotropyLevel = std::max( nAnisotropyLevel, nAnisotropyLevelOverride );
 	}
 
 	// Make sure the value is in range
-	nAnisotropyLevel = MIN( nAnisotropyLevel, g_pHardwareConfigDx8->Caps().m_nMaxAnisotropy );
+	nAnisotropyLevel = std::min( nAnisotropyLevel, g_pHardwareConfigDx8->Caps().m_nMaxAnisotropy );
 
 	// Set the D3D max anisotropy state for all samplers
 	for ( int i = 0; i < g_pHardwareConfigDx8->Caps().m_NumSamplers; ++i)
@@ -9306,8 +9315,8 @@ void CShaderAPIDx8::SetLights( int nCount, const LightDesc_t* pDesc )
 	nCount = 0;
 #endif
 
-	int nMaxLight = MIN( g_pHardwareConfigDx8->Caps().m_MaxNumLights, MATERIAL_MAX_LIGHT_COUNT );
-	nCount = MIN( nMaxLight, nCount );
+	int nMaxLight = std::min<int>( g_pHardwareConfigDx8->Caps().m_MaxNumLights, MATERIAL_MAX_LIGHT_COUNT );
+	nCount = std::min( nMaxLight, nCount );
 
 	m_DynamicState.m_LightingState.m_nLocalLightCount = nCount;
 	if ( nCount > 0 )
@@ -9471,7 +9480,7 @@ void CShaderAPIDx8::CopyRenderTargetToTextureEx( ShaderAPITextureHandle_t textur
 		else if ( textureHandle != SHADER_RENDERTARGET_BACKBUFFER )
 		{
 			Texture_t &tex = GetTexture( textureHandle );
-			pRT = tex.m_DebugName.String();
+			pRT = tex.m_DebugName.data();
 		}
 				
 		char buf[256];
@@ -10245,7 +10254,7 @@ void CShaderAPIDx8::UpdateStereoTexture( ShaderAPITextureHandle_t texHandle, boo
 {
 	LOCK_SHADERAPI();
 
-	if ( ( texHandle == INVALID_SHADERAPI_TEXTURE_HANDLE ) || !m_Textures.IsValidIndex( texHandle ) )
+	if ( ( texHandle == INVALID_SHADERAPI_TEXTURE_HANDLE ) || !IsValidTextureHandle( texHandle ) )
 	{
 		if ( pStereoActiveThisFrame )
 		{
@@ -10835,7 +10844,7 @@ bool CShaderAPIDx8::SetSkinningMatrices( const MeshInstanceData_t &instance )
 			const int nSrcBone = instance.m_pBoneRemap[k].m_nSrcBoneIndex;
 			uint nIndex = VERTEX_SHADER_BONE_TRANSFORM( nDestBone );
 			SetVertexShaderConstantInternal( nIndex, instance.m_pPoseToWorld[ nSrcBone ].Base(), 3, true );
-			nMaxVertexConstantIndex = MAX( nMaxVertexConstantIndex, nIndex + 3 );
+			nMaxVertexConstantIndex = std::max( nMaxVertexConstantIndex, nIndex + 3 );
 		}
 	}
 	else
@@ -10843,16 +10852,16 @@ bool CShaderAPIDx8::SetSkinningMatrices( const MeshInstanceData_t &instance )
 		// 0 bones can come in; static prop case
 		if ( instance.m_pPoseToWorld )
 		{
-			int nBoneCount = MAX( 1, instance.m_nBoneCount );
+			int nBoneCount = std::max( 1, instance.m_nBoneCount );
 			uint nIndex = VERTEX_SHADER_BONE_TRANSFORM( 0 );
 			SetVertexShaderConstantInternal( nIndex, instance.m_pPoseToWorld[ 0 ].Base(), 3 * nBoneCount, true );
-			nMaxVertexConstantIndex = MAX( nMaxVertexConstantIndex, nIndex + 3 * nBoneCount );
+			nMaxVertexConstantIndex = std::max( nMaxVertexConstantIndex, nIndex + 3 * nBoneCount );
 		}
 		else
 		{
 			uint nIndex = VERTEX_SHADER_BONE_TRANSFORM( 0 );
 			SetVertexShaderConstantInternal( nIndex, s_IdentityPoseToWorld[ 0 ].Base(), 3, true );
-			nMaxVertexConstantIndex = MAX( nMaxVertexConstantIndex, nIndex + 3 );
+			nMaxVertexConstantIndex = std::max( nMaxVertexConstantIndex, nIndex + 3 );
 		}
 	}
 
@@ -10955,7 +10964,7 @@ void CShaderAPIDx8::CompileVertexShaderLocalLights( CompiledLightingState_t *pCo
 	const MaterialLightingState_t *pLightingState = CanonicalizeMaterialLightingStateForCSM( pOrigLightingState, canonicalizedLightingState, bStaticLight );
 	
 	// We can just use the data for this specific instance
-	nLightCount = MIN( pLightingState->m_nLocalLightCount, g_pHardwareConfigDx8->MaxNumLights() );
+	nLightCount = std::min( pLightingState->m_nLocalLightCount, g_pHardwareConfigDx8->MaxNumLights() );
 	pCompiledState->m_nLocalLightCount = nLightCount;
 
 	// Set the lighting state
@@ -11040,7 +11049,7 @@ void CShaderAPIDx8::CompilePixelShaderLocalLights( CompiledLightingState_t *pCom
 	// NOTE: Use maxlights so we can render instances with different #s of lights
 	// without needing to change shader
 	const int nNumLights = pLightingState->m_nLocalLightCount;
-	int nIterCount = MIN( nLightCount, 3 );
+	int nIterCount = std::min( nLightCount, 3 );
 	for ( int i = 0; i < nIterCount; ++i )
 	{
 		int nIndex = 2 * i;
@@ -11095,7 +11104,7 @@ void CShaderAPIDx8::CommitVertexShaderLighting( CompiledLightingState_t *pLighti
 	// Set the lighting state
 	if ( pLightingState->m_nLocalLightCount > 0 )
 	{
-		SetVertexShaderConstantInternal( VERTEX_SHADER_LIGHTS, pLightingState->m_VertexShaderLocalLights[0].Base(), 5 * MIN( pLightingState->m_nLocalLightCount, g_pHardwareConfigDx8->MaxNumLights() ) );
+		SetVertexShaderConstantInternal( VERTEX_SHADER_LIGHTS, pLightingState->m_VertexShaderLocalLights[0].Base(), 5 * std::min( pLightingState->m_nLocalLightCount, g_pHardwareConfigDx8->MaxNumLights() ) );
 	}
 
 	// Zero out subsequent lights if we don't support static control flow
@@ -11305,8 +11314,8 @@ void CShaderAPIDx8::SetViewports( int nCount, const ShaderViewport_t* pViewports
 
 			m_nWindowWidth = viewRect.right - viewRect.left;
 			m_nWindowHeight = viewRect.bottom - viewRect.top;
-			nMaxWidth = MIN( m_nWindowWidth, nMaxWidth );
-			nMaxHeight = MIN( m_nWindowHeight, nMaxHeight );
+			nMaxWidth = std::min( m_nWindowWidth, nMaxWidth );
+			nMaxHeight = std::min( m_nWindowHeight, nMaxHeight );
 		}
 
 		// Dimensions can freak out on app exit, so at least make sure the viewport is positive
@@ -12302,7 +12311,7 @@ void CShaderAPIDx8::ClearSelectionNames( )
 	{
 		WriteHitRecord();
 	}
-	m_SelectionNames.Clear();
+	m_SelectionNames.clear();
 }
 
 void CShaderAPIDx8::LoadSelectionName( int name )
@@ -12311,8 +12320,8 @@ void CShaderAPIDx8::LoadSelectionName( int name )
 	if (m_InSelectionMode)
 	{
 		WriteHitRecord();
-		Assert( m_SelectionNames.Count() > 0 );
-		m_SelectionNames.Top() = name;
+		Assert( !m_SelectionNames.empty() );
+		m_SelectionNames.back() = name;
 	}
 }
 
@@ -12322,7 +12331,7 @@ void CShaderAPIDx8::PushSelectionName( int name )
 	if (m_InSelectionMode)
 	{
 		WriteHitRecord();
-		m_SelectionNames.Push(name);
+		m_SelectionNames.push_back(name);
 	}
 }
 
@@ -12332,21 +12341,21 @@ void CShaderAPIDx8::PopSelectionName()
 	if (m_InSelectionMode)
 	{
 		WriteHitRecord();
-		m_SelectionNames.Pop();
+		m_SelectionNames.pop_back();
 	}
 }
 
 void CShaderAPIDx8::WriteHitRecord( )
 {
-	if (m_SelectionNames.Count() && (m_SelectionMinZ != FLT_MAX))
+	if (std::ssize( m_SelectionNames ) && (m_SelectionMinZ != FLT_MAX))
 	{
-		Assert( m_pCurrSelectionRecord + m_SelectionNames.Count() + 3 <	m_pSelectionBufferEnd );
-		*m_pCurrSelectionRecord++ = m_SelectionNames.Count();
+		Assert( m_pCurrSelectionRecord + std::ssize( m_SelectionNames ) + 3 <	m_pSelectionBufferEnd );
+		*m_pCurrSelectionRecord++ = std::ssize( m_SelectionNames );
 		// NOTE: because of rounding, "(uint32)(float)UINT32_MAX" yields zero(!), hence the use of doubles.
 		// [ ALSO: As of Nov 2011, VS2010 exhibits a debug build code-gen bug if we cast the result to int32 instead of uint32 ]
 	    *m_pCurrSelectionRecord++ = (uint32)( 0.5 + m_SelectionMinZ*(double)((uint32)~0) );
 	    *m_pCurrSelectionRecord++ = (uint32)( 0.5 + m_SelectionMaxZ*(double)((uint32)~0) );
-		for (int i = 0; i < m_SelectionNames.Count(); ++i)
+		for (int i = 0; i < std::ssize( m_SelectionNames ); ++i)
 		{
 			*m_pCurrSelectionRecord++ = m_SelectionNames[i];
 		}
@@ -12445,13 +12454,13 @@ void CShaderAPIDx8::RecomputeAggregateLightingState( void )
 				// Bump up the # of actual lights to account for the hidden all-black directional light.
 				// This solution sucks, because if numlights already equals MATERIAL_MAX_LIGHT_COUNT we will be deleting the last local light.
 				// A better way would be to add a scalar in the compiled light state which suppresses the CSM shadows.
-				nNumLights = MIN( nNumLights + 1, MATERIAL_MAX_LIGHT_COUNT );
+				nNumLights = std::min<int>( nNumLights + 1, MATERIAL_MAX_LIGHT_COUNT );
 			}
 		}
 
-		m_DynamicState.m_ShaderLightState.m_nNumLights = MAX( m_DynamicState.m_ShaderLightState.m_nNumLights, nNumLights );
+		m_DynamicState.m_ShaderLightState.m_nNumLights = std::max( m_DynamicState.m_ShaderLightState.m_nNumLights, nNumLights );
 		// Cap it to the maximum number of lights supported by the hardware
-		m_DynamicState.m_ShaderLightState.m_nNumLights = MIN( m_DynamicState.m_ShaderLightState.m_nNumLights, g_pHardwareConfigDx8->MaxNumLights() );
+		m_DynamicState.m_ShaderLightState.m_nNumLights = std::min( m_DynamicState.m_ShaderLightState.m_nNumLights, g_pHardwareConfigDx8->MaxNumLights() );
 
 	}
 }
@@ -12537,13 +12546,13 @@ void CShaderAPIDx8::EnableGetAllTextures( bool bEnable )
 
 KeyValues* CShaderAPIDx8::LockDebugTextureList( void )
 {
-	m_DebugTextureListLock.Lock();
+	m_DebugTextureListLock.lock();
 	return m_pDebugTextureList;
 }
 
 void CShaderAPIDx8::UnlockDebugTextureList( void )
 {
-	m_DebugTextureListLock.Unlock();
+	m_DebugTextureListLock.unlock();
 }
 
 int CShaderAPIDx8::GetTextureMemoryUsed( TextureMemoryType eTextureMemory )
@@ -13327,10 +13336,10 @@ float CShaderAPIDx8::GetLightMapScaleFactor() const
 
 ShaderAPITextureHandle_t CShaderAPIDx8::FindTexture( const char *pDebugName )
 {
-	for ( ShaderAPITextureHandle_t hTexture = m_Textures.Head() ; hTexture != m_Textures.InvalidIndex(); hTexture = m_Textures.Next( hTexture ) )
+	for ( Texture_t &tex : m_Textures )
 	{
-		Texture_t &tex = m_Textures[hTexture];
-		if ( !V_stricmp( tex.m_DebugName.String(), pDebugName ) )
+		ShaderAPITextureHandle_t hTexture = TextureHandle( tex );
+		if ( !V_stricmp( tex.m_DebugName.data(), pDebugName ) )
 		{
 			return hTexture;
 		}

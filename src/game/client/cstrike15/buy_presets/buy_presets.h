@@ -88,7 +88,7 @@ protected:
 	bool			m_fillAmmo;
 };
 
-typedef CUtlVector< BuyPresetWeapon > BuyPresetWeaponList;
+typedef std::vector< BuyPresetWeapon > BuyPresetWeaponList;
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -125,7 +125,7 @@ public:
 	bool	m_nightvision;
 };
 
-typedef CUtlVector< WeaponSet > WeaponSetList;
+typedef std::vector< WeaponSet > WeaponSetList;
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -145,7 +145,7 @@ public:
 	void Parse( KeyValues *data );								///< Populates data from a KeyValues structure, for loading
 	void Save( KeyValues *data );								///< Fills in a KeyValues structure with data, for saving
 
-	int GetNumSets() const { return m_weaponList.Count(); }		///< Returns the number of fallback WeaponSets
+	int GetNumSets() const { return std::ssize( m_weaponList ); }		///< Returns the number of fallback WeaponSets
 	const WeaponSet * GetSet( int index ) const;				///< Returns the specified fallback WeaponSet, or NULL if it doesn't exist
 
 	int FullCost() const;										///< Calculates the full cost of the preset, which is exactly the full cost of the first fallback WeaponSet
@@ -161,7 +161,7 @@ private:
 	WeaponSetList m_weaponList;
 };
 
-typedef CUtlVector< BuyPreset > BuyPresetList;
+typedef std::vector< BuyPreset > BuyPresetList;
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -180,17 +180,17 @@ public:
 
 	void PurchasePreset( int presetIndex );							///< Generates and sends buy commands to buy a specific preset
 
-	int GetNumPresets() { VerifyLoadedTeam(); return m_presets.Count(); }
+	int GetNumPresets() { VerifyLoadedTeam(); return std::ssize( m_presets ); }
 	const BuyPreset * GetPreset( int index ) const;					///< Returns the specified "live" preset, or NULL if it doesn't exist
 	void SetPreset( int index, const BuyPreset *preset );
 
 	void SetPresets( const BuyPresetList& presets ) { m_presets = presets; }
 
 	void SetEditPresets( const BuyPresetList& presets ) { m_editPresets = presets; }
-	int GetNumEditPresets() const { return m_editPresets.Count(); }
+	int GetNumEditPresets() const { return std::ssize( m_editPresets ); }
 
 	BuyPreset * GetEditPreset( int index );							///< Returns the specified editing preset, or NULL if it doesn't exist
-	const CUtlVector< BuyPreset >& GetEditPresets() const { return m_editPresets; }
+	const std::vector< BuyPreset >& GetEditPresets() const { return m_editPresets; }
 
 	void ResetEditPresets() { m_editPresets = m_presets; }			///< Resets the editing presets to the live presets (e.g. when starting editing)
 	void ResetEditToDefaults( void );							///< Loads the default presets into the editing presets (e.g. when hitting the "Use Defaults" button)

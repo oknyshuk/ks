@@ -9,9 +9,6 @@
 #include "mathlib/vmatrix.h"
 #include "tier2/tier2.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define FORWARD_AXIS 0
 #define LEFT_AXIS 1
 #define UP_AXIS 2
@@ -381,8 +378,8 @@ void CFrustum::GetNearAndFarPlanesAroundBox( float *pNear, float *pFar, AABB_t c
 	{
 		Vector vDelta = vCorners[i] - m_camera.m_origin;
 		float flDist = DotProduct( m_forward, vDelta );
-		flNear = MIN( flNear, flDist );
-		flFar = MAX( flFar, flDist );
+		flNear = std::min( flNear, flDist );
+		flFar = std::max( flFar, flDist );
 	}
 
 	*pNear = flNear;
@@ -635,8 +632,8 @@ float CFrustum::ComputeScreenSize( Vector vecOrigin, float flRadius ) const
 	{
 		return 1.0;											// eye inside sphere
 	}
-	float flSin = sin( DEG2RAD( MIN( GetCameraFOV(), 90.0 ) ) );
-	return MIN( 1.0, flSin * ( flRadius / flDist ) );
+	float flSin = sin( DEG2RAD( std::min<float>( GetCameraFOV(), 90.0f ) ) );
+	return std::min<float>( 1.0f, flSin * ( flRadius / flDist ) );
 	
 }
 

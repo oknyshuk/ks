@@ -9,9 +9,6 @@
 #include "depth_of_field_ps20b.inc"
 #include "convar.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar mat_dof_max_blur_radius( "mat_dof_max_blur_radius", "10", FCVAR_MATERIAL_SYSTEM_THREAD );
 ConVar mat_dof_quality( "mat_dof_quality", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
 
@@ -193,8 +190,8 @@ BEGIN_VS_SHADER_FLAGS( DepthOfField_dx9, "Depth of Field", SHADER_NOT_EDITABLE )
 			vConst[3] = params[FARBLURDEPTH]->GetFloatValue();;
 			// max blur radius will need to be set based on qulity level and screen res
 			vConst[4] = mat_dof_max_blur_radius.GetFloat();
-			vConst[5] = MIN( params[NEARBLURRADIUS]->GetFloatValue(), vConst[4] ) / vConst[4];	// near and far blur radius as fraction of max radius
-			vConst[6] = MIN( params[FARBLURRADIUS]->GetFloatValue(), vConst[4] ) / vConst[4];
+			vConst[5] = std::min( params[NEARBLURRADIUS]->GetFloatValue(), vConst[4] ) / vConst[4];	// near and far blur radius as fraction of max radius
+			vConst[6] = std::min( params[FARBLURRADIUS]->GetFloatValue(), vConst[4] ) / vConst[4];
 
 			vConst[8] = params[NEARPLANE]->GetFloatValue();
 			vConst[9] = params[FARPLANE]->GetFloatValue();

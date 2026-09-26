@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2022 Joshua Ashton and Josh Dowell (Slartibarty)
+
 //=================================================================================================
 //
 // The base physics DLL interface
@@ -5,6 +8,7 @@
 //=================================================================================================
 
 #include "cbase.h"
+#include "tier0/memalloc.h"
 
 #include "vjolt_environment.h"
 #include "vjolt_collide.h"
@@ -14,9 +18,6 @@
 #include "vjolt_interface.h"
 
 #include "vstdlib/jobthread.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-------------------------------------------------------------------------------------------------
 

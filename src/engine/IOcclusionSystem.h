@@ -15,7 +15,6 @@ class Vector;
 class VMatrix;
 struct model_t;
 class VPlane;
-class CUtlBuffer;
 
 
 //-----------------------------------------------------------------------------

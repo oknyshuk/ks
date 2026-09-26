@@ -9,9 +9,6 @@
 #include "textstatsmgr.h"
 #include "tier0/dbg.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 CTextStatsMgr g_TextStatsMgr;	// The default text stats manager.
 
 

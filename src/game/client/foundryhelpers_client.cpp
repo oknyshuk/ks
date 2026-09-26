@@ -11,11 +11,8 @@
 #include "c_basetempentity.h"
 #include "tier2/beamsegdraw.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
-
-static CUtlVector<EHANDLE> g_EntityHighlightEffects;
+static std::vector< EHANDLE > g_EntityHighlightEffects;
 static ConVar cl_foundry_ShowEntityHighlights( "cl_foundry_ShowEntityHighlights", "1" );
 
 
@@ -69,7 +66,7 @@ void AddCoolLine( const Vector &v1, const Vector &v2, unsigned long iExtraFadeOf
 	Vector vStartPos = v1;
 	for ( int i=0; i < nMaxLines; i++ )
 	{
-		float flEndDist = MIN( flCurDist + flLineSectionLength, flLineLen );
+		float flEndDist = std::min( flCurDist + flLineSectionLength, flLineLen );
 		Vector vEndPos = v1 + vDelta * flEndDist;
 		
 		int alpha;
@@ -143,7 +140,7 @@ void FoundryHelpers_DrawAll()
 {
 	if ( cl_foundry_ShowEntityHighlights.GetBool() )
 	{
-		for ( int i=0; i < g_EntityHighlightEffects.Count(); i++ )
+		for ( int i=0; i < std::ssize( g_EntityHighlightEffects ); i++ )
 		{
 			C_BaseEntity *pEnt = g_EntityHighlightEffects[i];
 
@@ -158,14 +155,14 @@ void FoundryHelpers_DrawAll()
 
 void FoundryHelpers_ClearEntityHighlightEffects()
 {
-	g_EntityHighlightEffects.Purge();
+	g_EntityHighlightEffects.clear(); g_EntityHighlightEffects.shrink_to_fit();
 }
 
 void FoundryHelpers_AddEntityHighlightEffect( int iEntity )
 {
 	EHANDLE hEnt = cl_entitylist->GetBaseEntity( iEntity );
 	if ( hEnt.IsValid() )
-		g_EntityHighlightEffects.AddToTail( hEnt );
+		g_EntityHighlightEffects.push_back( hEnt );
 }
 
 

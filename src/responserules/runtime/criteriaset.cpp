@@ -7,17 +7,14 @@
 //===========================================================================//
 #include "rrbase.h"
 
-#include "utlmap.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include <tier0/memdbgon.h>
+#include "tier1/map_ops.h"
 
 using namespace ResponseRules;
 
 //-----------------------------------------------------------------------------
 // Case-insensitive criteria symbol table
 //-----------------------------------------------------------------------------
-CUtlSymbolTable CriteriaSet::sm_CriteriaSymbols( 1024, 1024, true );
+ks::intern_pool CriteriaSet::sm_CriteriaSymbols( true );
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -40,8 +37,8 @@ const char *SplitContext( const char *raw, char *key, int keylen, char *value, i
 	}
 
 	int len = colon1 - raw;
-	Q_strncpy( key, raw, MIN( len + 1, keylen ) );
-	key[ MIN( len, keylen - 1 ) ] = 0;
+	Q_strncpy( key, raw, std::min( len + 1, keylen ) );
+	key[ std::min( len, keylen - 1 ) ] = 0;
 
 	bool last = false;
 	char *end = Q_strstr( colon1 + 1, "," );
@@ -66,7 +63,7 @@ const char *SplitContext( const char *raw, char *key, int keylen, char *value, i
 			return nullptr;
 		}
 
-		len = MIN( colon2 - ( colon1 + 1 ), valuelen - 1 );
+		len = std::min<std::common_type_t<long int, int>>( colon2 - ( colon1 + 1 ), valuelen - 1 );
 		Q_strncpy( value, colon1 + 1, len + 1 );
 		value[ len ] = 0;
 	}
@@ -75,7 +72,7 @@ const char *SplitContext( const char *raw, char *key, int keylen, char *value, i
 		if ( duration )
 			*duration = 0.0;
 
-		len = MIN( end - ( colon1 + 1 ), valuelen - 1 );
+		len = std::min<std::common_type_t<long int, int>>( end - ( colon1 + 1 ), valuelen - 1 );
 		Q_strncpy( value, colon1 + 1, len + 1 );
 		value[ len ] = 0;
 	}
@@ -87,7 +84,7 @@ const char *SplitContext( const char *raw, char *key, int keylen, char *value, i
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CriteriaSet::CriteriaSet() : m_Lookup( 0, 0, CritEntry_t::LessFunc ), m_bOverrideOnAppend(true), 
+CriteriaSet::CriteriaSet() : m_bOverrideOnAppend(true), 
 	m_nNumPrefixedContexts(0)
 {
 }
@@ -95,18 +92,11 @@ CriteriaSet::CriteriaSet() : m_Lookup( 0, 0, CritEntry_t::LessFunc ), m_bOverrid
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CriteriaSet::CriteriaSet( const CriteriaSet& src ) : m_Lookup( 0, 0, CritEntry_t::LessFunc ), m_nNumPrefixedContexts(src.m_nNumPrefixedContexts)
+CriteriaSet::CriteriaSet( const CriteriaSet& src ) : m_Lookup( src.m_Lookup ), m_nNumPrefixedContexts(src.m_nNumPrefixedContexts)
 {
-	m_Lookup.EnsureCapacity( src.m_Lookup.Count() );
-	for ( short i = src.m_Lookup.FirstInorder(); 
-		i != src.m_Lookup.InvalidIndex(); 
-		i = src.m_Lookup.NextInorder( i ) )
-	{
-		m_Lookup.Insert( src.m_Lookup[ i ] );
-	}
 }
 
-CriteriaSet::CriteriaSet( const char *criteria, const char *value ) : m_Lookup( 0, 0, CritEntry_t::LessFunc ), m_bOverrideOnAppend(true)
+CriteriaSet::CriteriaSet( const char *criteria, const char *value ) : m_bOverrideOnAppend(true)
 {
 	AppendCriteria(criteria,value);
 }
@@ -117,7 +107,7 @@ CriteriaSet::CriteriaSet( const char *criteria, const char *value ) : m_Lookup( 
 //-----------------------------------------------------------------------------
 CriteriaSet::CritSymbol_t CriteriaSet::ComputeCriteriaSymbol( const char *criteria )
 {
-	return sm_CriteriaSymbols.AddString( criteria );
+	return sm_CriteriaSymbols.intern( criteria );
 }
 
 
@@ -126,14 +116,15 @@ CriteriaSet::CritSymbol_t CriteriaSet::ComputeCriteriaSymbol( const char *criter
 //-----------------------------------------------------------------------------
 void CriteriaSet::AppendCriteria( CriteriaSet::CritSymbol_t criteria, const char *value, float weight )
 {
-	int idx = FindCriterionIndex( criteria );
-	if ( idx == -1 )
+	auto it = LowerBound( criteria );
+	int idx = (int)( it - m_Lookup.begin() );
+	if ( it == m_Lookup.end() || it->criterianame.data() != criteria.data() )
 	{
 		CritEntry_t entry;
 		entry.criterianame = criteria;
 		MEM_ALLOC_CREDIT();
-		idx = m_Lookup.Insert( entry );
-		if ( sm_CriteriaSymbols.String(criteria)[0] == kAPPLYTOWORLDPREFIX )
+		m_Lookup.insert( it, entry );
+		if ( criteria.starts_with( kAPPLYTOWORLDPREFIX ) )
 		{
 			m_nNumPrefixedContexts += 1;
 		}
@@ -159,8 +150,7 @@ void CriteriaSet::AppendCriteria( CriteriaSet::CritSymbol_t criteria, const char
 //-----------------------------------------------------------------------------
 void CriteriaSet::AppendCriteria( const char *pCriteriaName, const char *value /*= ""*/, float weight /*= 1.0f*/ )
 {
-	CUtlSymbol criteria = ComputeCriteriaSymbol( pCriteriaName );
-	AppendCriteria( criteria, value, weight );
+	AppendCriteria( ComputeCriteriaSymbol( pCriteriaName ), value, weight );
 }
 
 
@@ -200,16 +190,16 @@ void CriteriaSet::RemoveCriteria( const char *criteria )
 // or if this function should do that (true).
 void CriteriaSet::RemoveCriteria( int idx, bool bTestForPrefix )
 {
-	Assert( m_Lookup.IsValidIndex(idx) );
+	Assert( IsValidIndex(idx) );
 	if ( bTestForPrefix )
 	{
-		if ( sm_CriteriaSymbols.String( m_Lookup[idx].criterianame )[0] == kAPPLYTOWORLDPREFIX )
+		if ( m_Lookup[idx].criterianame.starts_with( kAPPLYTOWORLDPREFIX ) )
 		{
 			Assert( m_nNumPrefixedContexts > 0 );
 			m_nNumPrefixedContexts = isel( m_nNumPrefixedContexts - 1, m_nNumPrefixedContexts - 1, 0 );
 		}
 	}
-	m_Lookup.RemoveAt( idx );
+	m_Lookup.erase( m_Lookup.begin() + idx );
 }
 
 //-----------------------------------------------------------------------------
@@ -218,7 +208,7 @@ void CriteriaSet::RemoveCriteria( int idx, bool bTestForPrefix )
 //-----------------------------------------------------------------------------
 int CriteriaSet::GetCount() const
 {
-	return m_Lookup.Count();
+	return (int)m_Lookup.size();
 }
 
 
@@ -229,16 +219,15 @@ int CriteriaSet::GetCount() const
 //-----------------------------------------------------------------------------
 int CriteriaSet::FindCriterionIndex( CritSymbol_t criteria ) const
 {
-	CritEntry_t search;
-	search.criterianame = criteria;
-	int idx = m_Lookup.Find( search );
-	return ( idx == m_Lookup.InvalidIndex() ) ? -1 : idx;
+	auto it = LowerBound( criteria );
+	return ( it == m_Lookup.end() || it->criterianame.data() != criteria.data() ) ? -1 : (int)( it - m_Lookup.begin() );
 }
 
 int CriteriaSet::FindCriterionIndex( const char *name ) const
 {
-	CUtlSymbol criteria = ComputeCriteriaSymbol( name );
-	return FindCriterionIndex( criteria );
+	// A name that was never pooled can't be in any set.
+	CritSymbol_t criteria = sm_CriteriaSymbols.find( name );
+	return criteria.data() ? FindCriterionIndex( criteria ) : -1;
 }
 
 
@@ -247,8 +236,8 @@ int CriteriaSet::FindCriterionIndex( const char *name ) const
 //-----------------------------------------------------------------------------
 CriteriaSet::CritSymbol_t CriteriaSet::GetNameSymbol( int nIndex ) const
 {
-	if ( nIndex < 0 || nIndex >= (int)m_Lookup.Count() )
-		return UTL_INVAL_SYMBOL;
+	if ( nIndex < 0 || nIndex >= (int)m_Lookup.size() )
+		return {};
 
 	const CritEntry_t *entry = &m_Lookup[ nIndex ];
 	return entry->criterianame;
@@ -262,12 +251,11 @@ CriteriaSet::CritSymbol_t CriteriaSet::GetNameSymbol( int nIndex ) const
 //-----------------------------------------------------------------------------
 const char *CriteriaSet::GetName( int index ) const
 {
-	if ( index < 0 || index >= (int)m_Lookup.Count() )
+	if ( index < 0 || index >= (int)m_Lookup.size() )
 		return "";
 	else
 	{
-		const char *pCriteriaName = sm_CriteriaSymbols.String( m_Lookup[ index ].criterianame );
-		return pCriteriaName ? pCriteriaName : "";
+		return ks::nz( m_Lookup[ index ].criterianame.data() );
 	}
 }
 
@@ -279,7 +267,7 @@ const char *CriteriaSet::GetName( int index ) const
 //-----------------------------------------------------------------------------
 const char *CriteriaSet::GetValue( int index ) const
 {
-	if ( index < 0 || index >= (int)m_Lookup.Count() )
+	if ( index < 0 || index >= (int)m_Lookup.size() )
 		return "";
 
 	const CritEntry_t *entry = &m_Lookup[ index ];
@@ -293,7 +281,7 @@ const char *CriteriaSet::GetValue( int index ) const
 //-----------------------------------------------------------------------------
 float CriteriaSet::GetWeight( int index ) const
 {
-	if ( index < 0 || index >= (int)m_Lookup.Count() )
+	if ( index < 0 || index >= (int)m_Lookup.size() )
 		return 1.0f;
 
 	const CritEntry_t *entry = &m_Lookup[ index ];
@@ -350,24 +338,16 @@ void CriteriaSet::Merge( const char *modifiers ) // add criteria parsed from a t
 void CriteriaSet::Describe() const
 {
 	// build an alphabetized representation of the set for printing
-	typedef CUtlMap<const char *, const CritEntry_t *> tMap;
-	tMap m_TempMap( 0, m_Lookup.Count(), CaselessStringLessThan );
+	// Names are unique: the symbol table is case-insensitive.
+	std::map<const char *, const CritEntry_t *, ks::cstr_iless> m_TempMap;
 
-	for ( short i = m_Lookup.FirstInorder(); i != m_Lookup.InvalidIndex(); i = m_Lookup.NextInorder( i ) )
+	for ( const CritEntry_t &entry : m_Lookup )
 	{
-		const CritEntry_t *entry = &m_Lookup[ i ];
-
-		m_TempMap.Insert( sm_CriteriaSymbols.String( entry->criterianame ), entry );
+		m_TempMap.emplace( ks::nz( entry.criterianame.data() ), &entry );
 	}
 
-	for ( tMap::IndexType_t i = m_TempMap.FirstInorder(); i != m_TempMap.InvalidIndex(); i = m_TempMap.NextInorder( i ) )
+	for ( auto &[name, entry] : m_TempMap )
 	{
-		// const CritEntry_t *entry = &m_TempMap[ i ];
-		// const char *pCriteriaName = sm_CriteriaSymbols.String( entry->criterianame );
-
-		const char *name;
-		name = m_TempMap.Key( i );
-		const CritEntry_t *entry  = m_TempMap.Element( i );
 		if ( entry->weight != 1.0f )
 		{
 			DevMsg( "  %20s = '%s' (weight %f)\n", name, entry->value ? entry->value : "", entry->weight );
@@ -379,18 +359,16 @@ void CriteriaSet::Describe() const
 	}
 
 	/*
-	for ( short i = m_Lookup.FirstInorder(); i != m_Lookup.InvalidIndex(); i = m_Lookup.NextInorder( i ) )
+	for ( const CritEntry_t &entry : m_Lookup )
 	{
-		const CritEntry_t *entry = &m_Lookup[ i ];
-
-		const char *pCriteriaName = sm_CriteriaSymbols.String( entry->criterianame );
-		if ( entry->weight != 1.0f )
+		const char *pCriteriaName = ks::nz( entry.criterianame.data() );
+		if ( entry.weight != 1.0f )
 		{
-			DevMsg( "  %20s = '%s' (weight %f)\n", pCriteriaName, entry->value ? entry->value : "", entry->weight );
+			DevMsg( "  %20s = '%s' (weight %f)\n", pCriteriaName, entry.value ? entry.value : "", entry.weight );
 		}
 		else
 		{
-			DevMsg( "  %20s = '%s'\n", pCriteriaName, entry->value ? entry->value : "" );
+			DevMsg( "  %20s = '%s'\n", pCriteriaName, entry.value ? entry.value : "" );
 		}
 	}
 	*/
@@ -399,7 +377,8 @@ void CriteriaSet::Describe() const
 
 void CriteriaSet::Reset()
 {
-	m_Lookup.Purge();
+	m_Lookup.clear();
+	m_Lookup.shrink_to_fit();
 }
 
 void CriteriaSet::WriteToEntity( CBaseEntity *pEntity )
@@ -455,6 +434,6 @@ int CriteriaSet::InterceptWorldSetContexts( CriteriaSet * RESTRICT pFrom, Criter
 		pSetOnWorld->GetCount(), nPrefixedContexts	);
 
 	pFrom->m_nNumPrefixedContexts = 0;
-	pFrom->m_Lookup.Swap(rewrite.m_Lookup);
+	pFrom->m_Lookup.swap(rewrite.m_Lookup);
 	return pSetOnWorld->GetCount();
 }

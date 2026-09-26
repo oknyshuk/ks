@@ -21,12 +21,9 @@
 #include <tier0/dbg.h>
 #include "host.h"
 #include "host_state.h"
-#include "utlbuffer.h"
+#include "tier1/text_reader.h"
 #include "characterset.h"
 #include "tier1/fmtstr.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 #define PAUSE_FRAMES_BETWEEN_MAPS	300
 #define PAUSE_TIME_BETWEEN_MAPS		2.0f
@@ -98,19 +95,11 @@ CMapReslistGenerator &MapReslistGenerator()
 	return g_MapReslistGenerator;
 }
 
-static bool ReslistLogLessFunc( CUtlString const &pLHS, CUtlString const &pRHS )
-{
-	return CaselessStringLessThan( pLHS.Get(), pRHS.Get() );
-}
-
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
 CMapReslistGenerator::CMapReslistGenerator() : 
-	m_AlreadyWrittenFileNames( 0, 0, true ),
-	m_DeletionListWarnings( 0, 0, DefLessFunc( CUtlSymbol ) ),
-	m_EngineLog( 0, 0, ReslistLogLessFunc ),
-	m_MapLog( 0, 0, ReslistLogLessFunc ),
+	m_AlreadyWrittenFileNames( true ),
 	m_bAutoQuit( false )
 {
 	MEM_ALLOC_CREDIT_CLASS();
@@ -165,7 +154,7 @@ void CMapReslistGenerator::BuildMapList()
 	}
 }
 
-bool BuildGeneralMapList( CUtlVector<maplist_map_t> *aMaps, bool bUseMapListFile, const char *pMapFile, const char *pSystemMsg, int *iCurrentMap )
+bool BuildGeneralMapList( std::vector< maplist_map_t > *aMaps, bool bUseMapListFile, const char *pMapFile, const char *pSystemMsg, int *iCurrentMap )
 {
 	if ( !bUseMapListFile )
 	{
@@ -179,7 +168,7 @@ bool BuildGeneralMapList( CUtlVector<maplist_map_t> *aMaps, bool bUseMapListFile
 				// add to list
 				maplist_map_t newMap;
 				Q_strncpy(newMap.name, pMapName, sizeof(newMap.name));
-				aMaps->AddToTail( newMap );
+				aMaps->push_back( newMap );
 			}
 
 			CommandLine()->RemoveParm( "-reslistmap" );
@@ -218,7 +207,7 @@ bool BuildGeneralMapList( CUtlVector<maplist_map_t> *aMaps, bool bUseMapListFile
 				// add to list
 				maplist_map_t newMap;
 				Q_strncpy(newMap.name, sz, sizeof(newMap.name));
-				aMaps->AddToTail( newMap );
+				aMaps->push_back( newMap );
 			}
 
 			Sys_FindClose();
@@ -266,7 +255,7 @@ bool BuildGeneralMapList( CUtlVector<maplist_map_t> *aMaps, bool bUseMapListFile
 
 							maplist_map_t newMap;
 							Q_strncpy(newMap.name, szMap, sizeof(newMap.name));
-							aMaps->AddToTail( newMap );
+							aMaps->push_back( newMap );
 						}
 					}
 					delete[] pStart;
@@ -288,7 +277,7 @@ bool BuildGeneralMapList( CUtlVector<maplist_map_t> *aMaps, bool bUseMapListFile
 		}
 	}
 
-	int c = aMaps->Count();
+	int c = std::ssize( *aMaps );
 	if ( c == 0 )
 	{
 		Msg( "%s: No maps found\n", pSystemMsg );
@@ -304,7 +293,7 @@ bool BuildGeneralMapList( CUtlVector<maplist_map_t> *aMaps, bool bUseMapListFile
 	{
 		for ( int i = 0 ; i < c; ++i )
 		{
-			if ( !Q_stricmp( aMaps->Element(i).name, startmap ) )
+			if ( !Q_stricmp( (*aMaps)[ i ].name, startmap ) )
 			{
 				*iCurrentMap = i;
 			}
@@ -315,11 +304,11 @@ bool BuildGeneralMapList( CUtlVector<maplist_map_t> *aMaps, bool bUseMapListFile
 	{
 		if ( i < *iCurrentMap )
 		{
-			Msg( "-  %s\n", aMaps->Element(i).name );
+			Msg( "-  %s\n", (*aMaps)[ i ].name );
 		}
 		else
 		{
-			Msg( "+  %s\n", aMaps->Element(i).name );
+			Msg( "+  %s\n", (*aMaps)[ i ].name );
 		}
 	}
 
@@ -333,33 +322,29 @@ bool BuildGeneralMapList( CUtlVector<maplist_map_t> *aMaps, bool bUseMapListFile
 //-----------------------------------------------------------------------------
 void CMapReslistGenerator::BuildEngineLogFromReslist()
 {
-	m_EngineLog.RemoveAll();
+	m_EngineLog.clear();
 
-	CUtlBuffer buffer( 0, 0, CUtlBuffer::TEXT_BUFFER );
-	if ( !g_pFileSystem->ReadFile( CFmtStr( "%s\\%s", m_sResListDir.String(), ENGINE_RESLIST_FILE ), "DEFAULT_WRITE_PATH", buffer ) )
+	auto data = g_pFileSystem->ReadFile( CFmtStr( "%s\\%s", m_sResListDir.c_str(), ENGINE_RESLIST_FILE ), "DEFAULT_WRITE_PATH" );
+	if ( !data )
 	{
 		// does not exist
 		return;
 	}
+	ks::text_reader buffer( ks::text_view( *data ) );
 
 	characterset_t breakSet;
 	CharacterSetBuild( &breakSet, "" );
 
 	// parse reslist
-	char szToken[MAX_PATH];
 	for ( ;; )
 	{
-		int nTokenSize = buffer.ParseToken( &breakSet, szToken, sizeof( szToken ) );
-		if ( nTokenSize <= 0 )
+		auto token = buffer.read_token( breakSet );
+		if ( !token || token->empty() )
 		{
 			break;
 		}
 
-		int idx = m_EngineLog.Find( szToken );
-		if ( idx == m_EngineLog.InvalidIndex() )
-		{
-			m_EngineLog.Insert( szToken );
-		}
+		m_EngineLog.emplace( *token );
 	}
 }
 
@@ -369,17 +354,14 @@ void CMapReslistGenerator::BuildEngineLogFromReslist()
 void CMapReslistGenerator::LogToEngineReslist( char const *pLine )
 {
 	// prevent unecessary duplication due to file appending
-	int idx = m_EngineLog.Find( pLine );
-	if ( idx != m_EngineLog.InvalidIndex() )
+	if ( !m_EngineLog.insert( ks::nz( pLine ) ).second )
 	{
 		// already logged
 		return;
 	}
 
-	m_EngineLog.Insert( pLine );
-
 	// Open for append, write data, close.
-	FileHandle_t fh = g_pFileSystem->Open( CFmtStr( "%s\\%s", m_sResListDir.String(), ENGINE_RESLIST_FILE ), "at", "DEFAULT_WRITE_PATH" );
+	FileHandle_t fh = g_pFileSystem->Open( CFmtStr( "%s\\%s", m_sResListDir.c_str(), ENGINE_RESLIST_FILE ), "at", "DEFAULT_WRITE_PATH" );
 	if ( fh != FILESYSTEM_INVALID_HANDLE )
 	{
 		g_pFileSystem->Write( "\"", 1, fh );
@@ -423,13 +405,13 @@ void CMapReslistGenerator::EnableReslistGeneration( bool usemaplistfile )
 
 
 	// create file to dump out to
-	g_pFileSystem->CreateDirHierarchy( m_sResListDir.String() , "DEFAULT_WRITE_PATH" );
+	g_pFileSystem->CreateDirHierarchy( m_sResListDir.c_str() , "DEFAULT_WRITE_PATH" );
 
 	// Leave the existing one if resuming from a specific map, otherwise, blow it away
 	if ( !CommandLine()->FindParm( "-startmap" ) )
 	{
-		g_pFileSystem->RemoveFile( CFmtStr( "%s\\%s", m_sResListDir.String(), ENGINE_RESLIST_FILE ), "DEFAULT_WRITE_PATH" );
-		m_EngineLog.RemoveAll();
+		g_pFileSystem->RemoveFile( CFmtStr( "%s\\%s", m_sResListDir.c_str(), ENGINE_RESLIST_FILE ), "DEFAULT_WRITE_PATH" );
+		m_EngineLog.clear();
 	}
 	else
 	{
@@ -498,9 +480,9 @@ void CMapReslistGenerator::OnLevelLoadStart(const char *levelName)
 	}
 
 	// reset the duplication list
-	m_AlreadyWrittenFileNames.RemoveAll();
+	m_AlreadyWrittenFileNames.clear();
 
-	m_MapLog.RemoveAll();
+	m_MapLog.clear();
 
 	// add in the bsp file to the list, and its node graph
 	char path[MAX_PATH];
@@ -556,7 +538,7 @@ bool CMapReslistGenerator::ShouldRebuildCaches()
 
 char const *CMapReslistGenerator::GetResListDirectory() const
 {
-	return m_sResListDir.String();
+	return m_sResListDir.c_str();
 }
 
 void CMapReslistGenerator::DoQuit()
@@ -587,7 +569,7 @@ void CMapReslistGenerator::RunFrame()
 		// about to transition or terminate, emit the current map log
 		WriteMapLog();
 
-		if ( m_Maps.IsValidIndex( m_iCurrentMap ) )
+		if ( ks::is_valid_index( m_Maps, m_iCurrentMap ) )
 		{
 			// will start counting again after the level loads
 			m_flNextMapRunTime = 0.0f;
@@ -599,7 +581,7 @@ void CMapReslistGenerator::RunFrame()
 				SetPrefix( m_Maps[m_iCurrentMap].name );
 
 				++m_iCurrentMap;
-				if ( m_Maps.IsValidIndex( m_iCurrentMap ) )
+				if ( ks::is_valid_index( m_Maps, m_iCurrentMap ) )
 				{
 					// cause a full engine restart on the transition to the next map
 					// ensure that one-time init code logs correctly to each map reslist
@@ -728,12 +710,11 @@ void CMapReslistGenerator::OnResourcePrecachedFullPath(const char *fullPathFileN
 	Q_FixSlashes( fixed );
 
 	// make sure the filename hasn't already been written
-	UtlSymId_t filename = m_AlreadyWrittenFileNames.Find( fixed );
-	if ( filename != UTL_INVAL_SYMBOL )
+	if ( m_AlreadyWrittenFileNames.contains( fixed ) )
 		return;
 
 	// record in list, so we don't write it again
-	m_AlreadyWrittenFileNames.AddString( fixed );
+	m_AlreadyWrittenFileNames.intern( fixed );
 
 	// add extras for mdl's
 	if (strstr(fixed, ".mdl"))
@@ -775,11 +756,7 @@ void CMapReslistGenerator::OnResourcePrecachedFullPath(const char *fullPathFileN
 	else
 	{
 		// find or add to sorted tree
-		int idx = m_MapLog.Find( relativeFileName );
-		if ( idx == m_MapLog.InvalidIndex() )
-		{
-			m_MapLog.Insert( relativeFileName );
-		}
+		m_MapLog.insert( ks::nz( relativeFileName ) );
 	}
 }
 
@@ -793,13 +770,13 @@ void CMapReslistGenerator::WriteMapLog()
 
 	// write the sorted map log, allows for easier diffs between revisions
 	char path[_MAX_PATH];
-	Q_snprintf( path, sizeof( path ), "%s\\%s.lst", m_sResListDir.String(), m_szLevelName );
+	Q_snprintf( path, sizeof( path ), "%s\\%s.lst", m_sResListDir.c_str(), m_szLevelName );
 	FileHandle_t fh = g_pFileSystem->Open( path, "wt", "DEFAULT_WRITE_PATH" );
 	if ( FILESYSTEM_INVALID_HANDLE != fh )
 	{
-		for ( int i = m_MapLog.FirstInorder(); i != m_MapLog.InvalidIndex(); i = m_MapLog.NextInorder( i ) )
+		for ( const std::string &line : m_MapLog )
 		{
-			const char *pLine = m_MapLog[i].String();
+			const char *pLine = line.c_str();
 			g_pFileSystem->Write( "\"", 1, fh );
 			g_pFileSystem->Write( pLine, Q_strlen( pLine ), fh );
 			g_pFileSystem->Write( "\"\n", 2, fh );
@@ -868,7 +845,7 @@ void CMapReslistGenerator::EnableDeletionsTracking()
 					Q_FixSlashes( filename );
 					Q_strlower( filename );
 	
-					m_DeletionList.AddString( filename );
+					m_DeletionList.intern( filename );
 
 					++deletions;
 				}
@@ -907,11 +884,9 @@ void CMapReslistGenerator::EnableDeletionsTracking()
 					Q_FixSlashes( com_token );
 					Q_strlower( com_token );
 	
-					CUtlSymbol sym = m_DeletionListWarningsSymbols.AddString( com_token );
-					int idx = m_DeletionListWarnings.Find( sym );
-					if ( idx == m_DeletionListWarnings.InvalidIndex() )
+					if ( !m_DeletionListWarningsSymbols.contains( com_token ) )
 					{
-						m_DeletionListWarnings.Insert( sym );
+						m_DeletionListWarnings.push_back( m_DeletionListWarningsSymbols.intern( com_token ) );
 						++warnings;
 					}
 				}
@@ -942,16 +917,12 @@ void CMapReslistGenerator::TrackDeletions( const char *fullPathFileName )
 	Q_FixSlashes( test );
 	Q_strlower( test );
 
-	CUtlSymbol sym = m_DeletionList.Find( test );
-	if ( UTL_INVAL_SYMBOL != sym )
+	if ( m_DeletionList.contains( test ) )
 	{
-		CUtlSymbol warningSymbol = m_DeletionListWarningsSymbols.AddString( test );
-
-		uint idx = m_DeletionListWarnings.Find( warningSymbol );
-		if ( idx == m_DeletionListWarnings.InvalidIndex() )
+		if ( !m_DeletionListWarningsSymbols.contains( test ) )
 		{
+			m_DeletionListWarnings.push_back( m_DeletionListWarningsSymbols.intern( test ) );
 			Msg( "--> Referenced file marked for deletion \"%s\"\n", test );
-			m_DeletionListWarnings.Insert( warningSymbol );
 		}
 	}
 
@@ -998,9 +969,9 @@ void CMapReslistGenerator::Shutdown()
 		SpewTrackedDeletionsLog();
 
 		g_pFileSystem->RemoveLoggingFunc( &TrackDeletionsLoggingFunc );
-		m_DeletionList.RemoveAll();
-		m_DeletionListWarnings.RemoveAll();
-		m_DeletionListWarningsSymbols.RemoveAll();
+		m_DeletionList.clear();
+		m_DeletionListWarnings.clear();
+		m_DeletionListWarningsSymbols.clear();
 		m_bTrackingDeletions = false;
 	}
 }
@@ -1016,12 +987,10 @@ void CMapReslistGenerator::SpewTrackedDeletionsLog()
 		return;
 	}
 
-	for ( int i = m_DeletionListWarnings.FirstInorder(); i != m_DeletionListWarnings.InvalidIndex() ; i = m_DeletionListWarnings.NextInorder( i ) )
+	for ( std::string_view filename : m_DeletionListWarnings )
 	{
-		char const *filename = m_DeletionListWarningsSymbols.String( m_DeletionListWarnings[ i ] );
-
 		g_pFileSystem->Write("\"", 1, hUndeleteFile);
-		g_pFileSystem->Write(filename, Q_strlen(filename), hUndeleteFile);
+		g_pFileSystem->Write(filename.data(), filename.size(), hUndeleteFile);
 		g_pFileSystem->Write("\"\n", 2, hUndeleteFile);
 	}
 

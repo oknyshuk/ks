@@ -16,10 +16,9 @@
 #include "tier0/memalloc.h"
 #include "tier0/tslist.h"
 #include "tier1/interface.h"
-#include "tier1/utlsymbol.h"
 #include "tier1/functors.h" 
 #include "tier1/checksum_crc.h"
-#include "tier1/utlqueue.h"
+#include "tier1/utlvector.h"
 #include "appframework/iappsystem.h"
 #include "tier2/tier2.h"
 

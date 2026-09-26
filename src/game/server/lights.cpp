@@ -12,9 +12,6 @@
 #include "world.h"
 #include "env_cascade_light.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 LINK_ENTITY_TO_CLASS( light, CLight );
 
 IMPLEMENT_REFLECT_DATAMAP( CLight )

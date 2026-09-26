@@ -3,7 +3,6 @@
 #define _SQUSERDATA_H_
 
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#include "memdbgon.h"
 #undef new // allow placement new
 #endif
 struct SQUserData : SQDelegable
@@ -42,6 +41,5 @@ struct SQUserData : SQDelegable
 };
 
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#include "memdbgoff.h"
 #endif
 #endif //_SQUSERDATA_H_

@@ -4,6 +4,9 @@
 #include "matchmaking/imatchframework.h"
 #include "tier2/tier2.h"
 #include "fmtstr.h"
+#include "tier1/byte_writer.h"
+#include <cstring>
+#include <vector>
 
 #include "audio/public/voice.h"
 
@@ -15,9 +18,6 @@
 #endif
 extern IVEngineClient *engineClient;
 #endif
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 CEngineVoiceStub *Audio_GetEngineVoiceStub()
 {
@@ -42,66 +42,67 @@ enum SndVoiceLog_t
 	SND_VOICE_LOG_RECORD_LOCAL = 8,
 	SND_VOICE_LOG_RECORD_LOCAL_11025 = 16,
 };
-CUtlBuffer g_bufSndVoiceLog;
-CUtlBuffer g_bufSndVoiceLog11025;
+ks::byte_writer g_bufSndVoiceLog;
+ks::byte_writer g_bufSndVoiceLog11025;
 
 CON_COMMAND( snd_voice_log_commit, "Commit voice log to file" )
 {
-	if ( ( args.ArgC() <= 1 ) || ( g_bufSndVoiceLog.TellMaxPut() <= 0 ) )
+	if ( ( args.ArgC() <= 1 ) || ( g_bufSndVoiceLog.size() <= 0 ) )
 	{
-		Msg( "Voice log size: %u/%u\n", g_bufSndVoiceLog.TellMaxPut(), g_bufSndVoiceLog11025.TellMaxPut() );
+		Msg( "Voice log size: %u/%u\n", (unsigned)g_bufSndVoiceLog.size(), (unsigned)g_bufSndVoiceLog11025.size() );
 		return;
 	}
 	if ( !strcmp( "0", args.Arg( 1 ) ) )
 	{
 		Msg( "Voice log discarded\n" );
-		g_bufSndVoiceLog.Purge();
-		g_bufSndVoiceLog11025.Purge();
+		g_bufSndVoiceLog.clear();
+		g_bufSndVoiceLog11025.clear();
 		return;
 	}
 	
-	if ( g_pFullFileSystem->WriteFile( args.Arg( 1 ), nullptr, g_bufSndVoiceLog ) )
+	if ( g_pFullFileSystem->WriteFile( args.Arg( 1 ), nullptr, g_bufSndVoiceLog.bytes() ) )
 	{
-		Msg( "Voice log committed to file '%s', %u bytes\n", args.Arg(1), g_bufSndVoiceLog.TellMaxPut() );
-		g_bufSndVoiceLog.Purge();
+		Msg( "Voice log committed to file '%s', %u bytes\n", args.Arg(1), (unsigned)g_bufSndVoiceLog.size() );
+		g_bufSndVoiceLog.clear();
 	}
 	else
 	{
-		Warning( "Failed to commit voice log to file '%s', keeping %u bytes\n", args.Arg(1), g_bufSndVoiceLog.TellMaxPut() );
+		Warning( "Failed to commit voice log to file '%s', keeping %u bytes\n", args.Arg(1), (unsigned)g_bufSndVoiceLog.size() );
 	}
 	
-	if ( g_pFullFileSystem->WriteFile( CFmtStr( "%s.11025", args.Arg( 1 ) ), nullptr, g_bufSndVoiceLog11025 ) )
+	if ( g_pFullFileSystem->WriteFile( CFmtStr( "%s.11025", args.Arg( 1 ) ), nullptr, g_bufSndVoiceLog11025.bytes() ) )
 	{
-		Msg( "Voice log committed to file '%s.11025', %u bytes\n", args.Arg(1), g_bufSndVoiceLog11025.TellMaxPut() );
-		g_bufSndVoiceLog11025.Purge();
+		Msg( "Voice log committed to file '%s.11025', %u bytes\n", args.Arg(1), (unsigned)g_bufSndVoiceLog11025.size() );
+		g_bufSndVoiceLog11025.clear();
 	}
 	else
 	{
-		Warning( "Failed to commit voice log to file '%s.11025', keeping %u bytes\n", args.Arg(1), g_bufSndVoiceLog11025.TellMaxPut() );
+		Warning( "Failed to commit voice log to file '%s.11025', keeping %u bytes\n", args.Arg(1), (unsigned)g_bufSndVoiceLog11025.size() );
 	}
 }
 
 CON_COMMAND( snd_voice_log_load, "Load voice log file" )
 {
-	g_bufSndVoiceLog.Purge();
-	if ( !g_pFullFileSystem->ReadFile( args.Arg( 1 ), nullptr, g_bufSndVoiceLog ) )
+	g_bufSndVoiceLog.clear();
+	auto data = g_pFullFileSystem->ReadFile( args.Arg( 1 ), nullptr );
+	if ( !data )
 	{
 		Warning( "Failed to read voice log from file '%s'\n", args.Arg( 1 ) );
 	}
 	else
 	{
+		g_bufSndVoiceLog.write_bytes( *data );
 		Msg( "Loaded voice log from file '%s'\n", args.Arg( 1 ) );
 	}
 }
 
 CON_COMMAND( snd_voice_log_setsin, "Set voice log sin-wave" )
 {
-	g_bufSndVoiceLog.Purge();
+	g_bufSndVoiceLog.clear();
 
 	const int kNumSamples = 500000;
 
-	g_bufSndVoiceLog.EnsureCapacity( kNumSamples * sizeof( int16 ) );
-	g_bufSndVoiceLog.SeekPut( CUtlBuffer::SEEK_HEAD, kNumSamples * sizeof( int16 ) );
+	const auto samples = g_bufSndVoiceLog.claim_span( kNumSamples * sizeof( int16 ) );
 
 	float flSinFreq = 2.0/128.0;
 	if ( args.ArgC() > 1 )
@@ -116,7 +117,8 @@ CON_COMMAND( snd_voice_log_setsin, "Set voice log sin-wave" )
 		for ( int q = 0 ; q < kNumSamples; ++ q )
 		{
 			float f = sin( flSinFreq * M_PI * q ) * 20000;
-			( ( int16 * ) g_bufSndVoiceLog.Base() )[q] = f;
+			const int16 sample = f;
+			std::memcpy( samples.data() + q * sizeof( int16 ), &sample, sizeof( sample ) );
 		}
 	}
 }
@@ -174,9 +176,9 @@ typedef ResampleGeneric_t< VOICE_OUTPUT_SAMPLE_RATE, SOUND_PC_CELP_FREQ > Resamp
 
 CON_COMMAND( snd_voice_log_resample, "Resample voice log file" )
 {
-	g_bufSndVoiceLog.Purge();
-	CUtlBuffer bufRaw;
-	if ( !g_pFullFileSystem->ReadFile( args.Arg( 1 ), nullptr, bufRaw ) )
+	g_bufSndVoiceLog.clear();
+	auto bufRaw = g_pFullFileSystem->ReadFile( args.Arg( 1 ), nullptr );
+	if ( !bufRaw )
 	{
 		Warning( "Failed to read voice log from file '%s'\n", args.Arg( 1 ) );
 		return;
@@ -187,17 +189,19 @@ CON_COMMAND( snd_voice_log_resample, "Resample voice log file" )
 	}
 
 	Resample_CELP_to_PC_t rcpt;
-	g_bufSndVoiceLog.EnsureCapacity( bufRaw.TellPut() * 2 );
-	uint32 numResamples = rcpt.Resample( (int16*)bufRaw.Base(), bufRaw.TellPut()/2, (int16*) g_bufSndVoiceLog.Base() );
-	g_bufSndVoiceLog.SeekPut( CUtlBuffer::SEEK_HEAD, numResamples*2 );
-	Msg( "Resampled voice log from %d to %d samples\n", bufRaw.TellPut()/2, numResamples );
+	std::vector< int16 > in( bufRaw->size() / 2 );
+	std::memcpy( in.data(), bufRaw->data(), in.size() * sizeof( int16 ) );
+	std::vector< int16 > out( bufRaw->size() + 2 );
+	uint32 numResamples = rcpt.Resample( in.data(), in.size(), out.data() );
+	g_bufSndVoiceLog.write_bytes( out.data(), numResamples * 2 );
+	Msg( "Resampled voice log from %d to %d samples\n", (int)( bufRaw->size() / 2 ), numResamples );
 }
 
 CON_COMMAND( snd_voice_log_resample44, "Resample voice log file all the way up to 44100" )
 {
-	g_bufSndVoiceLog.Purge();
-	CUtlBuffer bufRaw;
-	if ( !g_pFullFileSystem->ReadFile( args.Arg( 1 ), nullptr, bufRaw ) )
+	g_bufSndVoiceLog.clear();
+	auto bufRaw = g_pFullFileSystem->ReadFile( args.Arg( 1 ), nullptr );
+	if ( !bufRaw )
 	{
 		Warning( "Failed to read voice log from file '%s'\n", args.Arg( 1 ) );
 		return;
@@ -208,16 +212,16 @@ CON_COMMAND( snd_voice_log_resample44, "Resample voice log file all the way up t
 	}
 
 	Resample_CELP_to_PC_t rcpt;
-	CUtlBuffer buf11025;
-	buf11025.EnsureCapacity( bufRaw.TellPut() * 2 );
-	uint32 numResamples = rcpt.Resample( (int16*)bufRaw.Base(), bufRaw.TellPut()/2, (int16*) buf11025.Base() );
-	buf11025.SeekPut( CUtlBuffer::SEEK_HEAD, numResamples*2 );
-	Msg( "Resampled voice log from %d to %d @11025 samples\n", bufRaw.TellPut()/2, numResamples );
+	std::vector< int16 > in( bufRaw->size() / 2 );
+	std::memcpy( in.data(), bufRaw->data(), in.size() * sizeof( int16 ) );
+	std::vector< int16 > buf11025( bufRaw->size() + 2 );
+	uint32 numResamples = rcpt.Resample( in.data(), in.size(), buf11025.data() );
+	Msg( "Resampled voice log from %d to %d @11025 samples\n", (int)( bufRaw->size() / 2 ), numResamples );
 
-	g_bufSndVoiceLog.EnsureCapacity( buf11025.TellPut() * 4 );
-	int16 *pIn = (int16*) buf11025.Base();
-	int16 *pInEnd = pIn + numResamples;
-	int16 *pOut = (int16*) g_bufSndVoiceLog.Base();
+	std::vector< int16 > outSamples;
+	outSamples.reserve( numResamples * 4 );
+	const int16 *pIn = buf11025.data();
+	const int16 *pInEnd = pIn + numResamples;
 	while ( pIn < pInEnd )
 	{
 		int16 a = *( pIn++ );
@@ -225,10 +229,10 @@ CON_COMMAND( snd_voice_log_resample44, "Resample voice log file all the way up t
 
 		for ( int jj = 0; jj < 4; ++ jj )
 		{
-			*( pOut ++ ) = ( double( b ) * ( jj ) + double( a ) * ( 4 - jj ) ) / 4.0;
+			outSamples.push_back( ( double( b ) * ( jj ) + double( a ) * ( 4 - jj ) ) / 4.0 );
 		}
 	}
-	g_bufSndVoiceLog.SeekPut( CUtlBuffer::SEEK_HEAD, numResamples*8 );
+	g_bufSndVoiceLog.write_bytes( outSamples.data(), outSamples.size() * sizeof( int16 ) );
 }
 
 #endif // SND_VOICE_LOG_DEBUG
@@ -270,7 +274,7 @@ public:
 		uint64 m_uiFlags;
 		float m_flLastTalkTimestamp;
 	};
-	CUtlVector< RemoteTalker_t > m_arrRemoteVoice;
+	std::vector< RemoteTalker_t > m_arrRemoteVoice;
 	bool m_bVoiceForPs3;
 	int FindRemoteTalker( XUID xuid )
 	{
@@ -581,7 +585,7 @@ playvoice:
 
 		static float s_flLastTime = 0;
 		static int s_nBufferPosition = 0;
-		if ( g_bufSndVoiceLog.TellPut() <= nVoiceLogSamples )
+		if ( (int)g_bufSndVoiceLog.size() <= nVoiceLogSamples )
 			return;
 
 		if ( !s_flLastTime )
@@ -609,12 +613,12 @@ playvoice:
 		while ( numSoundFrames --> 0 )
 		{
 			// See if we need to reset buffer position
-			if ( s_nBufferPosition + nVoiceLogSamples > g_bufSndVoiceLog.TellPut() )
+			if ( s_nBufferPosition + nVoiceLogSamples > (int)g_bufSndVoiceLog.size() )
 				s_nBufferPosition = 0;
 
-			// uint32 numOutSamples = m_resampleCelp2Pc.Resample( ( ( const int16 * ) g_bufSndVoiceLog.Base() ) + ( s_nBufferPosition / 2 ), 160, piWritePos );
+			// uint32 numOutSamples = m_resampleCelp2Pc.Resample( ( ( const int16 * ) g_bufSndVoiceLog.data() ) + ( s_nBufferPosition / 2 ), 160, piWritePos );
 					uint32 numOutSamples = nVoiceLogSamples;
-					V_memcpy( piWritePos, ( ( const int16 * ) g_bufSndVoiceLog.Base() ) + ( s_nBufferPosition / sizeof( int16 ) ), nVoiceLogSamples* sizeof( int16 ) );
+					V_memcpy( piWritePos, ( ( const int16 * ) g_bufSndVoiceLog.data() ) + ( s_nBufferPosition / sizeof( int16 ) ), nVoiceLogSamples* sizeof( int16 ) );
 			piWritePos += numOutSamples;
 			numUncompressedBytes += numOutSamples * 2;
 			s_nBufferPosition += nVoiceLogSamples * sizeof( int16 );

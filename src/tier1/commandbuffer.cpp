@@ -8,11 +8,8 @@
 //===========================================================================//
 
 #include "tier1/commandbuffer.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/text_reader.h"
 #include "tier1/strtools.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 #define	MAX_ALIAS_NAME	32
 #define MAX_COMMAND_LENGTH 1024
@@ -28,9 +25,9 @@ struct cmdalias_t
 //-----------------------------------------------------------------------------
 // Constructor, destructor
 //-----------------------------------------------------------------------------
-CCommandBuffer::CCommandBuffer( ) : m_Commands( 32, 32 )
+CCommandBuffer::CCommandBuffer( )
 {
-	m_hNextCommand = m_Commands.InvalidIndex();
+	m_itNextCommand = m_Commands.end();
 	m_nWaitDelayTicks = 1;
 	m_nCurrentTick = 0;
 	m_nLastTickToProcess = -1;
@@ -71,20 +68,30 @@ void CCommandBuffer::LimitArgumentBufferSize( int nSize )
 //-----------------------------------------------------------------------------
 // Parses argv0 out of the buffer
 //-----------------------------------------------------------------------------
-bool CCommandBuffer::ParseArgV0( CUtlBuffer &buf, char *pArgV0, int nMaxLen, const char **pArgS )
+bool CCommandBuffer::ParseArgV0( ks::text_reader &buf, char *pArgV0, int nMaxLen, const char **pArgS )
 {
 	pArgV0[0] = 0;
 	*pArgS = nullptr;
 
-	if ( !buf.IsValid() )
+	if ( !buf.ok() )
 		return false;
 
-	int	nSize = buf.ParseToken( CCommand::DefaultBreakSet(), pArgV0, nMaxLen );
-	if ( ( nSize <= 0 ) || ( nMaxLen == nSize ) )
+	const std::optional< std::string_view > token = buf.read_token( *CCommand::DefaultBreakSet() );
+	if ( !token )
 		return false;
 
-	int nArgSLen = buf.TellMaxPut() - buf.TellGet();
-	*pArgS = (nArgSLen > 0) ? (const char*)buf.PeekGet() : nullptr;
+	const int nSize = (int)token->size();
+	if ( nMaxLen > 0 )
+	{
+		const int nCopy = std::min( nSize, nMaxLen - 1 );
+		memcpy( pArgV0, token->data(), nCopy );
+		pArgV0[nCopy] = 0;
+	}
+	if ( ( nSize <= 0 ) || ( nMaxLen <= nSize ) )
+		return false;
+
+	const std::string_view rest = buf.rest();
+	*pArgS = !rest.empty() ? rest.data() : nullptr;
 	return true;
 }
 
@@ -92,25 +99,24 @@ bool CCommandBuffer::ParseArgV0( CUtlBuffer &buf, char *pArgV0, int nMaxLen, con
 //-----------------------------------------------------------------------------
 // Insert a command into the command queue
 //-----------------------------------------------------------------------------
-void CCommandBuffer::InsertCommandAtAppropriateTime( intp hCommand )
+void CCommandBuffer::InsertCommandAtAppropriateTime( const Command_t &command )
 {
-	intp i;
-	Command_t &command = m_Commands[hCommand];
-	for ( i = m_Commands.Head(); i != m_Commands.InvalidIndex(); i = m_Commands.Next(i) )
+	auto i = m_Commands.begin();
+	for ( ; i != m_Commands.end(); ++i )
 	{
-		if ( m_Commands[i].m_nTick > command.m_nTick )
+		if ( i->m_nTick > command.m_nTick )
 			break;
 	}
-	m_Commands.LinkBefore( i, hCommand );
+	m_Commands.insert( i, command );
 }
 
 
 //-----------------------------------------------------------------------------
 // Insert a command into the command queue at the appropriate time
 //-----------------------------------------------------------------------------
-void CCommandBuffer::InsertImmediateCommand( intp hCommand )
+void CCommandBuffer::InsertImmediateCommand( const Command_t &command )
 {
-	m_Commands.LinkBefore( m_hNextCommand, hCommand );
+	m_Commands.insert( m_itNextCommand, command );
 }
 
 
@@ -137,8 +143,7 @@ bool CCommandBuffer::InsertCommand( const char *pArgS, int nCommandSize, int nTi
 	m_pArgSBuffer[m_nArgSBufferSize + nCommandSize] = 0;
 	++nCommandSize;
 
-	intp hCommand = m_Commands.Alloc();
-	Command_t &command = m_Commands[hCommand];
+	Command_t command;
 	command.m_nTick = nTick;
 	command.m_nFirstArgS = m_nArgSBufferSize;
 	command.m_nBufferSize = nCommandSize;
@@ -148,11 +153,11 @@ bool CCommandBuffer::InsertCommand( const char *pArgS, int nCommandSize, int nTi
 
 	if ( !m_bIsProcessingCommands || ( nTick > m_nCurrentTick ) )
 	{
-		InsertCommandAtAppropriateTime( hCommand );
+		InsertCommandAtAppropriateTime( command );
 	}
 	else
 	{
-		InsertImmediateCommand( hCommand );
+		InsertImmediateCommand( command );
 	}
 	return true;
 }
@@ -227,7 +232,7 @@ bool CCommandBuffer::AddText( const char *pText, cmd_source_t cmdSource, int nTi
 
 		const char *pArgS;
 		char *pArgV0 = (char*)stackalloc( nCommandLength+1 );
-		CUtlBuffer bufParse( pCurrentCommand, nCommandLength, CUtlBuffer::TEXT_BUFFER | CUtlBuffer::READ_ONLY ); 
+		ks::text_reader bufParse( pCurrentCommand, nCommandLength );
 		ParseArgV0( bufParse, pArgV0, nCommandLength+1, &pArgS );
 		if ( pArgV0[0] == 0 )
 			continue;
@@ -265,9 +270,9 @@ void CCommandBuffer::DelayAllQueuedCommands( int nDelay )
 	if ( nDelay <= 0 )
 		return;
 
-	for ( intp i = m_Commands.Head(); i != m_Commands.InvalidIndex(); i = m_Commands.Next(i) )
+	for ( Command_t &command : m_Commands )
 	{
-		m_Commands[i].m_nTick += nDelay;			
+		command.m_nTick += nDelay;			
 	}
 }
 
@@ -285,7 +290,7 @@ void CCommandBuffer::BeginProcessingCommands( int nDeltaTicks )
 	m_nLastTickToProcess = m_nCurrentTick + nDeltaTicks - 1;
 
 	// Necessary to insert commands while commands are being processed
-	m_hNextCommand = m_Commands.Head();
+	m_itNextCommand = m_Commands.begin();
 }
 
 
@@ -297,11 +302,10 @@ bool CCommandBuffer::DequeueNextCommand( CCommand* pCommand )
 	pCommand->Reset();
 
 	Assert( m_bIsProcessingCommands );
-	if ( m_Commands.Count() == 0 )
+	if ( m_Commands.empty() )
 		return false;
 
-	intp nHead = m_Commands.Head();
-	Command_t &command = m_Commands[ nHead ];
+	Command_t &command = m_Commands.front();
 	if ( command.m_nTick > m_nLastTickToProcess )
 		return false;
 
@@ -315,10 +319,10 @@ bool CCommandBuffer::DequeueNextCommand( CCommand* pCommand )
 		pCommand->Tokenize( &m_pArgSBuffer[command.m_nFirstArgS], command.m_source );
 	}
 
-	m_Commands.Remove( nHead );
+	m_Commands.pop_front();
 
 	// Necessary to insert commands while commands are being processed
-	m_hNextCommand = m_Commands.Head();
+	m_itNextCommand = m_Commands.begin();
 
 //	Msg("Dequeue : ");
 //	for ( int i = 0; i < nArgc; ++i )
@@ -343,10 +347,8 @@ void CCommandBuffer::Compact()
 	m_nArgSBufferSize = 0;
 
 	char pTempBuffer[ ARGS_BUFFER_LENGTH ];
-	for ( intp i = m_Commands.Head(); i != m_Commands.InvalidIndex(); i = m_Commands.Next(i) )
+	for ( Command_t &command : m_Commands )
 	{
-		Command_t &command = m_Commands[ i ];
-
 		memcpy( &pTempBuffer[m_nArgSBufferSize], &m_pArgSBuffer[command.m_nFirstArgS], command.m_nBufferSize );
 		command.m_nFirstArgS = m_nArgSBufferSize;
 		m_nArgSBufferSize += command.m_nBufferSize;
@@ -367,27 +369,25 @@ void CCommandBuffer::EndProcessingCommands()
 	Assert( m_bIsProcessingCommands );
 	m_bIsProcessingCommands = false;
 	m_nCurrentTick = m_nLastTickToProcess + 1;
-	m_hNextCommand = m_Commands.InvalidIndex();
+	m_itNextCommand = m_Commands.end();
 
 	// Extract commands that are before the end time
 	// NOTE: This is a bug for this to 
-	intp i = m_Commands.Head();
-	if ( i == m_Commands.InvalidIndex() )
+	if ( m_Commands.empty() )
 	{
 		m_nArgSBufferSize = 0;
 		return;
 	}
 
-	while ( i != m_Commands.InvalidIndex() )
+	while ( !m_Commands.empty() )
 	{
-		if ( m_Commands[i].m_nTick >= m_nCurrentTick )
+		const Command_t &command = m_Commands.front();
+		if ( command.m_nTick >= m_nCurrentTick )
 			break;
 
 		AssertMsgOnce( false, "CCommandBuffer::EndProcessingCommands() called before all appropriate commands were dequeued.\n" );
-		int nNext = i;
-		Msg( "Warning: Skipping command %s\n", &m_pArgSBuffer[ m_Commands[i].m_nFirstArgS ] );
-		m_Commands.Remove( i );
-		i = nNext;
+		Msg( "Warning: Skipping command %s\n", &m_pArgSBuffer[ command.m_nFirstArgS ] );
+		m_Commands.pop_front();
 	}
 
 	Compact();
@@ -400,7 +400,8 @@ void CCommandBuffer::EndProcessingCommands()
 CommandHandle_t CCommandBuffer::GetNextCommandHandle()
 {
 	Assert( m_bIsProcessingCommands );
-	return m_Commands.Head();
+	// Identity of the head command; stable while it stays queued
+	return m_Commands.empty() ? COMMAND_BUFFER_INVALID_COMMAND_HANDLE : (CommandHandle_t)&m_Commands.front();
 }
 
 

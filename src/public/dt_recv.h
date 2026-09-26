@@ -122,6 +122,10 @@ public:
 	bool					IsInsideArray() const;
 	void					SetInsideArray();
 
+	// A vector length prop; decoded before everything else. Not an SPROP_ flag: those feed the CRC.
+	bool					IsVectorLength() const;
+	void					SetVectorLength();
+
 	// Some property types bind more data to the prop in here.
 	const void*			GetExtraData() const;
 	void				SetExtraData( const void *pData );
@@ -142,6 +146,7 @@ public:
 private:
 
 	bool					m_bInsideArray;		// Set to true by the engine if this property sits inside an array.
+	bool					m_bVectorLength;	// See IsVectorLength().
 
 	// Extra data that certain special property types bind to the property here.
 	const void *m_pExtraData;
@@ -518,6 +523,16 @@ inline bool RecvProp::IsInsideArray() const
 inline void RecvProp::SetInsideArray()
 {
 	m_bInsideArray = true;
+}
+
+inline bool RecvProp::IsVectorLength() const
+{
+	return m_bVectorLength;
+}
+
+inline void RecvProp::SetVectorLength()
+{
+	m_bVectorLength = true;
 }
 
 inline const void* RecvProp::GetExtraData() const

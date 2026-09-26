@@ -7,10 +7,10 @@
 #ifndef USERMESSAGES_H
 #define USERMESSAGES_H
 
-#include <utldict.h>
+#include <map>
 #include <utlvector.h>
 #include <bitbuf.h>
-#include <utldelegate.h>
+#include <functional>
 #include "shareddefs.h"
 
 #include "networksystem/inetworksystem.h"
@@ -42,8 +42,8 @@ public:
 	bool UnbindMessage( IUserMessageBinder *pMessageBinder );
 
 private:
-	typedef CCopyableUtlVector< IUserMessageBinder * > UserMessageBinderVec_t;
-	typedef CUtlMap< int, CCopyableUtlVectorFixed< UserMessageBinderVec_t, MAX_SPLITSCREEN_PLAYERS > > UserMessageHandlerMap_t;
+	typedef std::vector< IUserMessageBinder * > UserMessageBinderVec_t;
+	typedef std::map< int, std::inplace_vector< UserMessageBinderVec_t, MAX_SPLITSCREEN_PLAYERS > > UserMessageHandlerMap_t;
 	UserMessageHandlerMap_t m_UserMessageBinderMap;
 };
 
@@ -65,8 +65,6 @@ public:
 	virtual const char *TypeName() const = 0;
 	virtual std::size_t ByteSize( const void *msg ) const = 0;
 	virtual std::string Describe( const void *msg ) const = 0;
-
-	virtual const CUtlAbstractDelegate &GetAbstractDelegate() = 0;
 };
 
 //-----------------------------------------------------------------------------
@@ -84,17 +82,17 @@ public:
 	}
 
 	template< int msgType, typename PB_OBJECT_TYPE >
-	void Bind( CUtlDelegate< bool ( const PB_OBJECT_TYPE & obj ) > handler )
+	void Bind( std::move_only_function< bool ( const PB_OBJECT_TYPE & obj ) > handler )
 	{
 		delete m_pBind;
-		m_pBind = new BindParams< msgType, PB_OBJECT_TYPE, 0 >( handler );
+		m_pBind = new BindParams< msgType, PB_OBJECT_TYPE, 0 >( std::move( handler ) );
 	}
 
 	template< int msgType, typename PB_OBJECT_TYPE >
-	void BindRealtimePassthrough( CUtlDelegate< bool( const PB_OBJECT_TYPE & obj ) > handler )
+	void BindRealtimePassthrough( std::move_only_function< bool ( const PB_OBJECT_TYPE & obj ) > handler )
 	{
 		delete m_pBind;
-		m_pBind = new BindParams< msgType, PB_OBJECT_TYPE, 1 >( handler );
+		m_pBind = new BindParams< msgType, PB_OBJECT_TYPE, 1 >( std::move( handler ) );
 	}
 
 	void Unbind()
@@ -114,8 +112,8 @@ private:
 	template< int msgType, typename PB_OBJECT_TYPE, int32 nExpectedPassthroughInReplay >
 	struct BindParams : public IUserMessageBinder
 	{
-		BindParams( CUtlDelegate< bool ( PB_OBJECT_TYPE const &msg ) > handler )
-			: m_handler( handler )
+		BindParams( std::move_only_function< bool ( PB_OBJECT_TYPE const &msg ) > handler )
+			: m_handler( std::move( handler ) )
 		{
 			UserMessages()->BindMessage( this );
 		}
@@ -184,12 +182,7 @@ private:
 			return ks::proto::to_text( *static_cast< const PB_OBJECT_TYPE * >( msg ) );
 		}
 
-		virtual const CUtlAbstractDelegate &GetAbstractDelegate()
-		{
-			return m_handler.GetAbstractDelegate();
-		}
-
-		CUtlDelegate< bool ( PB_OBJECT_TYPE const &obj ) > m_handler;
+		std::move_only_function< bool ( PB_OBJECT_TYPE const &obj ) > m_handler;
 	};
 
 	IUserMessageBinder *m_pBind;

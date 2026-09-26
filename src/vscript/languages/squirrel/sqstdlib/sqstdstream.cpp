@@ -9,7 +9,6 @@
 #include "sqstdstream.h"
 #include "sqstdblobimpl.h"
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#include "memdbgon.h"
 #endif
 
 #define SETUP_STREAM(v) \

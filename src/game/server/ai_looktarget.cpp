@@ -12,9 +12,6 @@
 #include "game.h"
 #include "ai_looktarget.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 // Mothballing this entity to get rid of it. info_hint does its job better (sjb)
 //LINK_ENTITY_TO_CLASS( ai_looktarget, CAI_LookTarget );

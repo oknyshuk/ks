@@ -14,9 +14,6 @@
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 class [[= ks::reflect::NetTable{ .name = "DT_FuncOccluder", .base = false } ]]
       CFuncOccluder : public CBaseEntity
 {

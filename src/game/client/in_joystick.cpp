@@ -36,9 +36,6 @@
 
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // Control like a joystick
 #define JOY_ABSOLUTE_AXIS	0x00000000		
 // Control like a mouse, spinner, trackball
@@ -432,7 +429,7 @@ static bool IsJoystickPegged( float input, float otherAxis )
 
 	float fMinimumVal = 0.01f; // accomodate dead zone
 	float algorythmX = abs(input); 
-	float algorythmY = MAX( abs(otherAxis),fMinimumVal ); 
+	float algorythmY = std::max( abs(otherAxis),fMinimumVal ); 
 
 	float fltempAlgorythmSample = pow(  pow(algorythmX,fPower)+pow(algorythmY,fPower),fPower); 
 
@@ -454,10 +451,10 @@ ConVar joy_pegged("joy_pegged", "0.75");// Once the stick is pushed this far, it
 ConVar joy_virtual_peg("joy_virtual_peg", "0");
 float CInput::ResponseCurveLookDefault( int nSlot, float x, int axis, float otherAxis, float dist, float frametime )
 {
-	envelope_t &envelope = controlEnvelope[ MAX( nSlot, 0 ) ];
+	envelope_t &envelope = controlEnvelope[ std::max( nSlot, 0 ) ];
 	float input = x;
 	// float maxX = 1.0; used in prev algorithm 
-	float flJoyDist = dist;//MAX( dist, MIN( joy_pegged.GetFloat(), sqrt(x*x + otherAxis*otherAxis) ) );
+	float flJoyDist = dist;//std::max( dist, std::min( joy_pegged.GetFloat(), sqrt(x*x + otherAxis*otherAxis) ) );
 
 	bool bPegged = ( flJoyDist >= joy_pegged.GetFloat() ) || IsJoystickPegged( x, otherAxis );
 
@@ -608,7 +605,7 @@ float CInput::ResponseCurveLookDefault( int nSlot, float x, int axis, float othe
 	x *= AutoAimDampening( input, axis, dist );
 
 	//float flDiagDiff = abs(x - otherAxis);
-	//x *= MIN( maxX, 1+(otherAxis) );
+	//x *= std::min( maxX, 1+(otherAxis) );
 
 	if( x > 0.0f && joy_display_input.GetBool() )
 	{
@@ -628,7 +625,7 @@ ConVar joy_useNewAcecelMethod("joy_useNewAcecelMethod","1");
 ConVar joy_useNewJoystickPegged( "joy_useNewJoystickPeggedTest", "0" );
 float CInput::ResponseCurveLookAccelerated( int nSlot, float x, int axis, float otherAxis, float dist, float frametime )
 {
-	envelope_t &envelope = controlEnvelope[ MAX( nSlot, 0 ) ];
+	envelope_t &envelope = controlEnvelope[ std::max( nSlot, 0 ) ];
 
 	float input = x;
 
@@ -661,7 +658,7 @@ float CInput::ResponseCurveLookAccelerated( int nSlot, float x, int axis, float 
 		// we don't necesarily know whether this is the axis which is pegged
 		if( !joy_no_accel_jump.GetBool() )
 		{
-			x = MAX( joy_lowmap.GetFloat(), x );
+			x = std::max( joy_lowmap.GetFloat(), x );
 		}
 
 		bDoAcceleration = true;
@@ -707,7 +704,7 @@ float CInput::ResponseCurveLookAccelerated( int nSlot, float x, int axis, float 
 			if (divisor != 0.0f)
 				minx = joy_lowmap.GetFloat() * ( factor * ( curvParam + 1 ) / divisor );
 
-			x = MAX( x, minx );		
+			x = std::max( x, minx );		
 		}
 	}
 
@@ -743,9 +740,9 @@ float CInput::ResponseCurveLookPolynomial( int nSlot, float x, int axis, float o
 		otherAxis *= -1;
 	}
 
-	envelope_t &envelope = controlEnvelope[ MAX( nSlot, 0 ) ];
+	envelope_t &envelope = controlEnvelope[ std::max( nSlot, 0 ) ];
 	float input = x;
-	float scale = MIN( 1.0f, sqrt(x*x+otherAxis*otherAxis) );
+	float scale = std::min( 1.0f, sqrt(x*x+otherAxis*otherAxis) );
 	bool bPegged = ( scale >= joy_pegged.GetFloat() ) || IsJoystickPegged( x, otherAxis );
 
 	if( axis == YAW && joy_virtual_peg.GetBool() )
@@ -819,13 +816,13 @@ float CInput::ResponseCurveLookPolynomial( int nSlot, float x, int axis, float o
 	else if ( otherAxis > x )
 		flDiagonal = (scale-x) * (x/otherAxis);
 
-	x = MIN( flMaxOutput, x + (flDiagonal*scale) );
+	x = std::min( flMaxOutput, x + (flDiagonal*scale) );
 	*/
 	//if ( bPegged )
 	//	x = flMaxOutput;
 
 	x *= envelope.envelopeScale[axis];
-	x = MIN( flMaxOutput, x );
+	x = std::min( flMaxOutput, x );
 
 	if( x > 0.0f && joy_display_input.GetBool() )
 		Msg("flDiagonal == %f : otherAxis = :%f : x = :%f, flMaxOutput = %f\n", flDiagonal, otherAxis, x, flMaxOutput );
@@ -1385,7 +1382,7 @@ void CInput::JoyStickForwardSideControl( float forward, float side, float &joyFo
 		// so diagonal needs to be scaled properly to full speed.
 
 		bool bInWalk = true;
-		float scale = MIN(1.0f,sqrt(forward*forward+side*side));
+		float scale = std::min(1.0f,sqrt(forward*forward+side*side));
 		if ( scale > 0.01f )
 		{
 			float val;
@@ -1776,7 +1773,7 @@ void CInput::JoyStickMove( float frametime, CUserCmd *cmd )
 	// Sample the axes, apply the input, and consume sample time.
 	if ( user.m_flRemainingJoystickSampleTime > 0 )
 	{
-		frametime = MIN(user.m_flRemainingJoystickSampleTime, frametime);
+		frametime = std::min(user.m_flRemainingJoystickSampleTime, frametime);
 		user.m_flRemainingJoystickSampleTime -= frametime;
 
 		float forward, side, pitch, yaw;

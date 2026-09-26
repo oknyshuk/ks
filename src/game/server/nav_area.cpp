@@ -13,7 +13,6 @@
 
 #include "tier0/vprof.h"
 #include "tier0/tslist.h"
-#include "tier1/utlhash.h"
 #include "vstdlib/jobthread.h"
 
 #include "nav_mesh.h"
@@ -30,9 +29,6 @@
 #include "functorutils.h"
 #include "team.h"
 #include "nav_entities.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 extern void HintMessageToAllPlayers( const char *message );
 
@@ -164,7 +160,7 @@ void CNavArea::CompressIDs( void )
 {
 	m_nextID = 1;
 
-	FOR_EACH_VEC( TheNavAreas, id )
+	for ( int id = 0; id < std::ssize( TheNavAreas ); id++ )
 	{
 		CNavArea *area = TheNavAreas[id];
 		area->m_id = m_nextID++;
@@ -221,12 +217,12 @@ CNavArea::CNavArea( void )
 
 	for( i = 0; i<NUM_DIRECTIONS; ++i )
 	{
-		m_connect[i].RemoveAll();
+		m_connect[i].clear();
 	}
 
 	for( i=0; i<CNavLadder::NUM_LADDER_DIRECTIONS; ++i )
 	{
-		m_ladder[i].RemoveAll();
+		m_ladder[i].clear();
 	}
 
 	for ( i=0; i<NUM_CORNERS; ++i )
@@ -355,15 +351,15 @@ void CNavArea::GetExtent( Extent *extent ) const
 	extent->lo = m_nwCorner;
 	extent->hi = m_seCorner;
 
-	extent->lo.z = MIN( extent->lo.z, m_nwCorner.z );
-	extent->lo.z = MIN( extent->lo.z, m_seCorner.z );
-	extent->lo.z = MIN( extent->lo.z, m_neZ );
-	extent->lo.z = MIN( extent->lo.z, m_swZ );
+	extent->lo.z = std::min( extent->lo.z, m_nwCorner.z );
+	extent->lo.z = std::min( extent->lo.z, m_seCorner.z );
+	extent->lo.z = std::min( extent->lo.z, m_neZ );
+	extent->lo.z = std::min( extent->lo.z, m_swZ );
 
-	extent->hi.z = MAX( extent->hi.z, m_nwCorner.z );
-	extent->hi.z = MAX( extent->hi.z, m_seCorner.z );
-	extent->hi.z = MAX( extent->hi.z, m_neZ );
-	extent->hi.z = MAX( extent->hi.z, m_swZ );
+	extent->hi.z = std::max( extent->hi.z, m_nwCorner.z );
+	extent->hi.z = std::max( extent->hi.z, m_seCorner.z );
+	extent->hi.z = std::max( extent->hi.z, m_neZ );
+	extent->hi.z = std::max( extent->hi.z, m_swZ );
 }
 
 
@@ -374,13 +370,13 @@ CNavNode *CNavArea::FindClosestNode( const Vector &pos, NavDirType dir ) const
 	if ( !HasNodes() )
 		return nullptr;
 
-	CUtlVector< CNavNode * > nodes;
+	std::vector< CNavNode * > nodes;
 	GetNodes( dir, &nodes );
 
 	CNavNode *bestNode = nullptr;
 	float bestDistanceSq = FLT_MAX;
 
-	for ( int i=0; i<nodes.Count(); ++i )
+	for ( int i=0; i<std::ssize( nodes ); ++i )
 	{
 		float distSq = pos.DistToSqr( *nodes[i]->GetPosition() );
 		if ( distSq < bestDistanceSq )
@@ -396,12 +392,12 @@ CNavNode *CNavArea::FindClosestNode( const Vector &pos, NavDirType dir ) const
 
 //--------------------------------------------------------------------------------------------------------------
 // build a vector of nodes along the given direction
-void CNavArea::GetNodes( NavDirType dir, CUtlVector< CNavNode * > *nodes ) const
+void CNavArea::GetNodes( NavDirType dir, std::vector< CNavNode * > *nodes ) const
 {
 	if ( !nodes )
 		return;
 
-	nodes->RemoveAll();
+	nodes->clear();
 
 	NavCornerType startCorner;
 	NavCornerType endCorner;
@@ -440,11 +436,11 @@ void CNavArea::GetNodes( NavDirType dir, CUtlVector< CNavNode * > *nodes ) const
 	CNavNode *node;
 	for ( node = m_node[ startCorner ]; node && node != m_node[ endCorner ]; node = node->GetConnectedNode( traversalDirection ) )
 	{
-		nodes->AddToTail( node );
+		nodes->push_back( node );
 	}
 	if ( node && node == m_node[ endCorner ] )
 	{
-		nodes->AddToTail( node );
+		nodes->push_back( node );
 	}
 }
 
@@ -510,9 +506,6 @@ public:
  */
 CNavArea::~CNavArea()
 {
-	// spot encounters aren't owned by anything else, so free them up here
-	m_spotEncounters.PurgeAndDeleteElements();
-
 	// if we are resetting the system, don't bother cleaning up - all areas are being destroyed
 	if (m_isReset)
 		return;
@@ -644,8 +637,8 @@ void CNavArea::OnDestroyNotify( CNavArea *dead )
 	con.area = dead;
 	for( int d=0; d<NUM_DIRECTIONS; ++d )
 	{
-		m_connect[ d ].FindAndRemove( con );
-		m_incomingConnect[ d ].FindAndRemove( con );
+		ks::erase_first( m_connect[ d ], con );
+		ks::erase_first( m_incomingConnect[ d ], con );
 	}
 }
 
@@ -672,21 +665,21 @@ void CNavArea::ConnectTo( CNavArea *area, NavDirType dir )
 		return;
 
 	// check if already connected
-	FOR_EACH_VEC( m_connect[ dir ], it )
+	for ( const NavConnect &existing : m_connect[ dir ] )
 	{
-		if (m_connect[ dir ][ it ].area == area)
+		if (existing.area == area)
 			return;
 	}
 
 	NavConnect con;
 	con.area = area;
 	con.length = ( area->GetCenter() - GetCenter() ).Length();
-	m_connect[ dir ].AddToTail( con );
-	m_incomingConnect[ dir ].FindAndRemove( con );
+	m_connect[ dir ].push_back( con );
+	ks::erase_first( m_incomingConnect[ dir ], con );
 
 	NavDirType dirOpposite = OppositeDirection( dir );
 	con.area = this;
-	if ( area->m_connect[ dirOpposite ].Find( con ) == area->m_connect[ dirOpposite ].InvalidIndex() )
+	if ( ks::find_index( area->m_connect[ dirOpposite ], con ) == -1 )
 	{
 		area->AddIncomingConnection( this, dirOpposite );
 	}	
@@ -729,10 +722,10 @@ void CNavArea::Disconnect( CNavArea *area )
 	{
 		NavDirType dir = (NavDirType) i;
 		NavDirType dirOpposite = OppositeDirection( dir );
-		int index = m_connect[ dir ].Find( connect );
-		if ( index != m_connect[ dir ].InvalidIndex() )
+		int index = ks::find_index( m_connect[ dir ], connect );
+		if ( index != -1 )
 		{
-			m_connect[ dir ].Remove( index );
+			m_connect[ dir ].erase( m_connect[ dir ].begin() + index );
 			if ( area->IsConnected( this, dirOpposite ) )
 			{
 				AddIncomingConnection( area, dir );
@@ -740,7 +733,7 @@ void CNavArea::Disconnect( CNavArea *area )
 			else
 			{
 				connect.area = this;
-				area->m_incomingConnect[ dirOpposite ].FindAndRemove( connect );
+				ks::erase_first( area->m_incomingConnect[ dirOpposite ], connect );
 			}
 		}		
 	}
@@ -758,7 +751,7 @@ void CNavArea::Disconnect( CNavLadder *ladder )
 
 	for( int i=0; i<CNavLadder::NUM_LADDER_DIRECTIONS; ++i )
 	{
-		m_ladder[i].FindAndRemove( con );
+		ks::erase_first( m_ladder[i], con );
 	}
 }
 
@@ -770,7 +763,7 @@ void CNavArea::AddLadderUp( CNavLadder *ladder )
 
 	NavLadderConnect tmp;
 	tmp.ladder = ladder;
-	m_ladder[ CNavLadder::LADDER_UP ].AddToTail( tmp );
+	m_ladder[ CNavLadder::LADDER_UP ].push_back( tmp );
 }
 
 
@@ -781,7 +774,7 @@ void CNavArea::AddLadderDown( CNavLadder *ladder )
 
 	NavLadderConnect tmp;
 	tmp.ladder = ladder;
-	m_ladder[ CNavLadder::LADDER_DOWN ].AddToTail( tmp );
+	m_ladder[ CNavLadder::LADDER_DOWN ].push_back( tmp );
 }
 
 
@@ -816,7 +809,7 @@ void CNavArea::FinishMerge( CNavArea *adjArea )
 	MergeAdjacentConnections( adjArea );
 
 	// remove subsumed adjacent area
-	TheNavAreas.FindAndRemove( adjArea );
+	ks::erase_first( TheNavAreas, adjArea );
 	TheNavMesh->OnEditDestroyNotify( adjArea );
 	TheNavMesh->DestroyArea( adjArea );
 }
@@ -867,9 +860,9 @@ void CNavArea::MergeAdjacentConnections( CNavArea *adjArea )
 	int dir;
 	for( dir = 0; dir<NUM_DIRECTIONS; dir++ )
 	{
-		FOR_EACH_VEC( adjArea->m_connect[ dir ], it )
+		for ( const NavConnect &adjConnect : adjArea->m_connect[ dir ] )
 		{
-			NavConnect connect = adjArea->m_connect[ dir ][ it ];
+			NavConnect connect = adjConnect;
 
 			if (connect.area != adjArea && connect.area != this)
 				ConnectTo( connect.area, (NavDirType)dir );
@@ -885,10 +878,8 @@ void CNavArea::MergeAdjacentConnections( CNavArea *adjArea )
 	// into the merged area, one for each of the adjacent subsumed smaller ones.
 	// If an area has a connection to the merged area, we must remove all references to adjArea, and add
 	// a single connection to us.
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ it ];
-
 		if (area == this || area == adjArea)
 			continue;
 
@@ -896,9 +887,9 @@ void CNavArea::MergeAdjacentConnections( CNavArea *adjArea )
 		{
 			// check if there are any references to adjArea in this direction
 			bool connected = false;
-			FOR_EACH_VEC( area->m_connect[ dir ], cit )
+			for ( const NavConnect &areaConnect : area->m_connect[ dir ] )
 			{
-				NavConnect connect = area->m_connect[ dir ][ cit ];
+				NavConnect connect = areaConnect;
 
 				if (connect.area == adjArea)
 				{
@@ -924,9 +915,9 @@ void CNavArea::MergeAdjacentConnections( CNavArea *adjArea )
 	// We gain all ladder connections adjArea had
 	for( dir=0; dir<CNavLadder::NUM_LADDER_DIRECTIONS; ++dir )
 	{
-		FOR_EACH_VEC( adjArea->m_ladder[ dir ], it )
+		for ( const NavLadderConnect &adjLadder : adjArea->m_ladder[ dir ] )
 		{
-			ConnectTo( adjArea->m_ladder[ dir ][ it ].ladder );
+			ConnectTo( adjLadder.ladder );
 		}
 	}
 
@@ -1076,9 +1067,9 @@ bool CNavArea::SplitEdit( bool splitAlongX, float splitEdge, CNavArea **outAlpha
 	int dir;
 	for( dir=0; dir<CNavLadder::NUM_LADDER_DIRECTIONS; ++dir )
 	{
-		FOR_EACH_VEC( m_ladder[ dir ], it )
+		for ( const NavLadderConnect &ladderConnect : m_ladder[ dir ] )
 		{
-			CNavLadder *ladder = m_ladder[ dir ][ it ].ladder;
+			CNavLadder *ladder = ladderConnect.ladder;
 			Vector ladderPos = ladder->m_top; // doesn't matter if we choose top or bottom
 
 			float alphaDistance = alpha->GetDistanceSquaredToPoint( ladderPos );
@@ -1116,7 +1107,7 @@ bool CNavArea::SplitEdit( bool splitAlongX, float splitEdge, CNavArea **outAlpha
 
 	// remove original area
 	TheNavMesh->OnEditDestroyNotify( this );
-	TheNavAreas.FindAndRemove( this );
+	ks::erase_first( TheNavAreas, this );
 	TheNavMesh->RemoveFromSelectedSet( this );
 	TheNavMesh->DestroyArea( this );
 
@@ -1131,9 +1122,9 @@ bool CNavArea::SplitEdit( bool splitAlongX, float splitEdge, CNavArea **outAlpha
  */
 bool CNavArea::IsConnected( const CNavLadder *ladder, CNavLadder::LadderDirectionType dir ) const
 {
-	FOR_EACH_VEC( m_ladder[ dir ], it )
+	for ( const NavLadderConnect &ladderConnect : m_ladder[ dir ] )
 	{
-		if ( ladder == m_ladder[ dir ][ it ].ladder )
+		if ( ladder == ladderConnect.ladder )
 		{
 			return true;
 		}
@@ -1160,17 +1151,17 @@ bool CNavArea::IsConnected( const CNavArea *area, NavDirType dir ) const
 		// search all directions
 		for( int d=0; d<NUM_DIRECTIONS; ++d )
 		{
-			FOR_EACH_VEC( m_connect[ d ], it )
+			for ( const NavConnect &connect : m_connect[ d ] )
 			{
-				if (area == m_connect[ d ][ it ].area)
+				if (area == connect.area)
 					return true;
 			}
 		}
 
 		// check ladder connections
-		FOR_EACH_VEC( m_ladder[ CNavLadder::LADDER_UP ], it )
+		for ( const NavLadderConnect &ladderConnect : m_ladder[ CNavLadder::LADDER_UP ] )
 		{
-			CNavLadder *ladder = m_ladder[ CNavLadder::LADDER_UP ][ it ].ladder;
+			CNavLadder *ladder = ladderConnect.ladder;
 
 			if (ladder->m_topBehindArea == area ||
 				ladder->m_topForwardArea == area ||
@@ -1179,9 +1170,9 @@ bool CNavArea::IsConnected( const CNavArea *area, NavDirType dir ) const
 				return true;
 		}
 
-		FOR_EACH_VEC( m_ladder[ CNavLadder::LADDER_DOWN ], dit )
+		for ( const NavLadderConnect &ladderConnect : m_ladder[ CNavLadder::LADDER_DOWN ] )
 		{
-			CNavLadder *ladder = m_ladder[ CNavLadder::LADDER_DOWN ][ dit ].ladder;
+			CNavLadder *ladder = ladderConnect.ladder;
 
 			if (ladder->m_bottomArea == area)
 				return true;
@@ -1190,9 +1181,9 @@ bool CNavArea::IsConnected( const CNavArea *area, NavDirType dir ) const
 	else
 	{
 		// check specific direction
-		FOR_EACH_VEC( m_connect[ dir ], it )
+		for ( const NavConnect &connect : m_connect[ dir ] )
 		{
-			if (area == m_connect[ dir ][ it ].area)
+			if (area == connect.area)
 				return true;
 		}
 	}
@@ -1237,10 +1228,10 @@ void CNavArea::AddIncomingConnection( CNavArea *source, NavDirType incomingEdgeD
 {
 	NavConnect con;
 	con.area = source;
-	if ( m_incomingConnect[ incomingEdgeDir ].Find( con ) == m_incomingConnect[ incomingEdgeDir ].InvalidIndex() )
+	if ( ks::find_index( m_incomingConnect[ incomingEdgeDir ], con ) == -1 )
 	{
 		con.length = ( source->GetCenter() - GetCenter() ).Length();
-		m_incomingConnect[ incomingEdgeDir ].AddToTail( con );
+		m_incomingConnect[ incomingEdgeDir ].push_back( con );
 	}	
 }
 
@@ -1306,7 +1297,7 @@ void CNavArea::FinishSplitEdit( CNavArea *newArea, NavDirType ignoreEdge )
 					break;
 			}
 
-			for ( int a = 0; a < m_incomingConnect[d].Count(); a++ )
+			for ( int a = 0; a < std::ssize( m_incomingConnect[d] ); a++ )
 			{			
 				CNavArea *adj = m_incomingConnect[d][a].area;
 
@@ -1332,7 +1323,7 @@ void CNavArea::FinishSplitEdit( CNavArea *newArea, NavDirType ignoreEdge )
 		}
 	}
 
-	TheNavAreas.AddToTail( newArea );
+	TheNavAreas.push_back( newArea );
 	TheNavMesh->AddNavArea( newArea );
 
 	// Assign nodes
@@ -1405,8 +1396,8 @@ bool CNavArea::SpliceEdit( CNavArea *other )
 	if (m_nwCorner.x > other->m_seCorner.x)
 	{
 		// 'this' is east of 'other'
-		float top = MAX( m_nwCorner.y, other->m_nwCorner.y );
-		float bottom = MIN( m_seCorner.y, other->m_seCorner.y );
+		float top = std::max( m_nwCorner.y, other->m_nwCorner.y );
+		float bottom = std::min( m_seCorner.y, other->m_seCorner.y );
 
 		nw.x = other->m_seCorner.x;
 		nw.y = top;
@@ -1442,8 +1433,8 @@ bool CNavArea::SpliceEdit( CNavArea *other )
 	else if (m_seCorner.x < other->m_nwCorner.x)
 	{
 		// 'this' is west of 'other'
-		float top = MAX( m_nwCorner.y, other->m_nwCorner.y );
-		float bottom = MIN( m_seCorner.y, other->m_seCorner.y );
+		float top = std::max( m_nwCorner.y, other->m_nwCorner.y );
+		float bottom = std::min( m_seCorner.y, other->m_seCorner.y );
 
 		nw.x = m_seCorner.x;
 		nw.y = top;
@@ -1481,8 +1472,8 @@ bool CNavArea::SpliceEdit( CNavArea *other )
 		if (m_nwCorner.y > other->m_seCorner.y)
 		{
 			// 'this' is south of 'other'
-			float left = MAX( m_nwCorner.x, other->m_nwCorner.x );
-			float right = MIN( m_seCorner.x, other->m_seCorner.x );
+			float left = std::max( m_nwCorner.x, other->m_nwCorner.x );
+			float right = std::min( m_seCorner.x, other->m_seCorner.x );
 
 			nw.x = left;
 			nw.y = other->m_seCorner.y;
@@ -1518,8 +1509,8 @@ bool CNavArea::SpliceEdit( CNavArea *other )
 		else if (m_seCorner.y < other->m_nwCorner.y)
 		{
 			// 'this' is north of 'other'
-			float left = MAX( m_nwCorner.x, other->m_nwCorner.x );
-			float right = MIN( m_seCorner.x, other->m_seCorner.x );
+			float left = std::max( m_nwCorner.x, other->m_nwCorner.x );
+			float right = std::min( m_seCorner.x, other->m_seCorner.x );
 
 			nw.x = left;
 			nw.y = m_seCorner.y;
@@ -1561,7 +1552,7 @@ bool CNavArea::SpliceEdit( CNavArea *other )
 
 	newArea->InheritAttributes( this, other );
 
-	TheNavAreas.AddToTail( newArea );
+	TheNavAreas.push_back( newArea );
 	TheNavMesh->AddNavArea( newArea );
 	
 	TheNavMesh->OnEditCreateNotify( newArea );
@@ -1642,7 +1633,7 @@ bool CNavArea::MergeEdit( CNavArea *adj )
 	InheritAttributes( adj );
 
 	// remove subsumed adjacent area
-	TheNavAreas.FindAndRemove( adj );
+	ks::erase_first( TheNavAreas, adj );
 	TheNavMesh->OnEditDestroyNotify( adj );
 	TheNavMesh->DestroyArea( adj );
 	
@@ -1706,7 +1697,7 @@ void CleanupApproachAreaAnalysisPrep( void )
  */
 void CNavArea::Strip( void )
 {
-	m_spotEncounters.PurgeAndDeleteElements(); // this calls delete on each element
+	m_spotEncounters.clear();
 }
 
 
@@ -2126,14 +2117,14 @@ float CNavArea::GetDistanceSquaredToPoint( const Vector &pos ) const
 //--------------------------------------------------------------------------------------------------------------
 CNavArea *CNavArea::GetRandomAdjacentArea( NavDirType dir ) const
 {
-	int count = m_connect[ dir ].Count();
+	int count = std::ssize( m_connect[ dir ] );
 	int which = RandomInt( 0, count-1 );
 
 	int i = 0;
-	FOR_EACH_VEC( m_connect[ dir ], it )
+	for ( const NavConnect &connect : m_connect[ dir ] )
 	{
 		if (i == which)
-			return m_connect[ dir ][ it ].area;
+			return connect.area;
 
 		++i;
 	}
@@ -2160,8 +2151,8 @@ void CNavArea::ComputePortal( const CNavArea *to, NavDirType dir, Vector *center
 			center->y = m_seCorner.y;
 		}
 
-		float left = MAX( m_nwCorner.x, to->m_nwCorner.x );
-		float right = MIN( m_seCorner.x, to->m_seCorner.x );
+		float left = std::max( m_nwCorner.x, to->m_nwCorner.x );
+		float right = std::min( m_seCorner.x, to->m_seCorner.x );
 
 		// clamp to our extent in case areas are disjoint
 		if ( left < m_nwCorner.x )
@@ -2196,8 +2187,8 @@ void CNavArea::ComputePortal( const CNavArea *to, NavDirType dir, Vector *center
 			center->x = m_seCorner.x;
 		}
 
-		float top = MAX( m_nwCorner.y, to->m_nwCorner.y );
-		float bottom = MIN( m_seCorner.y, to->m_seCorner.y );
+		float top = std::max( m_nwCorner.y, to->m_nwCorner.y );
+		float bottom = std::min( m_seCorner.y, to->m_seCorner.y );
 
 		// clamp to our extent in case areas are disjoint
 		if ( top < m_nwCorner.y )
@@ -2298,8 +2289,8 @@ void CNavArea::ComputeClosestPointInPortal( const CNavArea *to, NavDirType dir, 
 			closePos->y = m_seCorner.y;
 		}
 
-		float left = MAX( m_nwCorner.x, to->m_nwCorner.x );
-		float right = MIN( m_seCorner.x, to->m_seCorner.x );
+		float left = std::max( m_nwCorner.x, to->m_nwCorner.x );
+		float right = std::min( m_seCorner.x, to->m_seCorner.x );
 
 		// clamp to our extent in case areas are disjoint
 		// no good - need to push into to area for margins
@@ -2354,8 +2345,8 @@ void CNavArea::ComputeClosestPointInPortal( const CNavArea *to, NavDirType dir, 
 			closePos->x = m_seCorner.x;
 		}
 
-		float top = MAX( m_nwCorner.y, to->m_nwCorner.y );
-		float bottom = MIN( m_seCorner.y, to->m_seCorner.y );
+		float top = std::max( m_nwCorner.y, to->m_nwCorner.y );
+		float bottom = std::min( m_seCorner.y, to->m_seCorner.y );
 
 		// clamp to our extent in case areas are disjoint
 		// no good - need to push into to area for margins
@@ -2470,9 +2461,8 @@ float CNavArea::ComputeAdjacentConnectionHeightChange( const CNavArea *destinati
  */
 bool CNavArea::IsEdge( NavDirType dir ) const
 {
-	FOR_EACH_VEC( m_connect[ dir ], it )
+	for ( const NavConnect &connect : m_connect[ dir ] )
 	{
-		const NavConnect connect = m_connect[ dir ][ it ];
 
 		if (connect.area->IsConnected( this, OppositeDirection( dir ) ))
 			return false;
@@ -2532,8 +2522,8 @@ bool CNavArea::GetCornerHotspot( NavCornerType corner, Vector hotspot[NUM_CORNER
 	Vector se = GetCorner( SOUTH_EAST );
 
 	float size = 9.0f;
-	size = MIN( size, GetSizeX()/3 );	// make sure the hotspot doesn't extend outside small areas
-	size = MIN( size, GetSizeY()/3 );
+	size = std::min( size, GetSizeX()/3 );	// make sure the hotspot doesn't extend outside small areas
+	size = std::min( size, GetSizeY()/3 );
 
 	switch ( corner )
 	{
@@ -2697,7 +2687,7 @@ void CNavArea::Draw( void ) const
 			float lightIntensity = GetLightIntensity(pos);
 			end.z += HumanHeight*lightIntensity;
 			lightIntensity *= 255; // for color
-			NDebugOverlay::Line( end, pos, lightIntensity, lightIntensity, MAX( 192, lightIntensity ), true, DebugDuration );
+			NDebugOverlay::Line( end, pos, lightIntensity, lightIntensity, std::max<std::common_type_t<int, float>>( 192, lightIntensity ), true, DebugDuration );
 		}
 	}
 
@@ -3043,9 +3033,8 @@ void CNavArea::DrawHidingSpots( void ) const
 {
 	const HidingSpotVector *hidingSpots = GetHidingSpots();
 
-	FOR_EACH_VEC( (*hidingSpots), it )
+	for ( const HidingSpot *spot : *hidingSpots )
 	{
-		const HidingSpot *spot = (*hidingSpots)[ it ];
 
 		NavEditColor color;
 
@@ -3096,9 +3085,9 @@ void CNavArea::DrawConnectedAreas( void ) const
 
 	// draw connected ladders
 	{
-		FOR_EACH_VEC( m_ladder[ CNavLadder::LADDER_UP ], it )
+		for ( const NavLadderConnect &ladderConnect : m_ladder[ CNavLadder::LADDER_UP ] )
 		{
-			CNavLadder *ladder = m_ladder[ CNavLadder::LADDER_UP ][ it ].ladder;
+			CNavLadder *ladder = ladderConnect.ladder;
 
 			ladder->DrawLadder();
 
@@ -3109,9 +3098,9 @@ void CNavArea::DrawConnectedAreas( void ) const
 		}
 	}
 	{
-		FOR_EACH_VEC( m_ladder[ CNavLadder::LADDER_DOWN ], it )
+		for ( const NavLadderConnect &ladderConnect : m_ladder[ CNavLadder::LADDER_DOWN ] )
 		{
-			CNavLadder *ladder = m_ladder[ CNavLadder::LADDER_DOWN ][ it ].ladder;
+			CNavLadder *ladder = ladderConnect.ladder;
 
 			ladder->DrawLadder();
 
@@ -3450,10 +3439,8 @@ bool CNavArea::IsHidingSpotCollision( const Vector &pos ) const
 {
 	const float collisionRange = 30.0f;
 
-	FOR_EACH_VEC( m_hidingSpots, it )
+	for ( const HidingSpot *spot : m_hidingSpots )
 	{
-		const HidingSpot *spot = m_hidingSpots[ it ];
-
 		if ((spot->GetPosition() - pos).IsLengthLessThan( collisionRange ))
 			return true;
 	}
@@ -3572,7 +3559,9 @@ void CNavArea::ComputeHidingSpots( void )
 	}
 	extent;
 
-	m_hidingSpots.PurgeAndDeleteElements();
+	for ( HidingSpot *spot : m_hidingSpots )
+		DestroyHidingSpot( spot );	// deletes and unregisters
+	m_hidingSpots.clear();
 
 
 	// "jump areas" cannot have hiding spots
@@ -3597,9 +3586,8 @@ void CNavArea::ComputeHidingSpots( void )
 
 		bool isHoriz = (d == NORTH || d == SOUTH) ? true : false;
 
-		FOR_EACH_VEC( m_connect[d], it )
+		for ( const NavConnect &connect : m_connect[d] )
 		{
-			NavConnect connect = m_connect[ d ][ it ];
 
 			// if connection is only one-way, it's a "jump down" connection (ie: a discontinuity that may mean cover) 
 			// ignore it
@@ -3675,7 +3663,7 @@ void CNavArea::ComputeHidingSpots( void )
 				HidingSpot *spot = TheNavMesh->CreateHidingSpot();
 				spot->SetPosition( pos );
 				spot->SetFlags( IsHidingSpotInCover( pos ) ? HidingSpot::IN_COVER : HidingSpot::EXPOSED );
-				m_hidingSpots.AddToTail( spot );
+				m_hidingSpots.push_back( spot );
 			}
 		}
 	}
@@ -3714,10 +3702,8 @@ void ClassifySniperSpot( HidingSpot *spot )
 	sniperExtent.hi = Vector( 0.0f, 0.0f, 0.0f );
 
 	Extent areaExtent;
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ it ];
-
 		area->GetExtent( &areaExtent );
 
 		// scan this area
@@ -3794,23 +3780,21 @@ void CNavArea::ComputeSniperSpots( void )
 	if (nav_quicksave.GetBool())
 		return;
 
-	FOR_EACH_VEC( m_hidingSpots, it )
+	for ( HidingSpot *spot : m_hidingSpots )
 	{
-		HidingSpot *spot = m_hidingSpots[ it ];
-
 		ClassifySniperSpot( spot );
 	}
 }
 
 void CNavArea::AddHidingSpot( HidingSpot * pSpot )
 {
-	Assert( m_hidingSpots.Find( pSpot ) == m_hidingSpots.InvalidIndex() );
-	m_hidingSpots.AddToTail( pSpot );
+	Assert( ks::find_index( m_hidingSpots, pSpot ) == -1 );
+	m_hidingSpots.push_back( pSpot );
 }
 
 void CNavArea::RemoveHidingSpot( HidingSpot * pSpot )
 {
-	bool bSuccess = m_hidingSpots.FindAndRemove( pSpot );
+	bool bSuccess = ks::erase_first( m_hidingSpots, pSpot );
 	Assert( bSuccess );
 	NOTE_UNUSED( bSuccess );
 }
@@ -3825,9 +3809,9 @@ SpotEncounter *CNavArea::GetSpotEncounter( const CNavArea *from, const CNavArea 
 	{
 		SpotEncounter *e;
 
-		FOR_EACH_VEC( m_spotEncounters, it )
+		for ( const auto &encounter : m_spotEncounters )
 		{
-			e = m_spotEncounters[ it ];
+			e = encounter.get();
 
 			if (e->from.area == from && e->to.area == to)
 				return e;
@@ -3843,7 +3827,7 @@ SpotEncounter *CNavArea::GetSpotEncounter( const CNavArea *from, const CNavArea 
  */
 void CNavArea::AddSpotEncounters( const CNavArea *from, NavDirType fromDir, const CNavArea *to, NavDirType toDir )
 {
-	SpotEncounter *e = new SpotEncounter;
+	auto e = std::make_unique< SpotEncounter >();
 
 	e->from.area = const_cast<CNavArea *>( from );
 	e->fromDir = fromDir;
@@ -3889,9 +3873,9 @@ void CNavArea::AddSpotEncounters( const CNavArea *from, NavDirType fromDir, cons
 		eye = e->path.from + along * dir;
 
 		// check each hiding spot for visibility
-		FOR_EACH_VEC( TheHidingSpots, it )
+		for ( const auto &hidingSpot : TheHidingSpots )
 		{
-			spot = TheHidingSpots[ it ];
+			spot = hidingSpot.get();
 
 			// only look at spots with cover (others are out in the open and easily seen)
 			if (!spot->HasGoodCover())
@@ -3928,7 +3912,7 @@ void CNavArea::AddSpotEncounters( const CNavArea *from, NavDirType fromDir, cons
 					// add spot to encounter
 					spotOrder.spot = spot;
 					spotOrder.t = along/length;
-					e->spots.AddToTail( spotOrder );
+					e->spots.push_back( spotOrder );
 				}
 			}
 
@@ -3938,7 +3922,7 @@ void CNavArea::AddSpotEncounters( const CNavArea *from, NavDirType fromDir, cons
 	}
 
 	// add encounter to list
-	m_spotEncounters.AddToTail( e );
+	m_spotEncounters.push_back( std::move( e ) );
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -3948,7 +3932,7 @@ void CNavArea::AddSpotEncounters( const CNavArea *from, NavDirType fromDir, cons
  */
 void CNavArea::ComputeSpotEncounters( void )
 {
-	m_spotEncounters.RemoveAll();
+	m_spotEncounters.clear();
 
 	if (nav_quicksave.GetBool())
 		return;
@@ -3956,16 +3940,16 @@ void CNavArea::ComputeSpotEncounters( void )
 	// for each adjacent area
 	for( int fromDir=0; fromDir<NUM_DIRECTIONS; ++fromDir )
 	{
-		FOR_EACH_VEC( m_connect[ fromDir ], it )
+		for ( NavConnect &fromConnect : m_connect[ fromDir ] )
 		{
-			NavConnect *fromCon = &(m_connect[ fromDir ][ it ]);
+			NavConnect *fromCon = &fromConnect;
 
 			// compute encounter data for path to each adjacent area
 			for( int toDir=0; toDir<NUM_DIRECTIONS; ++toDir )
 			{
-				FOR_EACH_VEC( m_connect[ toDir ], ot )
+				for ( NavConnect &toConnect : m_connect[ toDir ] )
 				{
-					NavConnect *toCon = &(m_connect[ toDir ][ ot ]);
+					NavConnect *toCon = &toConnect;
 
 					if (toCon == fromCon)
 						continue;
@@ -4123,7 +4107,7 @@ bool CNavArea::ComputeLighting( void )
 		float lightIntensity = light.x + light.y + light.z;
 		lightIntensity = clamp( lightIntensity, 0, 1 );	// sum can go well over 1.0, but it's the lower region we care about.  if it's bright, we don't need to know *how* bright.
 
-		lightIntensity = MAX( lightIntensity, ambientIntensity );
+		lightIntensity = std::max( lightIntensity, ambientIntensity );
 
 		m_lightIntensity[i] = lightIntensity;
 	}
@@ -4150,16 +4134,15 @@ CON_COMMAND_F( nav_update_lighting, "Recomputes lighting values", FCVAR_CHEAT )
 	}
 	else
 	{
-		FOR_EACH_VEC( TheNavAreas, index )
+		for ( CNavArea *area : TheNavAreas )
 		{
-			CNavArea *area = TheNavAreas[ index ];
 			if ( area->ComputeLighting() )
 			{
 				++numComputed;
 			}
 		}
 	}
-	DevMsg( "Computed lighting for %d/%d areas\n", numComputed, TheNavAreas.Count() );
+	DevMsg( "Computed lighting for %d/%d areas\n", numComputed, (int)std::ssize( TheNavAreas ) );
 }
 
 
@@ -4237,9 +4220,8 @@ void CNavArea::RaiseCorner( NavCornerType corner, int amount, bool raiseAdjacent
 			NavAreaVector *areas = &TheNavMesh->m_grid[ x + y*TheNavMesh->m_gridSizeX ];
 
 			// find closest area in this cell
-			FOR_EACH_VEC( (*areas), it )
+			for ( CNavArea *area : *areas )
 			{
-				CNavArea *area = (*areas)[ it ];
 
 				// skip if we've already visited this area
 				if (area->IsMarked())
@@ -4424,9 +4406,8 @@ static void CommandNavUpdateBlocked( void )
 	{
 		float start = Plat_FloatTime();
 		CNavArea *blockedArea = nullptr;
-		FOR_EACH_VEC( TheNavAreas, nit )
+		for ( CNavArea *area : TheNavAreas )
 		{
-			CNavArea *area = TheNavAreas[ nit ];
 			area->UpdateBlocked( true );
 			if ( area->IsBlocked( TEAM_ANY ) )
 			{
@@ -4732,8 +4713,8 @@ void CNavArea::UpdateBlocked( bool force, int teamID )
 	Vector origin = GetCenter();
 	origin.z += HalfHumanHeight;
 
-	const float sizeX = MAX( 1, MIN( GetSizeX()/2 - 5, HalfHumanWidth ) );
-	const float sizeY = MAX( 1, MIN( GetSizeY()/2 - 5, HalfHumanWidth ) );
+	const float sizeX = std::max<std::common_type_t<int, float>>( 1, std::min<std::common_type_t<float, int>>( GetSizeX()/2 - 5, HalfHumanWidth ) );
+	const float sizeY = std::max<std::common_type_t<int, float>>( 1, std::min<std::common_type_t<float, int>>( GetSizeY()/2 - 5, HalfHumanWidth ) );
 	Extent bounds;
 	bounds.lo.Init( -sizeX, -sizeY, 0 );
 	bounds.hi.Init( sizeX, sizeY, VEC_DUCK_HULL_MAX.z - HalfHumanHeight );
@@ -4904,11 +4885,11 @@ void CNavArea::UpdateAvoidanceObstacles( void )
 	Vector mins = m_nwCorner;
 	Vector maxs = m_seCorner;
 
-	mins.z = MIN( m_nwCorner.z, m_seCorner.z );
-	maxs.z = MAX( m_nwCorner.z, m_seCorner.z ) + HumanCrouchHeight;
+	mins.z = std::min( m_nwCorner.z, m_seCorner.z );
+	maxs.z = std::max( m_nwCorner.z, m_seCorner.z ) + HumanCrouchHeight;
 
 	float obstructionHeight = 0.0f;
-	for ( int i=0; i<TheNavMesh->GetObstructions().Count(); ++i )
+	for ( int i=0; i<std::ssize( TheNavMesh->GetObstructions() ); ++i )
 	{
 		INavAvoidanceObstacle *obstruction = TheNavMesh->GetObstructions()[i];
 		CBaseEntity *obstructingEntity = obstruction->GetObstructingEntity();
@@ -4926,7 +4907,7 @@ void CNavArea::UpdateAvoidanceObstacles( void )
 
 		float propHeight = obstruction->GetNavObstructionHeight();
 
-		obstructionHeight = MAX( obstructionHeight, propHeight );
+		obstructionHeight = std::max( obstructionHeight, propHeight );
 	}
 
 	m_avoidanceObstacleHeight = obstructionHeight;
@@ -4971,9 +4952,8 @@ static void CommandNavCheckFloor( void )
 	else
 	{
 		float start = Plat_FloatTime();
-		FOR_EACH_VEC( TheNavAreas, nit )
+		for ( CNavArea *area : TheNavAreas )
 		{
-			CNavArea *area = TheNavAreas[ nit ];
 			area->CheckFloor( nullptr );
 			if ( area->IsBlocked( TEAM_ANY ) )
 			{
@@ -5048,7 +5028,7 @@ static ConCommand nav_select_overlapping( "nav_select_overlapping", CommandNavSe
 static byte m_PVS[PAD_NUMBER( MAX_MAP_CLUSTERS,8 ) / 8];
 static int m_nPVSSize;		// PVS size in bytes
 
-CUtlHash< NavVisPair_t, CVisPairHashFuncs, CVisPairHashFuncs > *g_pNavVisPairHash;
+NavVisPairSet g_NavVisPairHash;
 
 #define MASK_NAV_VISION				(MASK_BLOCKLOS_AND_NPCS|CONTENTS_IGNORE_NODRAW_OPAQUE)
 
@@ -5160,8 +5140,8 @@ CNavArea::VisibilityType CNavArea::ComputeVisibility( const CNavArea *area, bool
 	Vector vTraceMins( vThisNW );
 	Vector vTraceMaxs( vThisSE );
 
-	vTraceMins.z = MIN( MIN( MIN( vThisNW.z, vThisNE.z ), vThisSE.z ), vThisSW.z );
-	vTraceMaxs.z = MAX( MAX( MAX( vThisNW.z, vThisNE.z ), vThisSE.z ), vThisSW.z ) + 0.1;
+	vTraceMins.z = std::min( std::min( std::min( vThisNW.z, vThisNE.z ), vThisSE.z ), vThisSW.z );
+	vTraceMaxs.z = std::max( std::max( std::max( vThisNW.z, vThisNE.z ), vThisSE.z ), vThisSW.z ) + 0.1;
 
 	vTraceMins -= vThisCenter;
 	vTraceMaxs -= vThisCenter;
@@ -5253,7 +5233,7 @@ const CNavArea::CAreaBindInfoArray &CNavArea::ComputeVisibilityDelta( const CNav
 {
 	static CAreaBindInfoArray delta;
 
-	delta.RemoveAll();
+	delta.clear();
 	
 	// do not delta from a delta - if 'other' is already inheriting, use its inherited source directly
 	if ( other->m_inheritVisibilityFrom.area != nullptr )
@@ -5266,12 +5246,12 @@ const CNavArea::CAreaBindInfoArray &CNavArea::ComputeVisibilityDelta( const CNav
 
 	// add any visible areas in my list that are not in 'others' list into the delta
 	int i, j;
-	for( i=0; i<m_potentiallyVisibleAreas.Count(); ++i )
+	for( i=0; i<std::ssize( m_potentiallyVisibleAreas ); ++i )
 	{
 		if ( m_potentiallyVisibleAreas[i].area )
 		{
 			// is my visible area also in adjacent area's vis list
-			for( j=0; j<other->m_potentiallyVisibleAreas.Count(); ++j )
+			for( j=0; j<std::ssize( other->m_potentiallyVisibleAreas ); ++j )
 			{
 				if ( m_potentiallyVisibleAreas[i].area == other->m_potentiallyVisibleAreas[j].area &&
 					 m_potentiallyVisibleAreas[i].attributes == other->m_potentiallyVisibleAreas[j].attributes )
@@ -5281,20 +5261,20 @@ const CNavArea::CAreaBindInfoArray &CNavArea::ComputeVisibilityDelta( const CNav
 				}
 			}
 
-			if ( j == other->m_potentiallyVisibleAreas.Count() )
+			if ( j == std::ssize( other->m_potentiallyVisibleAreas ) )
 			{
 				// my vis area not in adjacent area's vis list or has different visibility attributes - add to delta
-				delta.AddToTail( m_potentiallyVisibleAreas[i] );
+				delta.push_back( m_potentiallyVisibleAreas[i] );
 			}
 		}
 	}
 
 	// add explicit NOT_VISIBLE references to areas in 'others' list that are NOT in mine
-	for( j=0; j<other->m_potentiallyVisibleAreas.Count(); ++j )
+	for( j=0; j<std::ssize( other->m_potentiallyVisibleAreas ); ++j )
 	{
 		if ( other->m_potentiallyVisibleAreas[j].area )
 		{
-			for( i=0; i<m_potentiallyVisibleAreas.Count(); ++i )
+			for( i=0; i<std::ssize( m_potentiallyVisibleAreas ); ++i )
 			{
 				if ( m_potentiallyVisibleAreas[i].area == other->m_potentiallyVisibleAreas[j].area )
 				{
@@ -5303,14 +5283,14 @@ const CNavArea::CAreaBindInfoArray &CNavArea::ComputeVisibilityDelta( const CNav
 				}
 			}
 
-			if ( i == m_potentiallyVisibleAreas.Count() )
+			if ( i == std::ssize( m_potentiallyVisibleAreas ) )
 			{
 				// 'other' has area in their list that we don't - mark it explicitly NOT_VISIBLE
 				AreaBindInfo info;
 				info.area = other->m_potentiallyVisibleAreas[j].area;
 				info.attributes = NOT_VISIBLE;
 
-				delta.AddToTail( info );
+				delta.push_back( info );
 			}
 		}
 	}
@@ -5322,7 +5302,7 @@ const CNavArea::CAreaBindInfoArray &CNavArea::ComputeVisibilityDelta( const CNav
 //--------------------------------------------------------------------------------------------------------
 void CNavArea::ResetPotentiallyVisibleAreas()
 {
-	m_potentiallyVisibleAreas.RemoveAll();
+	m_potentiallyVisibleAreas.clear();
 }
 
 
@@ -5376,7 +5356,7 @@ void CNavArea::ComputeVisToArea( CNavArea *&pOtherArea )
 	{
 		info.area = g_pCurVisArea;
 		info.attributes = visOtherToThis;
-		area->m_potentiallyVisibleAreas.AddToTail( info );
+		area->m_potentiallyVisibleAreas.push_back( info );
 	}
 }
 
@@ -5398,40 +5378,38 @@ void CNavArea::ComputeVisibilityToMesh( void )
 	{
 		radius = DEF_NAV_VIEW_DISTANCE;
 	}
-	collector.m_area.EnsureCapacity( 1000 );
+	collector.m_area.reserve( 1000 );
 	TheNavMesh->ForAllAreasInRadius( collector, GetCenter(), radius );
 
 	NavVisPair_t visPair;
-	UtlHashHandle_t hHash;
 
 	// First eliminate the ones already calculated
-	for ( int i = collector.m_area.Count() - 1; i >= 0; --i )
+	for ( int i = std::ssize( collector.m_area ) - 1; i >= 0; --i )
 	{
 		visPair.SetPair( this, collector.m_area[i] );
 
-		hHash = g_pNavVisPairHash->Find( visPair );
-		if ( hHash != g_pNavVisPairHash->InvalidHandle() )
+		if ( g_NavVisPairHash.contains( visPair ) )
 		{
-			collector.m_area.FastRemove( i );
+			ks::swap_remove( collector.m_area, i );
 		}
 	}
 
 	SetupPVS();
 
 	g_pCurVisArea = this;
-	ParallelProcess( collector.m_area.Base(), collector.m_area.Count(), &ComputeVisToArea );
+	ParallelProcess( collector.m_area.data(), std::ssize( collector.m_area ), &ComputeVisToArea );
 
-	m_potentiallyVisibleAreas.EnsureCapacity( g_ComputedVis.Count() );
+	m_potentiallyVisibleAreas.reserve( g_ComputedVis.Count() );
 	while ( g_ComputedVis.Count() )
 	{
-		g_ComputedVis.PopItem( &m_potentiallyVisibleAreas[ m_potentiallyVisibleAreas.AddToTail() ] );
+		g_ComputedVis.PopItem( &m_potentiallyVisibleAreas.emplace_back() );
 	}
 
-	FOR_EACH_VEC( collector.m_area, it )
+	for ( auto collectedArea : collector.m_area )
 	{
-		visPair.SetPair( this, (CNavArea *)collector.m_area[it] );
-		Assert( g_pNavVisPairHash->Find( visPair ) == g_pNavVisPairHash->InvalidHandle() );
-		g_pNavVisPairHash->Insert( visPair );
+		visPair.SetPair( this, (CNavArea *)collectedArea );
+		[[maybe_unused]] bool bInserted = g_NavVisPairHash.insert( visPair ).second;
+		Assert( bInserted );
 	}
 }
 
@@ -5532,7 +5510,7 @@ bool CNavArea::IsPotentiallyVisible( const CNavArea *viewedArea ) const
 	}
 
 	// normal visibility check
-	for ( int i=0; i<m_potentiallyVisibleAreas.Count(); ++i )
+	for ( int i=0; i<std::ssize( m_potentiallyVisibleAreas ); ++i )
 	{
 		if ( m_potentiallyVisibleAreas[i].area == viewedArea )
 		{
@@ -5547,7 +5525,7 @@ bool CNavArea::IsPotentiallyVisible( const CNavArea *viewedArea ) const
 	{
 		CAreaBindInfoArray &inherited = m_inheritVisibilityFrom.area->m_potentiallyVisibleAreas;
 
-		for ( int i=0; i<inherited.Count(); ++i )
+		for ( int i=0; i<std::ssize( inherited ); ++i )
 		{
 			if ( inherited[i].area == viewedArea )
 			{
@@ -5577,7 +5555,7 @@ bool CNavArea::IsCompletelyVisible( const CNavArea *viewedArea ) const
 	}
 
 	// normal visibility check
-	for ( int i=0; i<m_potentiallyVisibleAreas.Count(); ++i )
+	for ( int i=0; i<std::ssize( m_potentiallyVisibleAreas ); ++i )
 	{
 		if ( m_potentiallyVisibleAreas[i].area == viewedArea )
 		{
@@ -5591,7 +5569,7 @@ bool CNavArea::IsCompletelyVisible( const CNavArea *viewedArea ) const
 	{
 		CAreaBindInfoArray &inherited = m_inheritVisibilityFrom.area->m_potentiallyVisibleAreas;
 
-		for ( int i=0; i<inherited.Count(); ++i )
+		for ( int i=0; i<std::ssize( inherited ); ++i )
 		{
 			if ( inherited[i].area == viewedArea )
 			{

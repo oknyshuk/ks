@@ -39,9 +39,6 @@
 #include "MapReslistGenerator.h"
 #include "matchmaking/imatchframework.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern bool		g_bAbortServerSet;
 #ifndef DEDICATED
 extern ConVar	reload_materials;
@@ -530,7 +527,7 @@ void CHostState::State_Run( float frameTime )
 		// Only clamp time if client is in process of connecting or is already connected.
 		if ( IsClientConnected() )
 		{
-			frameTime = MIN( frameTime, host_state.interval_per_tick );
+			frameTime = std::min( frameTime, host_state.interval_per_tick );
 		}
 	}
 	int nTimerWait = 15;

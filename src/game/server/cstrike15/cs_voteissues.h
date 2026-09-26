@@ -122,7 +122,7 @@ public:
 
 private:
 
-	CUtlVector< char const * > m_arrStrings;
+	std::vector< char const * > m_arrStrings;
 
 	char				m_szPrevDetailsString[MAX_PATH];
 	char				m_szNiceName[MAX_PATH];
@@ -174,7 +174,7 @@ public:
 	virtual int			GetVoteIssue( void ) { return VOTEISSUE_NEXTLEVEL; }
 
 private:
-	CUtlVector <const char *> m_IssueOptions;
+	std::vector< const char * > m_IssueOptions;
 };
 
 //-----------------------------------------------------------------------------

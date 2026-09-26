@@ -23,7 +23,7 @@
 #include "utlvector.h"
 #endif
 
-#include "utlsymbol.h"
+#include <string_view>
 
 struct channel_t;
 class CSfxTable;
@@ -58,10 +58,10 @@ struct sentence_t
 	float		length;
 	bool		closecaption : 7;
 	bool		isPrecached : 1;
-	CUtlSymbol	caption;
+	std::string_view	caption;	// in ks::global_symbols(); null data() for none
 };
 
-extern CUtlVector<sentence_t>	g_Sentences;
+extern std::vector< sentence_t >	g_Sentences;
 
 
 extern int				VOX_FPaintPitchChannelFrom8( channel_t *ch, sfxcache_t *sc, int count, int pitch, int timecompress );

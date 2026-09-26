@@ -36,9 +36,6 @@ bool NPC_CheckBrushExclude( CBaseEntity *pEntity, CBaseEntity *pBrush );
 #endif
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar r_visualizetraces( "r_visualizetraces", "0", FCVAR_CHEAT );
 ConVar developer("developer", "0", FCVAR_RELEASE, "Set developer message level" ); // developer mode
 
@@ -432,7 +429,7 @@ CTraceFilterSimpleList::CTraceFilterSimpleList( int collisionGroup ) :
 //-----------------------------------------------------------------------------
 bool CTraceFilterSimpleList::ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask )
 {
-	if ( m_PassEntities.Find(pHandleEntity) != m_PassEntities.InvalidIndex() )
+	if ( ks::find_index( m_PassEntities, pHandleEntity ) != -1 )
 		return false;
 
 	return CTraceFilterSimple::ShouldHitEntity( pHandleEntity, contentsMask );
@@ -444,12 +441,12 @@ bool CTraceFilterSimpleList::ShouldHitEntity( IHandleEntity *pHandleEntity, int 
 //-----------------------------------------------------------------------------
 void CTraceFilterSimpleList::AddEntityToIgnore( IHandleEntity *pEntity )
 {
-	m_PassEntities.AddToTail( pEntity );
+	m_PassEntities.push_back( pEntity );
 }
 
 void CTraceFilterSimpleList::AddEntitiesToIgnore( int nCount, IHandleEntity **ppEntities )
 {
-	int nIndex = m_PassEntities.AddMultipleToTail( nCount );
+	int nIndex = std::ssize( m_PassEntities ); m_PassEntities.resize( m_PassEntities.size() + nCount );
 	memcpy( &m_PassEntities[nIndex], ppEntities, nCount * sizeof( IHandleEntity* ) );
 }
 
@@ -547,14 +544,14 @@ bool CTraceFilterSimpleClassnameList::ShouldHitEntity( IHandleEntity *pHandleEnt
 	if ( pOwner )
 	{
 		const char *pOwnerClass = pOwner->GetClassname();
-		for ( int i = 0; i < m_PassClassnames.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_PassClassnames ); i++ )
 		{
 			if ( !V_strcmp( m_PassClassnames[i], pOwnerClass ) )
 				return false;
 		}
 	}
 	const char *pEntityClass = pEntity->GetClassname();
-	for ( int i = 0; i < m_PassClassnames.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_PassClassnames ); ++i )
 	{
 		if ( !V_strcmp( pEntityClass, m_PassClassnames[ i ] ) )
 			return false;
@@ -569,7 +566,7 @@ bool CTraceFilterSimpleClassnameList::ShouldHitEntity( IHandleEntity *pHandleEnt
 //-----------------------------------------------------------------------------
 void CTraceFilterSimpleClassnameList::AddClassnameToIgnore( const char *pchClassname )
 {
-	m_PassClassnames.AddToTail( pchClassname );
+	m_PassClassnames.push_back( pchClassname );
 }
 
 CTraceFilterChain::CTraceFilterChain( ITraceFilter *pTraceFilter1, ITraceFilter *pTraceFilter2 )
@@ -1365,7 +1362,7 @@ void CTimeline::Compress( void )
 	case TIMELINE_COMPRESSION_SUM:
 		for ( i = 0, j = 0; i < TIMELINE_ARRAY_SIZE; i += 2, ++j )
 		{
-			m_flValues.GetForModify( j ) = MAX( m_flValues[ i ], m_flValues[ i + 1 ] );
+			m_flValues.GetForModify( j ) = std::max( m_flValues[ i ], m_flValues[ i + 1 ] );
 			m_nValueCounts.GetForModify( j ) = m_nValueCounts[ i ] + m_nValueCounts[ i + 1 ];
 		}
 		break;

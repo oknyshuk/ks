@@ -10,9 +10,6 @@
 #include "sos_op.h"
 #include "sos_op_player_info.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 
 extern Color OpColor;

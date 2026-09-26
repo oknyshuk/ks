@@ -47,7 +47,7 @@ private:
 		int height;
 	};
 
-	CUtlVector< ProcessedLine >	m_Processed;
+	std::vector< ProcessedLine >	m_Processed;
 
 	int				m_nMaxPixels;
 	int				m_nHeight;

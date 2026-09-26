@@ -23,9 +23,6 @@
 #include "ragdoll_shared.h"
 #include "hierarchy.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
@@ -1481,9 +1478,9 @@ void DetachAttachedRagdoll( CBaseEntity *pRagdollIn )
 
 void DetachAttachedRagdollsForEntity( CBaseEntity *pRagdollParent )
 {
-	CUtlVector<CBaseEntity *> list;
+	std::vector< CBaseEntity * > list;
 	GetAllChildren( pRagdollParent, list );
-	for ( int i = list.Count()-1; i >= 0; --i )
+	for ( int i = std::ssize( list )-1; i >= 0; --i )
 	{
 		DetachAttachedRagdoll( list[i] );
 	}

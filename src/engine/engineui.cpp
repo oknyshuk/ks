@@ -57,9 +57,6 @@
 
 #include "rocketui/rocketui.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern IVEngineClient *engineClient;
 extern HWND *pmainwindow;
 extern bool g_bTextMode;
@@ -322,7 +319,7 @@ private:
 		double flTime;
 		LevelLoadingProgress_e eProgress;
 	};
-	CUtlVector<LoadingProgressEntry_t> m_LoadingProgress;
+	std::vector< LoadingProgressEntry_t > m_LoadingProgress;
 
 	bool					m_bSaveProgress : 1;
 	bool					m_bNoShaderAPI : 1;
@@ -800,7 +797,7 @@ void CEngineUI::OnLevelLoadingStarted( char const *levelName, bool bLocalServer 
 
 	// reset progress bar timers
 	m_flLoadingStartTime = Plat_FloatTime();
-	m_LoadingProgress.RemoveAll();
+	m_LoadingProgress.clear();
 	m_eLastProgressPoint = PROGRESS_NONE;
 	m_nLastProgressPointRepeatCount = 0;
 	m_ProgressBias = 0;
@@ -1005,7 +1002,7 @@ void CEngineUI::UpdateProgressBar( LevelLoadingProgress_e progress, bool showDia
 	if ( desc.nRepeat > 1 && m_nLastProgressPointRepeatCount )
 	{
 		// cap the repeat count
-		m_nLastProgressPointRepeatCount = MIN(m_nLastProgressPointRepeatCount, desc.nRepeat);
+		m_nLastProgressPointRepeatCount = std::min(m_nLastProgressPointRepeatCount, desc.nRepeat);
 
 		// next progress point
 		float flNextPerc = GetProgressDescription((LevelLoadingProgress_e)((int)progress + 1)).nPercent / 100.0f;

@@ -9,9 +9,6 @@
 #include "perfvisualbenchmark.h"
 #include "keyvalues.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define VAR		0
 #define ON		1
 #define OFF		2
@@ -54,154 +51,154 @@ bool CPerfVisualBenchmark::Init()
 	runInfo.m_pOffVal = "";
 	runInfo.m_pDescription = "Default";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME;
-	m_RunInfo.AddToTail( runInfo );
+	m_RunInfo.push_back( runInfo );
 
 	runInfo.m_pVarName = "r_drawdetailprops";
 	runInfo.m_pOnVal = "0";
 	runInfo.m_pOffVal = "1";
 	runInfo.m_pDescription = "detail props";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME;
-	m_RunInfo.AddToTail( runInfo );
+	m_RunInfo.push_back( runInfo );
 
 	runInfo.m_pVarName = "r_drawworld";
 	runInfo.m_pOnVal = "0";
 	runInfo.m_pOffVal = "1";
 	runInfo.m_pDescription = "world geometry";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME;
-	m_RunInfo.AddToTail( runInfo );
+	m_RunInfo.push_back( runInfo );
 
 	runInfo.m_pVarName = "r_drawentities";
 	runInfo.m_pOnVal = "0";
 	runInfo.m_pOffVal = "1";
 	runInfo.m_pDescription = "entities";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME;
-	m_RunInfo.AddToTail( runInfo );
+	m_RunInfo.push_back( runInfo );
 
 	runInfo.m_pVarName = "r_3dsky";
 	runInfo.m_pOnVal = "0";
 	runInfo.m_pOffVal = "1";
 	runInfo.m_pDescription = "3D skybox";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME;
-	m_RunInfo.AddToTail( runInfo );
+	m_RunInfo.push_back( runInfo );
 
 	runInfo.m_pVarName = "r_drawdecals";
 	runInfo.m_pOnVal = "0";
 	runInfo.m_pOffVal = "1";
 	runInfo.m_pDescription = "decals";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME;
-	m_RunInfo.AddToTail( runInfo );
+	m_RunInfo.push_back( runInfo );
 
 	runInfo.m_pVarName = "mat_stub";
 	runInfo.m_pOnVal = "1";
 	runInfo.m_pOffVal = "0";
 	runInfo.m_pDescription = "material system and below";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME;
-	m_RunInfo.AddToTail( runInfo );
+	m_RunInfo.push_back( runInfo );
 
 	runInfo.m_pVarName = "mat_viewportscale";
 	runInfo.m_pOnVal = ".2";
 	runInfo.m_pOffVal = "1.0";
 	runInfo.m_pDescription = "fillrate";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME;
-	m_RunInfo.AddToTail( runInfo );
+	m_RunInfo.push_back( runInfo );
 
 	runInfo.m_pVarName = "r_drawstaticprops";
 	runInfo.m_pOnVal = "0";
 	runInfo.m_pOffVal = "1";
 	runInfo.m_pDescription = "fillrate";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME;
-	m_RunInfo.AddToTail( runInfo );
+	m_RunInfo.push_back( runInfo );
 
 	runInfo.m_pVarName = "r_drawbrushmodels";
 	runInfo.m_pOnVal = "0";
 	runInfo.m_pOffVal = "1";
 	runInfo.m_pDescription = "brush models";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME;
-	m_RunInfo.AddToTail( runInfo );
+	m_RunInfo.push_back( runInfo );
 
 	runInfo.m_pVarName = "r_renderoverlayfragment";
 	runInfo.m_pOnVal = "0";
 	runInfo.m_pOffVal = "1";
 	runInfo.m_pDescription = "overlays";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME;
-	m_RunInfo.AddToTail( runInfo );
+	m_RunInfo.push_back( runInfo );
 
 	runInfo.m_pVarName = "r_drawdisp";
 	runInfo.m_pOnVal = "0";
 	runInfo.m_pOffVal = "1";
 	runInfo.m_pDescription = "displacements";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME;
-	m_RunInfo.AddToTail( runInfo );
+	m_RunInfo.push_back( runInfo );
 
 	runInfo.m_pVarName = "r_drawviewmodel";
 	runInfo.m_pOnVal = "0";
 	runInfo.m_pOffVal = "1";
 	runInfo.m_pDescription = "viewmodel";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME;
-	m_RunInfo.AddToTail( runInfo );
+	m_RunInfo.push_back( runInfo );
 
 	runInfo.m_pVarName = "cl_drawhud";
 	runInfo.m_pOnVal = "0";
 	runInfo.m_pOffVal = "1";
 	runInfo.m_pDescription = "hud";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME;
-	m_RunInfo.AddToTail( runInfo );
+	m_RunInfo.push_back( runInfo );
 
 	runInfo.m_pVarName = "r_drawparticles";
 	runInfo.m_pOnVal = "0";
 	runInfo.m_pOffVal = "1";
 	runInfo.m_pDescription = "particles";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME;
-	m_RunInfo.AddToTail( runInfo );
+	m_RunInfo.push_back( runInfo );
 
 	runInfo.m_pVarName = "r_drawsprites";
 	runInfo.m_pOnVal = "0";
 	runInfo.m_pOffVal = "1";
 	runInfo.m_pDescription = "sprites";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME;
-	m_RunInfo.AddToTail( runInfo );
+	m_RunInfo.push_back( runInfo );
 
 	runInfo.m_pVarName = "mat_bumpmap";
 	runInfo.m_pOnVal = "0";
 	runInfo.m_pOffVal = "1";
 	runInfo.m_pDescription = "bump mapping";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME_RELOAD_MATERIALS;
-	m_RunInfo.AddToTail( runInfo );
+	m_RunInfo.push_back( runInfo );
 
 	runInfo.m_pVarName = "mat_specular";
 	runInfo.m_pOnVal = "0";
 	runInfo.m_pOffVal = "1";
 	runInfo.m_pDescription = "specularity";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME_RELOAD_MATERIALS;
-	m_RunInfo.AddToTail( runInfo );
+	m_RunInfo.push_back( runInfo );
 
 	runInfo.m_pVarName = "mat_drawwater";
 	runInfo.m_pOnVal = "0";
 	runInfo.m_pOffVal = "1";
 	runInfo.m_pDescription = "water";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME;
-	m_RunInfo.AddToTail( runInfo );
+	m_RunInfo.push_back( runInfo );
 
 	runInfo.m_pVarName = "r_dynamic";
 	runInfo.m_pOnVal = "0";
 	runInfo.m_pOffVal = "1";
 	runInfo.m_pDescription = "dynamic lighting";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME;
-	m_RunInfo.AddToTail( runInfo );
+	m_RunInfo.push_back( runInfo );
 
 	runInfo.m_pVarName = "r_shadows";
 	runInfo.m_pOnVal = "0";
 	runInfo.m_pOffVal = "1";
 	runInfo.m_pDescription = "shadows";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME;
-	m_RunInfo.AddToTail( runInfo );
+	m_RunInfo.push_back( runInfo );
 
 	runInfo.m_pVarName = "r_drawropes";
 	runInfo.m_pOnVal = "0";
 	runInfo.m_pOffVal = "1";
 	runInfo.m_pDescription = "ropes";
 	runInfo.m_flStabilizeTime = FPS_STABILIZE_TIME;
-	m_RunInfo.AddToTail( runInfo );
+	m_RunInfo.push_back( runInfo );
 
 	m_bIsOn = false;					//is this thing on?
 	return true;
@@ -278,7 +275,7 @@ void CPerfVisualBenchmark::PreRender( )
 
 	// next var
 	m_iCurVar++;				
-	if (m_iCurVar == m_RunInfo.Count())
+	if (m_iCurVar == std::ssize( m_RunInfo ))
 	{
 		Stop();
 		return;
@@ -291,10 +288,10 @@ void CPerfVisualBenchmark::PreRender( )
 
 void CPerfVisualBenchmark::Print()				//  sort and print into console
 {
-	for (int i = 0; i<m_RunInfo.Count(); i++)
+	for (int i = 0; i<std::ssize( m_RunInfo ); i++)
 	{
 		int curMax = 0;
-		for (int j = 0; j<m_RunInfo.Count(); j++)
+		for (int j = 0; j<std::ssize( m_RunInfo ); j++)
 		{
 			if (m_RunInfo[j].m_flFPS > m_RunInfo[curMax].m_flFPS)
 			{

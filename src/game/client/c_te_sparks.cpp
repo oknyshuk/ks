@@ -12,9 +12,6 @@
 #include "tier1/keyvalues.h"
 #include "toolframework_client.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: Sparks TE
 //-----------------------------------------------------------------------------

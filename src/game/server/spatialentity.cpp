@@ -12,9 +12,6 @@
 
 #include "spatialentity.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 #define SPATIAL_ENT_THINK_RATE TICK_INTERVAL
 

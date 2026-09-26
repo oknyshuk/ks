@@ -7,6 +7,8 @@
 // $NoKeywords: $
 //===========================================================================//
 
+#include <atomic>
+#include <mutex>
 #include "engine/IEngineTrace.h"
 #include "icliententitylist.h"
 #include "ispatialpartitioninternal.h"
@@ -28,13 +30,11 @@
 #include "mathlib/polyhedron.h"
 #include "sys_dll.h"
 #include "vphysics/virtualmesh.h"
-#include "tier1/utlhashtable.h"
+#include <deque>
+#include <unordered_map>
 #include "tier1/refcount.h"
 #include "vstdlib/jobthread.h"
 #include "tier0/microprofiler.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 //-----------------------------------------------------------------------------
@@ -57,13 +57,13 @@ enum
 ConVar debugrayenable( "debugrayenable", "0", 0, "Use this to enable ray testing.  To reset: bind \"F1\" \"clearalloverlays; debugrayreset  0; host_framerate 66.66666667\"" );
 ConVar debugrayreset( "debugrayreset", "0" );
 ConVar debugraylimit( "debugraylimit", "500", 0, "number of rays per frame that you have to hit before displaying them all" );
-static CUtlVector<Ray_t> s_FrameRays;
+static std::vector< Ray_t > s_FrameRays;
 #endif
 
 #define BENCHMARK_RAY_TEST 0
 
 #if BENCHMARK_RAY_TEST
-static CUtlVector<Ray_t> s_BenchmarkRays;
+static std::vector< Ray_t > s_BenchmarkRays;
 #endif
 
 class CAsyncOcclusionQuery;
@@ -190,7 +190,7 @@ private:
 	int m_traceStatCounters[NUM_TRACE_STAT_COUNTER];
 	int m_nOcclusionTestsSuspended;
 	// Note: occlusion key MUST be evenly distributed for this to work well. Fortunately, it's just player ids, they're distributed perfectly well
-	CUtlHashtable < int, CAsyncOcclusionQuery*, IdentityHashFunctor > m_OcclusionQueryMap;
+	std::unordered_map< int, CAsyncOcclusionQuery* > m_OcclusionQueryMap; // std::hash<int> is the identity
 
 	friend void RayBench( const CCommand &args );
 	friend void RayBatchBench( const CCommand &args );
@@ -625,10 +625,10 @@ void CEngineTrace::GetBrushesInAABB( const Vector &vMins, const Vector &vMaxs, C
 	int *pLeafList = (int *)stackalloc( pTraceInfo->m_pBSPData->numleafs * sizeof( int ) );
 	int iNumLeafs = CM_BoxLeafnums( vMins, vMaxs, pLeafList, pTraceInfo->m_pBSPData->numleafs, nullptr, nCModelIndex );
 
-	TraceCounter_t *pVisitedBrushes = pTraceInfo->m_BrushCounters[0].Base();
-	Plat_FastMemset( pVisitedBrushes, 0, pTraceInfo->m_BrushCounters[0].Count() * sizeof(TraceCounter_t) );
+	TraceCounter_t *pVisitedBrushes = pTraceInfo->m_BrushCounters[0].data();
+	Plat_FastMemset( pVisitedBrushes, 0, std::ssize( pTraceInfo->m_BrushCounters[0] ) * sizeof(TraceCounter_t) );
 
-	TraceCounter_t *pKeepBrushes = pTraceInfo->m_BrushCounters[1].Base();
+	TraceCounter_t *pKeepBrushes = pTraceInfo->m_BrushCounters[1].data();
 	int iKeepBrushCount = 0;
 	int iMaxBrushSides = 0;
 
@@ -655,7 +655,7 @@ void CEngineTrace::GetBrushesInAABB( const Vector &vMins, const Vector &vMaxs, C
 			if ( pTraceInfo->m_trace.allsolid )
 			{
 				//store the brush
-				Assert( iKeepBrushCount < pTraceInfo->m_BrushCounters[0].Count() );
+				Assert( iKeepBrushCount < std::ssize( pTraceInfo->m_BrushCounters[0] ) );
 
 				pKeepBrushes[iKeepBrushCount] = iBrushNumber;
 				++iKeepBrushCount;
@@ -740,13 +740,13 @@ void CEngineTrace::GetBrushesInCollideable( ICollideable *pCollideable, CBrushQu
 
 	for( int i = 0; i != 2; ++i )
 	{
-		memset( pTraceInfo->m_BrushCounters[i].Base(), 0, pTraceInfo->m_BrushCounters[i].Count() * sizeof(TraceCounter_t) );
+		memset( pTraceInfo->m_BrushCounters[i].data(), 0, std::ssize( pTraceInfo->m_BrushCounters[i] ) * sizeof(TraceCounter_t) );
 	}
 	
-	TraceCounter_t *pKeepBrushes = pTraceInfo->m_BrushCounters[1].Base(); //will get modified by GetBrushesInCollideable_r
-	GetBrushesInCollideable_r( pTraceInfo->m_pBSPData, pTraceInfo->m_BrushCounters[0].Base(), &pKeepBrushes, nHeadNode );
-	int iKeepBrushCount = pKeepBrushes - pTraceInfo->m_BrushCounters[1].Base();
-	pKeepBrushes = pTraceInfo->m_BrushCounters[1].Base();
+	TraceCounter_t *pKeepBrushes = pTraceInfo->m_BrushCounters[1].data(); //will get modified by GetBrushesInCollideable_r
+	GetBrushesInCollideable_r( pTraceInfo->m_pBSPData, pTraceInfo->m_BrushCounters[0].data(), &pKeepBrushes, nHeadNode );
+	int iKeepBrushCount = pKeepBrushes - pTraceInfo->m_BrushCounters[1].data();
+	pKeepBrushes = pTraceInfo->m_BrushCounters[1].data();
 
 	int iMaxBrushSides = 0;
 	for( int i = 0; i != iKeepBrushCount; ++i )
@@ -1458,20 +1458,20 @@ void CEngineTrace::ClipRayToEntity( const Ray_t &ray, unsigned int fMask, IHandl
 class CEntitiesAlongRay : public IPartitionEnumerator
 {
 public:
-	CEntitiesAlongRay( ) : m_EntityHandles(0, 32) {}
+	CEntitiesAlongRay( ) {}
 
 	void Reset()
 	{
-		m_EntityHandles.RemoveAll();
+		m_EntityHandles.clear();
 	}
 
 	IterationRetval_t EnumElement( IHandleEntity *pHandleEntity )
 	{
-		m_EntityHandles.AddToTail( pHandleEntity );
+		m_EntityHandles.push_back( pHandleEntity );
 		return ITERATION_CONTINUE;
 	}
 
-	CUtlVector< IHandleEntity * >	m_EntityHandles;
+	std::vector< IHandleEntity * >	m_EntityHandles;
 };
 
 class CEntityListAlongRay : public IPartitionEnumerator
@@ -1655,12 +1655,12 @@ ICollideable *CEngineTraceServer::GetWorldCollideable()
 void EngineTraceRenderRayCasts()
 {
 #if defined _DEBUG && !defined DEDICATED
-	if( debugrayenable.GetBool() && s_FrameRays.Count() > debugraylimit.GetInt() && !debugrayreset.GetInt() )
+	if( debugrayenable.GetBool() && std::ssize( s_FrameRays ) > debugraylimit.GetInt() && !debugrayreset.GetInt() )
 	{
-		Warning( "m_FrameRays.Count() == %d\n", s_FrameRays.Count() );
+		Warning( "m_FrameRays.Count() == %d\n", std::ssize( s_FrameRays ) );
 		debugrayreset.SetValue( 1 );
 		int i;
-		for( i = 0; i < s_FrameRays.Count(); i++ )
+		for( i = 0; i < std::ssize( s_FrameRays ); i++ )
 		{
 			Ray_t &ray = s_FrameRays[i];
 			if( ray.m_Extents.x != 0.0f || ray.m_Extents.y != 0.0f || ray.m_Extents.z != 0.0f )
@@ -1674,7 +1674,7 @@ void EngineTraceRenderRayCasts()
 		}
 	}
 
-	s_FrameRays.RemoveAll( );
+	s_FrameRays.clear();
 #endif
 }
 
@@ -1744,7 +1744,7 @@ IterationRetval_t CTraceListData::EnumElement( IHandleEntity *pHandleEntity )
 		if ( pCollideable->GetCollisionModel() )
 		{
 			Msg("%s in solid list (not solid) (%d, %04X) %.*s\n", m_pEngineTrace->GetDebugName(pHandleEntity), pCollideable->GetSolid(), pCollideable->GetSolidFlags(),
-				sizeof( pCollideable->GetCollisionModel()->szPathName ), pCollideable->GetCollisionModel()->szPathName );
+				(int)sizeof( pCollideable->GetCollisionModel()->szPathName ), pCollideable->GetCollisionModel()->szPathName );
 		}
 		else
 		{
@@ -1755,13 +1755,13 @@ IterationRetval_t CTraceListData::EnumElement( IHandleEntity *pHandleEntity )
 	{
 		if ( StaticPropMgr()->IsStaticProp( pHandleEntity ) )
 		{
-			int index = m_staticPropList.AddToTail();
+			int index = std::ssize( m_staticPropList ); m_staticPropList.emplace_back();
 			m_staticPropList[index].pCollideable = pCollideable;
 			m_staticPropList[index].pEntity = pHandleEntity;
 		}
 		else
 		{
-			int index = m_entityList.AddToTail();
+			int index = std::ssize( m_entityList ); m_entityList.emplace_back();
 			m_entityList[index].pCollideable = pCollideable;
 			m_entityList[index].pEntity = pHandleEntity;
 		}
@@ -1886,7 +1886,7 @@ void CEngineTrace::TraceRayAgainstLeafAndEntityList( const Ray_t &ray, ITraceLis
 	Vector mins, maxs;
 	if ( !bNoStaticProps )
 	{
-		int propCount = traceData.m_staticPropList.Count();
+		int propCount = std::ssize( traceData.m_staticPropList );
 		for ( int iProp = 0; iProp < propCount && !pTrace->allsolid; iProp++ )
 		{
 			IHandleEntity *pHandleEntity = traceData.m_staticPropList[iProp].pEntity;
@@ -1905,7 +1905,7 @@ void CEngineTrace::TraceRayAgainstLeafAndEntityList( const Ray_t &ray, ITraceLis
 			ClipTraceToTrace( trace, pTrace );
 		}
 	}
-	int entityCount = traceData.m_entityList.Count();
+	int entityCount = std::ssize( traceData.m_entityList );
 	for ( int iEntity = 0; iEntity < entityCount && !pTrace->allsolid; ++iEntity )
 	{
 		IHandleEntity *pHandleEntity = traceData.m_entityList[iEntity].pEntity;
@@ -2015,8 +2015,8 @@ CON_COMMAND_EXTERN( ray_batch_bench, RayBatchBench, "Time batches of rays" )
 				AddPointToBounds( tmpMins, mins, maxs );
 				AddPointToBounds( tmpMaxs, mins, maxs );
 				Vector ext = maxs - mins;
-				float maxSize = MAX(ext[0], ext[1]);
-				maxSize = MAX(maxSize, ext[2]);
+				float maxSize = std::max(ext[0], ext[1]);
+				maxSize = std::max(maxSize, ext[2]);
 				if ( maxSize > ray_batch_extents.GetFloat() )
 					break;
 				count++;
@@ -2226,8 +2226,8 @@ fltx4 TestBoxAinB( const VectorAligned &ptA, const VectorAligned &extA, const Ve
 // returns positive distances when box A protruding out of B; negative if A is contained inside of B
 fltx4 ProtrusionBoxAoutB( const AABB_t &aabb0, const AABB_t &aabb1 )
 {
-	fltx4 f4Min0 = LoadUnaligned3SIMD( &aabb0.m_vMinBounds ), f4Min1 = LoadUnaligned3SIMD( &aabb1.m_vMinBounds );
-	fltx4 f4Max0 = LoadUnaligned3SIMD( &aabb0.m_vMaxBounds ), f4Max1 = LoadUnaligned3SIMD( &aabb1.m_vMaxBounds );
+	fltx4 f4Min0 = LoadVector3SIMD( aabb0.m_vMinBounds ), f4Min1 = LoadVector3SIMD( aabb1.m_vMinBounds );
+	fltx4 f4Max0 = LoadVector3SIMD( aabb0.m_vMaxBounds ), f4Max1 = LoadVector3SIMD( aabb1.m_vMaxBounds );
 
 	return MaxSIMD( f4Min1 - f4Min0, f4Max0 - f4Max1 );
 
@@ -2254,10 +2254,10 @@ struct OcclusionStats_t
 	uint64 nVisShadowCullCalls;
 	uint64 nVisShadowCullsSucceeded;
 
-	CInterlockedUInt nQueries;
-	CInterlockedUInt nQueriesInFlight;
-	CInterlockedUInt nJobsInFlight;
-	CInterlockedUInt nJobs;
+	std::atomic<unsigned> nQueries;
+	std::atomic<unsigned> nQueriesInFlight;
+	std::atomic<unsigned> nJobsInFlight;
+	std::atomic<unsigned> nJobs;
 
 	bool RegisterOcclusion( bool bOcclusion )
 	{
@@ -2366,9 +2366,8 @@ static OcclusionStats_t s_occlusionStats = { 0 };
 
 
 class CAsyncOcclusionQuery;
-CThreadFastMutex s_occlusionQueryMutex;
-typedef CUtlLinkedList< CAsyncOcclusionQuery* > OcclusionQueryList_t;
-OcclusionQueryList_t s_occlusionQueries; // these are the real queries in flight awaiting a job to pick them up
+std::recursive_mutex s_occlusionQueryMutex;
+std::deque< CAsyncOcclusionQuery* > s_occlusionQueries; // these are the real queries in flight awaiting a job to pick them up
 
 class COcclusionQueryJob : public CJob
 {
@@ -2572,8 +2571,8 @@ public:
 		Assert( !m_bCompleted );
 		AddRef();
 		{
-			CAutoLockT< CThreadFastMutex > autoLock( s_occlusionQueryMutex );
-			s_occlusionQueries.AddToTail( this );
+			std::scoped_lock occlusionQueryLock( s_occlusionQueryMutex );
+			s_occlusionQueries.push_back( this );
 			if ( s_pOcclusionQueryJob )
 			{
 				if ( !s_pOcclusionQueryJob->m_bFinished )
@@ -2592,17 +2591,16 @@ JobStatus_t	COcclusionQueryJob::DoExecute()
 	{
 		CAsyncOcclusionQuery *pQuery;
 		{
-			CAutoLockT< CThreadFastMutex > autoLock( s_occlusionQueryMutex );
-			OcclusionQueryList_t::IndexLocalType_t nHead = s_occlusionQueries.Head( );
-			if ( nHead == s_occlusionQueries.InvalidIndex() )
+			std::scoped_lock occlusionQueryLock( s_occlusionQueryMutex );
+			if ( s_occlusionQueries.empty() )
 			{
 				m_bFinished = true;
 				break;
 			}
 			else
 			{
-				pQuery = s_occlusionQueries.Element( nHead );
-				s_occlusionQueries.Remove( nHead );
+				pQuery = s_occlusionQueries.front();
+				s_occlusionQueries.pop_front();
 			}
 		}
 
@@ -2619,28 +2617,27 @@ void CEngineTrace::FlushOcclusionQueries()
 {
 	// cancel all queries in flight: take them away from the jobs consuming them
 	{
-		CAutoLockT< CThreadFastMutex > autoLock( s_occlusionQueryMutex );
+		std::scoped_lock occlusionQueryLock( s_occlusionQueryMutex );
 		for ( ;;) 
 		{
-			OcclusionQueryList_t::IndexLocalType_t nHead = s_occlusionQueries.Head( );
-			if ( nHead == s_occlusionQueries.InvalidIndex() )
+			if ( s_occlusionQueries.empty() )
 			{
 				break;
 			}
 			else
 			{
-				CAsyncOcclusionQuery *pQuery = s_occlusionQueries.Element( nHead );
-				s_occlusionQueries.Remove( nHead );
+				CAsyncOcclusionQuery *pQuery = s_occlusionQueries.front();
+				s_occlusionQueries.pop_front();
 				pQuery->Release();
 			}
 		}
 	}
 	// also, release all jobs currently locked by 
-	for ( UtlHashHandle_t it = m_OcclusionQueryMap.FirstHandle(); it != m_OcclusionQueryMap.InvalidHandle(); it = m_OcclusionQueryMap.RemoveAndAdvance( it ) )
+	for ( auto &[nKey, pQuery] : m_OcclusionQueryMap )
 	{
-		m_OcclusionQueryMap.Element( it )->Release();
+		pQuery->Release();
 	}
-	m_OcclusionQueryMap.Purge();
+	m_OcclusionQueryMap.clear();
 	if ( s_pOcclusionQueryJob )
 	{
 		s_pOcclusionQueryJob->Release();
@@ -2659,7 +2656,7 @@ void FlushOcclusionQueries()
 
 void CEngineTrace::ResumeOcclusionTests()
 {
-	if ( !--m_nOcclusionTestsSuspended && s_occlusionQueries.Head() != s_occlusionQueries.InvalidIndex() )
+	if ( !--m_nOcclusionTestsSuspended && !s_occlusionQueries.empty() )
 	{
 		// We're out of suspension and we have some jobs queued up. Execute them.
 		SpinUpOcclusionJob();
@@ -2676,10 +2673,10 @@ bool CEngineTrace::IsFullyOccluded( int nOcclusionKey, const AABB_t &aabb0, cons
 		return s_occlusionStats.RegisterOcclusion( IsFullyOccluded_WithShadow( aabb0, aabb1, vShadow ) );
 
 	// first, try to find the previous frame version of this job
-	UtlHashHandle_t hFind = m_OcclusionQueryMap.Find( nOcclusionKey );
-	if ( hFind != m_OcclusionQueryMap.InvalidHandle() )
+	auto itFind = m_OcclusionQueryMap.find( nOcclusionKey );
+	if ( itFind != m_OcclusionQueryMap.end() )
 	{
-		CAsyncOcclusionQuery* pQuery = m_OcclusionQueryMap[ hFind ];
+		CAsyncOcclusionQuery* pQuery = itFind->second;
 		fltx4 f4ManhattanError = pQuery->GetManhattanDistance( aabb0, aabb1 );
 		if ( IsAllGreaterThanOrEq( ReplicateX4( occlusion_test_async_move_tolerance.GetFloat() ), f4ManhattanError ) )
 		{
@@ -2725,14 +2722,14 @@ bool CEngineTrace::IsFullyOccluded( int nOcclusionKey, const AABB_t &aabb0, cons
 
 		CAsyncOcclusionQuery* pNewQuery = new CAsyncOcclusionQuery( aabb0, aabb1, vShadow );
 		pNewQuery->Queue( m_nOcclusionTestsSuspended );
-		m_OcclusionQueryMap[ hFind ] = pNewQuery;
+		itFind->second = pNewQuery;
 	}
 	else
 	{
 		s_occlusionStats.nKeyNotFound++;
 		CAsyncOcclusionQuery* pNewQuery = new CAsyncOcclusionQuery( aabb0, aabb1, vShadow );
 		pNewQuery->Queue( m_nOcclusionTestsSuspended );
-		m_OcclusionQueryMap.Insert( nOcclusionKey, pNewQuery );
+		m_OcclusionQueryMap.emplace( nOcclusionKey, pNewQuery );
 	}
 
 	// we queued the new query, but we still don't know whether the boxes are occlude
@@ -2754,7 +2751,7 @@ void CEngineTrace::TraceRay( const Ray_t &ray, unsigned int fMask, ITraceFilter 
 #if defined _DEBUG && !defined DEDICATED
 	if( debugrayenable.GetBool() )
 	{
-		s_FrameRays.AddToTail( ray );
+		s_FrameRays.push_back( ray );
 	}
 #endif
 

@@ -16,17 +16,15 @@
 #include "choreoactor.h"
 #include "ichoreoeventcallback.h"
 #include "iscenetokenprocessor.h"
-#include "utlbuffer.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
+#include "tier1/text_writer.h"
 #include "filesystem.h"
-#include "utlrbtree.h"
+#include <set>
 #include "mathlib/mathlib.h"
 #include "tier1/strtools.h"
 #include "tier2/tier2.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
-#pragma warning( disable : 4127 )
 
 // Let scene linger for 1/4 second so blends can finish
 #define SCENE_LINGER_TIME 0.25f
@@ -123,32 +121,32 @@ CChoreoScene& CChoreoScene::operator=( const CChoreoScene& src )
 
 	// Delete existing
 	int i;
-	for ( i = 0; i < m_Actors.Count(); i++ )
+	for ( i = 0; i < std::ssize( m_Actors ); i++ )
 	{
 		CChoreoActor *a = m_Actors[ i ];
 		Assert( a );
 		delete a;
 	}
 
-	m_Actors.RemoveAll();
+	m_Actors.clear();
 
-	for ( i = 0; i < m_Events.Count(); i++ )
+	for ( i = 0; i < std::ssize( m_Events ); i++ )
 	{
 		CChoreoEvent *e = m_Events[ i ];
 		Assert( e );
 		delete e;
 	}
 
-	m_Events.RemoveAll();
+	m_Events.clear();
 
-	for ( i = 0 ; i < m_Channels.Count(); i++ )
+	for ( i = 0 ; i < std::ssize( m_Channels ); i++ )
 	{
 		CChoreoChannel *c = m_Channels[ i ];
 		Assert( c );
 		delete c;
 	}
 
-	m_Channels.RemoveAll();
+	m_Channels.clear();
 
 	m_pTokenizer = src.m_pTokenizer;
 	
@@ -167,7 +165,7 @@ CChoreoScene& CChoreoScene::operator=( const CChoreoScene& src )
 	// Now copy the object tree
 	// First copy the global events
 
-	for ( i = 0; i < src.m_Events.Count(); i++ )
+	for ( i = 0; i < std::ssize( src.m_Events ); i++ )
 	{
 		CChoreoEvent *event = src.m_Events[ i ];
 		if ( event->GetActor() == nullptr )
@@ -181,7 +179,7 @@ CChoreoScene& CChoreoScene::operator=( const CChoreoScene& src )
 	}
 
 	// Finally, push actors, channels, events onto global stacks
-	for ( i = 0; i < src.m_Actors.Count(); i++ )
+	for ( i = 0; i < std::ssize( src.m_Actors ); i++ )
 	{
 		CChoreoActor *actor = src.m_Actors[ i ];
 		CChoreoActor *newActor = AllocActor();
@@ -190,12 +188,12 @@ CChoreoScene& CChoreoScene::operator=( const CChoreoScene& src )
 		for ( int j = 0; j < newActor->GetNumChannels() ; j++ )
 		{
 			CChoreoChannel *ch = newActor->GetChannel( j ); 
-			m_Channels.AddToTail( ch );
+			m_Channels.push_back( ch );
 
 			for ( int k = 0; k < ch->GetNumEvents(); k++ )
 			{
 				CChoreoEvent *ev = ch->GetEvent( k );
-				m_Events.AddToTail( ev );
+				m_Events.push_back( ev );
 				ev->SetScene( this );
 			}
 		}
@@ -205,11 +203,7 @@ CChoreoScene& CChoreoScene::operator=( const CChoreoScene& src )
 
 	m_SceneRamp = src.m_SceneRamp;
 
-	m_TimeZoomLookup.RemoveAll();
-	for ( i = 0; i < (int)src.m_TimeZoomLookup.Count(); i++ )
-	{
-		m_TimeZoomLookup.Insert( src.m_TimeZoomLookup.GetElementName( i ), src.m_TimeZoomLookup[ i ] );
-	}
+	m_TimeZoomLookup = src.m_TimeZoomLookup;
 
 	Q_strncpy( m_szFileName, src.m_szFileName, sizeof( m_szFileName ) );
 
@@ -249,7 +243,7 @@ void CChoreoScene::Init( IChoreoEventCallback *callback )
 	m_szFileName[0] = 0;
 
 	m_bIsBackground = false;
-	m_bitvecHasEventOfType.ClearAll();
+	m_bitvecHasEventOfType.reset();
 	m_nLastPauseEvent = -1;
 	m_bIgnorePhonemes = false;
 }
@@ -260,32 +254,32 @@ void CChoreoScene::Init( IChoreoEventCallback *callback )
 CChoreoScene::~CChoreoScene( void )
 {
 	int i;
-	for ( i = 0; i < m_Actors.Count(); i++ )
+	for ( i = 0; i < std::ssize( m_Actors ); i++ )
 	{
 		CChoreoActor *a = m_Actors[ i ];
 		Assert( a );
 		delete a;
 	}
 
-	m_Actors.RemoveAll();
+	m_Actors.clear();
 
-	for ( i = 0; i < m_Events.Count(); i++ )
+	for ( i = 0; i < std::ssize( m_Events ); i++ )
 	{
 		CChoreoEvent *e = m_Events[ i ];
 		Assert( e );
 		delete e;
 	}
 
-	m_Events.RemoveAll();
+	m_Events.clear();
 
-	for ( i = 0 ; i < m_Channels.Count(); i++ )
+	for ( i = 0 ; i < std::ssize( m_Channels ); i++ )
 	{
 		CChoreoChannel *c = m_Channels[ i ];
 		Assert( c );
 		delete c;
 	}
 
-	m_Channels.RemoveAll();
+	m_Channels.clear();
 }
 
 
@@ -386,7 +380,7 @@ void CChoreoScene::Print( void )
 	// Look for events that don't have actor/channel set
 	int i;
 
-	for ( i = 0 ; i < m_Events.Count(); i++ )
+	for ( i = 0 ; i < std::ssize( m_Events ); i++ )
 	{
 		CChoreoEvent *e = m_Events[ i ];
 		if ( e->GetActor() )
@@ -395,7 +389,7 @@ void CChoreoScene::Print( void )
 		PrintEvent( 0, e );
 	}
 
-	for ( i = 0 ; i < m_Actors.Count(); i++ )
+	for ( i = 0 ; i < std::ssize( m_Actors ); i++ )
 	{
 		CChoreoActor *a = m_Actors[ i ];
 		if ( !a )
@@ -437,7 +431,7 @@ CChoreoEvent *CChoreoScene::AllocEvent( void )
 	MEM_ALLOC_CREDIT_CLASS();
 	CChoreoEvent *e = new CChoreoEvent( this );
 	Assert( e );
-	m_Events.AddToTail( e );
+	m_Events.push_back( e );
 	return e;
 }
 
@@ -450,7 +444,7 @@ CChoreoChannel *CChoreoScene::AllocChannel( void )
 	MEM_ALLOC_CREDIT_CLASS();
 	CChoreoChannel *c = new CChoreoChannel();
 	Assert( c );
-	m_Channels.AddToTail( c );
+	m_Channels.push_back( c );
 	return c;
 }
 
@@ -463,7 +457,7 @@ CChoreoActor *CChoreoScene::AllocActor( void )
 	MEM_ALLOC_CREDIT_CLASS();
 	CChoreoActor *a = new CChoreoActor;
 	Assert( a );
-	m_Actors.AddToTail( a );
+	m_Actors.push_back( a );
 	return a;
 }
 
@@ -474,7 +468,7 @@ CChoreoActor *CChoreoScene::AllocActor( void )
 //-----------------------------------------------------------------------------
 CChoreoActor *CChoreoScene::FindActor( const char *name )
 {
-	for ( int i = 0; i < m_Actors.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Actors ); i++ )
 	{
 		CChoreoActor *a = m_Actors[ i ];
 		if ( !a )
@@ -493,7 +487,7 @@ CChoreoActor *CChoreoScene::FindActor( const char *name )
 //-----------------------------------------------------------------------------
 int CChoreoScene::GetNumEvents( void )
 {
-	return m_Events.Count();
+	return std::ssize( m_Events );
 }
 
 //-----------------------------------------------------------------------------
@@ -503,7 +497,7 @@ int CChoreoScene::GetNumEvents( void )
 //-----------------------------------------------------------------------------
 CChoreoEvent *CChoreoScene::GetEvent( int event )
 {
-	if ( event < 0 || event >= m_Events.Count() )
+	if ( event < 0 || event >= std::ssize( m_Events ) )
 		return nullptr;
 
 	return m_Events[ event ];
@@ -515,7 +509,7 @@ CChoreoEvent *CChoreoScene::GetEvent( int event )
 //-----------------------------------------------------------------------------
 int CChoreoScene::GetNumActors( void )
 {
-	return m_Actors.Count();
+	return std::ssize( m_Actors );
 }
 
 //-----------------------------------------------------------------------------
@@ -536,7 +530,7 @@ CChoreoActor *CChoreoScene::GetActor( int actor )
 //-----------------------------------------------------------------------------
 int CChoreoScene::GetNumChannels( void )
 {
-	return m_Channels.Count();
+	return std::ssize( m_Channels );
 }
 
 //-----------------------------------------------------------------------------
@@ -594,14 +588,14 @@ void CCurveData::Parse( ISceneTokenProcessor *tokenizer, ICurveDataAccessor *dat
 		if ( !Q_stricmp( tokenizer->CurrentToken(), "}" ) )
 			break;
 		
-		CUtlVector< CExpressionSample > samples;
+		std::vector< CExpressionSample > samples;
 		
 		float time = (float)atof( tokenizer->CurrentToken() );
 		tokenizer->GetToken( false );
 		float value = (float)atof( tokenizer->CurrentToken() );
 		
 		// Add to counter
-		int idx = samples.AddToTail();
+		int idx = std::ssize( samples ); samples.emplace_back();
 		CExpressionSample *s = &samples[ idx ];
 			
 		s->time			= time;
@@ -615,9 +609,9 @@ void CCurveData::Parse( ISceneTokenProcessor *tokenizer, ICurveDataAccessor *dat
 			s->SetCurveType( curveType );
 		}
 
-		if ( samples.Count() >= 1 )
+		if ( std::ssize( samples ) >= 1 )
 		{
-			for ( int i = 0; i < samples.Count(); i++ )
+			for ( int i = 0; i < std::ssize( samples ); i++ )
 			{
 				CExpressionSample sample = samples[ i ];
 
@@ -774,7 +768,7 @@ void CChoreoScene::ParseFlexAnimations( ISceneTokenProcessor *tokenizer, CChoreo
 			ParseEdgeInfo( tokenizer, &edgeinfo[ 1 ] );
 		}
 
-		CUtlVector< CExpressionSample > samples[2];
+		std::vector< CExpressionSample > samples[2];
 		
 		for ( int samplecount = 0; samplecount < ( combo ? 2 : 1 ); samplecount++ )
 		{
@@ -801,7 +795,7 @@ void CChoreoScene::ParseFlexAnimations( ISceneTokenProcessor *tokenizer, CChoreo
 				float value = (float)atof( tokenizer->CurrentToken() );
 				
 				// Add to counter
-				int idx = samples[ samplecount ].AddToTail();
+				int idx = std::ssize( samples[ samplecount ] ); samples[ samplecount ].emplace_back();
 				
 				CExpressionSample *s = &samples[ samplecount ][ idx ];
 				
@@ -836,7 +830,7 @@ void CChoreoScene::ParseFlexAnimations( ISceneTokenProcessor *tokenizer, CChoreo
 			}
 		}
 		
-		if ( active || samples[ 0 ].Count() >= 1 )
+		if ( active || std::ssize( samples[ 0 ] ) >= 1 )
 		{
 			// Add it in
 			CFlexAnimationTrack *track = e->AddTrack( flexcontroller );
@@ -849,7 +843,7 @@ void CChoreoScene::ParseFlexAnimations( ISceneTokenProcessor *tokenizer, CChoreo
 			
 			for ( int t = 0; t < ( combo ? 2 : 1 ); t++ )
 			{
-				for ( int i = 0; i < samples[ t ].Count(); i++ )
+				for ( int i = 0; i < std::ssize( samples[ t ] ); i++ )
 				{
 					CExpressionSample *sample = &samples[ t ][ i ];
 					
@@ -1455,7 +1449,7 @@ bool CChoreoScene::ParseFromBuffer( const char *pFilename, ISceneTokenProcessor 
 void CChoreoScene::RemoveEventsExceptTypes( int* typeList, int count )
 {
 	int i;
-	for ( i = 0 ; i < m_Actors.Count(); i++ )
+	for ( i = 0 ; i < std::ssize( m_Actors ); i++ )
 	{
 		CChoreoActor *a = m_Actors[ i ];
 		if ( !a )
@@ -1494,7 +1488,7 @@ void CChoreoScene::RemoveEventsExceptTypes( int* typeList, int count )
 	}
 
 	// Remvoe non-matching global events, too
-	for ( i = m_Events.Count() - 1 ; i >= 0; --i )
+	for ( i = std::ssize( m_Events ) - 1 ; i >= 0; --i )
 	{
 		CChoreoEvent *e = m_Events[ i ];
 
@@ -1521,9 +1515,9 @@ void CChoreoScene::RemoveEventsExceptTypes( int* typeList, int count )
 
 void CChoreoScene::InternalDetermineEventTypes()
 {
-	m_bitvecHasEventOfType.ClearAll();
+	m_bitvecHasEventOfType.reset();
 
-	for ( int i = 0 ; i < m_Actors.Count(); i++ )
+	for ( int i = 0 ; i < std::ssize( m_Actors ); i++ )
 	{
 		CChoreoActor *a = m_Actors[ i ];
 		if ( !a )
@@ -1541,7 +1535,7 @@ void CChoreoScene::InternalDetermineEventTypes()
 				if ( !e )
 					continue;
 
-				m_bitvecHasEventOfType.Set( e->GetType(), true );
+				m_bitvecHasEventOfType.set( e->GetType(), true );
 			}
 		}
 	}
@@ -1560,7 +1554,7 @@ float CChoreoScene::FindStopTime( void )
 
 	float lasttime = 0.0f;
 
-	int c = m_Events.Count();
+	int c = std::ssize( m_Events );
 	for ( int i = 0; i < c ; i++ )
 	{
 		CChoreoEvent *e = m_Events[ i ];
@@ -1580,7 +1574,7 @@ float CChoreoScene::FindStopTime( void )
 float CChoreoScene::FindLastSpeakTime( void ) const
 {
 	// walk backward from the end of events to the beginning looking for the last speak event
-	const int c = m_Events.Count();
+	const int c = std::ssize( m_Events );
 	int lastSpeakEvent;
 	for ( lastSpeakEvent = c-1 ; lastSpeakEvent >= 0 ; --lastSpeakEvent )
 	{
@@ -1624,17 +1618,17 @@ float CChoreoScene::FindLastSpeakTime( void ) const
 //			*fmt - 
 //			... - 
 //-----------------------------------------------------------------------------
-void CChoreoScene::FilePrintf( CUtlBuffer& buf, int level, const char *fmt, ... )
+void CChoreoScene::FilePrintf( ks::text_writer& buf, int level, const char *fmt, ... )
 {
 	va_list argptr;
 	va_start( argptr, fmt );
 
 	while ( level-- > 0 )
 	{
-		buf.Printf( "  " );
+		buf.put( "  " );
 	}
 
-	buf.VaPrintf( fmt, argptr );
+	buf.vprintf( fmt, argptr );
 	va_end( argptr );
 }
 
@@ -1642,7 +1636,7 @@ void CChoreoScene::FilePrintf( CUtlBuffer& buf, int level, const char *fmt, ... 
 // Purpose: 
 // Input  : *fp - 
 //-----------------------------------------------------------------------------
-void CChoreoScene::FileSaveHeader( CUtlBuffer& buf )
+void CChoreoScene::FileSaveHeader( ks::text_writer& buf )
 {
 	FilePrintf( buf, 0, "// Choreo version 1\n" );
 }
@@ -1656,7 +1650,7 @@ void CChoreoScene::MarkForSaveAll( bool mark )
 	int i;
 
 	// Mark global events
-	for ( i = 0 ; i < m_Events.Count(); i++ )
+	for ( i = 0 ; i < std::ssize( m_Events ); i++ )
 	{
 		CChoreoEvent *e = m_Events[ i ];
 		if ( e->GetActor() )
@@ -1666,7 +1660,7 @@ void CChoreoScene::MarkForSaveAll( bool mark )
 	}
 
 	// Recursively mark everything else
-	for ( i = 0 ; i < m_Actors.Count(); i++ )
+	for ( i = 0 ; i < std::ssize( m_Actors ); i++ )
 	{
 		CChoreoActor *a = m_Actors[ i ];
 		if ( !a )
@@ -1684,12 +1678,12 @@ void CChoreoScene::MarkForSaveAll( bool mark )
 bool CChoreoScene::ExportMarkedToFile( const char *filename )
 {
 	// Create a serialization buffer
-	CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
+	ks::text_writer buf;
 	FileSaveHeader( buf );
 
 	// Look for events that don't have actor/channel set
 	int i;
-	for ( i = 0 ; i < m_Events.Count(); i++ )
+	for ( i = 0 ; i < std::ssize( m_Events ); i++ )
 	{
 		CChoreoEvent *e = m_Events[ i ];
 		if ( e->GetActor() )
@@ -1698,7 +1692,7 @@ bool CChoreoScene::ExportMarkedToFile( const char *filename )
 		FileSaveEvent( buf, 0, e );
 	}
 
-	for ( i = 0 ; i < m_Actors.Count(); i++ )
+	for ( i = 0 ; i < std::ssize( m_Actors ); i++ )
 	{
 		CChoreoActor *a = m_Actors[ i ];
 		if ( !a )
@@ -1711,7 +1705,7 @@ bool CChoreoScene::ExportMarkedToFile( const char *filename )
 	FileHandle_t fh = g_pFullFileSystem->Open( filename, "wt" );
 	if (fh)
 	{
-		g_pFullFileSystem->Write( buf.Base(), buf.TellPut(), fh );
+		g_pFullFileSystem->Write( buf.c_str(), buf.size(), fh );
 		g_pFullFileSystem->Close(fh);
 		return true;
 	}
@@ -1725,14 +1719,14 @@ bool CChoreoScene::ExportMarkedToFile( const char *filename )
 bool CChoreoScene::SaveToFile( const char *filename )
 {
 	// Create a serialization buffer
-	CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
+	ks::text_writer buf;
 	FileSaveHeader( buf );
 
 	MarkForSaveAll( true );
 
 	// Look for events that don't have actor/channel set
 	int i;
-	for ( i = 0 ; i < m_Events.Count(); i++ )
+	for ( i = 0 ; i < std::ssize( m_Events ); i++ )
 	{
 		CChoreoEvent *e = m_Events[ i ];
 		if ( e->GetActor() )
@@ -1741,7 +1735,7 @@ bool CChoreoScene::SaveToFile( const char *filename )
 		FileSaveEvent( buf, 0, e );
 	}
 
-	for ( i = 0 ; i < m_Actors.Count(); i++ )
+	for ( i = 0 ; i < std::ssize( m_Actors ); i++ )
 	{
 		CChoreoActor *a = m_Actors[ i ];
 		if ( !a )
@@ -1766,7 +1760,7 @@ bool CChoreoScene::SaveToFile( const char *filename )
 	FileHandle_t fh = g_pFullFileSystem->Open( filename, "wt" );
 	if (fh)
 	{
-		g_pFullFileSystem->Write( buf.Base(), buf.TellPut(), fh );
+		g_pFullFileSystem->Write( buf.c_str(), buf.size(), fh );
 		g_pFullFileSystem->Close(fh);
 		return true;
 	}
@@ -1779,7 +1773,7 @@ bool CChoreoScene::SaveToFile( const char *filename )
 //			level - 
 //			*e - 
 //-----------------------------------------------------------------------------
-void CChoreoScene::FileSaveRamp( CUtlBuffer& buf, int level, CChoreoEvent *e )
+void CChoreoScene::FileSaveRamp( ks::text_writer& buf, int level, CChoreoEvent *e )
 {
 	e->GetRamp()->FileSave( buf, level, "event_ramp" );
 }
@@ -1790,13 +1784,13 @@ void CChoreoScene::FileSaveRamp( CUtlBuffer& buf, int level, CChoreoEvent *e )
 //			level - 
 //			*e - 
 //-----------------------------------------------------------------------------
-void CChoreoScene::FileSaveSceneRamp( CUtlBuffer& buf, int level )
+void CChoreoScene::FileSaveSceneRamp( ks::text_writer& buf, int level )
 {
 	m_SceneRamp.FileSave( buf, level, "scene_ramp" );
 }
 
 
-void CCurveData::FileSave( CUtlBuffer& buf, int level, const char *name )
+void CCurveData::FileSave( ks::text_writer& buf, int level, const char *name )
 {
 	// Nothing to save?
 	int c = GetCount();
@@ -1848,22 +1842,19 @@ void CCurveData::FileSave( CUtlBuffer& buf, int level, const char *name )
 	CChoreoScene::FilePrintf( buf, level, "}\n" );
 }
 
-void CChoreoScene::FileSaveScaleSettings( CUtlBuffer& buf, int level, CChoreoScene *scene )
+void CChoreoScene::FileSaveScaleSettings( ks::text_writer& buf, int level, CChoreoScene *scene )
 {
 	// Nothing to save?
-	int c = scene->m_TimeZoomLookup.Count();
-	if ( c <= 0 )
+	if ( scene->m_TimeZoomLookup.empty() )
 		return;
 
 	FilePrintf( buf, level, "scalesettings\n" );
 	FilePrintf( buf, level, "{\n" );
 
-	for ( int i = 0; i < c; i++ )
+	for ( const auto &[tool, value] : scene->m_TimeZoomLookup )
 	{
-		int value = scene->m_TimeZoomLookup[ i ];
-
 		FilePrintf( buf, level + 1, "\"%s\" \"%i\"\n",
-			scene->m_TimeZoomLookup.GetElementName( i ),
+			tool.c_str(),
 			value );	
 	}
 
@@ -1877,7 +1868,7 @@ void CChoreoScene::FileSaveScaleSettings( CUtlBuffer& buf, int level, CChoreoSce
 //			level - 
 //			*track - 
 //-----------------------------------------------------------------------------
-void CChoreoScene::FileSaveFlexAnimationTrack( CUtlBuffer& buf, int level, CFlexAnimationTrack *track, int nDefaultCurveType )
+void CChoreoScene::FileSaveFlexAnimationTrack( ks::text_writer& buf, int level, CFlexAnimationTrack *track, int nDefaultCurveType )
 {
 	if ( !track )
 		return;
@@ -1991,7 +1982,7 @@ void CChoreoScene::FileSaveFlexAnimationTrack( CUtlBuffer& buf, int level, CFlex
 //			level - 
 //			*e - 
 //-----------------------------------------------------------------------------
-void CChoreoScene::FileSaveFlexAnimations( CUtlBuffer& buf, int level, CChoreoEvent *e )
+void CChoreoScene::FileSaveFlexAnimations( ks::text_writer& buf, int level, CChoreoEvent *e )
 {
 	// Nothing to save
 	if ( e->GetNumFlexAnimationTracks() <= 0 )
@@ -2023,7 +2014,7 @@ void CChoreoScene::FileSaveFlexAnimations( CUtlBuffer& buf, int level, CChoreoEv
 //			level - 
 //			*e - 
 //-----------------------------------------------------------------------------
-void CChoreoScene::FileSaveEvent( CUtlBuffer& buf, int level, CChoreoEvent *e )
+void CChoreoScene::FileSaveEvent( ks::text_writer& buf, int level, CChoreoEvent *e )
 {
 	if ( !e->IsMarkedForSave() )
 		return;
@@ -2183,7 +2174,7 @@ void CChoreoScene::FileSaveEvent( CUtlBuffer& buf, int level, CChoreoEvent *e )
 //			level - 
 //			*c - 
 //-----------------------------------------------------------------------------
-void CChoreoScene::FileSaveChannel( CUtlBuffer& buf, int level, CChoreoChannel *c )
+void CChoreoScene::FileSaveChannel( ks::text_writer& buf, int level, CChoreoChannel *c )
 {
 	if ( !c->IsMarkedForSave() )
 		return;
@@ -2215,7 +2206,7 @@ void CChoreoScene::FileSaveChannel( CUtlBuffer& buf, int level, CChoreoChannel *
 //			level - 
 //			*a - 
 //-----------------------------------------------------------------------------
-void CChoreoScene::FileSaveActor( CUtlBuffer& buf, int level, CChoreoActor *a )
+void CChoreoScene::FileSaveActor( ks::text_writer& buf, int level, CChoreoActor *a )
 {
 	if ( !a->IsMarkedForSave() )
 		return;
@@ -2256,7 +2247,7 @@ float CChoreoScene::FindAdjustedStartTime( void )
 
 	CChoreoEvent *e;
 
-	for ( int i = 0; i < m_Events.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Events ); i++ )
 	{
 		e = m_Events[ i ];
 
@@ -2288,7 +2279,7 @@ float CChoreoScene::FindAdjustedEndTime( void )
 
 	CChoreoEvent *e;
 
-	for ( int i = 0; i < m_Events.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Events ); i++ )
 	{
 		e = m_Events[ i ];
 
@@ -2322,25 +2313,25 @@ void CChoreoScene::ResetSimulation( bool forward /*= true*/, float starttime /*=
 {
 	CChoreoEvent *e;
 
-	m_ActiveResumeConditions.RemoveAll();
-	m_ResumeConditions.RemoveAll();
-	m_PauseEvents.RemoveAll();
+	m_ActiveResumeConditions.clear();
+	m_ResumeConditions.clear();
+	m_PauseEvents.clear();
 
 	// Put all items into the pending queue
-	for ( int i = 0; i < m_Events.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Events ); i++ )
 	{
 		e = m_Events[ i ];
 		e->ResetProcessing();
 
 		if ( e->GetType() == CChoreoEvent::SECTION )
 		{
-			m_PauseEvents.AddToTail( e );
+			m_PauseEvents.push_back( e );
 			continue;
 		}
 
 		if ( e->IsResumeCondition() )
 		{
-			m_ResumeConditions.AddToTail( e );
+			m_ResumeConditions.push_back( e );
 			continue;
 		}
 	}
@@ -2356,7 +2347,7 @@ void CChoreoScene::ResetSimulation( bool forward /*= true*/, float starttime /*=
 	// choreoprintf( 0, "Start time %f\n", m_flCurrentTime );
 
 	m_flLastActiveTime = 0.0f;
-	m_nActiveEvents = m_Events.Count();
+	m_nActiveEvents = std::ssize( m_Events );
 
 	m_flStartTime = starttime;
 	m_flEndTime = endtime;
@@ -2371,7 +2362,7 @@ bool CChoreoScene::CheckEventCompletion( void )
 
 	bool bAllCompleted = true;
 	// check all items in the active pending queue
-	for ( int i = 0; i < m_ActiveResumeConditions.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_ActiveResumeConditions ); i++ )
 	{
 		e = m_ActiveResumeConditions[ i ];
 
@@ -2390,13 +2381,13 @@ bool CChoreoScene::SpeechFinished( void ) const
 	// for a speech event. (They aren't necessarily stored in order.)
 	float lastEndTime = -m_flSoundSystemLatency;
 
-	const int c = m_Events.Count();
+	const int c = std::ssize( m_Events );
 	for ( int i = 0 ; i < c ; ++i )
 	{
 		if ( m_Events[i]->GetType() == CChoreoEvent::SPEAK )
 		{
 			float endtime = m_Events[i]->GetEndTime() - m_flSoundSystemLatency;
-			lastEndTime = MAX( lastEndTime, endtime );
+			lastEndTime = std::max( lastEndTime, endtime );
 		}
 	}
 
@@ -2455,7 +2446,7 @@ CChoreoEvent *CChoreoScene::FindPauseBetweenTimes( float starttime, float endtim
 	CChoreoEvent *e;
 
 	// Iterate through all events in the scene
-	for ( int i = 0; i < m_PauseEvents.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_PauseEvents ); i++ )
 	{
 		e = m_PauseEvents[ i ];
 		if ( !e )
@@ -2749,7 +2740,7 @@ bool CChoreoScene::EventLess( const CChoreoScene::ActiveList &al0, const CChoreo
 //-----------------------------------------------------------------------------
 void CChoreoScene::ClearPauseEventDependencies()
 {
-	int c = m_PauseEvents.Count();
+	int c = std::ssize( m_PauseEvents );
 	for ( int i = 0 ; i < c; ++i )
 	{
 		CChoreoEvent *pause = m_PauseEvents[ i ];
@@ -2787,11 +2778,15 @@ void CChoreoScene::Think( float curtime )
 
 	ClearPauseEventDependencies();
 
-	CUtlRBTree< ActiveList, int > pending(0,0,EventLess);
+	struct PendingLess
+	{
+		bool operator()( const ActiveList &al0, const ActiveList &al1 ) const { return EventLess( al0, al1 ); }
+	};
+	std::multiset< ActiveList, PendingLess > pending;
 
 	// Iterate through all events in the scene
 	int i;
-	for ( i = 0; i < m_Events.Count(); i++ )
+	for ( i = 0; i < std::ssize( m_Events ); i++ )
 	{
 		e = m_Events[ i ];
 		if ( !e )
@@ -2808,17 +2803,16 @@ void CChoreoScene::Think( float curtime )
 			entry.e		= e;
 			entry.pt	= disposition;
 
-			pending.Insert( entry );
+			pending.insert( entry );
 		}
 	}
 
 	// Events are sorted start time and then by channel and actor slot or by name if those aren't equal
 	bool dump = false;
 
-	i = pending.FirstInorder();
-	while ( i != pending.InvalidIndex() )
+	for ( const ActiveList &pendingEntry : pending )
 	{
-		ActiveList *entry = &pending[ i ];
+		const ActiveList *entry = &pendingEntry;
 
 		Assert( entry->e );
 
@@ -2845,7 +2839,7 @@ void CChoreoScene::Think( float curtime )
 				if ( entry->pt == PROCESSING_TYPE_START_RESUMECONDITION )
 				{
 					Assert( entry->e->IsResumeCondition() );
-					m_ActiveResumeConditions.AddToTail( entry->e );
+					m_ActiveResumeConditions.push_back( entry->e );
 				}
 
 				// This event can "pause" the scene, so we need to remember who "paused" the scene so that
@@ -2853,7 +2847,7 @@ void CChoreoScene::Think( float curtime )
 				if ( entry->e->GetType() == CChoreoEvent::SECTION )
 				{
 					// So this event should be in the pauseevents list, otherwise this'll be -1
-					m_nLastPauseEvent = m_PauseEvents.Find( entry->e );
+					m_nLastPauseEvent = ks::find_index( m_PauseEvents, entry->e );
 				}
 			}
 			break;
@@ -2868,8 +2862,6 @@ void CChoreoScene::Think( float curtime )
 			}
 			break;
 		}
-
-		i = pending.NextInorder( i );
 	}
 
 	if ( dump )
@@ -2936,7 +2928,7 @@ void CChoreoScene::RemoveActor( CChoreoActor *actor )
 	if ( idx == -1 )
 		return;
 
-	m_Actors.Remove( idx );
+	m_Actors.erase( m_Actors.begin() + idx );
 }
 
 //-----------------------------------------------------------------------------
@@ -2946,7 +2938,7 @@ void CChoreoScene::RemoveActor( CChoreoActor *actor )
 //-----------------------------------------------------------------------------
 int CChoreoScene::FindActorIndex( CChoreoActor *actor )
 {
-	for ( int i = 0; i < m_Actors.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Actors ); i++ )
 	{
 		if ( actor == m_Actors[ i ] )
 		{
@@ -3010,10 +3002,10 @@ void CChoreoScene::DeleteReferencedObjects( CChoreoChannel *channel )
 //-----------------------------------------------------------------------------
 void CChoreoScene::DeleteReferencedObjects( CChoreoEvent *event )
 {
-	int idx = m_PauseEvents.Find( event );
-	if ( idx != m_PauseEvents.InvalidIndex() )
+	int idx = ks::find_index( m_PauseEvents, event );
+	if ( idx != -1 )
 	{
-		m_PauseEvents.Remove( idx );
+		m_PauseEvents.erase( m_PauseEvents.begin() + idx );
 	}
 	// Events don't reference anything lower
 	DestroyEvent( event );
@@ -3025,13 +3017,13 @@ void CChoreoScene::DeleteReferencedObjects( CChoreoEvent *event )
 //-----------------------------------------------------------------------------
 void CChoreoScene::DestroyActor( CChoreoActor *actor )
 {
-	int size = m_Actors.Count();
+	int size = std::ssize( m_Actors );
 	for ( int i = size - 1; i >= 0; i-- )
 	{
 		CChoreoActor *a = m_Actors[ i ];
 		if ( a == actor )
 		{
-			m_Actors.Remove( i );
+			m_Actors.erase( m_Actors.begin() + i );
 		}
 	}
 
@@ -3044,13 +3036,13 @@ void CChoreoScene::DestroyActor( CChoreoActor *actor )
 //-----------------------------------------------------------------------------
 void CChoreoScene::DestroyChannel( CChoreoChannel *channel )
 {
-	int size = m_Channels.Count();
+	int size = std::ssize( m_Channels );
 	for ( int i = size - 1; i >= 0; i-- )
 	{
 		CChoreoChannel *c = m_Channels[ i ];
 		if ( c == channel )
 		{
-			m_Channels.Remove( i );
+			m_Channels.erase( m_Channels.begin() + i );
 		}
 	}
 
@@ -3063,13 +3055,13 @@ void CChoreoScene::DestroyChannel( CChoreoChannel *channel )
 //-----------------------------------------------------------------------------
 void CChoreoScene::DestroyEvent( CChoreoEvent *event )
 {
-	int size = m_Events.Count();
+	int size = std::ssize( m_Events );
 	for ( int i = size - 1; i >= 0; i-- )
 	{
 		CChoreoEvent *e = m_Events[ i ];
 		if ( e == event )
 		{
-			m_Events.Remove( i );
+			m_Events.erase( m_Events.begin() + i );
 		}
 	}
 
@@ -3083,14 +3075,14 @@ void CChoreoScene::ResumeSimulation( void )
 {
 	// If the thing that paused us was a SECTION pause event, then this will be set
 	if ( m_nLastPauseEvent >= 0 && 
-		 m_nLastPauseEvent < m_PauseEvents.Count() )
+		 m_nLastPauseEvent < std::ssize( m_PauseEvents ) )
 	{
 		// Start any suppressed dependencies immediately, should only be .wav files!!!
 		// These are .wav files which are placed at or just after the SECTION pause event
 		//  in the .vcd, but due to the user's sound system latency, they would have triggered before the
 		//  pause (we pre-queue sounds).  Since we suppressed that, we need to unsupress / start these sounds 
 		//  now that the SECTION pause is being resumed from
-		CUtlVector< CChoreoEvent * > deps;
+		std::vector< CChoreoEvent * > deps;
 		CChoreoEvent *pauseEvent = m_PauseEvents[ m_nLastPauseEvent ];
 		Assert( pauseEvent );
 		
@@ -3103,7 +3095,7 @@ void CChoreoScene::ResumeSimulation( void )
 		
 		// Snag any sounds which were suppressed by this issue
 		pauseEvent->GetEventDependencies( deps );
-		for ( int j = 0; j < deps.Count(); ++j )
+		for ( int j = 0; j < std::ssize( deps ); ++j )
 		{
 			CChoreoEvent *startEvent = deps[ j ];
 			Assert( startEvent );
@@ -3115,7 +3107,7 @@ void CChoreoScene::ResumeSimulation( void )
 	// Reset section pause signal
 	m_nLastPauseEvent = -1;
 
-	m_ActiveResumeConditions.RemoveAll();
+	m_ActiveResumeConditions.clear();
 }
 
 // Sound system needs to have sounds pre-queued by this much time
@@ -3151,7 +3143,7 @@ void CChoreoScene::GetSceneTimes( float& start, float& end )
 //-----------------------------------------------------------------------------
 void CChoreoScene::ReconcileTags( void )
 {
-	for ( int i = 0 ; i < m_Actors.Count(); i++ )
+	for ( int i = 0 ; i < std::ssize( m_Actors ); i++ )
 	{
 		CChoreoActor *a = m_Actors[ i ];
 		if ( !a )
@@ -3208,7 +3200,7 @@ void CChoreoScene::ReconcileTags( void )
 //-----------------------------------------------------------------------------
 CChoreoEvent *CChoreoScene::FindTargetingEvent( const char *wavname, const char *name )
 {
-	for ( int i = 0 ; i < m_Actors.Count(); i++ )
+	for ( int i = 0 ; i < std::ssize( m_Actors ); i++ )
 	{
 		CChoreoActor *a = m_Actors[ i ];
 		if ( !a )
@@ -3250,7 +3242,7 @@ CChoreoEvent *CChoreoScene::FindTargetingEvent( const char *wavname, const char 
 //-----------------------------------------------------------------------------
 CEventRelativeTag *CChoreoScene::FindTagByName( const char *wavname, const char *name )
 {
-	for ( int i = 0 ; i < m_Actors.Count(); i++ )
+	for ( int i = 0 ; i < std::ssize( m_Actors ); i++ )
 	{
 		CChoreoActor *a = m_Actors[ i ];
 		if ( !a )
@@ -3290,18 +3282,18 @@ CEventRelativeTag *CChoreoScene::FindTagByName( const char *wavname, const char 
 // Purpose: 
 // Input  : *filename - 
 //-----------------------------------------------------------------------------
-void CChoreoScene::ExportEvents( const char *filename, CUtlVector< CChoreoEvent * >& events )
+void CChoreoScene::ExportEvents( const char *filename, std::vector< CChoreoEvent * >& events )
 {
-	if ( events.Count() <= 0 )
+	if ( std::ssize( events ) <= 0 )
 		return;
 
 	// Create a serialization buffer
-	CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
-	FilePrintf( buf, 0, "// Choreo version 1:  <%i> Exported Events\n", events.Count() );
+	ks::text_writer buf;
+	FilePrintf( buf, 0, "// Choreo version 1:  <%i> Exported Events\n", std::ssize( events ) );
 
 	// Save out the selected events.
 	int i;
-	for ( i = 0 ; i < events.Count(); i++ )
+	for ( i = 0 ; i < std::ssize( events ); i++ )
 	{
 		CChoreoEvent *e = events[ i ];
 		if ( !e->GetActor() )
@@ -3314,7 +3306,7 @@ void CChoreoScene::ExportEvents( const char *filename, CUtlVector< CChoreoEvent 
 	FileHandle_t fh = g_pFullFileSystem->Open( filename, "wt" );
 	if (fh)
 	{
-		g_pFullFileSystem->Write( buf.Base(), buf.TellPut(), fh );
+		g_pFullFileSystem->Write( buf.c_str(), buf.size(), fh );
 		g_pFullFileSystem->Close(fh);
 	}
 }
@@ -3428,7 +3420,7 @@ float CChoreoScene::SnapTime( float t )
 //-----------------------------------------------------------------------------
 void CChoreoScene::ReconcileGestureTimes()
 {
-	for ( int i = 0 ; i < m_Actors.Count(); i++ )
+	for ( int i = 0 ; i < std::ssize( m_Actors ); i++ )
 	{
 		CChoreoActor *a = m_Actors[ i ];
 		if ( !a )
@@ -3445,24 +3437,6 @@ void CChoreoScene::ReconcileGestureTimes()
 	}
 }
 
-int CChoreoScene::TimeZoomFirst()
-{
-	return m_TimeZoomLookup.First();
-}
-
-int CChoreoScene::TimeZoomNext( int i )
-{
-	return m_TimeZoomLookup.Next( i );
-}
-int CChoreoScene::TimeZoomInvalid() const
-{
-	return m_TimeZoomLookup.InvalidIndex();
-}
-char const *CChoreoScene::TimeZoomName( int i )
-{
-	return m_TimeZoomLookup.GetElementName( i );
-}
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : *tool - 
@@ -3471,13 +3445,7 @@ char const *CChoreoScene::TimeZoomName( int i )
 int CChoreoScene::GetTimeZoom( char const *tool )
 {
 	// If not present add it
-	int idx = m_TimeZoomLookup.Find( tool );
-	if ( idx == m_TimeZoomLookup.InvalidIndex() )
-	{
-		idx = m_TimeZoomLookup.Insert( tool, 100 );
-	}
-
-	return m_TimeZoomLookup[ idx ];
+	return m_TimeZoomLookup.try_emplace( tool, 100 ).first->second;
 }
 
 //-----------------------------------------------------------------------------
@@ -3487,14 +3455,7 @@ int CChoreoScene::GetTimeZoom( char const *tool )
 //-----------------------------------------------------------------------------
 void CChoreoScene::SetTimeZoom( char const *tool, int tz )
 {
-	// If not present add it
-	int idx = m_TimeZoomLookup.Find( tool );
-	if ( idx == m_TimeZoomLookup.InvalidIndex() )
-	{
-		idx = m_TimeZoomLookup.Insert( tool, 100 );
-	}
-
-	m_TimeZoomLookup[ idx ] = tz;
+	m_TimeZoomLookup.insert_or_assign( tool, tz );
 }
 
 void CChoreoScene::ParseScaleSettings( ISceneTokenProcessor *tokenizer, CChoreoScene *scene )
@@ -3540,7 +3501,7 @@ bool CChoreoScene::Merge( CChoreoScene *other )
 
 	// Look for events that don't have actor/channel set
 	int i;
-	for ( i = 0 ; i < other->m_Events.Count(); i++ )
+	for ( i = 0 ; i < std::ssize( other->m_Events ); i++ )
 	{
 		CChoreoEvent *e = other->m_Events[ i ];
 		if ( e->GetActor() )
@@ -3554,7 +3515,7 @@ bool CChoreoScene::Merge( CChoreoScene *other )
 		ecount++;
 	}
 
-	for ( i = 0 ; i < other->m_Actors.Count(); i++ )
+	for ( i = 0 ; i < std::ssize( other->m_Actors ); i++ )
 	{
 		CChoreoActor *a = other->m_Actors[ i ];
 
@@ -3625,7 +3586,7 @@ bool CChoreoScene::Merge( CChoreoScene *other )
 //-----------------------------------------------------------------------------
 void CChoreoScene::ReconcileCloseCaption()
 {
-	for ( int i = 0 ; i < m_Actors.Count(); i++ )
+	for ( int i = 0 ; i < std::ssize( m_Actors ); i++ )
 	{
 		CChoreoActor *a = m_Actors[ i ];
 		if ( !a )
@@ -3660,7 +3621,7 @@ void CChoreoScene::SetFileName( char const *fn )
 
 bool CChoreoScene::GetPlayingSoundName( char *pchBuff, int iBuffLength )
 {
-	for ( int i = 0; i < m_Events.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Events ); i++ )
 	{
 		CChoreoEvent *e = m_Events[ i ];
 		if ( e->GetType() == CChoreoEvent::SPEAK && e->IsProcessing() )
@@ -3678,7 +3639,7 @@ bool CChoreoScene::GetPlayingSoundName( char *pchBuff, int iBuffLength )
 //-----------------------------------------------------------------------------
 bool CChoreoScene::HasUnplayedSpeech()
 {
-	for ( int i = 0; i < m_Events.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Events ); i++ )
 	{
 		CChoreoEvent *e = m_Events[ i ];
 		if ( e->GetType() == CChoreoEvent::SPEAK )
@@ -3697,7 +3658,7 @@ bool CChoreoScene::HasUnplayedSpeech()
 //-----------------------------------------------------------------------------
 bool CChoreoScene::HasFlexAnimation()
 {
-	for ( int i = 0; i < m_Events.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Events ); i++ )
 	{
 		CChoreoEvent *e = m_Events[ i ];
 		if ( e->GetType() == CChoreoEvent::FLEXANIMATION )
@@ -3730,7 +3691,7 @@ bool CChoreoScene::IsBackground( )
 
 bool CChoreoScene::HasEventsOfType( CChoreoEvent::EVENTTYPE type ) const
 {
-	return m_bitvecHasEventOfType.IsBitSet( type );
+	return m_bitvecHasEventOfType[type];
 }
 
 // ICurveDataAccessor method
@@ -3748,7 +3709,7 @@ bool CChoreoScene::SaveBinary( char const *pszBinaryFileName, char const *pPathI
 {
 	bool bret = false;
 
-	CUtlBuffer buf;
+	ks::byte_writer buf;
 	SaveToBinaryBuffer( buf, nTextVersionCRC, pStringPool );
 
 	if ( g_pFullFileSystem->FileExists( pszBinaryFileName, pPathID ) && 
@@ -3761,7 +3722,7 @@ bool CChoreoScene::SaveBinary( char const *pszBinaryFileName, char const *pPathI
 	FileHandle_t fh = g_pFullFileSystem->Open( pszBinaryFileName, "wb", pPathID );
 	if ( FILESYSTEM_INVALID_HANDLE != fh )
 	{
-		g_pFullFileSystem->Write( buf.Base(), buf.TellPut(), fh );
+		g_pFullFileSystem->Write( buf.data(), buf.size(), fh );
 		g_pFullFileSystem->Close( fh );
 
 		// Success
@@ -3775,27 +3736,27 @@ bool CChoreoScene::SaveBinary( char const *pszBinaryFileName, char const *pPathI
 	return bret;
 }
 
-void CChoreoScene::SaveToBinaryBuffer( CUtlBuffer& buf, unsigned int nTextVersionCRC, IChoreoStringPool *pStringPool )
+void CChoreoScene::SaveToBinaryBuffer( ks::byte_writer& buf, unsigned int nTextVersionCRC, IChoreoStringPool *pStringPool )
 {
-	buf.PutInt( SCENE_BINARY_TAG );
-	buf.PutChar( SCENE_BINARY_VERSION );
-	buf.PutInt( nTextVersionCRC );
+	buf.write< int >( SCENE_BINARY_TAG );
+	buf.write< char >( SCENE_BINARY_VERSION );
+	buf.write< int >( nTextVersionCRC );
 
 	// Look for events that don't have actor/channel set
-	CUtlVector< CChoreoEvent * > eventList;
+	std::vector< CChoreoEvent * > eventList;
 	int i;
-	for ( i = 0 ; i < m_Events.Count(); i++ )
+	for ( i = 0 ; i < std::ssize( m_Events ); i++ )
 	{
 		CChoreoEvent *e = m_Events[ i ];
 		if ( e->GetActor() )
 			continue;
 
-		eventList.AddToTail( e );
+		eventList.push_back( e );
 	}
 
-	int c = eventList.Count();
+	int c = std::ssize( eventList );
 	Assert( c <= 255 );
-	buf.PutUnsignedChar( c );
+	buf.write< unsigned char >( c );
 	for ( i = 0; i < c; ++i )
 	{
 		CChoreoEvent *e = eventList[ i ];
@@ -3803,19 +3764,19 @@ void CChoreoScene::SaveToBinaryBuffer( CUtlBuffer& buf, unsigned int nTextVersio
 	}
 
 	// Now serialize the actors themselves
-	CUtlVector< CChoreoActor * >	actorList;
-	for ( i = 0 ; i < m_Actors.Count(); i++ )
+	std::vector< CChoreoActor * >	actorList;
+	for ( i = 0 ; i < std::ssize( m_Actors ); i++ )
 	{
 		CChoreoActor *a = m_Actors[ i ];
 		if ( !a )
 			continue;
 
-		actorList.AddToTail( a );
+		actorList.push_back( a );
 	}
 
-	c = actorList.Count();
+	c = std::ssize( actorList );
 	Assert( c <= 255 );
-	buf.PutUnsignedChar( c );
+	buf.write< unsigned char >( c );
 	for ( i = 0; i < c; ++i )
 	{
 		CChoreoActor *a = actorList[ i ];
@@ -3838,7 +3799,7 @@ void CChoreoScene::SaveToBinaryBuffer( CUtlBuffer& buf, unsigned int nTextVersio
 	FilePrintf( buf, 0, "fps %i\n", m_nSceneFPS );
 	FilePrintf( buf, 0, "snap %s\n", m_bUseFrameSnap ? "on" : "off" );
 	*/
-	buf.PutUnsignedChar( m_bIgnorePhonemes );
+	buf.write< unsigned char >( m_bIgnorePhonemes );
 }
 
 //-----------------------------------------------------------------------------
@@ -3847,45 +3808,45 @@ void CChoreoScene::SaveToBinaryBuffer( CUtlBuffer& buf, unsigned int nTextVersio
 //			crc - 
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
-bool CChoreoScene::GetCRCFromBinaryBuffer( CUtlBuffer& buf, unsigned int& crc )
+bool CChoreoScene::GetCRCFromBinaryBuffer( ks::byte_reader& buf, unsigned int& crc )
 {
 	bool bret = false;
 
-	int pos = buf.TellGet();
+	size_t pos = buf.tell();
 
-	int tag = buf.GetInt();
+	int tag = buf.read< int >();
 	if ( tag == SCENE_BINARY_TAG )
 	{
-		byte ver = buf.GetChar();
+		byte ver = buf.read< char >();
 		if ( ver == SCENE_BINARY_VERSION )
 		{
 			bret = true;
-			crc = (unsigned int)buf.GetInt();
+			crc = (unsigned int)buf.read< int >();
 		}
 	}
 
-	buf.SeekGet( CUtlBuffer::SEEK_HEAD, pos );
+	buf.seek( pos );
 
 	return bret;
 }
 
-bool CChoreoScene::RestoreFromBinaryBuffer( CUtlBuffer& buf, char const *filename, IChoreoStringPool *pStringPool )
+bool CChoreoScene::RestoreFromBinaryBuffer( ks::byte_reader& buf, char const *filename, IChoreoStringPool *pStringPool )
 {
 	Q_strncpy( m_szFileName, filename, sizeof( m_szFileName ) );
 
-	int tag = buf.GetInt();
+	int tag = buf.read< int >();
 	if ( tag != SCENE_BINARY_TAG )
 		return false;
 
-	byte ver = buf.GetChar();
+	byte ver = buf.read< char >();
 	if ( ver != SCENE_BINARY_VERSION )
 		return false;
 
 	// Skip the CRC
-	buf.GetInt();
+	buf.read< int >();
 
 	int i;
-	int eventCount = buf.GetUnsignedChar();
+	int eventCount = buf.read< unsigned char >();
 	for ( i = 0; i < eventCount; ++i )
 	{
 		MEM_ALLOC_CREDIT();
@@ -3900,7 +3861,7 @@ bool CChoreoScene::RestoreFromBinaryBuffer( CUtlBuffer& buf, char const *filenam
 		return false;
 	}
 
-	int actorCount = buf.GetUnsignedChar();
+	int actorCount = buf.read< unsigned char >();
 	for ( i = 0; i < actorCount; ++i )
 	{
 		CChoreoActor *a = AllocActor();
@@ -3918,7 +3879,7 @@ bool CChoreoScene::RestoreFromBinaryBuffer( CUtlBuffer& buf, char const *filenam
 		return false;
 	}
 
-	m_bIgnorePhonemes = ( buf.GetUnsignedChar( ) != 0 );
+	m_bIgnorePhonemes = ( buf.read< unsigned char >() != 0 );
 
 // FIXME:  Are these ever needed on restore?
 //	ReconcileTags();

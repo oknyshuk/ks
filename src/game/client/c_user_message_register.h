@@ -47,7 +47,7 @@ public:
 	// This is called at startup to register all the user messages.
 	void Register()
 	{
-		m_msgBinder.Bind< msgType, PB_OBJECT_TYPE >( UtlMakeDelegate( m_pMsgFunc ));
+		m_msgBinder.Bind< msgType, PB_OBJECT_TYPE >( m_pMsgFunc);
 	}
 	
 	CUserMessageBinder m_msgBinder;

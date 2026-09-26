@@ -19,7 +19,7 @@ CCSCustomMaterialSwapManager g_CSCustomMaterialSwapManager;
 
 CCSCustomMaterialSwapManager::CCSCustomMaterialSwapManager()
 {
-	m_pPendingSwaps.EnsureCapacity( 4 );
+	m_pPendingSwaps.reserve( 4 );
 }
 
 CCSCustomMaterialSwapManager::~CCSCustomMaterialSwapManager()
@@ -48,7 +48,7 @@ void CCSCustomMaterialSwapManager::Shutdown()
 // handles swapping materials that are pending swap and ready
 bool CCSCustomMaterialSwapManager::Process()
 {
-	for ( int i = m_pPendingSwaps.Count() - 1; i >= 0 ; i-- )
+	for ( int i = std::ssize( m_pPendingSwaps ) - 1; i >= 0 ; i-- )
 	{
 		if ( m_pPendingSwaps[ i ].m_pNewCustomMaterial->IsValid() )
 		{
@@ -67,7 +67,7 @@ bool CCSCustomMaterialSwapManager::Process()
 				m_pPendingSwaps[ i ].m_pOldCustomMaterial->Release();
 				m_pPendingSwaps[ i ].m_pOldCustomMaterial = nullptr;
 			}
-			m_pPendingSwaps.Remove( i );
+			m_pPendingSwaps.erase( m_pPendingSwaps.begin() + i );
 		}
 	}
 
@@ -76,7 +76,7 @@ bool CCSCustomMaterialSwapManager::Process()
 
 void CCSCustomMaterialSwapManager::RequestMaterialSwap( EHANDLE hOwner, int nCustomMaterialIndex, ICustomMaterial *pNewCustomMaterialInterface )
 {
-	int nSwapIndex = m_pPendingSwaps.AddToTail();
+	int nSwapIndex = std::ssize( m_pPendingSwaps ); m_pPendingSwaps.emplace_back();
 	CCSPendingCustomMaterialSwap_t &materialSwap = m_pPendingSwaps[ nSwapIndex ];
 
 	materialSwap.m_hOwner = hOwner;
@@ -95,7 +95,7 @@ void CCSCustomMaterialSwapManager::RequestMaterialSwap( EHANDLE hOwner, int nCus
 
 void CCSCustomMaterialSwapManager::ClearPendingSwaps( EHANDLE hOwner, int nCustomMaterialIndex )
 {
-	for ( int i = m_pPendingSwaps.Count() - 1; i >= 0 ; i-- )
+	for ( int i = std::ssize( m_pPendingSwaps ) - 1; i >= 0 ; i-- )
 	{
 		if ( m_pPendingSwaps[ i ].m_hOwner == hOwner && m_pPendingSwaps[ i ].m_nCustomMaterialIndex == nCustomMaterialIndex )
 		{
@@ -108,14 +108,14 @@ void CCSCustomMaterialSwapManager::ClearPendingSwaps( EHANDLE hOwner, int nCusto
 				m_pPendingSwaps[ i ].m_pOldCustomMaterial->Release();
 				m_pPendingSwaps[ i ].m_pOldCustomMaterial = nullptr;
 			}
-			m_pPendingSwaps.Remove( i );
+			m_pPendingSwaps.erase( m_pPendingSwaps.begin() + i );
 		}
 	}
 }
 
 void CCSCustomMaterialSwapManager::ClearAllPendingSwaps( void )
 {
-	for ( int i = 0; i < m_pPendingSwaps.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_pPendingSwaps ); ++i )
 	{
 		CCSPendingCustomMaterialSwap_t &materialSwap = m_pPendingSwaps[ i ];
 		materialSwap.m_hOwner = nullptr;
@@ -128,5 +128,5 @@ void CCSCustomMaterialSwapManager::ClearAllPendingSwaps( void )
 			materialSwap.m_pOldCustomMaterial = nullptr;
 		}
 	}
-	m_pPendingSwaps.RemoveAll();
+	m_pPendingSwaps.clear();
 }

@@ -18,11 +18,7 @@
 #include "vstdlib/ikeyvaluessystem.h"
 
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
-
-#pragma warning( disable: 4355 )  // warning C4355: 'this' : used in base member initializer list
 
 class CClientTools;
 
@@ -162,13 +158,8 @@ private:
 
 	static int				s_nNextHandle;
 
-	static bool HandleLessFunc( const HToolEntry_t& lhs, const HToolEntry_t& rhs )
-	{
-		return lhs.m_Handle < rhs.m_Handle;
-	}
-
-	CUtlRBTree< HToolEntry_t >	m_Handles;
-	CUtlVector< int > m_ActiveHandles;
+	std::map< int, HToolEntry_t >	m_Handles;	// keyed by m_Handle
+	std::vector< int > m_ActiveHandles;
 	bool m_bInRecordingMode;
 };
 
@@ -189,7 +180,7 @@ IClientTools *clienttools = &s_ClientTools;
 //-----------------------------------------------------------------------------
 // Constructor
 //-----------------------------------------------------------------------------
-CClientTools::CClientTools() : m_Handles( 0, 0, HandleLessFunc )
+CClientTools::CClientTools()
 {
 	m_bInRecordingMode = false;
 	cl_entitylist->AddListenerEntity( this );
@@ -367,8 +358,8 @@ HTOOLHANDLE CClientTools::AttachToEntity( EntitySearchResult entityToAttach )
 
 	HToolEntry_t newHandle( s_nNextHandle++, ent );
 
-	m_Handles.Insert( newHandle );
-	m_ActiveHandles.AddToTail( newHandle.m_Handle );
+	m_Handles.emplace( newHandle.m_Handle, newHandle );
+	m_ActiveHandles.push_back( newHandle.m_Handle );
 
 	return (HTOOLHANDLE)newHandle.m_Handle;
 }
@@ -389,15 +380,15 @@ void CClientTools::DetachFromEntity( EntitySearchResult entityToDetach )
 		return;
 	}
 
-	int idx = m_Handles.Find( HToolEntry_t( handle ) );
-	if ( idx == m_Handles.InvalidIndex() )
+	auto idx = m_Handles.find( handle );
+	if ( idx == m_Handles.end() )
 	{
 		Assert( 0 );
 		return;
 	}
 
-	m_Handles.RemoveAt( idx );
-	m_ActiveHandles.FindAndRemove( handle );
+	m_Handles.erase( idx );
+	ks::erase_first( m_ActiveHandles, handle );
 }
 
 
@@ -408,21 +399,21 @@ void CClientTools::DetachFromEntity( EntitySearchResult entityToDetach )
 //-----------------------------------------------------------------------------
 C_BaseEntity *CClientTools::LookupEntity( HTOOLHANDLE handle )
 {
-	int idx = m_Handles.Find( HToolEntry_t( handle ) );
-	if ( idx == m_Handles.InvalidIndex() )
+	auto idx = m_Handles.find( handle );
+	if ( idx == m_Handles.end() )
 		return nullptr;
 
-	return m_Handles[ idx ].m_hEntity;
+	return idx->second.m_hEntity;
 }
 
 int	CClientTools::GetNumRecordables()
 {
-	return m_ActiveHandles.Count();
+	return std::ssize( m_ActiveHandles );
 }
 
 HTOOLHANDLE CClientTools::GetRecordable( int index )
 {
-	if ( index < 0 || index >= m_ActiveHandles.Count() )
+	if ( index < 0 || index >= std::ssize( m_ActiveHandles ) )
 	{
 		Assert( 0 );
 		return (HTOOLHANDLE)0;
@@ -455,11 +446,11 @@ EntitySearchResult CClientTools::NextEntity( EntitySearchResult currentEnt )
 //-----------------------------------------------------------------------------
 void CClientTools::SetEnabled( HTOOLHANDLE handle, bool enabled )
 {
-	int idx = m_Handles.Find( HToolEntry_t( handle ) );
-	if ( idx == m_Handles.InvalidIndex() )
+	auto idx = m_Handles.find( handle );
+	if ( idx == m_Handles.end() )
 		return;
 
-	HToolEntry_t *slot = &m_Handles[ idx ];
+	HToolEntry_t *slot = &idx->second;
 	Assert( slot );
 	if ( slot == nullptr )
 		return;
@@ -477,11 +468,11 @@ void CClientTools::SetEnabled( HTOOLHANDLE handle, bool enabled )
 //-----------------------------------------------------------------------------
 void CClientTools::SetRecording( HTOOLHANDLE handle, bool recording )
 {
-	int idx = m_Handles.Find( HToolEntry_t( handle ) );
-	if ( idx == m_Handles.InvalidIndex() )
+	auto idx = m_Handles.find( handle );
+	if ( idx == m_Handles.end() )
 		return;
 
-	HToolEntry_t &entry = m_Handles[ idx ];
+	HToolEntry_t &entry = idx->second;
 	if ( entry.m_hEntity )
 	{
 		entry.m_hEntity->SetToolRecording( recording );
@@ -490,11 +481,11 @@ void CClientTools::SetRecording( HTOOLHANDLE handle, bool recording )
 
 bool CClientTools::ShouldRecord( HTOOLHANDLE handle )
 {
-	int idx = m_Handles.Find( HToolEntry_t( handle ) );
-	if ( idx == m_Handles.InvalidIndex() )
+	auto idx = m_Handles.find( handle );
+	if ( idx == m_Handles.end() )
 		return false;
 
-	HToolEntry_t &entry = m_Handles[ idx ];
+	HToolEntry_t &entry = idx->second;
 	return entry.m_hEntity && entry.m_hEntity->ShouldRecordInTools();
 }
 
@@ -504,11 +495,11 @@ bool CClientTools::ShouldRecord( HTOOLHANDLE handle )
 //-----------------------------------------------------------------------------
 int CClientTools::GetModelIndex( HTOOLHANDLE handle )
 {
-	int idx = m_Handles.Find( HToolEntry_t( handle ) );
-	if ( idx == m_Handles.InvalidIndex() )
+	auto idx = m_Handles.find( handle );
+	if ( idx == m_Handles.end() )
 		return 0;
 
-	HToolEntry_t &entry = m_Handles[ idx ];
+	HToolEntry_t &entry = idx->second;
 	if ( entry.m_hEntity )
 	{
 		return entry.m_hEntity->GetModelIndex();
@@ -523,11 +514,11 @@ int CClientTools::GetModelIndex( HTOOLHANDLE handle )
 //-----------------------------------------------------------------------------
 const char* CClientTools::GetModelName( HTOOLHANDLE handle )
 {
-	int idx = m_Handles.Find( HToolEntry_t( handle ) );
-	if ( idx == m_Handles.InvalidIndex() )
+	auto idx = m_Handles.find( handle );
+	if ( idx == m_Handles.end() )
 		return nullptr;
 
-	HToolEntry_t &entry = m_Handles[ idx ];
+	HToolEntry_t &entry = idx->second;
 	if ( entry.m_hEntity )
 	{
 		return STRING( entry.m_hEntity->GetModelName() );
@@ -542,11 +533,11 @@ const char* CClientTools::GetModelName( HTOOLHANDLE handle )
 //-----------------------------------------------------------------------------
 const char* CClientTools::GetClassname( HTOOLHANDLE handle )
 {
-	int idx = m_Handles.Find( HToolEntry_t( handle ) );
-	if ( idx == m_Handles.InvalidIndex() )
+	auto idx = m_Handles.find( handle );
+	if ( idx == m_Handles.end() )
 		return nullptr;
 
-	HToolEntry_t &entry = m_Handles[ idx ];
+	HToolEntry_t &entry = idx->second;
 	if ( entry.m_hEntity )
 	{
 		return STRING( entry.m_hEntity->GetClassname() );
@@ -557,11 +548,11 @@ const char* CClientTools::GetClassname( HTOOLHANDLE handle )
 
 EntitySearchResult CClientTools::GetEntity( HTOOLHANDLE handle )
 {
-	int idx = m_Handles.Find( HToolEntry_t( handle ) );
-	if ( idx == m_Handles.InvalidIndex() )
+	auto idx = m_Handles.find( handle );
+	if ( idx == m_Handles.end() )
 		return reinterpret_cast< EntitySearchResult >( 0 );
 
-	HToolEntry_t *slot = &m_Handles[ idx ];
+	HToolEntry_t *slot = &idx->second;
 	Assert( slot );
 	if ( slot == nullptr )
 		return reinterpret_cast< EntitySearchResult >( 0 );
@@ -576,7 +567,7 @@ EntitySearchResult CClientTools::GetEntity( HTOOLHANDLE handle )
 //-----------------------------------------------------------------------------
 bool CClientTools::IsValidHandle( HTOOLHANDLE handle )
 {
-	return m_Handles.Find( HToolEntry_t( handle ) ) != m_Handles.InvalidIndex();
+	return m_Handles.contains( handle );
 }
 
 void CClientTools::OnEntityDeleted( CBaseEntity *pEntity )
@@ -795,11 +786,11 @@ bool CClientTools::IsBrush( EntitySearchResult currentEnt )
 
 Vector CClientTools::GetAbsOrigin( HTOOLHANDLE handle )
 {
-	int idx = m_Handles.Find( HToolEntry_t( handle ) );
-	if ( idx == m_Handles.InvalidIndex() )
+	auto idx = m_Handles.find( handle );
+	if ( idx == m_Handles.end() )
 		return vec3_origin;
 
-	HToolEntry_t &entry = m_Handles[ idx ];
+	HToolEntry_t &entry = idx->second;
 	if ( entry.m_hEntity )
 	{
 		return entry.m_hEntity->GetAbsOrigin();
@@ -810,11 +801,11 @@ Vector CClientTools::GetAbsOrigin( HTOOLHANDLE handle )
 
 QAngle CClientTools::GetAbsAngles( HTOOLHANDLE handle )
 {
-	int idx = m_Handles.Find( HToolEntry_t( handle ) );
-	if ( idx == m_Handles.InvalidIndex() )
+	auto idx = m_Handles.find( handle );
+	if ( idx == m_Handles.end() )
 		return vec3_angle;
 
-	HToolEntry_t &entry = m_Handles[ idx ];
+	HToolEntry_t &entry = idx->second;
 	if ( entry.m_hEntity )
 	{
 		return entry.m_hEntity->GetAbsAngles();
@@ -832,15 +823,15 @@ void CClientTools::PostToolMessage( KeyValues *pKeyValues )
 	if ( !Q_stricmp( pKeyValues->GetName(), "QueryParticleManifest" ) )
 	{
 		// NOTE: This cannot be done during particle system init because tools aren't set up at that point
-		CUtlVector<CUtlString> files;
+		std::vector< std::string > files;
 		GetParticleManifest( files );
-		int nCount = files.Count();
+		int nCount = std::ssize( files );
 		for ( int i = 0; i < nCount; ++i )
 		{
 			char pTemp[256];
 			Q_snprintf( pTemp, sizeof(pTemp), "%d", i );
 			KeyValues *pSubKey = pKeyValues->FindKey( pTemp, true );
-			pSubKey->SetString( "file", files[i] );
+			pSubKey->SetString( "file", files[i].c_str() );
 		}
 		return;
 	}
@@ -892,42 +883,42 @@ void CClientTools::ReloadParticleDefintions( const char *pFileName, const void *
 	//////////////
 	// Find any systems that depend on any system in the buffer
 	// slow, but necessary if we want live reloads to work - and doesn't happen too often
-	CUtlVector<CUtlString> systemNamesToReload;
+	std::vector< std::string > systemNamesToReload;
 
-	CUtlBuffer bufSystemsInBuffer(pBufData, nLen, CUtlBuffer::READ_ONLY);
+	ks::byte_reader bufSystemsInBuffer(pBufData, nLen);
 	g_pParticleSystemMgr->GetParticleSystemsInBuffer( bufSystemsInBuffer, &systemNamesToReload );
 
-	CUtlVector<CNewParticleEffect*> toReplaceEffects;
-	CUtlVector<CUtlString> toReplaceNames;
+	std::vector< CNewParticleEffect* > toReplaceEffects;
+	std::vector< std::string > toReplaceNames;
 
 	for( CNewParticleEffect *pEffect = ParticleMgr()->FirstNewEffect(); pEffect; pEffect = ParticleMgr()->NextNewEffect(pEffect) )
 	{
-		for( int i = 0; i < systemNamesToReload.Count(); ++i )
+		for( int i = 0; i < std::ssize( systemNamesToReload ); ++i )
 		{
-			if ( pEffect->DependsOnSystem( systemNamesToReload[i] ) )
+			if ( pEffect->DependsOnSystem( systemNamesToReload[i].c_str() ) )
 			{
 				// only reload a given effect once
-				if ( -1 == toReplaceEffects.Find(pEffect) )
+				if ( -1 == ks::find_index( toReplaceEffects, pEffect ) )
 				{
-					toReplaceNames.AddToTail( pEffect->GetName() );
-					toReplaceEffects.AddToTail( pEffect );
+					toReplaceNames.push_back( pEffect->GetName() );
+					toReplaceEffects.push_back( pEffect );
 				}
 			}
 		}
 	}
 
-	CUtlVector<CNonDrawingParticleSystem*> toReplaceEffectsNonDrawing;
-	CUtlVector<CUtlString> toReplaceNamesNonDrawing;
-	for( CNonDrawingParticleSystem *i = ParticleMgr()->m_NonDrawingParticleSystems.Head(); i ; i = i->m_pNext )
+	std::vector< CNonDrawingParticleSystem* > toReplaceEffectsNonDrawing;
+	std::vector< std::string > toReplaceNamesNonDrawing;
+	for( CNonDrawingParticleSystem *i = ParticleMgr()->m_NonDrawingParticleSystems.head(); i ; i = i->m_pNext )
 	{
-		for( int j = 0; j < systemNamesToReload.Count(); ++j )
+		for( int j = 0; j < std::ssize( systemNamesToReload ); ++j )
 		{
-			if ( i->Get()->DependsOnSystem( systemNamesToReload[j] ) )
+			if ( i->Get()->DependsOnSystem( systemNamesToReload[j].c_str() ) )
 			{
-				if ( -1 == toReplaceEffectsNonDrawing.Find( i ) )
+				if ( -1 == ks::find_index( toReplaceEffectsNonDrawing, i ) )
 				{
-					toReplaceNamesNonDrawing.AddToTail( i->Get()->GetName() );
-					toReplaceEffectsNonDrawing.AddToTail( i );
+					toReplaceNamesNonDrawing.push_back( i->Get()->GetName() );
+					toReplaceEffectsNonDrawing.push_back( i );
 				}
 			}
 		}
@@ -935,25 +926,25 @@ void CClientTools::ReloadParticleDefintions( const char *pFileName, const void *
 
 	//////////////
 	// Load the data and stomp the old definitions
-	CUtlBuffer bufReadParticleConfigFile(pBufData, nLen, CUtlBuffer::READ_ONLY);
+	ks::byte_reader bufReadParticleConfigFile(pBufData, nLen);
 	g_pParticleSystemMgr->ReadParticleConfigFile( bufReadParticleConfigFile, true );
 
 	//////////////
 	// Now replace all of the systems with their new versions
-	Assert( toReplaceEffects.Count() == toReplaceNames.Count() );
+	Assert( std::ssize( toReplaceEffects ) == std::ssize( toReplaceNames ) );
 
-	for( int i = 0; i < toReplaceNames.Count(); ++i )
+	for( int i = 0; i < std::ssize( toReplaceNames ); ++i )
 	{
 		CNewParticleEffect *pEffect = toReplaceEffects[i];
-		pEffect->ReplaceWith( toReplaceNames[i] );
+		pEffect->ReplaceWith( toReplaceNames[i].c_str() );
 	}
 
 	// update all the non-drawings ones
-	for( int i = 0; i < toReplaceNamesNonDrawing.Count(); i++ )
+	for( int i = 0; i < std::ssize( toReplaceNamesNonDrawing ); i++ )
 	{
 		CNonDrawingParticleSystem *pEffect = toReplaceEffectsNonDrawing[i];
 		delete pEffect->m_pSystem;
-		pEffect->m_pSystem = g_pParticleSystemMgr->CreateParticleCollection( toReplaceNamesNonDrawing[i] );
+		pEffect->m_pSystem = g_pParticleSystemMgr->CreateParticleCollection( toReplaceNamesNonDrawing[i].c_str() );
 	}
 }
 
@@ -1092,7 +1083,7 @@ CIFM_EntityKeyValuesHandler_RecreateEntities::CIFM_EntityKeyValuesHandler_Recrea
 
 void CIFM_EntityKeyValuesHandler_RecreateEntities::HandleData_PreUpdate( void )
 {
-	for( int i = 0; i != m_PlaybackEntities.Count(); ++i )
+	for( int i = 0; i != std::ssize( m_PlaybackEntities ); ++i )
 	{
 		m_PlaybackEntities[i].bTouched = false;
 	}
@@ -1100,13 +1091,13 @@ void CIFM_EntityKeyValuesHandler_RecreateEntities::HandleData_PreUpdate( void )
 
 void CIFM_EntityKeyValuesHandler_RecreateEntities::HandleData_PostUpdate( void )
 {
-	for( int i = m_PlaybackEntities.Count(); --i >= 0; )
+	for( int i = std::ssize( m_PlaybackEntities ); --i >= 0; )
 	{
 		if( !m_PlaybackEntities[i].bTouched )
 		{
 			//not updated, clear it
 			DestroyInstance( m_PlaybackEntities[i].pEntity );
-			m_PlaybackEntities.FastRemove( i );
+			ks::swap_remove( m_PlaybackEntities, i );
 		}
 	}
 }
@@ -1118,7 +1109,7 @@ void CIFM_EntityKeyValuesHandler_RecreateEntities::HandleData( KeyValues *pKeyVa
 	if( iEntIndex == -1 )
 		return;
 
-	for( int i = 0; i != m_PlaybackEntities.Count(); ++i )
+	for( int i = 0; i != std::ssize( m_PlaybackEntities ); ++i )
 	{
 		if( m_PlaybackEntities[i].iEntIndex == iEntIndex )
 		{
@@ -1134,18 +1125,18 @@ void CIFM_EntityKeyValuesHandler_RecreateEntities::HandleData( KeyValues *pKeyVa
 	temp.pEntity = CreateInstance();
 	temp.bTouched = true;
 
-	m_PlaybackEntities.AddToTail( temp );
+	m_PlaybackEntities.push_back( temp );
 	HandleInstance( temp.pEntity, pKeyValues );
 }
 
 
 void CIFM_EntityKeyValuesHandler_RecreateEntities::HandleData_RemoveAll( void )
 {
-	for( int i = m_PlaybackEntities.Count(); --i >= 0; )
+	for( int i = std::ssize( m_PlaybackEntities ); --i >= 0; )
 	{
 		DestroyInstance( m_PlaybackEntities[i].pEntity );
 	}
-	m_PlaybackEntities.RemoveAll();
+	m_PlaybackEntities.clear();
 }
 
 

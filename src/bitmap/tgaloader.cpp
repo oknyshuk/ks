@@ -10,12 +10,11 @@
 #include "basetypes.h"
 #include <math.h>
 #include "tier1/utlvector.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/vector_ops.h"
+#include "tier1/small_vector.h"
+#include "tier1/byte_reader.h"
 #include "filesystem.h"
 #include "tier2/tier2.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 namespace TGALoader
 {
@@ -47,14 +46,14 @@ struct TGAHeader_t
 // read a row into an RGBA8888 array.
 //-----------------------------------------------------------------------------
 
-typedef void (*ReadRowFunc_t)( CUtlBuffer& buf, TGAHeader_t const& header, unsigned char* pDstMemory );
+typedef void (*ReadRowFunc_t)( ks::byte_reader &buf, TGAHeader_t const& header, unsigned char* pDstMemory );
 
 
 //-----------------------------------------------------------------------------
 // output a RGBA8888 row into the destination format.
 //-----------------------------------------------------------------------------
 
-typedef void (*OutputRowFunc_t)( CUtlBuffer& buf, TGAHeader_t const& header, unsigned char* pDstMemory );
+typedef void (*OutputRowFunc_t)( ks::byte_reader &buf, TGAHeader_t const& header, unsigned char* pDstMemory );
 
 
 //-----------------------------------------------------------------------------
@@ -77,7 +76,7 @@ static int g_PixelsLeftInPacket;
 static unsigned char g_SrcGammaTable[256];
 static unsigned char g_DstGammaTable[256];
 
-typedef CUtlMemory<unsigned char> CTempImage;
+typedef std::vector<unsigned char> CTempImage;
 
 
 //-----------------------------------------------------------------------------
@@ -110,13 +109,13 @@ static bool ReadFile( char const* pFileName, CTempImage& image, int maxbytes = -
 	}
 	
 	// Allocate enough space
-	image.EnsureCapacity( pos );
+	ks::grow_to( image, pos );
 
 	// Back to the start of the file
 	g_pFullFileSystem->Seek( fileHandle, 0, FILESYSTEM_SEEK_HEAD );
 
 	// Read the file into the vector memory
-	int len = g_pFullFileSystem->Read( image.Base(), pos, fileHandle );
+	int len = g_pFullFileSystem->Read( image.data(), pos, fileHandle );
 
 	// Close the file
 	g_pFullFileSystem->Close( fileHandle );
@@ -129,16 +128,16 @@ static bool ReadFile( char const* pFileName, CTempImage& image, int maxbytes = -
 //-----------------------------------------------------------------------------
 // Reads in the TGA Header
 //-----------------------------------------------------------------------------
-static void ReadHeader( CUtlBuffer& buf, TGAHeader_t& header )
+static void ReadHeader( ks::byte_reader &buf, TGAHeader_t& header )
 {
-	buf.Get( &header, sizeof(TGAHeader_t) );
+	buf.read_bytes( &header, sizeof(TGAHeader_t) );
 }
 
 
 //-----------------------------------------------------------------------------
 // Figures out TGA information
 //-----------------------------------------------------------------------------
-bool GetInfo( CUtlBuffer& buf, int *width, int *height, 
+bool GetInfo( ks::byte_reader &buf, int *width, int *height, 
 						ImageFormat *imageFormat, float *sourceGamma )
 {
 	TGAHeader_t header;
@@ -204,7 +203,7 @@ bool GetInfo( char const* pFileName, int *width, int *height,
 		return false;
 
 	// Serialization buffer
-	CUtlBuffer buf( image.Base(), image.NumAllocated(), CUtlBuffer::READ_ONLY );
+	ks::byte_reader buf( image.data(), image.size() );
 
 	return GetInfo( buf, width, height, imageFormat, sourceGamma );
 }
@@ -214,66 +213,66 @@ bool GetInfo( char const* pFileName, int *width, int *height,
 // Various output methods
 //-----------------------------------------------------------------------------
 
-void OutputRowRGBA8888( CUtlBuffer& buf, TGAHeader_t const& header, unsigned char* pDst )
+void OutputRowRGBA8888( ks::byte_reader &buf, TGAHeader_t const& header, unsigned char* pDst )
 {
 	for( int i = 0; i < header.width; ++i, pDst += 4 )
 	{
-		unsigned char* pSrc = (unsigned char*)buf.PeekGet();
+		const unsigned char* pSrc = reinterpret_cast< const unsigned char * >( buf.rest().data() );
 		pDst[0] = pSrc[0];
 		pDst[1] = pSrc[1];
 		pDst[2] = pSrc[2];
 		pDst[3] = pSrc[3];
-		buf.SeekGet( CUtlBuffer::SEEK_CURRENT, 4 );
+		buf.skip( 4 );
 	}
 }
 
-void OutputRowABGR8888( CUtlBuffer& buf, TGAHeader_t const& header, unsigned char* pDst )
+void OutputRowABGR8888( ks::byte_reader &buf, TGAHeader_t const& header, unsigned char* pDst )
 {
 	for( int i = 0; i < header.width; ++i, pDst += 4 )
 	{
-		unsigned char* pSrc = (unsigned char*)buf.PeekGet();
+		const unsigned char* pSrc = reinterpret_cast< const unsigned char * >( buf.rest().data() );
 		pDst[3] = pSrc[0];
 		pDst[2] = pSrc[1];
 		pDst[1] = pSrc[2];
 		pDst[0] = pSrc[3];
-		buf.SeekGet( CUtlBuffer::SEEK_CURRENT, 4 );
+		buf.skip( 4 );
 	}
 }
 
-void OutputRowRGB888( CUtlBuffer& buf, TGAHeader_t const& header, unsigned char* pDst )
+void OutputRowRGB888( ks::byte_reader &buf, TGAHeader_t const& header, unsigned char* pDst )
 {
 	for( int i = 0; i < header.width; ++i, pDst += 3 )
 	{
-		unsigned char* pSrc = (unsigned char*)buf.PeekGet();
+		const unsigned char* pSrc = reinterpret_cast< const unsigned char * >( buf.rest().data() );
 		pDst[0] = pSrc[0];
 		pDst[1] = pSrc[1];
 		pDst[2] = pSrc[2];
-		buf.SeekGet( CUtlBuffer::SEEK_CURRENT, 4 );
+		buf.skip( 4 );
 	}
 }
 
-void OutputRowBGR888( CUtlBuffer& buf, TGAHeader_t const& header, unsigned char* pDst )
+void OutputRowBGR888( ks::byte_reader &buf, TGAHeader_t const& header, unsigned char* pDst )
 {
 	for( int i = 0; i < header.width; ++i, pDst += 3 )
 	{
-		unsigned char* pSrc = (unsigned char*)buf.PeekGet();
+		const unsigned char* pSrc = reinterpret_cast< const unsigned char * >( buf.rest().data() );
 		pDst[2] = pSrc[0];
 		pDst[1] = pSrc[1];
 		pDst[0] = pSrc[2];
-		buf.SeekGet( CUtlBuffer::SEEK_CURRENT, 4 );
+		buf.skip( 4 );
 	}
 }
 
-void OutputRowRGB565( CUtlBuffer& buf, TGAHeader_t const& header, unsigned char* pDst )
+void OutputRowRGB565( ks::byte_reader &buf, TGAHeader_t const& header, unsigned char* pDst )
 {
 	Assert( 0 );
 }
 
-void OutputRowI8( CUtlBuffer& buf, TGAHeader_t const& header, unsigned char* pDst )
+void OutputRowI8( ks::byte_reader &buf, TGAHeader_t const& header, unsigned char* pDst )
 {
 	for( int i = 0; i < header.width; ++i, ++pDst )
 	{
-		unsigned char* pSrc = (unsigned char*)buf.PeekGet();
+		const unsigned char* pSrc = reinterpret_cast< const unsigned char * >( buf.rest().data() );
 
 		if( ( pSrc[0] == pSrc[1] ) && ( pSrc[1] == pSrc[2] ) )
 		{
@@ -284,15 +283,15 @@ void OutputRowI8( CUtlBuffer& buf, TGAHeader_t const& header, unsigned char* pDs
 			pDst[0] = ( unsigned char )( 0.299f * pSrc[0] + 0.587f * pSrc[1] + 0.114f * pSrc[2] );
 		}
 
-		buf.SeekGet( CUtlBuffer::SEEK_CURRENT, 4 );
+		buf.skip( 4 );
 	}
 }
 
-void OutputRowIA88( CUtlBuffer& buf, TGAHeader_t const& header, unsigned char* pDst )
+void OutputRowIA88( ks::byte_reader &buf, TGAHeader_t const& header, unsigned char* pDst )
 {
 	for( int i = 0; i < header.width; ++i, pDst += 2 )
 	{
-		unsigned char* pSrc = (unsigned char*)buf.PeekGet();
+		const unsigned char* pSrc = reinterpret_cast< const unsigned char * >( buf.rest().data() );
 
 		if( ( pSrc[0] == pSrc[1] ) && ( pSrc[1] == pSrc[2] ) )
 		{
@@ -304,108 +303,108 @@ void OutputRowIA88( CUtlBuffer& buf, TGAHeader_t const& header, unsigned char* p
 		}
 		pDst[1] = pSrc[3];
 
-		buf.SeekGet( CUtlBuffer::SEEK_CURRENT, 4 );
+		buf.skip( 4 );
 	}
 }
 
-void OutputRowA8( CUtlBuffer& buf, TGAHeader_t const& header, unsigned char* pDst )
+void OutputRowA8( ks::byte_reader &buf, TGAHeader_t const& header, unsigned char* pDst )
 {
 	for( int i = 0; i < header.width; ++i, ++pDst )
 	{
-		unsigned char* pSrc = (unsigned char*)buf.PeekGet();
+		const unsigned char* pSrc = reinterpret_cast< const unsigned char * >( buf.rest().data() );
 		pDst[0] = pSrc[3];
-		buf.SeekGet( CUtlBuffer::SEEK_CURRENT, 4 );
+		buf.skip( 4 );
 	}
 }
 
-void OutputRowRGB888BlueScreen( CUtlBuffer& buf, TGAHeader_t const& header, unsigned char* pDst )
+void OutputRowRGB888BlueScreen( ks::byte_reader &buf, TGAHeader_t const& header, unsigned char* pDst )
 {
 	for( int i = 0; i < header.width; ++i, pDst += 3 )
 	{
-		unsigned char* pSrc = (unsigned char*)buf.PeekGet();
+		const unsigned char* pSrc = reinterpret_cast< const unsigned char * >( buf.rest().data() );
 		pDst[0] = (unsigned char)(( ( int )pSrc[0] * ( int )pSrc[3] ) >> 8);
 		pDst[1] = (unsigned char)(( ( int )pSrc[1] * ( int )pSrc[3] ) >> 8);
 		pDst[2] = (( ( ( ( int )pSrc[2] * ( int )pSrc[3] ) ) >> 8 ) + ( 255 - pSrc[3] ));
-		buf.SeekGet( CUtlBuffer::SEEK_CURRENT, 4 );
+		buf.skip( 4 );
 	}
 }
 
-void OutputRowBGR888BlueScreen( CUtlBuffer& buf, TGAHeader_t const& header, unsigned char* pDst )
+void OutputRowBGR888BlueScreen( ks::byte_reader &buf, TGAHeader_t const& header, unsigned char* pDst )
 {
 	for( int i = 0; i < header.width; ++i, pDst += 3 )
 	{
-		unsigned char* pSrc = (unsigned char*)buf.PeekGet();
+		const unsigned char* pSrc = reinterpret_cast< const unsigned char * >( buf.rest().data() );
 		pDst[2] = (unsigned char)(( ( int )pSrc[0] * ( int )pSrc[3] ) >> 8);
 		pDst[1] = (unsigned char)(( ( int )pSrc[1] * ( int )pSrc[3] ) >> 8);
 		pDst[0] = (unsigned char)(( ( ( ( int )pSrc[2] * ( int )pSrc[3] ) ) >> 8 ) + ( 255 - pSrc[3] ));
-		buf.SeekGet( CUtlBuffer::SEEK_CURRENT, 4 );
+		buf.skip( 4 );
 	}
 }
 
-void OutputRowARGB8888( CUtlBuffer& buf, TGAHeader_t const& header, unsigned char* pDst )
+void OutputRowARGB8888( ks::byte_reader &buf, TGAHeader_t const& header, unsigned char* pDst )
 {
 	for( int i = 0; i < header.width; ++i, pDst += 4 )
 	{
-		unsigned char* pSrc = (unsigned char*)buf.PeekGet();
+		const unsigned char* pSrc = reinterpret_cast< const unsigned char * >( buf.rest().data() );
 		pDst[0] = pSrc[3];
 		pDst[1] = pSrc[0];
 		pDst[2] = pSrc[1];
 		pDst[3] = pSrc[2];
-		buf.SeekGet( CUtlBuffer::SEEK_CURRENT, 4 );
+		buf.skip( 4 );
 	}
 }
 
-void OutputRowBGRA8888( CUtlBuffer& buf, TGAHeader_t const& header, unsigned char* pDst )
+void OutputRowBGRA8888( ks::byte_reader &buf, TGAHeader_t const& header, unsigned char* pDst )
 {
 	for( int i = 0; i < header.width; ++i, pDst += 4 )
 	{
-		unsigned char* pSrc = (unsigned char*)buf.PeekGet();
+		const unsigned char* pSrc = reinterpret_cast< const unsigned char * >( buf.rest().data() );
 		pDst[0] = pSrc[2];
 		pDst[1] = pSrc[1];
 		pDst[2] = pSrc[0];
 		pDst[3] = pSrc[3];
-		buf.SeekGet( CUtlBuffer::SEEK_CURRENT, 4 );
+		buf.skip( 4 );
 	}
 }
 
-void OutputRowBGRX8888( CUtlBuffer& buf, TGAHeader_t const& header, unsigned char* pDst )
+void OutputRowBGRX8888( ks::byte_reader &buf, TGAHeader_t const& header, unsigned char* pDst )
 {
 	for( int i = 0; i < header.width; ++i, pDst += 4 )
 	{
-		unsigned char* pSrc = (unsigned char*)buf.PeekGet();
+		const unsigned char* pSrc = reinterpret_cast< const unsigned char * >( buf.rest().data() );
 		pDst[0] = pSrc[2];
 		pDst[1] = pSrc[1];
 		pDst[2] = pSrc[0];
 		pDst[3] = 255;
-		buf.SeekGet( CUtlBuffer::SEEK_CURRENT, 4 );
+		buf.skip( 4 );
 	}
 }
 
-void OutputRowBGR565( CUtlBuffer& buf, TGAHeader_t const& header, unsigned char* pDst )
+void OutputRowBGR565( ks::byte_reader &buf, TGAHeader_t const& header, unsigned char* pDst )
 {
 	for( int i = 0; i < header.width; ++i, pDst += 2 )
 	{
-		unsigned char* pSrc = (unsigned char*)buf.PeekGet();
+		const unsigned char* pSrc = reinterpret_cast< const unsigned char * >( buf.rest().data() );
 		unsigned short rgba = (pSrc[2] & 0x1F) | ((pSrc[1] & 0x3F) << 5) | 
 			((pSrc[0] & 0x1F) << 11);
 
 		pDst[0] = rgba & 0xFF;
 		pDst[1] = rgba >> 8;
-		buf.SeekGet( CUtlBuffer::SEEK_CURRENT, 4 );
+		buf.skip( 4 );
 	}
 }
 
-void OutputRowBGRX5551( CUtlBuffer& buf, TGAHeader_t const& header, unsigned char* pDst )
+void OutputRowBGRX5551( ks::byte_reader &buf, TGAHeader_t const& header, unsigned char* pDst )
 {
 	for( int i = 0; i < header.width; ++i, pDst += 2 )
 	{
-		unsigned char* pSrc = (unsigned char*)buf.PeekGet();
+		const unsigned char* pSrc = reinterpret_cast< const unsigned char * >( buf.rest().data() );
 		unsigned short rgba = (pSrc[2] & 0x1F) | ((pSrc[1] & 0x1F) << 5) | 
 			((pSrc[0] & 0x1F) << 10) | 0x8000;
 
 		pDst[0] = rgba & 0xFF;
 		pDst[1] = rgba >> 8;
-		buf.SeekGet( CUtlBuffer::SEEK_CURRENT, 4 );
+		buf.skip( 4 );
 	}
 }
 
@@ -474,7 +473,7 @@ static void InitDestGammaConversionTable( float dstGamma )
 // Reads an 8-bit palettized TGA image
 //-----------------------------------------------------------------------------
 
-void ReadRow8BitUncompressedWithColormap( CUtlBuffer& buf, 
+void ReadRow8BitUncompressedWithColormap( ks::byte_reader &buf, 
 		TGAHeader_t const& header, unsigned char* pDst )
 {
 	int i;
@@ -485,7 +484,7 @@ void ReadRow8BitUncompressedWithColormap( CUtlBuffer& buf,
 	case 8:
 		for( i = 0; i < header.width; ++i, pDst += 4 )
 		{
-			int pal = buf.GetUnsignedChar();
+			int pal = buf.read< unsigned char >();
 
 			colormapEntry = &g_ColorMap[pal];
 			pDst[0] = colormapEntry[0];
@@ -498,7 +497,7 @@ void ReadRow8BitUncompressedWithColormap( CUtlBuffer& buf,
 	case 24:
 		for( i = 0; i < header.width; ++i, pDst += 4 )
 		{
-			int pal = buf.GetUnsignedChar();
+			int pal = buf.read< unsigned char >();
 
 			colormapEntry = &g_ColorMap[pal * 3];
 			pDst[0] = colormapEntry[2];
@@ -511,7 +510,7 @@ void ReadRow8BitUncompressedWithColormap( CUtlBuffer& buf,
 	case 32:
 		for( i = 0; i < header.width; ++i, pDst += 4 )
 		{
-			int pal = buf.GetUnsignedChar();
+			int pal = buf.read< unsigned char >();
 
 			colormapEntry = &g_ColorMap[pal * 4];
 			pDst[0] = colormapEntry[3];
@@ -532,12 +531,12 @@ void ReadRow8BitUncompressedWithColormap( CUtlBuffer& buf,
 // Reads an 8-bit greyscale TGA image
 //-----------------------------------------------------------------------------
 
-void ReadRow8BitUncompressedWithoutColormap( CUtlBuffer& buf, 
+void ReadRow8BitUncompressedWithoutColormap( ks::byte_reader &buf, 
 		TGAHeader_t const& header, unsigned char* pDst )
 {
 	for( int i = 0; i < header.width; ++i, pDst += 4 )
 	{
-		pDst[0] = pDst[1] = pDst[2] = buf.GetUnsignedChar();
+		pDst[0] = pDst[1] = pDst[2] = buf.read< unsigned char >();
 		pDst[3] = 255;
 	}
 }
@@ -546,14 +545,14 @@ void ReadRow8BitUncompressedWithoutColormap( CUtlBuffer& buf,
 // Reads a 24-bit TGA image
 //-----------------------------------------------------------------------------
 
-void ReadRow24BitUncompressedWithoutColormap( CUtlBuffer& buf, 
+void ReadRow24BitUncompressedWithoutColormap( ks::byte_reader &buf, 
 		TGAHeader_t const& header, unsigned char* pDst )
 {
 	for( int i = 0; i < header.width; ++i, pDst += 4 )
 	{
-		pDst[2] = buf.GetUnsignedChar();
-		pDst[1] = buf.GetUnsignedChar();
-		pDst[0] = buf.GetUnsignedChar();
+		pDst[2] = buf.read< unsigned char >();
+		pDst[1] = buf.read< unsigned char >();
+		pDst[0] = buf.read< unsigned char >();
 		pDst[3] = 255;
 	}
 }
@@ -562,15 +561,15 @@ void ReadRow24BitUncompressedWithoutColormap( CUtlBuffer& buf,
 // Reads a 32-bit TGA image
 //-----------------------------------------------------------------------------
 
-void ReadRow32BitUncompressedWithoutColormap( CUtlBuffer& buf, 
+void ReadRow32BitUncompressedWithoutColormap( ks::byte_reader &buf, 
 		TGAHeader_t const& header, unsigned char* pDst )
 {
 	for( int i = 0; i < header.width; ++i, pDst += 4 )
 	{
-		pDst[2] = buf.GetUnsignedChar();
-		pDst[1] = buf.GetUnsignedChar();
-		pDst[0] = buf.GetUnsignedChar();
-		pDst[3] = buf.GetUnsignedChar();
+		pDst[2] = buf.read< unsigned char >();
+		pDst[1] = buf.read< unsigned char >();
+		pDst[0] = buf.read< unsigned char >();
+		pDst[3] = buf.read< unsigned char >();
 	}
 }
 
@@ -579,7 +578,7 @@ void ReadRow32BitUncompressedWithoutColormap( CUtlBuffer& buf,
 // Decompresses a run-length encoded row of bytes
 //-----------------------------------------------------------------------------
 
-static void DecompressRow( CUtlBuffer& buf, TGAHeader_t const& header, unsigned char* pDst )
+static void DecompressRow( ks::byte_reader &buf, TGAHeader_t const& header, unsigned char* pDst )
 {
 	int bytesPerPixel = header.pixel_size >> 3;
 	int pixelsLeftInRow = header.width;
@@ -595,7 +594,7 @@ static void DecompressRow( CUtlBuffer& buf, TGAHeader_t const& header, unsigned 
 		if( !g_PixelsLeftInPacket )
 		{
 			// start a new packet.
-			unsigned char packetHeader = buf.GetUnsignedChar();
+			unsigned char packetHeader = buf.read< unsigned char >();
 			g_PixelsLeftInPacket = 1 + ( packetHeader & 0x7f );
 			if( packetHeader & 0x80 )
 			{
@@ -604,7 +603,7 @@ static void DecompressRow( CUtlBuffer& buf, TGAHeader_t const& header, unsigned 
 				// Read what I'm supposed to repeat
 				for (int i = 0; i < bytesPerPixel; ++i)
 				{
-					repeat[i] = buf.GetUnsignedChar();
+					repeat[i] = buf.read< unsigned char >();
 				}
 			}
 			else
@@ -631,7 +630,7 @@ static void DecompressRow( CUtlBuffer& buf, TGAHeader_t const& header, unsigned 
 		}
 		else
 		{
-			buf.Get( pDst, numPixelsToProcess * bytesPerPixel );
+			buf.read_bytes( pDst, numPixelsToProcess * bytesPerPixel );
 			pDst += numPixelsToProcess * bytesPerPixel;
 		}
 
@@ -647,14 +646,14 @@ static void DecompressRow( CUtlBuffer& buf, TGAHeader_t const& header, unsigned 
 //-----------------------------------------------------------------------------
 // Reads a compressed 8-bit palettized TGA image
 //-----------------------------------------------------------------------------
-void ReadRow8BitCompressedWithColormap( CUtlBuffer& buf, 
+void ReadRow8BitCompressedWithColormap( ks::byte_reader &buf, 
 		TGAHeader_t const& header, unsigned char* pDst )
 {
 	unsigned char rowI_8[TGA_MAX_ROW_LENGTH_IN_PIXELS];
 
 	DecompressRow( buf, header, rowI_8 );
 
-	CUtlBuffer uncompressedBuf( rowI_8, TGA_MAX_ROW_LENGTH_IN_PIXELS, CUtlBuffer::READ_ONLY );
+	ks::byte_reader uncompressedBuf( rowI_8, TGA_MAX_ROW_LENGTH_IN_PIXELS );
 	ReadRow8BitUncompressedWithColormap( uncompressedBuf, header, pDst );
 }
 
@@ -662,14 +661,14 @@ void ReadRow8BitCompressedWithColormap( CUtlBuffer& buf,
 //-----------------------------------------------------------------------------
 // Reads a compressed 8-bit greyscale TGA image
 //-----------------------------------------------------------------------------
-void ReadRow8BitCompressedWithoutColormap( CUtlBuffer& buf, 
+void ReadRow8BitCompressedWithoutColormap( ks::byte_reader &buf, 
 		TGAHeader_t const& header, unsigned char* pDst )
 {
 	unsigned char rowI_8[TGA_MAX_ROW_LENGTH_IN_PIXELS];
 
 	DecompressRow( buf, header, rowI_8 );
 
-	CUtlBuffer uncompressedBuf( rowI_8, TGA_MAX_ROW_LENGTH_IN_PIXELS, CUtlBuffer::READ_ONLY );
+	ks::byte_reader uncompressedBuf( rowI_8, TGA_MAX_ROW_LENGTH_IN_PIXELS );
 	ReadRow8BitUncompressedWithoutColormap( uncompressedBuf, header, pDst );
 }
 
@@ -677,14 +676,14 @@ void ReadRow8BitCompressedWithoutColormap( CUtlBuffer& buf,
 // Reads a compressed 24-bit TGA image
 //-----------------------------------------------------------------------------
 
-void ReadRow24BitCompressedWithoutColormap( CUtlBuffer& buf, 
+void ReadRow24BitCompressedWithoutColormap( ks::byte_reader &buf, 
 		TGAHeader_t const& header, unsigned char* pDst )
 {
 	unsigned char rowBGR_888[TGA_MAX_ROW_LENGTH_IN_PIXELS * 3];
 
 	DecompressRow( buf, header, rowBGR_888 );
 
-	CUtlBuffer uncompressedBuf( rowBGR_888, TGA_MAX_ROW_LENGTH_IN_PIXELS * 3, CUtlBuffer::READ_ONLY );
+	ks::byte_reader uncompressedBuf( rowBGR_888, TGA_MAX_ROW_LENGTH_IN_PIXELS * 3 );
 	ReadRow24BitUncompressedWithoutColormap( uncompressedBuf, header, pDst );
 }
 
@@ -692,14 +691,14 @@ void ReadRow24BitCompressedWithoutColormap( CUtlBuffer& buf,
 // Reads a compressed 32-bit TGA image
 //-----------------------------------------------------------------------------
 
-void ReadRow32BitCompressedWithoutColormap( CUtlBuffer& buf, 
+void ReadRow32BitCompressedWithoutColormap( ks::byte_reader &buf, 
 		TGAHeader_t const& header, unsigned char* pDst )
 {
 	unsigned char rowBGRA_8888[TGA_MAX_ROW_LENGTH_IN_PIXELS << 2];
 
 	DecompressRow( buf, header, rowBGRA_8888 );
 
-	CUtlBuffer uncompressedBuf( rowBGRA_8888, TGA_MAX_ROW_LENGTH_IN_PIXELS << 2, CUtlBuffer::READ_ONLY );
+	ks::byte_reader uncompressedBuf( rowBGRA_8888, TGA_MAX_ROW_LENGTH_IN_PIXELS << 2 );
 	ReadRow32BitUncompressedWithoutColormap( uncompressedBuf, header, pDst );
 }
 
@@ -778,7 +777,7 @@ static ReadRowFunc_t GetReadRowFunc( TGAHeader_t const& header )
 // Reads the color map
 //-----------------------------------------------------------------------------
 
-static bool ReadColormap( CUtlBuffer& buf, TGAHeader_t const& header )
+static bool ReadColormap( ks::byte_reader &buf, TGAHeader_t const& header )
 {
 	int numColormapBytes = header.colormap_length * ( header.colormap_size >> 3 );
 	if( numColormapBytes > TGA_MAX_COLORMAP_SIZE )
@@ -788,7 +787,7 @@ static bool ReadColormap( CUtlBuffer& buf, TGAHeader_t const& header )
 	}
 
 	// read colormap
-	buf.Get( g_ColorMap, numColormapBytes );
+	buf.read_bytes( g_ColorMap, numColormapBytes );
 
 	return true;
 }
@@ -797,7 +796,7 @@ static bool ReadColormap( CUtlBuffer& buf, TGAHeader_t const& header )
 //-----------------------------------------------------------------------------
 // Reads the source image
 //-----------------------------------------------------------------------------
-static bool ReadSourceImage( CUtlBuffer& buf, TGAHeader_t& header, CTempImage& image )
+static bool ReadSourceImage( ks::byte_reader &buf, TGAHeader_t& header, CTempImage& image )
 {
 	// Figure out our reading and riting
 	ReadRowFunc_t ReadRowFunc = GetReadRowFunc( header );
@@ -811,7 +810,7 @@ static bool ReadSourceImage( CUtlBuffer& buf, TGAHeader_t& header, CTempImage& i
 	// Only allocate the memory once
 	int memRequired = ImageLoader::GetMemRequired( header.width, header.height, 1,
 		IMAGE_FORMAT_RGBA8888, false );
-	image.EnsureCapacity( memRequired );
+	ks::grow_to( image, memRequired );
 
 	// read each row and process it. Note the image is upside-down from
 	// the way we want it.
@@ -821,7 +820,7 @@ static bool ReadSourceImage( CUtlBuffer& buf, TGAHeader_t& header, CTempImage& i
 	{
 		for( int row = 0; row < header.height; ++row )
 		{
-			pDstBits = image.Base() + 
+			pDstBits = image.data() + 
 				row * header.width * ImageLoader::SizeInBytes(IMAGE_FORMAT_RGBA8888);
 			ReadRowFunc( buf, header, pDstBits );
 		}
@@ -830,7 +829,7 @@ static bool ReadSourceImage( CUtlBuffer& buf, TGAHeader_t& header, CTempImage& i
 	{
 		for( int row = header.height; --row >= 0; )
 		{
-			pDstBits = image.Base() + 
+			pDstBits = image.data() + 
 				row * header.width * ImageLoader::SizeInBytes(IMAGE_FORMAT_RGBA8888);
 			ReadRowFunc( buf, header, pDstBits );
 		}
@@ -851,7 +850,7 @@ static bool OutputImage( CTempImage& image, TGAHeader_t& header,
 	if( !OutputRowFunc )
 		return false;
 
-	CUtlBuffer buf( image.Base(), image.NumAllocated(), CUtlBuffer::READ_ONLY );
+	ks::byte_reader buf( image.data(), image.size() );
 	unsigned char* pDstBits;
 	for( int row = 0; row < header.height; ++row )
 	{
@@ -867,7 +866,7 @@ static bool OutputImage( CTempImage& image, TGAHeader_t& header,
 //-----------------------------------------------------------------------------
 // Parses the lovely bits previously read from disk
 //-----------------------------------------------------------------------------
-bool Load( unsigned char *pOutputImage, CUtlBuffer& buf, int width, 
+bool Load( unsigned char *pOutputImage, ks::byte_reader &buf, int width, 
 		int height, ImageFormat imageFormat, float targetGamma, bool mipmap )
 {
 	TGAHeader_t header;
@@ -878,7 +877,7 @@ bool Load( unsigned char *pOutputImage, CUtlBuffer& buf, int width,
 	// skip TARGA image comment
 	if( header.id_length != 0 )
 	{
-		buf.SeekGet( CUtlBuffer::SEEK_CURRENT, header.id_length );
+		buf.skip( header.id_length );
 	}
 
 	// Read the color map for palettized images
@@ -900,7 +899,7 @@ bool Load( unsigned char *pOutputImage, CUtlBuffer& buf, int width,
 		return false;
 
 	// Now that we've got the source image, generate the mip-map levels
-	ImageLoader::GenerateMipmapLevels( tmpImage.Base(), pOutputImage,
+	ImageLoader::GenerateMipmapLevels( tmpImage.data(), pOutputImage,
 		header.width, header.height, 1, imageFormat, ARTWORK_GAMMA, targetGamma,
 		mipmap ? 0 : 1 );
 
@@ -924,7 +923,7 @@ bool Load( unsigned char *pOutputImage, const char *pFileName, int width, int he
 		return false;
 
 	// Make an unserialization buffer
-	CUtlBuffer buf( vec.Base(), vec.NumAllocated(), CUtlBuffer::READ_ONLY );
+	ks::byte_reader buf( vec.data(), vec.size() );
 	
 	// Do the dirty deed
 	return Load( pOutputImage, buf, width, height, imageFormat, targetGamma, mipmap );
@@ -934,7 +933,7 @@ bool Load( unsigned char *pOutputImage, const char *pFileName, int width, int he
 //-----------------------------------------------------------------------------
 // Creates a map in linear space
 //-----------------------------------------------------------------------------
-bool LoadRGBA8888( CUtlBuffer& buf, CUtlMemory<unsigned char> &outputData, int &outWidth, int &outHeight )
+bool LoadRGBA8888( ks::byte_reader &buf, std::vector<unsigned char> &outputData, int &outWidth, int &outHeight )
 {
 	TGAHeader_t header;
 
@@ -944,7 +943,7 @@ bool LoadRGBA8888( CUtlBuffer& buf, CUtlMemory<unsigned char> &outputData, int &
 	// skip TARGA image comment
 	if( header.id_length != 0 )
 	{
-		buf.SeekGet( CUtlBuffer::SEEK_CURRENT, header.id_length );
+		buf.skip( header.id_length );
 	}
 
 	// Read the color map for palettized images
@@ -959,7 +958,7 @@ bool LoadRGBA8888( CUtlBuffer& buf, CUtlMemory<unsigned char> &outputData, int &
 	int memSize = ImageLoader::GetMemRequired( 
 		header.width, header.height, 1, IMAGE_FORMAT_RGBA8888, false );
 
-	outputData.EnsureCapacity( memSize );
+	ks::grow_to( outputData, memSize );
 	if (!ReadSourceImage( buf, header, outputData ))
 		return false;
 
@@ -972,7 +971,7 @@ bool LoadRGBA8888( CUtlBuffer& buf, CUtlMemory<unsigned char> &outputData, int &
 // Reads a TGA, keeps it in RGBA8888
 //-----------------------------------------------------------------------------
 
-bool LoadRGBA8888( const char *pFileName, CUtlMemory<unsigned char> &outputData, int &outWidth, int &outHeight )
+bool LoadRGBA8888( const char *pFileName, std::vector<unsigned char> &outputData, int &outWidth, int &outHeight )
 {
 	Assert( pFileName );
 
@@ -984,7 +983,7 @@ bool LoadRGBA8888( const char *pFileName, CUtlMemory<unsigned char> &outputData,
 		return false;
 
 	// Make an unserialization buffer
-	CUtlBuffer buf( vec.Base(), vec.NumAllocated(), CUtlBuffer::READ_ONLY );
+	ks::byte_reader buf( vec.data(), vec.size() );
 	
 	// Do the dirty deed
 	return LoadRGBA8888( buf, outputData, outWidth, outHeight );

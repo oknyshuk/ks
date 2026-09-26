@@ -9,9 +9,6 @@
 #include "eventlist.h"
 #include "stringregistry.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // NOTE: If CStringRegistry allowed storing arbitrary data, we could just use that.
 // in this case we have the "isPrivate" member and the replacement rules 
 // (eventIndex can be reused by private activities), so a custom table is necessary
@@ -19,11 +16,11 @@ struct eventlist_t
 {
 	int					eventIndex;
 	int					iType;
-	unsigned short		stringKey;
+	CStringRegistry::Key	stringKey;
 	short				isPrivate;
 };
 
-CUtlVector<eventlist_t> g_EventList;
+std::vector< eventlist_t > g_EventList;
 
 // This stores the actual event names.  Also, the string ID in the registry is simply an index 
 // into the g_EventList array.
@@ -43,7 +40,7 @@ void EventList_Init( void )
 void EventList_Free( void )
 {
 	g_EventStrings.ClearStrings();
-	g_EventList.Purge();
+	g_EventList.clear(); g_EventList.shrink_to_fit();
 
 	// So studiohdrs can reindex event indices
 	++g_nEventListVersion;
@@ -53,7 +50,7 @@ void EventList_Free( void )
 eventlist_t *EventList_AddEventEntry( const char *pName, int iEventIndex, bool isPrivate, int iType )
 {
 	MEM_ALLOC_CREDIT();
-	int index = g_EventList.AddToTail();
+	int index = std::ssize( g_EventList ); g_EventList.emplace_back();
 	eventlist_t *pList = &g_EventList[index];
 	pList->eventIndex = iEventIndex;
 	pList->stringKey = g_EventStrings.AddString( pName, index );
@@ -85,7 +82,7 @@ static eventlist_t *ListFromString( const char *pString )
 static eventlist_t *ListFromEvent( int eventIndex )
 {
 	// ugly linear search
-	for ( int i = 0; i < g_EventList.Count(); i++ )
+	for ( int i = 0; i < std::ssize( g_EventList ); i++ )
 	{
 		if ( g_EventList[i].eventIndex == eventIndex )
 		{

@@ -4,7 +4,7 @@
 
 #include "resourcefile/resourcestream.h"
 #include "mathlib/aabb.h"
-#include "bitvec.h"
+#include <vector>
 #include "rubikon/serializehelpers.h"
 #include "rubikon/constants.h"
 #include "tier1/checksum_crc.h"
@@ -23,8 +23,8 @@ schema struct RnSphere_t
 	AABB_t GetBbox( const CTransform& xform ) const;
 
 	int GetTriangulation( Vector *pVerts = nullptr ) const;
-	void GetTriangulation( CUtlVector<Vector> &vertices, CUtlVector<uint32> &indices ) const;
-	void GetTriangulation( CUtlVector<Vector> &vertices, CUtlVector<uint32> &indices, int nSides, int nSlices ) const;
+	void GetTriangulation( std::vector< Vector > &vertices, std::vector< uint32 > &indices ) const;
+	void GetTriangulation( std::vector< Vector > &vertices, std::vector< uint32 > &indices, int nSides, int nSlices ) const;
 	
 	float GetVolume() const;
 	Vector ComputeOrthographicAreas() const;
@@ -65,8 +65,8 @@ schema struct RnCapsule_t
 	AABB_t GetBbox( const CTransform& xform ) const;
 
 	int GetTriangulation( Vector *pVerts = nullptr ) const;
-	void GetTriangulation( CUtlVector<Vector> &vertices, CUtlVector<uint32> &indices ) const;
-	void GetTriangulation( CUtlVector<Vector> &vertices, CUtlVector<uint32> &indices, int nSides, int nSlices ) const;
+	void GetTriangulation( std::vector< Vector > &vertices, std::vector< uint32 > &indices ) const;
+	void GetTriangulation( std::vector< Vector > &vertices, std::vector< uint32 > &indices, int nSides, int nSlices ) const;
 	
 	float GetVolume() const;
 	Vector ComputeOrthographicAreas() const;
@@ -201,7 +201,7 @@ schema struct RnHull_t
 	AABB_t GetBbox( const CTransform& xform ) const;
 
 	int GetTriangulation( Vector *pVerts = nullptr ) const;
-	void GetTriangulation( CUtlVector<Vector> &vertices, CUtlVector<uint32> &indices, float flScale = 1.0f ) const;
+	void GetTriangulation( std::vector< Vector > &vertices, std::vector< uint32 > &indices, float flScale = 1.0f ) const;
 	
 	float GetVolume( void ) const;
 	FORCEINLINE const Vector &GetCentroid( )const							{ return m_vCentroid; }
@@ -457,7 +457,7 @@ schema struct RnMesh_t
 
 	AABB_t GetBbox( void ) const;
 	int GetTriangulation( Vector *pVerts = nullptr ) const;
-	void GetTriangulation( CUtlVector<Vector> &vertices, CUtlVector<uint32> &indices, const Vector &vScale = Vector( 1, 1, 1 ) ) const;
+	void GetTriangulation( std::vector< Vector > &vertices, std::vector< uint32 > &indices, const Vector &vScale = Vector( 1, 1, 1 ) ) const;
 	float GetVolume( void ) const { return 0; }
 
 	uintp GetRuntimeSize( void ) const ;
@@ -742,19 +742,19 @@ inline Vector RnCapsule_t::ComputeOrthographicAreas()const
 
 
 
-inline bool IsTriangulationValid( int nVertexCount, const CUtlVector<uint32> &indices )
+inline bool IsTriangulationValid( int nVertexCount, const std::vector< uint32 > &indices )
 {
 	if( nVertexCount == 0 )
 	{
-		return indices.IsEmpty(); // triangulation is valid iff both indices and vertices are empty
+		return indices.empty(); // triangulation is valid iff both indices and vertices are empty
 	}
 	// check that indices are referring to all the vertices, and no more
-	CVarBitVecT<uint32> used( nVertexCount );
-	for( int i = 0; i < indices.Count(); ++i )
+	std::vector< bool > used( nVertexCount );
+	for( int i = 0; i < std::ssize( indices ); ++i )
 	{
 		if( indices[i] < ( uint )nVertexCount )
 		{
-			used.Set( indices[i] );
+			used[ indices[i] ] = true;
 		}
 		else
 		{
@@ -781,9 +781,9 @@ inline bool IsTriangulationValid( int nVertexCount, const CUtlVector<uint32> &in
 }
 
 
-inline bool IsTriangulationValid( const CUtlVector<Vector> &vertices, const CUtlVector<uint32> &indices )
+inline bool IsTriangulationValid( const std::vector< Vector > &vertices, const std::vector< uint32 > &indices )
 {
-	return IsTriangulationValid( vertices.Count(), indices );
+	return IsTriangulationValid( std::ssize( vertices ), indices );
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -825,7 +825,7 @@ inline int RnNode_t::GetHeight( void ) const
 	const RnNode_t* pRightChild = GetRightChild();
 	int RightHeight = pRightChild->GetHeight();
 
-	return 1 + MAX( LeftHeight, RightHeight );
+	return 1 + std::max( LeftHeight, RightHeight );
 }
 
 
@@ -920,20 +920,20 @@ inline int RnSphere_t::GetTriangulation( Vector *pVerts ) const
 
 
 //--------------------------------------------------------------------------------------------------
-inline void RnSphere_t::GetTriangulation( CUtlVector<Vector> &vertices, CUtlVector<uint32> &indices )const
+inline void RnSphere_t::GetTriangulation( std::vector< Vector > &vertices, std::vector< uint32 > &indices )const
 {
 	GetTriangulation( vertices, indices, 12, 5 );
 }
 
 
 //--------------------------------------------------------------------------------------------------
-inline void RnSphere_t::GetTriangulation( CUtlVector<Vector> &vertices, CUtlVector<uint32> &indices, int nSides, int nSlices )const
+inline void RnSphere_t::GetTriangulation( std::vector< Vector > &vertices, std::vector< uint32 > &indices, int nSides, int nSlices )const
 {
-	int nIndexBase = indices.AddMultipleToTail( nSides * 2 * nSlices * 3 ); 
-	uint32 *pOut = indices.Base() + nIndexBase;
+	int nIndexBase = std::ssize( indices ); indices.resize( indices.size() + ( nSides * 2 * nSlices * 3 ) ); 
+	uint32 *pOut = indices.data() + nIndexBase;
 
-	int nVertBase = vertices.AddMultipleToTail( nSides * nSlices + 2 );
-	Vector *pVerts = vertices.Base() + nVertBase;
+	int nVertBase = std::ssize( vertices ); vertices.resize( vertices.size() + ( nSides * nSlices + 2 ) );
+	Vector *pVerts = vertices.data() + nVertBase;
 	V_memset( pVerts, 0, ( nSides * nSlices + 2 ) * sizeof( Vector ) );
 
 	pVerts[ nSides * nSlices + 0 ] = Vector( -m_flRadius, 0, 0 );
@@ -962,7 +962,7 @@ inline void RnSphere_t::GetTriangulation( CUtlVector<Vector> &vertices, CUtlVect
 				*pOut++ = nVertBase + nSlices * i  + j ;
 				*pOut++ = nVertBase + nSlices * i  + j + 1;
 
-				Assert( nVertBase + nSlices * i  + j + 1 < vertices.Count() );
+				Assert( nVertBase + nSlices * i  + j + 1 < std::ssize( vertices ) );
 			}
 			else
 			{
@@ -995,7 +995,7 @@ inline void RnSphere_t::GetTriangulation( CUtlVector<Vector> &vertices, CUtlVect
 
 	//indices.SetCount( pOut - indices.Base() );
 
-	Assert( pOut == indices.end() );
+	Assert( pOut == indices.data() + indices.size() );
 	AssertDbg( IsTriangulationValid( vertices, indices ) );
 }
 
@@ -1115,21 +1115,21 @@ inline int RnCapsule_t::GetTriangulation( Vector *pVerts ) const
 
 
 //--------------------------------------------------------------------------------------------------
-inline void RnCapsule_t::GetTriangulation( CUtlVector<Vector> &vertices, CUtlVector<uint32> &indices )const
+inline void RnCapsule_t::GetTriangulation( std::vector< Vector > &vertices, std::vector< uint32 > &indices )const
 {
 	GetTriangulation( vertices, indices, 12, 2 );
 }
 
 
 //--------------------------------------------------------------------------------------------------
-inline void RnCapsule_t::GetTriangulation( CUtlVector<Vector> &vertices, CUtlVector<uint32> &indices, int nSides, int nSlices )const
+inline void RnCapsule_t::GetTriangulation( std::vector< Vector > &vertices, std::vector< uint32 > &indices, int nSides, int nSlices )const
 {
-	int nVertBase = vertices.Count();
-	int nIndexBase = indices.AddMultipleToTail( nSides * ( 2 + 2 * ( 2 * nSlices + 1 ) ) * 3 ); // each side is 4 tris, each 3 verts 
+	int nVertBase = std::ssize( vertices );
+	int nIndexBase = std::ssize( indices ); indices.resize( indices.size() + ( nSides * ( 2 + 2 * ( 2 * nSlices + 1 ) ) * 3 ) ); // each side is 4 tris, each 3 verts 
 	uint32 *pOut = &indices[ nIndexBase ];
 
 	int nSideVerts = 2 + 2 * nSlices;
-	vertices.AddMultipleToTail( nSides * nSideVerts + 2 );
+	vertices.resize( vertices.size() + ( nSides * nSideVerts + 2 ) );
 	Vector *pVerts = &vertices[nVertBase];
 	V_memset( pVerts, 0, nSides * nSideVerts * sizeof( Vector ) );
 
@@ -1215,7 +1215,7 @@ inline void RnCapsule_t::GetTriangulation( CUtlVector<Vector> &vertices, CUtlVec
 	{
 		pVerts[i] = m_vCenter[0] + vAxisX * pVerts[i].x + vAxisY * pVerts[i].y + vAxisZ * pVerts[i].z;
 	}
-	Assert( pOut == indices.end() );
+	Assert( pOut == indices.data() + indices.size() );
 	AssertDbg( IsTriangulationValid( vertices, indices ) );
 }
 
@@ -1286,10 +1286,10 @@ inline int RnHull_t::GetTriangulation( Vector *pVerts ) const
 
 
 //------------------------------------------------------------------------------------------------------------------------------------------------------
-inline void RnHull_t::GetTriangulation( CUtlVector<Vector> &vertices, CUtlVector<uint32> &indices, float flScale )const
+inline void RnHull_t::GetTriangulation( std::vector< Vector > &vertices, std::vector< uint32 > &indices, float flScale )const
 {
-	int nVertBase = vertices.Count();
-	vertices.AddMultipleToTail( GetVertexCount() );
+	int nVertBase = std::ssize( vertices );
+	vertices.resize( vertices.size() + ( GetVertexCount() ) );
 	for( int i = 0; i < GetVertexCount(); ++i )
 	{
 		vertices[ i + nVertBase ] = GetVertex( i ) * flScale;
@@ -1311,9 +1311,9 @@ inline void RnHull_t::GetTriangulation( CUtlVector<Vector> &vertices, CUtlVector
 			int v2 = nVertBase + pEdge2->m_nOrigin;
 			int v3 = nVertBase + pEdge3->m_nOrigin;
 
-			indices.AddToTail( v1 );
-			indices.AddToTail( v2 );
-			indices.AddToTail( v3 );
+			indices.push_back( v1 );
+			indices.push_back( v2 );
+			indices.push_back( v3 );
 
 			pEdge2 = pEdge3;
 			pEdge3 = GetEdge( pEdge3->m_nNext );
@@ -1355,23 +1355,23 @@ inline int RnMesh_t::GetTriangulation( Vector *pVerts ) const
 
 
 //------------------------------------------------------------------------------------------------------------------------------------------------------
-inline void RnMesh_t::GetTriangulation( CUtlVector<Vector> &vertices, CUtlVector<uint32> &indices, const Vector &vScale ) const
+inline void RnMesh_t::GetTriangulation( std::vector< Vector > &vertices, std::vector< uint32 > &indices, const Vector &vScale ) const
 {
-	int nVertBase = vertices.Count();
-	vertices.AddMultipleToTail( GetVertexCount() );
+	int nVertBase = std::ssize( vertices );
+	vertices.resize( vertices.size() + ( GetVertexCount() ) );
 	for ( int i = 0; i < GetVertexCount(); ++i )
 	{
 		Vector vertex = vScale * GetVertex( i );
 		vertices[ nVertBase + i ] = vertex;
 	}
 
-	indices.EnsureCapacity( 3 * GetTriangleCount() );
+	indices.reserve( 3 * GetTriangleCount() );
 	for ( int i = 0; i < GetTriangleCount(); ++i )
 	{
 		const RnTriangle_t* pTriangle = GetTriangle( i );
-		indices.AddToTail( nVertBase + pTriangle->m_nIndex[ 0 ] );
-		indices.AddToTail( nVertBase + pTriangle->m_nIndex[ 1 ] );
-		indices.AddToTail( nVertBase + pTriangle->m_nIndex[ 2 ] );
+		indices.push_back( nVertBase + pTriangle->m_nIndex[ 0 ] );
+		indices.push_back( nVertBase + pTriangle->m_nIndex[ 1 ] );
+		indices.push_back( nVertBase + pTriangle->m_nIndex[ 2 ] );
 	}
 
 	AssertDbg( IsTriangulationValid( vertices, indices ) );

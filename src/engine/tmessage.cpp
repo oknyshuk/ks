@@ -15,9 +15,7 @@
 #include "tier0/icommandline.h"
 #include "tier0/platform.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 #define MSGFILE_NAME		0
 #define MSGFILE_TEXT		1
 #define MAX_MESSAGES		600			// I don't know if this table will balloon like every other feature in Half-Life
@@ -184,7 +182,7 @@ int ParseString( char const *pText, char *buf, size_t bufsize )
 		char const *pStart = pTemp;
 		pTemp = SkipText( pTemp );
 
-		int len =  MIN( pTemp - pStart + 1, (int)bufsize - 1 );
+		int len =  std::min<std::common_type_t<long int, int>>( pTemp - pStart + 1, (int)bufsize - 1 );
 		Q_strncpy( buf, pStart, len );
 		buf[ len ] = 0;
 		return 1;
@@ -494,7 +492,7 @@ void TextMessageParse( byte *pMemFile, int fileSize )
 	messageSize = (messageCount * sizeof(client_textmessage_t));
 
 	// Must malloc because we need to be able to clear it after initialization
-	gMessageTable = (client_textmessage_t *)malloc( textHeapSize + nameHeapSize + messageSize );
+	gMessageTable = (client_textmessage_t *)MemAlloc_Alloc( textHeapSize + nameHeapSize + messageSize );
 	
 	// Copy table over
 	memcpy( gMessageTable, textMessages, messageSize );
@@ -531,7 +529,7 @@ void TextMessageShutdown( void )
 	// Clear out any old data that's sitting around.
 	if ( gMessageTable )
 	{
-		free( gMessageTable );
+		g_pMemAlloc->Free( gMessageTable );
 		gMessageTable = nullptr;
 	}
 }
@@ -544,7 +542,7 @@ void TextMessageInit( void )
 	// Clear out any old data that's sitting around.
 	if ( gMessageTable )
 	{
-		free( gMessageTable );
+		g_pMemAlloc->Free( gMessageTable );
 		gMessageTable = nullptr;
 	}
 
@@ -553,7 +551,7 @@ void TextMessageInit( void )
 	if ( pMemFile )
 	{
 		TextMessageParse( pMemFile, fileSize );
-		free( pMemFile );
+		g_pMemAlloc->Free( pMemFile );
 	}
 
 	int i;

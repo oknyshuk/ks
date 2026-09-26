@@ -17,13 +17,11 @@
 #include <keyvalues.h>
 
 #include "imaterialproxydict.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 class CAnimateSpecificTexture : public CBaseAnimatedTextureProxy
 {
 private:
-	CUtlString m_OnlyAnimateOnTexture;
+	std::string m_OnlyAnimateOnTexture;
 public:
 	virtual float GetAnimationStartTime( void* pBaseEntity ) { return 0; }
 	virtual bool Init( IMaterial *pMaterial, KeyValues *pKeyValues );
@@ -37,14 +35,14 @@ bool CAnimateSpecificTexture::Init( IMaterial *pMaterial, KeyValues *pKeyValues 
 	if( !pszAnimateOnTexture )
 		return false;
 
-	m_OnlyAnimateOnTexture.Set( pszAnimateOnTexture );
+	m_OnlyAnimateOnTexture.assign( ks::nz( pszAnimateOnTexture ) );
 
 	return CBaseAnimatedTextureProxy::Init( pMaterial, pKeyValues );
 }
 
 void CAnimateSpecificTexture::OnBind( void *pC_BaseEntity )
 {
-	if( FStrEq( m_AnimatedTextureVar->GetTextureValue()->GetName(), m_OnlyAnimateOnTexture ) )
+	if( FStrEq( m_AnimatedTextureVar->GetTextureValue()->GetName(), m_OnlyAnimateOnTexture.c_str() ) )
 	{
 		CBaseAnimatedTextureProxy::OnBind( pC_BaseEntity );
 	}

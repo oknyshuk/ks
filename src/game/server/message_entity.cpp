@@ -23,9 +23,6 @@
 #include "player.h"
 #include "entitylist.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // Spawnflags
 #define SF_MESSAGE_DISABLED		1
 
@@ -61,7 +58,7 @@ LINK_ENTITY_TO_CLASS( point_message, CMessageEntity );
 
 IMPLEMENT_REFLECT_DATAMAP( CMessageEntity )
 
-static CUtlVector< CHandle< CMessageEntity > >	g_MessageEntities;
+static std::vector< CHandle< CMessageEntity > >	g_MessageEntities;
 
 //-----------------------------------------
 // Spawn
@@ -84,7 +81,7 @@ void CMessageEntity::Activate( void )
 
 	CHandle< CMessageEntity > h;
 	h = this;
-	g_MessageEntities.AddToTail( h );
+	g_MessageEntities.push_back( h );
 }
 
 //-----------------------------------------------------------------------------
@@ -96,7 +93,7 @@ void CMessageEntity::UpdateOnRemove()
 
 	CHandle< CMessageEntity > h;
 	h = this;
-	g_MessageEntities.FindAndRemove( h );
+	ks::erase_first( g_MessageEntities, h );
 
 	BaseClass::UpdateOnRemove();
 }
@@ -166,13 +163,13 @@ void CMessageEntity::InputDisable( inputdata_t &inputdata )
 //  for now
 void DrawMessageEntities()
 {
-	int c = g_MessageEntities.Count();
+	int c = std::ssize( g_MessageEntities );
 	for ( int i = c - 1; i >= 0; i-- )
 	{
 		CMessageEntity *me = g_MessageEntities[ i ];
 		if ( !me )
 		{
-			g_MessageEntities.Remove( i );
+			g_MessageEntities.erase( g_MessageEntities.begin() + i );
 			continue;
 		}
 

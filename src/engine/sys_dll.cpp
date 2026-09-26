@@ -9,6 +9,7 @@
 
 #include <unistd.h>
 #include <fcntl.h>
+#include <mutex>
 #if !defined(DEDICATED)
 #include <SDL3/SDL.h>
 #endif
@@ -51,9 +52,6 @@
 #include "tier0/systeminformation.h"
 #include "toolframework/itoolframework.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define ONE_HUNDRED_TWENTY_EIGHT_MB	(128 * 1024 * 1024)
 
 ConVar mem_min_heapsize( "mem_min_heapsize", "48", 0, "Minimum amount of memory to dedicate to engine hunk and datacache (in mb)" );
@@ -61,7 +59,7 @@ ConVar mem_max_heapsize( "mem_max_heapsize", "512", 0, "Maximum amount of memory
 ConVar mem_max_heapsize_dedicated( "mem_max_heapsize_dedicated", "64", 0, "Maximum amount of memory to dedicate to engine hunk and datacache, for dedicated server (in mb)" );
 
 #define MINIMUM_WIN_MEMORY			(unsigned)(mem_min_heapsize.GetInt()*1024*1024)
-#define MAXIMUM_WIN_MEMORY			MAX( (unsigned)(mem_max_heapsize.GetInt()*1024*1024), MINIMUM_WIN_MEMORY )
+#define MAXIMUM_WIN_MEMORY			std::max( (unsigned)(mem_max_heapsize.GetInt()*1024*1024), MINIMUM_WIN_MEMORY )
 #define MAXIMUM_DEDICATED_MEMORY	(unsigned)(mem_max_heapsize_dedicated.GetInt()*1024*1024)
 
 DEFINE_LOGGING_CHANNEL_NO_TAGS( LOG_SERVER_LOG, "ServerLog", LCF_DO_NOT_ECHO );
@@ -596,50 +594,51 @@ void Sys_ShutdownAuthentication( void )
 CTHREADLOCALINT g_bInSpew;
 
 #include "tier1/fmtstr.h"
+#include <deque>
+#include <ranges>
 
 static ConVar sys_minidumpspewlines( "sys_minidumpspewlines", "500", FCVAR_RELEASE, "Lines of crash dump console spew to keep." );
 
-static CUtlLinkedList< CUtlString > g_SpewHistory;
+static std::deque< std::string > g_SpewHistory;
 static int g_nSpewLines = 1;
-static CThreadFastMutex g_SpewMutex;
+static std::recursive_mutex g_SpewMutex;
 
 static void AddSpewRecord( char const *pMsg )
 {
 #if !defined( DEDICATED )
-	CUtlString str;
-	str.Format( "%d(%f):  %s", g_nSpewLines, Plat_FloatTime(), pMsg );
+	std::string str;
+	str = ks::format_printf( "%d(%f):  %s", g_nSpewLines, Plat_FloatTime(), pMsg );
 
-	AUTO_LOCK_FM( g_SpewMutex );
+	std::scoped_lock lock( g_SpewMutex );
 	++g_nSpewLines;
-	if ( g_SpewHistory.Count() > sys_minidumpspewlines.GetInt() )
+	if ( std::ssize( g_SpewHistory ) > sys_minidumpspewlines.GetInt() )
 	{
-		g_SpewHistory.Remove( g_SpewHistory.Head() );
+		g_SpewHistory.pop_front();
 	}
 
 
-	g_SpewHistory.AddToTail( str );
+	g_SpewHistory.push_back( std::move( str ) );
 #endif
 }
 
 void GetSpew( char *buf, size_t buflen )
 {
-	AUTO_LOCK_FM( g_SpewMutex );
+	std::scoped_lock lock( g_SpewMutex );
 
 	// Walk list backward
 	char *pcur = buf;
 	int remainder = (int)buflen - 1;
 
 	// Walk backward(
-	for ( int i = g_SpewHistory.Tail(); i != g_SpewHistory.InvalidIndex(); i = g_SpewHistory.Previous( i ) )
+	for ( const std::string &rec : g_SpewHistory | std::views::reverse )
 	{
-		const CUtlString &rec = g_SpewHistory[ i ];
-		int len = rec.Length();
-		int tocopy = MIN( len, remainder );
+		int len = std::ssize( rec );
+		int tocopy = std::min( len, remainder );
 
 		if ( tocopy <= 0 )
 			break;
 		
-		Q_memcpy( pcur, rec.String(), tocopy );
+		Q_memcpy( pcur, rec.c_str(), tocopy );
 		remainder -= tocopy;
 		pcur += tocopy;
 

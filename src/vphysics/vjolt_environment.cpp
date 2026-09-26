@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2022 Joshua Ashton and Josh Dowell (Slartibarty)
+
 //=================================================================================================
 //
 // Interface to a physics scene
@@ -28,9 +31,6 @@
 #include "vjolt_state_recorder_file.h"
 
 #include "vjolt_environment.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-------------------------------------------------------------------------------------------------
 
@@ -976,7 +976,7 @@ void JoltPhysicsEnvironment::SerializeObjectToBuffer( IPhysicsObject *pObject, u
 
 IPhysicsObject *JoltPhysicsEnvironment::UnserializeObjectFromBuffer( void *pGameData, unsigned char *pBuffer, unsigned int bufferSize, bool enableCollisions )
 {
-	VJoltStateRecorder recorder( pBuffer, bufferSize, CUtlBuffer::READ_ONLY );
+	VJoltStateRecorder recorder( pBuffer, bufferSize, VJoltStateRecorder::read_only );
 
 	// Read shape
 	JPH::Shape *pShape;

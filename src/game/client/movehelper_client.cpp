@@ -12,9 +12,6 @@
 #include "engine/IEngineTrace.h"
 #include "engine/ivmodelinfo.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern CMoveData *g_pMoveData;
 
 class CMoveHelperClient : public IMoveHelper
@@ -56,12 +53,14 @@ private:
 		trace_t trace;
 
 		touchlist_t() {}
+		touchlist_t( touchlist_t && ) = default;	// std::vector relocation; copies stay private
+		touchlist_t &operator=( touchlist_t && ) = default;
 
 	private:
 		touchlist_t( const touchlist_t &src );
 	};
 
-	CUtlVector<touchlist_t>			m_TouchList;
+	std::vector< touchlist_t >			m_TouchList;
 
 	CBaseEntity*	m_pHost;
 };	
@@ -116,7 +115,7 @@ char const* CMoveHelperClient::GetName( EntityHandle_t handle ) const
 
 void CMoveHelperClient::ResetTouchList( void )
 {
-	m_TouchList.RemoveAll();
+	m_TouchList.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -128,7 +127,7 @@ bool CMoveHelperClient::AddToTouched( const trace_t& tr, const Vector& impactvel
 	int i;
 
 	// Look for duplicates
-	for (i = 0; i < m_TouchList.Count(); i++)
+	for (i = 0; i < std::ssize( m_TouchList ); i++)
 	{
 		if (m_TouchList[i].trace.Ent<CBaseEntity>() == tr.Ent<CBaseEntity>())
 		{
@@ -136,7 +135,7 @@ bool CMoveHelperClient::AddToTouched( const trace_t& tr, const Vector& impactvel
 		}
 	}
 
-	i = m_TouchList.AddToTail();
+	i = std::ssize( m_TouchList ); m_TouchList.emplace_back();
 	m_TouchList[i].trace = tr;
 	VectorCopy( impactvelocity, m_TouchList[i].deltavelocity );
 
@@ -155,7 +154,7 @@ void CMoveHelperClient::ProcessImpacts( void )
 	Vector vel = m_pHost->GetAbsVelocity();
 
 	// Touch other objects that were intersected during the movement.
-	for (int i = 0 ; i < m_TouchList.Count(); i++)
+	for (int i = 0 ; i < std::ssize( m_TouchList ); i++)
 	{
 		// Run the impact function as if we had run it during movement.
 		C_BaseEntity *entity = ClientEntityList().GetEnt( m_TouchList[i].trace.Ent<CBaseEntity>()->entindex() );

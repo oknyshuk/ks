@@ -19,9 +19,6 @@
 #include "c_cs_player.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 IMPLEMENT_NETWORKCLASS_ALIASED( PredictedViewModel, DT_PredictedViewModel )
 LINK_ENTITY_TO_CLASS_ALIASED( predicted_viewmodel, PredictedViewModel );
 
@@ -157,7 +154,7 @@ void CPredictedViewModel::ApplyViewModelPitchAndDip( CBasePlayer *owner, Vector&
 	{
 		float flDipAmt = 0.005;//weapon_land_dip_amt.GetFloat();
 
-		float landseconds = MAX(gpGlobals->curtime - (owner->m_Local.m_flLandingTime - 0.1f), 0.0f);
+		float landseconds = std::max(gpGlobals->curtime - (owner->m_Local.m_flLandingTime - 0.1f), 0.0f);
 		float landFraction = SmoothCurve( landseconds / 0.25f );
 		clamp( landFraction, 0.0f, 1.0f );
 
@@ -189,7 +186,7 @@ void CPredictedViewModel::ApplyViewModelPitchAndDip( CBasePlayer *owner, Vector&
 // 		float flMultiplier = flMaxMultiplier;
 // 
 // 		if ( !m_bShouldIgnoreOffsetAndAccuracy )
-// 			flMultiplier -= MAX( 0, (gpGlobals->curtime - pWeapon->m_flNextPrimaryAttack) * flMaxMultiplier );
+// 			flMultiplier -= std::max( 0, (gpGlobals->curtime - pWeapon->m_flNextPrimaryAttack) * flMaxMultiplier );
 // 
 // 		float flMultMinClamp = 0;
 // 		if ( bJumping )
@@ -230,7 +227,7 @@ void CPredictedViewModel::ApplyViewModelPitchAndDip( CBasePlayer *owner, Vector&
 // 
 // 		// smooth out the tilting
 // 		m_flInaccuracyTilt = Approach( flAccuracyDiff, m_flInaccuracyTilt, abs( (flAccuracyDiff-m_flInaccuracyTilt)*gpGlobals->frametime) * flApproachSpeed );
-// 		m_flInaccuracyTilt = MIN( m_flInaccuracyTilt, 3.0f );
+// 		m_flInaccuracyTilt = std::min( m_flInaccuracyTilt, 3.0f );
 // 		//Msg ( "owner->GetAbsVelocity().Length2D() = %f, flAccuracyDiff = %f,  m_flInaccuracyTilt = %f, flMultiplier = %f\n", owner->GetAbsVelocity().Length2D(), flAccuracyDiff, m_flInaccuracyTilt, flMultiplier );
 // 		//Msg ( "flApproachSpeed = %f, flAccuracyDiff = %f,  m_flOldAccuracyDiffSmoothed = %f\n", flApproachSpeed, flAccuracyDiff, m_flOldAccuracyDiffSmoothed );
 // 

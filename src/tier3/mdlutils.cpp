@@ -17,9 +17,6 @@
 #include "tier2/renderutils.h"
 #include "mathlib/camera.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Returns the bounding box for the model
@@ -208,12 +205,12 @@ void CMDL::SetMDL( MDLHandle_t h )
 				}
 			}
 
-			if ( m_Attachments.Count() != pHdr->GetNumAttachments() )
+			if ( std::ssize( m_Attachments ) != pHdr->GetNumAttachments() )
 			{
-				m_Attachments.SetSize( pHdr->GetNumAttachments() );
+				m_Attachments.assign( pHdr->GetNumAttachments(), {} );
 
 				// This is to make sure we don't use the attachment before its been set up
-				for ( int i=0; i < m_Attachments.Count(); i++ )
+				for ( int i=0; i < std::ssize( m_Attachments ); i++ )
 				{
 					m_Attachments[i].m_bValid = false;
 #ifdef _DEBUG
@@ -235,6 +232,23 @@ MDLHandle_t CMDL::GetMDL() const
 //-----------------------------------------------------------------------------
 // Release the MDL handle
 //-----------------------------------------------------------------------------
+CMDLHandleOwner &CMDLHandleOwner::operator=( CMDLHandleOwner &&o )
+{
+	if ( this != &o )
+	{
+		if ( m_h != MDLHANDLE_INVALID && g_pMDLCache )
+			g_pMDLCache->Release( m_h );
+		m_h = std::exchange( o.m_h, MDLHANDLE_INVALID );
+	}
+	return *this;
+}
+
+CMDLHandleOwner::~CMDLHandleOwner()
+{
+	if ( m_h != MDLHANDLE_INVALID && g_pMDLCache )
+		g_pMDLCache->Release( m_h );
+}
+
 void CMDL::UnreferenceMDL()
 {
 	if ( !g_pMDLCache )
@@ -399,10 +413,10 @@ void CMDL::SetUpBones( const matrix3x4_t& rootToWorld, int nMaxBoneCount, matrix
 		else
 			m_flTimeBasisAdjustment = m_flTime;
 
-		if ( m_arrSequenceFollowLoop.Count() )
+		if ( !m_arrSequenceFollowLoop.empty() )
 		{
-			m_nSequence = m_arrSequenceFollowLoop.Head();
-			m_arrSequenceFollowLoop.RemoveMultipleFromHead( 1 );
+			m_nSequence = m_arrSequenceFollowLoop.front();
+			m_arrSequenceFollowLoop.erase( m_arrSequenceFollowLoop.begin(), m_arrSequenceFollowLoop.begin() + 1 );
 			// Recurse with the updated sequence
 			SetUpBones( rootToWorld, nMaxBoneCount, pBoneToWorld, pPoseParameters, pSequenceLayers, nNumSequenceLayers );
 			return;
@@ -435,7 +449,7 @@ void CMDL::SetUpBones( const matrix3x4_t& rootToWorld, int nMaxBoneCount, matrix
 			{				
 				float flWeight = pSequenceLayers[ i ].m_flWeight;
 
-				int nFrameCount = MAX( 1, Studio_MaxFrame( &studioHdr, nSeqIndex, pPoseParameters ) );
+				int nFrameCount = std::max( 1, Studio_MaxFrame( &studioHdr, nSeqIndex, pPoseParameters ) );
 				float flLayerCycle = ( flAdjustedTime * flPlaybackRate ) / nFrameCount;
 
 				// FIXME: We're always wrapping; may want to determing if we should clamp
@@ -530,10 +544,10 @@ void CMDL::SetupBonesWithBoneMerge( const CStudioHdr *pMergeHdr, matrix3x4_t *pM
 		else
 			m_flTimeBasisAdjustment = m_flTime;
 
-		if ( m_arrSequenceFollowLoop.Count() )
+		if ( !m_arrSequenceFollowLoop.empty() )
 		{
-			m_nSequence = m_arrSequenceFollowLoop.Head();
-			m_arrSequenceFollowLoop.RemoveMultipleFromHead( 1 );
+			m_nSequence = m_arrSequenceFollowLoop.front();
+			m_arrSequenceFollowLoop.erase( m_arrSequenceFollowLoop.begin(), m_arrSequenceFollowLoop.begin() + 1 );
 			// Recurse with the updated sequence
 			SetupBonesWithBoneMerge( pMergeHdr, pMergeBoneToWorld, pFollow, pFollowBoneToWorld, matModelToWorld );
 			return;
@@ -623,7 +637,7 @@ void CMDL::SetupBones_AttachmentHelper( CStudioHdr *hdr, matrix3x4_t *pBoneToWor
 //-----------------------------------------------------------------------------
 bool CMDL::PutAttachment( int number, const matrix3x4_t &attachmentToWorld )
 {
-	if ( number < 1 || number > m_Attachments.Count() )
+	if ( number < 1 || number > std::ssize( m_Attachments ) )
 		return false;
 
 	CMDLAttachmentData *pAtt = &m_Attachments[number-1];
@@ -635,7 +649,7 @@ bool CMDL::PutAttachment( int number, const matrix3x4_t &attachmentToWorld )
 
 bool CMDL::GetAttachment( int number, matrix3x4_t& matrix )
 {
-	if ( number < 1 || number > m_Attachments.Count() )
+	if ( number < 1 || number > std::ssize( m_Attachments ) )
 		return false;
 
 	if ( !m_Attachments[number-1].m_bValid )
@@ -691,7 +705,7 @@ CMergedMDL::CMergedMDL()
 
 CMergedMDL::~CMergedMDL()
 {
-	m_aMergeMDLs.Purge();
+	m_aMergeMDLs.clear(); m_aMergeMDLs.shrink_to_fit();
 }
 
 //-----------------------------------------------------------------------------
@@ -852,7 +866,7 @@ void CMergedMDL::Draw()
 	// Draw the merge MDLs.
 	matrix3x4_t *pStackCopyOfRootMergeHdrModelToWorld = nullptr;
 	matrix3x4_t matMergeBoneToWorld[MAXSTUDIOBONES];
-	int nMergeCount = m_aMergeMDLs.Count();
+	int nMergeCount = std::ssize( m_aMergeMDLs );
 	for ( int iMerge = 0; iMerge < nMergeCount; ++iMerge )
 	{
 		matrix3x4_t *pMergeBoneToWorld = &matMergeBoneToWorld[0];
@@ -913,7 +927,7 @@ void CMergedMDL::SetSequence( int nSequence, bool bUseSequencePlaybackFPS )
 void CMergedMDL::AddSequenceFollowLoop( int nSequence, bool bUseSequencePlaybackFPS )
 {
 	Assert( bUseSequencePlaybackFPS == m_RootMDL.m_MDL.m_bUseSequencePlaybackFPS );
-	m_RootMDL.m_MDL.m_arrSequenceFollowLoop.AddToTail( nSequence );
+	m_RootMDL.m_MDL.m_arrSequenceFollowLoop.push_back( nSequence );
 }
 
 //-----------------------------------------------------------------------------
@@ -921,7 +935,7 @@ void CMergedMDL::AddSequenceFollowLoop( int nSequence, bool bUseSequencePlayback
 //-----------------------------------------------------------------------------
 void CMergedMDL::ClearSequenceFollowLoop()
 {
-	m_RootMDL.m_MDL.m_arrSequenceFollowLoop.RemoveAll();
+	m_RootMDL.m_MDL.m_arrSequenceFollowLoop.clear();
 }
 
 
@@ -933,7 +947,7 @@ void CMergedMDL::SetPoseParameters( const float *pPoseParameters, int nCount )
 {
 	if ( pPoseParameters )
 	{
-		int nParameters = MIN( MAXSTUDIOPOSEPARAM, nCount );
+		int nParameters = std::min( MAXSTUDIOPOSEPARAM, nCount );
 		for ( int iParam = 0; iParam < nParameters; ++iParam )
 		{
 			m_PoseParameters[ iParam ] = pPoseParameters[ iParam ];
@@ -954,7 +968,7 @@ void CMergedMDL::SetSequenceLayers( const MDLSquenceLayer_t *pSequenceLayers, in
 {
 	if ( pSequenceLayers )
 	{
-		m_nNumSequenceLayers = MIN( MAX_SEQUENCE_LAYERS, nCount );
+		m_nNumSequenceLayers = std::min( MAX_SEQUENCE_LAYERS, nCount );
 		for ( int iLayer = 0; iLayer < m_nNumSequenceLayers; ++iLayer )
 		{
 			m_SequenceLayers[ iLayer ] = pSequenceLayers[ iLayer ];
@@ -982,8 +996,8 @@ void CMergedMDL::SetMergeMDL( MDLHandle_t handle, CCustomMaterialOwner* pCustomM
 	if ( m_RootMDL.m_MDL.GetMDL() == MDLHANDLE_INVALID )
 		return;
 
-	int iIndex = m_aMergeMDLs.AddToTail();
-	if ( !m_aMergeMDLs.IsValidIndex( iIndex ) )
+	int iIndex = std::ssize( m_aMergeMDLs ); m_aMergeMDLs.emplace_back();
+	if ( !ks::is_valid_index( m_aMergeMDLs, iIndex ) )
 		return;
 
 	m_aMergeMDLs[iIndex].m_MDL.SetMDL( handle );
@@ -1019,7 +1033,7 @@ MDLHandle_t CMergedMDL::SetMergeMDL( const char *pMDLName, CCustomMaterialOwner*
 //-----------------------------------------------------------------------------
 int CMergedMDL::GetMergeMDLIndex( MDLHandle_t handle )
 {
-	int nMergeCount = m_aMergeMDLs.Count();
+	int nMergeCount = std::ssize( m_aMergeMDLs );
 	for ( int iMerge = 0; iMerge < nMergeCount; ++iMerge )
 	{
 		if ( m_aMergeMDLs[iMerge].m_MDL.GetMDL() == handle )
@@ -1034,7 +1048,7 @@ int CMergedMDL::GetMergeMDLIndex( MDLHandle_t handle )
 //-----------------------------------------------------------------------------
 CMDL *CMergedMDL::GetMergeMDL( MDLHandle_t handle )
 {
-	int nMergeCount = m_aMergeMDLs.Count();
+	int nMergeCount = std::ssize( m_aMergeMDLs );
 	for ( int iMerge = 0; iMerge < nMergeCount; ++iMerge )
 	{
 		if ( m_aMergeMDLs[iMerge].m_MDL.GetMDL() == handle )
@@ -1049,7 +1063,7 @@ CMDL *CMergedMDL::GetMergeMDL( MDLHandle_t handle )
 //-----------------------------------------------------------------------------
 void CMergedMDL::ClearMergeMDLs( void )
 {
-	m_aMergeMDLs.Purge();
+	m_aMergeMDLs.clear(); m_aMergeMDLs.shrink_to_fit();
 }
 
 //-----------------------------------------------------------------------------

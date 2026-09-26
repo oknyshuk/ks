@@ -5,6 +5,7 @@
 //===========================================================================//
 
 #include "server_pch.h"
+#include <bitset>
 #include "framesnapshot.h"
 #include "checksum_engine.h"
 #include "sv_main.h"
@@ -33,10 +34,7 @@
 #include "audio/public/vox.h"	// TERROR: for net_showreliablesounds
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "ihltv.h"
-#include "tier1/utlstringtoken.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier1/string_token.h"
 
 extern CNetworkStringTableContainer *networkStringTableContainerServer;
 
@@ -116,12 +114,12 @@ int ClampClientRate( int nRate )
 	// Apply mod specific clamps
 	if ( sv_maxrate.GetInt() > 0 )
 	{
-		nRate = MIN( nRate, sv_maxrate.GetInt() );
+		nRate = std::min( nRate, sv_maxrate.GetInt() );
 	}
 
 	if ( sv_minrate.GetInt() > 0 )
 	{
-		nRate = MAX( nRate, sv_minrate.GetInt() );
+		nRate = std::max( nRate, sv_minrate.GetInt() );
 	}
 
 	// Apply overall clamp
@@ -537,7 +535,7 @@ void CGameClient::SetupPackInfo( CFrameSnapshot *pSnapshot )
 #endif
 	{
 		// the hltv client doesn't has a ClientFrame list
-		m_pCurrentFrame->transmit_always = new CBitVec<MAX_EDICTS>;
+		m_pCurrentFrame->transmit_always = new std::bitset<MAX_EDICTS>;
 		m_PackInfo.m_pTransmitAlways = m_pCurrentFrame->transmit_always;
 	}
 	else
@@ -547,7 +545,7 @@ void CGameClient::SetupPackInfo( CFrameSnapshot *pSnapshot )
 
 	// Add frame to ClientFrame list 
 
-	int nMaxFrames = MAX( sv_maxclientframes.GetInt(), MAX_CLIENT_FRAMES );
+	int nMaxFrames = std::max( sv_maxclientframes.GetInt(), MAX_CLIENT_FRAMES );
 
 	// Only do this on dedicated servers (360 dedicated servers are !IsX360 so this check isn't strictly necessary)
 	//  and non-x360 am servers due to concerns over memory growth on the consoles.
@@ -558,14 +556,14 @@ void CGameClient::SetupPackInfo( CFrameSnapshot *pSnapshot )
 		// or to 960 (assuming 0.015625, 64 fps).
 		// In practice during changelevel on 360 I've seen it get up to 210 or so which is only 60% greater
 		//  than the 128 frame max default, so 450 seems like it should capture all cases.
-		nMaxFrames = MAX( nMaxFrames, (int)( sv_extra_client_connect_time.GetFloat() / m_Server->GetTickInterval() ) );
+		nMaxFrames = std::max( nMaxFrames, (int)( sv_extra_client_connect_time.GetFloat() / m_Server->GetTickInterval() ) );
 		// Msg( "Allowing up to %d frames for player for %f more seconds\n", nMaxFrames, realtime - m_flTimeClientBecameFullyConnected );
 	}
 
 	if ( sv_maxreplay.GetFloat() > 0 )
 	{
 		// if the server has replay features enabled, allow a way bigger frame buffer
-		nMaxFrames = MAX( nMaxFrames, sv_maxreplay.GetFloat() / m_Server->GetTickInterval() );
+		nMaxFrames = std::max<std::common_type_t<int, float>>( nMaxFrames, sv_maxreplay.GetFloat() / m_Server->GetTickInterval() );
 	}
 
 	// During the startup period we retain additional frames. Once nMaxFrames drops we need to
@@ -579,7 +577,7 @@ void CGameClient::SetupPackInfo( CFrameSnapshot *pSnapshot )
 	}
 		
 	m_PackInfo.m_AreasNetworked = 0;
-	int areaCount = g_AreasNetworked.Count();
+	int areaCount = std::ssize( g_AreasNetworked );
 	for ( int j = 0; j < areaCount; j++ )
 	{
 		// Msg("CGameClient::SetupPackInfo: too much areas (%i)", areaCount );
@@ -742,13 +740,13 @@ bool CGameClient::IsHearingClient( int index ) const
 		return false;
 	}
 
-	return pClient->m_VoiceStreams.Get( GetPlayerSlot() ) != 0;
+	return pClient->m_VoiceStreams[GetPlayerSlot()];
 }
 
 bool CGameClient::IsProximityHearingClient( int index ) const
 {
 	CGameClient *pClient = sv.Client( index );
-	return pClient->m_VoiceProximity.Get( GetPlayerSlot() ) != 0;
+	return pClient->m_VoiceProximity[GetPlayerSlot()];
 }
 
 void CGameClient::Inactivate( void )
@@ -781,14 +779,14 @@ void CGameClient::Inactivate( void )
 
 	BaseClass::Inactivate();
 
-	m_Sounds.Purge();
+	m_Sounds.clear(); m_Sounds.shrink_to_fit();
 	ConVarRef voice_verbose( "voice_verbose" );
 	if ( voice_verbose.GetBool() )
 	{
 		Msg( "* CGameClient::Inactivate:  Clearing m_VoiceStreams/m_VoiceProximity for %s (%s)\n", GetClientName(), GetNetChannel() ? GetNetChannel()->GetAddress() : "null" );
 	}
-	m_VoiceStreams.ClearAll();
-	m_VoiceProximity.ClearAll();
+	m_VoiceStreams.reset();
+	m_VoiceProximity.reset();
 
 
 	DeleteClientFrames( -1 ); // delete all
@@ -835,19 +833,19 @@ void CGameClient::Clear()
 
 	BaseClass::Clear();
 
-	m_HltvQueuedMessages.PurgeAndDeleteElements();
+	m_HltvQueuedMessages.clear();
 
 	// free all frames
 	DeleteClientFrames( -1 );
 
-	m_Sounds.Purge();
+	m_Sounds.clear(); m_Sounds.shrink_to_fit();
 	ConVarRef voice_verbose( "voice_verbose" );
 	if ( voice_verbose.GetBool() )
 	{
 		Msg( "* CGameClient::Clear:  Clearing m_VoiceStreams/m_VoiceProximity for %s (%s)\n", GetClientName(), GetNetChannel() ? GetNetChannel()->GetAddress() : "null" );
 	}
-	m_VoiceStreams.ClearAll();
-	m_VoiceProximity.ClearAll();
+	m_VoiceStreams.reset();
+	m_VoiceProximity.reset();
 	edict = nullptr;
 	m_pViewEntity = nullptr;
 	m_bVoiceLoopback = false;
@@ -982,7 +980,7 @@ void CGameClient::SendSound( SoundInfo_t &sound, bool isReliable )
 	// reliable sounds are send as single messages
 	if ( isReliable )
 	{
-		CSVCMsg_Sounds_t *sndmsg = new CSVCMsg_Sounds_t;
+		auto sndmsg = std::make_unique< CSVCMsg_Sounds_t >();
 
 		m_nSoundSequence = ( m_nSoundSequence + 1 ) & SOUND_SEQNUMBER_MASK;	// increase own sound sequence counter
 		sound.nSequenceNumber = 0; // don't transmit nSequenceNumber for reliable sounds
@@ -1019,21 +1017,19 @@ void CGameClient::SendSound( SoundInfo_t &sound, bool isReliable )
 		SendNetMsg( *sndmsg, true );
 
 		if ( m_nHltvReplayDelay )
-			m_HltvQueuedMessages.AddToTail( sndmsg );
-		else
-			delete sndmsg;
+			m_HltvQueuedMessages.push_back( std::move( sndmsg ) );
 
 		return;
 	}
 
 	sound.nSequenceNumber = m_nSoundSequence;
 
-	m_Sounds.AddToTail( sound );	// queue sounds until snapshot is send
+	m_Sounds.push_back( sound );	// queue sounds until snapshot is send
 }
 
 void CGameClient::WriteGameSounds( bf_write &buf, int nMaxSounds )
 {
-	if ( m_Sounds.Count() <= 0 )
+	if ( std::ssize( m_Sounds ) <= 0 )
 		return;
 
 	CSVCMsg_Sounds_t msg;
@@ -1052,7 +1048,7 @@ static ConVar sv_sound_discardextraunreliable( "sv_sound_discardextraunreliable"
 
 int	CGameClient::FillSoundsMessage(ks::net::CSVCMsg_Sounds &msg, int nMaxSounds )
 {
-	int i, count = m_Sounds.Count();
+	int i, count = std::ssize( m_Sounds );
 
 	// Discard events if we have too many to signal with 8 bits
 	if ( count > nMaxSounds )
@@ -1078,15 +1074,15 @@ int	CGameClient::FillSoundsMessage(ks::net::CSVCMsg_Sounds &msg, int nMaxSounds 
 	// remove added events from list
 	if ( sv_sound_discardextraunreliable.GetBool() )
 	{
-		if ( m_Sounds.Count() != count )
+		if ( std::ssize( m_Sounds ) != count )
 		{
-			DevMsg( 2, "Warning! Dropped %i unreliable sounds for client %s.\n" , m_Sounds.Count() - count, m_Name );
+			DevMsg( 2, "Warning! Dropped %i unreliable sounds for client %s.\n" , (int)std::ssize( m_Sounds ) - count, m_Name );
 		}
-		m_Sounds.RemoveAll();
+		m_Sounds.clear();
 	}
 	else
 	{
-		int remove = m_Sounds.Count() - ( count + nMaxSounds );
+		int remove = std::ssize( m_Sounds ) - ( count + nMaxSounds );
 		if ( remove > 0 )
 		{
 			DevMsg( 2, "Warning! Dropped %i unreliable sounds for client %s.\n" , remove, m_Name );
@@ -1095,11 +1091,11 @@ int	CGameClient::FillSoundsMessage(ks::net::CSVCMsg_Sounds &msg, int nMaxSounds 
 
 		if ( count > 0 )
 		{
-			m_Sounds.RemoveMultiple( 0, count );
+			m_Sounds.erase( m_Sounds.begin() + 0, m_Sounds.begin() + 0 + count );
 		}
 	}
 
-	Assert( m_Sounds.Count() <= nMaxSounds );
+	Assert( std::ssize( m_Sounds ) <= nMaxSounds );
 
 	return msg.sounds.size();
 }
@@ -1396,27 +1392,27 @@ bool CGameClient::SendNetMsg( INetMessage &msg, bool bForceReliable, bool bVoice
 	return BaseClass::SendNetMsg( msg, bForceReliable, bVoice );
 }
 
-static CUtlStringToken s_HltvUnskippableEvents[] = {
-	"round_start",
-	"begin_new_match",
-	"game_newmap"
+static constexpr uint32 s_HltvUnskippableEvents[] = {
+	ks::string_token( "round_start" ),
+	ks::string_token( "begin_new_match" ),
+	ks::string_token( "game_newmap" )
 };
 
-static CUtlStringToken s_HltvQueueableEvents[] = {
-	"teamplay_round_start","teamplay_round_end",
-	MakeStringToken( "endmatch_cmm_start_reveal_items" ),
-	"announce_phase_end",
-	"cs_match_end_restart",
-	"round_freeze_end"
+static constexpr uint32 s_HltvQueueableEvents[] = {
+	ks::string_token( "teamplay_round_start" ), ks::string_token( "teamplay_round_end" ),
+	ks::string_token( "endmatch_cmm_start_reveal_items" ),
+	ks::string_token( "announce_phase_end" ),
+	ks::string_token( "cs_match_end_restart" ),
+	ks::string_token( "round_freeze_end" )
 };
 
-static CUtlStringToken s_HltvPassThroughRealtimeEvents[] = {
-	"teamplay_broadcast_audio",
-	"player_chat",
-	"player_say",
-	"player_death",
-	"round_mvp",
-	"round_end"
+static constexpr uint32 s_HltvPassThroughRealtimeEvents[] = {
+	ks::string_token( "teamplay_broadcast_audio" ),
+	ks::string_token( "player_chat" ),
+	ks::string_token( "player_say" ),
+	ks::string_token( "player_death" ),
+	ks::string_token( "round_mvp" ),
+	ks::string_token( "round_end" )
 };
 
 
@@ -1432,7 +1428,7 @@ bool IsInList( const char *pEventName, const char **ppList, int nListCount )
 	return false;
 }
 
-bool IsInList( CUtlStringToken eventName, const CUtlStringToken *pTokenList, int nListCount )
+bool IsInList( uint32 eventName, const uint32 *pTokenList, int nListCount )
 {
 	for ( int i = 0; i < nListCount; ++i )
 	{
@@ -1449,20 +1445,16 @@ void CGameClient::FireGameEvent( IGameEvent *event )
 	if ( IsHltvReplay() )
 	{
 		const char *pEventName = event->GetName();  // please don't fold the string variable, it's useful for debugging
-		CUtlStringToken eventName = MakeStringToken( pEventName );
+		uint32 eventName = ks::string_token( pEventName );
 
 		if ( IsInList( eventName, s_HltvQueueableEvents, ARRAYSIZE( s_HltvQueueableEvents ) ) )
 		{
 			if ( event->IsReliable() ) // skip this event if it's not reliable
 			{
-				CSVCMsg_GameEvent_t *pEventMsg = new CSVCMsg_GameEvent_t;
-				if ( g_GameEventManager.SerializeEvent( event, pEventMsg ) )
+				auto pEventMsg = std::make_unique< CSVCMsg_GameEvent_t >();
+				if ( g_GameEventManager.SerializeEvent( event, pEventMsg.get() ) )
 				{
-					m_HltvQueuedMessages.AddToTail( pEventMsg );
-				}
-				else
-				{
-					delete pEventMsg;
+					m_HltvQueuedMessages.push_back( std::move( pEventMsg ) );
 				}
 			}
 			return;
@@ -1599,7 +1591,7 @@ bool CGameClient::SendSnapshot( CClientFrame * pFrame )
 
 		CHLTVServer *hltv = GetAnyConnectedHltvServer();
 		// pack sounds to one message
-		if ( m_Sounds.Count() > 0 )
+		if ( !m_Sounds.empty() )
 		{
 			CSVCMsg_Sounds_t sounds;
 			sounds.SetReliable( false );
@@ -1609,7 +1601,7 @@ bool CGameClient::SendSnapshot( CClientFrame * pFrame )
 
 		int maxEnts = tv_transmitall.GetBool()?255:64;
 		CSVCMsg_TempEntities_t tempentsmsg;
-		hltv->WriteTempEntities( this, pFrame->GetSnapshot(), m_pLastSnapshot.GetObject(), tempentsmsg, maxEnts );
+		hltv->WriteTempEntities( this, pFrame->GetSnapshot(), m_pLastSnapshot.get(), tempentsmsg, maxEnts );
 		if ( tempentsmsg.num_entries )
 		{
 			tempentsmsg.WriteToBuffer( *hltv->GetBuffer( HLTV_BUFFER_TEMPENTS ) );
@@ -1646,7 +1638,7 @@ bool CGameClient::SendSnapshot( CClientFrame * pFrame )
 		}
 
 		int maxEnts = replay_transmitall.GetBool()?255:64;
-		replay->WriteTempEntities( this, pFrame->GetSnapshot(), m_pLastSnapshot.GetObject(), *replay->GetBuffer( REPLAY_BUFFER_TEMPENTS ), maxEnts );
+		replay->WriteTempEntities( this, pFrame->GetSnapshot(), m_pLastSnapshot.get(), *replay->GetBuffer( REPLAY_BUFFER_TEMPENTS ), maxEnts );
 
 		// add snapshot to Replay server frame list
 		replay->AddNewFrame( pFrame );
@@ -1671,7 +1663,7 @@ bool CGameClient::SendSnapshot( CClientFrame * pFrame )
 	if ( bRet )
 	{
 		// Send messages that were queued up during replay - they need fully created entities, which is why I'm sending them after SendSnapshot
-		for ( INetMessage * pMessage : m_HltvQueuedMessages )
+		for ( auto &pMessage : m_HltvQueuedMessages )
 		{
 			if ( m_NetChannel )
 			{
@@ -1679,7 +1671,7 @@ bool CGameClient::SendSnapshot( CClientFrame * pFrame )
 					break;
 			}
 		}
-		m_HltvQueuedMessages.PurgeAndDeleteElements();
+		m_HltvQueuedMessages.clear();
 		//////////////////////////////////////////////////////////////////////////
 
 		if ( IsFakeClient() )
@@ -2002,7 +1994,7 @@ const char *HltvReplayStats_t::AsString()const
 		s_nLastHltvReplayBuffer = 0;
 	char *pBuffer = s_HltvReplayBuffers[ s_nLastHltvReplayBuffer ];
 
-	CUtlString fails = ":";
+	std::string fails = ":";
 	int nTotalFailures = 0;
 	for ( int i = 0; i < NUM_FAILURES; ++i )
 	{
@@ -2011,21 +2003,21 @@ const char *HltvReplayStats_t::AsString()const
 
 		if ( nFailedReplays[ i ] )
 		{
-			fails.Append( CFmtStr( "%u", nFailedReplays[ i ] ) );
+			fails.append( CFmtStr( "%u", nFailedReplays[ i ] ) );
 			nTotalFailures += nFailedReplays[ i ];
 		}
 	}
 	
 	if ( nNetAbortReplays )
 	{
-		fails.Append( CFmtStr( "[%u!]", nNetAbortReplays ) );
+		fails.append( CFmtStr( "[%u!]", nNetAbortReplays ) );
 		nTotalFailures += nNetAbortReplays;
 	}
 
 	if ( !nTotalFailures )
 		fails = "";
 	
-	V_snprintf( pBuffer, sizeof( s_HltvReplayBuffers[ s_nLastHltvReplayBuffer ] ), "%u/%u started, %u full, %u cancels / %u stops, %u fails%s", nSuccessfulStarts, nStartRequests, nFullReplays, nUserCancels, nStopRequests, nTotalFailures, fails.Get() );
+	V_snprintf( pBuffer, sizeof( s_HltvReplayBuffers[ s_nLastHltvReplayBuffer ] ), "%u/%u started, %u full, %u cancels / %u stops, %u fails%s", nSuccessfulStarts, nStartRequests, nFullReplays, nUserCancels, nStopRequests, nTotalFailures, fails.data() );
 
 	return pBuffer;
 }

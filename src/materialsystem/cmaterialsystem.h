@@ -8,6 +8,7 @@
 #define CMATERIALSYSTEM_H
 
 #include "tier1/delegates.h"
+#include <mutex>
 
 #include "materialsystem_global.h"
 #include "materialsystem/imaterialsystem.h"
@@ -42,7 +43,7 @@ typedef int LightmapOffset_t[2];
 
 //-----------------------------------------------------------------------------
 
-extern CThreadFastMutex g_MatSysMutex;
+extern std::recursive_mutex g_MatSysMutex;
 
 enum AsyncTextureLoadError_t
 {
@@ -687,9 +688,9 @@ private:
 	
 	//---------------------------------
 	// Callback methods for releasing + restoring video memory
-	CUtlVector< MaterialBufferReleaseFunc_t > m_ReleaseFunc;
-	CUtlVector< MaterialBufferRestoreFunc_t > m_RestoreFunc;
-	CUtlVector< EndFrameCleanupFunc_t > m_EndFrameCleanupFunc;
+	std::vector< MaterialBufferReleaseFunc_t > m_ReleaseFunc;
+	std::vector< MaterialBufferRestoreFunc_t > m_RestoreFunc;
+	std::vector< EndFrameCleanupFunc_t > m_EndFrameCleanupFunc;
 	class COnLevelShutdownFunc
 	{
 	public:
@@ -707,9 +708,9 @@ private:
 		OnLevelShutdownFunc_t	m_Func;
 		void *					m_pUserData;
 	};
-	CUtlVector< COnLevelShutdownFunc > m_OnLevelShutdownFuncs;
+	std::vector< COnLevelShutdownFunc > m_OnLevelShutdownFuncs;
 
-	CUtlVector< EndFramePriorToNextContextFunc_t > m_EndFramePriorToNextContextFunc;
+	std::vector< EndFramePriorToNextContextFunc_t > m_EndFramePriorToNextContextFunc;
 
 	//---------------------------------
 
@@ -793,7 +794,7 @@ private:
 
 
 	CJob *									m_pActiveAsyncJob;
-	CUtlVector<uint32>						m_threadEvents;
+	std::vector< uint32 >						m_threadEvents;
 
 	IThreadPool *							m_pMatQueueThreadPool;
 

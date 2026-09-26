@@ -6,6 +6,9 @@
 #if !defined CS_GAMEPLAY_HINTS_H_ 
 #define CS_GAMEPLAY_HINTS_H_ 
 
+#include <memory>
+#include <vector>
+
 struct CSGameplayHint_t;
 class CCSGameplayHints : public CAutoGameSystem
 {
@@ -27,7 +30,7 @@ public:
 	};
 
 private:
-	CUtlVector<CSGameplayHint_t*> m_HintList;
+	std::vector< std::unique_ptr< CSGameplayHint_t > > m_HintList;
 	KeyValues *m_pHintKV;
 
 	void Cleanup( void );

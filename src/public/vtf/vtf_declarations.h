@@ -12,7 +12,7 @@
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-class CUtlBuffer;
+namespace ks { class byte_reader; class byte_writer; }
 class Vector;
 struct Rect_t;
 class IFileSystem;

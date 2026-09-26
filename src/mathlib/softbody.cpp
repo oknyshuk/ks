@@ -1,8 +1,10 @@
 //========= Copyright (c) Valve Corporation, All rights reserved. ============//
 #include "softbody.h"
+#include "tier0/memalloc.h"
 #include "vstdlib/jobthread.h"
 #include "tier1/fmtstr.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/text_reader.h"
+#include "tier1/buffer_strider.h"
 #include "mathlib/femodel.h"
 #include "mathlib/femodel.inl"
 #include "tier1/fmtstr.h"
@@ -10,7 +12,7 @@
 #include "mathlib/femodeldesc.h"
 #include "mathlib/softbodyenvironment.h"
 #include "tier0/miniprofiler.h"
-#include "bitvec.h"
+#include <vector>
 #include "filesystem.h"
 #include "mathlib/dynamictree.h"
 #include "engine/ivdebugoverlay.h"
@@ -18,6 +20,9 @@
 #include "rubikon/param_types.h"
 #include "materialsystem/imesh.h"
 #include "mathlib/softbody.inl"
+#include "tier1/map_ops.h"
+#include <unordered_map>
+#include <unordered_set>
 
 // #include "rnthread.h"
 // #include "rnsimd.h"
@@ -427,17 +432,17 @@ void CSoftbody::DebugDump( )
 {
 	if ( IsDebug() && g_nClothDebug && m_nStepsSimulated < 7 )
 	{
-		CUtlString line;
+		std::string line;
 		AppendDebugInfo( line );
-		Msg( "%s\n", line.Get( ) );
+		Msg( "%s\n", line.data() );
 	}
 }
 
-void CSoftbody::AppendDebugInfo( CUtlString &line )
+void CSoftbody::AppendDebugInfo( std::string &line )
 {
 	AABB_t bbox = BuildBounds( );
 	Vector c = bbox.GetCenter( ), e = bbox.GetSize( );
-	CUtlString desc;
+	std::string desc;
 	const char *pActivityState = "Undefined";
 	switch ( m_nActivityState )
 	{
@@ -451,7 +456,7 @@ void CSoftbody::AppendDebugInfo( CUtlString &line )
 		pActivityState = "wakeup";
 		break;
 	}
-	desc.Format( "Softbody #%d %s.%d %s (%.4g,%.4g)\xb1(%.4g,%.4g)", m_nIndexInWorld, pActivityState, m_nStateCounter, m_DebugName.GetSafe( ), c.x, c.y, e.x, e.y );
+	desc = ks::format_printf( "Softbody #%d %s.%d %s (%.4g,%.4g)\xb1(%.4g,%.4g)", m_nIndexInWorld, pActivityState, m_nStateCounter, m_DebugName.GetSafe( ), c.x, c.y, e.x, e.y );
 	line += desc;
 }
 
@@ -595,17 +600,17 @@ void CSoftbody::DebugPreStep(float flTimeStep )
 {
 #ifdef _DEBUG
 	static bool s_bRead = false;
-	CUtlString buf; NOTE_UNUSED( buf );
+	std::string buf; NOTE_UNUSED( buf );
 	if ( g_nClothDebug )
 	{
 		buf = PrintParticleState();
 	}
 	if ( s_bRead )
 	{
-		CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
-		if ( g_pFullFileSystem->ReadFile( "cloth.txt", nullptr, buf ) )
+		if ( auto data = g_pFullFileSystem->ReadFile( "cloth.txt", nullptr ) )
 		{
-			ParseParticleState( buf, flTimeStep );
+			ks::text_reader reader( ks::text_view( *data ) );
+			ParseParticleState( reader, flTimeStep );
 		}
 		s_bRead = false;
 	}
@@ -651,10 +656,10 @@ uint CSoftbody::GetStateHash()const
 	return hash;
 }
 
-bool IsEqual( const CUtlVector< uint > &a, const CUtlVector< uint > & b )
+bool IsEqual( const std::vector< uint > &a, const std::vector< uint > & b )
 {
-	if ( a.Count() != b.Count() ) return false;
-	for ( int nIndex = 0; nIndex < a.Count(); ++nIndex )
+	if ( std::ssize( a ) != std::ssize( b ) ) return false;
+	for ( int nIndex = 0; nIndex < std::ssize( a ); ++nIndex )
 		if ( a[ nIndex ] != b[ nIndex ] )
 			return false;
 	return true;
@@ -665,30 +670,30 @@ bool IsEqual( const CUtlVector< uint > &a, const CUtlVector< uint > & b )
 void CSoftbody::ValidatingSimulate( int nIterations, float flTimeStep )
 {
 	// remember the initial state
-	CUtlVector< VectorAligned > pos0, pos1;
+	std::vector< VectorAligned > pos0, pos1;
 	int nNodes = m_pFeModel->m_nNodeCount;
-	pos0.CopyArray( m_pPos0, nNodes );
-	pos1.CopyArray( m_pPos1, nNodes );
+	pos0.assign( m_pPos0, m_pPos0 + nNodes );
+	pos1.assign( m_pPos1, m_pPos1 + nNodes );
 	bool bWasAnimTransformChanged = m_bAnimTransformChanged;
 	bool bRepeat = false;
 	
 	for ( ;; )
 	{
 		RawSimulate( nIterations, flTimeStep );
-		CUtlVector< VectorAligned > res0, res1; // initial results
-		res0.CopyArray( m_pPos0, nNodes );
-		res1.CopyArray( m_pPos1, nNodes );
+		std::vector< VectorAligned > res0, res1; // initial results
+		res0.assign( m_pPos0, m_pPos0 + nNodes );
+		res1.assign( m_pPos1, m_pPos1 + nNodes );
 
-		CUtlVector< VectorAligned > rep0, rep1; // repeat input state
-		rep0.CopyArray( pos0.Base(), nNodes );
-		rep1.CopyArray( pos1.Base(), nNodes );
+		std::vector< VectorAligned > rep0, rep1; // repeat input state
+		rep0.assign( ( pos0.data() ), ( pos0.data() ) + nNodes );
+		rep1.assign( ( pos1.data() ), ( pos1.data() ) + nNodes );
 
 		VectorAligned *pSavePos0 = m_pPos0, *pSavePos1 = m_pPos1; // save the previous pointers
-		m_pPos0 = rep0.Base();
-		m_pPos1 = rep1.Base();
+		m_pPos0 = rep0.data();
+		m_pPos1 = rep1.data();
 		m_bAnimTransformChanged = bWasAnimTransformChanged;
 		RawSimulate( nIterations, flTimeStep );                   // repeat simulation with the repeat input state
-		if ( m_pPos0 == rep1.Base() ) { rep0.Swap( rep1 ); } // m_Pos were swapped, swap rep
+		if ( m_pPos0 == rep1.data() ) { rep0.swap( rep1 ); } // m_Pos were swapped, swap rep
 		m_pPos0 = pSavePos0;									  // recover buffer pointers
 		m_pPos1 = pSavePos1;
 
@@ -704,8 +709,8 @@ void CSoftbody::ValidatingSimulate( int nIterations, float flTimeStep )
 		
 		m_bAnimTransformChanged = bWasAnimTransformChanged;
 		// start all over from the copied initial state
-		V_memcpy( m_pPos0, pos0.Base(), sizeof( VectorAligned ) * nNodes );
-		V_memcpy( m_pPos1, pos1.Base(), sizeof( VectorAligned ) * nNodes );
+		V_memcpy( m_pPos0, pos0.data(), sizeof( VectorAligned ) * nNodes );
+		V_memcpy( m_pPos1, pos1.data(), sizeof( VectorAligned ) * nNodes );
 	}
 }
 
@@ -734,12 +739,12 @@ void CSoftbody::RawSimulate( int nIterations, float flTimeStep )
 }
 
 
-void CSoftbody::ParseParticleState( CUtlBuffer &buf, float flTimeStep )
+void CSoftbody::ParseParticleState( ks::text_reader &buf, float flTimeStep )
 {
 	char szName[ 300 ];
 	Vector vOrigin, vAnimTarget, vVelocity;
 	uint nTotalFound = 0; NOTE_UNUSED( nTotalFound );
-	while ( 10 == buf.Scanf( "%s %f %f %f %f %f %f %f %f %f\n", szName, &vOrigin.x, &vOrigin.y, &vOrigin.z, &vAnimTarget.x, &vAnimTarget.y, &vAnimTarget.z, &vVelocity.x, &vVelocity.y, &vVelocity.z ) )
+	while ( 10 == buf.scanf( "%s %f %f %f %f %f %f %f %f %f\n", szName, &vOrigin.x, &vOrigin.y, &vOrigin.z, &vAnimTarget.x, &vAnimTarget.y, &vAnimTarget.z, &vVelocity.x, &vVelocity.y, &vVelocity.z ) )
 	{
 		// find this bone
 		bool bFound = false;
@@ -768,19 +773,18 @@ void CSoftbody::ParseParticleState( CUtlBuffer &buf, float flTimeStep )
 }
 
 
-CUtlString CSoftbody::PrintParticleState( )const
+std::string CSoftbody::PrintParticleState( )const
 {
-	CUtlString buf;
+	std::string buf;
 	for ( uint nCtrl = 0; nCtrl < m_pFeModel->m_nCtrlCount ; ++nCtrl )
 	{
-		CUtlString line;
+		std::string line;
 		uint nNode = m_pFeModel->CtrlToNode( nCtrl );
 		const VectorAligned &vOrigin = m_pPos1[ nNode ];
 		Vector vAnimTarget = GetAnim( nCtrl ).GetOrigin(), vVelocity = ( m_pPos1[ nNode ] - m_pPos0[ nNode ] ) / m_flLastTimestep;
 
-		line.Format( "%s %g %g %g %g %g %g %g %g %g\n", m_pFeModel->m_pCtrlName[ nCtrl ],
-			vOrigin.x, vOrigin.y, vOrigin.z, vAnimTarget.x, vAnimTarget.y, vAnimTarget.z, vVelocity.x, vVelocity.y, vVelocity.z
-		);
+		line = ks::format_printf( "%s %g %g %g %g %g %g %g %g %g\n", m_pFeModel->m_pCtrlName[ nCtrl ],
+			vOrigin.x, vOrigin.y, vOrigin.z, vAnimTarget.x, vAnimTarget.y, vAnimTarget.z, vVelocity.x, vVelocity.y, vVelocity.z );
 		buf += line;
 	}
 	return buf;
@@ -1648,7 +1652,7 @@ void CSoftbody::CollideWithWorldInternal()
 		return;
 	pTree->Query( proxies, AsBounds3( bbox ) );
 	const CFeModel *pFeModel = GetFeModel();
-	for ( int ndx = 0; ndx < proxies.Count(); ++ndx )
+	for ( int ndx = 0; ndx < std::ssize( proxies ); ++ndx )
 	{
 		int32 nProxy = proxies[ ndx ];
 		CSoftbodyCollisionShape *pShape = ( CSoftbodyCollisionShape* )pTree->GetUserData( nProxy );
@@ -1669,7 +1673,7 @@ void CSoftbody::CollideWithWorldInternal()
 					CSoftbodyCollisionSphere *pSphere = static_cast< CSoftbodyCollisionSphere * >( pShape );
 					Vector vCenter = pSphere->GetCenter();
 					float flRadius = pSphere->GetRadius() + pFeModel->m_flAddWorldCollisionRadius * m_flModelScale;
-					fltx4 v4Center = LoadUnaligned3SIMD( &vCenter ), f4Radius = ReplicateX4( flRadius );
+					fltx4 v4Center = LoadVector3SIMD( vCenter ), f4Radius = ReplicateX4( flRadius );
 
 					CRnSphereColliderFunctor collider( vCenter, flRadius, m_pPos1 + pFeModel->m_nStaticNodes, pFeModel->m_pNodeCollisionRadii, m_flModelScale );
 					FeAabb_t shapeAabb;
@@ -1685,7 +1689,7 @@ void CSoftbody::CollideWithWorldInternal()
 
 					const Vector &vCenter0 = pCapsule->GetCenter( 0 ), &vCenter1 = pCapsule->GetCenter( 1 );
 					float flRadius = pCapsule->GetRadius() + pFeModel->m_flAddWorldCollisionRadius * m_flModelScale;
-					fltx4 v4Center0 = LoadUnaligned3SIMD( &vCenter0 ), v4Center1 = LoadUnaligned3SIMD( &vCenter1 ), f4Radius = ReplicateX4( flRadius );
+					fltx4 v4Center0 = LoadVector3SIMD( vCenter0 ), v4Center1 = LoadVector3SIMD( vCenter1 ), f4Radius = ReplicateX4( flRadius );
 
 					CRnCapsuleColliderFunctor collider( vCenter0, vCenter1, flRadius, m_pPos1 + pFeModel->m_nStaticNodes, pFeModel->m_pNodeCollisionRadii, m_flModelScale );
 					FeAabb_t shapeAabb;
@@ -1757,7 +1761,7 @@ CSoftbody::CConstraintIterator::CConstraintIterator( CSoftbody *pSoftbody )
 
 	if ( pSoftbody->m_pFeModel->m_pLegacyStretchForce || ( pSoftbody->m_pFeModel->m_nDynamicNodeFlags & FE_FLAG_UNINERTIAL_CONSTRAINTS ) )
 	{
-		m_PosBeforeCorrect.CopyArray( pSoftbody->m_pPos1, pSoftbody->m_nNodeCount );
+		m_PosBeforeCorrect.assign( pSoftbody->m_pPos1, pSoftbody->m_pPos1 + pSoftbody->m_nNodeCount );
 	}
 }
 
@@ -1767,7 +1771,7 @@ const float g_flClothLegacyStretchForce = 0.95f;// this only matters for Dota le
 
 CSoftbody::CConstraintIterator::~CConstraintIterator()
 {
-	if ( !m_PosBeforeCorrect.IsEmpty( ) )
+	if ( !m_PosBeforeCorrect.empty() )
 	{
 		//CRnSoftbodyChangeGuard cg( m_pSoftbody, "~CConstraintIterator" );
 		const CFeModel *pFeModel = m_pSoftbody->m_pFeModel;
@@ -2174,7 +2178,7 @@ void CSoftbody::FilterTransforms( const FilterTransformsParams_t &params )
 			int nBone = params.pCtrlToBone[ nCtrl ];
 			if ( nBone >= 0 )
 			{
-				AssertDbg( !params.pValidTransforms || BitVec_IsBitSet( params.pValidTransforms, nBone ) );
+				AssertDbg( !params.pValidTransforms || ( params.pValidTransforms[ nBone >> 5 ] & ( 1u << ( nBone & 31 ) ) ) != 0 );
 				GetSim( nCtrl ) = ScaleMatrix3x3( params.pOutputWorldTransforms[ nBone ], flInvScale );
 			}
 		}
@@ -2981,14 +2985,13 @@ void CSoftbody::TouchAnimatedTransforms()
 
 bool IsBoneMapUnique( const int16 *pBones, uint nCount )
 {
-	CUtlHashtable< int16 > used;
+	std::unordered_set< int16 > used;
 	for ( uint nBone = 0; nBone < nCount; ++nBone )
 	{
 		if ( pBones[ nBone ] >= 0 )
 		{
-			if ( used.HasElement( pBones[ nBone ] ) )
+			if ( !used.insert( pBones[ nBone ] ).second )
 				return false;
-			used.Insert( pBones[ nBone ] );
 		}
 	}
 	return true;
@@ -3131,8 +3134,8 @@ void DrawTaperedCapsule( IVDebugOverlay* pDebugOverlay, Vector v0, Vector v1, fl
 		nStacks0 = Min( nStacks - 1, Max( 1, int( ceil( ( M_PI / 2 - flSlope ) / ( M_PI / nStacks ) + .5f) ) ) );
 	}
 	int nSegments = 8;
-	CUtlVector< Vector > verts;
-	verts.SetCount( nStacks * nSegments + 2 );
+	std::vector< Vector > verts;
+	verts.assign( nStacks * nSegments + 2, {} );
 
 	verts[ 0 ] = v0 - vAxis * r0;
 	Vector vNormal0 = VectorPerpendicularToVector( vAxis );
@@ -3158,7 +3161,7 @@ void DrawTaperedCapsule( IVDebugOverlay* pDebugOverlay, Vector v0, Vector v1, fl
 			verts[ 1 + nStack * nSegments + nSeg ] = v1 - csr1 * vAxis + cosf( flPsi ) * ssr1 * vNormal0 + sinf( flPsi ) * ssr1 * vNormal1;
 		}
 	}
-	verts.Tail() = v1 + vAxis * r1;
+	verts.back() = v1 + vAxis * r1;
 
 
 	int r = 128, g = 128, b = 128, a = 32;
@@ -3172,7 +3175,7 @@ void DrawTaperedCapsule( IVDebugOverlay* pDebugOverlay, Vector v0, Vector v1, fl
 			pDebugOverlay->AddTriangleOverlay( verts[ 1 + nPrevStack * nSegments + nSeg ], verts[ 1 + nPrevStack * nSegments + nNextSeg ], verts[ 1 + nStack * nSegments + nNextSeg ], r, g, b, a, false, 0 );
 			pDebugOverlay->AddTriangleOverlay( verts[ 1 + nStack * nSegments + nNextSeg ], verts[ 1 + nStack * nSegments + nSeg ], verts[ 1 + nPrevStack * nSegments + nSeg ], r, g, b, a, false, 0 );
 		}
-		pDebugOverlay->AddTriangleOverlay( verts.Tail(), verts[ 1 + ( nStacks - 1 ) * nSegments + nNextSeg ], verts[ 1 + ( nStacks - 1 ) * nSegments + nSeg ], r, g, b, a, false, 0 );
+		pDebugOverlay->AddTriangleOverlay( verts.back(), verts[ 1 + ( nStacks - 1 ) * nSegments + nNextSeg ], verts[ 1 + ( nStacks - 1 ) * nSegments + nSeg ], r, g, b, a, false, 0 );
 	}
 
 	for ( int nSeg = 0; nSeg < nSegments; ++nSeg )
@@ -3205,12 +3208,12 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IMesh *pDynamicMesh )
 	if ( options.m_nLayers == 0 )
 		return;
 	VectorAligned *pPos0 = m_pPos0, *pPos1 = m_pPos1;
-	CUtlVectorAligned< VectorAligned > posBuffer;
+	std::vector< VectorAligned > posBuffer;
 	
 	matrix3x4a_t tmViewModel = g_MatrixIdentity;
 	if ( m_nAnimSpace == SOFTBODY_ANIM_SPACE_LOCAL )
 	{
-		posBuffer.SetCount( m_nNodeCount * 2 );
+		posBuffer.assign( m_nNodeCount * 2, {} );
 		pPos0 = &posBuffer[ 0 ];
 		pPos1 = &posBuffer[ m_nNodeCount ];
 
@@ -3226,9 +3229,9 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IMesh *pDynamicMesh )
 	{
 		CMeshBuilder meshBuilder;
 		meshBuilder.Begin( pDynamicMesh, MATERIAL_LINES, m_nNodeCount );
-		CUtlVector< VectorAligned > pos2;
-		pos2.CopyArray( m_pPos1, m_nNodeCount );
-		IntegrateWind( pos2.Base(), 0.05f );
+		std::vector< VectorAligned > pos2;
+		pos2.assign( m_pPos1, m_pPos1 + m_nNodeCount );
+		IntegrateWind( pos2.data(), 0.05f );
 
 
 		float flMaxLenInv = 100.0f;
@@ -3257,7 +3260,7 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IMesh *pDynamicMesh )
 	}
 
 	// find virtual nodes
-	CVarBitVec virtualCtrls( m_nParticleCount );
+	std::vector< bool > virtualCtrls( m_nParticleCount );
 	uint nVirtualCtrls = ComputeVirtualCtrls( virtualCtrls );
 
 	// the positions of nodes are not correct in dormant mode
@@ -3299,7 +3302,7 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IMesh *pDynamicMesh )
 			meshBuilder.AdvanceVertex();
 		}
 
-		CUtlHashtable< uint32 > linesDrawn;
+		std::unordered_set< uint32 > linesDrawn;
 
 		for ( int nSimdQuad = 0; nSimdQuad < m_pFeModel->m_nSimdQuadCount[ 0 ]; nSimdQuad ++)
 		{
@@ -3311,9 +3314,8 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IMesh *pDynamicMesh )
 					uint jIdxs = ( 0x16BC >> ( j * 4 ) ) & 15; // 0-1, 1-2, 2-3, 3-0
 					// 0x17E8 >> ... : 0-1, 1-3, 3-2, 2-0
 					uint nIndex0 = quad.nNode[ jIdxs >> 2 ][ q ], nIndex1 = quad.nNode[ jIdxs & 3 ][ q ], nIndexPair = ( nIndex0 << 16 ) | nIndex1;
-					if ( !linesDrawn.HasElement( nIndexPair ) )
+					if ( linesDrawn.insert( nIndexPair ).second )
 					{
-						linesDrawn.Insert( nIndexPair );
 						meshBuilder.Index( nIndex0 + nBaseIndex );
 						meshBuilder.AdvanceIndex();
 						meshBuilder.Index( nIndex1 + nBaseIndex );
@@ -3358,7 +3360,7 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IMesh *pDynamicMesh )
 			for ( int nCtrl = 0; nCtrl < m_nParticleCount; ++nCtrl )
 			{
 				uint nNode = m_pFeModel->CtrlToNode( nCtrl );
-				if ( nNode < m_nNodeCount && !virtualCtrls.IsBitSet( nNode ) )
+				if ( nNode < m_nNodeCount && !virtualCtrls[ nNode ] )
 				{
 					float flAxisScale = ( nNode < m_pFeModel->m_nRotLockStaticNodes ? 2.0f : 5.0f );
 
@@ -3389,10 +3391,10 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebu
 	MPROF_AUTO_FAST( SoftbodyDraw );
 
 	VectorAligned *pPos0 = m_pPos0, *pPos1 = m_pPos1;
-	CUtlVector< VectorAligned > posBuffer;
+	std::vector< VectorAligned > posBuffer;
 	if ( m_nAnimSpace == SOFTBODY_ANIM_SPACE_LOCAL )
 	{
-		posBuffer.SetCount( m_nNodeCount * 2 );
+		posBuffer.assign( m_nNodeCount * 2, {} );
 		pPos0 = &posBuffer[ 0 ];
 		pPos1 = &posBuffer[ m_nNodeCount ];
 
@@ -3406,7 +3408,7 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebu
 	}
 
 	// find virtual nodes
-	CVarBitVec virtualCtrls( m_nParticleCount );
+	std::vector< bool > virtualCtrls( m_nParticleCount );
 	ComputeVirtualCtrls( virtualCtrls );
 
 	// the positions of nodes are not correct in dormant mode
@@ -3436,22 +3438,22 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebu
 
 	if ( m_nDebugDrawTreeFlags && m_pFeModel->m_pTreeParents && m_nDebugDrawTreeBeginLevel != m_nDebugDrawTreeEndLevel )
 	{
-		CUtlVector< FeAabb_t > boxes;
+		std::vector< FeAabb_t > boxes;
 		const uint nDynCount = m_pFeModel->GetDynamicNodeCount();
-		boxes.SetCount( nDynCount - 1 );
-		m_pFeModel->ComputeCollisionTreeBounds( pPos1 + m_pFeModel->m_nStaticNodes, boxes.Base() );
+		boxes.assign( nDynCount - 1, {} );
+		m_pFeModel->ComputeCollisionTreeBounds( pPos1 + m_pFeModel->m_nStaticNodes, boxes.data() );
 
-		CUtlVector< uint16 > levels;
-		levels.SetCount( 2 * nDynCount );
-		levels.FillWithValue( 0 );
+		std::vector< uint16 > levels;
+		levels.assign( 2 * nDynCount, {} );
+		std::ranges::fill( levels, 0 );
 		levels[ 2 * nDynCount - 1 ] = 0xABCD;
 		if ( m_nDebugDrawTreeFlags & SOFTBODY_DEBUG_DRAW_TREE_BOTTOM_UP )
 		{
-			m_pFeModel->ComputeCollisionTreeHeightBottomUp( levels.Base() + nDynCount );
+			m_pFeModel->ComputeCollisionTreeHeightBottomUp( levels.data() + nDynCount );
 		}
 		else if ( m_nDebugDrawTreeFlags & SOFTBODY_DEBUG_DRAW_TREE_TOP_DOWN )
 		{
-			m_pFeModel->ComputeCollisionTreeDepthTopDown( levels.Base() );
+			m_pFeModel->ComputeCollisionTreeDepthTopDown( levels.data() );
 		}
 		else
 		{
@@ -3549,7 +3551,7 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebu
 		pDebugOverlay->AddTriangleOverlay( p0, p1, p2, 192 + nRelError, 255 - nRelError, 255, 64, false, 0 );
 	}
 
-	CUtlHashtable< uint32 > drawnLines;
+	std::unordered_set< uint32 > drawnLines;
 	for ( uint nQuad = 0; nQuad < m_pFeModel->m_nQuadCount[ 0 ]; ++nQuad )
 	{
 		const FeQuad_t &quad = m_pFeModel->m_pQuads[ nQuad ];
@@ -3559,10 +3561,10 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebu
 			int j1 = ( j + 1 ) % 4;
 			bool bStatic = j == 0 && nQuad < m_pFeModel->m_nQuadCount[ 2 ];
 			uint id1 = quad.nNode[ j ] | ( quad.nNode[ j1 ] << 16 ), id2 = quad.nNode[ j1 ] | ( quad.nNode[ j ] << 16 );
-			if ( drawnLines.Find( id1 ) == drawnLines.InvalidHandle() )
+			if ( !drawnLines.contains( id1 ) )
 			{
-				drawnLines.Insert( id1 );
-				drawnLines.Insert( id2 );
+				drawnLines.insert( id1 );
+				drawnLines.insert( id2 );
 				pDebugOverlay->AddLineOverlay( vPos[ j ], vPos[ j1 ], bStatic ? 200 : 255, bStatic ? 100 : 255, 200, 64, false, 0 );
 			}
 		}
@@ -3579,10 +3581,10 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebu
 				int j1 = ( j + 1 ) % 3;
 				bool bStatic = j == 0 && nTri < m_pFeModel->m_nTriCount[ 2 ];
 				uint id1 = tri.nNode[ j ] | ( tri.nNode[ j1 ] << 16 ), id2 = tri.nNode[ j1 ] | ( tri.nNode[ j ] << 16 );
-				if ( drawnLines.Find( id1 ) == drawnLines.InvalidHandle( ) )
+				if ( !drawnLines.contains( id1 ) )
 				{
-					drawnLines.Insert( id1 );
-					drawnLines.Insert( id2 );
+					drawnLines.insert( id1 );
+					drawnLines.insert( id2 );
 					pDebugOverlay->AddLineOverlay( vPos[ j ], vPos[ j1 ], bStatic ? 200 : 255, bStatic ? 100 : 255, 200, 64, false, 0 );
 				}
 			}
@@ -3601,10 +3603,10 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebu
 					int j1 = ( j + 1 ) % 3;
 					bool bStatic = j == 0 && nSimdTri < m_pFeModel->m_nSimdTriCount[ 2 ];
 					uint id1 = tri.nNode[ j ][ q ] | ( tri.nNode[ j1 ][ q ] << 16 ), id2 = tri.nNode[ j1 ][ q ] | ( tri.nNode[ j ][ q ] << 16 );
-					if ( drawnLines.Find( id1 ) == drawnLines.InvalidHandle( ) )
+					if ( !drawnLines.contains( id1 ) )
 					{
-						drawnLines.Insert( id1 );
-						drawnLines.Insert( id2 );
+						drawnLines.insert( id1 );
+						drawnLines.insert( id2 );
 						pDebugOverlay->AddLineOverlay( vPos[ j ], vPos[ j1 ], bStatic ? 200 : 255, bStatic ? 100 : 255, 200, 64, false, 0 );
 					}
 				}
@@ -3622,10 +3624,10 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebu
 			bool bStatic = SubFloat( rod.f4Weight0, q ) == 0.0f || SubFloat( rod.f4Weight0, q ) == 1.0f ;
 			bool bVirtual = virtualCtrls[ m_pFeModel->NodeToCtrl( v0 ) ] || virtualCtrls[ m_pFeModel->NodeToCtrl( v1 ) ];
 			uint id1 = v0 | ( v1 << 16 ), id2 = v1 | ( v0 << 16 );
-			if ( drawnLines.Find( id1 ) == drawnLines.InvalidHandle( ) )
+			if ( !drawnLines.contains( id1 ) )
 			{
-				drawnLines.Insert( id1 );
-				drawnLines.Insert( id2 );
+				drawnLines.insert( id1 );
+				drawnLines.insert( id2 );
 				int r = 200, g = 200, b = 255;
 				if ( bStatic )
 				{
@@ -3646,7 +3648,7 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebu
 		for ( int nCtrl = 0; nCtrl < m_nParticleCount; ++nCtrl )
 		{
 			uint nNode = m_pFeModel->CtrlToNode( nCtrl );
-			if ( nNode < m_nNodeCount && !virtualCtrls.IsBitSet( nNode ) )
+			if ( nNode < m_nNodeCount && !virtualCtrls[ nNode ] )
 			{
 				float flAxisScale = ( nNode < m_pFeModel->m_nRotLockStaticNodes ? 2.0f : 5.0f );
 
@@ -3729,7 +3731,7 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebu
 			struct CLabel
 			{
 				CLabel() : m_flHighlight( 1 ){}
-				CUtlString m_Text;
+				std::string m_Text;
 				Vector m_vPos0, m_vPos1;
 				uint m_nNode0, m_nNode1;
 				float m_flHighlight;
@@ -3750,10 +3752,10 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebu
 					}
 				}
 			};
-			static CUtlVector< CLabel > labelPool;
-			labelPool.EnsureCapacity( m_pFeModel->m_nSimdRodCount );
-			labelPool.RemoveAll();
-			CUtlHashtable< uint32, int > labels;
+			static std::vector< CLabel > labelPool;
+			labelPool.reserve( m_pFeModel->m_nSimdRodCount );
+			labelPool.clear();
+			std::unordered_map< uint32, int > labels;
 			for ( uint nSimdRod = 0; nSimdRod < m_pFeModel->m_nSimdRodCount; ++nSimdRod )
 			{
 				const FeSimdRodConstraint_t &simdRod = m_pFeModel->m_pSimdRods[ nSimdRod ];
@@ -3768,30 +3770,30 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebu
 						Swap( n0, n1 );
 
 					uint nNodeKey = n0 | ( n1 << 16 );
-					int nLabel = labels.Get( nNodeKey, -1 );
+					const int *pLabelIndex = ks::find_ptr( labels, nNodeKey );
+					int nLabel = pLabelIndex ? *pLabelIndex : -1;
 					CLabel *pLabel ;
 					if ( nLabel < 0 )
 					{
-						nLabel = labelPool.AddToTail();
+						nLabel = std::ssize( labelPool ); labelPool.emplace_back();
 						pLabel = &labelPool[ nLabel ];
 						pLabel->Init( n0, n1, pPos1[ n0 ], pPos1[ n1 ], SubFloat( simdRod.f4MaxDist, nLane ) );
 						pLabel->m_flHighlight = flHighlight;
-						labels.Insert( nNodeKey, nLabel  );
+						labels.emplace( nNodeKey, nLabel );
 					}
 					else
 					{
 						pLabel = &labelPool[ nLabel ];
-						pLabel->m_Text.Append( ", " );
+						pLabel->m_Text.append( ", " );
 					}
-					pLabel->m_Text.Append( CFmtStrN< 64 >( "%u.%u", nSimdRod, nLane ) );
+					pLabel->m_Text.append( CFmtStrN< 64 >( "%u.%u", nSimdRod, nLane ) );
 				}
 			}
 
-			for ( UtlHashHandle_t iter = labels.FirstHandle(); iter != labels.InvalidHandle(); iter = labels.NextHandle( iter ) )
+			for ( const auto &[nNodeKey, nLabelIndex] : labels )
 			{
-				//uint nNodeKey = labels.Key( iter );
-				CLabel *pLabel = &labelPool[ labels.Element( iter ) ];
-				pDebugOverlay->AddTextOverlay( pLabel->GetPos(), 0.0f, pLabel->m_flHighlight, "%s", pLabel->m_Text.Get() );
+				CLabel *pLabel = &labelPool[ nLabelIndex ];
+				pDebugOverlay->AddTextOverlay( pLabel->GetPos(), 0.0f, pLabel->m_flHighlight, "%s", pLabel->m_Text.data() );
 			}
 		}
 		else
@@ -3806,16 +3808,16 @@ void CSoftbody::Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebu
 }
 
 
-uint CSoftbody::ComputeVirtualCtrls( CVarBitVec &virtualCtrls )
+uint CSoftbody::ComputeVirtualCtrls( std::vector< bool > &virtualCtrls )
 {
 	for ( uint nOffset = 0; nOffset < m_pFeModel->m_nCtrlOsOffsets; ++nOffset )
 	{
-		virtualCtrls.Set( m_pFeModel->m_pCtrlOsOffsets[ nOffset ].nCtrlChild );
+		virtualCtrls[ m_pFeModel->m_pCtrlOsOffsets[ nOffset ].nCtrlChild ] = true;
 	}
 
 	for ( uint nOffset = 0; nOffset < m_pFeModel->m_nCtrlOffsets; ++nOffset )
 	{
-		virtualCtrls.Set( m_pFeModel->m_pCtrlOffsets[ nOffset ].nCtrlChild );
+		virtualCtrls[ m_pFeModel->m_pCtrlOffsets[ nOffset ].nCtrlChild ] = true;
 	}
 	return m_pFeModel->m_nCtrlOsOffsets + m_pFeModel->m_nCtrlOffsets;
 }

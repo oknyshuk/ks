@@ -22,9 +22,6 @@
 #include "tier0/vprof.h"
 #include "shaderapifast.h"
 
-// NOTE: This must be the last include file in a .cpp file!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Storage buffer used for instance command buffers
@@ -37,7 +34,7 @@ public:
 	{ 
 		if ( m_pCommandBuffer )
 		{
-			delete m_pCommandBuffer; 
+			delete[] m_pCommandBuffer; 
 		}
 	}
 
@@ -315,7 +312,7 @@ void CBaseShader::PI_EndCommandBuffer()
 		{
 			if ( pContextData->m_pCommandBuffer )
 			{
-				delete pContextData->m_pCommandBuffer;
+				delete[] pContextData->m_pCommandBuffer;
 			}
 			pBuf = new unsigned char[nSize];
 			pContextData->m_pCommandBuffer = pBuf;

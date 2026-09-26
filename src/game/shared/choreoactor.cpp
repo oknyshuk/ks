@@ -10,10 +10,8 @@
 #include "choreoactor.h"
 #include "choreochannel.h"
 #include "choreoscene.h"
-#include "tier1/utlbuffer.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -45,7 +43,7 @@ CChoreoActor& CChoreoActor::operator=( const CChoreoActor& src )
 	Q_strncpy( m_szName, src.m_szName, sizeof( m_szName ) );
 	Q_strncpy( m_szFacePoserModelName, src.m_szFacePoserModelName, sizeof( m_szFacePoserModelName ) );
 
-	for ( int i = 0; i < src.m_Channels.Count(); i++ )
+	for ( int i = 0; i < std::ssize( src.m_Channels ); i++ )
 	{
 		CChoreoChannel *c = src.m_Channels[ i ];
 		CChoreoChannel *newChannel = new CChoreoChannel();
@@ -92,7 +90,7 @@ const char *CChoreoActor::GetName( void )
 //-----------------------------------------------------------------------------
 int CChoreoActor::GetNumChannels( void )
 {
-	return m_Channels.Count();
+	return std::ssize( m_Channels );
 }
 
 //-----------------------------------------------------------------------------
@@ -102,7 +100,7 @@ int CChoreoActor::GetNumChannels( void )
 //-----------------------------------------------------------------------------
 CChoreoChannel *CChoreoActor::GetChannel( int channel )
 {
-	if ( channel < 0 || channel >= m_Channels.Count() )
+	if ( channel < 0 || channel >= std::ssize( m_Channels ) )
 	{
 		return nullptr;
 	}
@@ -116,7 +114,7 @@ CChoreoChannel *CChoreoActor::GetChannel( int channel )
 //-----------------------------------------------------------------------------
 void CChoreoActor::AddChannel( CChoreoChannel *channel )
 {
-	m_Channels.AddToTail( channel );
+	m_Channels.push_back( channel );
 }
 
 //-----------------------------------------------------------------------------
@@ -129,7 +127,7 @@ void CChoreoActor::RemoveChannel( CChoreoChannel *channel )
 	if ( idx == -1 )
 		return;
 
-	m_Channels.Remove( idx );
+	m_Channels.erase( m_Channels.begin() + idx );
 }
 
 //-----------------------------------------------------------------------------
@@ -137,7 +135,7 @@ void CChoreoActor::RemoveChannel( CChoreoChannel *channel )
 //-----------------------------------------------------------------------------
 void CChoreoActor::RemoveAllChannels()
 {
-	m_Channels.RemoveAll();
+	m_Channels.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -161,7 +159,7 @@ void CChoreoActor::SwapChannels( int c1, int c2 )
 //-----------------------------------------------------------------------------
 int CChoreoActor::FindChannelIndex( CChoreoChannel *channel )
 {
-	for ( int i = 0; i < m_Channels.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Channels ); i++ )
 	{
 		if ( channel == m_Channels[ i ] )
 		{
@@ -240,13 +238,13 @@ CChoreoChannel *CChoreoActor::FindChannel( const char *name )
 	return nullptr;
 }
 
-void CChoreoActor::SaveToBuffer( CUtlBuffer& buf, CChoreoScene *pScene, IChoreoStringPool *pStringPool )
+void CChoreoActor::SaveToBuffer( ks::byte_writer& buf, CChoreoScene *pScene, IChoreoStringPool *pStringPool )
 {
-	buf.PutShort( pStringPool->FindOrAddString( GetName() ) );
+	buf.write< short >( pStringPool->FindOrAddString( GetName() ) );
 
 	int c = GetNumChannels();
 	Assert( c <= 255 );
-	buf.PutUnsignedChar( c );
+	buf.write< unsigned char >( c );
 
 	for ( int i = 0; i < c; i++ )
 	{
@@ -261,18 +259,18 @@ void CChoreoActor::SaveToBuffer( CUtlBuffer& buf, CChoreoScene *pScene, IChoreoS
 		FilePrintf( buf, level + 1, "faceposermodel \"%s\"\n", a->GetFacePoserModelName() );
 	}
 	*/
-	buf.PutChar( GetActive() ? 1 : 0 );
+	buf.write< char >( GetActive() ? 1 : 0 );
 }
 
-bool CChoreoActor::RestoreFromBuffer( CUtlBuffer& buf, CChoreoScene *pScene, IChoreoStringPool *pStringPool )
+bool CChoreoActor::RestoreFromBuffer( ks::byte_reader& buf, CChoreoScene *pScene, IChoreoStringPool *pStringPool )
 {
 	char sz[ 256 ];
-	pStringPool->GetString( buf.GetShort(), sz, sizeof( sz ) );
+	pStringPool->GetString( buf.read< short >(), sz, sizeof( sz ) );
 
 	SetName( sz );
 
 	int i;
-	int c = buf.GetUnsignedChar();
+	int c = buf.read< unsigned char >();
 	for ( i = 0; i < c; i++ )
 	{
 		CChoreoChannel *channel = pScene->AllocChannel();
@@ -287,7 +285,7 @@ bool CChoreoActor::RestoreFromBuffer( CUtlBuffer& buf, CChoreoScene *pScene, ICh
 		return false;
 	}
 
-	SetActive( buf.GetChar() == 1 ? true : false );
+	SetActive( buf.read< char >() == 1 ? true : false );
 
 	return true;
 }

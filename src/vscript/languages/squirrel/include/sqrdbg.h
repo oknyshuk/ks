@@ -34,7 +34,6 @@ to the following restrictions:
 #ifdef __cplusplus
 extern "C" {
 #endif
-#pragma comment(lib, "WSOCK32.LIB")
 struct SQDbgServer;
 typedef SQDbgServer* HSQREMOTEDBG;
 

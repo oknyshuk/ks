@@ -6,9 +6,7 @@
 //=============================================================================//
 
 #include "bitmap/texturepacker.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier0/dbg.h"
 
 
 //-----------------------------------------------------------------------------
@@ -26,10 +24,57 @@ CTexturePacker::CTexturePacker( int texWidth, int texHeight, int pixelGap )
 //-----------------------------------------------------------------------------
 // Purpose: Destructor
 //-----------------------------------------------------------------------------
-CTexturePacker::~CTexturePacker()
+CTexturePacker::~CTexturePacker() = default;
+
+//-----------------------------------------------------------------------------
+// Node allocation; children are always linked as child[0] (left) then child[1] (right)
+//-----------------------------------------------------------------------------
+int CTexturePacker::AllocNode( int parentIndex )
 {
-	// remove all existing data
-	m_Tree.RemoveAll();
+	int nodeIndex;
+	if ( m_FreeNodes.empty() )
+	{
+		nodeIndex = (int)m_Nodes.size();
+		m_Nodes.emplace_back();
+	}
+	else
+	{
+		nodeIndex = m_FreeNodes.back();
+		m_FreeNodes.pop_back();
+	}
+	Node_t &node = m_Nodes[nodeIndex];
+	node.entry = {};
+	node.parent = parentIndex;
+	node.child[0] = node.child[1] = -1;
+	node.bInTree = true;
+	if ( parentIndex >= 0 )
+	{
+		Node_t &parent = m_Nodes[parentIndex];
+		parent.child[ parent.child[0] < 0 ? 0 : 1 ] = nodeIndex;
+	}
+	return nodeIndex;
+}
+
+void CTexturePacker::FreeLeaf( int nodeIndex )
+{
+	Node_t &node = m_Nodes[nodeIndex];
+	Assert( node.bInTree && node.child[0] < 0 );
+	if ( node.parent >= 0 )
+	{
+		Node_t &parent = m_Nodes[node.parent];
+		if ( parent.child[0] == nodeIndex )
+		{
+			parent.child[0] = parent.child[1];
+			parent.child[1] = -1;
+		}
+		else
+		{
+			Assert( parent.child[1] == nodeIndex );
+			parent.child[1] = -1;
+		}
+	}
+	node.bInTree = false;
+	m_FreeNodes.push_back( nodeIndex );
 }
 
 //-----------------------------------------------------------------------------
@@ -38,11 +83,12 @@ CTexturePacker::~CTexturePacker()
 void CTexturePacker::Clear()
 { 
 	// remove all existing data
-	m_Tree.RemoveAll();
+	m_Nodes.clear();
+	m_FreeNodes.clear();
 
 	// Add root item, everything else is procedurally generated
-	int rootIndex = m_Tree.InsertChildAfter( m_Tree.InvalidIndex(), m_Tree.InvalidIndex() );
-	TreeEntry_t &topNode = m_Tree[rootIndex];
+	m_Root = AllocNode( -1 );
+	TreeEntry_t &topNode = m_Nodes[m_Root].entry;
 	topNode.rc.x = 0;
 	topNode.rc.y = 0;
 	topNode.rc.width = m_PageWidth;
@@ -56,17 +102,7 @@ void CTexturePacker::Clear()
 //-----------------------------------------------------------------------------
 bool CTexturePacker::IsLeaf( int nodeIndex )
 {
-	int leftChildIndex = m_Tree.FirstChild( nodeIndex );
-	if ( leftChildIndex == m_Tree.InvalidIndex() )
-	{
-		return true;
-	}
-	else if ( m_Tree.NextSibling( leftChildIndex ) == m_Tree.InvalidIndex() )
-	{
-		return true;
-	}
-
-	return false;
+	return m_Nodes[nodeIndex].child[0] < 0 || m_Nodes[nodeIndex].child[1] < 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -74,15 +110,7 @@ bool CTexturePacker::IsLeaf( int nodeIndex )
 //-----------------------------------------------------------------------------
 bool CTexturePacker::IsLeftChild( int nodeIndexParent, int nodeIndexChild )
 {
-	int leftChildIndex = m_Tree.FirstChild( nodeIndexParent );
-	if ( leftChildIndex == nodeIndexChild )
-	{
-		return true;
-	}
-	else 
-	{
-		return false;
-	}
+	return m_Nodes[nodeIndexParent].child[0] == nodeIndexChild;
 }
 
 //-----------------------------------------------------------------------------
@@ -102,33 +130,33 @@ int CTexturePacker::InsertRect( const Rect_t& texRect, int nodeIndex )
 {
 	if ( nodeIndex == -1 ) 
 	{
-		nodeIndex = m_Tree.Root();
-		Assert( nodeIndex !=  m_Tree.InvalidIndex() );
+		nodeIndex = m_Root;
+		Assert( nodeIndex >= 0 );
 	}
 
     if ( !IsLeaf( nodeIndex) ) // not a leaf
 	{
         // try inserting under left child
-		int leftChildIndex = m_Tree.FirstChild( nodeIndex );
+		int leftChildIndex = m_Nodes[nodeIndex].child[0];
 		int newIndex = InsertRect( texRect, leftChildIndex );
-		if ( m_Tree.IsValidIndex( newIndex ) )
+		if ( newIndex >= 0 )
 		{
 			return newIndex;
 		} 
 
         // no room, insert under right child
-		int rightChildIndex = m_Tree.NextSibling( leftChildIndex );
+		int rightChildIndex = m_Nodes[nodeIndex].child[1];
         return InsertRect( texRect, rightChildIndex );
 	}
     else
 	{
-		if ( m_Tree[nodeIndex].bInUse ) // there is already a glpyh here
+		if ( m_Nodes[nodeIndex].entry.bInUse ) // there is already a glpyh here
 		{
 			return -1;
 		}
 
-		int cacheSlotWidth = m_Tree[nodeIndex].rc.width;
-		int cacheSlotHeight = m_Tree[nodeIndex].rc.height;
+		int cacheSlotWidth = m_Nodes[nodeIndex].entry.rc.width;
+		int cacheSlotHeight = m_Nodes[nodeIndex].entry.rc.height;
 
 		if ( ( texRect.width > cacheSlotWidth ) || 
 			 ( texRect.height > cacheSlotHeight ) )
@@ -142,7 +170,7 @@ int CTexturePacker::InsertRect( const Rect_t& texRect, int nodeIndex )
 			 ( texRect.height == cacheSlotHeight ) )
 		{
 			// if we're just right, accept
-			m_Tree[nodeIndex].bInUse = true;
+			m_Nodes[nodeIndex].entry.bInUse = true;
 			return nodeIndex; 
 		}
         
@@ -154,49 +182,49 @@ int CTexturePacker::InsertRect( const Rect_t& texRect, int nodeIndex )
 		int leftChildIndex;
         if ( dw > dh )   // split along x
 		{			
-			leftChildIndex = m_Tree.InsertChildAfter( nodeIndex, m_Tree.InvalidIndex() );
+			leftChildIndex = AllocNode( nodeIndex );
 			Assert( IsLeftChild( nodeIndex, leftChildIndex ) );
-			TreeEntry_t &leftChild =  m_Tree[leftChildIndex];
-			leftChild.rc.x = m_Tree[nodeIndex].rc.x;
-			leftChild.rc.y = m_Tree[nodeIndex].rc.y;
+			TreeEntry_t &leftChild =  m_Nodes[leftChildIndex].entry;
+			leftChild.rc.x = m_Nodes[nodeIndex].entry.rc.x;
+			leftChild.rc.y = m_Nodes[nodeIndex].entry.rc.y;
 			leftChild.rc.width = texRect.width;
 			leftChild.rc.height = cacheSlotHeight;
 			leftChild.bInUse = false;
 
-			int rightChildIndex = m_Tree.InsertChildAfter( nodeIndex, leftChildIndex );
+			int rightChildIndex = AllocNode( nodeIndex );
 			Assert( IsRightChild( nodeIndex, rightChildIndex ) );
-			TreeEntry_t &rightChild =  m_Tree[rightChildIndex];
-			rightChild.rc.x = m_Tree[nodeIndex].rc.x + texRect.width + m_PixelGap;
-			rightChild.rc.y = m_Tree[nodeIndex].rc.y;
+			TreeEntry_t &rightChild =  m_Nodes[rightChildIndex].entry;
+			rightChild.rc.x = m_Nodes[nodeIndex].entry.rc.x + texRect.width + m_PixelGap;
+			rightChild.rc.y = m_Nodes[nodeIndex].entry.rc.y;
 			rightChild.rc.width = dw - m_PixelGap;  
 			rightChild.rc.height = cacheSlotHeight;
 			rightChild.bInUse = false;
 
-			Assert( m_Tree.Parent( leftChildIndex ) == m_Tree.Parent( rightChildIndex ) );
-			Assert( m_Tree.Parent( leftChildIndex ) == nodeIndex );
+			Assert( m_Nodes[leftChildIndex].parent == m_Nodes[rightChildIndex].parent );
+			Assert( m_Nodes[leftChildIndex].parent == nodeIndex );
 		}
         else // split along y
 		{			
-			leftChildIndex = m_Tree.InsertChildAfter( nodeIndex, m_Tree.InvalidIndex() );
+			leftChildIndex = AllocNode( nodeIndex );
 			Assert( IsLeftChild( nodeIndex, leftChildIndex ) );
-			TreeEntry_t &leftChild =  m_Tree[leftChildIndex];
-			leftChild.rc.x = m_Tree[nodeIndex].rc.x;
-			leftChild.rc.y = m_Tree[nodeIndex].rc.y;
+			TreeEntry_t &leftChild =  m_Nodes[leftChildIndex].entry;
+			leftChild.rc.x = m_Nodes[nodeIndex].entry.rc.x;
+			leftChild.rc.y = m_Nodes[nodeIndex].entry.rc.y;
 			leftChild.rc.width = cacheSlotWidth;
 			leftChild.rc.height = texRect.height;
 			leftChild.bInUse = false;
 			
-			int rightChildIndex = m_Tree.InsertChildAfter( nodeIndex, leftChildIndex );
+			int rightChildIndex = AllocNode( nodeIndex );
 			Assert( IsRightChild( nodeIndex, rightChildIndex ) );
-			TreeEntry_t &rightChild =  m_Tree[rightChildIndex];
-			rightChild.rc.x = m_Tree[nodeIndex].rc.x;
-			rightChild.rc.y = m_Tree[nodeIndex].rc.y + texRect.height + m_PixelGap;
+			TreeEntry_t &rightChild =  m_Nodes[rightChildIndex].entry;
+			rightChild.rc.x = m_Nodes[nodeIndex].entry.rc.x;
+			rightChild.rc.y = m_Nodes[nodeIndex].entry.rc.y + texRect.height + m_PixelGap;
 			rightChild.rc.width = cacheSlotWidth;
 			rightChild.rc.height = dh - m_PixelGap;
 			rightChild.bInUse = false;
 
-			Assert( m_Tree.Parent( leftChildIndex ) == m_Tree.Parent( rightChildIndex ) );
-			Assert( m_Tree.Parent( leftChildIndex ) == nodeIndex );
+			Assert( m_Nodes[leftChildIndex].parent == m_Nodes[rightChildIndex].parent );
+			Assert( m_Nodes[leftChildIndex].parent == nodeIndex );
 		}
         
         // insert into first child we created
@@ -209,42 +237,41 @@ int CTexturePacker::InsertRect( const Rect_t& texRect, int nodeIndex )
 //-----------------------------------------------------------------------------
 bool CTexturePacker::RemoveRect( int nodeIndex )
 {
-	if ( !m_Tree.IsInTree( nodeIndex ) )
+	if ( !IsInTree( nodeIndex ) )
 	{
 		return false;
 	}
 
-	m_Tree[nodeIndex].bInUse = false;
+	m_Nodes[nodeIndex].entry.bInUse = false;
 
-	// If its a leaf, see if its peer is empty, if it is the split can go away.
-	if ( IsLeaf( nodeIndex) ) // a leaf
+	// If its a leaf, see if its peer is empty, if it is the split can go away. The root has no peer.
+	int parentIndex = m_Nodes[nodeIndex].parent;
+	if ( IsLeaf( nodeIndex) && parentIndex >= 0 ) // a leaf
 	{
-		int parentIndex = m_Tree.Parent( nodeIndex );
-
 		// Is this node the left child?
-		if ( nodeIndex == m_Tree.FirstChild( parentIndex ) )
+		if ( IsLeftChild( parentIndex, nodeIndex ) )
 		{
 			// Get the index of the right child
-			int peerIndex = m_Tree.NextSibling( nodeIndex );
-			if ( IsLeaf( peerIndex ) && !m_Tree[peerIndex].bInUse )
+			int peerIndex = m_Nodes[parentIndex].child[1];
+			if ( IsLeaf( peerIndex ) && !m_Nodes[peerIndex].entry.bInUse )
 			{
 				// Both children are leaves and neither is in use, remove the split here.
-				m_Tree.Remove( nodeIndex );
-				m_Tree.Remove( peerIndex );
+				FreeLeaf( nodeIndex );
+				FreeLeaf( peerIndex );
 
 			}
 		}
 		else // Its the right child
 		{
 			// Get the index of the left child
-			int peerIndex = m_Tree.FirstChild( parentIndex );
-			Assert( nodeIndex == m_Tree.NextSibling( peerIndex ) );
+			int peerIndex = m_Nodes[parentIndex].child[0];
+			Assert( nodeIndex == m_Nodes[parentIndex].child[1] );
 
-			if ( IsLeaf( peerIndex ) && !m_Tree[peerIndex].bInUse )
+			if ( IsLeaf( peerIndex ) && !m_Nodes[peerIndex].entry.bInUse )
 			{
 				// Both children are leaves and neither is in use, remove the split here.
-				m_Tree.Remove( nodeIndex );
-				m_Tree.Remove( peerIndex );
+				FreeLeaf( nodeIndex );
+				FreeLeaf( peerIndex );
 
 			}
 		}

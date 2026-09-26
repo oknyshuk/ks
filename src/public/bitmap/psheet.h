@@ -8,11 +8,11 @@
 #define PSHEET_H
 
 
-#include "tier1/utlobjectreference.h"
+#include "tier1/tracked_ref.h"
 #include "materialsystem/MaterialSystemUtil.h"
 #include "tier1/utlvector.h"
 
-class CUtlBuffer;
+namespace ks { class byte_reader; }
 
 // classes for keeping a dictionary of sheet files in memory.  A sheet is a bunch of frames packewd
 // within one texture. Each sheet has 1 or more frame sequences stored for it.
@@ -69,14 +69,14 @@ class CSheet
 {
 public:
 	// read form a .sht file. This is the usual thing to do
-	CSheet( CUtlBuffer &buf );
+	CSheet( ks::byte_reader &buf );
 	CSheet( void );
 	~CSheet( void );
 
 	const SheetSequenceSample_t *GetSampleForSequence( float flAge, float flAgeScale, int nSequence, bool bForceLoop );
 
 	// references for smart ptrs
-	CUtlReferenceList<CSheet> m_References;
+	ks::tracked_ref_list<CSheet> m_References;
 
 	struct SheetInfo_t
 	{
@@ -87,7 +87,7 @@ public:
 		float m_flFrameSpan;
 	};
 
-	CUtlVector< SheetInfo_t > m_SheetInfo;
+	std::vector< SheetInfo_t > m_SheetInfo;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -120,7 +120,7 @@ public:
 	static bool IsMaterialDualSequence( IMaterial* pMat );
 
 private:
-	void LoadFromBuffer( CUtlBuffer& buf );
+	void LoadFromBuffer( ks::byte_reader & buf );
 	void LoadFromMaterial( IMaterial* pMaterial );
 
 	// TEMP: Store in a CSheet for now - eventually we'll want more data

@@ -7,13 +7,13 @@
 #ifndef SOS_SYSTEM_H
 #define SOS_SYSTEM_H
 
-#include "tier1/UtlStringMap.h"
 #include "tier1/utlstring.h"
-#include "tier1/utlsymbol.h"
+#include "tier1/map_ops.h"
 #include "toolframework/itoolframework.h"
 #include "snd_dma.h"
 #include "snd_channels.h"
 #include "sos_entry_match_system.h"
+#include <memory>
 
 
 
@@ -112,7 +112,7 @@ public:
 
 		// cleared before update loop, needs to go away anyway
 		// 		m_vBlendedListenerOrigin.Init( 0, 0, 0 );
-		m_UtlVecMultiOrigins.RemoveAll( );
+		m_UtlVecMultiOrigins.clear();
 		m_nChannel = 6;
 		m_nSoundSource = 0;
 		m_flDelay = 0.0;
@@ -235,7 +235,7 @@ public:
 	QAngle m_vEntityInfoAngle;
 	Vector m_vEntityInfoOrigin;
 	float m_flEntityInfoRadius;
-	CUtlVector< Vector > m_UtlVecMultiOrigins;
+	std::vector< Vector > m_UtlVecMultiOrigins;
 
 
 	// outputs
@@ -335,7 +335,7 @@ public:
 	int				FindOperatorViaOffset( size_t nOffset );
 	CSosOperator	*FindOperator( const char *pName, void **pStructHandle );
 	int				FindOperator( const char *pName );
-	const char*     GetOperatorName( int nOpIndex ) { return m_vOperatorMap.GetElementName( nOpIndex ); }
+	const char*     GetOperatorName( int nOpIndex ) { return m_vOperatorNames[ nOpIndex ]; }
 	int				GetOperatorOffset( int nIndex );
 	int				GetOperatorOutputOffset( const char *pOperatorName, const char *pOutputName );
 	void			*GetMemPtr() { return m_pMemPool; }
@@ -361,8 +361,9 @@ private:
 	SosStackType_t m_SOSType;
 	void *m_pMemPool;
 	size_t m_nMemSize;
-	CUtlVector< CSosOperator * > m_vStack;
-	CUtlDict < int, int > m_vOperatorMap;
+	std::vector< CSosOperator * > m_vStack;
+	ks::idict< int > m_vOperatorMap;				// name -> index in m_vStack
+	std::vector< const char * > m_vOperatorNames;	// parallel to m_vStack; points at m_vOperatorMap keys
 
 	int m_nChannelGuid;
 	float m_flStartTime;
@@ -444,11 +445,11 @@ public:
 
 private:
 
-	CUtlDict <CSosOperatorStack *, int> m_vAllStacks;
-	CUtlDict <CSosOperatorStack *, int> m_vUpdateStacks;
-	CUtlDict <CSosOperatorStack *, int> m_vStartStacks;
-	CUtlDict <CSosOperatorStack *, int> m_vStopStacks;
-	CUtlDict <CSosOperatorStack *, int> m_vCueStacks;
+	ks::idict< CSosOperatorStack * > m_vAllStacks;	// observes the typed dicts below
+	ks::idict< std::unique_ptr< CSosOperatorStack > > m_vUpdateStacks;
+	ks::idict< std::unique_ptr< CSosOperatorStack > > m_vStartStacks;
+	ks::idict< std::unique_ptr< CSosOperatorStack > > m_vStopStacks;
+	ks::idict< std::unique_ptr< CSosOperatorStack > > m_vCueStacks;
 
 };
 
@@ -507,16 +508,16 @@ public:
 
 public:
 	CSosOperatorStackCollection m_MasterStackCollection;
-	CUtlDict <CSosOperator*, int> m_vOperatorCollection;
+	ks::idict< CSosOperator * > m_vOperatorCollection;
 
  	CSosEntryMatchList m_sosEntryBlockList;
 
-	CUtlDict <channel_t *, int> m_vTrackDict;
+	ks::idict< channel_t * > m_vTrackDict;
 
 
 	// NOT THREAD PROTECTED!
-	CUtlVector < SosStopQueueData_t * > m_sosStopChannelQueue;
-	CUtlVector< SosStartQueueData_t * >	m_sosStartEntryQueue;
+	std::vector< std::unique_ptr< SosStopQueueData_t > > m_sosStopChannelQueue;
+	std::vector< std::unique_ptr< SosStartQueueData_t > >	m_sosStartEntryQueue;
 
 //	CTSQueue< StartSoundParams_t >	m_sosStartEntryQueue;
 //	CTSQueue< sos_stop_queue_t >	m_sosStopChannelQueue;
@@ -529,7 +530,7 @@ public:
 private: 
 	bool	m_bHasInitialized;
 //	CUtlStringMap < float > m_sosFloatOpvarMap;
-	CUtlDict < float, int > m_sosOpVarFloatMap;
+	ks::idict< float > m_sosOpVarFloatMap;
 };
 
 #define g_pSoundOperatorSystem CSosOperatorSystem::GetSoundOperatorSystem()

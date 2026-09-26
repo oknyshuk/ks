@@ -20,9 +20,6 @@
 
 #include "dt_utlvector_recv.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern ConVar r_sequence_debug;
 
 template class CInterpolatedVar<CAnimationLayer>;
@@ -115,7 +112,7 @@ void C_AnimationLayer::SetWeight( float flWeight )
 
 C_BaseAnimatingOverlay::C_BaseAnimatingOverlay()
 {
-	// NOTE: We zero the memory in the max capacity m_Layer vector in dt_ultvector_common.h
+	m_AnimOverlay.reserve( MAX_OVERLAYS );	// layer storage never moves
 
 	// FIXME: where does this initialization go now?
 	// AddVar( m_Layer, &m_iv_AnimOverlay, LATCH_ANIMATION_VAR );
@@ -196,60 +193,43 @@ const char *s_m_iv_AnimOverlayNames[C_BaseAnimatingOverlay::MAX_OVERLAYS] =
 void ResizeAnimationLayerCallback( void *pStruct, int offsetToUtlVector, int len )
 {
 	C_BaseAnimatingOverlay *pEnt = (C_BaseAnimatingOverlay*)pStruct;
-	CUtlVector < CAnimationLayer > *pVec = &pEnt->m_AnimOverlay;
-	CUtlVector< CInterpolatedVar< CAnimationLayer > > *pVecIV = &pEnt->m_iv_AnimOverlay;
+	std::vector< CAnimationLayer > &layers = pEnt->m_AnimOverlay;
+	std::vector< CInterpolatedVar< CAnimationLayer > > *pVecIV = &pEnt->m_iv_AnimOverlay;
 	
-	Assert( (char*)pVec - (char*)pEnt == offsetToUtlVector );
-	Assert( pVec->Count() == pVecIV->Count() || pVecIV->Count() == 0 );
-	Assert( pVec->Count() <= C_BaseAnimatingOverlay::MAX_OVERLAYS );
-	
-	int diff = len - pVec->Count();
+	Assert( (char*)&layers - (char*)pEnt == offsetToUtlVector );
+	Assert( std::ssize( layers ) == std::ssize( *pVecIV ) || std::ssize( *pVecIV ) == 0 );
+	Assert( len >= 0 && len <= C_BaseAnimatingOverlay::MAX_OVERLAYS );	// RecvProxy_UtlVectorLength clamps
+
+	int diff = len - std::ssize( layers );
 	if ( diff != 0 )
 	{
-		// remove all entries
-		for ( int i=0; i < pVec->Count(); i++ )
-		{
-			pEnt->RemoveVar( &pVec->Element( i ) );
-		}
+		for ( CAnimationLayer &layer : layers )
+			pEnt->RemoveVar( &layer );
 
 		pEnt->InvalidatePhysicsRecursive( BOUNDS_CHANGED );
 
-		// adjust vector sizes
 		if ( diff > 0 )
 		{
 			for ( int i = 0; i < diff; ++i )
-			{
-				int j = pVec->AddToTail( );
-				(*pVec)[j].SetOwner( pEnt );
-			}
-			pVecIV->AddMultipleToTail( diff );
+				layers.emplace_back().SetOwner( pEnt );
+			pVecIV->resize( pVecIV->size() + diff );
 		}
 		else
 		{
-			pVec->RemoveMultiple( len, -diff );
-			pVecIV->RemoveMultiple( len, -diff );
+			layers.resize( len );
+			pVecIV->erase( pVecIV->begin() + len, pVecIV->begin() + len + ( -diff ) );
 		}
 
 		// Rebind all the variables in the ent's list.
 		for ( int i=0; i < len; i++ )
 		{
-			IInterpolatedVar *pWatcher = &pVecIV->Element( i );
+			IInterpolatedVar *pWatcher = &(*pVecIV)[ i ];
 			pWatcher->SetDebugName( s_m_iv_AnimOverlayNames[i] );
-			pEnt->AddVar( &pVec->Element( i ), pWatcher, LATCH_ANIMATION_VAR, true );
+			pEnt->AddVar( &layers[i], pWatcher, LATCH_ANIMATION_VAR, true );
 		}
 	}
 
 	// FIXME: need to set historical values of nOrder in pVecIV to MAX_OVERLAY
-
-	// Ensure capacity
-	pVec->EnsureCapacity( len );
-
-	int nNumAllocated = pVec->NumAllocated();
-
-	// This is important to do because EnsureCapacity doesn't actually call the constructors
-	// on the elements, but we need them to be initialized, otherwise it'll have out-of-range
-	// values which will piss off the datatable encoder.
-	UtlVector_InitializeAllocatedElements( pVec->Base() + pVec->Count(), nNumAllocated - pVec->Count() );
 }
 
 
@@ -264,15 +244,15 @@ CAnimationLayer* C_BaseAnimatingOverlay::GetAnimOverlay( int i, bool bUseOrder )
 {
 	Assert( i >= 0 && i < MAX_OVERLAYS );
 
-	if ( !m_AnimOverlay.Count() )
+	if ( m_AnimOverlay.empty() )
 		return nullptr;
 
 	if ( bUseOrder )
 	{
-		FOR_EACH_VEC( m_AnimOverlay, j )
+		for ( CAnimationLayer &layer : m_AnimOverlay )
 		{
-			if ( m_AnimOverlay[j].GetOrder() == i )
-				return &m_AnimOverlay[j];
+			if ( layer.GetOrder() == i )
+				return &layer;
 		}
 	}
 
@@ -282,36 +262,20 @@ CAnimationLayer* C_BaseAnimatingOverlay::GetAnimOverlay( int i, bool bUseOrder )
 
 void C_BaseAnimatingOverlay::SetNumAnimOverlays( int num )
 {
-	if ( m_AnimOverlay.Count() < num )
+	while ( std::ssize( m_AnimOverlay ) < num )
+		m_AnimOverlay.emplace_back().SetOwner( this );
+
+	if ( std::ssize( m_AnimOverlay ) > num )
 	{
-		int nCountToAdd = num - m_AnimOverlay.Count();
-		for ( int i = 0; i < nCountToAdd; ++i )
-		{
-			int j = m_AnimOverlay.AddToTail( );
-			m_AnimOverlay[j].SetOwner( this );
-		}
-	}
-	else if ( m_AnimOverlay.Count() > num )
-	{
-		m_AnimOverlay.RemoveMultiple( num, m_AnimOverlay.Count() - num );
+		m_AnimOverlay.resize( num );
 		InvalidatePhysicsRecursive( BOUNDS_CHANGED );
 	}
-
-	// Ensure capacity
-	m_AnimOverlay.EnsureCapacity( C_BaseAnimatingOverlay::MAX_OVERLAYS );
-
-	int nNumAllocated = m_AnimOverlay.NumAllocated();
-
-	// This is important to do because EnsureCapacity doesn't actually call the constructors
-	// on the elements, but we need them to be initialized, otherwise it'll have out-of-range
-	// values which will piss off the datatable encoder.
-	UtlVector_InitializeAllocatedElements( m_AnimOverlay.Base() + m_AnimOverlay.Count(), nNumAllocated - m_AnimOverlay.Count() );
 }
 
 
 int C_BaseAnimatingOverlay::GetNumAnimOverlays() const
 {
-	return m_AnimOverlay.Count();
+	return std::ssize( m_AnimOverlay );
 }
 
 void C_BaseAnimatingOverlay::GetRenderBounds( Vector& theMins, Vector& theMaxs )
@@ -330,7 +294,7 @@ void C_BaseAnimatingOverlay::GetRenderBounds( Vector& theMins, Vector& theMaxs )
 	int nSequences = pStudioHdr->GetNumSeq();
 
 	int i;
-	for (i = 0; i < m_AnimOverlay.Count(); i++)
+	for (i = 0; i < std::ssize( m_AnimOverlay ); i++)
 	{
 		if ( m_AnimOverlay[i].m_flWeight > 0.0 && m_AnimOverlay[i].m_nOrder != MAX_OVERLAYS )
 		{
@@ -359,7 +323,7 @@ void C_BaseAnimatingOverlay::CheckForLayerChanges( CStudioHdr *hdr, float curren
 	
 	// FIXME: damn, there has to be a better way than this.
 	int i;
-	for (i = 0; i < m_iv_AnimOverlay.Count(); i++)
+	for (i = 0; i < std::ssize( m_iv_AnimOverlay ); i++)
 	{
 		CDisableRangeChecks disableRangeChecks; 
 
@@ -439,7 +403,7 @@ void C_BaseAnimatingOverlay::AccumulateLayers( IBoneSetup &boneSetup, BoneVector
 		layer[i] = MAX_OVERLAYS;
 	}
 
-	for (i = 0; i < m_AnimOverlay.Count(); i++)
+	for (i = 0; i < std::ssize( m_AnimOverlay ); i++)
 	{
 		CAnimationLayer *pLayer = GetAnimOverlay( i );
 		if ( pLayer )
@@ -457,7 +421,7 @@ void C_BaseAnimatingOverlay::AccumulateLayers( IBoneSetup &boneSetup, BoneVector
 	for (j = 0; j < MAX_OVERLAYS; j++)
 	{
 		i = layer[ j ];
-		if ( i >= m_AnimOverlay.Count() )
+		if ( i >= std::ssize( m_AnimOverlay ) )
 		{
 #if defined( DEBUG_TF2_OVERLAYS )
 			engine->Con_NPrintf( 10 + j, "%30s %6.2f : %6.2f : %1d", "            ", 0.f, 0.f, i );
@@ -790,7 +754,7 @@ void C_BaseAnimatingOverlay::DoAnimationEvents( CStudioHdr *pStudioHdr )
 	CheckForLayerChanges( pStudioHdr, gpGlobals->curtime ); // !!!
 
 	int j;
-	for (j = 0; j < m_AnimOverlay.Count(); j++)
+	for (j = 0; j < std::ssize( m_AnimOverlay ); j++)
 	{
 		if ( m_AnimOverlay[j].m_nSequence < 0 || m_AnimOverlay[j].m_nSequence >= nSequences )
 		{
@@ -914,7 +878,7 @@ CStudioHdr *C_BaseAnimatingOverlay::OnNewModel()
 	CStudioHdr *hdr = BaseClass::OnNewModel();
 
 	//// Clear out animation layers
-	//for ( int i=0; i < m_AnimOverlay.Count(); i++ )
+	//for ( int i=0; i < std::ssize( m_AnimOverlay ); i++ )
 	//{
 	//	m_AnimOverlay[i].Reset();
 	//	m_AnimOverlay[i].m_nOrder = MAX_OVERLAYS;
@@ -930,7 +894,7 @@ void C_BaseAnimatingOverlay::CheckInterpChanges( void )
 {
 	CDisableRangeChecks disableRangeChecks; 
 
-	for (int i = 0; i < m_AnimOverlay.Count(); i++)
+	for (int i = 0; i < std::ssize( m_AnimOverlay ); i++)
 	{
 		int iHead, iPrev1, iPrev2;
 		m_iv_AnimOverlay[i].GetInterpolationInfo( gpGlobals->curtime, &iHead, &iPrev1, &iPrev2 );
@@ -957,7 +921,7 @@ void C_BaseAnimatingOverlay::CheckForLayerPhysicsInvalidate( void )
 	//  changes are needed.
 	int nInvalidatePhysicsChangeBits = 0;
 
-	int nLayerCount = m_AnimOverlay.Count();
+	int nLayerCount = std::ssize( m_AnimOverlay );
 	for ( int i = 0; i < nLayerCount; ++i )
 	{
 		int nChangeBits = m_AnimOverlay[ i ].m_nInvalidatePhysicsBits;

@@ -59,7 +59,7 @@ private:
 
 	void UpdateBlocked();
 
-	static CUtlLinkedList<CFuncNavBlocker *> gm_NavBlockers;
+	static std::vector<CFuncNavBlocker *> gm_NavBlockers;
 
 	void BlockNav( void );
 	void UnblockNav( void );

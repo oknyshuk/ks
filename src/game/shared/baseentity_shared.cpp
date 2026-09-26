@@ -39,9 +39,6 @@ ConVar hl2_episodic( "hl2_episodic", "0", FCVAR_REPLICATED );
 
 #include "rumble_shared.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #ifdef GAME_DLL
 	ConVar ent_debugkeys( "ent_debugkeys", "" );
 	extern bool ParseKeyvalue( void *pObject, typedescription_t *pFields, int iNumFields, const char *szKeyName, const char *szValue );
@@ -833,7 +830,7 @@ char const *CBaseEntity::DamageDecal( int bitsDamageType, int gameMaterial )
 //-----------------------------------------------------------------------------
 int	CBaseEntity::GetIndexForThinkContext( const char *pszContext )
 {
-	for ( int i = 0; i < m_aThinkFunctions.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_aThinkFunctions ); i++ )
 	{
 		if ( !Q_strncmp( STRING( m_aThinkFunctions[i].m_iszContext ), pszContext, MAX_CONTEXT_LENGTH ) )
 			return i;
@@ -859,7 +856,7 @@ int CBaseEntity::RegisterThinkContext( const char *szContext )
 	sNewFunc.m_iszContext = AllocPooledString(szContext);
 
 	// Insert it into our list
-	return m_aThinkFunctions.AddToTail( sNewFunc );
+	m_aThinkFunctions.push_back( sNewFunc ); return (int)std::ssize( m_aThinkFunctions ) - 1;
 }
 
 //-----------------------------------------------------------------------------
@@ -975,7 +972,7 @@ float CBaseEntity::GetNextThink( const char *szContext )
 		iIndex = GetIndexForThinkContext( szContext );
 	}
 
-	if ( iIndex == m_aThinkFunctions.InvalidIndex() )
+	if ( iIndex == -1 )
 		return TICK_NEVER_THINK;
 
 	if ( m_aThinkFunctions[ iIndex ].m_nNextThinkTick == TICK_NEVER_THINK )
@@ -1077,7 +1074,7 @@ bool CBaseEntity::WillThink()
 	if ( m_nNextThinkTick > 0 )
 		return true;
 
-	for ( int i = 0; i < m_aThinkFunctions.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_aThinkFunctions ); i++ )
 	{
 		if ( m_aThinkFunctions[i].m_nNextThinkTick > 0 )
 			return true;
@@ -1092,7 +1089,7 @@ bool CBaseEntity::WillThink()
 void CBaseEntity::RebaseThinkTicks( bool bMakeDeltas )
 {
 	int nCurTick = TIME_TO_TICKS( gpGlobals->curtime );
-	for ( int i = 0; i < m_aThinkFunctions.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_aThinkFunctions ); i++ )
 	{
 		if ( m_aThinkFunctions[i].m_nNextThinkTick > 0 )
 		{
@@ -1124,7 +1121,7 @@ int CBaseEntity::GetFirstThinkTick()
 		minTick = m_nNextThinkTick;
 	}
 
-	for ( int i = 0; i < m_aThinkFunctions.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_aThinkFunctions ); i++ )
 	{
 		int next = m_aThinkFunctions[i].m_nNextThinkTick;
 		if ( next > 0 )
@@ -1779,7 +1776,7 @@ public:
 
 	bool ShouldHitEntity( IHandleEntity *pHandleEntity, int contentsMask )
 	{
-		if ( m_PassEntities.Count() )
+		if ( !m_PassEntities.empty() )
 		{
 			CBaseEntity *pEntity = EntityFromEntityHandle( pHandleEntity );
 			CBaseEntity *pPassEntity = EntityFromEntityHandle( m_PassEntities[0] );

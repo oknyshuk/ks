@@ -7,7 +7,6 @@
 
 // Author: Michael S. Booth (mike@turtlerockstudios.com), 2003
 
-#pragma warning( disable : 4530 )					// STL uses exceptions, but we are not compiling with them - ignore warning
 
 #include "cbase.h"
 
@@ -18,9 +17,6 @@
 #include "keyvalues.h"
 #include "tier0/icommandline.h"
 #include "fmtstr.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 CBotManager *TheBots = nullptr;
@@ -107,20 +103,20 @@ CCSBotManager::CCSBotManager()
 	m_roundStartTimestamp = 0.0f;
 
 	m_eventListenersEnabled = true;
-	m_commonEventListeners.AddToTail( &m_PlayerFootstepEvent );
-	m_commonEventListeners.AddToTail( &m_PlayerRadioEvent );
-	m_commonEventListeners.AddToTail( &m_PlayerFallDamageEvent );
-	m_commonEventListeners.AddToTail( &m_BombBeepEvent );
-	m_commonEventListeners.AddToTail( &m_DoorMovingEvent );
-	m_commonEventListeners.AddToTail( &m_BreakPropEvent );
-	m_commonEventListeners.AddToTail( &m_BreakBreakableEvent );
-	m_commonEventListeners.AddToTail( &m_WeaponFireEvent );
-	m_commonEventListeners.AddToTail( &m_WeaponFireOnEmptyEvent );
-	m_commonEventListeners.AddToTail( &m_WeaponReloadEvent );
-	m_commonEventListeners.AddToTail( &m_WeaponZoomEvent );
-	m_commonEventListeners.AddToTail( &m_BulletImpactEvent );
-	m_commonEventListeners.AddToTail( &m_GrenadeBounceEvent );
-	m_commonEventListeners.AddToTail( &m_NavBlockedEvent );
+	m_commonEventListeners.push_back( &m_PlayerFootstepEvent );
+	m_commonEventListeners.push_back( &m_PlayerRadioEvent );
+	m_commonEventListeners.push_back( &m_PlayerFallDamageEvent );
+	m_commonEventListeners.push_back( &m_BombBeepEvent );
+	m_commonEventListeners.push_back( &m_DoorMovingEvent );
+	m_commonEventListeners.push_back( &m_BreakPropEvent );
+	m_commonEventListeners.push_back( &m_BreakBreakableEvent );
+	m_commonEventListeners.push_back( &m_WeaponFireEvent );
+	m_commonEventListeners.push_back( &m_WeaponFireOnEmptyEvent );
+	m_commonEventListeners.push_back( &m_WeaponReloadEvent );
+	m_commonEventListeners.push_back( &m_WeaponZoomEvent );
+	m_commonEventListeners.push_back( &m_BulletImpactEvent );
+	m_commonEventListeners.push_back( &m_GrenadeBounceEvent );
+	m_commonEventListeners.push_back( &m_NavBlockedEvent );
 
 	TheBotPhrases = new BotPhraseManager;
 	TheBotProfiles = new BotProfileManager;
@@ -277,7 +273,7 @@ void CCSBotManager::EnableEventListeners( bool enable )
 	m_eventListenersEnabled = enable;
 
 	// enable/disable the most frequent event listeners, to improve performance when no bots are present.
-	for ( int i=0; i<m_commonEventListeners.Count(); ++i )
+	for ( int i=0; i<std::ssize( m_commonEventListeners ); ++i )
 	{
 		if ( enable )
 		{
@@ -347,8 +343,8 @@ void CCSBotManager::StartFrame( void )
 
 	if ( m_checkTransientAreasTimer.IsElapsed() && !nav_edit.GetBool() )
 	{
-		CUtlVector< CNavArea * >& transientAreas = TheNavMesh->GetTransientAreas();
-		for ( int i=0; i<transientAreas.Count(); ++i )
+		std::vector< CNavArea * >& transientAreas = TheNavMesh->GetTransientAreas();
+		for ( int i=0; i<std::ssize( transientAreas ); ++i )
 		{
 			CNavArea *area = transientAreas[i];
 			if ( area->GetAttributes() & NAV_MESH_TRANSIENT )
@@ -477,7 +473,7 @@ void CCSBotManager::ServerActivate( void )
 	// Now that we've parsed all the profiles, we have a list of the voice banks they're using.
 	// Go back and parse the custom voice speakables.
 	const BotProfileManager::VoiceBankList *voiceBanks = TheBotProfiles->GetVoiceBanks();
-	for ( int i=1; i<voiceBanks->Count(); ++i )
+	for ( int i=1; i<std::ssize( *voiceBanks ); ++i )
 	{
 		TheBotPhrases->Initialize( (*voiceBanks)[i], i );
 	}
@@ -699,8 +695,8 @@ public:
 			// accept based on name
 			if ( FStrEq( m_name, bot->GetProfile()->GetName() ) )
 			{
-				m_bots.RemoveAll();
-				m_bots.AddToTail( bot );
+				m_bots.clear();
+				m_bots.push_back( bot );
 				return false;
 			}
 
@@ -744,12 +740,12 @@ public:
 		}
 
 		// A match!
-		m_bots.AddToTail( bot );
+		m_bots.push_back( bot );
 
 		return true;
 	}
 
-	CUtlVector< CCSBot * > m_bots;
+	std::vector< CCSBot * > m_bots;
 
 private:
 	const char *m_name;
@@ -779,7 +775,7 @@ CON_COMMAND_F( bot_kill, "bot_kill <all> <t|ct> <type> <difficulty> <name> - Kil
 	CollectBots collector( name, weaponType, difficulty, team );
 	ForEachPlayer( collector );
 
-	for ( int i=0; i<collector.m_bots.Count(); ++i )
+	for ( int i=0; i<std::ssize( collector.m_bots ); ++i )
 	{
 		CCSBot *bot = collector.m_bots[i];
 		if ( !bot->IsAlive() )
@@ -816,7 +812,7 @@ CON_COMMAND_F( bot_kick, "bot_kick <all> <t|ct> <type> <difficulty> <name> - Kic
 	CollectBots collector( name, weaponType, difficulty, team );
 	ForEachPlayer( collector );
 
-	for ( int i=0; i<collector.m_bots.Count(); ++i )
+	for ( int i=0; i<std::ssize( collector.m_bots ); ++i )
 	{
 		CCSBot *bot = collector.m_bots[i];
 		engine->ServerCommand( UTIL_VarArgs( "kickid %d\n", engine->GetPlayerUserId( bot->edict() ) ) );
@@ -836,7 +832,7 @@ CON_COMMAND_F( bot_kick, "bot_kick <all> <t|ct> <type> <difficulty> <name> - Kic
 	}
 	else
 	{
-		int newQuota = cv_bot_quota.GetInt() - collector.m_bots.Count();
+		int newQuota = cv_bot_quota.GetInt() - std::ssize( collector.m_bots );
 		cv_bot_quota.SetValue( clamp( newQuota, 0, cv_bot_quota.GetInt() ) );
 	}
 }
@@ -1191,9 +1187,9 @@ bool CCSBotManager::BotAddCommand( int team, bool isFromConsole, const char *pro
 	// find a human that is not yet connected and use that human's stats
 	// TODO: <vitaliy> this would allow bots to take over humans
 	//
-	if ( 0 && CSGameRules() && CSGameRules()->IsQueuedMatchmaking() && CSGameRules()->m_mapQueuedMatchmakingPlayersData.Count() )
+	if ( 0 && CSGameRules() && CSGameRules()->IsQueuedMatchmaking() && !CSGameRules()->m_mapQueuedMatchmakingPlayersData.empty() )
 	{
-		CUtlVector< uint32 > arrConnectedHumans;
+		std::vector< uint32 > arrConnectedHumans;
 		for ( int i = 1; i <= gpGlobals->maxClients; ++i )
 		{
 			CCSPlayer *pHuman = dynamic_cast<CCSPlayer *>(UTIL_PlayerByIndex( i ));
@@ -1201,14 +1197,14 @@ bool CCSBotManager::BotAddCommand( int team, bool isFromConsole, const char *pro
 			{
 				uint32 uiAccountId = pHuman->GetHumanPlayerAccountID();
 				if ( uiAccountId )
-					arrConnectedHumans.AddToTail( uiAccountId );
+					arrConnectedHumans.push_back( uiAccountId );
 			}
 		}
 
-		FOR_EACH_MAP( CSGameRules()->m_mapQueuedMatchmakingPlayersData, idxQueuedPlayer )
+		for ( auto &[uiAccountID, pQMM] : CSGameRules()->m_mapQueuedMatchmakingPlayersData )
 		{
-			CCSGameRules::CQMMPlayerData_t &qmmPlayerData = * CSGameRules()->m_mapQueuedMatchmakingPlayersData.Element( idxQueuedPlayer );
-			if ( arrConnectedHumans.Find( qmmPlayerData.m_uiPlayerAccountId ) != arrConnectedHumans.InvalidIndex() )
+			CCSGameRules::CQMMPlayerData_t &qmmPlayerData = *pQMM;
+			if ( ks::find_index( arrConnectedHumans, qmmPlayerData.m_uiPlayerAccountId ) != -1 )
 				continue;	// such human is already connected
 			
 			bool bThisPlayerIsFirstTeam = ( qmmPlayerData.m_iDraftIndex < 5 );
@@ -1414,7 +1410,7 @@ void CCSBotManager::MaintainBotQuota( void )
 		// don't do this check in coop mission mode because we change the number every wave
 		if ( !isRoundInProgress || CSGameRules()->IsPlayingCoopMission() )
 		{
-			desiredBotCount = MAX( 0, desiredBotCount - humanPlayersInGame + spectatorPlayersInGame );
+			desiredBotCount = std::max( 0, desiredBotCount - humanPlayersInGame + spectatorPlayersInGame );
 		}
 		else
 		{
@@ -1427,7 +1423,7 @@ void CCSBotManager::MaintainBotQuota( void )
 		// unless the round is already in progress, in which case we play with what we've been dealt
 		if ( !isRoundInProgress )
 		{
-			desiredBotCount = (int)MAX( 0, cv_bot_quota.GetFloat() * humanPlayersInGame );
+			desiredBotCount = (int)std::max<std::common_type_t<int, float>>( 0, cv_bot_quota.GetFloat() * humanPlayersInGame );
 		}
 		else
 		{
@@ -1458,9 +1454,9 @@ void CCSBotManager::MaintainBotQuota( void )
 
 	// if bots will auto-vacate, we need to keep one slot open to allow players to join
 	if ( cv_bot_auto_vacate.GetBool() && !CSGameRules()->IsPlayingCoopMission() )
-		desiredBotCount = MIN( desiredBotCount, gpGlobals->maxClients - (humanPlayersInGame + 1) );
+		desiredBotCount = std::min( desiredBotCount, gpGlobals->maxClients - (humanPlayersInGame + 1) );
 	else
-		desiredBotCount = MIN( desiredBotCount, gpGlobals->maxClients - humanPlayersInGame + spectatorPlayersInGame );
+		desiredBotCount = std::min( desiredBotCount, gpGlobals->maxClients - humanPlayersInGame + spectatorPlayersInGame );
 
 	// Try to balance teams, if we are in the first 20 seconds of a round and bots can join either team.
 	if ( botsInGame > 0 && desiredBotCount == botsInGame && CSGameRules()->m_bFirstConnected )
@@ -1809,10 +1805,10 @@ const Vector *CCSBotManager::GetRandomPositionInZone( const Zone *zone ) const
 		Extent areaExtent;
 		area->GetExtent(&areaExtent);
 		Extent overlap;
-		overlap.lo.x = MAX( areaExtent.lo.x, zone->m_extent.lo.x );
-		overlap.lo.y = MAX( areaExtent.lo.y, zone->m_extent.lo.y );
-		overlap.hi.x = MIN( areaExtent.hi.x, zone->m_extent.hi.x );
-		overlap.hi.y = MIN( areaExtent.hi.y, zone->m_extent.hi.y );
+		overlap.lo.x = std::max( areaExtent.lo.x, zone->m_extent.lo.x );
+		overlap.lo.y = std::max( areaExtent.lo.y, zone->m_extent.lo.y );
+		overlap.hi.x = std::min( areaExtent.hi.x, zone->m_extent.hi.x );
+		overlap.hi.y = std::min( areaExtent.hi.y, zone->m_extent.hi.y );
 
 		pos.x = (overlap.lo.x + overlap.hi.x)/2.0f;
 		pos.y = (overlap.lo.y + overlap.hi.y)/2.0f;
@@ -2141,8 +2137,8 @@ void CCSBotManager::OnRoundFreezeEnd( IGameEvent *event )
 	bool reenableEvents = m_NavBlockedEvent.IsEnabled();
 
 	m_NavBlockedEvent.Enable( false ); // don't listen to nav_blocked events - there could be several, and we don't have bots pathing
-	CUtlVector< CNavArea * >& transientAreas = TheNavMesh->GetTransientAreas();
-	for ( int i=0; i<transientAreas.Count(); ++i )
+	std::vector< CNavArea * >& transientAreas = TheNavMesh->GetTransientAreas();
+	for ( int i=0; i<std::ssize( transientAreas ); ++i )
 	{
 		CNavArea *area = transientAreas[i];
 		if ( area->GetAttributes() & NAV_MESH_TRANSIENT )
@@ -2471,7 +2467,7 @@ unsigned int CCSBotManager::GetPlayerPriority( CBasePlayer *player ) const
  */
 CBaseEntity *CCSBotManager::GetRandomSpawn( int team ) const
 {
-	CUtlVector< CBaseEntity * > spawnSet;
+	std::vector< CBaseEntity * > spawnSet;
 	CBaseEntity *spot;
 
 	if (team == TEAM_TERRORIST || team == TEAM_MAXCOUNT)
@@ -2485,7 +2481,7 @@ CBaseEntity *CCSBotManager::GetRandomSpawn( int team ) const
 			 spot;
 			 spot = gEntList.FindEntityByClassname( spot, szTSpawnEntName ) )
 		{
-			spawnSet.AddToTail( spot );			
+			spawnSet.push_back( spot );			
 		}
 	}
 
@@ -2496,17 +2492,17 @@ CBaseEntity *CCSBotManager::GetRandomSpawn( int team ) const
 			 spot;
 			 spot = gEntList.FindEntityByClassname( spot, "info_player_counterterrorist" ) )
 		{
-			spawnSet.AddToTail( spot );			
+			spawnSet.push_back( spot );			
 		}
 	}
 
-	if (spawnSet.Count() == 0)
+	if (spawnSet.empty())
 	{
 		return nullptr;
 	}
 
 	// select one at random
-	int which = RandomInt( 0, spawnSet.Count()-1 );
+	int which = RandomInt( 0, std::ssize( spawnSet )-1 );
 	return spawnSet[ which ];
 }
 
@@ -2573,9 +2569,8 @@ void CCSBotManager::ResetRadioMessageTimestamps( void )
  */
 void DrawOccupyTime( void )
 {
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ it ];
 
 		int r, g, b;
 		
@@ -2621,9 +2616,8 @@ void DrawBattlefront( void )
 	const float epsilon = 1.0f;
 	int r = 255, g = 50, b = 0;
 	
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ it ];
 
 		if ( fabs(area->GetEarliestOccupyTime( TEAM_TERRORIST ) - area->GetEarliestOccupyTime( TEAM_CT )) > epsilon )
 		{
@@ -2693,9 +2687,9 @@ CON_COMMAND_F( nav_check_connectivity, "Checks to be sure every (or just the mar
 	{
 		// Otherwise, loop through every area, and make sure they can all get to the goal.
 		float start = Plat_FloatTime();
-		FOR_EACH_VEC( TheNavAreas, nit )
+		for ( CNavArea *area : TheNavAreas )
 		{
-			CheckAreaAgainstAllZoneAreas(TheNavAreas[ nit ]);
+			CheckAreaAgainstAllZoneAreas(area);
 		}
 
 		float end = Plat_FloatTime();

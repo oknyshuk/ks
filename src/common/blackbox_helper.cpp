@@ -7,9 +7,6 @@
 #include "cbase.h"
 #include "engine/iblackbox.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern IBlackBox *blackboxrecorder;
 
 void BlackBox_Record( const char *type, PRINTF_FORMAT_STRING const char *pFormat, ... )

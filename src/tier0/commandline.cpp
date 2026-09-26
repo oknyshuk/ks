@@ -20,9 +20,7 @@
 #include <limits.h>
 #define _MAX_PATH PATH_MAX
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 
 static const int MAX_PARAMETER_LEN = 128;
 
@@ -621,7 +619,9 @@ void CCommandLine::SetParm( int nIndex, char const *pParm )
 		{
 			if ( m_ppParms[nIndex] )
 				delete[] m_ppParms[nIndex];
-			m_ppParms[nIndex] = strdup( pParm );
+			size_t nLen = strlen( pParm ) + 1;
+			m_ppParms[nIndex] = new char[nLen];
+			memcpy( m_ppParms[nIndex], pParm, nLen );
 		}
 
 	}

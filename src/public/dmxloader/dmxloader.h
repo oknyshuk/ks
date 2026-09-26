@@ -11,17 +11,25 @@
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-class CUtlBuffer;
+namespace ks
+{
+	class byte_reader;
+	class byte_writer;
+	class text_reader;
+	class text_writer;
+}
 class CDmxElement;
 
 
 //-----------------------------------------------------------------------------
 // Serialization/Unserialization
 //-----------------------------------------------------------------------------
-bool SerializeDMX( CUtlBuffer &buf, CDmxElement *pRoot, const char *pFileName = nullptr );
+bool SerializeDMX( ks::byte_writer &buf, CDmxElement *pRoot, const char *pFileName = nullptr );
+bool SerializeDMX( ks::text_writer &buf, CDmxElement *pRoot, const char *pFileName = nullptr );
 bool SerializeDMX( const char *pFileName, const char *pPathID, bool bTextMode, CDmxElement *pRoot );
 
-bool UnserializeDMX( CUtlBuffer &buf, CDmxElement **ppRoot, const char *pFileName = nullptr );
+bool UnserializeDMX( ks::byte_reader &buf, CDmxElement **ppRoot, const char *pFileName = nullptr );
+bool UnserializeDMX( ks::text_reader &buf, CDmxElement **ppRoot, const char *pFileName = nullptr );
 bool UnserializeDMX( const char *pFileName, const char *pPathID,  bool bTextMode, CDmxElement **ppRoot );
 
 //-----------------------------------------------------------------------------

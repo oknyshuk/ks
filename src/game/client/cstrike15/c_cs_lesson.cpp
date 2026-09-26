@@ -13,11 +13,6 @@
 
 #include "gametypes.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
-
-extern CUtlDict< int, int > g_LessonActionMap;
 
 extern ConVar gameinstructor_verbose;
 
@@ -41,15 +36,15 @@ enum Mod_LessonAction
 void CScriptedIconLesson::Mod_PreReadLessonsFromFile( void )
 {
 	// Add custom actions to the map
-	CScriptedIconLesson::LessonActionMap.Insert( "game type is", LESSON_ACTION_GAME_TYPE_IS );
-	CScriptedIconLesson::LessonActionMap.Insert( "game mode is", LESSON_ACTION_GAME_MODE_IS );
-	CScriptedIconLesson::LessonActionMap.Insert( "is casual or training", LESSON_ACTION_CASUAL_OR_TRAINING );
-	CScriptedIconLesson::LessonActionMap.Insert( "has defuser", LESSON_ACTION_HAS_DEFUSER );
-	CScriptedIconLesson::LessonActionMap.Insert( "has any items", LESSON_ACTION_HAS_ANY_ITEMS );
-	CScriptedIconLesson::LessonActionMap.Insert( "has multiple items", LESSON_ACTION_HAS_MULTIPLE_ITEMS );
-	CScriptedIconLesson::LessonActionMap.Insert( "has multiple weapons", LESSON_ACTION_HAS_MULTIPLE_WEAPONS );
-	CScriptedIconLesson::LessonActionMap.Insert( "is buymenu open", LESSON_ACTION_HAS_BUYMENU_OPEN );
-	CScriptedIconLesson::LessonActionMap.Insert( "round state is", LESSON_ACTION_ROUND_STATE_IS );		  //0=freezetime; 1=mid-round; 2=round is over;
+	CScriptedIconLesson::LessonActionMap.emplace( "game type is", LESSON_ACTION_GAME_TYPE_IS );
+	CScriptedIconLesson::LessonActionMap.emplace( "game mode is", LESSON_ACTION_GAME_MODE_IS );
+	CScriptedIconLesson::LessonActionMap.emplace( "is casual or training", LESSON_ACTION_CASUAL_OR_TRAINING );
+	CScriptedIconLesson::LessonActionMap.emplace( "has defuser", LESSON_ACTION_HAS_DEFUSER );
+	CScriptedIconLesson::LessonActionMap.emplace( "has any items", LESSON_ACTION_HAS_ANY_ITEMS );
+	CScriptedIconLesson::LessonActionMap.emplace( "has multiple items", LESSON_ACTION_HAS_MULTIPLE_ITEMS );
+	CScriptedIconLesson::LessonActionMap.emplace( "has multiple weapons", LESSON_ACTION_HAS_MULTIPLE_WEAPONS );
+	CScriptedIconLesson::LessonActionMap.emplace( "is buymenu open", LESSON_ACTION_HAS_BUYMENU_OPEN );
+	CScriptedIconLesson::LessonActionMap.emplace( "round state is", LESSON_ACTION_ROUND_STATE_IS );		  //0=freezetime; 1=mid-round; 2=round is over;
 }
 
 

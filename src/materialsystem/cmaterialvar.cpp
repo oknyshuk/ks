@@ -14,8 +14,8 @@
 #include <stdlib.h>
 #include "shaderapi/ishaderapi.h"
 #include "imaterialinternal.h"
-#include "utlsymbol.h"
-#include "mempool.h"
+#include "tier1/map_ops.h"
+#include "tier1/fixed_pool.h"
 #include "itextureinternal.h"
 #include "tier0/dbg.h"
 #include "tier0/vprof.h"
@@ -23,10 +23,13 @@
 #include "mathlib/vmatrix.h"
 #include "tier1/strtools.h"
 #include "tier1/keyvalues.h"
-#include "tier1/mempool.h"
 #include "texturemanager.h"
 #include "cdll_int.h"
-#include "tier1/utlmap.h"
+#include <map>
+#include <mutex>
+#include <shared_mutex>
+#include <string_view>
+#include <vector>
 
 #define MATERIALVAR_CHAR_BUF_SIZE 512
 
@@ -47,7 +50,7 @@
 #define MV_NOT_COMMITTED ( (MVFreeBlock_t *)~0 )
 
 byte *g_pMVData = (byte *)VirtualAlloc( nullptr, MV_NUM_PAGES * MV_PAGE_SIZE, VA_RESERVE_FLAGS, PAGE_NOACCESS );
-CThreadFastMutex g_MVDataMutex; // we never normally alloc & free during levels, and there's not much contention, so a mutex is fine
+std::recursive_mutex g_MVDataMutex; // we never normally alloc & free during levels, and there's not much contention, so a mutex is fine
 
 struct MVFreeBlock_t
 {
@@ -69,7 +72,7 @@ void DumpAllMaterialVars( void );
 
 void MVDumpHeap()
 {
-	AUTO_LOCK( g_MVDataMutex );
+	std::scoped_lock lock( g_MVDataMutex );
 
 	Msg( "MaterialVar heap:\n" );
 	int sum = 0, pages = 0;
@@ -116,7 +119,7 @@ MVFreeBlock_t *MVCommitAlloc( int iPage )
 
 int MVFindBestPage()
 {
-	AUTO_LOCK( g_MVDataMutex );
+	std::scoped_lock lock( g_MVDataMutex );
 	int i;
 	int iFirstUncommitted = -1;
 	int iBestPage = -1;
@@ -167,7 +170,7 @@ int MVFindBestPage()
 
 void *MVAlloc()
 {
-	AUTO_LOCK( g_MVDataMutex );
+	std::scoped_lock lock( g_MVDataMutex );
 	int iBestPage = MVFindBestPage();
 
 	if ( iBestPage != -1 )
@@ -193,7 +196,7 @@ void MVFree( void *p )
 {
 	if ( MVInternallyAllocated( p ) )
 	{
-		AUTO_LOCK( g_MVDataMutex );
+		std::scoped_lock lock( g_MVDataMutex );
 
 		MVFreeBlock_t *pBlock = (MVFreeBlock_t *)p;
 		int iPage = ( ( (byte *)pBlock - g_pMVData ) / MV_PAGE_SIZE );
@@ -211,7 +214,7 @@ void MVFree( void *p )
 
 void *MVRelocate( void *p )
 {
-	AUTO_LOCK( g_MVDataMutex );
+	std::scoped_lock lock( g_MVDataMutex );
 
 	MVFreeBlock_t *pBlockOld = (MVFreeBlock_t *)p;
 	MVFreeBlock_t *pBlockNew = pBlockOld;
@@ -262,7 +265,7 @@ void *MVRelocate( void *p )
 
 void MVDecommitUnusedPages()
 {
-	AUTO_LOCK( g_MVDataMutex );
+	std::scoped_lock lock( g_MVDataMutex );
 
 	for ( int i = 0; i < MV_NUM_PAGES; i++ )
 	{
@@ -427,17 +430,49 @@ private:
 	};
 };
 
-// Has to exist *after* fixed size allocator declaration
-#include "tier0/memdbgon.h"
-
 typedef CMaterialVar *CMaterialVarPtr;
 
 #ifndef USE_MV_POOL
-DEFINE_FIXEDSIZE_ALLOCATOR( CMaterialVar, 1024, true );
+DEFINE_FIXEDSIZE_ALLOCATOR( CMaterialVar, 1024, ks::fixed_pool::grow::fast );
 #endif
 
-// Stores symbols for the material vars
-static CUtlSymbolTableMT s_MaterialVarSymbols( 0, 32, true );
+// Stores symbols for the material vars. Dense 16-bit ids: they are packed into IMaterialVar and
+// the tokencache_t behind FindVarFast.
+class CMaterialVarSymbolTable
+{
+public:
+	MaterialVarSym_t AddString( std::string_view name )
+	{
+		{
+			std::shared_lock lock( m_Mutex );
+			if ( auto it = m_Ids.find( name ); it != m_Ids.end() )
+				return it->second;
+		}
+		std::unique_lock lock( m_Mutex );
+		Assert( m_Names.size() < INVALID_MATERIAL_VAR_SYMBOL );
+		auto [it, bNew] = m_Ids.try_emplace( std::string( name ), (MaterialVarSym_t)m_Names.size() );
+		if ( bNew )
+			m_Names.push_back( it->first.c_str() );	// map nodes don't move
+		return it->second;
+	}
+	MaterialVarSym_t Find( std::string_view name ) const
+	{
+		std::shared_lock lock( m_Mutex );
+		auto it = m_Ids.find( name );
+		return it == m_Ids.end() ? INVALID_MATERIAL_VAR_SYMBOL : it->second;
+	}
+	const char *String( MaterialVarSym_t sym ) const
+	{
+		std::shared_lock lock( m_Mutex );
+		return sym < m_Names.size() ? m_Names[sym] : "";
+	}
+
+private:
+	mutable std::shared_mutex m_Mutex;
+	ks::ihash_map< MaterialVarSym_t > m_Ids;
+	std::vector< const char * > m_Names;
+};
+static CMaterialVarSymbolTable s_MaterialVarSymbols;
 
 static bool g_bDeleteUnreferencedTexturesEnabled = false;
 
@@ -460,9 +495,13 @@ bool MaterialVarLessFunc( IMaterial *const &a, IMaterial *const &b )
 	if ( a == b ) return 0;
 	return ( V_stricmp( (a ? a->GetName() : "[UNKNOWN]"), (b ? b->GetName() : "[UNKNOWN]") ) < 0 );
 }
+struct MaterialVarLess
+{
+	bool operator()( IMaterial *a, IMaterial *b ) const { return MaterialVarLessFunc( a, b ); }
+};
 void DumpAllMaterialVars( void )
 {
-	CUtlMap< IMaterial*, int > matcounts( MaterialVarLessFunc );
+	std::map< IMaterial*, int, MaterialVarLess > matcounts;
 	int numvars = 0;
 	for ( int page = 0; page < MV_NUM_PAGES; page++ )
 	{
@@ -478,23 +517,18 @@ void DumpAllMaterialVars( void )
 				CMaterialVar *var = (CMaterialVar *)block;
 				IMaterial *mat = var->GetOwningMaterial();
 				//Msg( " -- %40s | %s\n", (mat?mat->GetName():"[UNKNOWN]"), var->GetName() );
-				int idx = matcounts.Find( mat );
-				if ( idx == matcounts.InvalidIndex() )
-					matcounts.Insert( mat, 1 );
-				else
-					matcounts.Element(idx)++;
+				matcounts[mat]++;
 				numvars++;
 			}
 			block++;
 		}
 	}
 	//Msg("\n ==== Total %d materialvars:\n", numvars );
-	for ( int j = matcounts.FirstInorder(); j != matcounts.InvalidIndex(); j = matcounts.NextInorder(j) )
+	for ( auto &[mat, count] : matcounts )
 	{
-		IMaterial *mat = matcounts.Key(j);
-		Msg( " -- %4d %s\n", matcounts.Element(j), (mat?mat->GetName():"[UNKNOWN]") );
+		Msg( " -- %4d %s\n", count, (mat?mat->GetName():"[UNKNOWN]") );
 	}
-	Msg("\n ==== Total %d materialvars in %d materials\n", numvars, matcounts.Count() );
+	Msg("\n ==== Total %d materialvars in %d materials\n", numvars, (int)matcounts.size() );
 }
 #endif // USE_MV_POOL
 
@@ -578,7 +612,7 @@ void IMaterialVar::Destroy( IMaterialVar* pVar )
 MaterialVarSym_t IMaterialVar::GetSymbol( const char* pName )
 {
 	if (!pName)
-		return UTL_INVAL_SYMBOL;
+		return INVALID_MATERIAL_VAR_SYMBOL;
 
 	char temp[1024];
 	Q_strncpy( temp, pName, sizeof( temp ) );
@@ -589,7 +623,7 @@ MaterialVarSym_t IMaterialVar::GetSymbol( const char* pName )
 MaterialVarSym_t IMaterialVar::FindSymbol( const char* pName )
 {
 	if (!pName)
-		return UTL_INVAL_SYMBOL;
+		return INVALID_MATERIAL_VAR_SYMBOL;
 
 	return s_MaterialVarSymbols.Find( pName );
 }
@@ -644,7 +678,7 @@ CMaterialVar::CMaterialVar( IMaterial* pMaterial, const char *pKey, VMatrix cons
 
 	m_pMaterial = static_cast<IMaterialInternal*>(pMaterial);
 	m_Name = GetSymbol( pKey );
-	Assert( m_Name != UTL_INVAL_SYMBOL );
+	Assert( m_Name != INVALID_MATERIAL_VAR_SYMBOL );
 	m_Type = MATERIAL_VAR_TYPE_MATRIX;
 	m_pMatrix = new MaterialVarMatrix_t;
 	Assert( m_pMatrix );
@@ -662,7 +696,7 @@ CMaterialVar::CMaterialVar( IMaterial* pMaterial, const char *pKey, const char *
 
 	m_pMaterial = static_cast<IMaterialInternal*>(pMaterial);
 	m_Name = GetSymbol( pKey );
-	Assert( m_Name != UTL_INVAL_SYMBOL );
+	Assert( m_Name != INVALID_MATERIAL_VAR_SYMBOL );
 	int len = Q_strlen( pVal ) + 1;
 	m_pStringVal = new char[ len ];
 	Q_strncpy( m_pStringVal, pVal, len );
@@ -678,7 +712,7 @@ CMaterialVar::CMaterialVar( IMaterial* pMaterial, const char *pKey, float* pVal,
 
 	m_pMaterial = static_cast<IMaterialInternal*>(pMaterial);;
 	m_Name = GetSymbol( pKey );
-	Assert( m_Name != UTL_INVAL_SYMBOL );
+	Assert( m_Name != INVALID_MATERIAL_VAR_SYMBOL );
 	m_Type = MATERIAL_VAR_TYPE_VECTOR;
 	memcpy( m_VecVal.Base(), pVal, numComps * sizeof(float) );
 	for (int i = numComps; i < 4; ++i)
@@ -693,7 +727,7 @@ CMaterialVar::CMaterialVar( IMaterial* pMaterial, const char *pKey, float val )
 	Init();
 	m_pMaterial = static_cast<IMaterialInternal*>(pMaterial);
 	m_Name = GetSymbol( pKey );
-	Assert( m_Name != UTL_INVAL_SYMBOL );
+	Assert( m_Name != INVALID_MATERIAL_VAR_SYMBOL );
 	m_Type = MATERIAL_VAR_TYPE_FLOAT;
 	m_VecVal[0] = m_VecVal[1] = m_VecVal[2] = m_VecVal[3] = val;
 	m_intVal = (int) val;
@@ -705,7 +739,7 @@ CMaterialVar::CMaterialVar( IMaterial* pMaterial, const char *pKey, int val )
 	Init();
 	m_pMaterial = static_cast<IMaterialInternal*>(pMaterial);
 	m_Name = GetSymbol( pKey );
-	Assert( m_Name != UTL_INVAL_SYMBOL );
+	Assert( m_Name != INVALID_MATERIAL_VAR_SYMBOL );
 	m_Type = MATERIAL_VAR_TYPE_INT;
 	m_VecVal[0] = m_VecVal[1] = m_VecVal[2] = m_VecVal[3] = (float) val;
 	m_intVal = val;
@@ -716,7 +750,7 @@ CMaterialVar::CMaterialVar( IMaterial* pMaterial, const char *pKey )
 	Init();
 	m_pMaterial = static_cast<IMaterialInternal*>(pMaterial);
 	m_Name = GetSymbol( pKey );
-	Assert( m_Name != UTL_INVAL_SYMBOL );
+	Assert( m_Name != INVALID_MATERIAL_VAR_SYMBOL );
 	m_Type = MATERIAL_VAR_TYPE_UNDEFINED;
 }
 
@@ -787,7 +821,7 @@ MaterialVarSym_t CMaterialVar::GetNameAsSymbol() const
 
 const char *CMaterialVar::GetName( ) const
 {
-	if( !m_Name.IsValid() )
+	if( m_Name == INVALID_MATERIAL_VAR_SYMBOL )
 	{
 		Warning( "m_pName is NULL for CMaterialVar\n" );
 		return "";
@@ -1089,7 +1123,7 @@ void CMaterialVar::SetStringValue( const char *val )
 			}
 			s_pTempMaterialVar[m_nTempIndex].SetStringValue( val );
 		}
-		pCallQueue->QueueCall( this, &CMaterialVar::SetStringValue, CUtlEnvelope<const char *>(val) );
+		pCallQueue->QueueCall( this, &CMaterialVar::SetStringValue, ks::envelope<const char *>(val) );
 		return;
 	}
 
@@ -1285,7 +1319,8 @@ void CMaterialVar::SetTextureValue( ITexture *texture )
 		return;
 	}
 
-	ITextureInternal* pTexImp = static_cast<ITextureInternal *>( texture );
+	// May be the env_cubemap sentinel ((ITexture*)-1), which is not a real object.
+	ITextureInternal* pTexImp = reinterpret_cast<ITextureInternal *>( texture );
 
 	// Suppress all this if we're not actually changing anything
 	if ((m_Type == MATERIAL_VAR_TYPE_TEXTURE) && (m_pTexture == pTexImp))

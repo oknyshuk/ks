@@ -7,6 +7,7 @@
 
 
 #include "server_pch.h"
+#include <atomic>
 #include "client.h"
 #include "sv_packedentities.h"
 #include "bspfile.h"
@@ -25,7 +26,6 @@
 #include "host.h"
 #include "networkstringtableserver.h"
 #include "networkstringtable.h"
-#include "utlbuffer.h"
 #include "dt.h"
 #include "con_nprint.h"
 #include "smooth_average.h"
@@ -40,9 +40,6 @@
 #ifdef DEDICATED
 IClientEntityList *entitylist = nullptr;
 #endif
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 ConVar sv_validate_edict_change_infos( "sv_validate_edict_change_infos", "0", FCVAR_RELEASE, "Verify that edict changeinfos are being calculated properly (used to debug local network backdoor mode)." );
 ConVar sv_enable_delta_packing( "sv_enable_delta_packing", "0", FCVAR_RELEASE, "When enabled, this allows for entity packing to use the property changes for building up the data. This is many times faster, but can be disabled for error checking." );
@@ -63,7 +60,7 @@ static inline bool SV_EnsurePrivateData(edict_t *pEdict)
 	}
 	else
 	{
-		Host_Error("SV_EnsurePrivateData: pEdict->pvPrivateData==NULL (ent %d).\n", pEdict - sv.edicts);
+		Host_Error("SV_EnsurePrivateData: pEdict->pvPrivateData==NULL (ent %d).\n", (int)( pEdict - sv.edicts ));
 		return false;
 	}
 }
@@ -82,7 +79,7 @@ void SV_EnsureInstanceBaseline( ServerClass *pServerClass, int iEdict, Serialize
 	// See if we already have a baseline for this class.
 	if ( pClass->m_InstanceBaselineIndex == INVALID_STRING_INDEX )
 	{
-		AUTO_LOCK_FM( g_svInstanceBaselineMutex );
+		std::scoped_lock lock( g_svInstanceBaselineMutex );
 
 		// We need this second check in case multiple instances of the same class have grabbed the lock.
 		if ( pClass->m_InstanceBaselineIndex == INVALID_STRING_INDEX )
@@ -102,7 +99,8 @@ void SV_EnsureInstanceBaseline( ServerClass *pServerClass, int iEdict, Serialize
 				buf.GetNumBytesWritten(), packedData );
 			Assert( temp != INVALID_STRING_INDEX );
 			// Copy the baseline data into the handles table
-			sv.m_BaselineHandles.Insert( temp, g_pSerializedEntities->CopySerializedEntity( handle, __FILE__, __LINE__ ) );
+			if ( !sv.m_BaselineHandles.contains( temp ) )
+				sv.m_BaselineHandles.emplace( temp, g_pSerializedEntities->CopySerializedEntity( handle, __FILE__, __LINE__ ) );
 			// Insert a compiler and/or CPU memory barrier to ensure that all side-effects have
 			// been published before the index is published. Otherwise the string index may
 			// be visible before its initialization has finished. This potential problem is caused
@@ -110,7 +108,7 @@ void SV_EnsureInstanceBaseline( ServerClass *pServerClass, int iEdict, Serialize
 			// lock is looking at the variable that is protected by the lock. See this article for details:
 			// http://en.wikipedia.org/wiki/Double-checked_locking
 			// Write-release barrier
-			ThreadMemoryBarrier();
+			std::atomic_thread_fence( std::memory_order_seq_cst );
 			pClass->m_InstanceBaselineIndex = temp;
 		}
 	}
@@ -127,11 +125,11 @@ static inline bool DoesEdictChangeInfoContainPropIndex( SendTable *pSendTable, c
 	bool bFound = false;
 	for ( int i=0; i < pCI->m_nChangeOffsets && !bFound; i++ )
 	{
-		unsigned short index = pPrecalc->m_PropOffsetToIndexMap.Find( pCI->m_ChangeOffsets[i] );
-		if ( index == pPrecalc->m_PropOffsetToIndexMap.InvalidIndex() )
+		auto index = pPrecalc->m_PropOffsetToIndexMap.find( pCI->m_ChangeOffsets[i] );
+		if ( index == pPrecalc->m_PropOffsetToIndexMap.end() )
 			continue;
 
-		const PropIndicesCollection_t &coll = pPrecalc->m_PropOffsetToIndexMap[index];
+		const PropIndicesCollection_t &coll = index->second;
 		for ( int nIndex=0; nIndex < ARRAYSIZE( coll.m_Indices ); nIndex++ )
 		{
 			if ( coll.m_Indices[nIndex] == nProp )
@@ -177,7 +175,7 @@ static inline CChangeFrameList * GetMergedChangeFrameList( PackedEntity* pPrevFr
 		ErrorIfNot( pChangeFrame->GetNumProps() == nNumProps,
 			("SV_PackEntity: SnagChangeFrameList mismatched number of props[%d vs %d]", nNumProps, pChangeFrame->GetNumProps() ) );
 
-		pChangeFrame->SetChangeTick( ChangeList.Base(), ChangeList.Count(), nTick );
+		pChangeFrame->SetChangeTick( ChangeList.data(), std::ssize( ChangeList ), nTick );
 	}
 	else
 	{
@@ -193,21 +191,21 @@ static void ValidateIncrementalChanges( ServerClass* pServerClass, const CalcDel
 	const SendTable *pSendTable = pServerClass->m_pTable;
 
 	unsigned char tempData[ sizeof( CSendProxyRecipients ) * MAX_DATATABLE_PROXIES ];
-	CUtlMemory< CSendProxyRecipients > recip( (CSendProxyRecipients*)tempData, pSendTable->m_pPrecalc->GetNumDataTableProxies() );
+	std::span< CSendProxyRecipients > recip( (CSendProxyRecipients*)tempData, pSendTable->m_pPrecalc->GetNumDataTableProxies() );
 
 	//debug path, useful for detecting properties that differ from the binary diff and the change list
 	SerializedEntityHandle_t comparePackedProps = g_pSerializedEntities->AllocateSerializedEntity(__FILE__, __LINE__);
 	CalcDeltaResultsList_t compareDeltaProps;
 
 	//generate a change list using the normal route
-	SendTable_Encode( pSendTable, comparePackedProps, edict->GetUnknown(), edictIdx, &recip );
+	SendTable_Encode( pSendTable, comparePackedProps, edict->GetUnknown(), edictIdx, recip );
 	SendTable_CalcDelta( pSendTable, tPrevProps, comparePackedProps, edictIdx, compareDeltaProps );
 
 	//check to see if we have any missing properties or differing properties
-	for( uint32 nCurrIncremental = 0; nCurrIncremental < incremental.Count(); ++nCurrIncremental )
+	for( uint32 nCurrIncremental = 0; nCurrIncremental < std::ssize( incremental ); ++nCurrIncremental )
 	{
 		int nPropIndex = incremental[ nCurrIncremental ];
-		if( compareDeltaProps.Find( nPropIndex ) == -1 )
+		if( ks::find_index( compareDeltaProps, nPropIndex ) == -1 )
 		{
 			//missing a prop from our diff			
 			const SendProp* pProp = pSendTable->m_pPrecalc->GetProp( nPropIndex );
@@ -216,10 +214,10 @@ static void ValidateIncrementalChanges( ServerClass* pServerClass, const CalcDel
 		}
 	}
 
-	for( uint32 nCurrDiff = 0; nCurrDiff < compareDeltaProps.Count(); ++nCurrDiff )
+	for( uint32 nCurrDiff = 0; nCurrDiff < std::ssize( compareDeltaProps ); ++nCurrDiff )
 	{
 		int nPropIndex = compareDeltaProps[ nCurrDiff ];
-		if( incremental.Find( nPropIndex ) == -1 )
+		if( ks::find_index( incremental, nPropIndex ) == -1 )
 		{
 			//missing a prop from our incremental
 			const SendProp* pProp = pSendTable->m_pPrecalc->GetProp( nPropIndex );
@@ -273,7 +271,7 @@ static inline void SV_PackEntity(
 	
 	//memory to hold onto our recipient list on the stack to avoid allocator overhead.
 	unsigned char tempData[ sizeof( CSendProxyRecipients ) * MAX_DATATABLE_PROXIES ];
-	CUtlMemory< CSendProxyRecipients > recip( (CSendProxyRecipients*)tempData, pSendTable->m_pPrecalc->GetNumDataTableProxies() );
+	std::span< CSendProxyRecipients > recip( (CSendProxyRecipients*)tempData, pSendTable->m_pPrecalc->GetNumDataTableProxies() );
 	
 	//the new packed up properties and the delta list from the last frame we will be building
 	SerializedEntityHandle_t newPackedProps = SERIALIZED_ENTITY_HANDLE_INVALID;
@@ -300,7 +298,7 @@ static inline void SV_PackEntity(
 
 		//we can attempt a partial update
 		bool bCanReuseOldData;
-		newPackedProps = SendTable_BuildDeltaProperties( edict, edictIdx, pSendTable, pPrevFrame->GetPackedData(), deltaProps, &recip, bCanReuseOldData );
+		newPackedProps = SendTable_BuildDeltaProperties( edict, edictIdx, pSendTable, pPrevFrame->GetPackedData(), deltaProps, recip, bCanReuseOldData );
 		
 		//see if we were unable to merge (which may have been a result of us being able to reuse the original data)
 		if( ( newPackedProps == SERIALIZED_ENTITY_HANDLE_INVALID ) )
@@ -348,7 +346,7 @@ static inline void SV_PackEntity(
 
 		//build all the properties for this object into a serialized entity data block
 		newPackedProps = g_pSerializedEntities->AllocateSerializedEntity(__FILE__, __LINE__);
-		if( !SendTable_Encode( pSendTable, newPackedProps, edict->GetUnknown(), edictIdx, &recip ) )
+		if( !SendTable_Encode( pSendTable, newPackedProps, edict->GetUnknown(), edictIdx, recip ) )
 		{							 
 			Host_Error( "SV_PackEntity: SendTable_Encode returned false (ent %d).\n", edictIdx );
 		}
@@ -365,7 +363,7 @@ static inline void SV_PackEntity(
 
 			// If it's non-manual-mode, but we detect that there are no changes here, then just
 			// use the previous pSnapshot if it's available (as though the entity were manual mode).
-			if ( ( deltaProps.Count() == 0 ) && pPrevFrame->CompareRecipients( recip ) )
+			if ( ( std::ssize( deltaProps ) == 0 ) && pPrevFrame->CompareRecipients( recip ) )
 			{
 				if ( framesnapshotmanager->UsePreviouslySentPacket( pSnapshot, edictIdx, iSerialNum ) )
 				{
@@ -496,7 +494,7 @@ void PackEntities_NetworkBackDoor(
 		//  are encoded relative to packet time will be correct
 		Assert( edict->m_NetworkSerialNumber != -1 );
 
-		bool bShouldTransmit = pInfo->m_pTransmitEdict->Get( index ) ? true : false;
+		bool bShouldTransmit = (*pInfo->m_pTransmitEdict)[index];
 
 		//CServerDTITimer timer( pSendTable, SERVERDTI_ENCODE );
 		// If we're using the fast path for a single-player game, just pass the entity
@@ -576,7 +574,7 @@ void PackEntities_Normal(
 
 			CClientFrame *frame = client->m_pCurrentFrame;
 
-			if( frame->transmit_entity.Get( index ) )
+			if( frame->transmit_entity[index] )
 			{	
 				workItems[workItemCount].nIdx = index;
 				workItems[workItemCount].pEdict = edict;
@@ -872,7 +870,7 @@ const tokenset_t< SendPropType > gSendPropTypeTokenSet[] =
 //-----------------------------------------------------------------------------
 static void PrintSendProp( int index, const SendProp *pSendProp )
 {
-	CUtlString flags;
+	std::string flags;
 
 	if ( pSendProp->GetFlags() & SPROP_VARINT ) { flags += "|VARINT"; }
 	if ( pSendProp->GetFlags() & SPROP_UNSIGNED	) { flags += "|UNSIGNED"; }
@@ -896,16 +894,16 @@ static void PrintSendProp( int index, const SendProp *pSendProp )
 	if ( pSendProp->GetFlags() & SPROP_CHANGES_OFTEN ) { flags += "|CHANGES_OFTEN"; }               
 	if ( pSendProp->GetFlags() & SPROP_ENCODED_AGAINST_TICKCOUNT ) { flags += "|ENCODED_AGAINST_TICKCOUNT"; }   
 
-	const char *pFlags = flags.Get();
-	if ( !flags.IsEmpty() && *flags.Get() == '|' )
+	const char *pFlags = flags.data();
+	if ( !flags.empty() && *flags.data() == '|' )
 	{
-		pFlags = flags.Get() + 1;
+		pFlags = flags.data() + 1;
 	}
 
-	CUtlString name;
+	std::string name;
 	if ( pSendProp->GetParentArrayPropName() )
 	{
-		name.Format( "%s:%s", pSendProp->GetParentArrayPropName(), pSendProp->GetName() );
+		name = ks::format_printf( "%s:%s", pSendProp->GetParentArrayPropName(), pSendProp->GetName() );
 	}
 	else
 	{
@@ -914,7 +912,7 @@ static void PrintSendProp( int index, const SendProp *pSendProp )
 
 	Msg( "\t%d,%s,%d,%d,%s,%s,%d\n", 
 		 index,
-		 name.String(),
+		 name.c_str(),
 		 pSendProp->GetOffset(), 
 		 pSendProp->m_nBits,
 		 gSendPropTypeTokenSet->GetNameByToken( pSendProp->GetType() ), 

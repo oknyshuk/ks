@@ -59,7 +59,6 @@
 #include "predictableid.h"
 #include "variant_t.h"
 #include "takedamageinfo.h"
-#include "utllinkedlist.h"
 #include "touchlink.h"
 #include "groundlink.h"
 #include "base_transmit_proxy.h"

@@ -204,7 +204,7 @@ public:
 	}
 
 protected:
-	CUtlVector<ADDON *> m_AddOns;
+	std::vector< ADDON * > m_AddOns;
 };
 
 

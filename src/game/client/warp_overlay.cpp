@@ -10,9 +10,6 @@
 #include "particles_simple.h"
 #include "precache_register.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffectWarp )
 PRECACHE( MATERIAL, "sun/overlay" )
 PRECACHE_REGISTER_END()

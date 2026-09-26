@@ -85,16 +85,16 @@ void CMatPaintmaps::EndPaintTextureAllocation( void )
 void CMatPaintmaps::ReleasePaintmaps( void )
 {
 	// clean up paint textures, leave the paint data alone
-	for( int i = 0; i < m_PaintmapTextureHandles.Count(); i++ )
+	for( int i = 0; i < std::ssize( m_PaintmapTextureHandles ); i++ )
 	{
 		g_pShaderAPI->DeleteTexture( m_PaintmapTextureHandles[i] );
 	}
-	m_PaintmapTextureHandles.RemoveAll();
+	m_PaintmapTextureHandles.clear();
 }
 
 void CMatPaintmaps::RestorePaintmaps( int nNumLightmaps )
 {
-	Assert( m_PaintmapTextureHandles.Count() == 0 );
+	Assert( std::ssize( m_PaintmapTextureHandles ) == 0 );
 
 	// reallocate + update paint textures
 	for ( int i=0; i<nNumLightmaps; ++i )
@@ -109,11 +109,11 @@ void CMatPaintmaps::RestorePaintmaps( int nNumLightmaps )
 
 void CMatPaintmaps::CleanupPaintmaps( void )
 {
-	for( int i = 0; i < m_PaintmapTextureHandles.Count(); i++ )
+	for( int i = 0; i < std::ssize( m_PaintmapTextureHandles ); i++ )
 	{
 		g_pShaderAPI->DeleteTexture( m_PaintmapTextureHandles[i] );
 	}
-	m_PaintmapTextureHandles.RemoveAll();
+	m_PaintmapTextureHandles.clear();
 
 	if( m_pDataManager )
 	{
@@ -124,7 +124,7 @@ void CMatPaintmaps::CleanupPaintmaps( void )
 ShaderAPITextureHandle_t CMatPaintmaps::GetPaintmapPageTextureHandle( int paintmap )
 {
 	//test new texture
-	if( paintmap >= 0 && paintmap < m_PaintmapTextureHandles.Count() )
+	if( paintmap >= 0 && paintmap < std::ssize( m_PaintmapTextureHandles ) )
 	{
 		return m_PaintmapTextureHandles[paintmap];
 	}
@@ -210,10 +210,10 @@ void CMatPaintmaps::UpdatePaintmap( int paintmap, BYTE* pPaintData, int numRects
 		for ( int i=0; i<numRects; ++i )
 		{
 			Rect_t* pCurrentRect = &pRects[i];
-			minX = MIN( pCurrentRect->x, minX );
-			minY = MIN( pCurrentRect->y, minY );
-			maxX = MAX( pCurrentRect->x + pCurrentRect->width, maxX );
-			maxY = MAX( pCurrentRect->y + pCurrentRect->height, maxY );
+			minX = std::min( pCurrentRect->x, minX );
+			minY = std::min( pCurrentRect->y, minY );
+			maxX = std::max( pCurrentRect->x + pCurrentRect->width, maxX );
+			maxY = std::max( pCurrentRect->y + pCurrentRect->height, maxY );
 		}
 
 		rect.x = minX;
@@ -300,7 +300,7 @@ void CMatPaintmaps::AllocatePaintmapTexture( int paintmap, int iWidth, int iHeig
 	}
 
 	//flags |= TEXTUREFLAGS_PROCEDURAL;
-	m_PaintmapTextureHandles.EnsureCount( paintmap + 1 );
+	ks::ensure_size( m_PaintmapTextureHandles, paintmap + 1 );
 
 	char debugName[256];
 	Q_snprintf( debugName, sizeof( debugName ), "[paintmap %d]", paintmap );

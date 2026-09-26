@@ -8,6 +8,9 @@
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
+#include <map>
+#include <set>
+#include <vector>
 #include <stdarg.h>
 #include "baseflex.h"
 #include "entitylist.h"
@@ -23,9 +26,10 @@
 #include "ai_baseactor.h"
 #include "ai_criteria.h"
 #include "tier1/strtools.h"
+#include "tier1/intern_pool.h"
 #include "checksum_crc.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
-#include "utlbuffer.h"
+#include "tier1/byte_reader.h"
 #include "tier0/icommandline.h"
 #include "sceneentity.h"
 #include "datacache/idatacache.h"
@@ -46,9 +50,6 @@
 #include "usermessages.h"
 
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 extern ISoundEmitterSystemBase *soundemitterbase;
 extern ISceneFileCache *scenefilecache;
@@ -110,7 +111,7 @@ public:
 	[[= ks::reflect::Input{ .name = "Shutdown", .type = FIELD_VOID } ]] void	InputShutdown( inputdata_t &inputdata );
 
 private:
-	CUtlVector< CHandle< CSceneListManager > >	m_hListManagers;
+	std::vector< CHandle< CSceneListManager > >	m_hListManagers;
 	[[= ks::reflect::Key{ .name = "scene15", .index = 15 } ]] [[= ks::reflect::Key{ .name = "scene14", .index = 14 } ]] [[= ks::reflect::Key{ .name = "scene13", .index = 13 } ]] [[= ks::reflect::Key{ .name = "scene12", .index = 12 } ]] [[= ks::reflect::Key{ .name = "scene11", .index = 11 } ]] [[= ks::reflect::Key{ .name = "scene10", .index = 10 } ]] [[= ks::reflect::Key{ .name = "scene9", .index = 9 } ]] [[= ks::reflect::Key{ .name = "scene8", .index = 8 } ]] [[= ks::reflect::Key{ .name = "scene7", .index = 7 } ]] [[= ks::reflect::Key{ .name = "scene6", .index = 6 } ]] [[= ks::reflect::Key{ .name = "scene5", .index = 5 } ]] [[= ks::reflect::Key{ .name = "scene4", .index = 4 } ]] [[= ks::reflect::Key{ .name = "scene3", .index = 3 } ]] [[= ks::reflect::Key{ .name = "scene2", .index = 2 } ]] [[= ks::reflect::Key{ .name = "scene1", .index = 1 } ]] [[= ks::reflect::Key{ .name = "scene0", .index = 0 } ]] string_t				m_iszScenes[SCENE_LIST_MANAGER_MAX_SCENES];
 	EHANDLE					m_hScenes[SCENE_LIST_MANAGER_MAX_SCENES];
 };
@@ -174,11 +175,11 @@ private:
 		float					time_in_past;
 	};
 
-	CUtlVector< CHandle< CSceneEntity > >	m_ActiveScenes;
+	std::vector< CHandle< CSceneEntity > >	m_ActiveScenes;
 
-	CUtlVector< CHandle< CSceneEntity > >	m_Scenes;
+	std::vector< CHandle< CSceneEntity > >	m_Scenes;
 
-	CUtlVector< CRestoreSceneSound >		m_QueuedSceneSounds;
+	std::vector< CRestoreSceneSound >		m_QueuedSceneSounds;
 };
 
 //---------------------------------------------------------
@@ -419,20 +420,25 @@ public:
 
 	struct SpeakEventSound_t
 	{
-		CUtlSymbol	m_Symbol;
+		std::string_view	m_Symbol;	// view into the prefetch pool
 		float		m_flStartTime;
 	};
 
-	static bool SpeakEventSoundLessFunc( const SpeakEventSound_t& lhs, const SpeakEventSound_t& rhs );
+	// Sort by event start time
+	struct SpeakEventSoundLess
+	{
+		bool operator()( const SpeakEventSound_t& lhs, const SpeakEventSound_t& rhs ) const { return lhs.m_flStartTime < rhs.m_flStartTime; }
+	};
+	using SpeakEventSounds_t = std::multiset< SpeakEventSound_t, SpeakEventSoundLess >;
 
 	bool					GetSoundNameForPlayer( CChoreoEvent *event, CBasePlayer *player, char *buf, size_t buflen );
 
 	void					BuildSortedSpeakEventSoundsPrefetchList(
 								CChoreoScene *scene,
-								CUtlSymbolTable& table,
-								CUtlRBTree< SpeakEventSound_t >& soundnames,
+								ks::intern_pool& table,
+								SpeakEventSounds_t& soundnames,
 								float timeOffset );
-	void					PrefetchSpeakEventSounds( CUtlSymbolTable& table, CUtlRBTree< SpeakEventSound_t >& soundnames );
+	void					PrefetchSpeakEventSounds( const SpeakEventSounds_t& soundnames );
 
 	// Event handlers
 	virtual void			DispatchStartExpression( CChoreoScene *scene, CBaseFlex *actor, CChoreoEvent *event );
@@ -559,8 +565,7 @@ public:
 
 private:
 
-	CUtlVector< CHandle< CBaseFlex > >		m_hActorList;
-	CUtlVector< CHandle< CBaseEntity > >	m_hRemoveActorList;
+	std::vector< CHandle< CBaseFlex > >		m_hActorList;
 
 private:
 
@@ -626,8 +631,8 @@ private:
 	bool					m_bCompletedEarly;
 
 	bool					m_bInterruptSceneFinished;
-	CUtlVector< CHandle< CSceneEntity > >	m_hNotifySceneCompletion;
-	CUtlVector< CHandle< CSceneListManager > >	m_hListManagers;
+	std::vector< CHandle< CSceneEntity > >	m_hNotifySceneCompletion;
+	std::vector< CHandle< CSceneListManager > >	m_hListManagers;
 
 	bool					m_bRestoring;
 
@@ -1482,14 +1487,14 @@ void CSceneEntity::DispatchEndMoveTo( CChoreoScene *scene, CBaseFlex *actor, CCh
 //			soundorigins -
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
-bool AttenuateCaption( const char *token, const Vector& listener, CUtlVector< Vector >& soundorigins )
+bool AttenuateCaption( const char *token, const Vector& listener, std::vector< Vector >& soundorigins )
 {
 	if ( scene_maxcaptionradius.GetFloat() <= 0.0f )
 	{
 		return false;
 	}
 
-	int c = soundorigins.Count();
+	int c = std::ssize( soundorigins );
 
 	if ( c <= 0 )
 	{
@@ -1777,7 +1782,7 @@ void CSceneEntity::DispatchStartSpeak( CChoreoScene *scene, CBaseFlex *actor, CC
 					float durationShort = event->GetDuration();
 					float durationLong = endtime - event->GetStartTime();
 
-					float duration = MAX( durationShort, durationLong );
+					float duration = std::max( durationShort, durationLong );
 
 					char const *pszActorModel = STRING( actor->GetModelName() );
 					gender_t gender = soundemitterbase->GetActorGender( pszActorModel );
@@ -2051,7 +2056,7 @@ void CSceneEntity::InputScriptPlayerDeath( inputdata_t &inputdata )
 void CSceneEntity::InputSetTarget1( inputdata_t &inputdata )
 {
 	m_iszTarget1 = MAKE_STRING( inputdata.value.String() );
-	m_hActorList.Purge();
+	m_hActorList.clear();
 	NetworkProp()->NetworkStateForceUpdate();
 	m_hTarget1 = FindNamedTarget( m_iszTarget1, false );
 }
@@ -2059,7 +2064,7 @@ void CSceneEntity::InputSetTarget1( inputdata_t &inputdata )
 void CSceneEntity::InputSetTarget2( inputdata_t &inputdata )
 {
 	m_iszTarget2 = MAKE_STRING( inputdata.value.String() );
-	m_hActorList.Purge();
+	m_hActorList.clear();
 	NetworkProp()->NetworkStateForceUpdate();
 	m_hTarget2 = FindNamedTarget( m_iszTarget2, false );
 }
@@ -2067,7 +2072,7 @@ void CSceneEntity::InputSetTarget2( inputdata_t &inputdata )
 void CSceneEntity::InputSetTarget3( inputdata_t &inputdata )
 {
 	m_iszTarget3 = MAKE_STRING( inputdata.value.String() );
-	m_hActorList.Purge();
+	m_hActorList.clear();
 	NetworkProp()->NetworkStateForceUpdate();
 	m_hTarget3 = FindNamedTarget( m_iszTarget3, false );
 }
@@ -2075,7 +2080,7 @@ void CSceneEntity::InputSetTarget3( inputdata_t &inputdata )
 void CSceneEntity::InputSetTarget4( inputdata_t &inputdata )
 {
 	m_iszTarget4 = MAKE_STRING( inputdata.value.String() );
-	m_hActorList.Purge();
+	m_hActorList.clear();
 	NetworkProp()->NetworkStateForceUpdate();
 	m_hTarget4 = FindNamedTarget( m_iszTarget4, false );
 }
@@ -2172,7 +2177,7 @@ void CSceneEntity::InputInterjectResponse( inputdata_t &inputdata )
 		return;
 	}
 
-	CUtlVector< CAI_BaseActor * >	candidates;
+	std::vector< CAI_BaseActor * >	candidates;
 	int i;
 	for ( i = 0 ; i < m_pScene->GetNumActors(); i++ )
 	{
@@ -2187,10 +2192,10 @@ void CSceneEntity::InputInterjectResponse( inputdata_t &inputdata )
 		if ( !pBaseActor->IsAlive() )
 			continue;
 
-		candidates.AddToTail( pBaseActor );
+		candidates.push_back( pBaseActor );
 	}
 
-	int c = candidates.Count();
+	int c = std::ssize( candidates );
 
 	if ( !c )
 	{
@@ -2205,7 +2210,7 @@ void CSceneEntity::InputInterjectResponse( inputdata_t &inputdata )
 	}
 	else
 	{
-		CUtlVector< NPCInterjection > validResponses;
+		std::vector< NPCInterjection > validResponses;
 
 		char modifiers[ 512 ];
 		Q_snprintf( modifiers, sizeof( modifiers ), "scene:%s", STRING( GetEntityName() ) );
@@ -2237,10 +2242,10 @@ void CSceneEntity::InputInterjectResponse( inputdata_t &inputdata )
 			inter.response = response;
 			inter.npc = npc;
 
-			validResponses.AddToTail( inter );
+			validResponses.push_back( inter );
 		}
 
-		int rcount = validResponses.Count();
+		int rcount = std::ssize( validResponses );
 		if ( rcount >= 1 )
 		{
 			int slot = RandomInt( 0, rcount - 1 );
@@ -2361,7 +2366,7 @@ void CSceneEntity::PrefetchAnimBlocks( CChoreoScene *scene )
 	Assert( scene );
 
 	// Build a fast lookup, too
-	CUtlMap< CChoreoActor *, CBaseFlex *> actorMap( 0, 0, DefLessFunc( CChoreoActor * ) );
+	std::map< CChoreoActor *, CBaseFlex *> actorMap;
 
 	int spew = scene_async_prefetch_spew.GetInt();
 	int resident = 0;
@@ -2388,15 +2393,15 @@ void CSceneEntity::PrefetchAnimBlocks( CChoreoScene *scene )
 				if ( actor )
 				{
 					CBaseFlex *pActor = nullptr;
-					int idx = actorMap.Find( actor );
-					if ( idx == actorMap.InvalidIndex() )
+					auto it = actorMap.find( actor );
+					if ( it == actorMap.end() )
 					{
 						pActor = FindNamedActor( actor );
-						idx = actorMap.Insert( actor, pActor );
+						actorMap.emplace( actor, pActor );
 					}
 					else
 					{
-						pActor = actorMap[ idx ];
+						pActor = it->second;
 					}
 
 					if ( pActor )
@@ -2523,14 +2528,14 @@ void CSceneEntity::StartPlayback( void )
 	m_OnStart.FireOutput( this, this, 0 );
 
 	// Aysnchronously load speak sounds
-	CUtlSymbolTable prefetchSoundSymbolTable;
-	CUtlRBTree< SpeakEventSound_t > soundnames( 0, 0, SpeakEventSoundLessFunc );
+	ks::intern_pool prefetchSoundSymbolTable;
+	SpeakEventSounds_t soundnames;
 
 	BuildSortedSpeakEventSoundsPrefetchList( m_pScene, prefetchSoundSymbolTable, soundnames, 0.0f );
-	PrefetchSpeakEventSounds( prefetchSoundSymbolTable, soundnames );
+	PrefetchSpeakEventSounds( soundnames );
 
 	// Tell any managers we're within that we've started
-	int c = m_hListManagers.Count();
+	int c = std::ssize( m_hListManagers );
 	for ( int i = 0; i < c; i++ )
 	{
 		if ( m_hListManagers[i] )
@@ -2543,23 +2548,13 @@ void CSceneEntity::StartPlayback( void )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Static method used to sort by event start time
-//-----------------------------------------------------------------------------
-bool CSceneEntity::SpeakEventSoundLessFunc( const SpeakEventSound_t& lhs, const SpeakEventSound_t& rhs )
-{
-	return lhs.m_flStartTime < rhs.m_flStartTime;
-}
-
-//-----------------------------------------------------------------------------
 // Purpose: Prefetches the list of sounds build by BuildSortedSpeakEventSoundsPrefetchList
 //-----------------------------------------------------------------------------
-void CSceneEntity::PrefetchSpeakEventSounds( CUtlSymbolTable& table, CUtlRBTree< SpeakEventSound_t >& soundnames )
+void CSceneEntity::PrefetchSpeakEventSounds( const SpeakEventSounds_t& soundnames )
 {
-	for ( int i = soundnames.FirstInorder(); i != soundnames.InvalidIndex() ; i = soundnames.NextInorder( i ) )
+	for ( const SpeakEventSound_t& sound : soundnames )
 	{
-		SpeakEventSound_t& sound = soundnames[ i ];
-		// Look it up in the string table
-		char const *soundname = table.String( sound.m_Symbol );
+		char const *soundname = sound.m_Symbol.data();
 
 		// Warning( "Prefetch %s\n", soundname );
 
@@ -2572,8 +2567,8 @@ void CSceneEntity::PrefetchSpeakEventSounds( CUtlSymbolTable& table, CUtlRBTree<
 //-----------------------------------------------------------------------------
 void CSceneEntity::BuildSortedSpeakEventSoundsPrefetchList(
 	CChoreoScene *scene,
-	CUtlSymbolTable& table,
-	CUtlRBTree< SpeakEventSound_t >& soundnames,
+	ks::intern_pool& table,
+	SpeakEventSounds_t& soundnames,
 	float timeOffset )
 {
 	Assert( scene );
@@ -2622,10 +2617,10 @@ void CSceneEntity::BuildSortedSpeakEventSoundsPrefetchList(
 				*/
 
 				SpeakEventSound_t ses;
-				ses.m_Symbol = table.AddString( soundname );
+				ses.m_Symbol = table.intern( soundname );
 				ses.m_flStartTime = timeOffset + event->GetStartTime();
 
-				soundnames.Insert( ses );
+				soundnames.insert( ses );
 			}
 			break;
 		case CChoreoEvent::SUBSCENE:
@@ -3371,12 +3366,12 @@ void CSceneEntity::EndEvent( float currenttime, CChoreoScene *scene, CChoreoEven
 //-----------------------------------------------------------------------------
 void MissingSceneWarning( char const *scenename )
 {
-	static CUtlSymbolTable missing;
+	static ks::intern_pool missing;
 
 	// Make sure we only show the message once
-	if ( UTL_INVAL_SYMBOL == missing.Find( scenename ) )
+	if ( !missing.contains( scenename ) )
 	{
-		missing.AddString( scenename );
+		missing.intern( scenename );
 
 		Warning( "Scene '%s' missing!\n", scenename );
 	}
@@ -3429,7 +3424,7 @@ CChoreoScene *CSceneEntity::LoadScene( const char *filename, IChoreoEventCallbac
 	}
 
 	CChoreoScene *pScene = new CChoreoScene( nullptr );
-	CUtlBuffer buf( pBuffer, fileSize, CUtlBuffer::READ_ONLY );
+	ks::byte_reader buf( pBuffer, fileSize );
 	if ( !pScene->RestoreFromBinaryBuffer( buf, loadfile, &g_ChoreoStringPool ) )
 	{
 		Warning( "CSceneEntity::LoadScene: Unable to load binary scene '%s'\n", loadfile );
@@ -3605,15 +3600,15 @@ bool CSceneEntity::CheckEvent( float currenttime, CChoreoScene *scene, CChoreoEv
 
 CBaseFlex *CSceneEntity::FindNamedActor( int index )
 {
-	if (m_hActorList.Count() == 0)
+	if ( m_hActorList.empty() )
 	{
-		m_hActorList.SetCount( m_pScene->GetNumActors() );
+		m_hActorList.assign( m_pScene->GetNumActors(), {} );
 		NetworkProp()->NetworkStateForceUpdate();
 	}
 
-	if ( !m_hActorList.IsValidIndex( index ) )
+	if ( index < 0 || index >= std::ssize( m_hActorList ) )
 	{
-		DevWarning( "Scene %s has %d actors, but scene entity only has %d actors\n", m_pScene->GetFilename(), m_pScene->GetNumActors(), m_hActorList.Count() );
+		DevWarning( "Scene %s has %d actors, but scene entity only has %d actors\n", m_pScene->GetFilename(), m_pScene->GetNumActors(), (int)std::ssize( m_hActorList ) );
 		return nullptr;
 	}
 
@@ -3785,11 +3780,11 @@ public:
 		if (pActor)
 		{
 			m_vecPos1 = pActor->GetAbsOrigin();
-			m_flMaxSegmentDistance = MIN( flMaxRadius, (m_vecPos1 - m_vecPos2).Length() + 1.0 );
+			m_flMaxSegmentDistance = std::min<std::common_type_t<float, double>>( flMaxRadius, (m_vecPos1 - m_vecPos2).Length() + 1.0 );
 			if (m_flMaxSegmentDistance <= 1.0)
 			{
 				// must be closest to self
-				m_flMaxSegmentDistance = MIN( flMaxRadius, MAX_TRACE_LENGTH );
+				m_flMaxSegmentDistance = std::min<std::common_type_t<float, double>>( flMaxRadius, MAX_TRACE_LENGTH );
 			}
 		}
 	}
@@ -4293,9 +4288,9 @@ void CSceneEntity::RequestCompletionNotification( CSceneEntity *notify )
 	CHandle< CSceneEntity > h;
 	h = notify;
 	// Only add it once
-	if ( m_hNotifySceneCompletion.Find( h ) == m_hNotifySceneCompletion.InvalidIndex() )
+	if ( ks::find_index( m_hNotifySceneCompletion, h ) == -1 )
 	{
-		m_hNotifySceneCompletion.AddToTail( h );
+		m_hNotifySceneCompletion.push_back( h );
 	}
 }
 
@@ -4320,9 +4315,9 @@ void CSceneEntity::AddListManager( CSceneListManager *pManager )
 	CHandle< CSceneListManager > h;
 	h = pManager;
 	// Only add it once
-	if ( m_hListManagers.Find( h ) == m_hListManagers.InvalidIndex() )
+	if ( ks::find_index( m_hListManagers, h ) == -1 )
 	{
-		m_hListManagers.AddToTail( h );
+		m_hListManagers.push_back( h );
 	}
 }
 
@@ -4334,56 +4329,56 @@ void CSceneEntity::ClearActivatorTargets( void )
 	if ( !stricmp( STRING(m_iszTarget1), "!activator" ) )
 	{
 		// We need to clear out actors so they're re-evaluated
-		m_hActorList.Purge();
+		m_hActorList.clear();
 		NetworkProp()->NetworkStateForceUpdate();
 		m_hTarget1 = nullptr;
 	}
 	if ( !stricmp( STRING(m_iszTarget2), "!activator" ) )
 	{
 		// We need to clear out actors so they're re-evaluated
-		m_hActorList.Purge();
+		m_hActorList.clear();
 		NetworkProp()->NetworkStateForceUpdate();
 		m_hTarget2 = nullptr;
 	}
 	if ( !stricmp( STRING(m_iszTarget3), "!activator" ) )
 	{
 		// We need to clear out actors so they're re-evaluated
-		m_hActorList.Purge();
+		m_hActorList.clear();
 		NetworkProp()->NetworkStateForceUpdate();
 		m_hTarget3 = nullptr;
 	}
 	if ( !stricmp( STRING(m_iszTarget4), "!activator" ) )
 	{
 		// We need to clear out actors so they're re-evaluated
-		m_hActorList.Purge();
+		m_hActorList.clear();
 		NetworkProp()->NetworkStateForceUpdate();
 		m_hTarget4 = nullptr;
 	}
 	if ( !stricmp( STRING(m_iszTarget5), "!activator" ) )
 	{
 		// We need to clear out actors so they're re-evaluated
-		m_hActorList.Purge();
+		m_hActorList.clear();
 		NetworkProp()->NetworkStateForceUpdate();
 		m_hTarget5 = nullptr;
 	}
 	if ( !stricmp( STRING(m_iszTarget6), "!activator" ) )
 	{
 		// We need to clear out actors so they're re-evaluated
-		m_hActorList.Purge();
+		m_hActorList.clear();
 		NetworkProp()->NetworkStateForceUpdate();
 		m_hTarget6 = nullptr;
 	}
 	if ( !stricmp( STRING(m_iszTarget7), "!activator" ) )
 	{
 		// We need to clear out actors so they're re-evaluated
-		m_hActorList.Purge();
+		m_hActorList.clear();
 		NetworkProp()->NetworkStateForceUpdate();
 		m_hTarget7 = nullptr;
 	}
 	if ( !stricmp( STRING(m_iszTarget8), "!activator" ) )
 	{
 		// We need to clear out actors so they're re-evaluated
-		m_hActorList.Purge();
+		m_hActorList.clear();
 		NetworkProp()->NetworkStateForceUpdate();
 		m_hTarget8 = nullptr;
 	}
@@ -4400,7 +4395,7 @@ void CSceneEntity::OnSceneFinished( bool canceled, bool fireoutput )
 	LocalScene_Printf( "%s : %8.2f:  finished\n", STRING( m_iszSceneFile ), m_flCurrentTime );
 
 	// Notify any listeners
-	int c = m_hNotifySceneCompletion.Count();
+	int c = std::ssize( m_hNotifySceneCompletion );
 	int i;
 	for ( i = 0; i < c; i++ )
 	{
@@ -4410,7 +4405,7 @@ void CSceneEntity::OnSceneFinished( bool canceled, bool fireoutput )
 
 		ent->NotifyOfCompletion( this );
 	}
-	m_hNotifySceneCompletion.RemoveAll();
+	m_hNotifySceneCompletion.clear();
 
 	// Clear simulation
 	m_pScene->ResetSimulation();
@@ -4870,34 +4865,33 @@ int GetSceneSpeechCount( char const *pszScene )
 class CScenePrecacheSystem : public CAutoGameSystem
 {
 public:
-	CScenePrecacheSystem() : CAutoGameSystem( "CScenePrecacheSystem" ), m_RepeatCounts( 0, 0, DefLessFunc( int ) )
+	CScenePrecacheSystem() : CAutoGameSystem( "CScenePrecacheSystem" )
 	{
 	}
 
 	// Level init, shutdown
 	virtual void LevelShutdownPreEntity()
 	{
-		m_RepeatCounts.Purge();
+		m_RepeatCounts.clear();
 	}
 
 	bool ShouldPrecache( char const *pszScene )
 	{
 		int hash = HashStringCaselessConventional( pszScene );
 
-		int slot = m_RepeatCounts.Find( hash );
-		if ( slot != m_RepeatCounts.InvalidIndex() )
+		auto [it, bInserted] = m_RepeatCounts.try_emplace( hash, 0 );
+		if ( !bInserted )
 		{
-			m_RepeatCounts[ slot ]++;
+			it->second++;
 			return false;
 		}
 
-		m_RepeatCounts.Insert( hash, 0 );
 		return true;
 	}
 
 private:
 
-	CUtlMap< int, int > m_RepeatCounts;
+	std::map< int, int > m_RepeatCounts;
 };
 
 static CScenePrecacheSystem g_ScenePrecacheSystem;
@@ -4985,7 +4979,7 @@ void CInstancedSceneEntity::DoThink( float frametime )
 
 	if ( m_flPreDelay > 0 )
 	{
-		m_flPreDelay = MAX( 0, m_flPreDelay - frametime );
+		m_flPreDelay = std::max<std::common_type_t<int, float>>( 0, m_flPreDelay - frametime );
 		StartPlayback();
 		if ( !m_bIsPlayingBack )
 			return;
@@ -5104,7 +5098,7 @@ bool CInstancedSceneEntity::PassThrough( CBaseFlex *actor )
 		CAI_ScheduleBits testBits;
 		myNpc->GetCurSchedule()->GetInterruptMask( &testBits );
 
-		if (testBits.IsBitSet( COND_IDLE_INTERRUPT ))
+		if (testBits[COND_IDLE_INTERRUPT])
 		{
 			return true;
 		}
@@ -5163,14 +5157,14 @@ void CSceneManager::Think()
 	// The manager is always thinking at 20 hz
 	SetNextThink( gpGlobals->curtime + SCENE_THINK_INTERVAL );
 	float frameTime = ( gpGlobals->curtime - GetLastThink() );
-	frameTime = MIN( 0.1, frameTime );
+	frameTime = std::min<std::common_type_t<double, float>>( 0.1, frameTime );
 
 	// stop if AI is disabled
 	if (CAI_BaseNPC::m_nDebugBits & bits_debugDisableAI)
 		return;
 
 	bool needCleanupPass = false;
-	int c = m_ActiveScenes.Count();
+	int c = std::ssize( m_ActiveScenes );
 	for ( int i = 0; i < c; i++ )
 	{
 		CSceneEntity *scene = m_ActiveScenes[ i ].Get();
@@ -5182,10 +5176,10 @@ void CSceneManager::Think()
 
 		scene->DoThink( frameTime );
 
-		if ( m_ActiveScenes.Count() < c )
+		if ( std::ssize( m_ActiveScenes ) < c )
 		{
 			// Scene removed self while thinking. Adjust iteration.
-			c = m_ActiveScenes.Count();
+			c = std::ssize( m_ActiveScenes );
 			i--;
 		}
 	}
@@ -5199,10 +5193,10 @@ void CSceneManager::Think()
 			if ( scene )
 				continue;
 
-			m_Scenes.Remove( i );
+			m_Scenes.erase( m_Scenes.begin() + i );
 		}
 
-		c = m_ActiveScenes.Count();
+		c = std::ssize( m_ActiveScenes );
 
 		for ( int i = c - 1; i >= 0; i-- )
 		{
@@ -5210,7 +5204,7 @@ void CSceneManager::Think()
 			if ( scene )
 				continue;
 
-			m_ActiveScenes.Remove( i );
+			m_ActiveScenes.erase( m_ActiveScenes.begin() + i );
 		}
 	}
 }
@@ -5220,7 +5214,7 @@ void CSceneManager::Think()
 //-----------------------------------------------------------------------------
 void CSceneManager::ClearAllScenes()
 {
-	m_Scenes.RemoveAll();
+	m_Scenes.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -5234,12 +5228,12 @@ void CSceneManager::AddSceneEntity( CSceneEntity *scene )
 	h = scene;
 
 	// Already added/activated
-	if ( m_Scenes.Find( h ) != m_Scenes.InvalidIndex() )
+	if ( ks::find_index( m_Scenes, h ) != -1 )
 	{
 		return;
 	}
 
-	m_Scenes.AddToTail( h );
+	m_Scenes.push_back( h );
 
 	if ( scene->m_pScene )
 	{
@@ -5259,7 +5253,7 @@ void CSceneManager::RemoveSceneEntity( CSceneEntity *scene )
 
 	h = scene;
 
-	m_Scenes.FindAndRemove( h );
+	ks::erase_first( m_Scenes, h );
 }
 
 //-----------------------------------------------------------------------------
@@ -5275,12 +5269,12 @@ void CSceneManager::ActivateScene( CSceneEntity *scene )
 	h = scene;
 
 	// Already added/activated
-	if ( m_ActiveScenes.Find( h ) != m_ActiveScenes.InvalidIndex() )
+	if ( ks::find_index( m_ActiveScenes, h ) != -1 )
 	{
 		return;
 	}
 
-	m_ActiveScenes.AddToTail( h );
+	m_ActiveScenes.push_back( h );
 }
 
 //-----------------------------------------------------------------------------
@@ -5293,7 +5287,7 @@ void CSceneManager::DeactivateScene( CSceneEntity *scene )
 
 	h = scene;
 
-	m_ActiveScenes.FindAndRemove( h );
+	ks::erase_first( m_ActiveScenes, h );
 }
 
 
@@ -5303,7 +5297,7 @@ void CSceneManager::DeactivateScene( CSceneEntity *scene )
 //-----------------------------------------------------------------------------
 void CSceneManager::OnClientActive( CBasePlayer *player )
 {
-	int c = m_QueuedSceneSounds.Count();
+	int c = std::ssize( m_QueuedSceneSounds );
 	for ( int i = 0; i < c; i++ )
 	{
 		CRestoreSceneSound *sound = &m_QueuedSceneSounds[ i ];
@@ -5329,7 +5323,7 @@ void CSceneManager::OnClientActive( CBasePlayer *player )
 		EmitSound( filter, sound->actor->entindex(), es );
 	}
 
-	m_QueuedSceneSounds.RemoveAll();
+	m_QueuedSceneSounds.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -5337,7 +5331,7 @@ void CSceneManager::OnClientActive( CBasePlayer *player )
 //-----------------------------------------------------------------------------
 void CSceneManager::RemoveActorFromScenes( CBaseFlex *pActor, bool bInstancedOnly, bool bNonIdleOnly, const char *pszThisSceneOnly )
 {
-	int c = m_Scenes.Count();
+	int c = std::ssize( m_Scenes );
 	for ( int i = 0; i < c; i++ )
 	{
 		CSceneEntity *pScene = m_Scenes[ i ].Get();
@@ -5379,7 +5373,7 @@ void CSceneManager::RemoveActorFromScenes( CBaseFlex *pActor, bool bInstancedOnl
 //-----------------------------------------------------------------------------
 void CSceneManager::PauseActorsScenes( CBaseFlex *pActor, bool bInstancedOnly  )
 {
-	int c = m_Scenes.Count();
+	int c = std::ssize( m_Scenes );
 	for ( int i = 0; i < c; i++ )
 	{
 		CSceneEntity *pScene = m_Scenes[ i ].Get();
@@ -5410,7 +5404,7 @@ void CSceneManager::PauseActorsScenes( CBaseFlex *pActor, bool bInstancedOnly  )
 //-----------------------------------------------------------------------------
 bool CSceneManager::IsInInterruptableScenes( CBaseFlex *pActor )
 {
-	int c = m_Scenes.Count();
+	int c = std::ssize( m_Scenes );
 	for ( int i = 0; i < c; i++ )
 	{
 		CSceneEntity *pScene = m_Scenes[ i ].Get();
@@ -5436,7 +5430,7 @@ bool CSceneManager::IsInInterruptableScenes( CBaseFlex *pActor )
 //-----------------------------------------------------------------------------
 void CSceneManager::ResumeActorsScenes( CBaseFlex *pActor, bool bInstancedOnly  )
 {
-	int c = m_Scenes.Count();
+	int c = std::ssize( m_Scenes );
 	for ( int i = 0; i < c; i++ )
 	{
 		CSceneEntity *pScene = m_Scenes[ i ].Get();
@@ -5467,7 +5461,7 @@ void CSceneManager::ResumeActorsScenes( CBaseFlex *pActor, bool bInstancedOnly  
 //-----------------------------------------------------------------------------
 void CSceneManager::QueueActorsScenesToResume( CBaseFlex *pActor, bool bInstancedOnly  )
 {
-	int c = m_Scenes.Count();
+	int c = std::ssize( m_Scenes );
 	for ( int i = 0; i < c; i++ )
 	{
 		CSceneEntity *pScene = m_Scenes[ i ].Get();
@@ -5495,7 +5489,7 @@ void CSceneManager::QueueActorsScenesToResume( CBaseFlex *pActor, bool bInstance
 //-----------------------------------------------------------------------------
 bool CSceneManager::IsRunningScriptedScene( CBaseFlex *pActor, bool bIgnoreInstancedScenes )
 {
-	int c = m_Scenes.Count();
+	int c = std::ssize( m_Scenes );
 	for ( int i = 0; i < c; i++ )
 	{
 		CSceneEntity *pScene = m_Scenes[ i ].Get();
@@ -5517,7 +5511,7 @@ bool CSceneManager::IsRunningScriptedScene( CBaseFlex *pActor, bool bIgnoreInsta
 
 bool CSceneManager::IsRunningScriptedSceneAndNotPaused( CBaseFlex *pActor, bool bIgnoreInstancedScenes )
 {
-	int c = m_Scenes.Count();
+	int c = std::ssize( m_Scenes );
 	for ( int i = 0; i < c; i++ )
 	{
 		CSceneEntity *pScene = m_Scenes[ i ].Get();
@@ -5545,7 +5539,7 @@ bool CSceneManager::IsRunningScriptedSceneAndNotPaused( CBaseFlex *pActor, bool 
 //-----------------------------------------------------------------------------
 bool CSceneManager::IsRunningScriptedSceneWithSpeech( CBaseFlex *pActor, bool bIgnoreInstancedScenes )
 {
-	int c = m_Scenes.Count();
+	int c = std::ssize( m_Scenes );
 	for ( int i = 0; i < c; i++ )
 	{
 		CSceneEntity *pScene = m_Scenes[ i ].Get();
@@ -5569,7 +5563,7 @@ bool CSceneManager::IsRunningScriptedSceneWithSpeech( CBaseFlex *pActor, bool bI
 
 bool CSceneManager::IsRunningScriptedSceneWithSpeechAndNotPaused( CBaseFlex *pActor, bool bIgnoreInstancedScenes )
 {
-	int c = m_Scenes.Count();
+	int c = std::ssize( m_Scenes );
 	for ( int i = 0; i < c; i++ )
 	{
 		CSceneEntity *pScene = m_Scenes[ i ].Get();
@@ -5607,7 +5601,7 @@ void CSceneManager::QueueRestoredSound( CBaseFlex *actor, char const *soundname,
 	e.soundlevel = soundlevel;
 	e.time_in_past = time_in_past;
 
-	m_QueuedSceneSounds.AddToTail( e );
+	m_QueuedSceneSounds.push_back( e );
 }
 
 
@@ -5750,7 +5744,7 @@ void CSceneListManager::SceneStarted( CBaseEntity *pSceneOrManager )
 	// Tell any managers we're within that we've started a scene
 	if ( bFoundStart )
 	{
-		int c = m_hListManagers.Count();
+		int c = std::ssize( m_hListManagers );
 		for ( int i = 0; i < c; i++ )
 		{
 			if ( m_hListManagers[i] )
@@ -5769,9 +5763,9 @@ void CSceneListManager::AddListManager( CSceneListManager *pManager )
 	CHandle< CSceneListManager > h;
 	h = pManager;
 	// Only add it once
-	if ( m_hListManagers.Find( h ) == m_hListManagers.InvalidIndex() )
+	if ( ks::find_index( m_hListManagers, h ) == -1 )
 	{
-		m_hListManagers.AddToTail( h );
+		m_hListManagers.push_back( h );
 	}
 }
 

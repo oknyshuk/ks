@@ -11,9 +11,6 @@
 #include "cs_simple_hostage.h"
 #include "cs_bot.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // range for snipers to select a hiding spot
 const float sniperHideRange = 2000.0f;
 
@@ -876,10 +873,10 @@ void IdleState::OnUpdate( CCSBot *me )
 			// if we just spawned, cheat and make us aware of other players so players can't spawncamp us effectively
 			if ( me->m_spawnedTime - gpGlobals->curtime < 1.0f )
 			{
-				CUtlVector< CCSPlayer * > playerVector;
+				std::vector< CCSPlayer * > playerVector;
 				CollectPlayers( &playerVector, TEAM_ANY, COLLECT_ONLY_LIVING_PLAYERS );
 
-				for( int i=0; i<playerVector.Count(); ++i )
+				for( int i=0; i<std::ssize( playerVector ); ++i )
 				{
 					if ( me->entindex() == playerVector[i]->entindex() )
 					{

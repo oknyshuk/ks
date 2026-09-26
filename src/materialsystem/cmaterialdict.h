@@ -7,8 +7,12 @@
 #ifndef CMATERIALDICT_H
 #define CMATERIALDICT_H
 
-#include "tier1/utlsymbol.h"
-#include "tier1/utlrbtree.h"
+#include "tier1/intern_pool.h"
+#include <map>
+#include <set>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #ifndef MATSYS_INTERNAL
 #error "This file is private to the implementation of IMaterialSystem/IMaterialSystemInternal"
@@ -28,9 +32,7 @@ typedef unsigned short MaterialHandle_t;
 class CMaterialDict
 {
 public:
-	CMaterialDict() :
-		m_MaterialDict( 0, 256, MaterialLessFunc ),
-		m_MissingList( 0, 32, MissingMaterialLessFunc )
+	CMaterialDict()
 	{
 	}
 
@@ -66,30 +68,45 @@ protected: /*private:*/
 	void				RemoveMaterialFromMaterialList( MaterialHandle_t h );
 
 
+	MaterialHandle_t	AllocMaterialHandle();
+
 	// Stores a dictionary of materials, searched by name
-	struct MaterialLookup_t
+	struct MaterialKey_t
+	{
+		bool m_bManuallyCreated;
+		std::string_view m_Name;	// in ks::global_symbols() for stored keys
+	};
+
+	struct MaterialKeyLess
+	{
+		bool operator()( const MaterialKey_t& src1, const MaterialKey_t& src2 ) const
+		{
+			// Always sort manually-created materials to the front
+			if ( src1.m_bManuallyCreated != src2.m_bManuallyCreated )
+				return src1.m_bManuallyCreated;
+
+			return src1.m_Name < src2.m_Name;
+		}
+	};
+
+	// Names can repeat (procedural materials).
+	typedef std::multimap< MaterialKey_t, MaterialHandle_t, MaterialKeyLess > MaterialDict_t;
+
+	// A MaterialHandle_t indexes m_MaterialSlots and stays valid until its material is removed.
+	struct MaterialSlot_t
 	{
 		IMaterialInternal* m_pMaterial;
-		CUtlSymbol m_Name;
-		bool m_bManuallyCreated;
+		MaterialDict_t::iterator m_It;
 	};
+
+	MaterialDict_t m_MaterialDict;
+	std::vector< MaterialSlot_t > m_MaterialSlots;
+	std::vector< MaterialHandle_t > m_FreeMaterialSlots;
 
 	// Stores a dictionary of missing materials to cut down on redundant warning messages
 	// TODO:  1) Could add a counter
 	//        2) Could dump to file/console at exit for exact list of missing materials
-	struct MissingMaterial_t
-	{
-		CUtlSymbol	m_Name;
-	};
-
-	static bool MaterialLessFunc( const MaterialLookup_t& src1, 
-		const MaterialLookup_t& src2 );
-
-	static bool MissingMaterialLessFunc( const MissingMaterial_t& src1, 
-		const MissingMaterial_t& src2 );
-
-	CUtlRBTree< MaterialLookup_t, MaterialHandle_t > m_MaterialDict;
-	CUtlRBTree< MissingMaterial_t, int > m_MissingList;
+	std::set< std::string, std::less<> > m_MissingList;
 };
 
 //-----------------------------------------------------------------------------
@@ -97,17 +114,18 @@ protected: /*private:*/
 //-----------------------------------------------------------------------------
 inline MaterialHandle_t CMaterialDict::FirstMaterial() const
 {
-	return m_MaterialDict.FirstInorder();
+	return m_MaterialDict.empty() ? InvalidMaterial() : m_MaterialDict.begin()->second;
 }
 
 inline MaterialHandle_t CMaterialDict::NextMaterial( MaterialHandle_t h ) const
 {
-	return m_MaterialDict.NextInorder(h);
+	auto it = std::next( m_MaterialSlots[h].m_It );
+	return it == m_MaterialDict.end() ? InvalidMaterial() : it->second;
 }
 
 inline int CMaterialDict::GetNumMaterials( )	const
 {
-	return m_MaterialDict.Count();
+	return (int)m_MaterialDict.size();
 }
 
 
@@ -116,7 +134,7 @@ inline int CMaterialDict::GetNumMaterials( )	const
 //-----------------------------------------------------------------------------
 inline MaterialHandle_t CMaterialDict::InvalidMaterial() const
 {
-	return m_MaterialDict.InvalidIndex();
+	return (MaterialHandle_t)~0;
 }
 
 
@@ -125,26 +143,26 @@ inline MaterialHandle_t CMaterialDict::InvalidMaterial() const
 //-----------------------------------------------------------------------------
 inline IMaterial* CMaterialDict::GetMaterial( MaterialHandle_t idx ) const
 {
-	return m_MaterialDict[idx].m_pMaterial;
+	return m_MaterialSlots[idx].m_pMaterial;
 }
 
 inline IMaterialInternal* CMaterialDict::GetMaterialInternal( MaterialHandle_t idx ) const
 {
-	Assert( (m_MaterialDict[idx].m_pMaterial == nullptr) || m_MaterialDict[idx].m_pMaterial->IsRealTimeVersion() );	
-	return m_MaterialDict[idx].m_pMaterial;
+	Assert( (m_MaterialSlots[idx].m_pMaterial == nullptr) || m_MaterialSlots[idx].m_pMaterial->IsRealTimeVersion() );	
+	return m_MaterialSlots[idx].m_pMaterial;
 }
 
 inline IMaterialInternal* CMaterialDict::FindMaterial( const char *pszName, bool bManuallyCreated ) const
 {
-	MaterialLookup_t lookup;
+	MaterialKey_t lookup;
 	lookup.m_Name = pszName;
 	lookup.m_bManuallyCreated = bManuallyCreated;	// This causes the search to find only file-created materials
 
-	MaterialHandle_t h = m_MaterialDict.Find( lookup );
+	auto it = m_MaterialDict.find( lookup );
 
-	if ( h != m_MaterialDict.InvalidIndex() )
+	if ( it != m_MaterialDict.end() )
 	{
-		return m_MaterialDict[h].m_pMaterial;
+		return m_MaterialSlots[it->second].m_pMaterial;
 	}
 
 	return nullptr;
@@ -153,24 +171,12 @@ inline IMaterialInternal* CMaterialDict::FindMaterial( const char *pszName, bool
 
 inline bool CMaterialDict::IsMissing( const char *pszName )
 {
-	MissingMaterial_t missing;
-	missing.m_Name = pszName;
-	if ( m_MissingList.Find( missing ) != m_MissingList.InvalidIndex() )
-		return true;
-	return false;
+	return m_MissingList.contains( std::string_view( pszName ) );
 }
 
 inline bool CMaterialDict::NoteMissing( const char *pszName )
 {
-	MissingMaterial_t missing;
-	missing.m_Name = pszName;
-	if ( m_MissingList.Find( missing ) != m_MissingList.InvalidIndex() )
-	{
-		return false;
-	}
-
-	m_MissingList.Insert( missing );
-	return true;
+	return m_MissingList.emplace( pszName ).second;
 }
 
 //-----------------------------------------------------------------------------

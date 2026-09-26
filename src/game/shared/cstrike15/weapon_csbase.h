@@ -441,7 +441,7 @@ private:
 	int m_iDefaultExtraAmmo;
 
 	// [dwenger] track all prior owners of this weapon
-	CUtlVector< CCSPlayer* > m_PriorOwners;
+	std::vector< CCSPlayer* > m_PriorOwners;
 
 	// [tj] To keep track of people who drop weapons for teammates during the buy round
 	CHandle<CCSPlayer> m_donor;

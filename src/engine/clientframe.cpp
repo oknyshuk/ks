@@ -10,9 +10,6 @@
 #include "packed_entity.h"
 #include "framesnapshot.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 CClientFrame::CClientFrame( CFrameSnapshot *pSnapshot )
 {
 	last_entity = 0;
@@ -92,7 +89,7 @@ void CClientFrame::CopyFrame( CClientFrame &frame )
 	if ( frame.transmit_always )
 	{
 		Assert( transmit_always == nullptr );
-		transmit_always = new CBitVec<MAX_EDICTS>;
+		transmit_always = new std::bitset<MAX_EDICTS>;
 		*transmit_always = *(frame.transmit_always);
 	}
 }
@@ -249,12 +246,12 @@ bool CClientFrameManager::DeleteUnusedClientFrame( CClientFrame* pFrameToDelete 
 //-----------------------------------------------------------------------------
 CClientFrame* CClientFrameManager::AllocateFrame()
 {
-	return m_ClientFramePool.Alloc();
+	return m_ClientFramePool.alloc();
 }
 
 CClientFrame*	CClientFrameManager::AllocateAndInitFrame( int nTick )
 {
-	CClientFrame* pFrame = m_ClientFramePool.Alloc();
+	CClientFrame* pFrame = m_ClientFramePool.alloc();
 	pFrame->Init( nTick );
 	if ( m_Frames && m_Frames->tick_count > nTick )
 	{
@@ -272,7 +269,7 @@ void CClientFrameManager::FreeFrame( CClientFrame* pFrame )
 {
 	if ( pFrame->IsMemPoolAllocated() )
 	{
-		m_ClientFramePool.Free( pFrame );
+		m_ClientFramePool.free( pFrame );
 	}
 	else
 	{

@@ -6,6 +6,7 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "engine/ivmodelinfo.h"
+#include <mutex>
 #include "filesystem.h"
 #include "gl_model_private.h"
 #include "modelloader.h"
@@ -17,15 +18,13 @@
 #include "materialsystem/imaterial.h"
 #include "lightcache.h"
 #include "istudiorender.h"
-#include "utlhashtable.h"
+#include "tier1/map_ops.h"
+#include <unordered_map>
 #include "filesystem_engine.h"
 #include "client.h"
 #include "sys_dll.h"
 #include "gl_rsurf.h"
 #include "networkstringtable.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Gets the lighting center
@@ -112,7 +111,7 @@ public:
 	vcollide_t *GetVCollide( int modelIndex ) const;
 
 	virtual const char *GetModelKeyValueText( const model_t *model );
-	virtual bool GetModelKeyValue( const model_t *model, CUtlBuffer &buf );
+	virtual bool GetModelKeyValue( const model_t *model, ks::text_writer &buf );
 	virtual KeyValues *GetModelKeyValues( const model_t *pModel );
 	virtual float GetModelRadius( const model_t *model );
 	virtual studiohdr_t *GetStudiomodel( const model_t *mod );
@@ -158,7 +157,7 @@ public:
 	virtual int						RegisterCombinedDynamicModel( const char *pszName, MDLHandle_t Handle ) = 0;
 	virtual void					UpdateCombinedDynamicModel( int nModelIndex, MDLHandle_t Handle ) = 0;
 	virtual int						BeginCombinedModel( const char *pszName, bool bReuseExisting ) = 0;
-	virtual bool					SetCombineModels( int nModelIndex, const CUtlVector< SCombinerModelInput_t > &vecModelsToCombine ) = 0;
+	virtual bool					SetCombineModels( int nModelIndex, const std::vector< SCombinerModelInput_t > &vecModelsToCombine ) = 0;
 	virtual bool					FinishCombinedModel( int nModelIndex, CombinedModelLoadedCallback pFunc, void *pUserData ) = 0;
 	virtual void					ReleaseCombinedModel( int nModelIndex ) = 0;
 	virtual bool					IsDynamicModelLoading( int modelIndex );
@@ -186,10 +185,10 @@ protected:
 
 	void GrowNetworkedDynamicModels( int netidx )
 	{
-		if ( m_NetworkedDynamicModels.Count() <= netidx )
+		if ( std::ssize( m_NetworkedDynamicModels ) <= netidx )
 		{
-			int origCount = m_NetworkedDynamicModels.Count();
-			m_NetworkedDynamicModels.SetCountNonDestructively( netidx + 1 );
+			int origCount = std::ssize( m_NetworkedDynamicModels );
+			m_NetworkedDynamicModels.resize( netidx + 1 );
 			for ( int i = origCount; i <= netidx; ++i )
 			{
 				m_NetworkedDynamicModels[i] = nullptr;
@@ -198,22 +197,16 @@ protected:
 	}
 
 	// Networked dynamic model indices are lookup indices for this vector
-	CUtlVector< model_t* > m_NetworkedDynamicModels;
+	std::vector< model_t* > m_NetworkedDynamicModels;
 
-public:
-	struct ModelFileHandleHash
-	{
-		uint operator()( model_t *p ) const { return PointerHashFunctor()( p->fnHandle ); }
-		uint operator()( FileNameHandle_t fn ) const { return PointerHashFunctor()( fn ); }
-	};
-	struct ModelFileHandleEq
-	{
-		bool operator()( model_t *a, model_t *b ) const { return a == b; }
-		bool operator()( model_t *a, FileNameHandle_t b ) const { return a->fnHandle == b; }
-	};
-protected:
-	// Client-only dynamic model indices are iterators into this struct (only populated by CModelInfoClient subclass)
-	CUtlStableHashtable< model_t*, empty_t, ModelFileHandleHash, ModelFileHandleEq, int16, FileNameHandle_t > m_ClientDynamicModels;
+	// Client-only dynamic model indices are stable slots in m_ClientDynamicModels (only populated by
+	// CModelInfoClient subclass); null slots are free and reused, most recently freed first.
+	std::vector< model_t* > m_ClientDynamicModels;
+	std::vector< int > m_ClientDynamicModelFreeSlots;
+	std::unordered_map< FileNameHandle_t, int > m_ClientDynamicModelSlots; // model file -> slot
+
+	int AddClientDynamicModel( model_t *pModel );
+	void RemoveClientDynamicModel( model_t *pModel );
 };
 
 const model_t *CModelInfo::FindOrLoadModel( const char *name ) const
@@ -612,11 +605,11 @@ const char *CModelInfo::GetModelKeyValueText( const model_t *model )
 	return pStudioHdr->KeyValueText();
 }
 
-static CThreadFastMutex g_ModelKeyValueMutex;
+static std::recursive_mutex g_ModelKeyValueMutex;
 KeyValues *CModelInfo::GetModelKeyValues( const model_t *pModel )
 {
 	// in case we enter this from multiple threads
-	AUTO_LOCK_FM( g_ModelKeyValueMutex );
+	std::scoped_lock lock( g_ModelKeyValueMutex );
 	if ( !pModel->m_pKeyValues )
 	{
 		const char *pKeyValueText = GetModelKeyValueText( pModel );
@@ -635,7 +628,7 @@ KeyValues *CModelInfo::GetModelKeyValues( const model_t *pModel )
 
 
 
-bool CModelInfo::GetModelKeyValue( const model_t *model, CUtlBuffer &buf )
+bool CModelInfo::GetModelKeyValue( const model_t *model, ks::text_writer &buf )
 {
 	if (!model || model->type != mod_studio)
 		return false;
@@ -646,7 +639,7 @@ bool CModelInfo::GetModelKeyValue( const model_t *model, CUtlBuffer &buf )
 
 	if ( pStudioHdr->numincludemodels == 0)
 	{
-		buf.PutString( pStudioHdr->KeyValueText() );
+		buf.put( pStudioHdr->KeyValueText() );
 		return true;
 	}
 
@@ -654,12 +647,12 @@ bool CModelInfo::GetModelKeyValue( const model_t *model, CUtlBuffer &buf )
 
 	if (pVM)
 	{
-		for (int i = 0; i < pVM->m_group.Count(); i++)
+		for (int i = 0; i < std::ssize( pVM->m_group ); i++)
 		{
 			const studiohdr_t* pSubStudioHdr = pVM->m_group[i].GetStudioHdr();
 			if (pSubStudioHdr && pSubStudioHdr->KeyValueText())
 			{
-				buf.PutString( pSubStudioHdr->KeyValueText() );
+				buf.put( pSubStudioHdr->KeyValueText() );
 			}
 		}
 	}
@@ -730,7 +723,7 @@ int CModelInfo::GetModelIndex( const char *name ) const
 		int netdyn = pTable->FindStringIndex( name );
 		if ( netdyn != INVALID_STRING_INDEX )
 		{
-			Assert( !m_NetworkedDynamicModels.IsValidIndex( netdyn ) || V_strcmp( m_NetworkedDynamicModels[netdyn]->szPathName, name ) == 0 );
+			Assert( !ks::is_valid_index( m_NetworkedDynamicModels, netdyn ) || V_strcmp( m_NetworkedDynamicModels[netdyn]->szPathName, name ) == 0 );
 			return NETDYNAMIC_TO_MODEL( netdyn );
 		}
 	}
@@ -740,16 +733,15 @@ int CModelInfo::GetModelIndex( const char *name ) const
 
 int CModelInfo::GetModelClientSideIndex( const char *name ) const
 {
-	if ( m_ClientDynamicModels.Count() != 0 )
+	if ( !m_ClientDynamicModelSlots.empty() )
 	{
 		FileNameHandle_t file = g_pFullFileSystem->FindFileName( name );
 		if ( file )
 		{
-			UtlHashHandle_t h = m_ClientDynamicModels.Find( file );
-			if ( h != m_ClientDynamicModels.InvalidHandle() )
+			if ( const int *pSlot = ks::find_ptr( m_ClientDynamicModelSlots, file ) )
 			{
-				Assert( V_strcmp( m_ClientDynamicModels[h]->szPathName, name ) == 0 );
-				return CLIENTSIDE_TO_MODEL( h );
+				Assert( V_strcmp( m_ClientDynamicModels[*pSlot]->szPathName, name ) == 0 );
+				return CLIENTSIDE_TO_MODEL( *pSlot );
 			}
 		}
 	}
@@ -757,18 +749,52 @@ int CModelInfo::GetModelClientSideIndex( const char *name ) const
 	return -1;
 }
 
+int CModelInfo::AddClientDynamicModel( model_t *pModel )
+{
+	auto [it, bInserted] = m_ClientDynamicModelSlots.try_emplace( pModel->fnHandle, 0 );
+	if ( !bInserted )
+	{
+		Assert( m_ClientDynamicModels[it->second] == pModel );
+		return it->second;
+	}
+
+	if ( m_ClientDynamicModelFreeSlots.empty() )
+	{
+		it->second = std::ssize( m_ClientDynamicModels );
+		m_ClientDynamicModels.push_back( pModel );
+	}
+	else
+	{
+		it->second = m_ClientDynamicModelFreeSlots.back();
+		m_ClientDynamicModelFreeSlots.pop_back();
+		m_ClientDynamicModels[it->second] = pModel;
+	}
+	return it->second;
+}
+
+void CModelInfo::RemoveClientDynamicModel( model_t *pModel )
+{
+	auto it = m_ClientDynamicModelSlots.find( pModel->fnHandle );
+	if ( it == m_ClientDynamicModelSlots.end() || m_ClientDynamicModels[it->second] != pModel )
+		return;
+
+	m_ClientDynamicModels[it->second] = nullptr;
+	m_ClientDynamicModelFreeSlots.push_back( it->second );
+	m_ClientDynamicModelSlots.erase( it );
+}
+
 model_t *CModelInfo::LookupDynamicModel( int i )
 {
 	Assert( IsDynamicModelIndex( i ) );
 	if ( IsClientOnlyModelIndex( i ) )
 	{
-		UtlHashHandle_t h = (UtlHashHandle_t) MODEL_TO_CLIENTSIDE( i );
-		return m_ClientDynamicModels.IsValidHandle( h ) ? m_ClientDynamicModels[ h ] : nullptr;
+		int h = MODEL_TO_CLIENTSIDE( i );
+		return ( h >= 0 && h < std::ssize( m_ClientDynamicModels ) ) ? m_ClientDynamicModels[ h ] : nullptr;
 	}
 	else
 	{
 		int netidx = MODEL_TO_NETDYNAMIC( i );
-		if ( m_NetworkedDynamicModels.IsValidIndex( netidx ) && m_NetworkedDynamicModels[ netidx ] )
+		if ( ks::is_valid_index( m_NetworkedDynamicModels, netidx ) && m_NetworkedDynamicModels[ netidx ] )
 			return m_NetworkedDynamicModels[ netidx ];
 
 		INetworkStringTable *pTable = GetDynamicModelStringTable();
@@ -856,7 +882,7 @@ void CModelInfo::ReleaseDynamicModel( int modelIndex )
 void CModelInfo::OnLevelChange()
 {
 	// Network string table has reset
-	m_NetworkedDynamicModels.Purge();
+	m_NetworkedDynamicModels.clear(); m_NetworkedDynamicModels.shrink_to_fit();
 
 	// Force-unload any server-side models
 	modelloader->ForceUnloadNonClientDynamicModels();
@@ -878,7 +904,7 @@ public:
 	virtual int	RegisterCombinedDynamicModel( const char *pszName, MDLHandle_t Handle );
 	virtual void UpdateCombinedDynamicModel( int nModelIndex, MDLHandle_t Handle );
 	virtual int		BeginCombinedModel( const char *pszName, bool bReuseExisting );
-	virtual bool	SetCombineModels( int nModelIndex, const CUtlVector< SCombinerModelInput_t > &vecModelsToCombine );
+	virtual bool	SetCombineModels( int nModelIndex, const std::vector< SCombinerModelInput_t > &vecModelsToCombine );
 	virtual bool	FinishCombinedModel( int nModelIndex, CombinedModelLoadedCallback pFunc, void *pUserData );
 	virtual void	ReleaseCombinedModel( int nModelIndex );
 
@@ -963,7 +989,7 @@ int CModelInfoServer::BeginCombinedModel( const char *pszName, bool bReuseExisti
 }
 
 
-bool CModelInfoServer::SetCombineModels( int nModelIndex, const CUtlVector< SCombinerModelInput_t > &vecModelsToCombine )
+bool CModelInfoServer::SetCombineModels( int nModelIndex, const std::vector< SCombinerModelInput_t > &vecModelsToCombine )
 {
 	return false;
 }
@@ -1016,7 +1042,7 @@ public:
 	virtual int	RegisterCombinedDynamicModel( const char *pszName, MDLHandle_t Handle );
 	virtual void UpdateCombinedDynamicModel( int nModelIndex, MDLHandle_t Handle );
 	virtual int		BeginCombinedModel( const char *pszName, bool bReuseExisting );
-	virtual bool	SetCombineModels( int nModelIndex, const CUtlVector< SCombinerModelInput_t > &vecModelsToCombine );
+	virtual bool	SetCombineModels( int nModelIndex, const std::vector< SCombinerModelInput_t > &vecModelsToCombine );
 	virtual bool	FinishCombinedModel( int nModelIndex, CombinedModelLoadedCallback pFunc, void *pUserData );
 	virtual void	ReleaseCombinedModel( int nModelIndex );
 	virtual void OnDynamicModelStringTableChanged( int nStringIndex, const char *pString, const void *pData );
@@ -1259,9 +1285,9 @@ int CModelInfoClient::RegisterDynamicModel( const char *name, bool bClientSide )
 	// Lookup (or create) model_t* and register it to get a stable iterator index
 	model_t* pModel = modelloader->GetDynamicModel( name, true );
 	Assert( pModel );
-	UtlHashHandle_t localidx = m_ClientDynamicModels.Insert( pModel );
-	Assert( m_ClientDynamicModels.Count() < ((32767 >> 1) - 2) );
-	Assert( MODEL_TO_CLIENTSIDE( (short) CLIENTSIDE_TO_MODEL( localidx ) ) == (int) localidx );
+	int localidx = AddClientDynamicModel( pModel );
+	Assert( std::ssize( m_ClientDynamicModelSlots ) < ((32767 >> 1) - 2) );
+	Assert( MODEL_TO_CLIENTSIDE( (short) CLIENTSIDE_TO_MODEL( localidx ) ) == localidx );
 	return CLIENTSIDE_TO_MODEL( localidx );
 }
 
@@ -1284,9 +1310,9 @@ int CModelInfoClient::RegisterCombinedDynamicModel( const char *pszName, MDLHand
 	pModel->studio = MDLHANDLE_INVALID;
 	modelloader->UpdateDynamicCombinedModel( pModel, Handle, true );
 	Assert( pModel );
-	UtlHashHandle_t localidx = m_ClientDynamicModels.Insert( pModel );
-	Assert( m_ClientDynamicModels.Count() < ((32767 >> 1) - 2) );
-	Assert( MODEL_TO_CLIENTSIDE( (short) CLIENTSIDE_TO_MODEL( localidx ) ) == (int) localidx );
+	int localidx = AddClientDynamicModel( pModel );
+	Assert( std::ssize( m_ClientDynamicModelSlots ) < ((32767 >> 1) - 2) );
+	Assert( MODEL_TO_CLIENTSIDE( (short) CLIENTSIDE_TO_MODEL( localidx ) ) == localidx );
 	return CLIENTSIDE_TO_MODEL( localidx );
 }
 
@@ -1330,7 +1356,7 @@ int CModelInfoClient::BeginCombinedModel( const char *pszName, bool bReuseExisti
 }
 
 
-bool CModelInfoClient::SetCombineModels( int nModelIndex, const CUtlVector< SCombinerModelInput_t > &vecModelsToCombine )
+bool CModelInfoClient::SetCombineModels( int nModelIndex, const std::vector< SCombinerModelInput_t > &vecModelsToCombine )
 {
 	model_t *pModel = LookupDynamicModel( nModelIndex );
 
@@ -1353,7 +1379,7 @@ void CModelInfoClient::ReleaseCombinedModel( int nModelIndex )
 	if ( pModel )
 	{
 		modelloader->ReleaseDynamicModel( pModel, true );
-		m_ClientDynamicModels.Remove( pModel );
+		RemoveClientDynamicModel( pModel );
 	}
 }
 

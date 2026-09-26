@@ -15,9 +15,6 @@
 #include "inputsystem/iinputsystem.h"
 #include "tier0/vprof.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-------------------------------------------------- Constants
 
 #define CAM_MIN_DIST 30.0
@@ -614,7 +611,7 @@ void CInput::CAM_Think( void )
 	}
 	else
 	{
-		float lag = MAX( 1, 1 + cam_ideallag.GetFloat() );
+		float lag = std::max<std::common_type_t<int, float>>( 1, 1 + cam_ideallag.GetFloat() );
 
 		if( camOffset[ YAW ] - viewangles[ YAW ] != cam_idealyaw.GetFloat() )
 			camOffset[ YAW ] = MoveToward( AngleNormalizePositive( camOffset[ YAW ] ), AngleNormalizePositive( cam_idealyaw.GetFloat() + viewangles[ YAW ] ), lag );
@@ -728,7 +725,7 @@ void CInput::CAM_CameraThirdThink( void )
 	VectorCopy( user.m_vecCameraOffset, vecCamOffset );
 
 	// Move the camera.
-	float flLag = MAX( 1, 1 + user.m_pCameraThirdData->m_flLag );
+	float flLag = std::max<std::common_type_t<int, float>>( 1, 1 + user.m_pCameraThirdData->m_flLag );
 	if( vecCamOffset[PITCH] - angView[PITCH] != user.m_pCameraThirdData->m_flPitch )
 	{
 		vecCamOffset[PITCH] = MoveToward( vecCamOffset[PITCH], ( user.m_pCameraThirdData->m_flPitch + angView[PITCH] ), flLag );

@@ -6,6 +6,7 @@
 
 // HACKHACK fix this include
 #include "tier0/vprof.h"
+#include "tier0/memalloc.h"
 #include "server.h"
 #include "host_cmd.h"
 #include "keys.h"
@@ -74,9 +75,6 @@
 #include <fcntl.h>
 
 extern IVEngineClient *engineClient;
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 #define STEAM_PREFIX "STEAM_"
 
@@ -376,7 +374,7 @@ void Host_PrintStatus( cmd_source_t commandSource, void ( *print )(const char *f
 
 	if ( NET_IsMultiplayer() )
 	{
-		CUtlString sPublicIPInfo;
+		std::string sPublicIPInfo;
 		if ( !Steam3Server().BLanOnly() )
 		{
 			uint32 unPublicIP = Steam3Server().GetPublicIP();
@@ -384,10 +382,10 @@ void Host_PrintStatus( cmd_source_t commandSource, void ( *print )(const char *f
 			{
 				netadr_t addr;
 				addr.SetIP( unPublicIP );
-				sPublicIPInfo.Format("  (public ip: %s)", addr.ToString( true ) );
+				sPublicIPInfo = ks::format_printf( "  (public ip: %s)", addr.ToString( true ) );
 			}
 		}
-		print( "udp/ip  : %s:%i%s\n", net_local_adr.ToString(true), sv.GetUDPPort(), sPublicIPInfo.String() );
+		print( "udp/ip  : %s:%i%s\n", net_local_adr.ToString(true), sv.GetUDPPort(), sPublicIPInfo.c_str() );
 		static ConVarRef sv_steamdatagramtransport_port( "sv_steamdatagramtransport_port" );
 		if ( bWithAddresses && sv_steamdatagramtransport_port.GetInt() > 0 )
 		{
@@ -679,13 +677,13 @@ int _Host_Map_f_CompletionFunc( char const *cmdname, char const *partial, char c
 static bool Host_Map_Helper_FuzzyName( const CCommand &args, char *name, size_t bufsize )
 {
 	char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ];
-	CUtlString argv0;
+	std::string argv0;
 	argv0 = args.Arg( 0 );
 	argv0 += " ";
 
-	if ( _Host_Map_f_CompletionFunc( argv0, args[1], commands ) > 0 )
+	if ( _Host_Map_f_CompletionFunc( argv0.c_str(), args[1], commands ) > 0 )
 	{
-		Q_strncpy( name, &commands[ 0 ][ argv0.Length() ], bufsize );
+		Q_strncpy( name, &commands[ 0 ][ std::ssize( argv0 ) ], bufsize );
 		return true;
 	}
 	return false;
@@ -1767,14 +1765,14 @@ CON_COMMAND_F( soundfade, "Fade client volume.", FCVAR_SERVER_CAN_EXECUTE )
 
 	percent = clamp( atof(args[1]), 0.0f, 100.0f );
 	
-	holdTime = MAX( 0.0f, atof(args[2]) );
+	holdTime = std::max<std::common_type_t<float, double>>( 0.0f, atof(args[2]) );
 
 	inTime = 0.0f;
 	outTime = 0.0f;
 	if (args.ArgC() == 5)
 	{
-		outTime = MAX( 0.0f, atof(args[3]) );
-		inTime = MAX( 0.0f, atof( args[4]) );
+		outTime = std::max<std::common_type_t<float, double>>( 0.0f, atof(args[3]) );
+		inTime = std::max<std::common_type_t<float, double>>( 0.0f, atof( args[4]) );
 	}
 
 	S_SoundFade( percent, holdTime, outTime, inTime );
@@ -2127,18 +2125,18 @@ CON_COMMAND_F( forktest, "Cause the engine to fork and wait for child PID, param
 		if ( !CommandLine()->FindParm( "-forkfdskeepall" ) )
 		{
 			FileFindHandle_t hFind = 0;
-			CUtlVector< int > arrHandlesToClose;
+			std::vector< int > arrHandlesToClose;
 			for ( char const *szFileName = g_pFullFileSystem->FindFirst( "/proc/self/fd/*", &hFind );
 				szFileName && *szFileName; szFileName = g_pFullFileSystem->FindNext( hFind ) )
 			{
 				int iFdHandle = Q_atoi( szFileName );
-				if ( ( iFdHandle > 2 ) && ( arrHandlesToClose.Find( iFdHandle ) == arrHandlesToClose.InvalidIndex() ) )
-					arrHandlesToClose.AddToTail( iFdHandle );
+				if ( ( iFdHandle > 2 ) && ( ks::find_index( arrHandlesToClose, iFdHandle ) == -1 ) )
+					arrHandlesToClose.push_back( iFdHandle );
 			}
 			g_pFullFileSystem->FindClose( hFind );
-			FOR_EACH_VEC( arrHandlesToClose, idxFd )
+			for ( int iHandleToClose : arrHandlesToClose )
 			{
-				::close( arrHandlesToClose[idxFd] );
+				::close( iHandleToClose );
 			}
 
 			if ( !CommandLine()->FindParm( "-forkfdskeepstd" ) )

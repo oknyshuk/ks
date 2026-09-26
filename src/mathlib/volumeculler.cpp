@@ -11,9 +11,6 @@
 #include "mathlib/vector.h"
 #include "mathlib/volumeculler.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // Returns true if the AABB is completely within the frustum.
 // Basic scalar approach derived from "Real Time Rendering" 2nd edition section 13.13.3.
 // TODO: Replace this a function similar to CFrustum::CheckBoxInline().
@@ -263,7 +260,7 @@ void CVolumeCuller::GetBaseFrustumPlanes( VPlane *pBasePlanes ) const
 void CVolumeCuller::SetInclusionVolumePlanes( const VPlane *pPlanes, uint nNumPlanes )
 {
 	Assert( nNumPlanes <= cMaxInclusionVolumePlanes );
-	nNumPlanes = MIN( nNumPlanes, cMaxInclusionVolumePlanes );
+	nNumPlanes = std::min<int>( nNumPlanes, cMaxInclusionVolumePlanes );
 	m_nNumInclusionVolumePlanes = nNumPlanes;
 
 	for ( uint i = 0; i < nNumPlanes; ++i )

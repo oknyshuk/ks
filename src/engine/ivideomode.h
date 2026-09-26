@@ -12,6 +12,7 @@
 
 
 #include "vmodes.h"
+#include "tier1/byte_writer.h"
 #include "vtf/vtf.h"
 
 struct MovieInfo_t;
@@ -77,7 +78,7 @@ public:
 
 	// Takes snapshots
 	virtual void			TakeSnapshotJPEG( const char *pFileName, int quality ) = 0;
-	virtual bool			TakeSnapshotJPEGToBuffer( CUtlBuffer& buf, int quality ) = 0;
+	virtual bool			TakeSnapshotJPEGToBuffer( ks::byte_writer& buf, int quality ) = 0;
 
 	// Synchronizes cached mode width/height to actual SDL window size.
 	// Call this after window creation, display changes, or when resolution may have changed.

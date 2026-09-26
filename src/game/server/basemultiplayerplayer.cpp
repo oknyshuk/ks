@@ -14,9 +14,6 @@
 
 ConVar sv_allchat("sv_allchat", "1", FCVAR_NOTIFY, "Players can receive all other players' text chat, team restrictions apply");
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 CBaseMultiplayerPlayer::CBaseMultiplayerPlayer()
 {
 	m_iCurrentConcept = MP_CONCEPT_NONE;
@@ -207,7 +204,7 @@ void CBaseMultiplayerPlayer::AwardAchievement( int iAchievement, int iCount )
 
 #ifdef _DEBUG
 
-	#include "utlbuffer.h"
+	#include "tier1/text_writer.h"
 
 	void DumpAchievementCounters( const CCommand &args )
 	{
@@ -221,21 +218,10 @@ void CBaseMultiplayerPlayer::AwardAchievement( int iAchievement, int iCount )
 		CBaseMultiplayerPlayer *pPlayer = ToBaseMultiplayerPlayer( UTIL_PlayerByIndex( iPlayerIndex ) );
 		if ( pPlayer && pPlayer->GetPerLifeCounterKeys() )
 		{
-			CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
+			ks::text_writer buf;
 			pPlayer->GetPerLifeCounterKeys()->RecursiveSaveToFile( buf, 0 );
 
-			char szBuf[1024];
-
-			// probably not the best way to print out a CUtlBuffer
-			int pos = 0;
-			while ( buf.PeekStringLength() )
-			{
-				szBuf[pos] = buf.GetChar();
-				pos++;
-			}
-			szBuf[pos] = '\0';
-
-			Msg( "%s\n", szBuf );
+			Msg( "%s\n", buf.c_str() );
 		}
 	}
 	ConCommand dump_achievement_counters( "dump_achievement_counters", DumpAchievementCounters, "Spew the per-life achievement counters for multiplayer players", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );

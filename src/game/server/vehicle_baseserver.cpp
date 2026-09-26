@@ -23,9 +23,6 @@
 #include "rumble_shared.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar g_debug_vehiclesound( "g_debug_vehiclesound", "0", FCVAR_CHEAT );
 ConVar g_debug_vehicleexit( "g_debug_vehicleexit", "0", FCVAR_CHEAT );
 
@@ -94,7 +91,7 @@ void CBaseServerVehicle::Precache( void )
 			CBaseEntity::PrecacheScriptSound( STRING(m_vehicleSounds.iszSound[i]) );
 		}
 	}
-	for ( i = 0; i < m_vehicleSounds.crashSounds.Count(); i++ )
+	for ( i = 0; i < std::ssize( m_vehicleSounds.crashSounds ); i++ )
 	{
 		if ( m_vehicleSounds.crashSounds[i].iszCrashSound != NULL_STRING )
 		{
@@ -206,7 +203,7 @@ bool CBaseServerVehicle::NPC_AddPassenger( CBaseCombatCharacter *pPassenger, str
 		return false;
 
 	// Find the seat
-	for ( int i = 0; i < m_PassengerInfo.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_PassengerInfo ); i++ )
 	{
 		if ( m_PassengerInfo[i].GetSeat() == nSeat && m_PassengerInfo[i].GetRole() == nRole )
 		{
@@ -231,7 +228,7 @@ bool CBaseServerVehicle::NPC_RemovePassenger( CBaseCombatCharacter *pPassenger )
 		return false;
 
 	// Find the seat
-	for ( int i = 0; i < m_PassengerInfo.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_PassengerInfo ); i++ )
 	{
 		if ( m_PassengerInfo[i].m_hPassenger == pPassenger )
 		{
@@ -251,7 +248,7 @@ bool CBaseServerVehicle::NPC_RemovePassenger( CBaseCombatCharacter *pPassenger )
 int CBaseServerVehicle::NPC_GetPassengerSeatAttachment( CBaseCombatCharacter *pPassenger )
 {
 	// Get the role and seat the the supplied passenger
-	for ( int i = 0; i < m_PassengerInfo.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_PassengerInfo ); i++ )
 	{
 		// If this is the passenger, get the attachment it'll be at
 		if ( m_PassengerInfo[i].m_hPassenger == pPassenger )
@@ -342,7 +339,7 @@ bool CBaseServerVehicle::NPC_GetPassengerSeatPositionLocal( CBaseCombatCharacter
 const PassengerSeatAnims_t *CBaseServerVehicle::NPC_GetPassengerSeatAnims( CBaseCombatCharacter *pPassenger, PassengerSeatAnimType_t nType )
 {
 	// Get the role and seat the the supplied passenger
-	for ( int i = 0; i < m_PassengerInfo.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_PassengerInfo ); i++ )
 	{
 		if ( m_PassengerInfo[i].m_hPassenger == pPassenger )
 		{
@@ -604,7 +601,7 @@ void CBaseServerVehicle::ParseExitAnim( KeyValues *pkvExitList, bool bEscapeExit
 	while ( pkvExitAnim )
 	{
 		// Add 'em to our list
-		int iIndex = m_ExitAnimations.AddToTail();
+		int iIndex = std::ssize( m_ExitAnimations ); m_ExitAnimations.emplace_back();
 		Q_strncpy( m_ExitAnimations[iIndex].szAnimName, pkvExitAnim->GetName(), sizeof(m_ExitAnimations[iIndex].szAnimName) );
 		m_ExitAnimations[iIndex].bEscapeExit = bEscapeExit;
 		if ( StringHasPrefixCaseSensitive( pkvExitAnim->GetString(), "upsidedown" ) )
@@ -636,7 +633,7 @@ void CBaseServerVehicle::ParseNPCSeatTransition( KeyValues *pTransitionKeyValues
 // Purpose: Sorting function for vehicle seat animation priorities
 //-----------------------------------------------------------------------------
 typedef CPassengerSeatTransition SortSeatPriorityType;
-int __cdecl SeatPrioritySort( const SortSeatPriorityType *s1, const SortSeatPriorityType *s2 )
+int SeatPrioritySort( const SortSeatPriorityType *s1, const SortSeatPriorityType *s2 )
 {
 	return ( s1->GetPriority() > s2->GetPriority() );
 }
@@ -662,15 +659,15 @@ void CBaseServerVehicle::ParseNPCPassengerSeat( KeyValues *pSetKeyValues, CPasse
 
 		if ( Q_stricmp( lpszName, "entry" ) == 0 )
 		{
-			int nIndex = pSeat->m_EntryTransitions.AddToTail();
-			Assert( pSeat->m_EntryTransitions.IsValidIndex( nIndex ) );
+			int nIndex = std::ssize( pSeat->m_EntryTransitions ); pSeat->m_EntryTransitions.emplace_back();
+			Assert( ks::is_valid_index( pSeat->m_EntryTransitions, nIndex ) );
 
 			ParseNPCSeatTransition( pKey, &pSeat->m_EntryTransitions[nIndex] );
 		}
 		else if ( Q_stricmp( lpszName, "exit" ) == 0 )
 		{
-			int nIndex = pSeat->m_ExitTransitions.AddToTail();
-			Assert( pSeat->m_ExitTransitions.IsValidIndex( nIndex ) );
+			int nIndex = std::ssize( pSeat->m_ExitTransitions ); pSeat->m_ExitTransitions.emplace_back();
+			Assert( ks::is_valid_index( pSeat->m_ExitTransitions, nIndex ) );
 
 			ParseNPCSeatTransition( pKey, &pSeat->m_ExitTransitions[nIndex] );
 		}
@@ -680,20 +677,20 @@ void CBaseServerVehicle::ParseNPCPassengerSeat( KeyValues *pSetKeyValues, CPasse
 	}
 
 	// Sort the seats based on their priority
-	pSeat->m_EntryTransitions.Sort( SeatPrioritySort );
-	pSeat->m_ExitTransitions.Sort( SeatPrioritySort );
+	ks::qsort( pSeat->m_EntryTransitions, SeatPrioritySort );
+	ks::qsort( pSeat->m_ExitTransitions, SeatPrioritySort );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Find a passenger role (by name), or create a new one of that names
 // Input  : strName - name of the role
-//		  : *nIndex - the index into the CUtlBuffer where this role resides
+//		  : *nIndex - the index into the role list where this role resides
 // Output : CPassengerRole * - Role found or created
 //-----------------------------------------------------------------------------
 CPassengerRole *CBaseServerVehicle::FindOrCreatePassengerRole( string_t strName, int *nIndex )
 {
 	// Try to find an already created container of the same name
-	for ( int i = 0; i < m_PassengerRoles.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_PassengerRoles ); i++ )
 	{
 		// If we match, return it
 		if ( FStrEq( STRING( m_PassengerRoles[i].m_strName ), STRING( strName ) ) )
@@ -709,8 +706,8 @@ CPassengerRole *CBaseServerVehicle::FindOrCreatePassengerRole( string_t strName,
 	}
 
 	// Create a new container
-	int nNewIndex = m_PassengerRoles.AddToTail();
-	Assert( m_PassengerRoles.IsValidIndex( nNewIndex ) );
+	int nNewIndex = std::ssize( m_PassengerRoles ); m_PassengerRoles.emplace_back();
+	Assert( ks::is_valid_index( m_PassengerRoles, nNewIndex ) );
 	
 	m_PassengerRoles[nNewIndex].m_strName = strName;
 	
@@ -760,14 +757,14 @@ void CBaseServerVehicle::ParseNPCRoles( KeyValues *pkvPassengerList )
 			continue;
 
 		// Add a new role
-		int nSeatIndex = pRole->m_PassengerSeats.AddToTail();
-		Assert( pRole->m_PassengerSeats.IsValidIndex( nSeatIndex ) );
+		int nSeatIndex = std::ssize( pRole->m_PassengerSeats ); pRole->m_PassengerSeats.emplace_back();
+		Assert( ks::is_valid_index( pRole->m_PassengerSeats, nSeatIndex ) );
 
 		// Parse the information
 		ParseNPCPassengerSeat( pkvPassengerKey, &pRole->m_PassengerSeats[nSeatIndex] );
 	
 		// Add a matching entry into our passenger manifest
-		int nPassengerIndex = m_PassengerInfo.AddToTail();
+		int nPassengerIndex = std::ssize( m_PassengerInfo ); m_PassengerInfo.emplace_back();
 		m_PassengerInfo[nPassengerIndex].m_hPassenger = nullptr;
 		m_PassengerInfo[nPassengerIndex].m_nSeat = nSeatIndex;
 		m_PassengerInfo[nPassengerIndex].m_nRole = nRoleIndex;
@@ -785,21 +782,21 @@ void CBaseServerVehicle::ParseNPCRoles( KeyValues *pkvPassengerList )
 
 	if ( g_debug_npc_vehicle_roles.GetBool() )
 	{
-		Msg("Passenger Roles Parsed:\t%d\n\n", m_PassengerRoles.Count() );
-		for ( int i = 0; i < m_PassengerRoles.Count(); i++ )
+		Msg("Passenger Roles Parsed:\t%d\n\n", (int)std::ssize( m_PassengerRoles ) );
+		for ( int i = 0; i < std::ssize( m_PassengerRoles ); i++ )
 		{
-			Msg("\tPassenger Role:\t%s (%d seats)\n", STRING(m_PassengerRoles[i].m_strName), m_PassengerRoles[i].m_PassengerSeats.Count() );
+			Msg("\tPassenger Role:\t%s (%d seats)\n", STRING(m_PassengerRoles[i].m_strName), (int)std::ssize( m_PassengerRoles[i].m_PassengerSeats ) );
 			
 			// Iterate through all information sets under this name
-			for ( int j = 0; j < m_PassengerRoles[i].m_PassengerSeats.Count(); j++ )
+			for ( int j = 0; j < std::ssize( m_PassengerRoles[i].m_PassengerSeats ); j++ )
 			{
 				Msg("\t\tAttachment: %d\n", m_PassengerRoles[i].m_PassengerSeats[j].m_nAttachmentID );
 				
 				// Entries
-				Msg("\t\tEntries:\t%d\n", m_PassengerRoles[i].m_PassengerSeats[j].m_EntryTransitions.Count() );
+				Msg("\t\tEntries:\t%d\n", (int)std::ssize( m_PassengerRoles[i].m_PassengerSeats[j].m_EntryTransitions ) );
 				Msg("\t\t=====================\n" );
 
-				for ( int nEntry = 0; nEntry < m_PassengerRoles[i].m_PassengerSeats[j].m_EntryTransitions.Count(); nEntry++ )
+				for ( int nEntry = 0; nEntry < std::ssize( m_PassengerRoles[i].m_PassengerSeats[j].m_EntryTransitions ); nEntry++ )
 				{
 					Msg("\t\t\tAnimation:\t%s\t(Priority %d)\n", STRING(m_PassengerRoles[i].m_PassengerSeats[j].m_EntryTransitions[nEntry].m_strAnimationName), 
 																 m_PassengerRoles[i].m_PassengerSeats[j].m_EntryTransitions[nEntry].m_nPriority );
@@ -808,10 +805,10 @@ void CBaseServerVehicle::ParseNPCRoles( KeyValues *pkvPassengerList )
 				Msg("\n");
 
 				// Exits
-				Msg("\t\tExits:\t%d\n", m_PassengerRoles[i].m_PassengerSeats[j].m_ExitTransitions.Count() );
+				Msg("\t\tExits:\t%d\n", (int)std::ssize( m_PassengerRoles[i].m_PassengerSeats[j].m_ExitTransitions ) );
 				Msg("\t\t=====================\n" );
 
-				for ( int nExits = 0; nExits < m_PassengerRoles[i].m_PassengerSeats[j].m_ExitTransitions.Count(); nExits++ )
+				for ( int nExits = 0; nExits < std::ssize( m_PassengerRoles[i].m_PassengerSeats[j].m_ExitTransitions ); nExits++ )
 				{
 					Msg("\t\t\tAnimation:\t%s\t(Priority %d)\n", STRING(m_PassengerRoles[i].m_PassengerSeats[j].m_ExitTransitions[nExits].m_strAnimationName), 
 																 m_PassengerRoles[i].m_PassengerSeats[j].m_ExitTransitions[nExits].m_nPriority );
@@ -904,7 +901,7 @@ void CBaseServerVehicle::CacheEntryExitPoints( void )
 	int nAttachment = pAnimating->LookupAttachment( "vehicle_driver_eyes" );
 	
 	// For each exit animation, determine where the end point is and cache it
-	for ( int i = 0; i < m_ExitAnimations.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_ExitAnimations ); i++ )
 	{
 		if ( GetLocalAttachmentAtTime( m_ExitAnimations[i].szAnimName, nAttachment, 1.0f, &m_ExitAnimations[i].vecExitPointLocal, &m_ExitAnimations[i].vecExitAnglesLocal ) == false )
 		{
@@ -941,7 +938,7 @@ void CBaseServerVehicle::ParseEntryExitAnims( void )
 			while ( pkvEntryAnim )
 			{
 				// Add 'em to our list
-				int iIndex = m_EntryAnimations.AddToTail();
+				int iIndex = std::ssize( m_EntryAnimations ); m_EntryAnimations.emplace_back();
 				Q_strncpy( m_EntryAnimations[iIndex].szAnimName, pkvEntryAnim->GetName(), sizeof(m_EntryAnimations[iIndex].szAnimName) );
 				m_EntryAnimations[iIndex].iHitboxGroup = pkvEntryAnim->GetInt();
 
@@ -1134,7 +1131,7 @@ int CBaseServerVehicle::GetEntryAnimForPoint( const Vector &vecEyePoint )
 	}
 
 	// No entry anims? Vehicles with no entry anims are always enterable.
-	if ( !m_EntryAnimations.Count() )
+	if ( m_EntryAnimations.empty() )
 		return 0;
 
 	// Figure out which entrypoint hitbox the player is in
@@ -1168,7 +1165,7 @@ int CBaseServerVehicle::GetEntryAnimForPoint( const Vector &vecEyePoint )
 		if ( IsPointInBox( localEyePoint, pbox->bbmin, pbox->bbmax ) )
 		{
 			// Find the entry animation for this hitbox
-			int iCount = m_EntryAnimations.Count();
+			int iCount = std::ssize( m_EntryAnimations );
 			for ( int entry = 0; entry < iCount; entry++ )
 			{
 				if ( m_EntryAnimations[entry].iHitboxGroup == pbox->group )
@@ -1203,7 +1200,7 @@ int CBaseServerVehicle::GetExitAnimToUse( Vector &vecEyeExitEndpoint, bool &bAll
 	}
 
 	// No exit anims? 
-	if ( !m_ExitAnimations.Count() )
+	if ( m_ExitAnimations.empty() )
 		return ACTIVITY_NOT_AVAILABLE;
 
 	// Figure out which entrypoint hitbox the player is in
@@ -1235,7 +1232,7 @@ int CBaseServerVehicle::GetExitAnimToUse( Vector &vecEyeExitEndpoint, bool &bAll
 
 	float flMaxCosAngleDelta = -2.0f;
 
-	int iCount = m_ExitAnimations.Count();
+	int iCount = std::ssize( m_ExitAnimations );
 	for ( int i = 0; i < iCount; i++ )
 	{
 		if ( m_ExitAnimations[i].bUpright != bUpright )
@@ -1397,7 +1394,7 @@ void CBaseServerVehicle::HandleEntryExitFinish( bool bExitAnimOn, bool bResetAni
 		{
 			Vector vecEyes;
 			QAngle vecEyeAng;
-			if ( m_iCurrentExitAnim >= 0 && m_iCurrentExitAnim < m_ExitAnimations.Count() )
+			if ( m_iCurrentExitAnim >= 0 && m_iCurrentExitAnim < std::ssize( m_ExitAnimations ) )
 			{
 				// Convert our offset points to worldspace ones
 				vecEyes = m_ExitAnimations[m_iCurrentExitAnim].vecExitPointLocal;
@@ -1818,7 +1815,7 @@ bool CBaseServerVehicle::PlayCrashSound( float speed )
 		}
 	}
 
-	for ( i = 0; i < m_vehicleSounds.crashSounds.Count(); i++ )
+	for ( i = 0; i < std::ssize( m_vehicleSounds.crashSounds ); i++ )
 	{
 		const vehicle_crashsound_t &crash = m_vehicleSounds.crashSounds[i];
 		if ( !crash.gearLimit )
@@ -1834,7 +1831,7 @@ bool CBaseServerVehicle::PlayCrashSound( float speed )
 		}
 	}
 
-	for ( i = m_vehicleSounds.crashSounds.Count()-1; i >= 0; --i )
+	for ( i = std::ssize( m_vehicleSounds.crashSounds )-1; i >= 0; --i )
 	{
 		const vehicle_crashsound_t &crash = m_vehicleSounds.crashSounds[i];
 		if ( delta > crash.flMinDeltaSpeed && absLastSpeed > crash.flMinSpeed )
@@ -2214,7 +2211,7 @@ void CBaseServerVehicle::SoundUpdate( vbs_sound_update_t &params )
 
 	// Figure out our speed for the purposes of sound playing.
 	// We slow the transition down a little to make the gear changes slower.
-	if ( m_vehicleSounds.pGears.Count() > 0 )
+	if ( !m_vehicleSounds.pGears.empty() )
 	{
 		if ( flCurrentSpeed > m_flSpeedPercentage )
 		{
@@ -2278,7 +2275,7 @@ void CBaseServerVehicle::StopSound( vehiclesound iSound )
 //-----------------------------------------------------------------------------
 void CBaseServerVehicle::RecalculateSoundGear( vbs_sound_update_t &params )
 {
-	int iNumGears = m_vehicleSounds.pGears.Count();
+	int iNumGears = std::ssize( m_vehicleSounds.pGears );
 	for ( int i = (iNumGears-1); i >= 0; i-- )
 	{
 		if ( m_flSpeedPercentage > m_vehicleSounds.pGears[i].flMinSpeed )
@@ -2317,7 +2314,7 @@ void CBaseServerVehicle::StopEngineRumble()
 CBaseCombatCharacter *CBaseServerVehicle::NPC_GetPassengerInSeat( int nRoleID, int nSeatID )
 {
 	// Search all passengers in the vehicle
-	for ( int i = 0; i < m_PassengerInfo.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_PassengerInfo ); i++ )
 	{
 		// If the seat ID matches, return the entity in that seat
 		if ( m_PassengerInfo[i].GetSeat() == nSeatID && m_PassengerInfo[i].GetRole() == nRoleID )
@@ -2335,7 +2332,7 @@ CBaseCombatCharacter *CBaseServerVehicle::NPC_GetPassengerInSeat( int nRoleID, i
 int CBaseServerVehicle::NPC_GetAvailableSeat_Any( CBaseCombatCharacter *pPassenger, int nRoleID )
 {
 	// Look through all available seats
-	for ( int i = 0; i < m_PassengerRoles[nRoleID].m_PassengerSeats.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_PassengerRoles[nRoleID].m_PassengerSeats ); i++ )
 	{
 		// See if anyone is already in this seat
 		CBaseCombatCharacter *pCurrentPassenger = NPC_GetPassengerInSeat( nRoleID, i );
@@ -2382,7 +2379,7 @@ int CBaseServerVehicle::NPC_GetAvailableSeat( CBaseCombatCharacter *pPassenger, 
 
 	// Get the role index
 	int nRole = FindRoleIndexByName( strRoleName );
-	if ( m_PassengerRoles.IsValidIndex( nRole ) == false )
+	if ( ks::is_valid_index( m_PassengerRoles, nRole ) == false )
 		return -1;
 
 	switch( nQueryType )
@@ -2420,7 +2417,7 @@ bool CBaseServerVehicle::NPC_HasAvailableSeat( string_t strRoleName )
 int CBaseServerVehicle::FindRoleIndexByName( string_t strRoleName )
 {
 	// Search through all our known roles
-	for ( int i = 0; i < m_PassengerRoles.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_PassengerRoles ); i++ )
 	{
 		// Return the index if the name matches
 		if ( FStrEq( STRING( m_PassengerRoles[i].GetName() ), STRING( strRoleName ) ) )
@@ -2437,7 +2434,7 @@ int CBaseServerVehicle::FindRoleIndexByName( string_t strRoleName )
 int CBaseServerVehicle::FindSeatIndexByName( int nRoleIndex, string_t strSeatName )
 {
 	// Role must be valid
-	if ( m_PassengerRoles.IsValidIndex( nRoleIndex ) == false )
+	if ( ks::is_valid_index( m_PassengerRoles, nRoleIndex ) == false )
 		return -1;
 
 	// Used for attachment polling
@@ -2449,7 +2446,7 @@ int CBaseServerVehicle::FindSeatIndexByName( int nRoleIndex, string_t strSeatNam
 	int nAttachmentID = pAnimating->LookupAttachment( STRING( strSeatName ) );
 
 	// Look through the roles for this seat attachment ID
-	for ( int i = 0; i < m_PassengerRoles[nRoleIndex].m_PassengerSeats.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_PassengerRoles[nRoleIndex].m_PassengerSeats ); i++ )
 	{
 		// Return that index if found
 		if ( m_PassengerRoles[nRoleIndex].m_PassengerSeats[i].GetAttachmentID() == nAttachmentID )
@@ -2465,7 +2462,7 @@ int CBaseServerVehicle::FindSeatIndexByName( int nRoleIndex, string_t strSeatNam
 void CBaseServerVehicle::RestorePassengerInfo( void )
 {
 	// If there is passenger information, then we have passengers in the vehicle
-	if ( m_PassengerInfo.Count() != 0 && m_bParsedAnimations == false )
+	if ( !m_PassengerInfo.empty() && m_bParsedAnimations == false )
 	{
 		// Load the entry/exit animations from the vehicle
 		ParseEntryExitAnims();
@@ -2475,18 +2472,18 @@ void CBaseServerVehicle::RestorePassengerInfo( void )
 	// FIXME: If a passenger cannot fix-up its indices, it must be removed from the vehicle!
 
 	// Fix-up every passenger with updated indices
-	for ( int i = 0; i < m_PassengerInfo.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_PassengerInfo ); i++ )
 	{
 		// Fix up the role first
 		int nRoleIndex = FindRoleIndexByName( m_PassengerInfo[i].m_strRoleName );
-		if ( m_PassengerRoles.IsValidIndex( nRoleIndex ) )
+		if ( ks::is_valid_index( m_PassengerRoles, nRoleIndex ) )
 		{
 			// New role index
 			m_PassengerInfo[i].m_nRole = nRoleIndex;
 			
 			// Then fix up the seat via attachment name
 			int nSeatIndex = FindSeatIndexByName( nRoleIndex, m_PassengerInfo[i].m_strSeatName );
-			if ( m_PassengerRoles[nRoleIndex].m_PassengerSeats.IsValidIndex( nSeatIndex ) )
+			if ( ks::is_valid_index( m_PassengerRoles[nRoleIndex].m_PassengerSeats, nSeatIndex ) )
 			{
 				// New seat index
 				m_PassengerInfo[i].m_nSeat = nSeatIndex;
@@ -2575,7 +2572,7 @@ void CVehicleSoundsParser::ParseKeyValue( void *pData, const char *pKey, const c
 	if ( !strcmpi( pKey, "gear" ) )
 	{
 		// Create, initialize, and add a new gear to our list
-		int iNewGear = pSounds->pGears.AddToTail();
+		int iNewGear = std::ssize( pSounds->pGears ); pSounds->pGears.emplace_back();
 		pSounds->pGears[iNewGear].flMaxSpeed = 0;
 		pSounds->pGears[iNewGear].flSpeedApproachFactor = 1.0;
 
@@ -2599,7 +2596,7 @@ void CVehicleSoundsParser::ParseKeyValue( void *pData, const char *pKey, const c
 	}
 	else if ( !strcmpi( pKey, "crashsound" ) )
 	{
-		m_iCurrentCrashSound = pSounds->crashSounds.AddToTail();
+		m_iCurrentCrashSound = std::ssize( pSounds->crashSounds ); pSounds->crashSounds.emplace_back();
 		pSounds->crashSounds[m_iCurrentCrashSound].flMinSpeed = 0;
 		pSounds->crashSounds[m_iCurrentCrashSound].flMinDeltaSpeed = 0;
 		pSounds->crashSounds[m_iCurrentCrashSound].iszCrashSound = NULL_STRING;
@@ -2611,7 +2608,7 @@ void CVehicleSoundsParser::ParseKeyValue( void *pData, const char *pKey, const c
 		// Are we currently in a gear block?
 		if ( m_iCurrentGear >= 0 )
 		{
-			Assert( m_iCurrentGear < pSounds->pGears.Count() );
+			Assert( m_iCurrentGear < std::ssize( pSounds->pGears ) );
 
 			// Check gear keys
 			if ( !strcmpi( pKey, "max_speed" ) )

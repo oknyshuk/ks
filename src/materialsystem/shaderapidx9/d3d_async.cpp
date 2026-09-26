@@ -6,11 +6,7 @@
 //===========================================================================//
 
 #include "togl/rendermechanism.h"
-#include "utlsymbol.h"
 #include "utlvector.h"
-#include "utldict.h"
-#include "utlbuffer.h"
-#include "UtlStringMap.h"
 #include "locald3dtypes.h"
 #include "shaderapidx8_global.h"
 #include "recording.h"
@@ -19,7 +15,6 @@
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "shaderapidx8.h"
 #include "materialsystem/IShader.h"
-#include "utllinkedlist.h"
 #include "materialsystem/ishadersystem.h"
 #include "tier0/fasttimer.h"
 #include <stdlib.h>
@@ -27,8 +22,6 @@
 #include "materialsystem/shader_vcs_version.h"
 #include "datacache/idatacache.h"
 #include "winutils.h"
-
-#include "tier0/memdbgon.h"
 
 #if SHADERAPI_USE_SMP
 

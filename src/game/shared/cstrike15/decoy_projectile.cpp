@@ -28,9 +28,6 @@
 	#include "bot_manager.h"
 #endif
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 #if defined( CLIENT_DLL )
 
 IMPLEMENT_REFLECT_CLIENTCLASS( C_DecoyProjectile, DT_DecoyProjectile, CDecoyProjectile )

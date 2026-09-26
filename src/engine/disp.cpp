@@ -30,9 +30,6 @@
 #include "shadowmgr.h"
 #include "debugoverlay.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Globals.
@@ -251,7 +248,7 @@ void CDispInfo::TestAddDecalTri( int iIndexStart, unsigned short decalHandle, CD
 
 	if ( outCount > 2 ) 
 	{
-		outCount = MIN( outCount, CDispDecalFragment::MAX_VERTS );
+		outCount = std::min<int>( outCount, CDispDecalFragment::MAX_VERTS );
 
 		// Allocate a new fragment...
 		CDispDecalFragment* pFragment = AllocateDispDecalFragment( decalHandle, outCount );
@@ -357,7 +354,7 @@ void CDispInfo::CullDecals(
 	nChildDecals = 0;
 	for( int iDecal=0; iDecal < nDecals; iDecal++ )
 	{
-		if( decals[iDecal]->m_NodeIntersect.Get( iNodeBit ) )
+		if( decals[iDecal]->m_NodeIntersect[iNodeBit] )
 		{
 			childDecals[nChildDecals] = decals[iDecal];
 			++nChildDecals;
@@ -382,7 +379,10 @@ void CDispInfo::TesselateDisplacement()
 	CEngineTesselateHelper helper;
 	helper.m_pDisp = this;
 	helper.m_IndexMesh.BeginModify( m_pMesh->m_pMesh, 0, 0, m_iIndexOffset, nMaxIndices );
-	helper.m_pActiveVerts = m_ActiveVerts.Base();
+	uint32 activeVertWords[ks::word_count<CCoreDispInfo::MAX_VERT_COUNT>];
+	for ( int iWord = 0; iWord < ks::word_count<CCoreDispInfo::MAX_VERT_COUNT>; ++iWord )
+		activeVertWords[iWord] = ks::get_word( m_ActiveVerts, iWord );
+	helper.m_pActiveVerts = activeVertWords;
 	helper.m_pPowerInfo = GetPowerInfo();
 
 
@@ -502,14 +502,14 @@ void CDispInfo::SpecifyBuildableDynamicMesh( void )
 void CDispInfo::InitializeActiveVerts()
 {
 	// Mark the corners vertices and root node by default..
-	m_ActiveVerts.ClearAll();
+	m_ActiveVerts.reset();
 	
-	m_ActiveVerts.Set( VertIndex( 0, 0 ) );
-	m_ActiveVerts.Set( VertIndex( GetSideLength()-1, 0 ) );
-	m_ActiveVerts.Set( VertIndex( GetSideLength()-1, GetSideLength()-1 ) );
-	m_ActiveVerts.Set( VertIndex( 0, GetSideLength()-1 ) );
+	m_ActiveVerts.set( VertIndex( 0, 0 ) );
+	m_ActiveVerts.set( VertIndex( GetSideLength()-1, 0 ) );
+	m_ActiveVerts.set( VertIndex( GetSideLength()-1, GetSideLength()-1 ) );
+	m_ActiveVerts.set( VertIndex( 0, GetSideLength()-1 ) );
 
-	m_ActiveVerts.Set( VertIndex( m_pPowerInfo->m_RootNode ) );
+	m_ActiveVerts.set( VertIndex( m_pPowerInfo->m_RootNode ) );
 
 	// Force the midpoint active on any edges where there are sub displacements.
 	for( int iSide=0; iSide < 4; iSide++ )
@@ -524,7 +524,7 @@ void CDispInfo::InitializeActiveVerts()
 			CVertIndex nodeIndex;
 			nodeIndex[iEdgeDim] = g_EdgeSideLenMul[iSide] * m_pPowerInfo->m_SideLengthM1;
 			nodeIndex[!iEdgeDim] = m_pPowerInfo->m_MidPoint;
-			m_ActiveVerts.Set( VertIndex( nodeIndex ) );
+			m_ActiveVerts.set( VertIndex( nodeIndex ) );
 		}
 	}
 }
@@ -533,7 +533,7 @@ void CDispInfo::InitializeActiveVerts()
 void CDispInfo::ClearLOD()
 {
 	// First, everything as inactive.
-	m_ActiveVerts.ClearAll();
+	m_ActiveVerts.reset();
 }
 
 extern ConVar mat_surfaceid;
@@ -644,7 +644,7 @@ bool CDispInfo::Render( CGroupMesh *pGroup, bool bAllowDebugModes )
 	}
 	else
 	{
-		if( pGroup->m_nVisible < pGroup->m_Visible.Count() )
+		if( pGroup->m_nVisible < std::ssize( pGroup->m_Visible ) )
 		{
 			// Don't bother if all faces are backfacing, or somesuch...
 			if (m_nIndices)
@@ -779,7 +779,7 @@ void IterateLightmapSamples( CDispInfo *pDisp, const ProcessLightmapSampleData_t
 {
 	ASSERT_SURF_VALID( pDisp->m_ParentSurfID );
 
-	if ( !g_DispLightmapSamplePositions.Count() )
+	if ( !std::ssize( g_DispLightmapSamplePositions ) )
 	{
 		ExecuteNTimes( 20, Warning( "Cannot update displacement for dlight - set 'r_dlightsenable 1' and reload the map! (data may also have been culled by MakeGameData)\n" ) );
 		return;
@@ -902,7 +902,7 @@ void CDispInfo::AddSingleDynamicAlphaLight( dlight_t& dl )
 	if ( dl.flags & DLIGHT_SUBTRACT_DISPLACEMENT_ALPHA )
 		data.m_Intensity *= -1.0f;
 
-	float minlight = MAX( g_flMinLightingValue, dl.minlight );
+	float minlight = std::max( g_flMinLightingValue, dl.minlight );
 	float ooQuadraticAttn = data.m_LightDistSqr * minlight; // / maxIntensity;
 
 	data.m_ooQuadraticAttn = ooQuadraticAttn;
@@ -964,7 +964,7 @@ bool CDispInfo::SetupDecalNodeIntersect_R( CVertIndex const &nodeIndex,
 
 		if (anyChildIntersected)
 		{
-			pDispDecal->m_NodeIntersect.Set( iNodeBitIndex );
+			pDispDecal->m_NodeIntersect.set( iNodeBitIndex );
 			return true;
 		}
 
@@ -1021,7 +1021,7 @@ bool CDispInfo::SetupDecalNodeIntersect_R( CVertIndex const &nodeIndex,
 		}
 
 		// Ok, this node is needed and its children may be needed as well.
-		pDispDecal->m_NodeIntersect.Set( iNodeBitIndex );
+		pDispDecal->m_NodeIntersect.set( iNodeBitIndex );
 		return true;
 	}
 
@@ -1031,7 +1031,7 @@ bool CDispInfo::SetupDecalNodeIntersect_R( CVertIndex const &nodeIndex,
 void CDispInfo::SetupDecalNodeIntersect( CVertIndex const &nodeIndex, int iNodeBitIndex,
 	CDispDecalBase *pDispDecal,	ShadowInfo_t const* pInfo )
 {
-	pDispDecal->m_NodeIntersect.ClearAll();
+	pDispDecal->m_NodeIntersect.reset();
 
 	// Generate a vertex cache, so we're not continually reprojecting vertices...
 	static CDecalNodeSetupCache cache;

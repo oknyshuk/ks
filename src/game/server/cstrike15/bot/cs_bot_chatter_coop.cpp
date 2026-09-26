@@ -13,9 +13,6 @@
 #include "cs_bot_chatter.h"
 #include "cs_team.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 BotChatterCoop::BotChatterCoop( CCSBot *me ) :
 BotChatterInterface( me )
 {

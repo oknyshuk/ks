@@ -19,9 +19,6 @@
 #include "cs_bot.h"
 #include "cs_bot_chatter.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // Use to toggle between old bot chatter system and response rules
 extern ConVar bot_chatter_use_rr;
 
@@ -33,9 +30,8 @@ bool GetRandomSpotAtPlace( Place place, Vector *pPos )
 {
 	int count = 0;
 
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ it ];
 
 		if (area->GetPlace() == place)
 			++count;
@@ -46,9 +42,8 @@ bool GetRandomSpotAtPlace( Place place, Vector *pPos )
 		
 	int which = RandomInt( 0, count-1 );
 
-	FOR_EACH_VEC( TheNavAreas, rit )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ rit ];
 
 		if (area->GetPlace() == place && which == 0)
 		{
@@ -344,9 +339,9 @@ BotPhrase::BotPhrase( bool isPlace )
 
 BotPhrase::~BotPhrase()
 {
-	for( int bank=0; bank<m_voiceBank.Count(); ++bank )
+	for( int bank=0; bank<std::ssize( m_voiceBank ); ++bank )
 	{
-		for( int speakable=0; speakable<m_voiceBank[bank]->Count(); ++speakable )
+		for( int speakable=0; speakable<std::ssize( *m_voiceBank[bank] ); ++speakable )
 		{
 			delete (*m_voiceBank[bank])[speakable];
 		}
@@ -361,9 +356,9 @@ void BotPhrase::InitVoiceBank( int bankIndex )
 {
 	while ( m_numVoiceBanks <= bankIndex )
 	{
-		m_count.AddToTail(0);
-		m_index.AddToTail(0);
-		m_voiceBank.AddToTail( new BotSpeakableVector );
+		m_count.push_back( 0 );
+		m_index.push_back( 0 );
+		m_voiceBank.push_back( new BotSpeakableVector );
 		++m_numVoiceBanks;
 	}
 }
@@ -402,7 +397,7 @@ char *BotPhrase::GetSpeakable( int bankIndex, float *duration ) const
 			// check count criteria
 			// if this speakable has a count criteria, it must match to be used
 			// if this speakable does not have a count criteria, we dont care what the count is set to
-			if (speak->m_count == UNDEFINED_COUNT || speak->m_count == MIN( m_countCriteria, COUNT_MANY ))
+			if (speak->m_count == UNDEFINED_COUNT || speak->m_count == std::min<CountCriteria>( m_countCriteria, COUNT_MANY ))
 			{
 				if (duration)
 					*duration = speak->m_duration;
@@ -428,16 +423,16 @@ char *BotPhrase::GetSpeakable( int bankIndex, float *duration ) const
  */
 void BotPhrase::Randomize( void )
 {
-	for ( int bank = 0; bank < m_voiceBank.Count(); ++bank )
+	for ( int bank = 0; bank < std::ssize( m_voiceBank ); ++bank )
 	{
 		BotSpeakableVector *speakables = m_voiceBank[bank];
-		if ( speakables->Count() == 1 )
+		if ( std::ssize( *speakables ) == 1 )
 			continue;
 
 		// A simple shuffle: for each array index, swap it with a random index
-		for ( int index = 0; index < speakables->Count(); ++index )
+		for ( int index = 0; index < std::ssize( *speakables ); ++index )
 		{
-			int newIndex = RandomInt( 0, speakables->Count()-1 );
+			int newIndex = RandomInt( 0, std::ssize( *speakables )-1 );
 
 			BotSpeakable *speakable = (*speakables)[index];
 			(*speakables)[index] = (*speakables)[newIndex];
@@ -474,18 +469,18 @@ void BotPhraseManager::Reset( void )
 	int i;
 
 	// free phrase resources
-	for( i=0; i<m_list.Count(); ++i )
+	for( i=0; i<std::ssize( m_list ); ++i )
 	{
 		delete m_list[i];
 	}
 
-	for( i=0; i<m_placeList.Count(); ++i )
+	for( i=0; i<std::ssize( m_placeList ); ++i )
 	{
 		delete m_placeList[i];
 	}
 
-	m_list.RemoveAll();
-	m_placeList.RemoveAll();
+	m_list.clear();
+	m_placeList.clear();
 
 	m_painPhrase = nullptr;
 	m_agreeWithPlanPhrase = nullptr;
@@ -502,16 +497,16 @@ void BotPhraseManager::OnRoundRestart( void )
 
 	// shuffle all the speakables
 	int i;
-	for( i=0; i<m_placeList.Count(); ++i )
+	for( i=0; i<std::ssize( m_placeList ); ++i )
 		m_placeList[i]->Randomize();
 
-	for( i=0; i<m_list.Count(); ++i )
+	for( i=0; i<std::ssize( m_list ); ++i )
 		m_list[i]->Randomize();
 }
 
 BotChatterOutputType BotPhraseManager::GetOutputType( int voiceBank ) const
 {
-	if ( voiceBank >= 0 && voiceBank < m_output.Count() )
+	if ( voiceBank >= 0 && voiceBank < std::ssize( m_output ) )
 	{
 		return m_output[voiceBank];
 	}
@@ -576,9 +571,9 @@ bool BotPhraseManager::Initialize( const char *filename, int bankIndex )
 				return false;
 			}
 
-			while ( m_output.Count() <= bankIndex )
+			while ( std::ssize( m_output ) <= bankIndex )
 			{
-				m_output.AddToTail(BOT_CHATTER_RADIO);
+				m_output.push_back( BOT_CHATTER_RADIO );
 			}
 
 			char *token = SharedGetToken();
@@ -767,7 +762,7 @@ bool BotPhraseManager::Initialize( const char *filename, int bankIndex )
 				// cstrike15 doesn't use bot chatter this way, the system redirects to RR, so no need to do anything other than slam this
 				speak->m_duration = 1.0f;
 				BotSpeakableVector * speakables = phrase->m_voiceBank[ bankIndex ];
-				speakables->AddToTail( speak );
+				speakables->push_back( speak );
 
 				++phrase->m_count[ bankIndex ];
 			}
@@ -780,9 +775,9 @@ bool BotPhraseManager::Initialize( const char *filename, int bankIndex )
 
 			// add phrase collection to the appropriate master list
 			if (isPlace)
-				m_placeList.AddToTail( phrase );
+				m_placeList.push_back( phrase );
 			else
-				m_list.AddToTail( phrase );
+				m_list.push_back( phrase );
 		}
 	}
 
@@ -804,7 +799,7 @@ BotPhraseManager::~BotPhraseManager()
  */
 const BotPhrase *BotPhraseManager::GetPhrase( const char *name ) const
 {
-	for( int i=0; i<m_list.Count(); ++i )
+	for( int i=0; i<std::ssize( m_list ); ++i )
 	{
 		if (!stricmp( m_list[i]->m_name, name ))
 			return m_list[i]; 
@@ -842,7 +837,7 @@ const BotPhrase *BotPhraseManager::GetPlace( const char *name ) const
 	if (name == nullptr)
 		return nullptr;
 
-	for( int i=0; i<m_placeList.Count(); ++i )
+	for( int i=0; i<std::ssize( m_placeList ); ++i )
 	{
 		if (!stricmp( m_placeList[i]->m_name, name ))
 			return m_placeList[i];
@@ -859,7 +854,7 @@ const BotPhrase *BotPhraseManager::GetPlace( PlaceCriteria place ) const
 	if (place == UNDEFINED_PLACE)
 		return nullptr;
 
-	for( int i=0; i<m_placeList.Count(); ++i )
+	for( int i=0; i<std::ssize( m_placeList ); ++i )
 	{
 		if (m_placeList[i]->m_place == place)
 			return m_placeList[i];

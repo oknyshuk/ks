@@ -19,9 +19,6 @@
 #include "bitstring.h"
 #include "stringregistry.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Init static variables
@@ -505,7 +502,7 @@ bool CAI_SchedulesManager::LoadSchedulesFromBuffer( const char *prefix, char *pS
 			{
 				int interrupt = AI_RemapFromGlobal(condID);
 				Assert( AI_IdIsGlobal( condID ) && interrupt >= 0 && interrupt < MAX_CONDITIONS );
-				new_schedule->m_InterruptMask.Set(interrupt);
+				new_schedule->m_InterruptMask.set(interrupt);
 			}
 
 			// Read the next token

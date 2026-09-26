@@ -3,9 +3,6 @@
 #include "BaseVSShader.h"
 #include "prototype_helper.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 DEFINE_FALLBACK_SHADER( Prototype, Prototype_dx9 )
 BEGIN_VS_SHADER( Prototype_dx9, "Prototype" )
 	BEGIN_SHADER_PARAMS

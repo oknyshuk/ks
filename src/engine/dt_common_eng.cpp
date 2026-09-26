@@ -8,7 +8,8 @@
 #include "dt_stack.h"
 #include "client.h"
 #include "host.h"
-#include "utllinkedlist.h"
+#include <memory>
+#include <vector>
 #include "server.h"
 #include "server_class.h"
 #include "eiface.h"
@@ -16,19 +17,15 @@
 #include "sv_packedentities.h"
 #include "tier0/icommandline.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
-extern CUtlLinkedList< CClientSendTable*, unsigned short > g_ClientSendTables;
-extern CUtlLinkedList< CRecvDecoder *, unsigned short > g_RecvDecoders;
+extern std::vector< std::unique_ptr< CClientSendTable > > g_ClientSendTables;
+extern std::vector< std::unique_ptr< CRecvDecoder > > g_RecvDecoders;
 
 RecvTable* FindRecvTable( const char *pName );
 
 bool DataTable_SetupReceiveTableFromSendTable( SendTable *sendTable, bool bNeedsDecoder )
 {
-	CClientSendTable *pClientSendTable = new CClientSendTable;
+	CClientSendTable *pClientSendTable = g_ClientSendTables.emplace_back( std::make_unique< CClientSendTable >() ).get();
 	SendTable *pTable = &pClientSendTable->m_SendTable;
-	g_ClientSendTables.AddToTail( pClientSendTable );
 
 	// Read the name.
 	pTable->m_pNetTableName = COM_StringCopy( sendTable->m_pNetTableName );
@@ -37,8 +34,7 @@ bool DataTable_SetupReceiveTableFromSendTable( SendTable *sendTable, bool bNeeds
 	if ( bNeedsDecoder )
 	{
 		// Make a decoder for it.
-		CRecvDecoder *pDecoder = new CRecvDecoder;
-		g_RecvDecoders.AddToTail( pDecoder );
+		CRecvDecoder *pDecoder = g_RecvDecoders.emplace_back( std::make_unique< CRecvDecoder >() ).get();
 		
 		RecvTable *pRecvTable = FindRecvTable( pTable->m_pNetTableName );
 		if ( !pRecvTable )
@@ -61,7 +57,7 @@ bool DataTable_SetupReceiveTableFromSendTable( SendTable *sendTable, bool bNeeds
 	// Read the property list.
 	pTable->m_nProps = sendTable->m_nProps;
 	pTable->m_pProps = pTable->m_nProps ? new SendProp[ pTable->m_nProps ] : 0;
-	pClientSendTable->m_Props.SetSize( pTable->m_nProps );
+	pClientSendTable->m_Props.assign( pTable->m_nProps, {} );
 
 	for ( int iProp=0; iProp < pTable->m_nProps; iProp++ )
 	{
@@ -89,7 +85,7 @@ bool DataTable_SetupReceiveTableFromSendTable( SendTable *sendTable, bool bNeeds
 
 			Assert( pDTName && Q_strlen(pDTName) > 0 );
 
-			pClientProp->SetTableName( COM_StringCopy( pDTName ) );
+			pClientProp->SetTableName( pDTName );
 			
 			// Normally we wouldn't care about this but we need to compare it against 
 			// proxies in the server DLL in SendTable_BuildHierarchy.
@@ -119,19 +115,19 @@ bool DataTable_SetupReceiveTableFromSendTable( SendTable *sendTable, bool bNeeds
 }
 
 // If the table's ID is -1, writes its info into the buffer and increments curID.
-void DataTable_MaybeCreateReceiveTable( CUtlVector< SendTable * >& visited, SendTable *pTable, bool bNeedDecoder )
+void DataTable_MaybeCreateReceiveTable( std::vector< SendTable * >& visited, SendTable *pTable, bool bNeedDecoder )
 {
 	// Already sent?
-	if ( visited.Find( pTable ) != visited.InvalidIndex() )
+	if ( ks::find_index( visited, pTable ) != -1 )
 		return;
 
-	visited.AddToTail( pTable );
+	visited.push_back( pTable );
 
 	DataTable_SetupReceiveTableFromSendTable( pTable, bNeedDecoder );
 }
 
 
-void DataTable_MaybeCreateReceiveTable_R( CUtlVector< SendTable * >& visited, SendTable *pTable )
+void DataTable_MaybeCreateReceiveTable_R( std::vector< SendTable * >& visited, SendTable *pTable )
 {
 	DataTable_MaybeCreateReceiveTable( visited, pTable, false );
 
@@ -157,7 +153,7 @@ void DataTable_CreateClientTablesFromServerTables()
 	ServerClass *pClasses = serverGameDLL->GetAllServerClasses();
 	ServerClass *pCur;
 
-	CUtlVector< SendTable * > visited;
+	std::vector< SendTable * > visited;
 
 	// First, we send all the leaf classes. These are the ones that will need decoders
 	// on the client.

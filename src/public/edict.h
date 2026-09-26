@@ -15,7 +15,6 @@
 #include "globalvars_base.h"
 #include "engine/ICollideable.h"
 #include "iservernetworkable.h"
-#include "bitvec.h"
 #include "tier1/convar.h"
 
 struct edict_t;

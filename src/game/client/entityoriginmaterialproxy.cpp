@@ -7,14 +7,10 @@
 
 #include "cbase.h"
 // identifier was truncated to '255' characters in the debug information
-//#pragma warning(disable: 4786)
 
 #include "proxyentity.h"
 #include "materialsystem/imaterialvar.h"
 #include "imaterialproxydict.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 #include "c_cs_player.h" // for grenades
 
@@ -60,7 +56,7 @@ protected:
 EXPOSE_MATERIAL_PROXY( CEntityOriginMaterialProxy, EntityOrigin );
 
 /*
-extern CUtlVector<EHANDLE> g_SmokeGrenadeHandles;
+extern std::vector< EHANDLE > g_SmokeGrenadeHandles;
 
 #define SMOKE_PROXY_RADIUS_SQUARED 30000 //approx smoke radius ^2
 ConVar cl_debug_smoke_proxy( "cl_debug_smoke_proxy", "0", FCVAR_CHEAT );

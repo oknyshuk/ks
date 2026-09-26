@@ -236,7 +236,7 @@ private:
 	[[= ks::reflect::Key{ .name = "ActorInVehicle" } ]] ThreeState_t	m_fActorInVehicle;
 	[[= ks::reflect::Key{ .name = "PlayerInVehicle" } ]] ThreeState_t	m_fPlayerInVehicle;
 
-	CUtlVector< CAI_ScriptConditionsElement > m_ElementList;
+	std::vector< CAI_ScriptConditionsElement > m_ElementList;
 
 	//---------------------------------
 

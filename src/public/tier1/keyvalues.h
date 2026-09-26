@@ -9,17 +9,11 @@
 #define KEYVALUES_H
 
 
-#ifndef nullptr
-#ifdef __cplusplus
-#define NULL    0
-#else
-#define NULL    ((void *)0)
-#endif
-#endif
-
 #include "utlvector.h"
 #include "color.h"
 #include "exprevaluator.h"
+
+#include <string_view>
 
 
 #define FOR_EACH_SUBKEY( kvRoot, kvSubKey ) \
@@ -33,13 +27,20 @@
 
 
 class IBaseFileSystem;
-class CUtlBuffer;
 class Color;
 class CKeyValuesTokenReader;
 class KeyValues;
 class IKeyValuesDumpContext;
 typedef void * FileHandle_t;
 class CKeyValuesGrowableStringTable;
+
+namespace ks
+{
+	class byte_reader;
+	class byte_writer;
+	class text_reader;
+	class text_writer;
+}
 
 
 // single byte identifies a xbox kv file in binary format
@@ -163,8 +164,9 @@ public:
 	// Read from a buffer...  Note that the buffer must be null terminated
 	bool LoadFromBuffer( char const *resourceName, const char *pBuffer, IBaseFileSystem* pFileSystem = nullptr, const char *pPathID = nullptr, GetSymbolProc_t pfnEvaluateSymbolProc = nullptr );
 
-	// Read from a utlbuffer...
-	bool LoadFromBuffer( char const *resourceName, CUtlBuffer &buf, IBaseFileSystem* pFileSystem = nullptr, const char *pPathID = nullptr, GetSymbolProc_t pfnEvaluateSymbolProc = nullptr );
+	bool LoadFromBuffer( char const *resourceName, std::string_view text, IBaseFileSystem* pFileSystem = nullptr, const char *pPathID = nullptr, GetSymbolProc_t pfnEvaluateSymbolProc = nullptr );
+
+	bool LoadFromBuffer( char const *resourceName, ks::text_reader &text, IBaseFileSystem* pFileSystem = nullptr, const char *pPathID = nullptr, GetSymbolProc_t pfnEvaluateSymbolProc = nullptr );
 
 	// Find a keyValue, create it if it is not found.
 	// Set bCreate to true to create the key if it doesn't already exist (which ensures a valid pointer will be returned)
@@ -265,14 +267,14 @@ public:
 	// in the one we're chained to.
 	void ChainKeyValue( KeyValues* pChain );
 	
-	void RecursiveSaveToFile( CUtlBuffer& buf, int indentLevel );
+	void RecursiveSaveToFile( ks::text_writer &buf, int indentLevel );
 
-	bool WriteAsBinary( CUtlBuffer &buffer ) const;
-	bool ReadAsBinary( CUtlBuffer &buffer, int nStackDepth = 0 );
+	bool WriteAsBinary( ks::byte_writer &buffer ) const;
+	bool ReadAsBinary( ks::byte_reader &buffer, int nStackDepth = 0 );
 
 	// Same as the other binary functions, but filter out and remove empty keys (like when seralizing to a file )
-	bool WriteAsBinaryFiltered( CUtlBuffer &buffer );
-	bool ReadAsBinaryFiltered( CUtlBuffer &buffer, int nStackDepth = 0 );
+	bool WriteAsBinaryFiltered( ks::byte_writer &buffer );
+	bool ReadAsBinaryFiltered( ks::byte_reader &buffer, int nStackDepth = 0 );
 
 	// Allocate & create a new copy of the keys
 	KeyValues *MakeCopy( void ) const;
@@ -343,36 +345,33 @@ private:
 
 	void RecursiveCopyKeyValues( KeyValues& src );
 	void RemoveEverything();
-//	void RecursiveSaveToFile( IBaseFileSystem *filesystem, CUtlBuffer &buffer, int indentLevel );
-//	void WriteConvertedString( CUtlBuffer &buffer, const char *pszString );
-	
 	// NOTE: If both filesystem and pBuf are non-null, it'll save to both of them.
 	// If filesystem is null, it'll ignore f.
-	void RecursiveSaveToFile( IBaseFileSystem *filesystem, FileHandle_t f, CUtlBuffer *pBuf, int indentLevel, bool bWriteEmptySubkeys = false );
-	void WriteConvertedString( IBaseFileSystem *filesystem, FileHandle_t f, CUtlBuffer *pBuf, const char *pszString );
+	void RecursiveSaveToFile( IBaseFileSystem *filesystem, FileHandle_t f, ks::text_writer *pBuf, int indentLevel, bool bWriteEmptySubkeys = false );
+	void WriteConvertedString( IBaseFileSystem *filesystem, FileHandle_t f, ks::text_writer *pBuf, const char *pszString );
 	
 	void RecursiveLoadFromBuffer( char const *resourceName, CKeyValuesTokenReader &buf, GetSymbolProc_t pfnEvaluateSymbolProc );
 
 	// for handling #include "filename"
-	void AppendIncludedKeys( CUtlVector< KeyValues * >& includedKeys );
+	void AppendIncludedKeys( std::vector< KeyValues * >& includedKeys );
 	void ParseIncludedKeys( char const *resourceName, const char *filetoinclude, 
-		IBaseFileSystem* pFileSystem, const char *pPathID, CUtlVector< KeyValues * >& includedKeys, GetSymbolProc_t pfnEvaluateSymbolProc );
+		IBaseFileSystem* pFileSystem, const char *pPathID, std::vector< KeyValues * >& includedKeys, GetSymbolProc_t pfnEvaluateSymbolProc );
 
 	// For handling #base "filename"
-	void MergeBaseKeys( CUtlVector< KeyValues * >& baseKeys );
+	void MergeBaseKeys( std::vector< KeyValues * >& baseKeys );
 	void RecursiveMergeKeyValues( KeyValues *baseKV );
 
 	// NOTE: If both filesystem and pBuf are non-null, it'll save to both of them.
 	// If filesystem is null, it'll ignore f.
-	void InternalWrite( IBaseFileSystem *filesystem, FileHandle_t f, CUtlBuffer *pBuf, const void *pData, int len );
+	void InternalWrite( IBaseFileSystem *filesystem, FileHandle_t f, ks::text_writer *pBuf, const void *pData, int len );
 	
 	void Init();
-	void WriteIndents( IBaseFileSystem *filesystem, FileHandle_t f, CUtlBuffer *pBuf, int indentLevel );
+	void WriteIndents( IBaseFileSystem *filesystem, FileHandle_t f, ks::text_writer *pBuf, int indentLevel );
 
 	void FreeAllocatedValue();
 	void AllocateValueBlock(int size);
 
-	bool ReadAsBinaryPooledFormat( CUtlBuffer &buf, IBaseFileSystem *pFileSystem, unsigned int poolKey, GetSymbolProc_t pfnEvaluateSymbolProc );
+	bool ReadAsBinaryPooledFormat( ks::byte_reader &buf, IBaseFileSystem *pFileSystem, unsigned int poolKey, GetSymbolProc_t pfnEvaluateSymbolProc );
 
 	bool EvaluateConditional( const char *pExpressionString, GetSymbolProc_t pfnEvaluateSymbolProc );
 

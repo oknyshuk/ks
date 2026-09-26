@@ -8,7 +8,8 @@
 #include "net_ws_headers.h"
 
 #include <tier0/dbg.h>
-#include "utlbuffer.h"
+#include "tier1/byte_writer.h"
+#include "tier1/string_ops.h"
 #include "cl_rcon.h"
 #include "vprof_engine.h"
 #include "proto_oob.h" // PORT_RCON define
@@ -17,9 +18,6 @@
 #include "zip/XUnzip.h"
 
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 static CRConClient g_RCONClient;
 CRConClient & RCONClient()
@@ -98,20 +96,20 @@ void CRConVProfExport::SetBudgetFlagsFilter( int filter )
 
 int CRConVProfExport::GetNumBudgetGroups()
 {
-	return m_Info.Count();
+	return std::ssize( m_Info );
 }
 
 void CRConVProfExport::GetBudgetGroupInfos( CExportedBudgetGroupInfo *pInfos )
 {
-	memcpy( pInfos, m_Info.Base(), GetNumBudgetGroups() * sizeof(CExportedBudgetGroupInfo) );
+	memcpy( pInfos, m_Info.data(), GetNumBudgetGroups() * sizeof(CExportedBudgetGroupInfo) );
 }
 
 void CRConVProfExport::GetBudgetGroupTimes( float times[IVProfExport::MAX_BUDGETGROUP_TIMES] )
 {
-	int nGroups = MIN( m_Times.Count(), IVProfExport::MAX_BUDGETGROUP_TIMES );
+	int nGroups = std::min<int>( std::ssize( m_Times ), IVProfExport::MAX_BUDGETGROUP_TIMES );
 	memset( times, 0, nGroups * sizeof(float) );
-	nGroups = MIN( GetNumBudgetGroups(), nGroups );
-	memcpy( times, m_Times.Base(), nGroups * sizeof(float) );
+	nGroups = std::min( GetNumBudgetGroups(), nGroups );
+	memcpy( times, m_Times.data(), nGroups * sizeof(float) );
 }
 
 void CRConVProfExport::PauseProfile()
@@ -135,19 +133,19 @@ void CRConVProfExport::ResumeProfile()
 
 void CRConVProfExport::CleanupGroupData()
 {
-	int nCount = m_Info.Count();
+	int nCount = std::ssize( m_Info );
 	for ( int i = 0; i < nCount; ++i )
 	{
-		delete m_Info[i].m_pName;
+		delete[] m_Info[i].m_pName;
 	}
 
-	m_Info.RemoveAll();
+	m_Info.clear();
 }
 
 void CRConVProfExport::OnRemoteGroupData( const void *data, int len )
 {
-	CUtlBuffer buf( data, len, CUtlBuffer::READ_ONLY );
-	int nFirstGroup = buf.GetInt();
+	ks::byte_reader buf( data, len );
+	int nFirstGroup = buf.read<int>();
 
 	if ( nFirstGroup == 0 )
 	{
@@ -155,24 +153,24 @@ void CRConVProfExport::OnRemoteGroupData( const void *data, int len )
 	}
 	else
 	{
-		Assert( nFirstGroup == m_Info.Count() );
+		Assert( nFirstGroup == std::ssize( m_Info ) );
 	}
 
 	// NOTE: See WriteRemoteVProfGroupData in vprof_engine.cpp
 	// to see the encoding of this data
-	int nGroupCount = buf.GetInt();
-	int nBase = m_Info.AddMultipleToTail( nGroupCount );
+	int nGroupCount = buf.read<int>();
+	int nBase = std::ssize( m_Info ); m_Info.resize( m_Info.size() + nGroupCount );
 	char temp[1024];
 	for ( int i = 0; i < nGroupCount; ++i )
 	{
 		CExportedBudgetGroupInfo *pInfo = &m_Info[nBase + i];
 
 		unsigned char red, green, blue, alpha;
-		red = buf.GetUnsignedChar( );
-		green = buf.GetUnsignedChar( );
-		blue = buf.GetUnsignedChar( );
-		alpha = buf.GetUnsignedChar( );
-		buf.GetString( temp, sizeof(temp) );
+		red = buf.read<unsigned char>();
+		green = buf.read<unsigned char>();
+		blue = buf.read<unsigned char>();
+		alpha = buf.read<unsigned char>();
+		buf.read_cstring( temp, sizeof(temp) );
 		int nLen = Q_strlen( temp );
 
 		pInfo->m_Color.SetColor( red, green, blue, alpha );
@@ -188,11 +186,10 @@ void CRConVProfExport::OnRemoteData( const void *data, int len )
 	// NOTE: See WriteRemoteVProfData in vprof_engine.cpp
 	// to see the encoding of this data
 	int nCount = len / sizeof(float);
-	Assert( nCount == m_Info.Count() );
+	Assert( nCount == std::ssize( m_Info ) );
 
-	CUtlBuffer buf( data, len, CUtlBuffer::READ_ONLY );
-	m_Times.SetCount( nCount );
-	memcpy( m_Times.Base(), data, nCount * sizeof(float) );
+	m_Times.assign( nCount, {} );
+	memcpy( m_Times.data(), data, nCount * sizeof(float) );
 }
 
 
@@ -223,7 +220,6 @@ CON_COMMAND_F( rpt_download_log, "", FCVAR_HIDDEN | FCVAR_DONTRECORD )
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
-#pragma warning ( disable : 4355 )
 
 CRConClient::CRConClient() : m_Socket( this )
 {
@@ -234,7 +230,6 @@ CRConClient::CRConClient() : m_Socket( this )
 	m_nConsoleLogIndex = 0;
 }
 
-#pragma warning ( default : 4355 )
 
 //-----------------------------------------------------------------------------
 // Purpose: Destructor
@@ -250,12 +245,12 @@ CRConClient::~CRConClient()
 void CRConClient::SetPassword( const char *pPassword )
 {
 	m_Socket.CloseAllAcceptedSockets();
-	m_Password = pPassword;
+	m_Password = ks::nz( pPassword );
 }
 
 void CRConClient::SetRemoteFileDirectory( const char *pDir )
 {
-	m_RemoteFileDir = pDir;
+	m_RemoteFileDir = ks::nz( pDir );
 	m_nScreenShotIndex = 0;
 	m_nConsoleLogIndex = 0;
 	g_pFullFileSystem->CreateDirHierarchy( pDir, "MOD" );
@@ -295,8 +290,8 @@ void CRConClient::OnSocketClosed( SocketHandle_t hSocket, const netadr_t & netAd
 	m_bAuthenticated = false;
 	m_iReqID = 0;
 	m_iAuthRequestID = 1; // must start at 1
-	m_SendBuffer.Purge();
-	m_RecvBuffer.Purge();
+	m_SendBuffer.clear();
+	m_RecvBuffer.clear();
 }
 
 
@@ -349,14 +344,15 @@ void CRConClient::CloseListenSocket()
 void CRConClient::SendQueuedData()
 {
 	SocketHandle_t hSocket = GetSocketHandle();
-	while ( m_SendBuffer.TellMaxPut() - m_SendBuffer.TellGet() > sizeof(int) )
+	ks::byte_reader reader( m_SendBuffer );
+	while ( reader.remaining() > sizeof(int) )
 	{
-		size_t nSize = *(int*)m_SendBuffer.PeekGet();
-		Assert( nSize >= m_SendBuffer.TellMaxPut() - m_SendBuffer.TellGet() - sizeof( int ) );
-		int ret = send( hSocket, (const char *)m_SendBuffer.PeekGet(), nSize + sizeof( int ), 0 );
+		size_t nSize = reader.peek<int>();
+		Assert( nSize >= reader.remaining() - sizeof( int ) );
+		int ret = send( hSocket, (const char *)reader.rest().data(), nSize + sizeof( int ), 0 );
 		if ( ret != -1 )
 		{
-			m_SendBuffer.SeekGet( CUtlBuffer::SEEK_CURRENT, nSize + sizeof( int ) );
+			reader.skip( nSize + sizeof( int ) );
 			continue;
 		}
 
@@ -368,19 +364,17 @@ void CRConClient::SendQueuedData()
 		break;
 	}
 
-	int nSizeRemaining = m_SendBuffer.TellMaxPut() - m_SendBuffer.TellGet();
+	// CloseSocket() above empties the buffer
+	const size_t nSizeRemaining = m_SendBuffer.empty() ? 0 : reader.remaining();
 	if ( nSizeRemaining <= sizeof(int) )
 	{
-		m_SendBuffer.Purge();
+		m_SendBuffer.clear();
 		return;
 	}
 
 	// In this case, we've still got queued messages to send
 	// Keep the portion of the buffer we didn't process for next time
-	CUtlBuffer tmpBuf;
-	tmpBuf.Put( m_SendBuffer.PeekGet(), nSizeRemaining );
-	m_SendBuffer.Purge();
-	m_SendBuffer.Put( tmpBuf.Base(), tmpBuf.TellPut() );
+	m_SendBuffer.erase( m_SendBuffer.begin(), m_SendBuffer.begin() + reader.tell() );
 }
 
 
@@ -389,14 +383,14 @@ void CRConClient::SendQueuedData()
 //-----------------------------------------------------------------------------
 void CRConClient::ParseReceivedData()
 {
-	m_RecvBuffer.SeekGet( CUtlBuffer::SEEK_HEAD, 0 );
+	ks::byte_reader reader( m_RecvBuffer );
 
-	int size = m_RecvBuffer.GetInt();
-	while ( size && size <= m_RecvBuffer.TellPut() - m_RecvBuffer.TellGet() )
+	int size = reader.read<int>();
+	while ( size && size <= int( reader.remaining() ) )
 	{
 		//DevMsg( "RCON: got packet %i long\n", size );
-		int reqID = m_RecvBuffer.GetInt();
-		int cmdID = m_RecvBuffer.GetInt(); // ignore the cmd id
+		int reqID = reader.read<int>();
+		int cmdID = reader.read<int>(); // ignore the cmd id
 		//		DevMsg( "RCON Cmd: <-- %i %i %i\n", reqID, cmdID, readLen );
 
 		switch( cmdID )
@@ -414,47 +408,47 @@ void CRConClient::ParseReceivedData()
 					m_bAuthenticated = true;
 				}
 				char dummy[2];
-				m_RecvBuffer.GetString( dummy, sizeof(dummy) );
-				m_RecvBuffer.GetString( dummy, sizeof(dummy) );
+				reader.read_cstring( dummy, sizeof(dummy) );
+				reader.read_cstring( dummy, sizeof(dummy) );
 			}
 			break;
 
 		case SERVERDATA_SCREENSHOT_RESPONSE:
 			{
-				int nDataSize = m_RecvBuffer.GetInt();
-				SaveRemoteScreenshot( m_RecvBuffer.PeekGet(), nDataSize );
-				m_RecvBuffer.SeekGet( CUtlBuffer::SEEK_CURRENT, nDataSize );
+				int nDataSize = reader.read<int>();
+				SaveRemoteScreenshot( reader.rest().data(), nDataSize );
+				reader.skip( nDataSize );
 			}
 			break;
 
 		case SERVERDATA_CONSOLE_LOG_RESPONSE:
 			{
-				int nDataSize = m_RecvBuffer.GetInt();
-				SaveRemoteConsoleLog( m_RecvBuffer.PeekGet(), nDataSize );
-				m_RecvBuffer.SeekGet( CUtlBuffer::SEEK_CURRENT, nDataSize );
+				int nDataSize = reader.read<int>();
+				SaveRemoteConsoleLog( reader.rest().data(), nDataSize );
+				reader.skip( nDataSize );
 			}
 			break;
 
 		case SERVERDATA_VPROF_DATA:
 			{
-				int nDataSize = m_RecvBuffer.GetInt();
-				m_VProfExport.OnRemoteData( m_RecvBuffer.PeekGet(), nDataSize );
-				m_RecvBuffer.SeekGet( CUtlBuffer::SEEK_CURRENT, nDataSize );
+				int nDataSize = reader.read<int>();
+				m_VProfExport.OnRemoteData( reader.rest().data(), nDataSize );
+				reader.skip( nDataSize );
 			}
 			break;
 
 		case SERVERDATA_VPROF_GROUPS:
 			{
-				int nDataSize = m_RecvBuffer.GetInt();
-				m_VProfExport.OnRemoteGroupData( m_RecvBuffer.PeekGet(), nDataSize );
-				m_RecvBuffer.SeekGet( CUtlBuffer::SEEK_CURRENT, nDataSize );
+				int nDataSize = reader.read<int>();
+				m_VProfExport.OnRemoteGroupData( reader.rest().data(), nDataSize );
+				reader.skip( nDataSize );
 			}
 			break;
 
 		case SERVERDATA_RESPONSE_STRING:
 			{
 				char pBuf[2048];
-				m_RecvBuffer.GetString( pBuf, sizeof(pBuf) );
+				reader.read_cstring( pBuf, sizeof(pBuf) );
 				Msg( "%s", pBuf );
 			}
 			break;
@@ -464,12 +458,12 @@ void CRConClient::ParseReceivedData()
 				// to a directory. Start a bug report and populate the fields
 				// with the data in the provided directory.
 				char pBuf[MAX_PATH];
-				m_RecvBuffer.GetString( pBuf, sizeof(pBuf) );
+				reader.read_cstring( pBuf, sizeof(pBuf) );
 
-				CUtlString bugcmd;
-				bugcmd.Format( "bug -remotebugpath %s",pBuf );
+				std::string bugcmd;
+				bugcmd = ks::format_printf( "bug -remotebugpath %s",pBuf );
 
-				Cbuf_AddText( CBUF_SERVER, bugcmd.Get() );
+				Cbuf_AddText( CBUF_SERVER, bugcmd.data() );
 				Cbuf_Execute();
 			}
 			break;
@@ -477,21 +471,20 @@ void CRConClient::ParseReceivedData()
 		default:
 			{
 				// Displays a message from the server
-				int strLen = m_RecvBuffer.TellPut() - m_RecvBuffer.TellGet();
-				CUtlMemory<char> msg;
-				msg.EnsureCapacity( strLen + 1 );
-				m_RecvBuffer.GetString( msg.Base(), msg.Count() );
+				int strLen = reader.remaining();
+				std::vector<char> msg( strLen + 1 );
+				reader.read_cstring( msg.data(), std::ssize( msg ) );
 
-				msg[ msg.Count() - 1 ] = '\0';
-				Msg( "%s", (const char *)msg.Base() );
-				m_RecvBuffer.GetString( msg.Base(), msg.Count() ); // ignore the second string
+				msg[ std::ssize( msg ) - 1 ] = '\0';
+				Msg( "%s", (const char *)msg.data() );
+				reader.read_cstring( msg.data(), std::ssize( msg ) ); // ignore the second string
 			}
 			break;
 		}
 
-		if ( m_RecvBuffer.TellPut() - m_RecvBuffer.TellGet() >= sizeof(int) )
+		if ( reader.remaining() >= sizeof(int) )
 		{
-			size = m_RecvBuffer.GetInt(); // read how much is in this packet
+			size = reader.read<int>(); // read how much is in this packet
 		}
 		else
 		{
@@ -499,28 +492,21 @@ void CRConClient::ParseReceivedData()
 		}
 	}
 
-	if ( size || (m_RecvBuffer.TellPut() - m_RecvBuffer.TellGet() > 0) )
+	if ( size || reader.remaining() > 0 )
 	{
 		// In this case, we've got a partial message; we didn't get it all.
 		// Keep the portion of the buffer we didn't process for next time
-		CUtlBuffer tmpBuf;
-		if ( m_RecvBuffer.TellPut() - m_RecvBuffer.TellGet() > 0 )
-		{
-			tmpBuf.Put( m_RecvBuffer.PeekGet(), m_RecvBuffer.TellPut() - m_RecvBuffer.TellGet() );
-		}
-		m_RecvBuffer.Purge();
+		ks::byte_writer leftover;
 		if ( size > 0 )
 		{
-			m_RecvBuffer.PutInt( size );
+			leftover.write<int>( size );
 		}
-		if ( tmpBuf.TellPut() > 0 )
-		{
-			m_RecvBuffer.Put( tmpBuf.Base(), tmpBuf.TellPut() );
-		}
+		leftover.write_bytes( reader.rest() );
+		m_RecvBuffer = leftover.release();
 	}
 	else
 	{
-		m_RecvBuffer.Purge();
+		m_RecvBuffer.clear();
 	}
 }
 
@@ -563,13 +549,13 @@ void CRConClient::RunFrame()
 		return;
 
 	// we have a command to process
-	// Read data into a utlbuffer
-	m_RecvBuffer.EnsureCapacity( m_RecvBuffer.TellPut() + readLen + 1 );
-	char *recvbuffer = (char *)stackalloc( MIN( 1024, readLen + 1 ) );
+	// Read data into the receive buffer
+	m_RecvBuffer.reserve( m_RecvBuffer.size() + readLen + 1 );
+	char *recvbuffer = (char *)stackalloc( ( std::min<std::common_type_t<int, long unsigned int>>( 1024, readLen + 1 ) ) );
 	unsigned int len = 0;
 	while ( len < readLen )
 	{
-		int recvLen = recv( hSocket, recvbuffer , MIN( 1024, readLen - len ) , 0 );
+		int recvLen = recv( hSocket, recvbuffer , std::min<std::common_type_t<int, long unsigned int>>( 1024, readLen - len ) , 0 );
 		if ( recvLen == 0 ) // socket was closed
 		{
 			CloseSocket();
@@ -582,7 +568,11 @@ void CRConClient::RunFrame()
 			break;
 		}
 
-		m_RecvBuffer.Put( recvbuffer, recvLen );
+		if ( recvLen > 0 )
+		{
+			const auto received = ks::byte_view( recvbuffer, recvLen );
+			m_RecvBuffer.insert( m_RecvBuffer.end(), received.begin(), received.end() );
+		}
 		len += recvLen;
 	}
 	
@@ -593,24 +583,24 @@ void CRConClient::RunFrame()
 //-----------------------------------------------------------------------------
 // Purpose: send a response to the server
 //-----------------------------------------------------------------------------
-void CRConClient::SendResponse( CUtlBuffer &response, bool bAutoAuthenticate )
+void CRConClient::SendResponse( ks::byte_writer &response, bool bAutoAuthenticate )
 {
 	if ( bAutoAuthenticate && !IsAuthenticated() )
 	{
 		Authenticate();
 		if ( IsConnected() )
 		{
-			m_SendBuffer.Put( response.Base(), response.TellMaxPut() );
+			m_SendBuffer.insert( m_SendBuffer.end(), response.bytes().begin(), response.bytes().end() );
 		}
 		return;
 	}
 
-	int ret = send( GetSocketHandle(), (const char *)response.Base(), response.TellMaxPut(), 0 );
+	int ret = send( GetSocketHandle(), (const char *)response.data(), response.size(), 0 );
 	if ( ret == -1 )
 	{
 		if ( SocketWouldBlock() )
 		{
-			m_SendBuffer.Put( response.Base(), response.TellMaxPut() );
+			m_SendBuffer.insert( m_SendBuffer.end(), response.bytes().begin(), response.bytes().end() );
 		}
 		else
 		{
@@ -624,18 +614,17 @@ void CRConClient::SendResponse( CUtlBuffer &response, bool bAutoAuthenticate )
 //-----------------------------------------------------------------------------
 // Purpose: builds a simple command to send to the server
 //-----------------------------------------------------------------------------
-void CRConClient::BuildResponse( CUtlBuffer &response, ServerDataRequestType_t msg, const char *pString1, const char *pString2 )
+void CRConClient::BuildResponse( ks::byte_writer &response, ServerDataRequestType_t msg, const char *pString1, const char *pString2 )
 {
 	// build the response
-	response.PutInt(0); // the size, filled in below
-	response.PutInt(m_iReqID++);
-	response.PutInt(msg);
-	response.PutString(pString1);
-	response.PutString(pString2);
-	int nSize = response.TellPut() - sizeof(int); 
-	response.SeekPut( CUtlBuffer::SEEK_HEAD, 0 );
-	response.PutInt( nSize ); // the size
-	response.SeekPut( CUtlBuffer::SEEK_CURRENT, nSize );
+	response.write<int>(0); // the size, filled in below
+	response.write<int>(m_iReqID++);
+	response.write<int>(msg);
+	response.write_cstring(ks::nz(pString1));
+	response.write_cstring(ks::nz(pString2));
+	int nSize = response.size() - sizeof(int); 
+	response.seek( 0 );
+	response.write<int>( nSize ); // the size
 }
 
 
@@ -644,13 +633,13 @@ void CRConClient::BuildResponse( CUtlBuffer &response, ServerDataRequestType_t m
 //-----------------------------------------------------------------------------
 void CRConClient::Authenticate()
 {
-	CUtlBuffer response;
+	ks::byte_writer response;
 
 	// build the response
-	response.PutInt(0); // the size, filled in below
-	response.PutInt(++m_iAuthRequestID);
-	response.PutInt(SERVERDATA_AUTH);
-	response.PutString( m_Password.Get() );
+	response.write<int>(0); // the size, filled in below
+	response.write<int>(++m_iAuthRequestID);
+	response.write<int>(SERVERDATA_AUTH);
+	response.write_cstring( m_Password );
 
 	// Use the otherwise-empty second string for the userid.  The server will use this to
 	// exec "mp_disable_autokick <userid>" upon successful authentication.
@@ -667,7 +656,7 @@ void CRConClient::Authenticate()
 				{
 					addedUserID = true;
 					// Fixup from network order (little endian)
-					response.PutString( va( "%d", LittleLong( pi->userID ) ) );
+					response.write_cstring( va( "%d", LittleLong( pi->userID ) ) );
 				}
 			}
 		}
@@ -675,12 +664,11 @@ void CRConClient::Authenticate()
 
 	if ( !addedUserID )
 	{
-		response.PutString( "" );
+		response.write_cstring( "" );
 	}
-	int size = response.TellPut() - sizeof(int); 
-	response.SeekPut( CUtlBuffer::SEEK_HEAD, 0 );
-	response.PutInt(size); // the size
-	response.SeekPut( CUtlBuffer::SEEK_CURRENT, size );
+	int size = response.size() - sizeof(int); 
+	response.seek( 0 );
+	response.write<int>(size); // the size
 
 	SendResponse( response, false );
 }
@@ -697,7 +685,7 @@ void CRConClient::SendCmd( const char *msg )
 			return;
 	}
 
-	CUtlBuffer response;
+	ks::byte_writer response;
 	BuildResponse( response, SERVERDATA_EXECCOMMAND, msg, "" );
 	SendResponse( response );
 }
@@ -719,7 +707,7 @@ void CRConClient::StartVProfData()
 	OverrideVProfExport( &m_VProfExport );
 #endif
 
-	CUtlBuffer response;
+	ks::byte_writer response;
 	BuildResponse( response, SERVERDATA_VPROF, "", "" );
 	SendResponse( response );
 }
@@ -739,7 +727,7 @@ void CRConClient::StopVProfData()
 	if ( !IsConnected() )
 		return;
 
-	CUtlBuffer response;
+	ks::byte_writer response;
 	BuildResponse( response, SERVERDATA_REMOVE_VPROF, "", "" );
 	SendResponse( response );
 }
@@ -756,7 +744,7 @@ void CRConClient::TakeScreenshot()
 			return;
 	}
 
-	CUtlBuffer response;
+	ks::byte_writer response;
 	BuildResponse( response, SERVERDATA_TAKE_SCREENSHOT, "", "" );
 	SendResponse( response );
 }
@@ -769,7 +757,7 @@ void CRConClient::GrabConsoleLog()
 			return;
 	}
 
-	CUtlBuffer response;
+	ks::byte_writer response;
 	BuildResponse( response, SERVERDATA_SEND_CONSOLE_LOG, "", "" );
 	SendResponse( response );
 }
@@ -785,7 +773,7 @@ void CRConClient::SendBugRequest()
 		}
 	}
 	
-	CUtlBuffer response;
+	ks::byte_writer response;
 	BuildResponse( response, SERVERDATA_SEND_REMOTEBUG, "", "" );
 	SendResponse( response );
 }
@@ -799,7 +787,7 @@ void CRConClient::SaveRemoteScreenshot( const void* pBuffer, int nBufLen )
 	char pScreenshotPath[MAX_PATH];
 	do 
 	{
-		Q_snprintf( pScreenshotPath, sizeof( pScreenshotPath ), "%s/screenshot%04d.jpg", m_RemoteFileDir.Get(), m_nScreenShotIndex++ );	
+		Q_snprintf( pScreenshotPath, sizeof( pScreenshotPath ), "%s/screenshot%04d.jpg", m_RemoteFileDir.data(), m_nScreenShotIndex++ );	
 	} while ( g_pFullFileSystem->FileExists( pScreenshotPath, "MOD" ) );
 
 	char pFullPath[MAX_PATH];
@@ -824,7 +812,7 @@ void CRConClient::SaveRemoteConsoleLog( const void* pBuffer, int nBufLen )
 	char pLogPath[MAX_PATH];
 	do 
 	{
-		Q_snprintf( pLogPath, sizeof( pLogPath ), "%s/console%04d.log", m_RemoteFileDir.Get(), m_nConsoleLogIndex++ );	
+		Q_snprintf( pLogPath, sizeof( pLogPath ), "%s/console%04d.log", m_RemoteFileDir.data(), m_nConsoleLogIndex++ );	
 	} while ( g_pFullFileSystem->FileExists( pLogPath, "MOD" ) );
 
 	char pFullPath[MAX_PATH];

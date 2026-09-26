@@ -9,9 +9,6 @@
 #include "choreoscene.h"
 #include "choreoevent.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 extern ISoundEmitterSystemBase *soundemitterbase;
 CChoreoScene *BlockingLoadScene( const char *filename );
@@ -29,48 +26,48 @@ CSceneCache::CSceneCache()
 
 int	CSceneCache::GetSoundCount() const
 {
-	return sounds.Count();
+	return std::ssize( sounds );
 }
 
 char const *CSceneCache::GetSoundName( int index )
 {
-	return soundemitterbase->GetSoundName( sounds[ index ] );
+	return soundemitterbase->GetSoundName( sounds.begin()[ index ] );
 }
 
-void CSceneCache::Save( CUtlBuffer& buf  )
+void CSceneCache::Save( ks::byte_writer& buf )
 {
-	buf.PutUnsignedInt( msecs );
+	buf.write< unsigned int >( msecs );
 
 	unsigned short c = GetSoundCount();
-	buf.PutShort( c );
+	buf.write< short >( c );
 	
-	Assert( sounds.Count() <= 65536 );
+	Assert( std::ssize( sounds ) <= 65536 );
 
 	for ( int i = 0; i < c; ++i )
 	{
-		buf.PutString( GetSoundName( i ) );
+		buf.write_cstring( GetSoundName( i ) );
 	}
 }
 
-void CSceneCache::Restore( CUtlBuffer& buf  )
+void CSceneCache::Restore( ks::byte_reader& buf )
 {
 	MEM_ALLOC_CREDIT();
 
-	msecs = buf.GetUnsignedInt();
+	msecs = buf.read< unsigned int >();
 
-	unsigned short c = (unsigned short)buf.GetShort();
+	unsigned short c = (unsigned short)buf.read< short >();
 
 	for ( int i = 0; i < c; ++i )
 	{
 		char soundname[ 512 ];
-		buf.GetString( soundname, sizeof( soundname ) );
+		buf.read_cstring( soundname, sizeof( soundname ) );
 
 		int idx = soundemitterbase->GetSoundIndex( soundname );
 		if ( soundemitterbase->IsValidIndex( idx ) )
 		{
-			if ( sounds.Find( idx ) == sounds.InvalidIndex() )
+			if ( !sounds.contains( idx ) )
 			{
-				sounds.Insert( idx );
+				sounds.insert( idx );
 			}
 		}
 	}
@@ -81,7 +78,7 @@ void CSceneCache::Restore( CUtlBuffer& buf  )
 // Input  : *event - 
 //			soundlist - 
 //-----------------------------------------------------------------------------
-void CSceneCache::PrecacheSceneEvent( CChoreoEvent *event, CUtlSortVector< int, CSceneCacheListLess > &soundlist )
+void CSceneCache::PrecacheSceneEvent( CChoreoEvent *event, std::flat_multiset< int > &soundlist )
 {
 	if ( !event || event->GetType() != CChoreoEvent::SPEAK )
 		return;
@@ -90,7 +87,7 @@ void CSceneCache::PrecacheSceneEvent( CChoreoEvent *event, CUtlSortVector< int, 
 	if ( soundemitterbase->IsValidIndex( idx ) )
 	{
 		MEM_ALLOC_CREDIT();
-		soundlist.Insert( idx );
+		soundlist.insert( idx );
 	}
 
 	if ( event->GetCloseCaptionType() == CChoreoEvent::CC_MASTER )
@@ -99,10 +96,10 @@ void CSceneCache::PrecacheSceneEvent( CChoreoEvent *event, CUtlSortVector< int, 
 		if ( event->GetPlaybackCloseCaptionToken( tok, sizeof( tok ) ) )
 		{
 			int idx = soundemitterbase->GetSoundIndex( tok );
-			if ( soundemitterbase->IsValidIndex( idx ) && soundlist.Find( idx ) == soundlist.InvalidIndex() )
+			if ( soundemitterbase->IsValidIndex( idx ) && !soundlist.contains( idx ) )
 			{
 				MEM_ALLOC_CREDIT();
-				soundlist.Insert( idx );
+				soundlist.insert( idx );
 			}
 		}
 	}
@@ -111,7 +108,7 @@ void CSceneCache::PrecacheSceneEvent( CChoreoEvent *event, CUtlSortVector< int, 
 void CSceneCache::Rebuild( char const *filename )
 {
 	msecs = 0;
-	sounds.RemoveAll();
+	sounds.clear();
 
 	CChoreoScene *scene = BlockingLoadScene( filename );
 	if ( scene )

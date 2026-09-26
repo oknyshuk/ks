@@ -10,9 +10,6 @@
 #include "convar.h"
 #include "lightmapped_4wayblend_dx9_helper.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 static Lightmapped_4WayBlend_DX9_Vars_t s_info;
 

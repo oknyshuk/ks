@@ -8,14 +8,9 @@
 
 #include <limits.h>
 #include "studio.h"
-#include "tier1/utlmap.h"
-#include "tier1/utldict.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/map_ops.h"
 #include "filesystem.h"
 #include "tier0/icommandline.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 extern IFileSystem *		g_pFileSystem;
 
@@ -26,11 +21,11 @@ extern IFileSystem *		g_pFileSystem;
 // a string table to speed up searching for sequences in the current virtual model
 struct modellookup_t
 {
-	CUtlDict<short,short> seqTable;
-	CUtlDict<short,short> animTable;
+	ks::idict<short> seqTable;
+	ks::idict<short> animTable;
 };
 
-static CUtlVector<modellookup_t> g_ModelLookup;
+static std::vector< modellookup_t > g_ModelLookup;
 static int g_ModelLookupIndex = -1;
 
 inline bool HasLookupTable()
@@ -38,12 +33,12 @@ inline bool HasLookupTable()
 	return g_ModelLookupIndex >= 0 ? true : false;
 }
 
-inline CUtlDict<short,short> *GetSeqTable()
+inline ks::idict<short> *GetSeqTable()
 {
 	return &g_ModelLookup[g_ModelLookupIndex].seqTable;
 }
 
-inline CUtlDict<short,short> *GetAnimTable()
+inline ks::idict<short> *GetAnimTable()
 {
 	return &g_ModelLookup[g_ModelLookupIndex].animTable;
 }
@@ -63,8 +58,8 @@ CModelLookupContext::CModelLookupContext(int group, const studiohdr_t *pStudioHd
 	m_lookupIndex = -1;
 	if ( group == 0 && pStudioHdr->numincludemodels )
 	{
-		m_lookupIndex = g_ModelLookup.AddToTail();
-		g_ModelLookupIndex = g_ModelLookup.Count()-1;
+		m_lookupIndex = std::ssize( g_ModelLookup ); g_ModelLookup.emplace_back();
+		g_ModelLookupIndex = std::ssize( g_ModelLookup )-1;
 	}
 }
 
@@ -72,15 +67,15 @@ CModelLookupContext::~CModelLookupContext()
 {
 	if ( m_lookupIndex >= 0 )
 	{
-		Assert(m_lookupIndex == (g_ModelLookup.Count()-1));
-		g_ModelLookup.FastRemove(m_lookupIndex);
-		g_ModelLookupIndex = g_ModelLookup.Count()-1;
+		Assert(m_lookupIndex == (std::ssize( g_ModelLookup )-1));
+		ks::swap_remove( g_ModelLookup, m_lookupIndex );
+		g_ModelLookupIndex = std::ssize( g_ModelLookup )-1;
 	}
 }
 
 void virtualmodel_t::AppendModels( int group, const studiohdr_t *pStudioHdr )
 {
-	AUTO_LOCK_( CThreadTerminalMutex<CThreadFastMutex>, m_Lock );
+	std::scoped_lock lock( m_Lock );
 
 	// build a search table if necesary
 	CModelLookupContext ctx(group, pStudioHdr);
@@ -126,11 +121,11 @@ void virtualmodel_t::AppendModels( int group, const studiohdr_t *pStudioHdr )
 
 	if ( nValidIncludes )
 	{
-		m_group.EnsureCapacity( m_group.Count() + nValidIncludes );
+		m_group.reserve( std::ssize( m_group ) + nValidIncludes );
 		for (j = 0; j < nValidIncludes; j++)
 		{
 			MEM_ALLOC_CREDIT();
-			int group = m_group.AddToTail();
+			int group = std::ssize( m_group ); m_group.emplace_back();
 			m_group[group].cache = list[j].handle;
 			AppendModels( group, list[j].pHdr );
 		}
@@ -141,18 +136,18 @@ void virtualmodel_t::AppendModels( int group, const studiohdr_t *pStudioHdr )
 
 void virtualmodel_t::AppendSequences( int group, const studiohdr_t *pStudioHdr )
 {
-	AUTO_LOCK_( CThreadTerminalMutex<CThreadFastMutex>, m_Lock );
-	int numCheck = m_seq.Count();
+	std::scoped_lock lock( m_Lock );
+	int numCheck = std::ssize( m_seq );
 
 	int j, k;
 
 	MEM_ALLOC_CREDIT();
 
-	CUtlVector< virtualsequence_t > seq;
+	std::vector< virtualsequence_t > seq;
 
 	seq = m_seq;
 
-	m_group[ group ].masterSeq.SetCount( pStudioHdr->numlocalseq );
+	m_group[ group ].masterSeq.assign( pStudioHdr->numlocalseq, {} );
 
 	for (j = 0; j < pStudioHdr->numlocalseq; j++)
 	{
@@ -162,10 +157,9 @@ void virtualmodel_t::AppendSequences( int group, const studiohdr_t *pStudioHdr )
 		if ( HasLookupTable() )
 		{
 			k = numCheck;
-			short index = GetSeqTable()->Find( s1 );
-			if ( index != GetSeqTable()->InvalidIndex() )
+			if ( short *pIndex = ks::find_ptr( *GetSeqTable(), s1 ) )
 			{
-				k = GetSeqTable()->Element(index);
+				k = *pIndex;
 			}
 		}
 		else
@@ -188,7 +182,7 @@ void virtualmodel_t::AppendSequences( int group, const studiohdr_t *pStudioHdr )
 			tmp.index = j;
 			tmp.flags = seqdesc->flags;
 			tmp.activity = seqdesc->activity;
-			k = seq.AddToTail( tmp );
+			k = std::ssize( seq ); seq.push_back( tmp );
 		}
 		else if (m_group[ seq[k].group ].GetStudioHdr()->pLocalSeqdesc( seq[k].index )->flags & STUDIO_OVERRIDE)
 		{
@@ -205,11 +199,12 @@ void virtualmodel_t::AppendSequences( int group, const studiohdr_t *pStudioHdr )
 
 	if ( HasLookupTable() )
 	{
-		for ( j = numCheck; j < seq.Count(); j++ )
+		for ( j = numCheck; j < std::ssize( seq ); j++ )
 		{
 			const studiohdr_t *hdr = m_group[ seq[j].group ].GetStudioHdr();
 			const char *s1 = hdr->pLocalSeqdesc( seq[j].index )->pszLabel();
-			GetSeqTable()->Insert( s1, j );
+			// Keep the first, as the linear search does.
+			GetSeqTable()->emplace( s1, j );
 		}
 	}
 
@@ -219,10 +214,10 @@ void virtualmodel_t::AppendSequences( int group, const studiohdr_t *pStudioHdr )
 
 void virtualmodel_t::UpdateAutoplaySequences( const studiohdr_t *pStudioHdr )
 {
-	AUTO_LOCK_( CThreadTerminalMutex<CThreadFastMutex>, m_Lock );
+	std::scoped_lock lock( m_Lock );
 	int autoplayCount = pStudioHdr->CountAutoplaySequences();
-	m_autoplaySequences.SetCount( autoplayCount );
-	pStudioHdr->CopyAutoplaySequences( m_autoplaySequences.Base(), autoplayCount );
+	m_autoplaySequences.assign( autoplayCount, {} );
+	pStudioHdr->CopyAutoplaySequences( m_autoplaySequences.data(), autoplayCount );
 }
 
 //-----------------------------------------------------------------------------
@@ -231,17 +226,17 @@ void virtualmodel_t::UpdateAutoplaySequences( const studiohdr_t *pStudioHdr )
 
 void virtualmodel_t::AppendAnimations( int group, const studiohdr_t *pStudioHdr )
 {
-	AUTO_LOCK_( CThreadTerminalMutex<CThreadFastMutex>, m_Lock );
-	int numCheck = m_anim.Count();
+	std::scoped_lock lock( m_Lock );
+	int numCheck = std::ssize( m_anim );
 
-	CUtlVector< virtualgeneric_t > anim;
+	std::vector< virtualgeneric_t > anim;
 	anim = m_anim;
 
 	MEM_ALLOC_CREDIT();
 
 	int j, k;
 
-	m_group[ group ].masterAnim.SetCount( pStudioHdr->numlocalanim );
+	m_group[ group ].masterAnim.assign( pStudioHdr->numlocalanim, {} );
 
 	for (j = 0; j < pStudioHdr->numlocalanim; j++)
 	{
@@ -249,10 +244,9 @@ void virtualmodel_t::AppendAnimations( int group, const studiohdr_t *pStudioHdr 
 		if ( HasLookupTable() )
 		{
 			k = numCheck;
-			short index = GetAnimTable()->Find( s1 );
-			if ( index != GetAnimTable()->InvalidIndex() )
+			if ( short *pIndex = ks::find_ptr( *GetAnimTable(), s1 ) )
 			{
-				k = GetAnimTable()->Element(index);
+				k = *pIndex;
 			}
 		}
 		else
@@ -272,7 +266,7 @@ void virtualmodel_t::AppendAnimations( int group, const studiohdr_t *pStudioHdr 
 			virtualgeneric_t tmp;
 			tmp.group = group;
 			tmp.index = j;
-			k = anim.AddToTail( tmp );
+			k = std::ssize( anim ); anim.push_back( tmp );
 		}
 
 		m_group[ group ].masterAnim[ j ] = k;
@@ -280,10 +274,10 @@ void virtualmodel_t::AppendAnimations( int group, const studiohdr_t *pStudioHdr 
 	
 	if ( HasLookupTable() )
 	{
-		for ( j = numCheck; j < anim.Count(); j++ )
+		for ( j = numCheck; j < std::ssize( anim ); j++ )
 		{
 			const char *s1 = m_group[ anim[j].group ].GetStudioHdr()->pLocalAnimdesc( anim[j].index )->pszName();
-			GetAnimTable()->Insert( s1, j );
+			GetAnimTable()->emplace( s1, j );
 		}
 	}
 
@@ -297,13 +291,13 @@ void virtualmodel_t::AppendAnimations( int group, const studiohdr_t *pStudioHdr 
 
 void virtualmodel_t::AppendBonemap( int group, const studiohdr_t *pStudioHdr )
 {
-	AUTO_LOCK_( CThreadTerminalMutex<CThreadFastMutex>, m_Lock );
+	std::scoped_lock lock( m_Lock );
 	MEM_ALLOC_CREDIT();
 
 	const studiohdr_t *pBaseStudioHdr = m_group[ 0 ].GetStudioHdr( );
 
-	m_group[ group ].boneMap.SetCount( pBaseStudioHdr->numbones );
-	m_group[ group ].masterBone.SetCount( pStudioHdr->numbones );
+	m_group[ group ].boneMap.assign( pBaseStudioHdr->numbones, {} );
+	m_group[ group ].masterBone.assign( pStudioHdr->numbones, {} );
 
 	int j, k;
 
@@ -373,17 +367,17 @@ void virtualmodel_t::AppendBonemap( int group, const studiohdr_t *pStudioHdr )
 
 void virtualmodel_t::AppendAttachments( int group, const studiohdr_t *pStudioHdr )
 {
-	AUTO_LOCK_( CThreadTerminalMutex<CThreadFastMutex>, m_Lock );
-	int numCheck = m_attachment.Count();
+	std::scoped_lock lock( m_Lock );
+	int numCheck = std::ssize( m_attachment );
 
-	CUtlVector< virtualgeneric_t > attachment;
+	std::vector< virtualgeneric_t > attachment;
 	attachment = m_attachment;
 
 	MEM_ALLOC_CREDIT();
 
 	int j, k, n;
 
-	m_group[ group ].masterAttachment.SetCount( pStudioHdr->numlocalattachments );
+	m_group[ group ].masterAttachment.assign( pStudioHdr->numlocalattachments, {} );
 
 	for (j = 0; j < pStudioHdr->numlocalattachments; j++)
 	{
@@ -413,7 +407,7 @@ void virtualmodel_t::AppendAttachments( int group, const studiohdr_t *pStudioHdr
 			virtualgeneric_t tmp;
 			tmp.group = group;
 			tmp.index = j;
-			k = attachment.AddToTail( tmp );
+			k = std::ssize( attachment ); attachment.push_back( tmp );
 		}
 
 		m_group[ group ].masterAttachment[ j ] = k;
@@ -429,17 +423,17 @@ void virtualmodel_t::AppendAttachments( int group, const studiohdr_t *pStudioHdr
 
 void virtualmodel_t::AppendPoseParameters( int group, const studiohdr_t *pStudioHdr )
 {
-	AUTO_LOCK_( CThreadTerminalMutex<CThreadFastMutex>, m_Lock );
-	int numCheck = m_pose.Count();
+	std::scoped_lock lock( m_Lock );
+	int numCheck = std::ssize( m_pose );
 
-	CUtlVector< virtualgeneric_t > pose;
+	std::vector< virtualgeneric_t > pose;
 	pose = m_pose;
 
 	MEM_ALLOC_CREDIT();
 
 	int j, k;
 
-	m_group[ group ].masterPose.SetCount( pStudioHdr->numlocalposeparameters );
+	m_group[ group ].masterPose.assign( pStudioHdr->numlocalposeparameters, {} );
 
 	for (j = 0; j < pStudioHdr->numlocalposeparameters; j++)
 	{
@@ -459,15 +453,15 @@ void virtualmodel_t::AppendPoseParameters( int group, const studiohdr_t *pStudio
 			virtualgeneric_t tmp;
 			tmp.group = group;
 			tmp.index = j;
-			k = pose.AddToTail( tmp );
+			k = std::ssize( pose ); pose.push_back( tmp );
 		}
 		else
 		{
 			// duplicate, reset start and end to fit full dynamic range
 			mstudioposeparamdesc_t *pPose1 = pStudioHdr->pLocalPoseParameter( j );
 			mstudioposeparamdesc_t *pPose2 = m_group[ pose[k].group ].GetStudioHdr()->pLocalPoseParameter( pose[k].index );
-			float start =  MIN( pPose2->end, MIN( pPose1->end, MIN( pPose2->start, pPose1->start ) ) );
-			float end =  MAX( pPose2->end, MAX( pPose1->end, MAX( pPose2->start, pPose1->start ) ) );
+			float start =  std::min( pPose2->end, std::min( pPose1->end, std::min( pPose2->start, pPose1->start ) ) );
+			float end =  std::max( pPose2->end, std::max( pPose1->end, std::max( pPose2->start, pPose1->start ) ) );
 			pPose2->start = start;
 			pPose2->end = end;
 		}
@@ -485,17 +479,17 @@ void virtualmodel_t::AppendPoseParameters( int group, const studiohdr_t *pStudio
 
 void virtualmodel_t::AppendNodes( int group, const studiohdr_t *pStudioHdr )
 {
-	AUTO_LOCK_( CThreadTerminalMutex<CThreadFastMutex>, m_Lock );
-	int numCheck = m_node.Count();
+	std::scoped_lock lock( m_Lock );
+	int numCheck = std::ssize( m_node );
 
-	CUtlVector< virtualgeneric_t > node;
+	std::vector< virtualgeneric_t > node;
 	node = m_node;
 
 	MEM_ALLOC_CREDIT();
 
 	int j, k;
 
-	m_group[ group ].masterNode.SetCount( pStudioHdr->numlocalnodes );
+	m_group[ group ].masterNode.assign( pStudioHdr->numlocalnodes, {} );
 
 	for (j = 0; j < pStudioHdr->numlocalnodes; j++)
 	{
@@ -515,7 +509,7 @@ void virtualmodel_t::AppendNodes( int group, const studiohdr_t *pStudioHdr )
 			virtualgeneric_t tmp;
 			tmp.group = group;
 			tmp.index = j;
-			k = node.AddToTail( tmp );
+			k = std::ssize( node ); node.push_back( tmp );
 		}
 
 		m_group[ group ].masterNode[ j ] = k;
@@ -531,10 +525,10 @@ void virtualmodel_t::AppendNodes( int group, const studiohdr_t *pStudioHdr )
 
 void virtualmodel_t::AppendIKLocks( int group, const studiohdr_t *pStudioHdr )
 {
-	AUTO_LOCK_( CThreadTerminalMutex<CThreadFastMutex>, m_Lock );
-	int numCheck = m_iklock.Count();
+	std::scoped_lock lock( m_Lock );
+	int numCheck = std::ssize( m_iklock );
 
-	CUtlVector< virtualgeneric_t > iklock;
+	std::vector< virtualgeneric_t > iklock;
 	iklock = m_iklock;
 
 	int j, k;
@@ -559,7 +553,7 @@ void virtualmodel_t::AppendIKLocks( int group, const studiohdr_t *pStudioHdr )
 			virtualgeneric_t tmp;
 			tmp.group = group;
 			tmp.index = j;
-			k = iklock.AddToTail( tmp );
+			k = std::ssize( iklock ); iklock.push_back( tmp );
 		}
 	}
 

@@ -20,9 +20,6 @@
 #include "physics_impact_damage.h"
 #include "entityblocker.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define SF_PROP_VEHICLE_ALWAYSTHINK		0x00000001
 
 ConVar g_debug_vehiclebase( "g_debug_vehiclebase", "0", FCVAR_CHEAT );
@@ -39,12 +36,10 @@ LINK_ENTITY_TO_CLASS( prop_vehicle, CPropVehicle );
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-#pragma warning (disable:4355)
 CPropVehicle::CPropVehicle() : m_VehiclePhysics( this )
 {
 	SetVehicleType( VEHICLE_TYPE_CAR_WHEELS );
 }
-#pragma warning (default:4355)
 
 //-----------------------------------------------------------------------------
 // Purpose: 

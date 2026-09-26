@@ -14,9 +14,6 @@
 #include "cs_gamestate.h"
 #include "cs_simple_hostage.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //--------------------------------------------------------------------------------------------------------------
 CSGameState::CSGameState( CCSBot *owner )
 {
@@ -396,7 +393,7 @@ void CSGameState::InitializeHostageInfo( void )
 	m_allHostagesRescued = false;
 	m_haveSomeHostagesBeenTaken = false;
 
-	for( int i=0; i<g_Hostages.Count(); ++i )
+	for( int i=0; i<std::ssize( g_Hostages ); ++i )
 	{
 		m_hostage[ m_hostageCount ].hostage = g_Hostages[i];
 		m_hostage[ m_hostageCount ].knownPos = g_Hostages[i]->GetAbsOrigin();

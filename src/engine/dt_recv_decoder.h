@@ -9,6 +9,7 @@
 
 
 #include "dt.h"
+#include <string>
 
 
 class CDTIRecvTable;
@@ -25,17 +26,13 @@ class RecvProp;
 class CClientSendProp
 {
 public:
+	// Null when unset.
+	const char*	GetTableName() const		{ return m_TableName.empty() ? nullptr : m_TableName.c_str(); }
 
-				CClientSendProp();
-				~CClientSendProp();
-
-	const char*	GetTableName()				{ return m_pTableName; }
-	void		SetTableName( char *pName )	{ m_pTableName = pName; }
-		
+	void		SetTableName( const char *pName )	{ m_TableName = pName ? pName : ""; }
 
 private:
-
-	char	*m_pTableName;	// For DPT_DataTable properties.. this tells the table name.
+	std::string	m_TableName;	// For DPT_DataTable properties.. this tells the table name.
 };
 
 
@@ -60,7 +57,7 @@ public:
 public:
 
 	SendTable					m_SendTable;
-	CUtlVector<CClientSendProp>	m_Props;	// Extra data for the properties.
+	std::vector< CClientSendProp >	m_Props;	// Extra data for the properties.
 };
 
 
@@ -85,6 +82,26 @@ public:
 	int				GetNumDatatableProps() const;
 	const RecvProp*	GetDatatableProp( int i ) const;
 
+	bool			IsVectorLength( int iProp ) const	{ return m_Props[iProp] && m_Props[iProp]->IsVectorLength(); }
+
+	// fn(i) for i in [0, n), vector lengths first; propOf(i) is i's prop. Use with lazy routes.
+	template < class PropOf, class Fn >
+	void			ForEachLengthsFirst( int n, PropOf propOf, Fn fn ) const
+	{
+		if ( !m_bHasVectorLengths )
+		{
+			for ( int i = 0; i < n; i++ )
+				fn( i );
+			return;
+		}
+		for ( int i = 0; i < n; i++ )
+			if ( IsVectorLength( propOf( i ) ) )
+				fn( i );
+		for ( int i = 0; i < n; i++ )
+			if ( !IsVectorLength( propOf( i ) ) )
+				fn( i );
+	}
+
 
 public:
 	
@@ -95,8 +112,10 @@ public:
 	CSendTablePrecalc	m_Precalc;
 
 	// This mirrors m_Precalc.m_Props. 
-	CUtlVector<const RecvProp*>	m_Props;
-	CUtlVector<const RecvProp*>	m_DatatableProps;
+	std::vector< const RecvProp* >	m_Props;
+	std::vector< const RecvProp* >	m_DatatableProps;
+
+	bool						m_bHasVectorLengths = false;	// any prop with RecvProp::IsVectorLength()
 
 	CDTIRecvTable *m_pDTITable;
 };
@@ -123,7 +142,7 @@ inline RecvTable* CRecvDecoder::GetRecvTable() const
 
 inline int CRecvDecoder::GetNumProps() const
 {
-	return m_Props.Count();
+	return std::ssize( m_Props );
 }
 
 inline const RecvProp* CRecvDecoder::GetProp( int i ) const
@@ -138,7 +157,7 @@ inline const SendProp* CRecvDecoder::GetSendProp( int i ) const
 
 inline int CRecvDecoder::GetNumDatatableProps() const
 {
-	return m_DatatableProps.Count();
+	return std::ssize( m_DatatableProps );
 }
 
 inline const RecvProp* CRecvDecoder::GetDatatableProp( int i ) const

@@ -13,7 +13,7 @@
 #include "dt_common.h"
 #include "tier0/dbg.h"
 #include "const.h"
-#include "bitvec.h"
+#include <bitset>
 
 
 // ------------------------------------------------------------------------ //
@@ -130,12 +130,12 @@ public:
 
 inline void CSendProxyRecipients::SetAllRecipients()
 {
-	m_Bits.SetAll();
+	m_Bits.set();
 }
 
 inline void CSendProxyRecipients::ClearAllRecipients()
 {
-	m_Bits.ClearAll();
+	m_Bits.reset();
 }
 
 

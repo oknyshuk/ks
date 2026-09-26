@@ -1,6 +1,6 @@
 //========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
 //
-// Purpose:	This file sets all of our debugging flags.  It should be 
+// Purpose:	This file sets all of our debugging flags.  It should be
 //			called before all other header files.
 //
 // $NoKeywords: $
@@ -9,51 +9,39 @@
 #ifndef DBGFLAG_H
 #define DBGFLAG_H
 
+// The flags that survive here are the ones something actually reads, and that a supported build
+// type can actually reach. The rest of this file's original contents are gone:
+//
+//   DBGFLAG_MEMORY / DBGFLAG_MEMORY_NEWDEL
+//       Nothing read them. They selected Valve's own malloc/free override, which this fork
+//       replaced with memoverride.cpp's global operator new / delete.
+//
+//   DBGFLAG_VALIDATE
+//       Only reachable under _DEBUG && STEAM. STEAM is never defined here, and the recursive
+//       validator it turned on is gone with it.
+//
+//   DBGFLAG_STRINGS
+//       Nothing reads it. String validation did not come across.
+//
+// DBGFLAG_STRINGS_STRIP is deliberately *not* defaulted anywhere: the headers that consult it
+// still guard real content with it, and nothing here should silently make that content vanish.
+//
+// These flags are activated by dbg.h, which includes this header, so a translation unit that
+// wants assertions has to include tier0/dbg.h.
 
-// Here are all the flags we support:
-// DBGFLAG_MEMORY:			Enables our memory debugging system, which overrides malloc & free
-// DBGFLAG_MEMORY_NEWDEL:	Enables new / delete tracking for memory debug system.  Requires DBGFLAG_MEMORY to be enabled.
-// DBGFLAG_VALIDATE:		Enables our recursive validation system for checking integrity and memory leaks
-// DBGFLAG_ASSERT:			Turns Assert on or off (when off, it isn't compiled at all)
-// DBGFLAG_ASSERTFATAL:		Turns AssertFatal on or off (when off, it isn't compiled at all)
-// DBGFLAG_ASSERTDLG:		Turns assert dialogs on or off and debug breaks on or off when not under the debugger.
-//								(Dialogs will always be on when process is being debugged.)
-// DBGFLAG_STRINGS:			Turns on hardcore string validation (slow but safe)
+// Turns Assert and friends on. When it is not defined, Assert() compiles to ((void)0) -- see
+// the note in dbg.h about why the no-op path must not reference AssertImpl.
+#if defined( _DEBUG )
 
-#undef DBGFLAG_MEMORY
-#undef DBGFLAG_MEMORY_NEWDEL
-#undef DBGFLAG_VALIDATE
-#undef DBGFLAG_ASSERT
-#undef DBGFLAG_ASSERTFATAL
-#undef DBGFLAG_ASSERTDLG
-#undef DBGFLAG_STRINGS
-
-//-----------------------------------------------------------------------------
-// Default flags for debug builds
-//-----------------------------------------------------------------------------
-#if defined( _DEBUG ) && !defined( PS3MEMOVERRIDEWRAP )
-
-#define DBGFLAG_MEMORY
-#ifdef _SERVER	// only enable new & delete tracking for server; on client it conflicts with CRT mem leak tracking
-#define DBGFLAG_MEMORY_NEWDEL	
-#endif
-#ifdef STEAM
-#define DBGFLAG_VALIDATE
-#endif
 #define DBGFLAG_ASSERT
 #define DBGFLAG_ASSERTFATAL
 #define DBGFLAG_ASSERTDLG
-#define DBGFLAG_STRINGS
 
-
-//-----------------------------------------------------------------------------
-// Default flags for release builds
-//-----------------------------------------------------------------------------
 #else // _DEBUG
-#ifdef STEAM
-#define DBGFLAG_ASSERT
-#endif
-#define DBGFLAG_ASSERTFATAL		// note: fatal asserts are enabled in release builds
+
+// Fatal asserts and the assert dialog stay on in release builds; only plain Assert() is
+// compiled out.
+#define DBGFLAG_ASSERTFATAL
 #define DBGFLAG_ASSERTDLG
 
 #endif // _DEBUG

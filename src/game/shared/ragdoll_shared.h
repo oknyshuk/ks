@@ -23,6 +23,7 @@ class CBoneAccessor;
 #include "mathlib/vector.h"
 #include "bone_accessor.h"
 #include "vcollide_parse.h"
+#include <vector>
 
 // UNDONE: Remove and make dynamic?
 #define RAGDOLL_MAX_ELEMENTS	24
@@ -105,8 +106,8 @@ public:
 
 private:
 	typedef CHandle<CBaseAnimating> CRagdollHandle;
-	CUtlLinkedList< CRagdollEntry > m_LRU; 
-	CUtlLinkedList< CRagdollEntry > m_LRUImportantRagdolls; 
+	std::vector< CRagdollEntry > m_LRU; 
+	std::vector< CRagdollEntry > m_LRUImportantRagdolls; 
 
 	int m_iMaxRagdolls;
 	int m_iSimulatedRagdollCount;

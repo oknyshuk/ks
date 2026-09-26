@@ -18,7 +18,6 @@
 #include "cs_shareddefs.h"
 #include "cs_gamerules.h"
 #include "fmtstr.h"
-#include "utlbuffer.h"
 #include "bot_util.h"
 #include "tier0/vprof.h"
 #include "cs_bot_manager.h"
@@ -107,7 +106,7 @@ unsigned int CSNavMesh::GetSubVersionNumber( void ) const
 /** 
  * Store custom mesh data for derived classes
  */
-void CSNavMesh::SaveCustomData( CUtlBuffer &fileBuffer ) const
+void CSNavMesh::SaveCustomData( ks::byte_writer &fileBuffer ) const
 {
 
 }
@@ -116,7 +115,7 @@ void CSNavMesh::SaveCustomData( CUtlBuffer &fileBuffer ) const
 /**
  * Load custom mesh data for derived classes
  */
-void CSNavMesh::LoadCustomData( CUtlBuffer &fileBuffer, unsigned int subVersion )
+void CSNavMesh::LoadCustomData( ks::byte_reader &fileBuffer, unsigned int subVersion )
 {
 
 }
@@ -140,9 +139,9 @@ void CSNavMesh::Reset( void )
  */
 void CSNavMesh::ClearPlayerCounts( void )
 {
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( CNavArea *pNavArea : TheNavAreas )
 	{
-		CCSNavArea *area = (CCSNavArea*)TheNavAreas[ it ];
+		CCSNavArea *area = (CCSNavArea*)pNavArea;
 		area->ClearPlayerCount();
 	}
 }
@@ -157,7 +156,7 @@ void CSNavMesh::MaintainChickenPopulation( void )
 		m_refreshChickenTimer.Start( RandomFloat( 10.0f, 20.0f ) );
 
 		int actualCount = 0;
-		for( int i=0; i<m_chickenVector.Count(); ++i )
+		for( int i=0; i<std::ssize( m_chickenVector ); ++i )
 		{
 			if ( m_chickenVector[i] != nullptr )
 			{
@@ -176,7 +175,7 @@ void CSNavMesh::MaintainChickenPopulation( void )
 
 				for( int attempts=0; attempts<10; ++attempts )
 				{
-					int which = RandomInt( 0, TheNavAreas.Count()-1 );
+					int which = RandomInt( 0, std::ssize( TheNavAreas )-1 );
 
 					CNavArea *testArea = TheNavAreas[ which ];
 
@@ -189,7 +188,7 @@ void CSNavMesh::MaintainChickenPopulation( void )
 						{
 							// don't spawn a chicken on top of another chicken
 							int n;
-							for( n=0; n<m_chickenVector.Count(); ++n )
+							for( n=0; n<std::ssize( m_chickenVector ); ++n )
 							{
 								if ( m_chickenVector[n] == nullptr )
 									continue;
@@ -200,7 +199,7 @@ void CSNavMesh::MaintainChickenPopulation( void )
 									break;
 							}
 
-							if ( n >= m_chickenVector.Count() )
+							if ( n >= std::ssize( m_chickenVector ) )
 							{
 								// found a good spot - spawn a chicken here
 								chicken = CreateEntityByName( "chicken" );
@@ -209,7 +208,7 @@ void CSNavMesh::MaintainChickenPopulation( void )
 									chicken->SetAbsOrigin( testArea->GetCenter() );
 
 									DispatchSpawn( chicken );
-									m_chickenVector.AddToTail( chicken );
+									m_chickenVector.push_back( chicken );
 								}
 
 								break;
@@ -255,7 +254,7 @@ NavErrorType CSNavMesh::PostLoad( unsigned int version )
 		m_desiredChickenCount = 10;
 	else
 		m_desiredChickenCount = g_pMapInfo ? g_pMapInfo->m_iPetPopulation : 0;
-	m_chickenVector.RemoveAll();
+	m_chickenVector.clear();
 
 	if ( CSGameRules() && CSGameRules()->IsPlayingCooperativeGametype() )
 	{
@@ -281,14 +280,14 @@ CON_COMMAND( dm_reset_spawns, "" )
 
 void CSNavMesh::ResetDMSpawns( void )
 {
-	FOR_EACH_VEC( m_DMSpawnVector, i )
+	for ( auto &hDMSpawn : m_DMSpawnVector )
 	{
-		UTIL_Remove( m_DMSpawnVector[i] );
+		UTIL_Remove( hDMSpawn );
 	}
 
 	m_desiredDMSpawns = 50;
 	m_consecutiveFailedAttempts = 0;
-	m_DMSpawnVector.RemoveAll();
+	m_DMSpawnVector.clear();
 	MaintainDMSpawnPopulation();
 }
 
@@ -308,7 +307,7 @@ void CSNavMesh::MaintainDMSpawnPopulation( void )
 		m_refreshDMSpawnTimer.Start( 1.0f );
 
 		int actualCount = 0;
-		for( int i=0; i<m_DMSpawnVector.Count(); ++i )
+		for( int i=0; i<std::ssize( m_DMSpawnVector ); ++i )
 		{
 			if ( m_DMSpawnVector[i] != nullptr )
 			{
@@ -333,7 +332,7 @@ void CSNavMesh::MaintainDMSpawnPopulation( void )
 
 			int need = m_desiredDMSpawns - actualCount;
 
-			int spawnsToTry = MAX( 10, need );
+			int spawnsToTry = std::max( 10, need );
 
 			for( int k=0; k < spawnsToTry; k++ )
 			{
@@ -356,7 +355,7 @@ void CSNavMesh::MaintainDMSpawnPopulation( void )
 					}
 					else
 					{
-						testArea = TheNavAreas[ RandomInt( 0, TheNavAreas.Count() - 1 ) ];
+						testArea = TheNavAreas[ RandomInt( 0, std::ssize( TheNavAreas ) - 1 ) ];
 					}
 
 					const float tooSmall = ( mp_guardian_target_site.GetInt() >= 0 ) ? 35.0f : 100.0f;
@@ -366,7 +365,7 @@ void CSNavMesh::MaintainDMSpawnPopulation( void )
 						bool bBadNavArea = false;
 
 						// don't spawn a DMSpawn too close to another DMSpawn
-						for( int n = 0; n < m_DMSpawnVector.Count(); n++ )
+						for( int n = 0; n < std::ssize( m_DMSpawnVector ); n++ )
 						{
 							if ( m_DMSpawnVector[n] == nullptr )
 								continue;
@@ -424,7 +423,7 @@ void CSNavMesh::MaintainDMSpawnPopulation( void )
 							DMSpawn->SetAbsOrigin( testArea->GetCenter() + Vector( 0, 0, 16 ));
 
 							DispatchSpawn( DMSpawn );
-							m_DMSpawnVector.AddToTail( DMSpawn );
+							m_DMSpawnVector.push_back( DMSpawn );
 
 							m_consecutiveFailedAttempts = 0;
 

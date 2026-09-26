@@ -11,9 +11,6 @@
 #include "motion_blur_ps20b.inc"
 #include "convar.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar mat_motion_blur_percent_of_screen_max( "mat_motion_blur_percent_of_screen_max", "4.0", FCVAR_MATERIAL_SYSTEM_THREAD );
 
 DEFINE_FALLBACK_SHADER( MotionBlur, MotionBlur_dx9 )
@@ -113,7 +110,7 @@ BEGIN_VS_SHADER_FLAGS( MotionBlur_dx9, "Motion Blur", SHADER_NOT_EDITABLE )
 				nNumBlurSamples = 6;
 
 			// If we are blurring less than half the allowed blur max, use fewer samples
-			float flPercentMaxBlur = clamp( 2.0f * flApproximateBlurLength / MIN( mat_motion_blur_percent_of_screen_max.GetFloat() / 100.0f, 4.0f ), 0.0f, 1.0f );
+			float flPercentMaxBlur = clamp( 2.0f * flApproximateBlurLength / std::min( mat_motion_blur_percent_of_screen_max.GetFloat() / 100.0f, 4.0f ), 0.0f, 1.0f );
 			nNumBlurSamples = ( int )( ( float )nNumBlurSamples * flPercentMaxBlur );
 			if ( nNumBlurSamples < 1 )
 				nNumBlurSamples = 1;

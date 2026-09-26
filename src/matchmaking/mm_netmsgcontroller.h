@@ -21,7 +21,7 @@ public:
 	virtual KeyValues * UnpackGameDetailsFromQOS( MM_GameDetails_QOS_t const *pvQosReply );
 	virtual KeyValues * UnpackGameDetailsFromSteamLobby( uint64 uiLobbyID );
 
-	virtual void PackageGameDetailsForQOS( KeyValues *pSettings, CUtlBuffer &buf );
+	virtual void PackageGameDetailsForQOS( KeyValues *pSettings, ks::byte_writer &buf );
 
 	virtual KeyValues * PackageGameDetailsForReservation( KeyValues *pSettings );
 

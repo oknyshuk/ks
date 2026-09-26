@@ -140,7 +140,6 @@ static void BindOptions( Rml::DataModelConstructor &c )
     } );
     c.BindEventCallback( "options_close", []( Rml::DataModelHandle, Rml::Event &, Args ) {
         RocketOptionsDocument::ShowPanel( false );
-        RocketOptionsDocument::UnloadDialog();
     } );
     c.BindEventCallback( "options_save", []( Rml::DataModelHandle, Rml::Event &, Args ) {
         Msg( "Saving settings.\n" );
@@ -502,15 +501,15 @@ void RocketOptionsDocument::PopulateControls()
 
 void RocketOptionsDocument::LoadDialog()
 {
-    if( m_pInstance )
-        return;
-
+    // Transient panel: rebuild here so it lands in the context current now.
+    //
     // The controls fire `change` as they initialise, and those events reach us
     // through the document itself (data-event-change) rather than a listener
     // attached afterwards -- so the guard has to be up before the load, or the
     // RML's default values would be written into the ConVars. PopulateControls
     // drops it again.
     m_bPopulating = true;
+    UnloadDialog();
 
     if( !RkPanelLoad( m_pInstance, ROCKET_CONTEXT_CURRENT, "panel_options.rml", LoadDialog, UnloadDialog ) )
     {
@@ -529,10 +528,7 @@ void RocketOptionsDocument::UnloadDialog()
 void RocketOptionsDocument::ShowPanel( bool bShow, bool immediate )
 {
     if( bShow )
-    {
-        LoadDialog();
-        PopulateControls();   // ConVars can have moved since it was last open
-    }
+        LoadDialog();   // rebuilds the panel, re-reading the ConVars
 
     RkPanelShow( m_pInstance, m_bVisible, bShow );
 }

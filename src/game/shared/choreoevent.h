@@ -14,7 +14,7 @@ class CChoreoEvent;
 class CChoreoScene;
 class IChoreoEventCallback; 
 class CAudioMixer;
-class CUtlBuffer;
+namespace ks { class byte_reader; class byte_writer; class text_writer; }
 class IChoreoStringPool;
 
 
@@ -24,7 +24,7 @@ class IChoreoStringPool;
 #include "networkvar.h"
 #include "localflexcontroller.h"
 
-typedef CUtlString ChoreoStr_t;
+typedef std::string ChoreoStr_t;
 
 //-----------------------------------------------------------------------------
 // Purpose: SPEAK events can have "relative tags" that other objects can reference
@@ -224,7 +224,7 @@ private:
 
 	// 0 == magnitude
 	// 1 == left/right
-	CUtlVector< CExpressionSample > m_Samples[ 2 ];
+	std::vector< CExpressionSample > m_Samples[ 2 ];
 	int								m_nFlexControllerIndex[ 2 ];
 	LocalFlexController_t			m_nFlexControllerIndexRaw[ 2 ];
 
@@ -353,8 +353,8 @@ public:
 	virtual int		GetDefaultCurveType();
 
 	// Binary serialization
-	void			SaveToBuffer( CUtlBuffer& buf, CChoreoScene *pScene, IChoreoStringPool *pStringPool );
-	bool			RestoreFromBuffer( CUtlBuffer& buf, CChoreoScene *pScene, IChoreoStringPool *pStringPool );
+	void			SaveToBuffer( ks::byte_writer& buf, CChoreoScene *pScene, IChoreoStringPool *pStringPool );
+	bool			RestoreFromBuffer( ks::byte_reader& buf, CChoreoScene *pScene, IChoreoStringPool *pStringPool );
 
 	// Accessors
 	EVENTTYPE		GetType( void );
@@ -575,7 +575,7 @@ public:
 
 	void			ClearEventDependencies();
 	void			AddEventDependency( CChoreoEvent *other );
-	void			GetEventDependencies( CUtlVector< CChoreoEvent * >& list );
+	void			GetEventDependencies( std::vector< CChoreoEvent * >& list );
 
 	void			SetActive( bool state );
 	bool			GetActive() const;
@@ -595,8 +595,8 @@ private:
 	// Declare copy constructor private to prevent accidental usage...
 					CChoreoEvent(const CChoreoEvent& src );
 
-	void SaveFlexAnimationsToBuffer( CUtlBuffer& buf, IChoreoStringPool *pStringPool );
-	bool RestoreFlexAnimationsFromBuffer( CUtlBuffer& buf, IChoreoStringPool *pStringPool );
+	void SaveFlexAnimationsToBuffer( ks::byte_writer& buf, IChoreoStringPool *pStringPool );
+	bool RestoreFlexAnimationsFromBuffer( ks::byte_reader& buf, IChoreoStringPool *pStringPool );
 
 	float			GetBoundedAbsoluteTagPercentage( AbsTagType type, int tagnum );
 
@@ -651,11 +651,11 @@ private:
 	// Associated channel
 	CChoreoChannel	*m_pChannel;
 
-	CUtlVector < CEventRelativeTag > m_RelativeTags;
-	CUtlVector < CFlexTimingTag > m_TimingTags;
-	CUtlVector < CEventAbsoluteTag > m_AbsoluteTags[ NUM_ABS_TAG_TYPES ];
+	std::vector< CEventRelativeTag > m_RelativeTags;
+	std::vector< CFlexTimingTag > m_TimingTags;
+	std::vector< CEventAbsoluteTag > m_AbsoluteTags[ NUM_ABS_TAG_TYPES ];
 
-	CUtlVector < CFlexAnimationTrack * > m_FlexAnimationTracks;
+	std::vector< CFlexAnimationTrack * > m_FlexAnimationTracks;
 
 	CChoreoScene	*m_pSubScene;
 	CAudioMixer		*m_pMixer;
@@ -678,7 +678,7 @@ private:
 	float			m_flLastSlaveEndTime;	
 	// true if the cc token was found in the cc manager's database
 
-	CUtlVector< CChoreoEvent * >	m_Dependencies;
+	std::vector< CChoreoEvent * >	m_Dependencies;
 
 	int				m_nDefaultCurveType;
 

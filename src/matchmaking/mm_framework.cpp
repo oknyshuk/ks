@@ -11,9 +11,6 @@
 
 #include "mm_title_main.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 // Stress testing events listeners every frame
 ConVar mm_events_listeners_validation( "mm_events_listeners_validation", "0", FCVAR_DEVELOPMENTONLY );

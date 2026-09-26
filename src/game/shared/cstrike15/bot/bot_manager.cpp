@@ -19,9 +19,6 @@
 
 #include "tier0/vprof.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 float g_BotUpkeepInterval = 0.0f;
 float g_BotUpdateInterval = 0.0f;
@@ -65,9 +62,9 @@ void CBotManager::StartFrame( void )
 	{
 		Vector edge, lastEdge;
 
-		FOR_EACH_LL( m_activeGrenadeList, it )
+		for ( const auto &pGrenade : m_activeGrenadeList )
 		{
-			ActiveGrenade *ag = m_activeGrenadeList[ it ];
+			ActiveGrenade *ag = pGrenade.get();
 
 			const Vector &pos = ag->GetDetonationPosition();
 
@@ -159,8 +156,7 @@ void CBotManager::StartFrame( void )
  */
 void CBotManager::AddGrenade( CBaseGrenade *grenade )
 {
-	ActiveGrenade *ag = new ActiveGrenade( grenade );
-	m_activeGrenadeList.AddToTail( ag );
+	m_activeGrenadeList.push_back( std::make_unique<ActiveGrenade>( grenade ) );
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -169,15 +165,14 @@ void CBotManager::AddGrenade( CBaseGrenade *grenade )
  */
 void CBotManager::RemoveGrenade( CBaseGrenade *grenade )
 {
-	FOR_EACH_LL( m_activeGrenadeList, it )
+	for ( auto it = m_activeGrenadeList.begin(); it != m_activeGrenadeList.end(); ++it )
 	{
-		ActiveGrenade *ag = m_activeGrenadeList[ it ];
+		ActiveGrenade *ag = it->get();
 
 		if (ag->IsEntity( grenade ))
 		{
 			ag->OnEntityGone();
-			m_activeGrenadeList.Remove( it );
-			delete ag;
+			m_activeGrenadeList.erase( it );
 			return;
 		}
 	}
@@ -189,9 +184,9 @@ void CBotManager::RemoveGrenade( CBaseGrenade *grenade )
  */
 void CBotManager::SetGrenadeRadius( CBaseGrenade *grenade, float radius )
 {
-	FOR_EACH_LL( m_activeGrenadeList, it )
+	for ( const auto &pGrenade : m_activeGrenadeList )
 	{
-		ActiveGrenade *ag = m_activeGrenadeList[ it ];
+		ActiveGrenade *ag = pGrenade.get();
 
 		if (ag->IsEntity( grenade ))
 		{
@@ -207,44 +202,28 @@ void CBotManager::SetGrenadeRadius( CBaseGrenade *grenade, float radius )
  */
 void CBotManager::ValidateActiveGrenades( void )
 {
-	int it = m_activeGrenadeList.Head();
-
-	while( it != m_activeGrenadeList.InvalidIndex() )
+	for ( auto it = m_activeGrenadeList.begin(); it != m_activeGrenadeList.end(); )
 	{
-		ActiveGrenade *ag = m_activeGrenadeList[ it ];
-
-		int current = it;
-		it = m_activeGrenadeList.Next( it );
+		ActiveGrenade *ag = it->get();
 
 		// lazy validation
 		if (!ag->IsValid())
 		{
-			m_activeGrenadeList.Remove( current );
-			delete ag;
+			it = m_activeGrenadeList.erase( it );
 			continue;
 		}
 		else
 		{
 			ag->Update();
 		}
+		++it;
 	}
 }
 
 //--------------------------------------------------------------------------------------------------------------
 void CBotManager::DestroyAllGrenades( void )
 {
-	int it = m_activeGrenadeList.Head();
-
-	while ( it != m_activeGrenadeList.InvalidIndex() )
-	{
-		ActiveGrenade *ag = m_activeGrenadeList[it];
-		int current = it;
-		it = m_activeGrenadeList.Next( it );
-		m_activeGrenadeList.Remove( current );
-		delete ag;
-	}
-
-	m_activeGrenadeList.PurgeAndDeleteElements();
+	m_activeGrenadeList.clear();
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -253,22 +232,17 @@ void CBotManager::DestroyAllGrenades( void )
  */
 bool CBotManager::IsInsideSmokeCloud( const Vector *pos, float radius )
 {
-	int it = m_activeGrenadeList.Head();
-
-	while( it != m_activeGrenadeList.InvalidIndex() )
+	for ( auto it = m_activeGrenadeList.begin(); it != m_activeGrenadeList.end(); )
 	{
-		ActiveGrenade *ag = m_activeGrenadeList[ it ];
-
-		int current = it;
-		it = m_activeGrenadeList.Next( it );
+		ActiveGrenade *ag = it->get();
 
 		// lazy validation
 		if (!ag->IsValid())
 		{
-			m_activeGrenadeList.Remove( current );
-			delete ag;
+			it = m_activeGrenadeList.erase( it );
 			continue;
 		}
+		++it;
 
 		if (ag->IsSmoke())
 		{
@@ -299,9 +273,9 @@ bool CBotManager::IsLineBlockedBySmoke( const Vector &from, const Vector &to, fl
 	//Vector sightDir = to - from;
 	//float sightLength = sightDir.NormalizeInPlace();
 
-	FOR_EACH_LL( m_activeGrenadeList, it )
+	for ( const auto &pGrenade : m_activeGrenadeList )
 	{
-		ActiveGrenade *ag = m_activeGrenadeList[ it ];
+		ActiveGrenade *ag = pGrenade.get();
 		const float smokeRadiusSq = ag->GetRadius() * ag->GetRadius() * grenadeBloat * grenadeBloat;
 
 		if ( ag->IsSmoke() && CSGameRules() )

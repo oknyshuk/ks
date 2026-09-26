@@ -6,10 +6,7 @@
 
 #include "inputsystem/iinputstacksystem.h"
 #include "tier2/tier2.h"
-#include "tier1/utlstack.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
+#include <vector>
 
 
 //-----------------------------------------------------------------------------
@@ -51,7 +48,7 @@ private:
 	// Updates the cursor based on the current state of the input stack
 	void UpdateCursorState();
 
-	CUtlStack< InputContext_t * > m_ContextStack;
+	std::vector< InputContext_t * > m_ContextStack;
 };
 
 
@@ -84,11 +81,10 @@ const AppSystemInfo_t* CInputStackSystem::GetDependencies()
 void CInputStackSystem::Shutdown()
 {
 	// Delete any leaked contexts
-	while( m_ContextStack.Count() )
+	while ( !m_ContextStack.empty() )
 	{
-		InputContext_t *pContext = nullptr;
-		m_ContextStack.Pop( pContext );
-		delete pContext;
+		delete m_ContextStack.back();
+		m_ContextStack.pop_back();
 	}
 
 	BaseClass::Shutdown();
@@ -106,7 +102,7 @@ InputContextHandle_t CInputStackSystem::PushInputContext()
 	pContext->m_bCursorVisible = true;
 	pContext->m_bMouseCaptureEnabled = false;
 	pContext->m_hCursorIcon = g_pInputSystem->GetStandardCursor( INPUT_CURSOR_ARROW );
-	m_ContextStack.Push( pContext );
+	m_ContextStack.push_back( pContext );
 
 	UpdateCursorState();
 
@@ -119,12 +115,11 @@ InputContextHandle_t CInputStackSystem::PushInputContext()
 //-----------------------------------------------------------------------------
 void CInputStackSystem::PopInputContext( )
 {
-	if ( m_ContextStack.Count() == 0 )
+	if ( m_ContextStack.empty() )
 		return;
 
-	InputContext_t *pContext = nullptr;
-	m_ContextStack.Pop( pContext );
-	delete pContext;
+	delete m_ContextStack.back();
+	m_ContextStack.pop_back();
 
 	UpdateCursorState();
 }
@@ -240,7 +235,7 @@ bool CInputStackSystem::IsTopmostEnabledContext( InputContextHandle_t hContext )
 	if ( !pContext )
 		return false;
 
-	int nCount = m_ContextStack.Count();
+	int nCount = std::ssize( m_ContextStack );
 	for ( int i = nCount; --i >= 0; )
 	{
 		InputContext_t *pStackContext = m_ContextStack[i];
@@ -258,7 +253,7 @@ bool CInputStackSystem::IsTopmostEnabledContext( InputContextHandle_t hContext )
 //-----------------------------------------------------------------------------
 void CInputStackSystem::UpdateCursorState()
 {
-	int nCount = m_ContextStack.Count();
+	int nCount = std::ssize( m_ContextStack );
 	for ( int i = nCount; --i >= 0; )
 	{
 		InputContext_t *pContext = m_ContextStack[i];

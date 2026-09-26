@@ -9,9 +9,6 @@
 #include "server.h"
 #include "ivoiceserver.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 class CVoiceServer : public IVoiceServer
 {
 public:
@@ -40,12 +37,12 @@ public:
 		CGameClient *cl = sv.Client(iSender);
 			
 		ConVarRef voice_verbose( "voice_verbose" );
-		if ( voice_verbose.GetBool() && ( !!cl->m_VoiceStreams.Get( iReceiver ) != !!bListen ) )
+		if ( voice_verbose.GetBool() && ( !!cl->m_VoiceStreams[iReceiver] != !!bListen ) )
 		{
 			Msg( "* CVoiceServer::SetClientListening:  %s m_VoiceStreams from %s (%s) to %s (%s)\n", bListen ? "Enable" : "Disable", cl->GetClientName(), cl->GetNetChannel() ? cl->GetNetChannel()->GetAddress() : "null", sv.Client(iReceiver)->GetClientName(), sv.Client(iReceiver)->GetNetChannel() ? sv.Client(iReceiver)->GetNetChannel()->GetAddress() : "null" );
 		}
 
-		cl->m_VoiceStreams.Set( iReceiver, bListen?1:0 );
+		cl->m_VoiceStreams.set( iReceiver, bListen );
 
 		return true;
 	}	
@@ -60,7 +57,7 @@ public:
 
 		CGameClient *cl = sv.Client(iSender);
 
-		cl->m_VoiceProximity.Set( iReceiver, bUseProximity );
+		cl->m_VoiceProximity.set( iReceiver, bUseProximity );
 
 		return true;
 	}	

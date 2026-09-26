@@ -15,8 +15,6 @@
 
 #include "cmaterialsystem.h"
 
-// NOTE: This must be the last file included!!!
-#include "tier0/memdbgon.h"
 #include "bitmap/floatbitmap.h"
 
 static ConVar mat_lightmap_pfms( "mat_lightmap_pfms", "0", FCVAR_MATERIAL_SYSTEM_THREAD, "Outputs .pfm files containing lightmap data for each lightmap page when a level exits." ); // Write PFM files for each lightmap page in the game directory when exiting a level 
@@ -275,8 +273,8 @@ void CMatLightmaps::BeginLightmapAllocation()
 	// we clean up lightmaps on console right before we load the next map
 	CleanupLightmaps();
 
-	m_ImagePackers.RemoveAll();
-	int i = m_ImagePackers.AddToTail();
+	m_ImagePackers.clear();
+	int i = std::ssize( m_ImagePackers ); m_ImagePackers.emplace_back();
 	m_ImagePackers[i].Reset( 0, GetMaxLightmapPageWidth(), GetMaxLightmapPageHeight() );
 
 	SetCurrentMaterialInternal(0);
@@ -308,7 +306,7 @@ int CMatLightmaps::AllocateLightmap( int width, int height,
 	
 	// material change
 	int i;
-	int nPackCount = m_ImagePackers.Count();
+	int nPackCount = std::ssize( m_ImagePackers );
 	if ( GetCurrentMaterialInternal() != pMaterial )
 	{
 		// If this happens, then we need to close out all image packers other than
@@ -317,7 +315,7 @@ int CMatLightmaps::AllocateLightmap( int width, int height,
 		{
 			// NOTE: We *must* use the order preserving one here so the remaining one
 			// is the last lightmap
-			m_ImagePackers.Remove( i );
+			m_ImagePackers.erase( m_ImagePackers.begin() + i );
 			--nPackCount;
 		}
 
@@ -353,7 +351,7 @@ int CMatLightmaps::AllocateLightmap( int width, int height,
 	if ( !bAdded )
 	{
 		++m_numSortIDs;
-		i = m_ImagePackers.AddToTail();
+		i = std::ssize( m_ImagePackers ); m_ImagePackers.emplace_back();
 		m_ImagePackers[i].Reset( m_numSortIDs, GetMaxLightmapPageWidth(), GetMaxLightmapPageHeight() );
 		++m_NumLightmapPages;
 		if ( !m_ImagePackers[i].AddBlock( width, height, &offsetIntoLightmapPage[0], &offsetIntoLightmapPage[1] ) )
@@ -390,9 +388,9 @@ void CMatLightmaps::EndLightmapAllocation()
 
 	// Compute the dimensions of the last lightmap 
 	int lastLightmapPageWidth, lastLightmapPageHeight;
-	int nLastIdx = m_ImagePackers.Count();
+	int nLastIdx = std::ssize( m_ImagePackers );
 	m_ImagePackers[nLastIdx - 1].GetMinimumDimensions( &lastLightmapPageWidth, &lastLightmapPageHeight, HardwareConfig()->MaxTextureAspectRatio() );
-	m_ImagePackers.Purge();
+	m_ImagePackers.clear(); m_ImagePackers.shrink_to_fit();
 
 	m_pLightmapPages = new LightmapPageInfo_t[GetNumLightmapPages()];
 	Assert( m_pLightmapPages );
@@ -409,7 +407,7 @@ void CMatLightmaps::EndLightmapAllocation()
    }
 
 	int i;
-	m_LightmapPageTextureHandles.EnsureCapacity( GetNumLightmapPages() );
+	m_LightmapPageTextureHandles.reserve( GetNumLightmapPages() );
 	for ( i = 0; i < GetNumLightmapPages(); i++ )
 	{
 		// Compute lightmap dimensions
@@ -458,8 +456,8 @@ void CMatLightmaps::AllocateLightmapTexture( int lightmap )
 		flags |= TEXTURE_CREATE_MANAGED;
 	}
 
-	int nPreviousTextureHandles = m_LightmapPageTextureHandles.Count();
-	m_LightmapPageTextureHandles.EnsureCount( lightmap + 1 );
+	int nPreviousTextureHandles = std::ssize( m_LightmapPageTextureHandles );
+	ks::ensure_size( m_LightmapPageTextureHandles, lightmap + 1 );
 	for ( int nLightmap = nPreviousTextureHandles; nLightmap <= lightmap; ++nLightmap )
 	{
 		m_LightmapPageTextureHandles[ nLightmap ] = INVALID_SHADERAPI_TEXTURE_HANDLE;
@@ -720,7 +718,7 @@ Vector4D ConvertLightmapColorToRGBScale( const float *lightmapColor )
 	}
 
 	fScale = ceil( fScale * (255.0f/16.0f) ) * (16.0f/255.0f);
-	fScale = MIN( fScale, 16.0f );
+	fScale = std::min( fScale, 16.0f );
 
 	float fInvScale = 1.0f / fScale;
 
@@ -728,7 +726,7 @@ Vector4D ConvertLightmapColorToRGBScale( const float *lightmapColor )
 	{
 		result[i] = lightmapColor[i] * fInvScale;
 		result[i] = ceil( result[i] * 255.0f ) * (1.0f/255.0f);
-		result[i] = MIN( result[i], 1.0f );
+		result[i] = std::min( result[i], 1.0f );
 	}
 
 	fScale /= 16.0f;

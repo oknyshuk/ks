@@ -14,9 +14,6 @@
 #include "mathlib/vector.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 const int MAX_COMMAND_BUFFER = 2048;
 //-----------------------------------------------------------------------------
 // Purpose: Sends a command to the editor (if running) to begin an editing session

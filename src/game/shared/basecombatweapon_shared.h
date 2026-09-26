@@ -639,7 +639,7 @@ public:
 
 	virtual IClientModelRenderable*	GetClientModelRenderable();
 
-	static CUtlLinkedList< CBaseCombatWeapon * >& GetWeaponList( void );
+	static std::vector< CBaseCombatWeapon * >& GetWeaponList( void );
 
 
 	void					ApplyThirdPersonStickers( C_BaseAnimating *pWeaponModelTargetOverride = nullptr );

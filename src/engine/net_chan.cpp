@@ -23,9 +23,6 @@
 #include "download.h"
 #include "filesystem_init.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
@@ -75,7 +72,7 @@ void LogMultiline(bool input, char const *label, const char * data, size_t len) 
 	{
 		memset(asc_line, ' ', sizeof(asc_line));
 		memset(hex_line, ' ', sizeof(hex_line));
-		size_t line_len = MIN(len, LINE_SIZE);
+		size_t line_len = std::min(len, LINE_SIZE);
 		for (size_t i=0; i<line_len; ++i) {
 			unsigned char ch = static_cast<unsigned char>(data[i]);
 			asc_line[i] = ( V_isprint(ch) && !V_iscntrl(ch) ) ? data[i] : '.';
@@ -165,7 +162,7 @@ private:
 
 		void UpdateRaw( INetMessage *msg, int nEndBit )
 		{
-			Q_memcpy( m_Message, (const byte *)msg, MIN( msg->GetSize(), sizeof( m_Message ) ) );
+			Q_memcpy( m_Message, (const byte *)msg, std::min( msg->GetSize(), sizeof( m_Message ) ) );
 			m_nEndBit = nEndBit;
 			Q_strncpy( m_szDesc, msg->ToString(), sizeof( m_szDesc ) );
 		}
@@ -176,7 +173,7 @@ private:
 			{
 				Msg( "---> DIDN'T FINISH PARSING %s\n", m_szName );
 			}
-			Msg( "%s: type( %d ) group ( %d ) size ( %d bytes ), startbit %d end bit %d\n", m_szName, m_nType, m_nGroup, m_nMessageSize, m_nStartBit, m_nEndBit );
+			Msg( "%s: type( %d ) group ( %d ) size ( %d bytes ), startbit %d end bit %d\n", m_szName, m_nType, m_nGroup, (int)m_nMessageSize, m_nStartBit, m_nEndBit );
 			Msg( "   %s\n", m_szDesc );
 			// Raw contents
 			if ( m_pMsg )
@@ -258,7 +255,7 @@ void CNetchanParanoidMode::StartPacket( bf_read &fullbuf )
 	if ( !IsEnabled() )
 		return;
 
-	m_nRawDataSize = MIN( fullbuf.TotalBytesAvailable(), NET_MAX_PAYLOAD );
+	m_nRawDataSize = std::min<std::common_type_t<size_t, int>>( fullbuf.TotalBytesAvailable(), NET_MAX_PAYLOAD );
 	Q_memcpy( m_pRawData, fullbuf.GetBasePointer(), m_nRawDataSize );
 
 	// Reset counter
@@ -377,7 +374,7 @@ void CNetChan::Clear()
 
 	for ( i=0; i<MAX_STREAMS; i++ )
 	{
-		while ( m_WaitingList[i].Count() )
+		while ( !m_WaitingList[i].empty() )
 			RemoveHeadInWaitingList( i );	
 
 		if ( m_ReceiveList[i].buffer )
@@ -422,7 +419,7 @@ void CNetChan::CompressFragments()
 	// write fragemnts for both streams
 	for ( int i=0; i<MAX_STREAMS; i++ )
 	{
-		if ( m_WaitingList[i].Count() == 0 )
+		if ( m_WaitingList[i].empty() )
 			continue;
 
 		// get the first fragments block which is send next
@@ -676,7 +673,7 @@ bool CNetChan::EnqueueVeryLargeAsyncTransfer( INetMessage &msg )
 	data->transferID = m_FileRequestCounter;
 	V_memset( data->filename, 0, sizeof( data->filename ) );
 
-	m_WaitingList[ FRAG_FILE_STREAM ].AddToTail( data );	// that's it for now
+	m_WaitingList[ FRAG_FILE_STREAM ].push_back( data );	// that's it for now
 
 	// check if send as stream or with snapshot
 	data->asTCP = false; // m_StreamActive && ( Bits2Bytes(data->length) > m_MaxReliablePayloadSize );
@@ -733,17 +730,17 @@ void CNetChan::Shutdown(const char *pReason)
 	}
 
 	// free net messages
-	for ( int i = 0; i < m_NetMessages.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_NetMessages ); i++ )
 	{
-		CUtlVector< INetMessageBinder * >& Messages = m_NetMessages[ i ];
+		std::vector< INetMessageBinder * >& Messages = m_NetMessages[ i ];
 
-		for( int j = Messages.Count() - 1; j >= 0; j-- )
+		for( int j = std::ssize( Messages ) - 1; j >= 0; j-- )
 		{
 			Messages[ j ]->SetNetChannel( nullptr );
 		}
 	}
 
-	m_NetMessages.Purge();
+	m_NetMessages.clear(); m_NetMessages.shrink_to_fit();
 
 
 	m_DemoRecorder = nullptr;
@@ -759,7 +756,7 @@ void CNetChan::Shutdown(const char *pReason)
 	}
 }
 
-CNetChan::CNetChan() : m_SplitPlayers( 0, 0, SplitPlayer_t::Less )
+CNetChan::CNetChan()
 {
 	m_pActiveChannel = this;
 	m_nSplitPacketSequence = 1;
@@ -903,17 +900,16 @@ void CNetChan::Setup( int sock, const ns_address &adr, const char * name, INetCh
 	FlowReset();
 
 	// Set our encryption key
-	m_EncryptionKey.Purge();
+	m_EncryptionKey.clear();
 	if ( pbEncryptionKey )
 	{
-		m_EncryptionKey.EnsureCapacity( NET_CRYPT_KEY_LENGTH );
-		Q_memcpy( m_EncryptionKey.Base(), pbEncryptionKey, NET_CRYPT_KEY_LENGTH );
+		m_EncryptionKey.assign( pbEncryptionKey, pbEncryptionKey + NET_CRYPT_KEY_LENGTH );
 	}
 
-	m_NETMsgNOP.Bind< CNETMsg_NOP_t >( this, UtlMakeDelegate( this, &CNetChan::NETMsg_NOP ) );
-	m_NETMsgDisconnect.Bind< CNETMsg_Disconnect_t >( this, UtlMakeDelegate( this, &CNetChan::NETMsg_Disconnect ) );
-	m_NETMsgFile.Bind< CNETMsg_File_t >( this, UtlMakeDelegate( this, &CNetChan::NETMsg_File ) );
-	m_NETMsgSplitScreenUser.Bind< CNETMsg_SplitScreenUser_t >( this, UtlMakeDelegate( this, &CNetChan::NETMsg_SplitScreenUser ) );
+	m_NETMsgNOP.Bind< CNETMsg_NOP_t >( this, std::bind_front( &CNetChan::NETMsg_NOP, this ) );
+	m_NETMsgDisconnect.Bind< CNETMsg_Disconnect_t >( this, std::bind_front( &CNetChan::NETMsg_Disconnect, this ) );
+	m_NETMsgFile.Bind< CNETMsg_File_t >( this, std::bind_front( &CNetChan::NETMsg_File, this ) );
+	m_NETMsgSplitScreenUser.Bind< CNETMsg_SplitScreenUser_t >( this, std::bind_front( &CNetChan::NETMsg_SplitScreenUser, this ) );
 
 	// tell message handler to register known netmessages
 	m_MessageHandler->ConnectionStart( this );
@@ -953,7 +949,7 @@ bool CNetChan::StartStreaming( unsigned int challengeNr )
 	MEM_ALLOC_CREDIT();
 
 	m_StreamSocket = NET_ConnectSocket( m_Socket, remote_address.AsType<netadr_t>() );
-	m_StreamData.EnsureCapacity( NET_MAX_PAYLOAD );
+	ks::grow_to( m_StreamData, NET_MAX_PAYLOAD );
 
 	return (m_StreamSocket != 0);
 }
@@ -1017,7 +1013,7 @@ void CNetChan::SetMaxBufferSize(bool bReliable, int nBytes, bool bVoice )
 	nBytes = clamp( nBytes, NET_MAX_DATAGRAM_PAYLOAD, NET_MAX_PAYLOAD );
 
 	bf_write *stream;
-	CUtlMemory<byte> *buffer;
+	std::vector<byte> *buffer;
 
 	if ( bReliable )
 	{
@@ -1035,7 +1031,7 @@ void CNetChan::SetMaxBufferSize(bool bReliable, int nBytes, bool bVoice )
 		buffer = &m_UnreliableDataBuffer;
 	}
 
-	if ( buffer->Count() == nBytes )
+	if ( std::ssize( *buffer ) == nBytes )
 		return;
 
 	byte	*copybuf = nullptr;
@@ -1051,22 +1047,20 @@ void CNetChan::SetMaxBufferSize(bool bReliable, int nBytes, bool bVoice )
 	if ( copybits > 0 )
 	{
 		copybuf = new byte[ copybytes ];
-		Q_memcpy( copybuf, buffer->Base(), copybytes );
+		Q_memcpy( copybuf, buffer->data(), copybytes );
 	}
 
-	buffer->Purge();
-
 	MEM_ALLOC_CREDIT();
-	buffer->EnsureCapacity( nBytes );
+	buffer->assign( nBytes, 0 );
 
 	if ( copybits > 0 )
 	{
-		Q_memcpy( buffer->Base(), copybuf, copybytes );
+		Q_memcpy( buffer->data(), copybuf, copybytes );
 		delete [] copybuf;
 		copybuf = nullptr;
 	}
 
-	stream->StartWriting( buffer->Base(), nBytes, copybits );
+	stream->StartWriting( buffer->data(), nBytes, copybits );
 	
 }
 
@@ -1340,7 +1334,7 @@ bool CNetChan::IsFileInWaitingList( const char *filename )
 
 	for ( int stream=0; stream<MAX_STREAMS; stream++)
 	{
-		for ( int i = 0; i < m_WaitingList[stream].Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_WaitingList[stream] ); i++ )
 		{
 			dataFragments_t * data = m_WaitingList[stream][i]; 
 
@@ -1354,7 +1348,7 @@ bool CNetChan::IsFileInWaitingList( const char *filename )
 
 void CNetChan::RemoveHeadInWaitingList( int nList )
 {
-	Assert( m_WaitingList[nList].Count() );
+	Assert( std::ssize( m_WaitingList[nList] ) );
 
 	dataFragments_t * data = m_WaitingList[nList][0]; // get head
 
@@ -1369,7 +1363,7 @@ void CNetChan::RemoveHeadInWaitingList( int nList )
 
 	// data->fragments.Purge();
 
-	m_WaitingList[nList].FindAndRemove( data );	// remove from list
+	ks::erase_first( m_WaitingList[nList], data );	// remove from list
 
 	delete data;	//free structure itself
 }
@@ -1384,7 +1378,7 @@ bool CNetChan::CreateFragmentsFromBuffer( bf_write *buffer, int stream )
 	// reliable data to the last item. that doesn't work with the first item
 	// since it may have been already send and is waiting for acknowledge
 
-	int count = m_WaitingList[stream].Count();
+	int count = std::ssize( m_WaitingList[stream] );
 
 	if ( count > 1 )
 	{
@@ -1433,7 +1427,7 @@ bool CNetChan::CreateFragmentsFromBuffer( bf_write *buffer, int stream )
 		
 		bfwrite.StartWriting( data->buffer, totalBytes );
 
-		m_WaitingList[stream].AddToTail( data );	// that's it for now
+		m_WaitingList[stream].push_back( data );	// that's it for now
 	}
 
 	// write new reliable data to buffer
@@ -1508,7 +1502,7 @@ bool CNetChan::CreateFragmentsFromFile( const char *filename, int stream, unsign
 	data->transferID = transferID;
 	Q_strncpy( data->filename, filename, sizeof(data->filename) );
 		
-	m_WaitingList[stream].AddToTail( data );	// that's it for now
+	m_WaitingList[stream].push_back( data );	// that's it for now
 
 	// check if send as stream or with snapshot
 	data->asTCP = false; // m_StreamActive && ( Bits2Bytes(data->length) > m_MaxReliablePayloadSize );
@@ -1523,7 +1517,7 @@ bool CNetChan::CreateFragmentsFromFile( const char *filename, int stream, unsign
 
 void CNetChan::SendTCPData( void )
 {
-	if ( m_WaitingList[FRAG_NORMAL_STREAM].Count() == 0 )
+	if ( m_WaitingList[FRAG_NORMAL_STREAM].empty() )
 		return; // nothing in line
 
 	dataFragments_t *data = m_WaitingList[FRAG_NORMAL_STREAM][0];
@@ -1669,7 +1663,7 @@ bool CNetChan::SendSubChannelData( bf_write &buf )
 		{
 			// send from file
 			Assert( data->file != FILESYSTEM_INVALID_HANDLE );
-			char *tmpbuf = new char[ MAX( length, 1 ) ]; // alloc on stack
+			char *tmpbuf = new char[ std::max<std::common_type_t<unsigned int, int>>( length, 1 ) ]; // alloc on stack
 			g_pFileSystem->Seek( data->file, offset, FILESYSTEM_SEEK_HEAD );
 			g_pFileSystem->Read( tmpbuf, length, data->file );
 			buf.WriteBytes( tmpbuf, length );
@@ -1850,7 +1844,7 @@ void CNetChan::UpdateSubChannels()
 
 	for ( i = 0; i < MAX_STREAMS; i++ )
 	{
-		if ( m_WaitingList[i].Count() <= 0 )
+		if ( std::ssize( m_WaitingList[i] ) <= 0 )
 			continue;
 
 		dataFragments_s *data = m_WaitingList[i][0]; // get head
@@ -1867,11 +1861,11 @@ void CNetChan::UpdateSubChannels()
 
 		// how many fragments can we send ?
 
-		int numFragments = MIN( nSendMaxFragments, data->numFragments - nSentFragments );
+		int numFragments = std::min( nSendMaxFragments, data->numFragments - nSentFragments );
 
 		// if we are in file background transmission mode, just send one fragment per packet
 		if ( i == FRAG_FILE_STREAM && m_bFileBackgroundTranmission )
-			numFragments = MIN( 1, numFragments );
+			numFragments = std::min( 1, numFragments );
 
 		// copy fragment data into subchannel
 
@@ -2089,7 +2083,7 @@ int CNetChan::SendDatagram(bf_write *datagram)
 			// Pad with ones
 			if ( nPadBits > 0 )
 			{
-				unsigned int unOnes = GetBitForBitnum( nPadBits ) - 1;
+				unsigned int unOnes = ( 1u << nPadBits ) - 1;
 				send.WriteUBitLong( unOnes, nPadBits );
 			}
 		}
@@ -2254,7 +2248,7 @@ const unsigned char * CNetChan::GetChannelEncryptionKey() const
 		byte( ( unHostVersion >> 2 ) & 0xFF ), byte( ( unHostVersion >> 10 ) & 0xFF ), byte( ( unHostVersion >> 18 ) & 0xFF ), byte( ( unHostVersion >> 26 ) & 0xFF ),
 		byte( ( unHostVersion >> 4 ) & 0xFF ), byte( ( unHostVersion >> 12 ) & 0xFF ), byte( ( unHostVersion >> 20 ) & 0xFF ), byte( ( unHostVersion >> 28 ) & 0xFF ),
 	};
-	return m_EncryptionKey.NumAllocated() ? m_EncryptionKey.Base() : ubDefaultEncryptionKey;
+	return !m_EncryptionKey.empty() ? m_EncryptionKey.data() : ubDefaultEncryptionKey;
 }
 
 bool CNetChan::ProcessMessages( bf_read &buf, bool wasReliable  )
@@ -2484,7 +2478,7 @@ CNetChan::subChannel_s *CNetChan::GetFreeSubChannel()
 void CNetChan::CheckWaitingList(int nList)
 {
 	// go thru waiting lists and mark fragments send with this seqnr packet
-	if ( m_WaitingList[nList].Count() == 0 || m_nOutSequenceNrAck <= 0 )
+	if ( m_WaitingList[nList].empty() || m_nOutSequenceNrAck <= 0 )
 		return; // no data in list
 
 	dataFragments_t *data = m_WaitingList[nList][0]; // get head
@@ -2735,7 +2729,7 @@ int CNetChan::ProcessPacketHeader( netpacket_t * packet )
 					if ( subchan->numFragments[j] == 0 )
 						continue;
 
-					Assert( m_WaitingList[j].Count() > 0 );
+					Assert( std::ssize( m_WaitingList[j] ) > 0 );
 					
 					dataFragments_t * data = m_WaitingList[j][0];
 
@@ -2949,12 +2943,12 @@ bool CNetChan::SendNetMsg( INetMessage &msg, bool bForceReliable, bool bVoice )
 
 INetMessageBinder *CNetChan::FindMessageBinder( int type, int index )
 {
-	if ( !m_NetMessages.IsValidIndex( type )  )
+	if ( !ks::is_valid_index( m_NetMessages, type )  )
 	{
 		return nullptr;
 	}
 
-	if( index < m_NetMessages[ type ].Count() )
+	if( index < std::ssize( m_NetMessages[ type ] ) )
 	{
 		return m_NetMessages[ type ][ index ];
 	}
@@ -2967,23 +2961,23 @@ bool CNetChan::RegisterMessage(INetMessageBinder *msg)
 
 	Assert( Type <= SVC_Messages_MAX || Type <= CLC_Messages_MAX || Type <= NET_Messages_MAX );
 
-	m_NetMessages.EnsureCount( Type + 1 );
+	ks::ensure_size( m_NetMessages, Type + 1 );
 
-	m_NetMessages[ Type ].AddToTail( msg );
+	m_NetMessages[ Type ].push_back( msg );
 	msg->SetNetChannel( this );
 	return true;
 }
 
 bool CNetChan::UnregisterMessage(INetMessageBinder *msg)
 {
-	CUtlVector< INetMessageBinder * >& Messages = m_NetMessages[ msg->GetType() ];
-	int numtypes = Messages.Count();
+	std::vector< INetMessageBinder * >& Messages = m_NetMessages[ msg->GetType() ];
+	int numtypes = std::ssize( Messages );
 
 	for( int i = 0; i < numtypes; i++ )
 	{
 		if ( Messages[ i ] == msg )
 		{
-			Messages.Remove( i );
+			Messages.erase( Messages.begin() + i );
 			return true;
 		}
 	}
@@ -3183,7 +3177,7 @@ bool CNetChan::ProcessStream( void )
 		// read in 4kB chuncks
 		int bytesLeft = ( m_StreamLength - m_StreamReceived );	
 
-		int bytesRecv = NET_ReceiveStream( m_StreamSocket, (char*)m_StreamData.Base() + m_StreamReceived, bytesLeft, 0 );
+		int bytesRecv = NET_ReceiveStream( m_StreamSocket, (char*)m_StreamData.data() + m_StreamReceived, bytesLeft, 0 );
 		
 		if ( bytesRecv == 0 )
 		{
@@ -3206,7 +3200,7 @@ bool CNetChan::ProcessStream( void )
 		{
 			int ackseqnr =m_StreamSeqNr;
 
-			bf_read buffer( m_StreamData.Base(), m_StreamLength );
+			bf_read buffer( m_StreamData.data(), m_StreamLength );
 
 			ProcessMessages( buffer, true );
 
@@ -3228,8 +3222,8 @@ int CNetChan::GetDataRate() const
 bool CNetChan::HasPendingReliableData( void )
 {
 	return (m_StreamReliable.GetNumBitsWritten() > 0) || 
-		   (m_WaitingList[FRAG_NORMAL_STREAM].Count() > 0) ||
-		   (m_WaitingList[FRAG_FILE_STREAM].Count() > 0);
+		   (!m_WaitingList[FRAG_NORMAL_STREAM].empty()) ||
+		   (!m_WaitingList[FRAG_FILE_STREAM].empty());
 }
 
 float CNetChan::GetTimeConnected() const
@@ -3435,7 +3429,7 @@ bool CNetChan::GetStreamProgress( int flow, int *received, int *total ) const
 	{
 		for ( int i = 0; i<MAX_STREAMS; i++ )
 		{
-			if ( m_WaitingList[i].Count() > 0 )
+			if ( !m_WaitingList[i].empty() )
 			{
 				(*total) += m_WaitingList[i][0]->numFragments * FRAGMENT_SIZE;
 				(*received) += m_WaitingList[i][0]->ackedFragments * FRAGMENT_SIZE;
@@ -3620,22 +3614,14 @@ void CNetChan::AttachSplitPlayer( int nSplitPlayerSlot, INetChannel *pChannel )
 	SplitPlayer_t search;
 	search.m_nSlot = nSplitPlayerSlot;
 	search.m_pChannel = pChannel;
-	int idx = m_SplitPlayers.Find( search );
-	if ( idx == m_SplitPlayers.InvalidIndex() )
-	{
-		m_SplitPlayers.Insert( search );
-	}
+	m_SplitPlayers.insert( search );
 }
 
 void CNetChan::DetachSplitPlayer( int nSplitPlayerSlot )
 {
 	SplitPlayer_t search;
 	search.m_nSlot = nSplitPlayerSlot;
-	int idx = m_SplitPlayers.Find( search );
-	if ( idx != m_SplitPlayers.InvalidIndex() )
-	{
-		m_SplitPlayers.RemoveAt( idx );
-	}
+	m_SplitPlayers.erase( search );
 }
 
 void CNetChan::ChangeSplitUser( bf_write &out, int slot )
@@ -3646,7 +3632,7 @@ void CNetChan::ChangeSplitUser( bf_write &out, int slot )
 	SplitScreenUser.WriteToBuffer( out );
 }
 
-void CNetChan::MaybeAppendBuffer( EBufType eBufType, bf_write &out, SplitPlayer_t &sp, bf_write &src, int *pnCurrentSlot )
+void CNetChan::MaybeAppendBuffer( EBufType eBufType, bf_write &out, const SplitPlayer_t &sp, bf_write &src, int *pnCurrentSlot )
 {
 	if ( src.GetNumBitsWritten() <= 0 )
 		return;
@@ -3705,9 +3691,8 @@ void CNetChan::MergeSplitUserBuffers( EBufType eBufType, bf_write &outbuf )
 {
 	int nCurrentSlot = 0;
 
-	for ( int user = m_SplitPlayers.FirstInorder(); user != m_SplitPlayers.InvalidIndex(); user = m_SplitPlayers.NextInorder( user ) )
+	for ( const SplitPlayer_t &sp : m_SplitPlayers )
 	{
-		SplitPlayer_t &sp = m_SplitPlayers[ user ];
 		CNetChan *chan = static_cast< CNetChan * >( sp.m_pChannel );
 		if ( !chan )
 			continue;
@@ -3726,7 +3711,7 @@ void CNetChan::MergeSplitUserBuffers( EBufType eBufType, bf_write &outbuf )
 void CNetChan::SplitUserCombineForSending()
 {
 	// Nothing to do?
-	if ( m_SplitPlayers.Count() == 0 )
+	if ( m_SplitPlayers.empty() )
 		return;
 
 	MergeSplitUserBuffers( BUF_RELIABLE, m_StreamReliable );

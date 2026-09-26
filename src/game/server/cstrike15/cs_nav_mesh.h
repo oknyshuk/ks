@@ -45,8 +45,8 @@ public:
 	virtual CNavArea *CreateArea( void ) const;							// CNavArea factory
 
 	virtual unsigned int GetSubVersionNumber( void ) const;									// returns sub-version number of data format used by derived classes
-	virtual void SaveCustomData( CUtlBuffer &fileBuffer ) const;							// store custom mesh data for derived classes
-	virtual void LoadCustomData( CUtlBuffer &fileBuffer, unsigned int subVersion );			// load custom mesh data for derived classes
+	virtual void SaveCustomData( ks::byte_writer &fileBuffer ) const;							// store custom mesh data for derived classes
+	virtual void LoadCustomData( ks::byte_reader &fileBuffer, unsigned int subVersion );			// load custom mesh data for derived classes
 
 	virtual void Reset( void );											///< destroy Navigation Mesh data and revert to initial state
 	virtual void Update( void );										///< invoked on each game frame
@@ -70,13 +70,13 @@ private:
 	void MaintainChickenPopulation( void );
 	int m_desiredChickenCount;
 	CountdownTimer m_refreshChickenTimer;
-	CUtlVector< CHandle< CBaseEntity > > m_chickenVector;
+	std::vector< CHandle< CBaseEntity > > m_chickenVector;
 
 	void MaintainDMSpawnPopulation( void );
 	int m_desiredDMSpawns;
 	int m_consecutiveFailedAttempts;
 	CountdownTimer m_refreshDMSpawnTimer;
-	CUtlVector< CHandle< CBaseEntity > > m_DMSpawnVector;
+	std::vector< CHandle< CBaseEntity > > m_DMSpawnVector;
 
 	bool IsSpawnBlockedByTrigger( Vector pos );
 

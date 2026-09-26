@@ -20,7 +20,6 @@
 #include "game/client/IGameClientExports.h"
 #include "fmtstr.h"
 #include "vstdlib/random.h"
-#include "utlbuffer.h"
 #include "tier1/tokenset.h"
 #include "filesystem.h"
 #include "inputsystem/iinputsystem.h"
@@ -47,9 +46,6 @@
 #include "cstrike15_gcconstants.h"
 #include "engine/inetsupport.h"
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 using namespace BaseModUI;
@@ -159,9 +155,6 @@ CUIGameData::CUIGameData() :
 	m_pAsyncJob = nullptr;
 
 	m_pSelectStorageClient = nullptr;
-
-	SetDefLessFunc( m_mapUserXuidToAvatar );
-	SetDefLessFunc( m_mapUserXuidToName );
 }
 
 //=============================================================================
@@ -526,18 +519,18 @@ char const * CUIGameData::GetPlayerName( XUID playerID, char const *szPlayerName
 	if ( steamapicontext && steamapicontext->SteamUtils() &&
 		steamapicontext->SteamFriends() && steamapicontext->SteamUser() )
 	{
-		int iIndex = m_mapUserXuidToName.Find( playerID );
-		if ( iIndex == m_mapUserXuidToName.InvalidIndex() )
+		auto iIndex = m_mapUserXuidToName.find( playerID );
+		if ( iIndex == m_mapUserXuidToName.end() )
 		{
 			char const *szName = steamapicontext->SteamFriends()->GetFriendPersonaName( playerID );
 			if ( szName && *szName )
 			{
-				iIndex = m_mapUserXuidToName.Insert( playerID, szName );
+				iIndex = m_mapUserXuidToName.emplace( playerID, ks::nz( szName ) ).first;
 			}
 		}
 
-		if ( iIndex != m_mapUserXuidToName.InvalidIndex() )
-			return m_mapUserXuidToName.Element( iIndex ).Get();
+		if ( iIndex != m_mapUserXuidToName.end() )
+			return iIndex->second.data();
 	}
 
 	return szPlayerNameSpeculative;
@@ -550,12 +543,12 @@ void CUIGameData::Steam_OnPersonaStateChanged( PersonaStateChange_t *pParam )
 
 	if ( pParam->m_nChangeFlags & k_EPersonaChangeName )
 	{
-		int iIndex = m_mapUserXuidToName.Find( pParam->m_ulSteamID );
-		if ( iIndex != m_mapUserXuidToName.InvalidIndex() )
+		auto iIndex = m_mapUserXuidToName.find( pParam->m_ulSteamID );
+		if ( iIndex != m_mapUserXuidToName.end() )
 		{
-			CUtlString utlName = m_mapUserXuidToName.Element( iIndex );
-			m_mapUserXuidToName.RemoveAt( iIndex );
-			GetPlayerName( pParam->m_ulSteamID, utlName.Get() );
+			std::string utlName = std::move( iIndex->second );
+			m_mapUserXuidToName.erase( iIndex );
+			GetPlayerName( pParam->m_ulSteamID, utlName.data() );
 		}
 	}
 
@@ -650,15 +643,15 @@ struct ServerCookie_t
 	uint64 m_uiCookie;
 	double m_dblTimeCached;
 };
-CUtlMap< uint64, ServerCookie_t, int32, CDefLess< uint64 > > g_mapServerCookies;
+std::map< uint64, ServerCookie_t > g_mapServerCookies;
 static uint64 Helper_GetServerCookie( uint64 gsid )
 {
-	int32 i = g_mapServerCookies.Find( gsid );
-	if ( i == g_mapServerCookies.InvalidIndex() )
+	auto it = g_mapServerCookies.find( gsid );
+	if ( it == g_mapServerCookies.end() )
 		return 0;
-	if ( Plat_FloatTime() - g_mapServerCookies.Element( i ).m_dblTimeCached > 60.0f )
+	if ( Plat_FloatTime() - it->second.m_dblTimeCached > 60.0f )
 		return 0;
-	return g_mapServerCookies.Element( i ).m_uiCookie;
+	return it->second.m_uiCookie;
 }
 
 void CUIGameData::OnEvent( KeyValues *pEvent )

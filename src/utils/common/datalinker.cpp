@@ -7,6 +7,7 @@
 
 #include "datalinker.h"
 #include "dbg.h"
+#include "tier1/strtools.h"
 #include "memalloc.h"
 
 namespace DataLinker
@@ -62,11 +63,11 @@ void Stream::EnsureAvailable( uint addCapacity )
 	if ( m_data.empty() )
 	{
 		// first allocation
-		m_data.push_back( Chunk( MAX( addCapacity*4u, 4096u ), 0 ) );
+		m_data.push_back( Chunk( std::max( addCapacity*4u, 4096u ), 0 ) );
 	}
 	else if ( m_data.back().GetAvailable() < addCapacity )
 	{
-		m_data.push_back( Chunk( MAX( addCapacity*4u, m_data.back().m_capacity*2u ), m_size ) );
+		m_data.push_back( Chunk( std::max( addCapacity*4u, m_data.back().m_capacity*2u ), m_size ) );
 	}
 }
 

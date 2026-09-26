@@ -12,7 +12,7 @@
 
 
 #include "baseentity.h"
-#include "utllinkedlist.h"
+#include <vector>
 
 
 // Shared stuff between door portals and window portals.
@@ -92,7 +92,7 @@ public:
 	// Note: when you're standing in the space between the **'s, then the server would stop transmitting
 	// the contents of area 2 because there would be no portal you were on the correct side of to
 	// see into area 2.
-	virtual bool	UpdateVisibility( const CUtlVector< Vector > &vecOrigins, float fovDistanceAdjustFactor, bool &bIsOpenOnClient );
+	virtual bool	UpdateVisibility( const std::vector< Vector > &vecOrigins, float fovDistanceAdjustFactor, bool &bIsOpenOnClient );
 
 
 public:
@@ -102,13 +102,10 @@ public:
 	
 	[[= ks::reflect::Key{ .name = "PortalVersion" } ]] int				m_iPortalVersion;
 
-private:
-	
-	unsigned short	m_AreaPortalsElement;	// link into g_AreaPortals.
 };
 
 
-extern CUtlLinkedList<CFuncAreaPortalBase*, unsigned short> g_AreaPortals;
+extern std::vector<CFuncAreaPortalBase*> g_AreaPortals;
 
 
 

@@ -14,9 +14,6 @@
 #include "cdll_engine_int.h"
 #include "../../debugoverlay.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 
 extern Color OpColor;
@@ -65,7 +62,7 @@ void CSosOperatorSourceInfo::Execute( void *pVoidMem, channel_t *pChannel, CScra
 
 	bool bUseEntity = ( pStructMem->m_nSource == SO_SRC_ENTITY );
 
-	int nSourceCount = pScratchPad->m_UtlVecMultiOrigins.Count();
+	int nSourceCount = std::ssize( pScratchPad->m_UtlVecMultiOrigins );
 
 	// have we gotten our sources yet?
 	if( nSourceCount < 1 )
@@ -113,10 +110,10 @@ void CSosOperatorSourceInfo::Execute( void *pVoidMem, channel_t *pChannel, CScra
 		si.pAngles = &source_angles;
 		si.pflRadius = &flRadius;
 
-		CUtlVector< Vector > utlVecMultiOrigins;
+		std::vector< Vector > utlVecMultiOrigins;
 		si.m_pUtlVecMultiOrigins = &pScratchPad->m_UtlVecMultiOrigins;
 
-		CUtlVector< Vector > utlVecMultiAngles;
+		std::vector< Vector > utlVecMultiAngles;
 		//		si.m_pUtlVecMultiAngles = &pScratchPad->m_UtlVecMultiAngles;
 
 		// TODO: morasky, verify it's been handled
@@ -174,7 +171,7 @@ void CSosOperatorSourceInfo::Execute( void *pVoidMem, channel_t *pChannel, CScra
 
 	}
 
-	nSourceCount = pScratchPad->m_UtlVecMultiOrigins.Count();
+	nSourceCount = std::ssize( pScratchPad->m_UtlVecMultiOrigins );
 	pStructMem->m_flOutSourceCount[0] = (float) nSourceCount;
 
 

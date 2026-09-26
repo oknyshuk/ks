@@ -12,9 +12,6 @@
 #include "team.h"
 #include "player.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 void SendProxy_Color32ToInt( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
 {
 	color32 *pIn = (color32*)pData;
@@ -198,17 +195,17 @@ SendProp SendPropStringT( const char *pVarName, int offset, int sizeofVar )
 
 void CSendProxyRecipients::SetRecipient( int iClient )
 {
-	m_Bits.Set( iClient );
+	m_Bits.set( iClient );
 }
 
 void CSendProxyRecipients::ClearRecipient( int iClient )
 {
-	m_Bits.Clear( iClient );
+	m_Bits.reset( iClient );
 }
 
 void CSendProxyRecipients::SetOnly( int iClient )
 {
-	m_Bits.ClearAll();
+	m_Bits.reset();
 	SetRecipient( iClient );
 
 	CBaseEntity *pEntity = CBaseEntity::Instance( iClient + 1 );
@@ -228,8 +225,8 @@ void CSendProxyRecipients::SetOnly( int iClient )
 		}
 		else
 		{
-			CUtlVector< CHandle< CBasePlayer> > &list = pPlayer->GetSplitScreenPlayers();
-			for ( int i = 0; i < list.Count(); ++i )
+			std::vector< CHandle< CBasePlayer> > &list = pPlayer->GetSplitScreenPlayers();
+			for ( int i = 0; i < std::ssize( list ); ++i )
 			{
 				CBasePlayer *pSplitPlayer = list[ i ];
 				if ( !pSplitPlayer )
@@ -246,7 +243,7 @@ void CSendProxyRecipients::SetOnly( int iClient )
 
 void CSendProxyRecipients::ExcludeOnly( int iClient )
 {
-	m_Bits.SetAll();
+	m_Bits.set();
 	ClearRecipient( iClient );
 	CBaseEntity *pEntity = CBaseEntity::Instance( iClient + 1 );
 	if ( pEntity && pEntity->IsPlayer() )
@@ -261,8 +258,8 @@ void CSendProxyRecipients::ExcludeOnly( int iClient )
 		}
 		else
 		{
-			CUtlVector< CHandle< CBasePlayer> > &list = pPlayer->GetSplitScreenPlayers();
-			for ( int i = 0; i < list.Count(); ++i )
+			std::vector< CHandle< CBasePlayer> > &list = pPlayer->GetSplitScreenPlayers();
+			for ( int i = 0; i < std::ssize( list ); ++i )
 			{
 				CBasePlayer *pSplitPlayer = list[ i ];
 				if ( !pSplitPlayer )

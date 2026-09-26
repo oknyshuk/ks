@@ -17,9 +17,6 @@
 #include "materialsystem/imesh.h"
 #include "materialsystem/imaterial.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 Vector g_CurrentViewOrigin(0, 0, 0), g_CurrentViewForward(1, 0, 0), g_CurrentViewRight(0, -1, 0), g_CurrentViewUp(0, 0, 1);
 
 Vector g_MainViewOrigin[ MAX_SPLITSCREEN_CLIENTS ];

@@ -15,9 +15,6 @@
 #include "reflect_annotations.h"
 #include "c_te_particlesystem.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: Show Line TE
 //-----------------------------------------------------------------------------
@@ -72,7 +69,7 @@ void C_TEShowLine::PostDataUpdate( DataUpdateType_t updateType )
 
 	VectorScale(vec, dec, vec);
 
-	CSmartPtr<CTEParticleRenderer> pRen = CTEParticleRenderer::Create( "TEShowLine", m_vecOrigin );
+	ks::intrusive_ptr<CTEParticleRenderer> pRen = CTEParticleRenderer::Create( "TEShowLine", m_vecOrigin );
 	if( !pRen )
 		return;
 	

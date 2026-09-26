@@ -12,9 +12,6 @@
 #include "floattoscreen_ps20b.inc"
 #include "convar.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 BEGIN_VS_SHADER_FLAGS( floattoscreen, "Help for floattoscreen", SHADER_NOT_EDITABLE )
 	BEGIN_SHADER_PARAMS

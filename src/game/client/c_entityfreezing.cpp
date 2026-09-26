@@ -17,9 +17,6 @@
 #include "debugoverlay_shared.h"
 #include "animation.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 ConVar cl_blobulator_freezing_max_metaball_radius( "cl_blobulator_freezing_max_metaball_radius", 
 												  "12.0", 
@@ -139,7 +136,7 @@ int C_EntityFreezing::DrawModel( int flags, const RenderableInstance_t &instance
 		Vector vecHorizontal = pBox->bbmax - pBox->bbmin;
 
 		// Get the particle radius
-		float flShortestAxis = MIN( MIN( vecHorizontal.x, vecHorizontal.y ), vecHorizontal.z );
+		float flShortestAxis = std::min( std::min( vecHorizontal.x, vecHorizontal.y ), vecHorizontal.z );
 		float flDiameter = clamp( flShortestAxis, 1.0f, cl_blobulator_freezing_max_metaball_radius.GetFloat() );
 		float flRadius = flDiameter * 0.5f;
 		float flVarience = flRadius * 0.25f;
@@ -232,7 +229,7 @@ int C_EntityFreezing::DrawModel( int flags, const RenderableInstance_t &instance
 
 			if ( m_bFinishFreezing )
 			{
-				m_flFrozenPerHitbox[ i ] = MIN( 1.0f, m_flFrozenPerHitbox[ i ] + gpGlobals->frametime * 0.75f );
+				m_flFrozenPerHitbox[ i ] = std::min( 1.0f, m_flFrozenPerHitbox[ i ] + gpGlobals->frametime * 0.75f );
 			}
 
 			if ( m_flFrozenPerHitbox[ i ] <= 0.0f )

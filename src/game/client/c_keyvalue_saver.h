@@ -58,7 +58,7 @@ private:
 
 private:
 	
-	CUtlVector< KeyValueSaverData > m_KeyValueData;
+	std::vector< KeyValueSaverData > m_KeyValueData;
 
 	int		m_nSplitScreenSlot;
 };

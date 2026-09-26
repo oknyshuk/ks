@@ -40,9 +40,6 @@
 #include "engine/IEngineSound.h"
 #include "hltvreplaysystem.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheCSViewScene )
 PRECACHE( MATERIAL, "effects/overlaysmoke" )
@@ -99,13 +96,13 @@ void CCSViewRender::PerformNightVisionEffect( const CViewSetup &view )
 			{
 				pPlayer->m_flNightVisionAlpha += 15;
 
-				pPlayer->m_flNightVisionAlpha = MIN( pPlayer->m_flNightVisionAlpha, iMaxValue );
+				pPlayer->m_flNightVisionAlpha = std::min<std::common_type_t<float, int>>( pPlayer->m_flNightVisionAlpha, iMaxValue );
 			}
 			else 
 			{
 				pPlayer->m_flNightVisionAlpha -= 40;
 
-				pPlayer->m_flNightVisionAlpha = MAX( pPlayer->m_flNightVisionAlpha, 0 );
+				pPlayer->m_flNightVisionAlpha = std::max<std::common_type_t<float, int>>( pPlayer->m_flNightVisionAlpha, 0 );
 			}
 
 			overlaycolor[3] = pPlayer->m_flNightVisionAlpha;
@@ -344,7 +341,7 @@ void DrawCappedTorus( Vector vecOrigin, float flRadiusA, float flRadiusB, Color 
 // Purpose: Renders pre-viewmodel smoke screen
 //-----------------------------------------------------------------------------
 #include "c_cs_player.h" // for clientSmokeGrenadeRecord_t
-extern CUtlVector<EHANDLE> g_SmokeGrenadeHandles;
+extern std::vector< EHANDLE > g_SmokeGrenadeHandles;
 void CCSViewRender::RenderSmokeOverlay( bool bPreViewModel )
 {
 	if ( bPreViewModel )
@@ -354,7 +351,7 @@ void CCSViewRender::RenderSmokeOverlay( bool bPreViewModel )
 		//Assume we have no smoke overlay
 		float flOptimalSmokeOverlayAlpha = 0;
 	
-		if ( g_SmokeGrenadeHandles.Count() > 0 )
+		if ( !g_SmokeGrenadeHandles.empty() )
 		{
 			Vector vecPlayerEyePos = MainViewOrigin(GET_ACTIVE_SPLITSCREEN_SLOT());
 
@@ -369,7 +366,7 @@ void CCSViewRender::RenderSmokeOverlay( bool bPreViewModel )
 			#endif
 
 			// we need to find the closest smoke to prevent a latter grenade in the list lifting the opacity of a potentially closer one
-			for( int it=0; it < g_SmokeGrenadeHandles.Count(); it++ )
+			for( int it=0; it < std::ssize( g_SmokeGrenadeHandles ); it++ )
 			{
 				CBaseCSGrenadeProjectile *pGrenade = static_cast< CBaseCSGrenadeProjectile* >( g_SmokeGrenadeHandles[it].Get() );
 				if ( !pGrenade )

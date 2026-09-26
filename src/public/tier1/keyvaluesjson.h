@@ -10,13 +10,13 @@
 
 #include "keyvalues.h"
 
-class CUtlBuffer;
+#include <string_view>
 
 /// JSON parser.  Use this class when you need to customize the parsing.
 class KeyValuesJSONParser
 {
 public:
-	KeyValuesJSONParser( const CUtlBuffer &buf );
+	KeyValuesJSONParser( std::string_view text );
 	KeyValuesJSONParser( const char *pszText, int cbSize = -1 );
 	~KeyValuesJSONParser();
 
@@ -52,7 +52,7 @@ private:
 	};
 
 	int m_eToken;
-	CUtlVectorFixedGrowable<char,1024> m_vecTokenChars;
+	ks::small_vector< char, 1024 > m_vecTokenChars;
 
 	void NextToken();
 	void ParseNumberToken();

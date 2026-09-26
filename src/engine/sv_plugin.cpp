@@ -18,9 +18,6 @@
 #include "networkstringtableserver.h"
 #include "matchmaking/imatchframework.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 extern IMatchFramework *g_pMatchFramework;
 extern CreateInterfaceFn g_AppSystemFactory;
@@ -227,7 +224,7 @@ CServerPlugin::~CServerPlugin()
 void CServerPlugin::LoadPlugins()
 {
 
-	m_Plugins.PurgeAndDeleteElements();
+	m_Plugins.clear();
 
 	char const *findfn = Sys_FindFirst( "addons/*.vdf", nullptr, 0 );
 	while ( findfn )
@@ -264,10 +261,10 @@ void CServerPlugin::LoadPlugins()
 //---------------------------------------------------------------------------------
 void CServerPlugin::UnloadPlugins()
 {
-	for ( int i = m_Plugins.Count() - 1; i >= 0; --i )
+	for ( int i = std::ssize( m_Plugins ) - 1; i >= 0; --i )
 	{
 		m_Plugins[i]->Unload();
-		m_Plugins.Remove(i);
+		m_Plugins.erase( m_Plugins.begin() + i );
 	}
 }
 
@@ -276,10 +273,10 @@ void CServerPlugin::UnloadPlugins()
 //---------------------------------------------------------------------------------
 bool CServerPlugin::UnloadPlugin( int index )
 {
-	if ( m_Plugins.IsValidIndex( index ) )
+	if ( ks::is_valid_index( m_Plugins, index ) )
 	{
 		m_Plugins[index]->Unload();
-		m_Plugins.Remove(index);
+		m_Plugins.erase( m_Plugins.begin() + index );
 		return true;
 	}
 	return false;
@@ -290,17 +287,13 @@ bool CServerPlugin::UnloadPlugin( int index )
 //---------------------------------------------------------------------------------
 bool CServerPlugin::LoadPlugin( const char *fileName )
 {
-	CPlugin *plugin = new CPlugin();
+	auto plugin = std::make_unique< CPlugin >();
 	if ( plugin->Load( fileName ) )
 	{
-		m_Plugins.AddToTail( plugin );
+		m_Plugins.push_back( std::move( plugin ) );
 		return true;
 	}
-	else
-	{
-		delete plugin;
-		return false;
-	}
+	return false;
 }
 
 //---------------------------------------------------------------------------------
@@ -308,7 +301,7 @@ bool CServerPlugin::LoadPlugin( const char *fileName )
 //---------------------------------------------------------------------------------
 void CServerPlugin::DisablePlugins()
 {
-	for ( int i = 0; i < m_Plugins.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Plugins ); i++ )
 	{
 		m_Plugins[i]->Disable(true);
 	}
@@ -319,7 +312,7 @@ void CServerPlugin::DisablePlugins()
 //---------------------------------------------------------------------------------
 void CServerPlugin::EnablePlugins()
 {
-	for ( int i = 0; i < m_Plugins.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Plugins ); i++ )
 	{
 		m_Plugins[i]->Disable(false);
 	}
@@ -330,7 +323,7 @@ void CServerPlugin::EnablePlugins()
 //---------------------------------------------------------------------------------
 void CServerPlugin::DisablePlugin( int index )
 {
-	if ( m_Plugins.IsValidIndex( index ) )
+	if ( ks::is_valid_index( m_Plugins, index ) )
 	{
 		m_Plugins[index]->Disable(true);
 	}
@@ -341,7 +334,7 @@ void CServerPlugin::DisablePlugin( int index )
 //---------------------------------------------------------------------------------
 void CServerPlugin::EnablePlugin( int index )
 {
-	if ( m_Plugins.IsValidIndex( index ) )
+	if ( ks::is_valid_index( m_Plugins, index ) )
 	{
 		m_Plugins[index]->Disable(false);
 	}
@@ -354,7 +347,7 @@ void CServerPlugin::PrintDetails()
 {
 	ConMsg( "Loaded plugins:\n");
 	ConMsg( "---------------------\n" );
-	for ( int i = 0; i < m_Plugins.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Plugins ); i++ )
 	{
 		ConMsg( "%i:\t\"%s\"%s\n", i, m_Plugins[i]->GetName(), m_Plugins[i]->IsDisabled() ? " (disabled)": "" );
 	}
@@ -362,7 +355,7 @@ void CServerPlugin::PrintDetails()
 }
 
 // helper macro to stop this being typed for every passthrough
-#define FORALL_PLUGINS	for( int i = 0; i < m_Plugins.Count(); i++ ) 
+#define FORALL_PLUGINS	for( int i = 0; i < std::ssize( m_Plugins ); i++ ) 
 
 
 extern CNetworkStringTableContainer *networkStringTableContainerServer;
@@ -585,7 +578,7 @@ void CServerPlugin::OnQueryCvarValueFinished( QueryCvarCookie_t iCookie, edict_t
 {
 	FORALL_PLUGINS
 	{
-		CPlugin *p = m_Plugins[i];
+		CPlugin *p = m_Plugins[i].get();
 		if ( !p->IsDisabled() )
 		{
 			// OnQueryCvarValueFinished was added in version 2 of this interface.
@@ -600,7 +593,7 @@ void CServerPlugin::OnEdictAllocated( edict_t *edict )
 {
 	FORALL_PLUGINS
 	{
-		CPlugin *p = m_Plugins[i];
+		CPlugin *p = m_Plugins[i].get();
 		if ( !p->IsDisabled() )
 		{
 			// OnEdictAllocated was added in version 3 of this interface.
@@ -615,7 +608,7 @@ void CServerPlugin::OnEdictFreed( const edict_t *edict )
 {
 	FORALL_PLUGINS
 	{
-		CPlugin *p = m_Plugins[i];
+		CPlugin *p = m_Plugins[i].get();
 		if ( !p->IsDisabled() )
 		{
 			// OnEdictFreed was added in version 3 of this interface.
@@ -631,7 +624,7 @@ bool CServerPlugin::BNetworkCryptKeyCheckRequired( uint32 unFromIP, uint16 usFro
 {
 	FORALL_PLUGINS
 	{
-		CPlugin *p = m_Plugins[ i ];
+		CPlugin *p = m_Plugins[i].get();
 		if ( !p->IsDisabled() )
 		{
 			// BNetworkCryptKeyCheckRequired was added in version 4 of this interface.
@@ -653,7 +646,7 @@ bool CServerPlugin::BNetworkCryptKeyValidate( uint32 unFromIP, uint16 usFromPort
 {
 	FORALL_PLUGINS
 	{
-		CPlugin *p = m_Plugins[ i ];
+		CPlugin *p = m_Plugins[i].get();
 		if ( !p->IsDisabled() )
 		{
 			// BNetworkCryptKeyValidate was added in version 4 of this interface.
@@ -717,13 +710,13 @@ void  CServerPlugin::CreateMessage( edict_t *pEntity, DIALOG_TYPE type, KeyValue
 	
 	IClient *client = sv.Client(clientnum-1);
 
-	CUtlBuffer buf;
+	ks::byte_writer buf;
 	CSVCMsg_Menu_t menu;
 
 	data->WriteAsBinary( buf );
 
 	menu.dialog_type = type;
-	menu.menu_key_values = std::string( ( const char * ) buf.Base(), buf.TellPut() );
+	menu.menu_key_values = std::string( ks::text_view( buf.bytes() ) );
 
 	client->SendNetMsg( menu );
 }

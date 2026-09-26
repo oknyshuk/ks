@@ -17,7 +17,6 @@
 #include "tier0/vprof.h"
 #include "bone_accessor.h"
 #include "mathlib/ssequaternion.h"
-#include "bitvec.h"
 #include "datamanager.h"
 #include "convar.h"
 #include "tier0/tslist.h"
@@ -27,9 +26,6 @@
 #include "tier0/miniprofiler.h"
 
 #include "bone_utils.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 class CIKSolver
@@ -262,8 +258,8 @@ bool Studio_SolveIK( int iThigh, int iKnee, int iFoot, Vector &targetFoot, Vecto
 
 	// exaggerate knee targets for legs that are nearly straight
 	// FIXME: should be configurable, and the ikKnee should be from the original animation, not modifed
-	float d = (targetFoot-worldThigh).Length() - MIN( l1, l2 );
-	d = MAX( l1 + l2, d );
+	float d = (targetFoot-worldThigh).Length() - std::min( l1, l2 );
+	d = std::max( l1 + l2, d );
 	// FIXME: too short knee directions cause trouble
 	d = d * 100;
 
@@ -283,7 +279,7 @@ bool Studio_SolveIK( int iThigh, int iKnee, int iFoot, Vector &targetFoot, Vecto
 
 	// too close?
 	// limit distance to about an 80 degree knee bend
-	float minDist = MAX( fabs(l1 - l2) * 1.15, MIN( l1, l2 ) * 0.15 );
+	float minDist = std::max( fabs(l1 - l2) * 1.15, std::min( l1, l2 ) * 0.15 );
 	if (ikFoot.Length() < minDist)
 	{
 		// too close to get an accurate vector, just use original vector
@@ -743,11 +739,11 @@ bool Studio_IKSequenceError( const CStudioHdr *pStudioHdr, mstudioseqdesc_t &seq
 
 CIKContext::CIKContext()
 {
-	m_target.EnsureCapacity( 12 ); // FIXME: this sucks, shouldn't it be grown?
+	m_target.reserve( 12 ); // FIXME: this sucks, shouldn't it be grown?
 	m_iFramecounter = -1;
 	m_pStudioHdr = nullptr;
 	m_flTime = -1.0f;
-	m_target.SetSize( 0 );
+	m_target.assign( 0, {} );
 }
 
 
@@ -757,23 +753,23 @@ void CIKContext::Init( const CStudioHdr *pStudioHdr, const QAngle &angles, const
 	SNPROF_ANIM( "CIKContext::Init" );
 
 	m_pStudioHdr = pStudioHdr;
-	m_ikChainRule.RemoveAll(); // m_numikrules = 0;
+	m_ikChainRule.clear(); // m_numikrules = 0;
 	if (pStudioHdr->numikchains())
 	{
-		m_ikChainRule.SetSize( pStudioHdr->numikchains() );
+		m_ikChainRule.assign( pStudioHdr->numikchains(), {} );
 
 		// FIXME: Brutal hackery to prevent a crash
-		if (m_target.Count() == 0)
+		if (std::ssize( m_target ) == 0)
 		{
-			m_target.SetSize(12);
-			memset( m_target.Base(), 0, sizeof(m_target[0])*m_target.Count() );
+			m_target.assign( 12, {} );
+			memset( m_target.data(), 0, sizeof(m_target[0])*std::ssize( m_target ) );
 			ClearTargets();
 		}
 
 	}
 	else
 	{
-		m_target.SetSize( 0 );
+		m_target.assign( 0, {} );
 	}
 	AngleMatrix( angles, pos, m_rootxform );
 	m_iFramecounter = iFramecounter;
@@ -816,7 +812,7 @@ void CIKContext::AddDependencies( mstudioseqdesc_t &seqdesc, int iSequence, floa
 		}
 		else
 		{
-			flCycle = MAX( 0.0, MIN( flCycle, 0.9999 ) );
+			flCycle = std::max( 0.0, std::min<std::common_type_t<float, double>>( flCycle, 0.9999 ) );
 		}
 	}
 
@@ -841,15 +837,15 @@ void CIKContext::AddDependencies( mstudioseqdesc_t &seqdesc, int iSequence, floa
 			continue;
 
 		// FIXME: Brutal hackery to prevent a crash
-		if (m_target.Count() == 0)
+		if (std::ssize( m_target ) == 0)
 		{
-			m_target.SetSize(12);
-			memset( m_target.Base(), 0, sizeof(m_target[0])*m_target.Count() );
+			m_target.assign( 12, {} );
+			memset( m_target.data(), 0, sizeof(m_target[0])*std::ssize( m_target ) );
 			ClearTargets();
 		}
 
 		// Validate chain index to prevent out-of-bounds access
-		if ( ikrule.chain < 0 || ikrule.chain >= m_ikChainRule.Count() )
+		if ( ikrule.chain < 0 || ikrule.chain >= std::ssize( m_ikChainRule ) )
 		{
 			continue;
 		}
@@ -861,7 +857,7 @@ void CIKContext::AddDependencies( mstudioseqdesc_t &seqdesc, int iSequence, floa
 			if ( ikrule.type != IK_UNLATCH)
 			{
 				// clear out chain if rule is 100%
-				m_ikChainRule.Element( ikrule.chain ).RemoveAll( );
+				m_ikChainRule[ ikrule.chain ].clear();
 				if ( ikrule.type == IK_RELEASE)
 				{
 					continue;
@@ -869,8 +865,8 @@ void CIKContext::AddDependencies( mstudioseqdesc_t &seqdesc, int iSequence, floa
 			}
 		}
 
- 		int nIndex = m_ikChainRule.Element( ikrule.chain ).AddToTail( );
-  		m_ikChainRule.Element( ikrule.chain ).Element( nIndex ) = ikrule;
+ 		int nIndex = std::ssize( m_ikChainRule[ ikrule.chain ] ); m_ikChainRule[ ikrule.chain ].emplace_back();
+  		m_ikChainRule[ ikrule.chain ][ nIndex ] = ikrule;
 	}
 }
 
@@ -891,7 +887,7 @@ void CIKContext::AddAutoplayLocks( BoneVector pos[], BoneQuaternion q[] )
 	matrix3x4a_t *boneToWorld = g_MatrixPool.Alloc();
 	CBoneBitList boneComputed;
 
-	int ikOffset = m_ikLock.AddMultipleToTail( m_pStudioHdr->GetNumIKAutoplayLocks() );
+	int ikOffset = std::ssize( m_ikLock ); m_ikLock.resize( m_ikLock.size() + ( m_pStudioHdr->GetNumIKAutoplayLocks() ) );
 	memset( &m_ikLock[ikOffset], 0, sizeof(ikcontextikrule_t)*m_pStudioHdr->GetNumIKAutoplayLocks() );
 
 	for (int i = 0; i < m_pStudioHdr->GetNumIKAutoplayLocks(); i++)
@@ -953,7 +949,7 @@ void CIKContext::AddSequenceLocks( mstudioseqdesc_t &seqdesc, BoneVector pos[], 
 	matrix3x4a_t *boneToWorld = g_MatrixPool.Alloc();
 	CBoneBitList boneComputed;
 
-	int ikOffset = m_ikLock.AddMultipleToTail( seqdesc.numiklocks );
+	int ikOffset = std::ssize( m_ikLock ); m_ikLock.resize( m_ikLock.size() + seqdesc.numiklocks );
 	memset( &m_ikLock[ikOffset], 0, sizeof(ikcontextikrule_t) * seqdesc.numiklocks );
 
 	for (int i = 0; i < seqdesc.numiklocks; i++)
@@ -1211,7 +1207,7 @@ void CIKTarget::MoveReferenceFrame( Vector &deltaPos, QAngle &deltaAngles )
 void CIKContext::ClearTargets( void )
 {
 	int i;
-	for (i = 0; i < m_target.Count(); i++)
+	for (i = 0; i < std::ssize( m_target ); i++)
 	{
 		m_target[i].latched.iFramecounter = -9999;
 	}
@@ -1230,7 +1226,7 @@ void CIKContext::UpdateTargets( BoneVector pos[], BoneQuaternion q[], matrix3x4a
 
 	int i, j;
 
-	for (i = 0; i < m_target.Count(); i++)
+	for (i = 0; i < std::ssize( m_target ); i++)
 	{
 		m_target[i].est.flWeight = 0.0f;
 		m_target[i].est.latched = 1.0f;
@@ -1244,11 +1240,11 @@ void CIKContext::UpdateTargets( BoneVector pos[], BoneQuaternion q[], matrix3x4a
 
 	AutoIKRelease( );
 
-	for (j = 0; j < m_ikChainRule.Count(); j++)
+	for (j = 0; j < std::ssize( m_ikChainRule ); j++)
 	{
-		for (i = 0; i < m_ikChainRule.Element( j ).Count(); i++)
+		for (i = 0; i < std::ssize( m_ikChainRule[ j ] ); i++)
 		{
-			ikcontextikrule_t *pRule = &m_ikChainRule.Element( j ).Element( i );
+			ikcontextikrule_t *pRule = &m_ikChainRule[ j ][ i ];
 
 			// ikchainresult_t *pChainRule = &chainRule[ m_ikRule[i].chain ];
 
@@ -1291,7 +1287,7 @@ void CIKContext::UpdateTargets( BoneVector pos[], BoneQuaternion q[], matrix3x4a
 						pTarget->est.floor = Lerp( pRule->flRuleWeight, pTarget->est.floor, pRule->floor );
 						pTarget->est.radius = Lerp( pRule->flRuleWeight, pTarget->est.radius, pRule->radius );
 						//pTarget->est.latched = Lerp( pRule->flRuleWeight, pTarget->est.latched, pRule->latched );
-						pTarget->est.latched = MIN( pTarget->est.latched, pRule->latched );
+						pTarget->est.latched = std::min( pTarget->est.latched, pRule->latched );
 						pTarget->est.release = Lerp( pRule->flRuleWeight, pTarget->est.release, pRule->release );
 						pTarget->est.flWeight = Lerp( pRule->flRuleWeight, pTarget->est.flWeight, pRule->flWeight );
 					}
@@ -1309,7 +1305,7 @@ void CIKContext::UpdateTargets( BoneVector pos[], BoneQuaternion q[], matrix3x4a
 					if (pRule->latched > 0.0)
 						pTarget->est.latched = 0.0;
 					else
-						pTarget->est.latched = MIN( pTarget->est.latched, 1.0f - pRule->flWeight );
+						pTarget->est.latched = std::min( pTarget->est.latched, 1.0f - pRule->flWeight );
 				}
 				break;
 			case IK_RELEASE:
@@ -1318,7 +1314,7 @@ void CIKContext::UpdateTargets( BoneVector pos[], BoneQuaternion q[], matrix3x4a
 					if (pRule->latched > 0.0)
 						pTarget->est.latched = 0.0;
 					else
-						pTarget->est.latched = MIN( pTarget->est.latched, 1.0f - pRule->flWeight );
+						pTarget->est.latched = std::min( pTarget->est.latched, 1.0f - pRule->flWeight );
 
 					pTarget->est.flWeight = (pTarget->est.flWeight) * (1 - pRule->flWeight * pRule->flRuleWeight);
 				}
@@ -1327,7 +1323,7 @@ void CIKContext::UpdateTargets( BoneVector pos[], BoneQuaternion q[], matrix3x4a
 		}
 	}
 
-	for (i = 0; i < m_target.Count(); i++)
+	for (i = 0; i < std::ssize( m_target ); i++)
 	{
 		CIKTarget *pTarget = &m_target[i];
 		if (pTarget->est.flWeight > 0.0)
@@ -1468,7 +1464,7 @@ void CIKContext::AutoIKRelease( void )
 	BONE_PROFILE_FUNC();
 	int i;
 
-	for (i = 0; i < m_target.Count(); i++)
+	for (i = 0; i < std::ssize( m_target ); i++)
 	{
 		CIKTarget *pTarget = &m_target[i];
 
@@ -1485,11 +1481,11 @@ void CIKContext::AutoIKRelease( void )
 			float ft = m_flTime - pTarget->error.flErrorTime;
 			if (dt < 0.25)
 			{
-				pTarget->error.ramp = MIN( pTarget->error.ramp + ft * 4.0, 1.0 );
+				pTarget->error.ramp = std::min( pTarget->error.ramp + ft * 4.0, 1.0 );
 			}
 			else
 			{
-				pTarget->error.ramp = MAX( pTarget->error.ramp - ft * 4.0, 0.0 );
+				pTarget->error.ramp = std::max( pTarget->error.ramp - ft * 4.0, 0.0 );
 			}
 			if (pTarget->error.ramp > 0.0)
 			{
@@ -1527,8 +1523,8 @@ void CIKContext::AutoIKRelease( void )
 								OutputDebugString( buf );
 								*/
 
-								int nIndex = m_ikChainRule.Element( ikrule.chain ).AddToTail( );
-  								m_ikChainRule.Element( ikrule.chain ).Element( nIndex ) = ikrule;
+								int nIndex = std::ssize( m_ikChainRule[ ikrule.chain ] ); m_ikChainRule[ ikrule.chain ].emplace_back();
+  								m_ikChainRule[ ikrule.chain ][ nIndex ] = ikrule;
 							}
 							else
 							{
@@ -1593,11 +1589,11 @@ void CIKContext::SolveDependencies( BoneVector pos[], BoneQuaternion q[], matrix
 		MatrixAngles( boneToWorld[bone], pChainResult->q, pChainResult->pos );
 	}
 
-	for( j = 0; j < m_ikChainRule.Count(); j++ )
+	for( j = 0; j < std::ssize( m_ikChainRule ); j++ )
 	{
-		for( i = 0; i < m_ikChainRule.Element( j ).Count(); i++ )
+		for( i = 0; i < std::ssize( m_ikChainRule[ j ] ); i++ )
 		{
-			ikcontextikrule_t *pRule = &m_ikChainRule.Element( j ).Element( i );
+			ikcontextikrule_t *pRule = &m_ikChainRule[ j ][ i ];
 			ikchainresult_t *pChainResult = &chainResult[ pRule->chain ];
 			pChainResult->target = -1;
 
@@ -1678,7 +1674,7 @@ void CIKContext::SolveDependencies( BoneVector pos[], BoneQuaternion q[], matrix
 		}
 	}
 
-	for (i = 0; i < m_target.Count(); i++)
+	for (i = 0; i < std::ssize( m_target ); i++)
 	{
 		CIKTarget *pTarget = &m_target[i];
 
@@ -1772,7 +1768,7 @@ void CIKContext::SolveAutoplayLocks(
 	CBoneBitList boneComputed;
 	int i;
 
-	for (i = 0; i < m_ikLock.Count(); i++)
+	for (i = 0; i < std::ssize( m_ikLock ); i++)
 	{
 		const mstudioiklock_t &lock = ((CStudioHdr *)m_pStudioHdr)->pIKAutoplayLock( i );
 		SolveLock( &lock, i, pos, q, boneToWorld, boneComputed );
@@ -1799,7 +1795,7 @@ void CIKContext::SolveSequenceLocks(
 	CBoneBitList boneComputed;
 	int i;
 
-	for (i = 0; i < m_ikLock.Count(); i++)
+	for (i = 0; i < std::ssize( m_ikLock ); i++)
 	{
 		mstudioiklock_t *plock = seqdesc.pIKLock( i );
 		SolveLock( plock, i, pos, q, boneToWorld, boneComputed );
@@ -1824,7 +1820,7 @@ void CIKContext::AddAllLocks( BoneVector pos[], BoneQuaternion q[] )
 	matrix3x4a_t *boneToWorld = g_MatrixPool.Alloc();
 	CBoneBitList boneComputed;
 
-	int ikOffset = m_ikLock.AddMultipleToTail( m_pStudioHdr->GetNumIKChains() );
+	int ikOffset = std::ssize( m_ikLock ); m_ikLock.resize( m_ikLock.size() + ( m_pStudioHdr->GetNumIKChains() ) );
 	memset( &m_ikLock[ikOffset], 0, sizeof(ikcontextikrule_t)*m_pStudioHdr->GetNumIKChains() );
 
 	for (int i = 0; i < m_pStudioHdr->GetNumIKChains(); i++)
@@ -1880,7 +1876,7 @@ void CIKContext::SolveAllLocks(
 
 	mstudioiklock_t lock;
 
-	for (i = 0; i < m_ikLock.Count(); i++)
+	for (i = 0; i < std::ssize( m_ikLock ); i++)
 	{
 		lock.chain = i;
 		lock.flPosWeight = 1.0;
@@ -1958,17 +1954,17 @@ void CIKContext::CopyTo( CIKContext* pOther, const unsigned short * iRemapping  
 
 	// replace the ik rules and ik locks on the other ik context, and remap the bone chain indices to match
 
-	pOther->m_ikChainRule.RemoveAll();
-	pOther->m_ikLock.RemoveAll();
+	pOther->m_ikChainRule.clear();
+	pOther->m_ikLock.clear();
 	
-	FOR_EACH_VEC( m_ikChainRule, n )
+	for ( const auto &chainRules : m_ikChainRule )
 	{
-		int nIndex = pOther->m_ikChainRule.AddToTail();
+		int nIndex = std::ssize( pOther->m_ikChainRule ); pOther->m_ikChainRule.emplace_back();
 
-		FOR_EACH_VEC( m_ikChainRule[n], m )
+		for ( const auto &chainRule : chainRules )
 		{
-			int nIKChainBone = m_ikChainRule[n][m].bone;
-			if ( iRemapping != nullptr && m_ikChainRule[ n ][ m ].type != IK_RELEASE )
+			int nIKChainBone = chainRule.bone;
+			if ( iRemapping != nullptr && chainRule.type != IK_RELEASE )
 			{
 				int nIKChainBoneRemapped = iRemapping[ nIKChainBone ];
 				if ( nIKChainBoneRemapped < 0 || nIKChainBoneRemapped >= MAXSTUDIOBONES )
@@ -1977,16 +1973,16 @@ void CIKContext::CopyTo( CIKContext* pOther, const unsigned short * iRemapping  
 				nIKChainBone = nIKChainBoneRemapped;
 			}
 
-			int nSubIndex = pOther->m_ikChainRule[nIndex].AddToTail();
-			pOther->m_ikChainRule[nIndex][nSubIndex] = m_ikChainRule[n][m];
+			int nSubIndex = std::ssize( pOther->m_ikChainRule[nIndex] ); pOther->m_ikChainRule[nIndex].emplace_back();
+			pOther->m_ikChainRule[nIndex][nSubIndex] = chainRule;
 			pOther->m_ikChainRule[nIndex][nSubIndex].bone = nIKChainBone;	// this can be a remapped bone
 		}
 	}
 
-	FOR_EACH_VEC( m_ikLock, n )
+	for ( const auto &ikLock : m_ikLock )
 	{
-		int nIKChainBone = m_ikLock[n].bone;
-		if ( iRemapping != nullptr && m_ikLock[ n ].type != IK_RELEASE )
+		int nIKChainBone = ikLock.bone;
+		if ( iRemapping != nullptr && ikLock.type != IK_RELEASE )
 		{
 			int nIKChainBoneRemapped = iRemapping[ nIKChainBone ];
 			if ( nIKChainBoneRemapped < 0 || nIKChainBoneRemapped >= MAXSTUDIOBONES )
@@ -1995,8 +1991,8 @@ void CIKContext::CopyTo( CIKContext* pOther, const unsigned short * iRemapping  
 			nIKChainBone = nIKChainBoneRemapped;
 		}
 
-		int nIndex = pOther->m_ikLock.AddToTail();
-		pOther->m_ikLock[nIndex] = m_ikLock[n];
+		int nIndex = std::ssize( pOther->m_ikLock ); pOther->m_ikLock.emplace_back();
+		pOther->m_ikLock[nIndex] = ikLock;
 		pOther->m_ikLock[ nIndex ].bone = nIKChainBone;	// this can be a remapped bone
 	}
 	

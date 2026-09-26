@@ -9,9 +9,6 @@
 #include "disp_powerinfo.h"
 #include "builddisp.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 class CNodeVert
 {
 public:
@@ -769,9 +766,9 @@ void GetDispBox( CCoreDispInfo *pDisp, CDispBox &box )
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void SetupDispBoxes( CCoreDispInfo **ppListBase, int nListSize, CUtlVector<CDispBox> &out )
+void SetupDispBoxes( CCoreDispInfo **ppListBase, int nListSize, std::vector< CDispBox > &out )
 {
-	out.SetSize( nListSize );
+	out.assign( nListSize, {} );
 	for ( int iDisp = 0; iDisp < nListSize; ++iDisp )
 	{
 		CCoreDispInfo *pDisp = ppListBase[iDisp];
@@ -1075,7 +1072,7 @@ void FindNeighboringDispSurfs( CCoreDispInfo **ppListBase, int nListSize )
 		ClearNeighborData( ppListBase[iDisp] );
 	}
 
-	CUtlVector<CDispBox> boxes;
+	std::vector< CDispBox > boxes;
 	SetupDispBoxes( ppListBase, nListSize, boxes );	
 
 	int nCornerOverflows = 0;
@@ -1170,8 +1167,8 @@ bool IsVertAllowed( CDispUtilsHelper *pDisp, CVertIndex const &sideVert, int iLe
 	CVertIndex nbIndex;
 	TransformIntoSubNeighbor( pDisp, iSide, iSub, sideVert, nbIndex );
 	
-	CBitVec<MAX_DISPVERTS> &allowedVerts = CCoreDispInfo::FromDispUtils( pNeighbor )->GetAllowedVerts();
-	return !!allowedVerts.Get( pNeighbor->VertIndexToInt( nbIndex ) );
+	std::bitset<MAX_DISPVERTS> &allowedVerts = CCoreDispInfo::FromDispUtils( pNeighbor )->GetAllowedVerts();
+	return allowedVerts[ pNeighbor->VertIndexToInt( nbIndex ) ];
 }
 
 //-----------------------------------------------------------------------------
@@ -1181,11 +1178,11 @@ void UnallowVerts_R( CDispUtilsHelper *pDisp, CVertIndex const &nodeIndex, int &
 	int iNodeIndex = pDisp->VertIndexToInt( nodeIndex );
 	
 	CCoreDispInfo *pCoreDisp = CCoreDispInfo::FromDispUtils( pDisp );	
-	if ( !pCoreDisp->GetAllowedVerts().Get( iNodeIndex ) )
+	if ( !pCoreDisp->GetAllowedVerts()[iNodeIndex] )
 		return;
 
 	nUnallowed++;
-	pCoreDisp->GetAllowedVerts().Clear( iNodeIndex );
+	pCoreDisp->GetAllowedVerts().reset( iNodeIndex );
 
 	for ( int iDep=0; iDep < CVertInfo::NUM_REVERSE_DEPENDENCIES; iDep++ )
 	{
@@ -1238,7 +1235,7 @@ void SetupAllowedVerts( CCoreDispInfo **ppListBase, int nListSize )
 	int iDisp;
 	for ( iDisp = 0; iDisp < nListSize; ++iDisp )
 	{
-		ppListBase[iDisp]->GetAllowedVerts().SetAll();
+		ppListBase[iDisp]->GetAllowedVerts().set();
 	}
 
 	// Disable verts that need to be disabled so higher-powered displacements remove
@@ -1422,7 +1419,7 @@ static int GetAllNeighbors( const CCoreDispInfo *pDisp, int (&iNeighbors)[512] )
 //-----------------------------------------------------------------------------
 static void BlendCorners( CCoreDispInfo **ppListBase, int nListSize )
 {
-	CUtlVector<int> nbCornerVerts;
+	std::vector< int > nbCornerVerts;
 
 	for ( int iDisp = 0; iDisp < nListSize; ++iDisp )
 	{
@@ -1432,9 +1429,9 @@ static void BlendCorners( CCoreDispInfo **ppListBase, int nListSize )
 		int nNeighbors = GetAllNeighbors( pDisp, iNeighbors );
 
 		// Make sure we have room for all the neighbors.
-		nbCornerVerts.RemoveAll();
-		nbCornerVerts.EnsureCapacity( nNeighbors );
-		nbCornerVerts.AddMultipleToTail( nNeighbors );
+		nbCornerVerts.clear();
+		nbCornerVerts.reserve( nNeighbors );
+		nbCornerVerts.resize( nbCornerVerts.size() + nNeighbors );
 
 		// For each corner.
 		for ( int iCorner=0; iCorner < 4; iCorner++ )

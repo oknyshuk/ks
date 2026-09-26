@@ -16,9 +16,6 @@
 #include "datacache/imdlcache.h"
 #include "ai_addon.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern void			SetDebugBits( CBasePlayer* pPlayer, const char *name, int bit );
 
 extern bool g_bAIDisabledByUser;

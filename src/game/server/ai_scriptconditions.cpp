@@ -15,9 +15,6 @@
 #include "ai_basenpc.h"
 #include "ai_scriptconditions.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define SF_ACTOR_AS_ACTIVATOR	( 1 << 0 )
 
 ConVar debugscriptconditions( "ai_debugscriptconditions", "0" );
@@ -82,12 +79,12 @@ void CAI_ScriptConditions::OnRestore( void )
 		conditionactor.SetTimeOut( m_Timeout );
 		conditionactor.SetTimer( m_Timer );
  
-		m_ElementList.AddToTail( conditionactor );
+		m_ElementList.push_back( conditionactor );
 
 		m_hActor = nullptr;
 	}
 
-	if ( m_ElementList.Count() == 0 && m_Actor == NULL_STRING && m_fDisabled == false )
+	if ( m_ElementList.empty() && m_Actor == NULL_STRING && m_fDisabled == false )
 	{
 		AddNewElement( nullptr );
 	}
@@ -359,7 +356,7 @@ void CAI_ScriptConditions::UpdateOnRemove( void )
 	gEntList.RemoveListenerEntity( this );
 	BaseClass::UpdateOnRemove();
 
-	m_ElementList.Purge();
+	m_ElementList.clear(); m_ElementList.shrink_to_fit();
 }
 
 //-----------------------------------------------------------------------------
@@ -373,7 +370,7 @@ void CAI_ScriptConditions::EvaluationThink()
 
 
 
-	for ( int i = 0; i < m_ElementList.Count(); )
+	for ( int i = 0; i < std::ssize( m_ElementList ); )
 	{
 		CAI_ScriptConditionsElement *pConditionElement = &m_ElementList[i];
 
@@ -391,14 +388,14 @@ void CAI_ScriptConditions::EvaluationThink()
 
 		if ( m_Actor != NULL_STRING && !pActor )
 		{
-			if ( m_ElementList.Count() == 1 )
+			if ( std::ssize( m_ElementList ) == 1 )
 			{
 				DevMsg( "Warning: Active AI script conditions associated with an non-existant or destroyed NPC\n" );
 				m_NoValidActors.FireOutput( this, this, 0 );
 			}
 
 			iActorsDone++;
-			m_ElementList.Remove( i );
+			m_ElementList.erase( m_ElementList.begin() + i );
 			continue;
 		}
 
@@ -452,10 +449,10 @@ void CAI_ScriptConditions::EvaluationThink()
 	}
 
 	//All done!
-	if ( iActorsDone == m_ElementList.Count() )
+	if ( iActorsDone == std::ssize( m_ElementList ) )
 	{
 		Disable();
-		m_ElementList.Purge();
+		m_ElementList.clear(); m_ElementList.shrink_to_fit();
 	}
 
 	SetThinkTime();
@@ -484,7 +481,7 @@ int CAI_ScriptConditions::AddNewElement( CBaseEntity *pActor )
 		conditionelement.GetTimer()->Reset();
 	}
 
-	return m_ElementList.AddToTail( conditionelement );
+	m_ElementList.push_back( conditionelement ); return (int)std::ssize( m_ElementList ) - 1;
 }
 
 //-----------------------------------------------------------------------------
@@ -494,7 +491,7 @@ void CAI_ScriptConditions::Enable( void )
 	m_hTarget = gEntList.FindEntityByName( nullptr, m_target );
 
 	CBaseEntity *pActor = gEntList.FindEntityByName( nullptr, m_Actor );
-	if ( m_ElementList.Count() == 0 )
+	if ( m_ElementList.empty() )
 	{
 		if ( m_Actor != NULL_STRING && pActor == nullptr )
 		{
@@ -692,7 +689,7 @@ bool CAI_ScriptConditions::ActorInPlayersPVS( CBaseEntity *pActor, bool bNot )
 
 bool CAI_ScriptConditions::ActorInList( CBaseEntity *pActor )
 {
-	for ( int i = 0; i < m_ElementList.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_ElementList ); i++ )
 	{
 		if ( m_ElementList[i].GetActor() == pActor )
 			 return true;

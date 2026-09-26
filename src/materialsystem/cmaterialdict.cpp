@@ -14,38 +14,13 @@
 #include "filesystem.h"
 #include "imaterialinternal.h"
 
-// NOTE: This must be the last file included!!!
-#include "tier0/memdbgon.h"
-
-//-----------------------------------------------------------------------------
-// sort function
-//-----------------------------------------------------------------------------
-bool CMaterialDict::MaterialLessFunc( const MaterialLookup_t& src1, 
-										   const MaterialLookup_t& src2 )
-{
-	// Always sort manually-created materials to the front
-	if ( src1.m_bManuallyCreated != src2.m_bManuallyCreated )
-		return src1.m_bManuallyCreated;
-
-	return src1.m_Name < src2.m_Name;
-}
-
-//-----------------------------------------------------------------------------
-// sort function for missing materials
-//-----------------------------------------------------------------------------
-bool CMaterialDict::MissingMaterialLessFunc( const MissingMaterial_t& src1, 
-											const MissingMaterial_t& src2 )
-{
-	return src1.m_Name < src2.m_Name;
-}
-
 void CMaterialDict::Shutdown( )
 {
 	// Clean up all materials..
 	RemoveAllMaterials();
 
 	// FIXME: Could dump list here...
-	m_MissingList.RemoveAll();
+	m_MissingList.clear();
 
 }
 
@@ -54,11 +29,28 @@ void CMaterialDict::Shutdown( )
 //-----------------------------------------------------------------------------
 void CMaterialDict::AddMaterialToMaterialList( IMaterialInternal *pMaterial )
 {
-	MaterialLookup_t lookup;
-	lookup.m_pMaterial = pMaterial;
-	lookup.m_Name = pMaterial->GetName();
+	MaterialKey_t lookup;
+	lookup.m_Name = ks::global_symbols().intern( pMaterial->GetName() );
 	lookup.m_bManuallyCreated = pMaterial->IsManuallyCreated();
-	m_MaterialDict.Insert( lookup );
+	MaterialHandle_t h = AllocMaterialHandle();
+	m_MaterialSlots[h] = { pMaterial, m_MaterialDict.emplace( lookup, h ) };
+}
+
+MaterialHandle_t CMaterialDict::AllocMaterialHandle()
+{
+	if ( m_FreeMaterialSlots.empty() )
+	{
+		MaterialHandle_t h = (MaterialHandle_t)m_MaterialSlots.size();
+		if ( h == InvalidMaterial() )
+		{
+			Error( "CMaterialDict overflow!\n" );
+		}
+		m_MaterialSlots.emplace_back();
+		return h;
+	}
+	MaterialHandle_t h = m_FreeMaterialSlots.back();
+	m_FreeMaterialSlots.pop_back();
+	return h;
 }
 
 void CMaterialDict::RemoveMaterialFromMaterialList( IMaterialInternal *pMaterial )
@@ -71,9 +63,9 @@ void CMaterialDict::RemoveMaterialFromMaterialList( IMaterialInternal *pMaterial
 	for (i = FirstMaterial(); i != InvalidMaterial(); i = iNext )
 	{
 		iNext = NextMaterial(i);
-		if ( m_MaterialDict[i].m_pMaterial == pMaterial )
+		if ( m_MaterialSlots[i].m_pMaterial == pMaterial )
 		{
-			m_MaterialDict.RemoveAt( i );
+			RemoveMaterialFromMaterialList( i );
 			break;
 		}
 	}
@@ -83,7 +75,7 @@ void CMaterialDict::RemoveMaterialFromMaterialList( IMaterialInternal *pMaterial
 #ifdef _DEBUG
 	for ( i = iNext; i != InvalidMaterial(); i = NextMaterial(i) )
 	{
-		Assert( m_MaterialDict[i].m_pMaterial != pMaterial );
+		Assert( m_MaterialSlots[i].m_pMaterial != pMaterial );
 	}
 #endif
 }
@@ -123,12 +115,16 @@ void CMaterialDict::RemoveMaterialSubRect( IMaterialInternal *pMaterial )
 
 void CMaterialDict::RemoveMaterialFromMaterialList( MaterialHandle_t h )
 {
-	m_MaterialDict.RemoveAt( h );
+	m_MaterialDict.erase( m_MaterialSlots[h].m_It );
+	m_MaterialSlots[h] = { nullptr, m_MaterialDict.end() };
+	m_FreeMaterialSlots.push_back( h );
 }
 
 void CMaterialDict::RemoveAllMaterialsFromMaterialList()
 {
-	m_MaterialDict.RemoveAll();
+	m_MaterialDict.clear();
+	m_MaterialSlots.clear();
+	m_FreeMaterialSlots.clear();
 }
 
 void CMaterialDict::RemoveAllMaterials()

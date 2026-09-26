@@ -15,9 +15,6 @@
 #include "cmatqueuedrendercontext.h"
 #include "cmaterialsystem.h" // @HACKHACK
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 ConVar mat_report_queue_status( "mat_report_queue_status", "0", FCVAR_MATERIAL_SYSTEM_THREAD );
 
@@ -305,7 +302,7 @@ FORCEINLINE void CMatQueuedMesh::MST_CopyDynamicVB( const MeshDesc_t &desc, cons
 	}
 	else
 	{
-#define FindMin( desc, pCurrent, tag )	( ( desc.m_VertexSize_##tag != 0 ) ? MIN( pCurrent, desc.m_p##tag )  : pCurrent )
+#define FindMin( desc, pCurrent, tag )	( ( desc.m_VertexSize_##tag != 0 ) ? std::min( (void *)(pCurrent), (void *)(desc.m_p##tag) )  : (void *)(pCurrent) )
 
 		pDest = (void *)((byte *)~0);
 
@@ -359,7 +356,7 @@ FORCEINLINE void CMatQueuedMesh::MST_CopyDynamicIB( const MeshDesc_t &desc, cons
 	}
 	while ( i < nIndices )
 	{
-		int nToCopy = MIN( ARRAYSIZE(tempIndices), nIndices - i );
+		int nToCopy = std::min<std::common_type_t<long unsigned int, int>>( ARRAYSIZE(tempIndices), nIndices - i );
 		for ( int j = 0; j < nToCopy; j++ )
 		{
 			tempIndices[j] = pIndexData[i+j] + desc.m_nFirstVertex;
@@ -1306,7 +1303,7 @@ void CMatQueuedRenderContext::EndQueue( bool bCallQueued )
 		}
 	}
 
-	for ( i = 0; i < m_RenderTargetStack.Count(); i++ )
+	for ( i = 0; i < std::ssize( m_RenderTargetStack ); i++ )
 	{
 		for ( int j = 0; j < MAX_RENDER_TARGETS; j++ )
 		{
@@ -1317,9 +1314,9 @@ void CMatQueuedRenderContext::EndQueue( bool bCallQueued )
 		}
 	}
 
-	m_RenderTargetStack.Clear();
+	m_RenderTargetStack.clear();
 
-	m_ScissorRectStack.Clear();
+	m_ScissorRectStack.clear();
 }
 
 
@@ -1385,10 +1382,10 @@ void CMatQueuedRenderContext::CallQueued( bool bTermAfterCall )
 	{
 #ifndef MS_NO_DYNAMIC_BUFFER_COPY
 		Msg( "%d calls queued for %d bytes in parameters and overhead, %d bytes verts, %d bytes indices, %d bytes other\n", 
-			m_queue.Count(), m_queue.GetMemoryUsed(), Vertices().GetUsed(), Indices().GetUsed(), RenderDataSizeUsed() );
+			m_queue.Count(), (int)m_queue.GetMemoryUsed(), Vertices().GetUsed(), Indices().GetUsed(), RenderDataSizeUsed() );
 #else
 		Msg( "%d calls queued for %d bytes in parameters and overhead, %d bytes verts, %d bytes indices, %d bytes other\n", 
-			m_queue.Count(), m_queue.GetMemoryUsed(), Vertices().GetUsed() + m_Vertices.GetUsed(), Indices().GetUsed() + m_Indices.GetUsed(), RenderDataSizeUsed() );
+			m_queue.Count(), (int)m_queue.GetMemoryUsed(), Vertices().GetUsed() + m_Vertices.GetUsed(), Indices().GetUsed() + m_Indices.GetUsed(), RenderDataSizeUsed() );
 #endif
 	}
 
@@ -1481,7 +1478,7 @@ void CMatQueuedRenderContext::SetRenderTargetEx( int nRenderTargetID, ITexture *
 void CMatQueuedRenderContext::GetRenderTargetDimensions( int &width, int &height) const
 {
 	// Target at top of stack
-	ITexture *pTOS = m_RenderTargetStack.Top().m_pRenderTargets[0];
+	ITexture *pTOS = m_RenderTargetStack.back().m_pRenderTargets[0];
 
 	// If top of stack isn't the back buffer, get dimensions from the texture
 	if ( pTOS != nullptr )
@@ -1637,10 +1634,10 @@ void CMatQueuedRenderContext::GetFogDistances( float *fStart, float *fEnd, float
 void CMatQueuedRenderContext::GetViewport( int& x, int& y, int& width, int& height ) const
 {
 	// Verify valid top of RT stack
-	Assert ( m_RenderTargetStack.Count() > 0 );
+	Assert ( !m_RenderTargetStack.empty() );
 
 	// Grab the top of stack
-	const RenderTargetStackElement_t& element = m_RenderTargetStack.Top();
+	const RenderTargetStackElement_t& element = m_RenderTargetStack.back();
 
 	// If either dimension is negative, set to full bounds of current target
 	if ( (element.m_nViewW < 0) || (element.m_nViewH < 0) )
@@ -1898,7 +1895,7 @@ void CMatQueuedRenderContext::CopyRenderTargetToTextureEx( ITexture *pTexture, i
 //-----------------------------------------------------------------------------
 void CMatQueuedRenderContext::CopyTextureToRenderTargetEx( int i, ITexture *pTexture, Rect_t *pSrc, Rect_t *pDst )
 {
-	m_queue.QueueCall( m_pHardwareContext, &IMatRenderContext::CopyTextureToRenderTargetEx, i, pTexture, CUtlEnvelope<Rect_t>(pSrc), CUtlEnvelope<Rect_t>(pDst) );
+	m_queue.QueueCall( m_pHardwareContext, &IMatRenderContext::CopyTextureToRenderTargetEx, i, pTexture, ks::envelope<Rect_t>(pSrc), ks::envelope<Rect_t>(pDst) );
 }
 
 

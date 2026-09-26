@@ -82,7 +82,7 @@ bool R_ShouldUseAreaFrustum( int area );
 extern ConVar r_DrawPortals;
 
 // Used when r_DrawPortals is on. Draws the screen space rects for each portal.
-extern CUtlVector<CPortalRect> g_PortalRects;
+extern std::vector< CPortalRect > g_PortalRects;
 
 
 
@@ -93,7 +93,7 @@ extern CUtlVector<CPortalRect> g_PortalRects;
 inline unsigned char R_IsAreaVisible( int area )
 {
 	extern unsigned char g_RenderAreaBits[32];
-	return g_RenderAreaBits[area>>3] & GetBitForBitnum(area&7);
+	return g_RenderAreaBits[area>>3] & ( 1 << ( area & 7 ) );
 }
 
 #endif // R_AREAPORTAL_H

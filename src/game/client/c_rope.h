@@ -16,7 +16,7 @@
 #include "rope_physics.h"
 #include "materialsystem/imaterial.h"
 #include "rope_shared.h"
-#include "bitvec.h"
+#include <bitset>
 
 
 void RecvProxy_RecomputeSprings( const CRecvProxyData *pData, void *pStruct, void *pOut );
@@ -203,7 +203,7 @@ private:
 
 private:
 	// Track which links touched something last frame. Used to prevent wind from gusting on them.
-	CBitVec<ROPE_MAX_SEGMENTS>		m_LinksTouchingSomething;
+	std::bitset<ROPE_MAX_SEGMENTS>		m_LinksTouchingSomething;
 	int								m_nLinksTouchingSomething;
 	bool							m_bApplyWind;
 	int								m_fPrevLockedPoints;	// Which points are locked down.

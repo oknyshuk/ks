@@ -11,9 +11,6 @@
 #include "server.h"
 #include "client.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 #define ISPEAKER_RIGHT_FRONT	0
 #define ISPEAKER_LEFT_FRONT		1

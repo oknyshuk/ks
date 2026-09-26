@@ -36,7 +36,7 @@
 MEM_INTERFACE void *MemAllocScratch( int nMemSize );
 MEM_INTERFACE void MemFreeScratch();
 
-//Only works with USE_MEM_DEBUG and memory allocation call stack tracking enabled.
+//Only works with memory allocation call stack tracking enabled.
 MEM_INTERFACE int GetAllocationCallStack( void *mem, void **pCallStackOut, int iMaxEntriesOut );
 
 MEM_INTERFACE void MemOutOfMemory( size_t nBytesAttempted );

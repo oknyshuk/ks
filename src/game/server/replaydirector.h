@@ -12,7 +12,7 @@
 #include <igamesystem.h>
 #include <ireplaydirector.h>
 #include <ireplay.h>
-#include <utlrbtree.h>
+#include <set>
 
 #define	REPLAY_MIN_DIRECTOR_DELAY		10	// minimum delay if director is enabled
 #define	REPLAY_MAX_DELAY				120	// maximum delay
@@ -30,6 +30,15 @@ public:
 		int			m_Tick;		// tick of this command
 		int			m_Priority; // game event priority
 		IGameEvent	*m_Event;	// IGameEvent
+};
+
+// Orders events by tick; transparent so the history can be searched by tick.
+struct CReplayGameEventLess
+{
+	using is_transparent = void;
+	bool operator()( const CReplayGameEvent &e1, const CReplayGameEvent &e2 ) const { return e1.m_Tick < e2.m_Tick; }
+	bool operator()( const CReplayGameEvent &e, int tick ) const { return e.m_Tick < tick; }
+	bool operator()( int tick, const CReplayGameEvent &e ) const { return tick < e.m_Tick; }
 };
 
 class CReplayDirector : public CGameEventListener, public CBaseGameSystemPerFrame, public IReplayDirector
@@ -86,10 +95,13 @@ protected:
 	virtual void	StartInstantBroadcastShot();
 	virtual void	FinishCameraManShot();
 	virtual void	BuildActivePlayerList();
-	virtual CReplayGameEvent *FindBestGameEvent();
-	virtual void	CreateShotFromEvent( CReplayGameEvent *ge );
+	virtual const CReplayGameEvent *FindBestGameEvent();
+	virtual void	CreateShotFromEvent( const CReplayGameEvent *ge );
 
-	int		FindFirstEvent( int tick ); // finds first event >= tick
+	// events with equal ticks stay in arrival order
+	using EventHistory_t = std::multiset<CReplayGameEvent, CReplayGameEventLess>;
+
+	EventHistory_t::const_iterator FindFirstEvent( int tick ) const; // finds first event >= tick
 	void	CheckHistory();
 	void	RemoveEventsFromHistory(int tick); // removes all commands < tick, or all if tick -1
 	
@@ -112,7 +124,7 @@ protected:
 	CBasePlayer		*m_pActivePlayers[MAX_PLAYERS]; // fixed cameras (point_viewcontrol)
 	int				m_iCameraManIndex;		// entity index of current camera man or 0
 	
-	CUtlRBTree<CReplayGameEvent>	m_EventHistory;
+	EventHistory_t	m_EventHistory;
 };
 
 extern IGameSystem* ReplayDirectorSystem();

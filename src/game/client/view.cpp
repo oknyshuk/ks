@@ -57,9 +57,7 @@
 
 
 	
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-		  
+#include "tier0/memalloc.h"
 void ToolFramework_AdjustEngineViewport( int& x, int& y, int& width, int& height );
 bool ToolFramework_SetupEngineView( Vector &origin, QAngle &angles, float &fov );
 bool ToolFramework_SetupEngineMicrophone( Vector &origin, QAngle &angles );
@@ -508,7 +506,7 @@ void CViewRender::OnRenderStart()
 */
 
 			// Don't let it go too low
-			localFOV = MAX( min_fov, localFOV );
+			localFOV = std::max( min_fov, localFOV );
 
 			GetHud().m_flFOVSensitivityAdjust = 1.0f;
 
@@ -858,7 +856,7 @@ void CViewRender::WriteSaveGameScreenshotOfSize( const char *pFilename, int widt
 		
 	// get the data from the backbuffer and save to disk
 	// bitmap bits
-	unsigned char *pImage = ( unsigned char * )malloc( width * 3 * height );
+	unsigned char *pImage = ( unsigned char * )MemAlloc_Alloc( width * 3 * height );
 
 	{
 		CMatRenderContextPtr pRenderContext( materials );
@@ -871,21 +869,21 @@ void CViewRender::WriteSaveGameScreenshotOfSize( const char *pFilename, int widt
 
 	// allocate a buffer to write the tga into
 	int iMaxTGASize = 1024 + (width * height * 4);
-	void *pTGA = malloc( iMaxTGASize );
-	CUtlBuffer buffer( pTGA, iMaxTGASize );
+	void *pTGA = new char[ iMaxTGASize ];
+	ks::byte_writer buffer( pTGA, iMaxTGASize );
 
 	if( !TGAWriter::WriteToBuffer( pImage, buffer, width, height, IMAGE_FORMAT_RGB888, IMAGE_FORMAT_RGB888 ) )
 	{
 		Error( "Couldn't write bitmap data snapshot.\n" );
 	}
 	
-	free( pImage );
+	g_pMemAlloc->Free( pImage );
 
 	// async write to disk (this will take ownership of the memory)
 	char szPathedFileName[_MAX_PATH];
 	Q_snprintf( szPathedFileName, sizeof(szPathedFileName), "//MOD/%s", pFilename );
 
-	filesystem->AsyncWrite( szPathedFileName, buffer.Base(), buffer.TellPut(), true );
+	filesystem->AsyncWrite( szPathedFileName, buffer.data(), buffer.size(), true );
 
 	g_bRenderingScreenshot = false;
 	m_bAllowViewAccess = false;

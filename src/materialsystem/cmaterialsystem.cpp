@@ -5,6 +5,7 @@
 //===========================================================================//
 	
 #include "pch_materialsystem.h"
+#include <mutex>
 
 #define MATSYS_INTERNAL
 
@@ -19,7 +20,6 @@
 #include "shaderlib/ShaderDLL.h"
 #include "shaderapi_builtin.h"
 #include "tier1/callqueue.h"
-#include "tier1/smartptr.h"
 #include "vstdlib/jobthread.h"
 #include "cmatnullrendercontext.h"
 #include "datacache/iresourceaccesscontrol.h"
@@ -27,9 +27,7 @@
 #include "shaderapidx9/imeshdx8.h"
 #include "tier0/perfstats.h"
 
-// NOTE: This must be the last file included!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 #define _finite finite
 
 // this is hooked into the engines convar
@@ -100,7 +98,7 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR( MaterialSystem_Config_t, MaterialSystem_Confi
 
 //-----------------------------------------------------------------------------
 
-CThreadFastMutex g_MatSysMutex;
+std::recursive_mutex g_MatSysMutex;
 
 //-----------------------------------------------------------------------------
 // Purpose: additional materialsystem information, internal use only
@@ -368,7 +366,7 @@ CMaterialSystem::~CMaterialSystem()
 
 	if ( m_pSubString )
 	{
-		free( m_pSubString );
+		g_pMemAlloc->Free( m_pSubString );
 		m_pSubString = nullptr;
 	}
 }
@@ -1184,15 +1182,15 @@ void CMaterialSystem::SetView( void* hwnd )
 void CMaterialSystem::AddReleaseFunc( MaterialBufferReleaseFunc_t func )
 {
 	// Shouldn't have two copies in our list
-	Assert( m_ReleaseFunc.Find( func ) == -1 );
-	m_ReleaseFunc.AddToTail( func );
+	Assert( ks::find_index( m_ReleaseFunc, func ) == -1 );
+	m_ReleaseFunc.push_back( func );
 }
 
 void CMaterialSystem::RemoveReleaseFunc( MaterialBufferReleaseFunc_t func )
 {
-	int i = m_ReleaseFunc.Find( func );
+	int i = ks::find_index( m_ReleaseFunc, func );
 	if( i != -1 )
-		m_ReleaseFunc.Remove(i);
+		m_ReleaseFunc.erase( m_ReleaseFunc.begin() + i );
 }
 
 
@@ -1202,15 +1200,15 @@ void CMaterialSystem::RemoveReleaseFunc( MaterialBufferReleaseFunc_t func )
 void CMaterialSystem::AddRestoreFunc( MaterialBufferRestoreFunc_t func )
 {
 	// Shouldn't have two copies in our list
-	Assert( m_RestoreFunc.Find( func ) == -1 );
-	m_RestoreFunc.AddToTail( func );
+	Assert( ks::find_index( m_RestoreFunc, func ) == -1 );
+	m_RestoreFunc.push_back( func );
 }
 
 void CMaterialSystem::RemoveRestoreFunc( MaterialBufferRestoreFunc_t func )
 {
-	int i = m_RestoreFunc.Find( func );
+	int i = ks::find_index( m_RestoreFunc, func );
 	Assert( i != -1 );
-	m_RestoreFunc.Remove(i);
+	m_RestoreFunc.erase( m_RestoreFunc.begin() + i );
 }
 
 
@@ -1220,16 +1218,16 @@ void CMaterialSystem::RemoveRestoreFunc( MaterialBufferRestoreFunc_t func )
 void CMaterialSystem::AddEndFrameCleanupFunc( EndFrameCleanupFunc_t func )
 {
 	// Shouldn't have two copies in our list
-	Assert( m_EndFrameCleanupFunc.Find( func ) == -1 );
-	m_EndFrameCleanupFunc.AddToTail( func );
+	Assert( ks::find_index( m_EndFrameCleanupFunc, func ) == -1 );
+	m_EndFrameCleanupFunc.push_back( func );
 }
 
 void CMaterialSystem::RemoveEndFrameCleanupFunc( EndFrameCleanupFunc_t func )
 {
-	int i = m_EndFrameCleanupFunc.Find( func );
+	int i = ks::find_index( m_EndFrameCleanupFunc, func );
 	if( i != -1 )
 	{
-		m_EndFrameCleanupFunc.Remove(i);
+		m_EndFrameCleanupFunc.erase( m_EndFrameCleanupFunc.begin() + i );
 	}
 }
 
@@ -1239,7 +1237,7 @@ void CMaterialSystem::OnLevelShutdown()
 	// changing contexts away from gameplay
 	m_bLevelLoadingComplete = false;
 
-	int nSize = m_OnLevelShutdownFuncs.Count();
+	int nSize = std::ssize( m_OnLevelShutdownFuncs );
 	for (int i = 0 ; i < nSize ; ++i)
 	{
 		COnLevelShutdownFunc & instance = m_OnLevelShutdownFuncs[i];
@@ -1251,24 +1249,24 @@ void CMaterialSystem::OnLevelShutdown()
 bool CMaterialSystem::AddOnLevelShutdownFunc( OnLevelShutdownFunc_t func, void * pUserData )
 {
 	COnLevelShutdownFunc instance(func, pUserData);
-	int i = m_OnLevelShutdownFuncs.Find( instance );
+	int i = ks::find_index( m_OnLevelShutdownFuncs, instance );
 	if (i != -1)
 	{
 		return false;
 	}
-	m_OnLevelShutdownFuncs.AddToTail(instance);
+	m_OnLevelShutdownFuncs.push_back( instance );
 	return true;
 }
 
 bool CMaterialSystem::RemoveOnLevelShutdownFunc( OnLevelShutdownFunc_t func, void * pUserData )
 {
 	COnLevelShutdownFunc instance(func, pUserData);
-	int i = m_OnLevelShutdownFuncs.Find( instance );
+	int i = ks::find_index( m_OnLevelShutdownFuncs, instance );
 	if (i == -1)
 	{
 		return false;
 	}
-	m_OnLevelShutdownFuncs.Remove(i);
+	m_OnLevelShutdownFuncs.erase( m_OnLevelShutdownFuncs.begin() + i );
 	return true;
 }
 
@@ -1278,16 +1276,16 @@ bool CMaterialSystem::RemoveOnLevelShutdownFunc( OnLevelShutdownFunc_t func, voi
 void CMaterialSystem::AddEndFramePriorToNextContextFunc( EndFramePriorToNextContextFunc_t func )
 {
 	// Shouldn't have two copies in our list
-	Assert( m_EndFramePriorToNextContextFunc.Find( func ) == m_EndFramePriorToNextContextFunc.InvalidIndex() );
-	m_EndFramePriorToNextContextFunc.AddToTail( func );
+	Assert( ks::find_index( m_EndFramePriorToNextContextFunc, func ) == -1 );
+	m_EndFramePriorToNextContextFunc.push_back( func );
 }
 
 void CMaterialSystem::RemoveEndFramePriorToNextContextFunc( EndFramePriorToNextContextFunc_t func )
 {
-	int i = m_EndFramePriorToNextContextFunc.Find( func );
-	if( i != m_EndFramePriorToNextContextFunc.InvalidIndex() )
+	int i = ks::find_index( m_EndFramePriorToNextContextFunc, func );
+	if( i != -1 )
 	{
-		m_EndFramePriorToNextContextFunc.Remove(i);
+		m_EndFramePriorToNextContextFunc.erase( m_EndFramePriorToNextContextFunc.begin() + i );
 	}
 }
 
@@ -1336,7 +1334,7 @@ void CMaterialSystem::ReleaseShaderObjects( int nChangeFlags )
 			GetLightmaps()->ReleaseLightmapPages();
 		}
 	}
-	for (int i = 0; i < m_ReleaseFunc.Count(); ++i)
+	for (int i = 0; i < std::ssize( m_ReleaseFunc ); ++i)
 	{
 		m_ReleaseFunc[i]( nChangeFlags );
 	}
@@ -1383,7 +1381,7 @@ void CMaterialSystem::RestoreShaderObjects( CreateInterfaceFn shaderFactory, int
 		g_pOcclusionQueryMgr->AllocOcclusionQueryObjects();
 	}
 
-	for (int i = 0; i < m_RestoreFunc.Count(); ++i)
+	for (int i = 0; i < std::ssize( m_RestoreFunc ); ++i)
 	{
 		m_RestoreFunc[i]( nChangeFlags );
 	}
@@ -1616,7 +1614,7 @@ void CMaterialSystem::ReadConfigFromConVars( MaterialSystem_Config_t *pConfig )
 	pConfig->SetFlag( MATSYS_VIDCFG_FLAGS_DISABLE_DETAIL, !mat_detail_tex.GetBool() );
 	pConfig->SetFlag( MATSYS_VIDCFG_FLAGS_DISABLE_PHONG, !mat_phong.GetBool() );
 	pConfig->SetFlag( MATSYS_VIDCFG_FLAGS_ENABLE_PARALLAX_MAPPING, mat_parallaxmap.GetBool() );
-	pConfig->m_nForceAnisotropicLevel = MAX( mat_forceaniso.GetInt(), 1 );
+	pConfig->m_nForceAnisotropicLevel = std::max( mat_forceaniso.GetInt(), 1 );
 
 	// special handling for mat_dxlevel since it must be clamped to allowable values
 	int nDxLevel = clamp( mat_dxlevel.GetInt(), g_pMaterialSystemHardwareConfig->GetMinDXSupportLevel(), g_pMaterialSystemHardwareConfig->GetMaxDXSupportLevel() );
@@ -2252,7 +2250,7 @@ bool CMaterialSystem::OnDrawMeshModulated( IMesh *pMesh, const Vector4D &diffuse
 
 void CMaterialSystem::OnThreadEvent( uint32 threadEvent )
 {
-	m_threadEvents.AddToTail( threadEvent );
+	m_threadEvents.push_back( threadEvent );
 }
 
 
@@ -2383,7 +2381,7 @@ IMaterial* CMaterialSystem::FindMaterial( char const *pMaterialName, const char 
 		//Q_strncat( vmtName, ".vmt", nLen, COPY_ALL_CHARACTERS );
 		Assert( nLen >= (int)Q_strlen( vmtName ) + 1 );
 
-		CUtlVector<FileNameHandle_t> includes;
+		std::vector< FileNameHandle_t > includes;
 		KeyValues *pKeyValues = new KeyValues("vmt");
 		KeyValues *pPatchKeyValues = new KeyValues( "vmt_patches" );
 		if ( !LoadVMTFile( *pKeyValues, *pPatchKeyValues, vmtName, true, &includes ) )
@@ -2450,7 +2448,7 @@ IMaterial* CMaterialSystem::FindMaterial( char const *pMaterialName, const char 
 
 bool CMaterialSystem::LoadKeyValuesFromVMTFile( KeyValues &vmtKeyValues, const char *pMaterialName, bool bUsesUNCFilename )
 {
-	CUtlVector<FileNameHandle_t> includes;
+	std::vector< FileNameHandle_t > includes;
 	KeyValues *pPatchKeyValues = new KeyValues( "vmt_patches" );
 
 	bool bResult = LoadVMTFile( vmtKeyValues, *pPatchKeyValues, pMaterialName, bUsesUNCFilename, &includes );
@@ -2742,7 +2740,7 @@ void CMaterialSystem::ServiceEndFramePriorToNextContext()
 	volatile int nLastCallIndex;
 	volatile EndFramePriorToNextContextFunc_t pLastCallSite;
 
-	for ( int i = 0; i < m_EndFramePriorToNextContextFunc.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_EndFramePriorToNextContextFunc ); ++i )
 	{
 		nLastCallIndex = i;
 		pLastCallSite = m_EndFramePriorToNextContextFunc[ i ];
@@ -2777,7 +2775,7 @@ void CMaterialSystem::ServiceEndFramePriorToNextContext()
 		ReloadMaterials( pReloadSubString );
 		if ( pReloadSubString )
 		{
-			free( pReloadSubString );
+			g_pMemAlloc->Free( pReloadSubString );
 		}
 	}
 
@@ -2832,12 +2830,12 @@ void CMaterialSystem::ReloadMaterials( const char *pSubString )
 
 		if ( m_pSubString )
 		{
-			free( m_pSubString );
+			g_pMemAlloc->Free( m_pSubString );
 			m_pSubString = nullptr;
 		}
 		if ( pSubString )
 		{
-			m_pSubString = strdup( pSubString );
+			m_pSubString = MemAlloc_StrDup( pSubString );
 		}
 		m_bDeferredMaterialReload = true;
 		return;
@@ -2856,18 +2854,18 @@ void CMaterialSystem::ReloadMaterials( const char *pSubString )
 		Flush( false );
 	
 		char const chMultiDelim = '*';
-		CUtlVector< char > arrSearchSubString;
-		CUtlVector< char const * > arrSearchItems;
+		std::vector< char > arrSearchSubString;
+		std::vector< char const * > arrSearchItems;
 
 		if ( strchr( pSubString, chMultiDelim ) )
 		{
-			arrSearchSubString.SetCount( strlen( pSubString ) + 1 );
-			strcpy( arrSearchSubString.Base(), pSubString );
-			for ( char * pch = arrSearchSubString.Base(); pch; )
+			arrSearchSubString.assign( strlen( pSubString ) + 1, {} );
+			strcpy( arrSearchSubString.data(), pSubString );
+			for ( char * pch = arrSearchSubString.data(); pch; )
 			{
 				char *pchEnd = strchr( pch, chMultiDelim );
 				pchEnd ? *( pchEnd ++ ) = 0 : 0;
-				arrSearchItems.AddToTail( pch );
+				arrSearchItems.push_back( pch );
 				pch = pchEnd;
 			}
 		}
@@ -2879,11 +2877,11 @@ void CMaterialSystem::ReloadMaterials( const char *pSubString )
 
 			char const *szMatName = GetMaterialInternal(i)->GetName();
 			
-			if ( arrSearchItems.Count() > 1 )
+			if ( std::ssize( arrSearchItems ) > 1 )
 			{
 				bool bMatched = false;
 				
-				for ( int k = 0; !bMatched && ( k < arrSearchItems.Count() ); ++ k )
+				for ( int k = 0; !bMatched && ( k < std::ssize( arrSearchItems ) ); ++ k )
 					if( Q_stristr( szMatName, arrSearchItems[k] ) )
 						bMatched = true;
 				
@@ -3269,7 +3267,7 @@ void CMaterialSystem::ThreadExecuteQueuedContext( CMatQueuedRenderContext *pCont
 	m_pRenderContext =  &m_HardwareRenderContext;
 	pContext->EndQueue( true );
 
-	for (int i = 0; i < m_EndFrameCleanupFunc.Count(); ++i)
+	for (int i = 0; i < std::ssize( m_EndFrameCleanupFunc ); ++i)
 	{
 		m_EndFrameCleanupFunc[ i ]();
 	}
@@ -3468,7 +3466,7 @@ void CMaterialSystem::EndFrame( void )
 		}
 	}
 
-	if ( m_threadEvents.Count()	)
+	if ( !m_threadEvents.empty() )
 	{
 		nextThreadMode = MATERIAL_SINGLE_THREADED;
 	}
@@ -3511,7 +3509,6 @@ void CMaterialSystem::EndFrame( void )
 		}
 
 		m_ThreadMode = nextThreadMode;
-		Assert( g_MatSysMutex.GetOwnerId() == 0 );
 
 		g_pShaderAPI->EnableShaderShaderMutex( m_ThreadMode != MATERIAL_SINGLE_THREADED ); // use mutex even for queued to allow "disalow access" to function properly
 		g_pShaderAPI->EnableBuffer2FramesAhead( true );
@@ -3558,16 +3555,16 @@ void CMaterialSystem::EndFrame( void )
 
 	if ( m_ThreadMode == MATERIAL_SINGLE_THREADED )
 	{
-		for ( int i = 0; i < m_threadEvents.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_threadEvents ); i++ )
 		{
 			g_pShaderDevice->HandleThreadEvent(m_threadEvents[i]);
 		}
-		m_threadEvents.RemoveAll();
+		m_threadEvents.clear();
 	}
 
 	if ( m_ThreadMode == MATERIAL_SINGLE_THREADED || m_ThreadMode == MATERIAL_QUEUED_SINGLE_THREADED )
 	{
-		for (int i = 0; i < m_EndFrameCleanupFunc.Count(); ++i)
+		for (int i = 0; i < std::ssize( m_EndFrameCleanupFunc ); ++i)
 		{
 			m_EndFrameCleanupFunc[ i ]();
 		}
@@ -3606,7 +3603,7 @@ void CMaterialSystem::EvictManagedResources()
 	g_pShaderAPI->EvictManagedResources();
 }
 
-int __cdecl MaterialNameCompareFunc( const void *elem1, const void *elem2 )
+int MaterialNameCompareFunc( const void *elem1, const void *elem2 )
 {
 	IMaterialInternal *pMaterialA = g_MaterialSystem.GetMaterialInternal( *(MaterialHandle_t *)elem1 );
 	IMaterialInternal *pMaterialB = g_MaterialSystem.GetMaterialInternal( *(MaterialHandle_t *)elem2 );
@@ -4410,7 +4407,7 @@ MaterialLock_t CMaterialSystem::Lock()
 		m_pActiveAsyncJob = nullptr;
 	}
 
-	g_MatSysMutex.Lock();
+	g_MatSysMutex.lock();
 
 	MaterialLock_t hMaterialLock = (MaterialLock_t)pCurContext;
 	m_pRenderContext = &m_HardwareRenderContext;
@@ -4455,7 +4452,7 @@ void CMaterialSystem::Unlock( MaterialLock_t hMaterialLock )
 #endif
 		}
 	}
-	g_MatSysMutex.Unlock();
+	g_MatSysMutex.unlock();
 }
 
 //-----------------------------------------------------------------------------------------------------

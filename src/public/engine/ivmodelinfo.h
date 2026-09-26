@@ -30,7 +30,7 @@ typedef unsigned char byte;
 struct virtualterrainparams_t;
 class CPhysCollide;
 typedef unsigned short MDLHandle_t;
-class CUtlBuffer;
+namespace ks { class text_writer; }
 class IClientRenderable;
 
 
@@ -132,7 +132,7 @@ public:
 	virtual int 					GetModelMaterials( const model_t *model, int count, IMaterial** ppMaterial ) = 0;
 	virtual bool					IsModelVertexLit( const model_t *model ) const = 0;
 	virtual const char				*GetModelKeyValueText( const model_t *model ) = 0;
-	virtual bool					GetModelKeyValue( const model_t *model, CUtlBuffer &buf ) = 0; // supports keyvalue blocks in submodels
+	virtual bool					GetModelKeyValue( const model_t *model, ks::text_writer &buf ) = 0; // supports keyvalue blocks in submodels
 	virtual float					GetModelRadius( const model_t *model ) = 0;
 
 	virtual const studiohdr_t		*FindModel( const studiohdr_t *pStudioHdr, void **cache, const char *modelname ) const = 0;
@@ -190,7 +190,7 @@ public:
 	virtual void					UpdateCombinedDynamicModel( int nModelIndex, MDLHandle_t Handle ) = 0;
 
 	virtual int						BeginCombinedModel( const char *pszName, bool bReuseExisting ) = 0;
-	virtual bool					SetCombineModels( int nModelIndex, const CUtlVector< SCombinerModelInput_t > &vecModelsToCombine ) = 0;
+	virtual bool					SetCombineModels( int nModelIndex, const std::vector< SCombinerModelInput_t > &vecModelsToCombine ) = 0;
 	virtual bool					FinishCombinedModel( int nModelIndex, CombinedModelLoadedCallback pFunc, void *pUserData = nullptr ) = 0;
 	virtual void					ReleaseCombinedModel( int nModelIndex ) = 0;
 

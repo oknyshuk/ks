@@ -11,9 +11,6 @@
 #include "ai_behavior_fightfromcover.h"
 #include "ai_hint.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
@@ -122,7 +119,7 @@ void CAI_FightFromCoverBehavior::GatherConditions()
 
 	if ( GetHintNode() && m_FrontTimer.Expired() && m_FrontMoveMonitor.TargetMoved( m_hGoal->GetFrontPosition() ) )
 	{
-		float flFastRejectDist = MAX( m_hGoal->m_WidthZone, m_hGoal->m_LengthZone ) + m_hGoal->m_BiasZone;
+		float flFastRejectDist = std::max( m_hGoal->m_WidthZone, m_hGoal->m_LengthZone ) + m_hGoal->m_BiasZone;
 
 		if ( ( GetHintNode()->GetAbsOrigin() - m_hGoal->GetFrontPosition() ).LengthSqr() > Square( flFastRejectDist ) || !IsPointInZone( GetHintNode()->GetAbsOrigin() ) )
 		{
@@ -167,7 +164,7 @@ int CAI_FightFromCoverBehavior::SelectSchedule()
 			hintCriteria.SetFlag( bits_HINT_NODE_NEAREST | bits_HINT_NODE_USE_GROUP );
 
 			// Add the search position
-			hintCriteria.AddIncludePosition( vFront, MAX( m_hGoal->m_WidthZone, m_hGoal->m_LengthZone ) + m_hGoal->m_BiasZone );
+			hintCriteria.AddIncludePosition( vFront, std::max( m_hGoal->m_WidthZone, m_hGoal->m_LengthZone ) + m_hGoal->m_BiasZone );
 			hintCriteria.AddExcludePosition( m_hGoal->GetGoalEntity()->GetAbsOrigin(), 2.5*12 );
 
 			hintCriteria.SetFilterFunc( &HintSearchFilter, this );
@@ -821,7 +818,7 @@ int CAI_FightFromCoverGoal::DrawDebugTextOverlays()
 			vBoxDrawCenter += m_vFront;
 			NDebugOverlay::BoxAngles( vBoxDrawCenter, Vector( -(m_LengthZone/2), -(m_WidthZone/2), -(m_HeightZone/2) ), Vector( m_LengthZone/2, m_WidthZone/2, m_HeightZone/2 ), m_hDirectionalMarker->GetAbsAngles(), 255, 0, 0, 16, 0 );
 
-			for ( int i = 0; i < m_actors.Count(); i++ )
+			for ( int i = 0; i < std::ssize( m_actors ); i++ )
 			{
 				if ( m_actors[i] != nullptr )
 				{

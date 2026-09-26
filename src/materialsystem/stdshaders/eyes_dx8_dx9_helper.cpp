@@ -22,9 +22,6 @@
 #include "eyes_flashlight_vs30.inc"
 #include "eyes_flashlight_ps30.inc"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 void InitParamsEyes_DX8_DX9( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, 
 							Eyes_DX8_DX9_Vars_t &info )

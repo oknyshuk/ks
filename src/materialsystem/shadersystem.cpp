@@ -8,13 +8,11 @@
 #include <stdlib.h>
 #include "materialsystem_global.h"
 #include "filesystem.h"
-#include "tier1/utldict.h"
+#include "tier1/map_ops.h"
 #include "shaderlib/ShaderDLL.h"
 #include "texturemanager.h"
 #include "itextureinternal.h"
 #include "IHardwareConfigInternal.h"
-#include "tier1/utlstack.h"
-#include "tier1/utlbuffer.h"
 #include "mathlib/vmatrix.h"
 #include "imaterialinternal.h"
 #include "tier1/strtools.h"
@@ -25,9 +23,7 @@
 #include "shader_dll_verify.h"
 #include "tier0/vprof.h"
 #include "tier1/tier1_logging.h"
-
-// NOTE: This must be the last file included!
-#include "tier0/memdbgon.h"
+#include <unordered_set>
 
 #define ShaderApiParam( x ) x
 
@@ -107,7 +103,7 @@ private:
 		// True if this is a mod's shader DLL, in which case it's not allowed to 
 		// override any existing shader names.
 		bool m_bModShaderDLL;
-		CUtlDict< IShader *, unsigned short >	m_ShaderDict; 
+		ks::idict< IShader * >	m_ShaderDict; 
 	};
 
 private:
@@ -167,7 +163,7 @@ private:
 
 private:
 	// List of all DLLs containing shaders
-	CUtlVector< ShaderDLLInfo_t > m_ShaderDLLs;
+	std::vector< ShaderDLLInfo_t > m_ShaderDLLs;
 
 	// Used to prevent re-entrant rendering from warning messages.
 	CBufferedLoggingListener m_BufferedLoggingListener;
@@ -274,13 +270,13 @@ void CShaderSystem::ModInit()
 void CShaderSystem::ModShutdown()
 {
 	// Unload only MOD dlls
-	for ( int i = m_ShaderDLLs.Count(); --i >= 0; )
+	for ( int i = std::ssize( m_ShaderDLLs ); --i >= 0; )
 	{
 		if ( m_ShaderDLLs[i].m_bModShaderDLL )
 		{
 			UnloadShaderDLL(i);
 			delete[] m_ShaderDLLs[i].m_pFileName;
-			m_ShaderDLLs.Remove( i );
+			m_ShaderDLLs.erase( m_ShaderDLLs.begin() + i );
 		}
 	}
 }
@@ -296,7 +292,7 @@ void CShaderSystem::LoadAllShaderDLLs( )
 	GetShaderDLLInternal()->Connect( Sys_GetFactoryThis(), true );
 
 	// Loads local defined or statically linked shaders
-	int i = m_ShaderDLLs.AddToHead();
+	m_ShaderDLLs.emplace( m_ShaderDLLs.begin() ); int i = 0;
 
 	m_ShaderDLLs[i].m_pFileName     = new char[1];
 	m_ShaderDLLs[i].m_pFileName[0]  = 0;
@@ -341,16 +337,16 @@ void CShaderSystem::LoadModShaderDLLs( int dxSupportLevel )
 //-----------------------------------------------------------------------------
 void CShaderSystem::UnloadAllShaderDLLs()
 {
-	if ( m_ShaderDLLs.Count() == 0 )
+	if ( m_ShaderDLLs.empty() )
 		return;
 
-	for ( int i = m_ShaderDLLs.Count(); --i >= 0; )
+	for ( int i = std::ssize( m_ShaderDLLs ); --i >= 0; )
 	{
 		UnloadShaderDLL(i);
 		delete[] m_ShaderDLLs[i].m_pFileName;
 	}
 
-	m_ShaderDLLs.RemoveAll();
+	m_ShaderDLLs.clear();
 }
 
 bool CShaderSystem::LoadShaderDLL( const char *pFullPath )
@@ -408,7 +404,7 @@ bool CShaderSystem::LoadShaderDLL( const char *pFullPath, const char *pPathID, b
 	}
 	else
 	{
-		nShaderDLLIndex = m_ShaderDLLs.AddToTail();
+		nShaderDLLIndex = std::ssize( m_ShaderDLLs ); m_ShaderDLLs.emplace_back();
 		int nLen = Q_strlen(pFullPath) + 1;
 		m_ShaderDLLs[nShaderDLLIndex].m_pFileName = new char[ nLen ];
 		Q_strncpy( m_ShaderDLLs[nShaderDLLIndex].m_pFileName, pFullPath, nLen );
@@ -433,7 +429,7 @@ bool CShaderSystem::LoadShaderDLL( const char *pFullPath, const char *pPathID, b
 //-----------------------------------------------------------------------------
 int CShaderSystem::FindShaderDLL( const char *pFullPath )
 {
-	for ( int i = m_ShaderDLLs.Count(); --i >= 0; )
+	for ( int i = std::ssize( m_ShaderDLLs ); --i >= 0; )
 	{
 		if ( !Q_stricmp( pFullPath, m_ShaderDLLs[i].m_pFileName ) )
 			return i;
@@ -471,7 +467,7 @@ void CShaderSystem::UnloadShaderDLL( const char *pFullPath )
 	{
 		UnloadShaderDLL( nShaderDLLIndex );
 		delete[] m_ShaderDLLs[nShaderDLLIndex].m_pFileName;
-		m_ShaderDLLs.Remove( nShaderDLLIndex ); 
+		m_ShaderDLLs.erase( m_ShaderDLLs.begin() + nShaderDLLIndex ); 
 	}
 }
 
@@ -567,12 +563,12 @@ void CShaderSystem::SetupShaderDictionary( int nShaderDLLIndex )
 		// Make sure it doesn't try to override another shader DLL's names.
 		if ( info.m_bModShaderDLL )
 		{
-			for ( int iTestDLL=0; iTestDLL < m_ShaderDLLs.Count(); iTestDLL++ )
+			for ( int iTestDLL=0; iTestDLL < std::ssize( m_ShaderDLLs ); iTestDLL++ )
 			{
 				ShaderDLLInfo_t *pTestDLL = &m_ShaderDLLs[iTestDLL];
 				if ( !pTestDLL->m_bModShaderDLL )
 				{
-					if ( pTestDLL->m_ShaderDict.Find( pShaderName ) != pTestDLL->m_ShaderDict.InvalidIndex() )
+					if ( pTestDLL->m_ShaderDict.contains( pShaderName ) )
 					{ 
 						Error( "Game shader '%s' trying to override a base shader '%s'.", info.m_pFileName, pShaderName );
 					}
@@ -580,7 +576,8 @@ void CShaderSystem::SetupShaderDictionary( int nShaderDLLIndex )
 			}
 		}
 
-		info.m_ShaderDict.Insert( pShaderName, pShader );
+		// Keep the first of a name, which GetShaders lists.
+		info.m_ShaderDict.emplace( pShaderName, pShader );
 	}
 }
 
@@ -598,13 +595,12 @@ IShader* CShaderSystem::FindShader( char const* pShaderName )
 {
 	// FIXME: What kind of search order should we use here?
 	// I'm currently assuming last added, first searched.
-	for (int i = m_ShaderDLLs.Count(); --i >= 0; )
+	for (int i = std::ssize( m_ShaderDLLs ); --i >= 0; )
 	{
 		ShaderDLLInfo_t &info = m_ShaderDLLs[i];
-		unsigned short idx = info.m_ShaderDict.Find( pShaderName );
-		if ( idx != info.m_ShaderDict.InvalidIndex() )
+		if ( IShader **ppShader = ks::find_ptr( info.m_ShaderDict, pShaderName ) )
 		{
-			return info.m_ShaderDict[idx];
+			return *ppShader;
 		}
 	}
 
@@ -622,31 +618,25 @@ int CShaderSystem::ShaderCount() const
 
 int CShaderSystem::GetShaders( int nFirstShader, int nMaxCount, IShader **ppShaderList ) const
 {
-	CUtlSymbolTable	uniqueNames( 0, 512, true ); 
+	std::unordered_set< std::string_view, ks::ihash, ks::iequal > uniqueNames;	// views into the shader dicts
 
 	int nCount = 0;
 	int nActualCount = 0;
-	for ( int i = m_ShaderDLLs.Count(); --i >= 0; )
+	for ( int i = std::ssize( m_ShaderDLLs ); --i >= 0; )
 	{
 		const ShaderDLLInfo_t &info = m_ShaderDLLs[i];
-		for ( unsigned short j = info.m_ShaderDict.First(); 
-			j != info.m_ShaderDict.InvalidIndex();
-			j = info.m_ShaderDict.Next( j ) )
+		for ( auto &[name, pShader] : info.m_ShaderDict )
 		{
 			// Don't add shaders twice
-			const char *pShaderName = info.m_ShaderDict.GetElementName( j );
-			if ( uniqueNames.Find( pShaderName ) != UTL_INVAL_SYMBOL )
+			if ( !uniqueNames.insert( name ).second )
 				continue;
-
-			// Indicate we've seen this shader
-			uniqueNames.AddString( pShaderName );
 
 			++nActualCount;
 			if ( nActualCount > nFirstShader )
 			{
 				if ( ppShaderList )
 				{
-					ppShaderList[ nCount ] = info.m_ShaderDict[j];
+					ppShaderList[ nCount ] = pShader;
 				}
 				++nCount;
 				if ( nCount >= nMaxCount )
@@ -759,7 +749,6 @@ void CShaderSystem::DoneWithShaderDraw()
 
 
 #ifdef _DEBUG
-#pragma warning (disable:4189)
 #endif
 
 //-----------------------------------------------------------------------------
@@ -849,7 +838,6 @@ void CShaderSystem::InitShaderParameters( IShader *pShader, IMaterialVar **param
 }
 
 #ifdef _DEBUG
-#pragma warning (default:4189)
 #endif
 
 //-----------------------------------------------------------------------------
@@ -968,7 +956,6 @@ void CShaderSystem::ComputeRenderStateFlagsFromSnapshot( ShaderRenderState_t* pR
 // Initializes state snapshots
 //-----------------------------------------------------------------------------
 #ifdef _DEBUG
-#pragma warning (disable:4189)
 #endif
 
 int CShaderSystem::GetModulationSnapshotCount( IMaterialVar **params )
@@ -1050,7 +1037,6 @@ void CShaderSystem::InitStateSnapshots( IShader *pShader, IMaterialVar **params,
 }
 
 #ifdef _DEBUG
-#pragma warning (default:4189)
 #endif
 
 //-----------------------------------------------------------------------------

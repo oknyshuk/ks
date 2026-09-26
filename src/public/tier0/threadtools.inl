@@ -48,7 +48,7 @@ INLINE_ON_PS3 CThread::~CThread()
 
 INLINE_ON_PS3 const char *CThread::GetName()
 {
-	AUTO_LOCK( m_Lock );
+	std::scoped_lock lock( m_Lock );
 	if ( !m_szName[0] )
 	{
 		_snprintf( m_szName, sizeof(m_szName) - 1, "Thread(%p/0x%p)", this, m_threadId );
@@ -61,7 +61,7 @@ INLINE_ON_PS3 const char *CThread::GetName()
 
 INLINE_ON_PS3 void CThread::SetName(const char *pszName)
 {
-	AUTO_LOCK( m_Lock );
+	std::scoped_lock lock( m_Lock );
 	strncpy( m_szName, pszName, sizeof(m_szName) - 1 );
 	m_szName[sizeof(m_szName) - 1] = 0;
 }
@@ -73,7 +73,7 @@ INLINE_ON_PS3 void CThread::SetName(const char *pszName)
 // Start thread running  - error if already running
 INLINE_ON_PS3 bool CThread::Start( unsigned nBytesStack, ThreadPriorityEnum_t nPriority )
 {
-	AUTO_LOCK( m_Lock );
+	std::scoped_lock lock( m_Lock );
 
 	if ( IsAlive() )
 	{
@@ -97,7 +97,7 @@ INLINE_ON_PS3 bool CThread::Start( unsigned nBytesStack, ThreadPriorityEnum_t nP
 
 	pthread_attr_t attr;
 	pthread_attr_init( &attr );
-	pthread_attr_setstacksize( &attr, MAX( nBytesStack, 1024u*1024 ) );
+	pthread_attr_setstacksize( &attr, std::max( nBytesStack, 1024u*1024 ) );
 	//lwss - fix memory leak here
 	m_threadInit = ThreadInit_t( init );
 	//if ( pthread_create( &m_threadId, &attr, (void *(*)(void *))GetThreadProc(), new ThreadInit_t( init ) ) != 0 )
@@ -408,7 +408,7 @@ INLINE_ON_PS3 void* CThread::ThreadProc(LPVOID pv)
 	g_pCurThread = nullptr;
 	FreeThreadID();
 
-	AUTO_LOCK( pThread->m_Lock );
+	std::scoped_lock lock( pThread->m_Lock );
 	pThread->m_threadZombieId = pThread->m_threadId;
 	pThread->m_threadId = 0;
 

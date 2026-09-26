@@ -24,7 +24,7 @@ public:
 
 public:
 	//Data members
-	CUtlVector<C_BaseEntity*> m_Entities;
+	std::vector< C_BaseEntity* > m_Entities;
 	Vector	m_vecOrigin;
 	float	m_flMagnitude;
 	float	m_flRadius;

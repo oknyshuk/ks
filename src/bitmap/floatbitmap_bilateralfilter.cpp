@@ -14,9 +14,6 @@
 #include "tier0/threadtools.h"
 #include "tier0/progressbar.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 struct TBFCalculationContext
 {
@@ -79,7 +76,7 @@ void FloatBitMap_t::TileableBilateralFilter( int radius_in_pixels,
 	ctxs[0].edge_threshold_value = edge_threshold_value;
 	ctxs[0].orig_bm = & orig;
 	ctxs[0].dest_bm = this;
-	int nthreads = MIN( 32, GetCPUInformation().m_nPhysicalProcessors );
+	int nthreads = std::min<std::common_type_t<int, uint8>>( 32, GetCPUInformation().m_nPhysicalProcessors );
 	ThreadHandle_t waithandles[32];
 	int starty = 0;
 	int ystep = NumRows() / nthreads;
@@ -91,7 +88,7 @@ void FloatBitMap_t::TileableBilateralFilter( int radius_in_pixels,
 		ctxs[t].thread_number = t;
 		ctxs[t].min_y = starty;
 		if ( t != nthreads - 1 )
-			ctxs[t].max_y = MIN( NumRows() - 1, starty + ystep - 1 );
+			ctxs[t].max_y = std::min( NumRows() - 1, starty + ystep - 1 );
 		else
 			ctxs[t].max_y = NumRows() - 1;
 		waithandles[t]= CreateSimpleThread( TBFCalculationThreadFN, & ctxs[t] );

@@ -9,11 +9,7 @@
 #include "filesystem.h"
 #include "tier2/tier2.h"
 #include "tier2/fileutils.h"
-#include "tier1/UtlStringMap.h"
 #include "tier1/strtools.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 extern int g_nParticle_Multiplier;
 
@@ -73,7 +69,7 @@ class C_OP_InstantaneousEmitter : public CParticleOperatorInstance
 		}
 		if ( m_nMaxEmittedPerFrame < 0 )
 		{
-			m_nMaxEmittedPerFrame = MIN( pDef->m_nMaxParticles, MAX_PARTICLES_IN_A_SYSTEM );
+			m_nMaxEmittedPerFrame = std::min( pDef->m_nMaxParticles, MAX_PARTICLES_IN_A_SYSTEM );
 		}
 		m_nScaleControlPointField = clamp( m_nScaleControlPointField, 0, 2 );
 		m_nScaleControlPoint      = clamp( m_nScaleControlPoint,    -1, MAX_PARTICLE_CONTROL_POINTS );
@@ -197,7 +193,7 @@ class C_OP_InstantaneousEmitter : public CParticleOperatorInstance
 
 			nActualParticlesToEmit = pCtx->m_StartingParticlesToEmit * vecScale[m_nScaleControlPointField];
 		}
-		pCtx->m_nRemainingParticles = MAX( 0, nActualParticlesToEmit );
+		pCtx->m_nRemainingParticles = std::max( 0, nActualParticlesToEmit );
 		pCtx->m_bComputedActualParticlesToEmit = true;
 	}
 
@@ -246,12 +242,12 @@ uint32 C_OP_InstantaneousEmitter::Emit( CParticleCollection *pParticles, float f
 		return 0;
 
 	// Tick down remaining particles, capped to the maximum emission per frame
-	int nParticlesThisFrame = MIN( m_nMaxEmittedPerFrame, pCtx->m_nRemainingParticles );
+	int nParticlesThisFrame = std::min( m_nMaxEmittedPerFrame, pCtx->m_nRemainingParticles );
 	pCtx->m_nRemainingParticles -= nParticlesThisFrame;
 
 	// We're only allowed to own so many particles, though... if we run out of room, only emit the last N particles
 	int nAllowedParticlesToEmit = pParticles->m_nMaxAllowedParticles - pParticles->m_nActiveParticles;
-	int nActualParticlesToEmit  = MIN( nAllowedParticlesToEmit, nParticlesThisFrame );
+	int nActualParticlesToEmit  = std::min( nAllowedParticlesToEmit, nParticlesThisFrame );
 	if ( nActualParticlesToEmit == 0 )
 		return 0;
 
@@ -402,7 +398,7 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 			pParticles->GetControlPointAtTime( m_nScaleControlPoint, pParticles->m_flCurTime, &vecScale );
 			float flScale = vecScale[m_nScaleControlPointField];
 			Assert( flScale >= 0.0f );
-			flEmissionRate *= MAX( 0.0f, flScale );
+			flEmissionRate *= std::max( 0.0f, flScale );
 		}
 
 		if ( flControlPointScale != 0.0f )
@@ -453,14 +449,14 @@ class C_OP_ContinuousEmitter : public CParticleOperatorInstance
 		for( int i = nStartParticle; i < nStartParticle + nActualParticlesToEmit; i++ )
 		{
 			float *pTimeStamp = pParticles->GetFloatAttributePtrForWrite( PARTICLE_ATTRIBUTE_CREATION_TIME, i );
-			flTimeStep = MIN( flTimeStep, flCurrDrawTime );
+			flTimeStep = std::min( flTimeStep, flCurrDrawTime );
 			*pTimeStamp = flTimeStep;
 			flTimeStep += flTimeStampStep;
 		}
 
 		if ( !g_bDontMakeSkipToTimeTakeForever )
 		{
-			flPrevDrawTime = MAX( flPrevDrawTime, flCurrDrawTime - pParticles->m_pDef->m_flNoDrawTimeToGoToSleep );
+			flPrevDrawTime = std::max( flPrevDrawTime, flCurrDrawTime - pParticles->m_pDef->m_flNoDrawTimeToGoToSleep );
 			pParticles->m_flCurTime = flPrevDrawTime;
 			pParticles->m_fl4CurTime = ReplicateX4( flPrevDrawTime );
 			pParticles->m_flTargetDrawTime = flPrevDrawTime;
@@ -569,7 +565,7 @@ uint32 C_OP_ContinuousEmitter::Emit( CParticleCollection *pParticles, float flCu
 			Vector vecScale;
 			pParticles->GetControlPointAtTime( m_nScaleControlPoint, pParticles->m_flCurTime, &vecScale );
 			Assert( vecScale[m_nScaleControlPointField] >= 0.0f );
-			flEmissionRate *= MAX( 0.0f, vecScale[m_nScaleControlPointField] );
+			flEmissionRate *= std::max( 0.0f, vecScale[m_nScaleControlPointField] );
 		}
 
 		if ( flControlPointScale != 0.0f || m_bScalePerParticle )
@@ -602,8 +598,8 @@ uint32 C_OP_ContinuousEmitter::Emit( CParticleCollection *pParticles, float flCu
 			flCurrDrawTime = pParticles->m_flCurTime;
 		if ( !IsInfinitelyEmitting() )
 		{
-				flPrevDrawTime = MAX( flPrevDrawTime, flStartTime );
-			flCurrDrawTime = MIN( flCurrDrawTime, ( flStartTime + m_flEmissionDuration ) );
+				flPrevDrawTime = std::max( flPrevDrawTime, flStartTime );
+			flCurrDrawTime = std::min( flCurrDrawTime, ( flStartTime + m_flEmissionDuration ) );
 		}
 		flDeltaTime = flCurrDrawTime - flPrevDrawTime;
 
@@ -649,7 +645,7 @@ uint32 C_OP_ContinuousEmitter::Emit( CParticleCollection *pParticles, float flCu
 	for( int i = nStartParticle; i < nStartParticle + nActualParticlesToEmit; i++ )
 	{
 		float *pTimeStamp = pParticles->GetFloatAttributePtrForWrite( PARTICLE_ATTRIBUTE_CREATION_TIME, i );
-		flEmitTime = MIN( flEmitTime, flCurrDrawTime );
+		flEmitTime = std::min( flEmitTime, flCurrDrawTime );
 		*pTimeStamp = flEmitTime;
 		flEmitTime += flEmitTimeStep;
 	}
@@ -962,7 +958,7 @@ uint32 C_OP_NoiseEmitter::Emit( CParticleCollection *pParticles, float flCurStre
 	for( int i = nStartParticle; i < nStartParticle + nActualParticlesToEmit; i++ )
 	{
 		float *pTimeStamp = pParticles->GetFloatAttributePtrForWrite( PARTICLE_ATTRIBUTE_CREATION_TIME, i );
-		flTimeStep = MIN( flTimeStep, flCurrDrawTime );
+		flTimeStep = std::min( flTimeStep, flCurrDrawTime );
 		*pTimeStamp = flTimeStep;
 		flTimeStep += flTimeStampStep;
 	}
@@ -1095,7 +1091,7 @@ class C_OP_MaintainEmitter : public CParticleOperatorInstance
 			pCtx->m_ActualParticlesToMaintain = m_nParticlesToMaintain * vecScale[m_nScaleControlPointField];
 		}
 
-		pCtx->m_ActualParticlesToMaintain = MAX( 0, pCtx->m_ActualParticlesToMaintain );
+		pCtx->m_ActualParticlesToMaintain = std::max( 0, pCtx->m_ActualParticlesToMaintain );
 	}
 
 	int m_nParticlesToMaintain;
@@ -1141,7 +1137,7 @@ uint32 C_OP_MaintainEmitter::Emit( CParticleCollection *pParticles, float flCurS
 	int nAllowedParticlesToEmit = pParticles->m_nMaxAllowedParticles - pParticles->m_nActiveParticles;
 	// Cap to the maximum emission 
 	int nParticlesToTryToEmit = pCtx->m_ActualParticlesToMaintain - pParticles->m_nActiveParticles;
-	int nActualParticlesToEmit = MIN( nAllowedParticlesToEmit, nParticlesToTryToEmit );
+	int nActualParticlesToEmit = std::min( nAllowedParticlesToEmit, nParticlesToTryToEmit );
 
 	if ( nActualParticlesToEmit < 0 )
 		return 0;
@@ -1152,7 +1148,7 @@ uint32 C_OP_MaintainEmitter::Emit( CParticleCollection *pParticles, float flCurS
 	// While we always try to kick up to the specified number of particles, 
 	// we'll space their creation times over the last frame to avoid clumping
 
-	float flEmissionStart = MAX( pParticles->m_flPrevSimTime, flStartTime );
+	float flEmissionStart = std::max( pParticles->m_flPrevSimTime, flStartTime );
 	float flDeltaTime = pParticles->m_flCurTime - flEmissionStart;
 	float flEmitTimeStep = flDeltaTime / nActualParticlesToEmit;
 	float flEmitTime = flEmissionStart;
@@ -1161,7 +1157,7 @@ uint32 C_OP_MaintainEmitter::Emit( CParticleCollection *pParticles, float flCurS
 	for( int i = nStartParticle; i < nStartParticle + nActualParticlesToEmit; i++ )
 	{
 		float *pTimeStamp = pParticles->GetFloatAttributePtrForWrite( PARTICLE_ATTRIBUTE_CREATION_TIME, i );
-		flEmitTime = MIN( flEmitTime, pParticles->m_flCurTime );
+		flEmitTime = std::min( flEmitTime, pParticles->m_flCurTime );
 		*pTimeStamp = flEmitTime;
 		flEmitTime += flEmitTimeStep;
 	}

@@ -63,7 +63,6 @@ public:
 	virtual void GetMouseDelta( float &x, float &y, bool bIgnoreNextMouseDelta = false ) = 0;
 
 	virtual void SetMouseVisible( bool bState ) = 0;
-	virtual int GetActiveDisplayIndex() = 0;
 	virtual void SetMouseCursor( SDL_Cursor *hCursor ) = 0;
 	virtual void SetForbidMouseGrab( bool bForbidMouseGrab ) = 0;
 	virtual void OnFrameRendered() = 0;

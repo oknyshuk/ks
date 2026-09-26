@@ -169,12 +169,12 @@ private:
 	};
 
 
-	CUtlVector<CImagePacker>			m_ImagePackers;
+	std::vector< CImagePacker >			m_ImagePackers;
 	int									m_numSortIDs;
 	IMaterialInternal					*m_currentWhiteLightmapMaterial;
 
 	LightmapPageInfo_t					*m_pLightmapPages;
-	CUtlVector<ShaderAPITextureHandle_t> m_LightmapPageTextureHandles;
+	std::vector< ShaderAPITextureHandle_t > m_LightmapPageTextureHandles;
 	int									m_NumLightmapPages;
 	int									m_nUpdatingLightmapsStackDepth;
 	int									m_firstDynamicLightmap;

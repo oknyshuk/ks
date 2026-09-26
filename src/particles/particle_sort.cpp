@@ -11,9 +11,6 @@
 #include "particles_internal.h"
 #include "bitmap/psheet.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 #define SORTBUFSIZE0 (( MAX_PARTICLES_IN_A_SYSTEM + 4 ) * sizeof( ParticleRenderData_t ) )
 #define SORTBUFSIZE1 ( ( 1 + MAX_PARTICLES_IN_A_SYSTEM / 4 )* sizeof( ParticleFullRenderData_Scalar_View ) )

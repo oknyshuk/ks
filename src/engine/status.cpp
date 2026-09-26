@@ -6,10 +6,11 @@
 
 
 #include "tier0/vprof.h"
+#include "tier0/memalloc.h"
 #include "tier0/etwprof.h"
 #include "tier0/icommandline.h"
 #include "tier0/systeminformation.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/text_writer.h"
 #include "tier1/keyvalues.h"
 #include "matchmaking/imatchframework.h"
 #include "edict.h"
@@ -19,22 +20,19 @@
 #include "status.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 
 class CKeyValuesDumpForStatusReport : public IKeyValuesDumpContextAsText
 {
 public:
-	CKeyValuesDumpForStatusReport( CUtlBuffer &buffer ) : m_buffer( buffer ) {}
+	CKeyValuesDumpForStatusReport( ks::text_writer &buffer ) : m_buffer( buffer ) {}
 
 public:
-	virtual bool KvWriteText( char const *szText ) { m_buffer.Printf( "%s", szText ); return true; }
+	virtual bool KvWriteText( char const *szText ) { m_buffer.put( szText ); return true; }
 
 protected:
-	CUtlBuffer &m_buffer;
+	ks::text_writer &m_buffer;
 };
 
 //-----------------------------------------------------------------------------
@@ -61,10 +59,16 @@ static PAGED_POOL_INFO_t final;
 
 //-----------------------------------------------------------------------------
 
+template < size_t N >
+static void Status_CopyText( char (&dest)[N], const ks::text_writer &text )
+{
+	V_strncpy( dest, text.c_str(), N );
+}
+
 static void Status_UpdateMemoryStatus( bool bIncludeFullMemoryInfo )
 {
 	g_szMemoryStatusBuffer[0] = 0;
-	CUtlBuffer buf( g_szMemoryStatusBuffer, sizeof(g_szMemoryStatusBuffer),  CUtlBuffer::TEXT_BUFFER );
+	ks::text_writer buf;
 
 	if ( bIncludeFullMemoryInfo )
 	{
@@ -72,37 +76,39 @@ static void Status_UpdateMemoryStatus( bool bIncludeFullMemoryInfo )
 
 	if ( g_pMemAlloc->MemoryAllocFailed() )
 	{
-		buf.Printf( "*** Memory allocation failed for %d bytes! ***\n", g_pMemAlloc->MemoryAllocFailed() );
+		buf.printf( "*** Memory allocation failed for %d bytes! ***\n", (int)g_pMemAlloc->MemoryAllocFailed() );
 	}
 
 	GenericMemoryStat_t *pMemoryStats = nullptr;
 	int nMemoryStatCount = g_pMemAlloc->GetGenericMemoryStats( &pMemoryStats );
 	if ( nMemoryStatCount > 0 )
 	{
-		buf.Printf( "g_pMemAlloc->GetGenericMemoryStats(): %d\n", nMemoryStatCount );
+		buf.printf( "g_pMemAlloc->GetGenericMemoryStats(): %d\n", nMemoryStatCount );
 
 		for ( int i = 0; i < nMemoryStatCount; i++ )
 		{
-			buf.Printf( "%d. %s : %d \n", i + 1, pMemoryStats[i].name, pMemoryStats[i].value );
+			buf.printf( "%d. %s : %d \n", i + 1, pMemoryStats[i].name, pMemoryStats[i].value );
 		}
 	}
-	buf.Printf( "\n" );
+	buf.put( '\n' );
+	Status_CopyText( g_szMemoryStatusBuffer, buf );
 }
 
 static void Status_UpdateMinidumpCommentBuffer()
 {
 	g_szMinidumpInfoBuffer[0] = 0;
-	CUtlBuffer minidumpInfoBuffer( g_szMinidumpInfoBuffer, sizeof(g_szMinidumpInfoBuffer),  CUtlBuffer::TEXT_BUFFER );
+	ks::text_writer minidumpInfoBuffer;
 
-	minidumpInfoBuffer.Printf( "Uptime: %f\n", Plat_FloatTime() );
+	minidumpInfoBuffer.printf( "Uptime: %f\n", Plat_FloatTime() );
 	if ( g_minidumpinfo[0] != 0 )
 	{
-		minidumpInfoBuffer.Printf( "%s", g_minidumpinfo );
+		minidumpInfoBuffer.printf( "%s", g_minidumpinfo );
 	}
-	minidumpInfoBuffer.Printf( "Active: %s\nSpawnCount %d\nMapLoad Count %d\n", ( game && game->IsActiveApp() ) ? "active" : "inactive", gHostSpawnCount, g_nMapLoadCount );
+	minidumpInfoBuffer.printf( "Active: %s\nSpawnCount %d\nMapLoad Count %d\n", ( game && game->IsActiveApp() ) ? "active" : "inactive", gHostSpawnCount, g_nMapLoadCount );
+	Status_CopyText( g_szMinidumpInfoBuffer, minidumpInfoBuffer );
 }
 
-static CUtlBuffer *s_pStatusBuffer = nullptr;
+static ks::text_writer *s_pStatusBuffer = nullptr;
 
 static void Status_PrintCallback( const char *fmt, ... )
 {
@@ -110,7 +116,7 @@ static void Status_PrintCallback( const char *fmt, ... )
 	{
 		va_list		argptr;
 		va_start (argptr,fmt);
-		s_pStatusBuffer->VaPrintf( fmt, argptr );
+		s_pStatusBuffer->vprintf( fmt, argptr );
 		va_end (argptr);
 	}
 }
@@ -118,10 +124,11 @@ static void Status_PrintCallback( const char *fmt, ... )
 static void Status_UpdateHostStatusBuffer()
 {
 	g_szHostStatusBuffer[0] = 0;
-	CUtlBuffer hostStatusBuffer( g_szHostStatusBuffer, sizeof(g_szHostStatusBuffer), CUtlBuffer::TEXT_BUFFER );
+	ks::text_writer hostStatusBuffer;
 	s_pStatusBuffer = &hostStatusBuffer;
 	Host_PrintStatus( kCommandSrcCode, Status_PrintCallback, false );
 	s_pStatusBuffer = nullptr;
+	Status_CopyText( g_szHostStatusBuffer, hostStatusBuffer );
 }
 
 static void Status_UpdateMatchmakingBuffer()
@@ -132,17 +139,19 @@ static void Status_UpdateMatchmakingBuffer()
 	{
 		if ( IMatchSession *pMatchSession = g_pMatchFramework->GetMatchSession() )
 		{
-			CUtlBuffer matchmakingStatusBuffer( g_szMatchmakingStatusBuffer, sizeof(g_szMatchmakingStatusBuffer), CUtlBuffer::TEXT_BUFFER );
+			ks::text_writer matchmakingStatusBuffer;
 			
-			matchmakingStatusBuffer.Printf( "match session %p\n", pMatchSession );
+			matchmakingStatusBuffer.printf( "match session %p\n", pMatchSession );
 
 			CKeyValuesDumpForStatusReport kvDumpContext( matchmakingStatusBuffer );
 
-			matchmakingStatusBuffer.Printf( "session system data:\n" );
+			matchmakingStatusBuffer.printf( "session system data:\n" );
 			pMatchSession->GetSessionSystemData()->Dump( &kvDumpContext );
 
-			matchmakingStatusBuffer.Printf( "session settings:\n" );
+			matchmakingStatusBuffer.printf( "session settings:\n" );
 			pMatchSession->GetSessionSettings()->Dump( &kvDumpContext );
+
+			Status_CopyText( g_szMatchmakingStatusBuffer, matchmakingStatusBuffer );
 		}
 	}
 
@@ -195,13 +204,14 @@ static void Status_UpdateCombinedBuffer()
 	Status_UpdateBuffers( false );
 
 	g_szCombinedStatusBuffer[0] = 0;
-	CUtlBuffer combinedStatusBuffer( g_szCombinedStatusBuffer, sizeof(g_szCombinedStatusBuffer),  CUtlBuffer::TEXT_BUFFER );
+	ks::text_writer combinedStatusBuffer;
 
-	combinedStatusBuffer.Printf( "\nGame Info:\n%s", g_szMinidumpInfoBuffer );
-	combinedStatusBuffer.Printf( "\nMemory Info:\n%s", g_szMemoryStatusBuffer );
-	combinedStatusBuffer.Printf( "\nHost Info:\n%s", g_szHostStatusBuffer );
-	combinedStatusBuffer.Printf( "\nMatchmaking Info:\n%s", g_szMatchmakingStatusBuffer );
-	combinedStatusBuffer.Printf( "\nAudio Info:\n%s", g_szAudioStatusBuffer );
+	combinedStatusBuffer.printf( "\nGame Info:\n%s", g_szMinidumpInfoBuffer );
+	combinedStatusBuffer.printf( "\nMemory Info:\n%s", g_szMemoryStatusBuffer );
+	combinedStatusBuffer.printf( "\nHost Info:\n%s", g_szHostStatusBuffer );
+	combinedStatusBuffer.printf( "\nMatchmaking Info:\n%s", g_szMatchmakingStatusBuffer );
+	combinedStatusBuffer.printf( "\nAudio Info:\n%s", g_szAudioStatusBuffer );
+	Status_CopyText( g_szCombinedStatusBuffer, combinedStatusBuffer );
 }
 
 // public functions

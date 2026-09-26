@@ -8,13 +8,11 @@
 #include "tier0/platform.h"
 #include "tier0/dbg.h"
 #include "tier1/lzss.h"
-#include "tier1/utlbuffer.h"
 
 #define LZSS_LOOKSHIFT		4
 #define LZSS_LOOKAHEAD		( 1 << LZSS_LOOKSHIFT )
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier0/memalloc.h"
 
 //-----------------------------------------------------------------------------
 // Returns true if buffer is compressed.
@@ -214,81 +212,16 @@ unsigned char *CLZSS::CompressNoAlloc( unsigned char *pInput, int inputLength, u
 //-----------------------------------------------------------------------------
 unsigned char* CLZSS::Compress( unsigned char *pInput, int inputLength, unsigned int *pOutputSize )
 {
-	unsigned char *pStart = (unsigned char *)malloc( inputLength );
+	unsigned char *pStart = (unsigned char *)MemAlloc_Alloc( inputLength );
 	unsigned char *pFinal = CompressNoAlloc( pInput, inputLength, pStart, pOutputSize );
 	if ( !pFinal )
 	{
-		free( pStart );
+		g_pMemAlloc->Free( pStart );
 		return nullptr;
 	}
 
 	return pStart;
 }
-
-/*
-// BUG BUG:  This code is flaky, don't use until it's debugged!!!
-unsigned int CLZSS::Uncompress( unsigned char *pInput, CUtlBuffer &buf )
-{
-	int cmdByte = 0;
-	int getCmdByte = 0;
-
-	unsigned int actualSize = GetActualSize( pInput );
-	if ( !actualSize )
-	{
-		// unrecognized
-		return 0;
-	}
-
-	unsigned char *pBase = ( unsigned char * )buf.Base();
-
-	pInput += sizeof( lzss_header_t );
-
-	while ( !buf.IsValid() )
-	{
-		if ( !getCmdByte ) 
-		{
-			cmdByte = *pInput++;
-		}
-		getCmdByte = ( getCmdByte + 1 ) & 0x07;
-
-		if ( cmdByte & 0x01 )
-		{
-			int position = *pInput++ << LZSS_LOOKSHIFT;
-			position |= ( *pInput >> LZSS_LOOKSHIFT );
-			int count = ( *pInput++ & 0x0F ) + 1;
-			if ( count == 1 ) 
-			{
-				break;
-			}
-			unsigned int pos = buf.TellPut();
-			unsigned char *pSource = ( pBase + pos ) - position - 1;
-
-			// BUGBUG:
-			// This is failing!!!
-			// buf.WriteBytes( pSource, count );
-			// So have to iterate them manually
-			for ( int i =0; i < count; ++i )
-			{
-				buf.PutUnsignedChar( *pSource++ );
-			}
-		} 
-		else 
-		{
-			buf.PutUnsignedChar( *pInput++ );
-		}
-		cmdByte = cmdByte >> 1;
-	}
-
-	if ( buf.TellPut() != (int)actualSize )
-	{
-		// unexpected failure
-		Assert( 0 );
-		return 0;
-	}
-
-	return buf.TellPut();
-}
-*/
 
 unsigned int CLZSS::SafeUncompress( unsigned char *pInput, unsigned char *pOutput, unsigned int unBufSize )
 {

@@ -4,8 +4,6 @@
 #include "cbase.h"
 #include "reflect_sendtable.h"
 
-#include "tier0/memdbgon.h"
-
 namespace ks::reflect::net
 {
 
@@ -81,7 +79,7 @@ SendProp make_prop( const PropDesc &d, std::span<const PropDesc> all )
 	case PropKind::ArrayInner:
 		return InternalSendPropArray( d.elements, d.stride, d.name, d.lenProxy );
 	case PropKind::UtlVector:
-		return SendPropUtlVector( d.name, d.offset, d.size, d.ensure, d.max,
+		return SendPropUtlVector( d.name, d.offset, d.size, d.vec, d.max,
 		                          make_prop( all[d.elem], all ) );
 	case PropKind::Exclude:
 		return SendPropExclude( d.name, d.excludeProp );

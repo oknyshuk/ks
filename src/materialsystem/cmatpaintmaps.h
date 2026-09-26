@@ -61,7 +61,7 @@ private:
 	void AllocatePaintmapTexture( int paintmap, int iWidth, int iHeight );
 
 	CPixelWriter m_PaintmapPixelWriter;
-	CUtlVector<ShaderAPITextureHandle_t> m_PaintmapTextureHandles;
+	std::vector< ShaderAPITextureHandle_t > m_PaintmapTextureHandles;
 
 	int m_nLockedPaintmap;
 	int m_nUpdatingPaintmapsStackDepth;

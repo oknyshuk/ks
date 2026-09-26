@@ -13,9 +13,6 @@
 #include "snd_dma.h"
 #include "../../cl_splitscreen.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // ------------------------------------------------------------------------
 // GOOD OLD MACROS
 #define SOS_DtoR 0.01745329251994329500
@@ -46,7 +43,7 @@
 #define SOS_RESCALE(X,Xa,Xb,Ya,Yb) SOS_LERP(SOS_RAMP(X,Xa,Xb),Ya,Yb)
 
 #define SOS_INRANGE(x,a,b) (((x) >= SOS_MIN(a,b)) && ((x) <= SOS_MAX(a,b)))
-#define SOS_CLAMP(x,a,b) ((x)<SOS_MIN(a,b)?SOS_MIN(a,b):(x)>MAX(a,b)?SOS_MAX(a,b):(x))
+#define SOS_CLAMP(x,a,b) ((x)<SOS_MIN(a,b)?SOS_MIN(a,b):(x)>std::max(a,b)?SOS_MAX(a,b):(x))
 
 #define SOS_CRAMP(value,a,b) SOS_CLAMP(SOS_RAMP(value,a,b),0,1)
 #define SOS_CLERP(factor,a,b) SOS_CLAMP(SOS_LERP(factor,a,b),a,b)
@@ -737,10 +734,10 @@ void CSosOperatorFloat::Execute( void *pVoidMem, channel_t *pChannel, CScratchPa
 		}
 		break;
 	case SO_OP_MAX:
-		flResult = MAX( pStructMem->m_flInput1[0], pStructMem->m_flInput2[0] );
+		flResult = std::max( pStructMem->m_flInput1[0], pStructMem->m_flInput2[0] );
 		break;
 	case SO_OP_MIN:
-		flResult = MIN( pStructMem->m_flInput1[0], pStructMem->m_flInput2[0] );
+		flResult = std::min( pStructMem->m_flInput1[0], pStructMem->m_flInput2[0] );
 		break;
 	case SO_OP_INV:
 		flResult = 1.0 - pStructMem->m_flInput1[0];
@@ -874,10 +871,10 @@ void CSosOperatorVec3::Execute( void *pVoidMem, channel_t *pChannel, CScratchPad
 			}
 			break;
 		case SO_OP_MAX:
-			pStructMem->m_flOutput[i] = MAX(pStructMem->m_flInput1[i], pStructMem->m_flInput2[i]);
+			pStructMem->m_flOutput[i] = std::max(pStructMem->m_flInput1[i], pStructMem->m_flInput2[i]);
 			break;
 		case SO_OP_MIN:
-			pStructMem->m_flOutput[i] = MIN(pStructMem->m_flInput1[i], pStructMem->m_flInput2[i]);
+			pStructMem->m_flOutput[i] = std::min(pStructMem->m_flInput1[i], pStructMem->m_flInput2[i]);
 			break;
 		case SO_OP_INV:
 			pStructMem->m_flOutput[i] = 1.0 - pStructMem->m_flInput1[i];
@@ -1005,10 +1002,10 @@ void CSosOperatorSpeakers::Execute( void *pVoidMem, channel_t *pChannel, CScratc
 			}
 			break;
 		case SO_OP_MAX:
-			pStructMem->m_flOutput[i] = MAX( pStructMem->m_flInput1[i], pStructMem->m_flInput2[i] );
+			pStructMem->m_flOutput[i] = std::max( pStructMem->m_flInput1[i], pStructMem->m_flInput2[i] );
 			break;
 		case SO_OP_MIN:
-			pStructMem->m_flOutput[i] = MIN( pStructMem->m_flInput1[1], pStructMem->m_flInput2[i] );
+			pStructMem->m_flOutput[i] = std::min( pStructMem->m_flInput1[1], pStructMem->m_flInput2[i] );
 			break;
 		case SO_OP_INV:
 			pStructMem->m_flOutput[i] = 1.0 - pStructMem->m_flInput1[i];

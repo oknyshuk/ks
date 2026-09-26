@@ -10,9 +10,6 @@
 #include "ai_hint.h"
 #include "ai_navigator.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 #define BEHAVIOR_FEAR_SAFETY_TIME		5
 #define FEAR_SAFE_PLACE_TOLERANCE		36.0f

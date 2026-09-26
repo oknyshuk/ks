@@ -7,9 +7,6 @@
 #include "cbase.h"
 #include "bonelist.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 CBoneList::CBoneList()
 {
 	m_bShouldDelete = false;

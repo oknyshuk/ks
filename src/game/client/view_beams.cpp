@@ -24,9 +24,6 @@
 
 ConVar r_DrawBeams( "r_DrawBeams", "1", FCVAR_CHEAT, "0=Off, 1=Normal, 2=Wireframe" );
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 bool g_BeamCreationAllowed = false;
 
 //-----------------------------------------------------------------------------
@@ -461,7 +458,7 @@ void CViewRenderBeams::InitBeams( void )
 	int p = CommandLine()->ParmValue("-particles", -1);
 	if ( p >= 0 )
 	{
-		m_nNumBeamTrails = MAX( p, MIN_PARTICLES );
+		m_nNumBeamTrails = std::max<int>( p, MIN_PARTICLES );
 	}
 	else
 	{
@@ -1514,8 +1511,8 @@ void CViewRenderBeams::UpdateBeam( Beam_t *pbeam, float frametime, C_Beam *pcbea
 				{
 					frac = remaining / pbeam->life;
 				}
-				frac = MIN( 1.0f, frac );
-				frac = MAX( 0.0f, frac );
+				frac = std::min( 1.0f, frac );
+				frac = std::max( 0.0f, frac );
 
 				frac = 1.0f - frac;
 

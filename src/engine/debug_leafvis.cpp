@@ -6,8 +6,6 @@
 //
 //===========================================================================//
 #include "render_pch.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 #include "r_areaportal.h"
 #include "coordsize.h"
@@ -51,7 +49,7 @@ struct leafvis_t
 		return true;
 	}
 
-	CUtlVector<Vector>		verts;
+	std::vector< Vector >		verts;
 	struct Polygon_t
 	{
 		Polygon_t( int nVertCount, DrawGroup_t drawGroup = DG_BASE ) : 
@@ -64,7 +62,7 @@ struct leafvis_t
 		DrawGroup_t m_DrawGroup;
 	};
 
-	CUtlVector< Polygon_t >	m_Polygons;
+	std::vector< Polygon_t >	m_Polygons;
 	Vector					m_Colors[MAX_DRAW_GROUPS];
 	int						numbrushes;
 	int						numentitychars;
@@ -77,14 +75,14 @@ leafvis_t *g_LeafVis = nullptr;
 
 leafvis_t *g_FrustumVis = nullptr, *g_ClipVis[4] = {nullptr,nullptr,nullptr,nullptr};
 
-static void AddPlaneToList( CUtlVector<cplane_t> &list, const Vector& normal, float dist, int invert )
+static void AddPlaneToList( std::vector< cplane_t > &list, const Vector& normal, float dist, int invert )
 {
 	cplane_t plane;
 	plane.dist = invert ? -dist : dist;
 	plane.normal = invert ? -normal : normal;
 
 	Vector point = plane.dist * plane.normal;
-	for ( int i = 0; i < list.Count(); i++ )
+	for ( int i = 0; i < std::ssize( list ); i++ )
 	{
 		// same plane, remove or replace
 		if ( list[i].normal == plane.normal )
@@ -100,10 +98,10 @@ static void AddPlaneToList( CUtlVector<cplane_t> &list, const Vector& normal, fl
 		}
 
 	}
-	list.AddToTail( plane );
+	list.push_back( plane );
 }
 
-static void PlaneList( int leafIndex, model_t *model, CUtlVector<cplane_t> &planeList )
+static void PlaneList( int leafIndex, model_t *model, std::vector< cplane_t > &planeList )
 {
 	if (!model || !model->brush.pShared || !model->brush.pShared->nodes)
 		Sys_Error ("PlaneList: bad model");
@@ -145,16 +143,16 @@ void TranslatePlaneList( cplane_t *pPlanes, int planeCount, const Vector &offset
 }
 
 
-void CSGPlaneList( leafvis_t *pVis, CUtlVector<cplane_t> &planeList, DrawGroup_t drawGroup = DG_BASE )
+void CSGPlaneList( leafvis_t *pVis, std::vector< cplane_t > &planeList, DrawGroup_t drawGroup = DG_BASE )
 {
-	int planeCount = planeList.Count();
+	int planeCount = std::ssize( planeList );
 	Vector	vertsIn[MAX_LEAF_PVERTS], vertsOut[MAX_LEAF_PVERTS];
 
 	// compute a point inside the volume defined by these planes
-	Vector insidePoint = CSGInsidePoint( planeList.Base(), planeList.Count() );
+	Vector insidePoint = CSGInsidePoint( planeList.data(), std::ssize( planeList ) );
 	// move the planes so that the inside point is at the origin 
 	// NOTE: This is to maximize precision for the CSG operations
-	TranslatePlaneList( planeList.Base(), planeList.Count(), -insidePoint );
+	TranslatePlaneList( planeList.data(), std::ssize( planeList ), -insidePoint );
 
 	// Build the CSG solid of this leaf given that the planes in the list define a convex solid
 	for ( int i = 0; i < planeCount; i++ )
@@ -188,12 +186,12 @@ void CSGPlaneList( leafvis_t *pVis, CUtlVector<cplane_t> &planeList, DrawGroup_t
 		if ( vertCount >= 3 )
 		{
 			// Copy polygon out
-			pVis->m_Polygons.AddToTail( leafvis_t::Polygon_t( vertCount, drawGroup ) );
+			pVis->m_Polygons.push_back( leafvis_t::Polygon_t( vertCount, drawGroup ) );
 			for ( j = 0; j < vertCount; j++ )
 			{
 				// move the verts back by the initial translation
 				Vector vert = vertsIn[j] + insidePoint;
-				pVis->verts.AddToTail( vert );
+				pVis->verts.push_back( vert );
 			}
 		}
 	}
@@ -216,7 +214,7 @@ void LeafvisChanged( IConVar *pLeafvisVar, const char *pOld, float flOldValue )
 
 void AddLeafPortals( leafvis_t *pLeafvis, int leafIndex, DrawGroup_t drawGroup = DG_BASE )
 {
-	CUtlVector<cplane_t> planeList;
+	std::vector< cplane_t > planeList;
 	Vector	normal;
 
 	// Build a list of inward pointing planes of the tree descending to this
@@ -393,7 +391,7 @@ void DrawLeafvis( leafvis_t *pVis )
 		g_materialLeafVisWireframe->ColorModulate( pVis->m_Colors[nPass][0], pVis->m_Colors[nPass][1], pVis->m_Colors[nPass][2] );
 
 		pRenderContext->Bind( g_materialLeafVisWireframe );
-		for ( int i = 0; i < pVis->m_Polygons.Count(); i++ )
+		for ( int i = 0; i < std::ssize( pVis->m_Polygons ); i++ )
 		{
 			int nPolygonVertCount = pVis->m_Polygons[i].m_nVertCount;
 			if ( nPolygonVertCount >= 3 && nPass == pVis->m_Polygons[i].m_DrawGroup )
@@ -425,7 +423,7 @@ void DrawLeafvis_Solid( leafvis_t *pVis )
 	Vector lightNormal(1,1,1);
 	VectorNormalize(lightNormal);
 	pRenderContext->Bind( g_pMaterialDebugFlat );
-	for ( int i = 0; i < pVis->m_Polygons.Count(); i++ )
+	for ( int i = 0; i < std::ssize( pVis->m_Polygons ); i++ )
 	{
 		int vertCount = pVis->m_Polygons[i].m_nVertCount;
 		if ( vertCount >= 3 )
@@ -518,7 +516,7 @@ void RecomputeClipbrushes( bool bEnabled )
 			cbrush_t *pBrush = &pBSP->map_brushes[i];
 			if ( (pBrush->contents & (CONTENTS_PLAYERCLIP|CONTENTS_MONSTERCLIP|CONTENTS_GRENADECLIP)) == contents[v] )
 			{
-				CUtlVector<cplane_t> planeList;
+				std::vector< cplane_t > planeList;
 				if ( pBrush->IsBox() )
 				{
 					cboxbrush_t *pBox = &pBSP->map_boxbrushes[pBrush->GetBox()];
@@ -688,13 +686,13 @@ void CSGFrustum( Frustum_t &frustum )
 	g_FrustumVis = new leafvis_t;
 
 	g_FrustumVis->m_Colors[DG_FRUSTUM].Init(1.0f, 1.0f, 1.0f);
-	CUtlVector<cplane_t> planeList;
+	std::vector< cplane_t > planeList;
 	for ( int i = 0; i < 6; i++ )
 	{
 		cplane_t tmp;
 		tmp.type = PLANE_ANYZ;
 		frustum.GetPlane(i, &tmp.normal, &tmp.dist);
-		planeList.AddToTail( tmp );
+		planeList.push_back( tmp );
 	}
 	CSGPlaneList( g_FrustumVis, planeList, DG_FRUSTUM );
 }

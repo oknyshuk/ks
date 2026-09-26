@@ -8,6 +8,7 @@
 #ifndef CS_STEAMSTATS_H
 #define CS_STEAMSTATS_H
 
+#include <string_view>
 #include "steam/steam_api.h"
 #include "GameEventListener.h"
 #include "cs_gamestats_shared.h"
@@ -187,7 +188,7 @@ public:
 	
 	virtual void SubmitGameStats( KeyValues *pKV )
 	{
-		int listCount = s_StatLists->Count();
+		int listCount = std::ssize( *s_StatLists );
 		for( int i=0; i < listCount; ++i )
 		{
 			// Create a master key value that has stats everybody should share (map name, session ID, etc)
@@ -222,12 +223,12 @@ private:
 		Vector m_pos;
 		QAngle m_ang;
 		uint64 m_ullData;
-		CUtlSymbol m_symMap;
+		std::string_view m_symMap;	// view into ks::global_symbols()
 		int16 m_nRound;
 		int16 m_numRoundSeconds;
 		bool m_bRequireMoreReliableUpload;
 	};
-	CUtlVector< CsgoGameEvent_t >	m_arrClientCsgoGameEvents;
+	std::vector< CsgoGameEvent_t >	m_arrClientCsgoGameEvents;
 	StatsCollection_t				m_lifetimeStats[MAX_SPLITSCREEN_PLAYERS];
 	StatsCollection_t				m_matchStats[MAX_SPLITSCREEN_PLAYERS];
 	StatsCollection_t				m_roundStats[MAX_SPLITSCREEN_PLAYERS];

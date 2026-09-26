@@ -13,9 +13,6 @@
 #include "sendproxy.h"
 #include "sun_shared.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define LIGHTGLOW_MAXDIST_BITS		16
 #define LIGHTGLOW_MAXDIST_MAX_VALUE	((1 << LIGHTGLOW_MAXDIST_BITS)-1)
 

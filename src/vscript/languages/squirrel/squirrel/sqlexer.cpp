@@ -9,7 +9,6 @@
 #include "sqcompiler.h"
 #include "sqlexer.h"
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#include "memdbgon.h"
 #endif
 
 #define CUR_CHAR (_currdata)

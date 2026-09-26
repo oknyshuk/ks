@@ -9,15 +9,13 @@
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "func_areaportalbase.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier1/vector_ops.h"
 
 // A sphere around the player used for backface culling of areaportals.
 #define VIEWER_PADDING	80
 
 
-CUtlLinkedList<CFuncAreaPortalBase*, unsigned short> g_AreaPortals;
+std::vector<CFuncAreaPortalBase*> g_AreaPortals;
 
 
 
@@ -32,18 +30,18 @@ IMPLEMENT_REFLECT_DATAMAP( CFuncAreaPortalBase )
 CFuncAreaPortalBase::CFuncAreaPortalBase()
 {
 	m_portalNumber = -1;
-	m_AreaPortalsElement = g_AreaPortals.AddToTail( this );
+	g_AreaPortals.push_back( this );
 	m_iPortalVersion = 0;
 }
 
 
 CFuncAreaPortalBase::~CFuncAreaPortalBase()
 {
-	g_AreaPortals.Remove( m_AreaPortalsElement );
+	ks::erase_first( g_AreaPortals, this );
 }
 
 
-bool CFuncAreaPortalBase::UpdateVisibility( const CUtlVector< Vector > &vecOrigins, float fovDistanceAdjustFactor, bool &bIsOpenOnClient )
+bool CFuncAreaPortalBase::UpdateVisibility( const std::vector< Vector > &vecOrigins, float fovDistanceAdjustFactor, bool &bIsOpenOnClient )
 {
 	// NOTE: We leave bIsOpenOnClient alone on purpose here. See the header for a description of why.
 	
@@ -51,7 +49,7 @@ bool CFuncAreaPortalBase::UpdateVisibility( const CUtlVector< Vector > &vecOrigi
 		return false;
 
 	// See if the viewer is on the backside.
-	for ( int i = 0; i < vecOrigins.Count(); ++i )
+	for ( int i = 0; i < std::ssize( vecOrigins ); ++i )
 	{
 		const Vector &vOrigin = vecOrigins[ i ];
 		VPlane plane;

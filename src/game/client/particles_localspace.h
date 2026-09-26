@@ -17,7 +17,7 @@ public:
 
 	DECLARE_CLASS( CLocalSpaceEmitter, CParticleEffect );
 	
-	static CSmartPtr<CLocalSpaceEmitter> Create( const char *pDebugName, ClientEntityHandle_t hEntity, int nAttachment, int flags = 0 );
+	static ks::intrusive_ptr<CLocalSpaceEmitter> Create( const char *pDebugName, ClientEntityHandle_t hEntity, int nAttachment, int flags = 0 );
 
 	virtual void RenderParticles( CParticleRenderIterator *pIterator );
 	virtual void SimulateParticles( CParticleSimulateIterator *pIterator );

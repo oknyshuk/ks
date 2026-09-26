@@ -8,9 +8,6 @@
 #include "cs_bot.h"
 #include "cs_team.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar bot_coop_force_throw_grenade_chance( "bot_coop_force_throw_grenade_chance", "0.3", FCVAR_CHEAT );
 
 bool ReactToBombState( CCSBot *me )
@@ -118,31 +115,31 @@ void RunStrat_GuardSpot( CCSBot *me )
 
 void MakeAwareOfCTs( CCSBot * me )
 {
-	CUtlVector< CCSPlayer * > vecCTs;
+	std::vector< CCSPlayer * > vecCTs;
 	CollectPlayers( &vecCTs, TEAM_CT, COLLECT_ONLY_LIVING_PLAYERS );
 
-	if ( vecCTs.Count() == 0 )
+	if ( vecCTs.empty() )
 		return;
 
 	CCSPlayer *pTargetPlayer = nullptr;
 	float flClosePlayer = 1e6;
-	FOR_EACH_VEC( vecCTs, iter )
+	for ( CCSPlayer *pCTPlayer : vecCTs )
 	{
-		if ( me->IsVisible( vecCTs[ iter ] ) )
+		if ( me->IsVisible( pCTPlayer ) )
 		{
-			float dist = me->GetTravelDistanceToPlayer( vecCTs[ iter ] );
+			float dist = me->GetTravelDistanceToPlayer( pCTPlayer );
 			if ( dist < flClosePlayer )
 			{
 				flClosePlayer = dist;
-				pTargetPlayer = vecCTs[ iter ];
+				pTargetPlayer = pCTPlayer;
 			}
 		}
 
-		me->OnAudibleEvent( nullptr, vecCTs[ iter ], MAX_COORD_FLOAT, PRIORITY_HIGH, true );
+		me->OnAudibleEvent( nullptr, pCTPlayer, MAX_COORD_FLOAT, PRIORITY_HIGH, true );
 	}
 
 	if ( !pTargetPlayer )
-		pTargetPlayer = vecCTs[ RandomInt( 0, vecCTs.Count() - 1 ) ];
+		pTargetPlayer = vecCTs[ RandomInt( 0, std::ssize( vecCTs ) - 1 ) ];
 
 	me->SetBotEnemy( pTargetPlayer );
 }

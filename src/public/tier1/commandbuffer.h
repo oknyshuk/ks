@@ -14,14 +14,17 @@
 
 #include "tier0/platform.h"
 
-#include "tier1/utllinkedlist.h"
+#include <list>
 #include "tier1/convar.h"
 
 
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-class CUtlBuffer;
+namespace ks
+{
+	class text_reader;
+}
 
 
 //-----------------------------------------------------------------------------
@@ -90,11 +93,11 @@ private:
 	};
 
 	// Insert a command into the command queue at the appropriate time
-	void InsertCommandAtAppropriateTime( intp hCommand );
+	void InsertCommandAtAppropriateTime( const Command_t &command );
 						   
 	// Insert a command into the command queue
 	// Only happens if it's inserted while processing other commands
-	void InsertImmediateCommand( intp hCommand );
+	void InsertImmediateCommand( const Command_t &command );
 
 	// Insert a command into the command queue
 	bool InsertCommand( const char *pArgS, int nCommandSize, int nTick, cmd_source_t cmdSource );
@@ -106,16 +109,16 @@ private:
 	void Compact();
 
 	// Parses argv0 out of the buffer
-	bool ParseArgV0( CUtlBuffer &buf, char *pArgv0, int nMaxLen, const char **pArgs );
+	bool ParseArgV0( ks::text_reader &buf, char *pArgv0, int nMaxLen, const char **pArgs );
 
 	char	m_pArgSBuffer[ ARGS_BUFFER_LENGTH ];
 	int		m_nLastUsedArgSSize;
 	int		m_nArgSBufferSize;
-	CUtlFixedLinkedList< Command_t >	m_Commands;
+	std::list< Command_t >	m_Commands;
 	int		m_nCurrentTick;
 	int		m_nLastTickToProcess;
 	int		m_nWaitDelayTicks;
-	intp	m_hNextCommand;
+	std::list< Command_t >::iterator	m_itNextCommand;	// end() when not processing
 	int		m_nMaxArgSBufferLength;
 	bool	m_bIsProcessingCommands;
 	bool	m_bWaitEnabled;

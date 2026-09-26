@@ -11,13 +11,12 @@
 #include "tier0/cache_hints.h"
 #include "tier0/dbg.h"
 #include "tier0/threadtools.h"
+#include <atomic>
+#include <mutex>
 #include <time.h>
 #include <string.h>
 #include <stdio.h>
 
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 CMiniProfiler *s_pLastMiniProfilerTS;
 
@@ -60,13 +59,13 @@ CMiniProfiler* PushMiniProfilerTS( CMiniProfiler *pProfiler )
 }
 
 
-CThreadFastMutex g_ProfilerListMutex CONSTRUCT_EARLY;
-//CInterlockedInt g_LinkedMiniProfilerIdCount;
+std::recursive_mutex g_ProfilerListMutex CONSTRUCT_EARLY;
+//std::atomic<int> g_LinkedMiniProfilerIdCount;
 
 void AppendMiniProfilerToList( CLinkedMiniProfiler *pProfiler, CLinkedMiniProfiler **ppList )
 {
 #if ENABLE_MINI_PROFILER
-	g_ProfilerListMutex.Lock();
+	g_ProfilerListMutex.lock();
 	//pProfiler->m_nId = g_LinkedMiniProfilerIdCount++;
 	if( IsDebug() )
 	{
@@ -114,7 +113,7 @@ void AppendMiniProfilerToList( CLinkedMiniProfiler *pProfiler, CLinkedMiniProfil
 			pProfiler->m_ppPrev = nullptr;
 		}
 	}
-	g_ProfilerListMutex.Unlock();
+	g_ProfilerListMutex.unlock();
 #endif // ENABLE_MINI_PROFILER
 }
 
@@ -122,7 +121,7 @@ void AppendMiniProfilerToList( CLinkedMiniProfiler *pProfiler, CLinkedMiniProfil
 void RemoveMiniProfilerFromList( CLinkedMiniProfiler *pProfiler ) 
 {
 #if ENABLE_MINI_PROFILER
-	g_ProfilerListMutex.Lock();
+	g_ProfilerListMutex.lock();
 	// We need to remove miniprofiler from the list properly. This is an issue because we unload DLLs sometimes. 
 	if ( pProfiler->m_ppPrev )
 	{
@@ -137,7 +136,7 @@ void RemoveMiniProfilerFromList( CLinkedMiniProfiler *pProfiler )
 	pProfiler->m_ppPrev = nullptr;
 	pProfiler->m_pNext = nullptr;
 	
-	g_ProfilerListMutex.Unlock();
+	g_ProfilerListMutex.unlock();
 #endif // ENABLE_MINI_PROFILER
 }
 
@@ -211,8 +210,8 @@ MINIPROFILER_DLL_LINKAGE void PublishAll( CLinkedMiniProfiler*pList, uint32 nHis
 void MicroProfilerAddTS( CMicroProfiler *pProfiler, uint64 numTimeBaseTicks )
 {
 #if ENABLE_MICRO_PROFILER > 0
-	ThreadInterlockedExchangeAdd64( ( int64* )&pProfiler->m_numTimeBaseTicks, numTimeBaseTicks );
-	ThreadInterlockedIncrement( ( int32* )&pProfiler->m_numCalls );
+	std::atomic_ref<uint64>( pProfiler->m_numTimeBaseTicks ).fetch_add( numTimeBaseTicks );
+	std::atomic_ref<uint64>( pProfiler->m_numCalls )++;
 #endif
 }
 

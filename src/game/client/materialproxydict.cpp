@@ -7,10 +7,7 @@
 #include "cbase.h"
 #include "imaterialproxydict.h"
 #include "materialsystem/imaterialproxy.h"
-#include "tier1/UtlStringMap.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier1/map_ops.h"
 
 class CMaterialProxyDict : public IMaterialProxyDict
 {
@@ -18,7 +15,7 @@ public:
 	IMaterialProxy *	CreateProxy( const char *proxyName );
 	void				Add( const char *pMaterialProxyName, MaterialProxyFactory_t *pMaterialProxyFactory );
 private:
-	CUtlStringMap<MaterialProxyFactory_t *> m_StringToProxyFactoryMap;
+	ks::idict<MaterialProxyFactory_t *> m_StringToProxyFactoryMap;
 };
 
 void CMaterialProxyDict::Add( const char *pMaterialProxyName, MaterialProxyFactory_t *pMaterialProxyFactory )
@@ -35,12 +32,12 @@ IMaterialProxyDict &GetMaterialProxyDict()
 
 IMaterialProxy *CMaterialProxyDict::CreateProxy( const char *pMaterialProxyName )
 {
-	UtlSymId_t sym = m_StringToProxyFactoryMap.Find( pMaterialProxyName );
-	if ( sym == m_StringToProxyFactoryMap.InvalidIndex() )
+	MaterialProxyFactory_t **ppFactory = ks::find_ptr( m_StringToProxyFactoryMap, pMaterialProxyName );
+	if ( !ppFactory )
 	{
 		return nullptr;
 	}
-	MaterialProxyFactory_t *pMaterialProxyFactory = m_StringToProxyFactoryMap[sym];
+	MaterialProxyFactory_t *pMaterialProxyFactory = *ppFactory;
 	Assert( pMaterialProxyFactory );
 	return (*pMaterialProxyFactory)();
 }

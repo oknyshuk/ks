@@ -11,9 +11,6 @@
 #include "rope.h"
 #include "eventqueue.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 //=========================================================
 //=========================================================
@@ -136,7 +133,7 @@ void CAI_RappelBehavior::SetDescentSpeed()
 		float factor;
 		factor = flDist / RAPPEL_DECEL_DIST;
 
-		speed = MAX( RAPPEL_MIN_SPEED, speed * factor );
+		speed = std::max<std::common_type_t<int, float>>( RAPPEL_MIN_SPEED, speed * factor );
 	}
 
 	Vector vecNewVelocity = vec3_origin;

@@ -14,11 +14,12 @@
 //
 //=============================================================================
 
+#include <mutex>
 #include <limits.h>
 #include "tier1/convar.h"
 #include "vstdlib/jobthread.h"
-#include "tier1/utlmap.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/map_ops.h"
+#include <memory>
 #include "tier0/icommandline.h"
 #include "vstdlib/random.h"
 #include "basefilesystem.h"
@@ -29,9 +30,7 @@
 // and to make it a deliberate compile time choice to keep the fast path.
 #undef WaitForSingleObject
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
@@ -132,36 +131,32 @@ struct AsyncOpenedFile_t : CRefCounted<CRefCountServiceNoDelete> // no mutex nee
 {
 	AsyncOpenedFile_t() : hFile(FILESYSTEM_INVALID_HANDLE) {}
 	FileHandle_t hFile;
+	const std::string *m_pName = nullptr;	// this entry's key in CAsyncOpenedFiles
 };
 
+// Handles are the AsyncOpenedFile_t pointers; map nodes don't move.
 class CAsyncOpenedFiles
 {
 public:
-	CAsyncOpenedFiles()
-	{
-		m_map.SetLessFunc( CaselessStringLessThan );
-	}
-
 	FSAsyncFile_t FindOrAdd( const char *pszFilename )
 	{
 		char szFixedName[MAX_FILEPATH];
 		Q_strncpy( szFixedName, pszFilename, sizeof( szFixedName ) );
 		Q_FixSlashes( szFixedName );
 
-		Assert( (intp)FS_INVALID_ASYNC_FILE == m_map.InvalidIndex() );
+		std::scoped_lock lock( m_mutex );
 
-		AUTO_LOCK_FM( m_mutex );
-
-		int iEntry = m_map.Find( szFixedName );
-		if ( iEntry == m_map.InvalidIndex() )
+		auto iEntry = m_map.find( szFixedName );
+		if ( iEntry == m_map.end() )
 		{
-			iEntry = m_map.Insert( strdup( szFixedName ), new AsyncOpenedFile_t );
+			iEntry = m_map.emplace( szFixedName, std::make_unique< AsyncOpenedFile_t >() ).first;
+			iEntry->second->m_pName = &iEntry->first;
 		}
 		else
 		{
-			m_map[iEntry]->AddRef();
+			iEntry->second->AddRef();
 		}
-		return (FSAsyncFile_t)(intp)iEntry;
+		return (FSAsyncFile_t)iEntry->second.get();
 	}
 
 	FSAsyncFile_t Find( const char *pszFilename )
@@ -170,15 +165,15 @@ public:
 		Q_strncpy( szFixedName, pszFilename, sizeof( szFixedName ) );
 		Q_FixSlashes( szFixedName );
 
-		AUTO_LOCK_FM( m_mutex );
+		std::scoped_lock lock( m_mutex );
 
-		int iEntry = m_map.Find( szFixedName );
-		if ( iEntry != m_map.InvalidIndex() )
+		auto iEntry = m_map.find( szFixedName );
+		if ( iEntry == m_map.end() )
 		{
-			m_map[iEntry]->AddRef();
+			return FS_INVALID_ASYNC_FILE;
 		}
-
-		return (FSAsyncFile_t)(intp)iEntry;
+		iEntry->second->AddRef();
+		return (FSAsyncFile_t)iEntry->second.get();
 	}
 
 	AsyncOpenedFile_t *Get( FSAsyncFile_t item )
@@ -188,12 +183,11 @@ public:
 			return nullptr;
 		}
 
-		AUTO_LOCK_FM( m_mutex );
+		std::scoped_lock lock( m_mutex );
 
-		int iEntry = (CUtlMap<CUtlString, AsyncOpenedFile_t>::IndexType_t)size_cast<int>( (intp) item );
-		Assert( m_map.IsValidIndex( iEntry ) );
-		m_map[iEntry]->AddRef();
-		return m_map[iEntry];
+		AsyncOpenedFile_t *pFile = (AsyncOpenedFile_t *)item;
+		pFile->AddRef();
+		return pFile;
 	}
 
 	void AddRef( FSAsyncFile_t item )
@@ -203,11 +197,9 @@ public:
 			return;
 		}
 
-		AUTO_LOCK_FM( m_mutex );
+		std::scoped_lock lock( m_mutex );
 
-		int iEntry = (CUtlMap<CUtlString, AsyncOpenedFile_t>::IndexType_t)size_cast<int>( (intp) item );
-		Assert( m_map.IsValidIndex( iEntry ) );
-		m_map[iEntry]->AddRef();
+		( (AsyncOpenedFile_t *)item )->AddRef();
 	}
 
 	void Release( FSAsyncFile_t item )
@@ -217,26 +209,25 @@ public:
 			return;
 		}
 
-		AUTO_LOCK_FM( m_mutex );
+		std::scoped_lock lock( m_mutex );
 
-		int iEntry = (CUtlMap<CUtlString, AsyncOpenedFile_t>::IndexType_t)size_cast<int>( (intp) item );
-		Assert( m_map.IsValidIndex( iEntry ) );
-		if ( m_map[iEntry]->Release() == 0 )
+		AsyncOpenedFile_t *pFile = (AsyncOpenedFile_t *)item;
+		if ( pFile->Release() == 0 )
 		{
-			if ( m_map[iEntry]->hFile != FILESYSTEM_INVALID_HANDLE )
+			if ( pFile->hFile != FILESYSTEM_INVALID_HANDLE )
 			{
-				BaseFileSystem()->Close( m_map[iEntry]->hFile );
+				BaseFileSystem()->Close( pFile->hFile );
 			}
-			delete m_map[iEntry];
-			delete m_map.Key( iEntry );
-			m_map.RemoveAt( iEntry );
+			auto iEntry = m_map.find( *pFile->m_pName );
+			Assert( iEntry != m_map.end() && iEntry->second.get() == pFile );
+			m_map.erase( iEntry );
 		}
 	}
 
 private:
-	CThreadFastMutex m_mutex;
+	std::recursive_mutex m_mutex;
 
-	CUtlMap<const char *, AsyncOpenedFile_t *> m_map;
+	std::map< std::string, std::unique_ptr< AsyncOpenedFile_t >, ks::iless > m_map;
 };
 
 CAsyncOpenedFiles g_AsyncOpenedFiles;
@@ -287,7 +278,7 @@ public:
 #if defined( TRACK_BLOCKING_IO )
 		m_Timer.Start();
 #endif
-		pszFilename = strdup( fromRequest.pszFilename );
+		pszFilename = MemAlloc_StrDup( fromRequest.pszFilename );
 		Q_FixSlashes( const_cast<char*>( pszFilename ) );
 
 		pContext = this;
@@ -297,7 +288,7 @@ public:
 		{
 			g_AsyncOpenedFiles.AddRef( hSpecificAsyncFile );
 		}
-#if (defined(_DEBUG) || defined(USE_MEM_DEBUG))
+#if defined(_DEBUG)
 		m_pszAllocCreditFile = nullptr;
 		m_nAllocCreditLine = 0;
 #endif
@@ -311,7 +302,7 @@ public:
 		}
 
 		if ( pszFilename )
-			free( (void *)pszFilename );
+			g_pMemAlloc->Free( (void *)pszFilename );
 	}
 
 	virtual char const	*Describe()
@@ -331,14 +322,14 @@ public:
 		bool oldState = BaseFileSystem()->SetAllowSynchronousLogging( false );
 #endif
 
-#if (defined(_DEBUG) || defined(USE_MEM_DEBUG))
+#if defined(_DEBUG)
 		if ( m_pszAllocCreditFile )
 			MemAlloc_PushAllocDbgInfo( m_pszAllocCreditFile, m_nAllocCreditLine );
 #endif
 
 		JobStatus_t retval = BaseFileSystem()->SyncRead( *this );
 
-#if (defined(_DEBUG) || defined(USE_MEM_DEBUG))
+#if defined(_DEBUG)
 		if ( m_pszAllocCreditFile )
 			MemAlloc_PopAllocDbgInfo();
 #endif
@@ -384,7 +375,7 @@ public:
 
 	void SetAllocCredit( const char *pszFile, int line )
 	{
-#if (defined(_DEBUG) || defined(USE_MEM_DEBUG))
+#if defined(_DEBUG)
 		m_pszAllocCreditFile = pszFile;
 		m_nAllocCreditLine = line;
 #endif
@@ -398,7 +389,7 @@ private:
 #if defined( TRACK_BLOCKING_IO )
 	CFastTimer				m_Timer;
 #endif
-#if (defined(_DEBUG) || defined(USE_MEM_DEBUG))
+#if defined(_DEBUG)
 	const char *			m_pszAllocCreditFile;
 	int						m_nAllocCreditLine;
 #endif
@@ -422,7 +413,7 @@ public:
 #if defined( TRACK_BLOCKING_IO )
 		m_Timer.Start();
 #endif
-		m_pszFilename = strdup( pszFilename );
+		m_pszFilename = MemAlloc_StrDup( pszFilename );
 		g_nAsyncWriteJobs++;
 
 		SetFlags( GetFlags() | JF_SERIAL );
@@ -431,7 +422,7 @@ public:
 	~CFileAsyncWriteJob()
 	{
 		g_nAsyncWriteJobs--;
-		free( (void *)m_pszFilename );
+		g_pMemAlloc->Free( (void *)m_pszFilename );
 	}
 
 	virtual char const *Describe() { return m_pszFilename; }
@@ -458,9 +449,7 @@ public:
 	virtual void DoCleanup()
 	{
 		if ( m_pData && m_bFreeMemory )
-		{
-			delete (char*)m_pData;
-		}
+			delete[] (char*)m_pData;
 	}
 
 protected:
@@ -475,27 +464,6 @@ private:
 #endif
 };
 
-class CFileAsyncWriteFileJob : public CFileAsyncWriteJob
-{
-public:
-	CFileAsyncWriteFileJob( const char *pszFilename, const CUtlBuffer *pData, unsigned nBytes, bool bFreeMemory, bool bAppend )
-	  : CFileAsyncWriteJob( pszFilename, pData->Base(), nBytes, bFreeMemory, bAppend ),
-		m_pBuffer( pData )
-	{
-	}
-
-	virtual void DoCleanup()
-	{
-		if ( m_pBuffer && m_bFreeMemory )
-		{
-			delete m_pBuffer;
-		}
-	}
-
-private:
-	const CUtlBuffer *m_pBuffer;
-};
-
 //---------------------------------------------------------
 // Append two files
 //---------------------------------------------------------
@@ -508,8 +476,8 @@ public:
 #if defined( TRACK_BLOCKING_IO )
 		m_Timer.Start();
 #endif
-		m_pszAppendTo = strdup( pszAppendTo );
-		m_pszAppendFrom = strdup( pszAppendFrom );
+		m_pszAppendTo = MemAlloc_StrDup( pszAppendTo );
+		m_pszAppendFrom = MemAlloc_StrDup( pszAppendFrom );
 		Q_FixSlashes( const_cast<char*>( m_pszAppendTo ) );
 		Q_FixSlashes( const_cast<char*>( m_pszAppendFrom ) );
 		g_nAsyncWriteJobs++;
@@ -681,7 +649,7 @@ void CBaseFileSystem::InitAsync()
 	params.iThreadPriority = 0;
 	params.bIOThreads = true;
 
-	params.nThreads = MIN( GetCPUInformation().m_nLogicalProcessors, 3 ); // > 3 threads doing IO on one drive, are you crazy?
+	params.nThreads = std::min<std::common_type_t<uint8, int>>( GetCPUInformation().m_nLogicalProcessors, 3 ); // > 3 threads doing IO on one drive, are you crazy?
 	params.nStackSize = 256 * 1024;
 
 	if ( b360EmulatePS3 )
@@ -746,7 +714,7 @@ FSAsyncStatus_t CBaseFileSystem::AsyncReadMultipleCreditAlloc( const FileAsyncRe
 			pJob =  new CFileAsyncFileSizeJob( pRequests[i] );
 		}
 
-#if (defined(_DEBUG) || defined(USE_MEM_DEBUG))
+#if defined(_DEBUG)
 		pJob->SetAllocCredit( pszFile, line );
 #endif
 		if ( !bSynchronous )
@@ -813,43 +781,6 @@ FSAsyncStatus_t CBaseFileSystem::AsyncWrite(const char *pFileName, const void *p
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
-FSAsyncStatus_t CBaseFileSystem::AsyncWriteFile(const char *pFileName, const CUtlBuffer *pBuff, int nSrcBytes, bool bFreeMemory, bool bAppend, FSAsyncControl_t *pControl )
-{
-	bool bAsyncMode = ( GetAsyncMode() == FSAM_ASYNC );
-	bool bSynchronous = ( !bAsyncMode || !m_pThreadPool );
-
-	if ( !bAsyncMode )
-	{
-		AsyncFinishAll();
-	}
-
-	CJob *pJob = new CFileAsyncWriteFileJob( pFileName, pBuff, nSrcBytes, bFreeMemory, bAppend );
-
-	if ( !bSynchronous )
-	{
-		m_pThreadPool->AddJob( pJob );
-	}
-	else
-	{
-		pJob->Execute();
-	}
-
-	if ( pControl )
-	{
-		*pControl = (FSAsyncControl_t)pJob;
-	}
-	else
-	{
-		pJob->Release();
-	}
-
-	return FSASYNC_OK;
-}
-
-
-//-----------------------------------------------------------------------------
-// 
-//-----------------------------------------------------------------------------
 FSAsyncStatus_t CBaseFileSystem::AsyncAppendFile(const char *pAppendToFileName, const char *pAppendFromFileName, FSAsyncControl_t *pControl )
 {
 	bool bAsyncMode = ( GetAsyncMode() == FSAM_ASYNC );
@@ -886,12 +817,12 @@ FSAsyncStatus_t CBaseFileSystem::AsyncAppendFile(const char *pAppendToFileName, 
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
-CThreadMutex g_AsyncFinishMutex;
+std::recursive_mutex g_AsyncFinishMutex;
 void CBaseFileSystem::AsyncFinishAll( int iToPriority )
 {
 	if ( m_pThreadPool)
 	{
-		AUTO_LOCK( g_AsyncFinishMutex );
+		std::scoped_lock lock( g_AsyncFinishMutex );
 		m_pThreadPool->ExecuteToPriority( ConvertPriority( iToPriority ) );
 	}
 }
@@ -911,7 +842,7 @@ void CBaseFileSystem::AsyncFinishAllWrites()
 {
 	if ( m_pThreadPool && g_nAsyncWriteJobs )
 	{
-		AUTO_LOCK( g_AsyncFinishMutex );
+		std::scoped_lock lock( g_AsyncFinishMutex );
 		m_pThreadPool->ExecuteAll( AsyncWriteJobFilter );
 	}
 }
@@ -1277,7 +1208,7 @@ FSAsyncStatus_t CBaseFileSystem::SyncRead( const FileAsyncRequest_t &request )
 		}
 
 		result = ( ( nBytesRead == 0 ) && ( nBytesToRead != 0 ) ) ? FSASYNC_ERR_READING : FSASYNC_OK;
-		DoAsyncCallback( request, pDest, MIN( nBytesRead, nBytesToRead ), result );
+		DoAsyncCallback( request, pDest, std::min( nBytesRead, nBytesToRead ), result );
 	}
 	else
 	{
@@ -1322,14 +1253,10 @@ FSAsyncStatus_t CBaseFileSystem::SyncWrite(const char *pszFilename, const void *
 		Write( pSrc, nSrcBytes, hFile );
 		Close( hFile );
 		if ( bFreeMemory )
-		{
-			delete (char*)pSrc;
-		}
+			delete[] (char*)pSrc;
 
 		if ( m_fwLevel >= FILESYSTEM_WARNING_REPORTALLACCESSES_ASYNC )
-		{
 			LogAccessToFile( "asyncwrite", pszFilename, "" );
-		}
 
 		return FSASYNC_OK;
 	}
@@ -1354,7 +1281,7 @@ FSAsyncStatus_t CBaseFileSystem::SyncAppendFile(const char *pAppendToFileName, c
 			SetBufferSize( hSourceFile, 0 );
 			const int BUFSIZE = 128 * 1024;
 			int fileSize = Size( hSourceFile );
-			char *buf = (char *)malloc( BUFSIZE );
+			char *buf = (char *)MemAlloc_Alloc( BUFSIZE );
 			int size;
 
 			while ( fileSize > 0 )
@@ -1369,7 +1296,7 @@ FSAsyncStatus_t CBaseFileSystem::SyncAppendFile(const char *pAppendToFileName, c
 				fileSize -= size;
 			}
 
-			free(buf);
+			g_pMemAlloc->Free(buf);
 			Close( hSourceFile );
 			result = FSASYNC_OK;
 		}
@@ -1424,7 +1351,7 @@ void CBaseFileSystem::DoAsyncCallback( const FileAsyncRequest_t &request, void *
 	{
 		Assert( !request.pfnAlloc );
 		// The ugly delete[] (void*) method generates a compile warning on osx, as it should.
-		free( pDataToFree );
+		g_pMemAlloc->Free( pDataToFree );
 	}
 }
 

@@ -9,9 +9,6 @@
 #include <ctype.h>
 #include "fmtstr.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 
 //
@@ -24,13 +21,13 @@ public:
 	virtual bool ApplyRuleUint64( uint64 uiBase, uint64 &uiNew )
 	{
 		bool bResult = ( uiNew > uiBase );
-		uiNew = MAX( uiNew, uiBase );
+		uiNew = std::max( uiNew, uiBase );
 		return bResult;
 	}
 	virtual bool ApplyRuleFloat( float flBase, float &flNew )
 	{
 		bool bResult = ( flNew > flBase );
-		flNew = MAX( flNew, flBase );
+		flNew = std::max( flNew, flBase );
 		return bResult;
 	}
 }

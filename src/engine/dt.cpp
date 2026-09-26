@@ -26,9 +26,6 @@
 #include "filesystem_engine.h"
 #include "filesystem.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define PROPINDEX_NUMBITS 12
 #define MAX_TOTAL_SENDTABLE_PROPS	( (1 << PROPINDEX_NUMBITS) - 1 ) // one value reserved for end marker
 #define PROPINDEX_END_MARKER ( ( 1 << PROPINDEX_NUMBITS ) - 1 )
@@ -48,11 +45,11 @@ ConVar sv_new_delta_bits( "sv_new_delta_bits", "1" );
 class CDeltaBitsRun
 {
 public:
-	CUtlVector<int> m_Props;
-	CUtlVector<int> m_BitCounts;
+	std::vector< int > m_Props;
+	std::vector< int > m_BitCounts;
 };
 
-CUtlVector<CDeltaBitsRun*> g_DeltaBitsRuns;
+std::vector< CDeltaBitsRun* > g_DeltaBitsRuns;
 CDeltaBitsRun *g_pDeltaBitsRun = nullptr;
 
 inline void LogDeltaBitsStart()
@@ -358,20 +355,14 @@ CSendNode::~CSendNode()
 	{
 		delete GetChild( i );
 	}
-	m_Children.Purge();
+	m_Children.clear(); m_Children.shrink_to_fit();
 }
 
 // ----------------------------------------------------------------------------- //
 // CSendTablePrecalc
 // ----------------------------------------------------------------------------- //
 
-bool PropOffsetLT( const unsigned short &a, const unsigned short &b )
-{
-	return a < b;
-}
-
-CSendTablePrecalc::CSendTablePrecalc() : 
-	m_PropOffsetToIndexMap( 0, 0, PropOffsetLT )
+CSendTablePrecalc::CSendTablePrecalc()
 {
 	m_pDTITable = nullptr;
 	m_pSendTable = 0;
@@ -534,7 +525,7 @@ void SendTable_BuildHierarchy_IterateProps(
 				pChild->m_iDatatableProp = bhs->m_nDatatableProps;
 				++bhs->m_nDatatableProps;
 
-				pNode->m_Children.AddToTail( pChild );
+				pNode->m_Children.push_back( pChild );
 
 				// Recurse into the new child datatable.
 				SendTable_BuildHierarchy( pChild, pProp->GetDataTable(), bhs );
@@ -598,36 +589,36 @@ void SendTable_BuildHierarchy(
 	pNode->m_nRecursiveProps = bhs->m_nProps - pNode->m_iFirstRecursiveProp;
 }
 
-static int __cdecl SendProp_SortPriorities( const byte *p1, const byte *p2 )
+static int SendProp_SortPriorities( const byte *p1, const byte *p2 )
 {
 	return *p1 > *p2;
 }
 
 void SendTable_SortByPriority(CBuildHierarchyStruct *bhs)
 {
-	CUtlVector<byte> priorities;
+	std::vector< byte > priorities;
 
 	// Build a list of priorities 
 
 	// Default entry for SPROP_CHANGES_OFTEN
-	priorities.AddToTail( SENDPROP_CHANGES_OFTEN_PRIORITY );
+	priorities.push_back( SENDPROP_CHANGES_OFTEN_PRIORITY );
 
 	for ( int i = 0; i < bhs->m_nProps; i++ )
 	{
 		const SendProp *p = bhs->m_pProps[i];
 
-		if ( priorities.Find( p->GetPriority() ) < 0 )
+		if ( ks::find_index( priorities, p->GetPriority() ) < 0 )
 		{
-			priorities.AddToTail( p->GetPriority() );
+			priorities.push_back( p->GetPriority() );
 		}
 	}
 
 	// We're using this one because CUtlVector::Sort utilizes qsort, which has different behavior on Windows than on Linux
-	std::stable_sort( priorities.Base(), priorities.Base() + priorities.Count() );
+	std::stable_sort( priorities.data(), priorities.data() + std::ssize( priorities ) );
 
 	int start = 0;
 
-	for ( int priorityIndex = 0; priorityIndex < priorities.Count(); ++priorityIndex )
+	for ( int priorityIndex = 0; priorityIndex < std::ssize( priorities ); ++priorityIndex )
 	{
 		byte priority = priorities[priorityIndex];
 		int i;
@@ -660,7 +651,7 @@ void SendTable_SortByPriority(CBuildHierarchyStruct *bhs)
 	}
 }
 
-void CalcPathLengths_R( CSendNode *pNode, CUtlVector<int> &pathLengths, int curPathLength, int &totalPathLengths )
+void CalcPathLengths_R( CSendNode *pNode, std::vector< int > &pathLengths, int curPathLength, int &totalPathLengths )
 {
 	pathLengths[pNode->GetRecursiveProxyIndex()] = curPathLength;
 	totalPathLengths += curPathLength;
@@ -707,20 +698,20 @@ void FillPathEntries_R( CSendTablePrecalc *pPrecalc, CSendNode *pNode, CSendNode
 void SendTable_GenerateProxyPaths( CSendTablePrecalc *pPrecalc, int nProxyIndices )
 {
 	// Initialize the array.
-	pPrecalc->m_ProxyPaths.SetSize( nProxyIndices );
+	pPrecalc->m_ProxyPaths.assign( nProxyIndices, {} );
 	for ( int i=0; i < nProxyIndices; i++ )
 		pPrecalc->m_ProxyPaths[i].m_iFirstEntry = pPrecalc->m_ProxyPaths[i].m_nEntries = 0xFFFF;
 	
 	// Figure out how long the path down the tree is to each node.
 	int totalPathLengths = 0;
-	CUtlVector<int> pathLengths;
-	pathLengths.SetSize( nProxyIndices );
-	memset( pathLengths.Base(), 0, sizeof( pathLengths[0] ) * nProxyIndices );
+	std::vector< int > pathLengths;
+	pathLengths.assign( nProxyIndices, {} );
+	memset( pathLengths.data(), 0, sizeof( pathLengths[0] ) * nProxyIndices );
 	CalcPathLengths_R( pPrecalc->GetRootNode(), pathLengths, 0, totalPathLengths );
 	
 	// 
 	int iCurEntry = 0;
-	pPrecalc->m_ProxyPathEntries.SetSize( totalPathLengths );
+	pPrecalc->m_ProxyPathEntries.assign( totalPathLengths, {} );
 	FillPathEntries_R( pPrecalc, pPrecalc->GetRootNode(), nullptr, iCurEntry );
 }
 
@@ -750,9 +741,9 @@ bool CSendTablePrecalc::SetupFlatPropertyArray()
 
 	// Copy the SendProp pointers into the precalc.	
 	MEM_ALLOC_CREDIT();
-	m_Props.CopyArray( bhs.m_pProps, bhs.m_nProps );
-	m_DatatableProps.CopyArray( bhs.m_pDatatableProps, bhs.m_nDatatableProps );
-	m_PropProxyIndices.CopyArray( bhs.m_PropProxyIndices, bhs.m_nProps );
+	m_Props.assign( bhs.m_pProps, bhs.m_pProps + bhs.m_nProps );
+	m_DatatableProps.assign( bhs.m_pDatatableProps, bhs.m_pDatatableProps + bhs.m_nDatatableProps );
+	m_PropProxyIndices.assign( bhs.m_PropProxyIndices, bhs.m_PropProxyIndices + bhs.m_nProps );
 
 	// Assign the datatable proxy indices.
 	SetNumDataTableProxies( 0 );

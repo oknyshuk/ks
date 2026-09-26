@@ -16,9 +16,6 @@
 #include "mathlib/mathlib.h"
 #include "basetempentity.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 IMPLEMENT_REFLECT_SERVERCLASS( CBaseTempEntity, DT_BaseTempEntity )
 
 

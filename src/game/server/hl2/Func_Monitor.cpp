@@ -12,9 +12,6 @@
 #include "modelentities.h"
 #include "info_camera_link.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 class [[= ks::reflect::NetTable{ .name = "DT_FuncMonitor" } ]]
       CFuncMonitor : public CFuncBrush
 {

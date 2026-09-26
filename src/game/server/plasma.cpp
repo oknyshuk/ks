@@ -10,9 +10,6 @@
 #include "reflect_annotations.h"
 #include "plasma.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //==================================================
 // CPlasma
 //==================================================

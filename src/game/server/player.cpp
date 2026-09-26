@@ -84,10 +84,8 @@
 #include "weapon_c4.h"
 #include "basecsgrenade_projectile.h"
 #include "playerdecals_signature.h"
+#include "tier1/map_ops.h"
 #endif
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 ConVar autoaim_max_dist( "autoaim_max_dist", "2160" ); // 2160 = 180 feet
@@ -532,9 +530,9 @@ void CBasePlayer::SetupVisibility( CBaseEntity *pViewEntity, unsigned char *pvs,
 	}
 
 	// Merge in PVS from split screen players
-	CUtlVector< CHandle<CBasePlayer> > &splitPlayers = GetSplitScreenAndPictureInPicturePlayers();
+	std::vector< CHandle<CBasePlayer> > &splitPlayers = GetSplitScreenAndPictureInPicturePlayers();
 
-	for ( int i = 0; i < splitPlayers.Count(); i++ )
+	for ( int i = 0; i < std::ssize( splitPlayers ); i++ )
 	{
 		CBasePlayer *pl = splitPlayers[i];
 		if ( !pl )
@@ -612,14 +610,14 @@ int CBasePlayer::ShouldTransmit( const CCheckTransmitInfo *pInfo )
 }
 
 
-bool CBasePlayer::WantsLagCompensationOnEntity( const CBaseEntity *entity, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const
+bool CBasePlayer::WantsLagCompensationOnEntity( const CBaseEntity *entity, const CUserCmd *pCmd, const std::bitset<MAX_EDICTS> *pEntityTransmitBits ) const
 {
 	// Team members shouldn't be adjusted unless friendly fire is on.
 	if ( !mp_friendlyfire.GetInt() && !mp_teammates_are_enemies.GetBool() && entity->GetTeamNumber() == GetTeamNumber() )
 		return false;
 
 	// If this entity hasn't been transmitted to us and acked, then don't bother lag compensating it.
-	if ( pEntityTransmitBits && !pEntityTransmitBits->Get( entity->entindex() ) )
+	if ( pEntityTransmitBits && !(*pEntityTransmitBits)[ entity->entindex() ] )
 		return false;
 
 	const Vector &vMyOrigin = GetAbsOrigin();
@@ -2670,7 +2668,7 @@ bool CBasePlayer::IsValidObserverTarget(CBaseEntity * target)
 		}
 		else
 		{
-			flDeathSpecTime += MIN( SPEC_TEAMMATE_DEATH_MIN_TIME, DEATH_ANIMATION_TIME );
+			flDeathSpecTime += std::min<std::common_type_t<double, float>>( SPEC_TEAMMATE_DEATH_MIN_TIME, DEATH_ANIMATION_TIME );
 		}
 
 		if ( flDeathSpecTime < gpGlobals->curtime )
@@ -2913,7 +2911,7 @@ void CBasePlayer::AddPointsToTeam( int score, bool bAllowNegativeScore )
 //-----------------------------------------------------------------------------
 int CBasePlayer::GetCommandContextCount( void ) const
 {
-	return m_CommandContext.Count();
+	return std::ssize( m_CommandContext );
 }
 
 //-----------------------------------------------------------------------------
@@ -2923,7 +2921,7 @@ int CBasePlayer::GetCommandContextCount( void ) const
 //-----------------------------------------------------------------------------
 CCommandContext *CBasePlayer::GetCommandContext( int index )
 {
-	if ( index < 0 || index >= m_CommandContext.Count() )
+	if ( index < 0 || index >= std::ssize( m_CommandContext ) )
 		return nullptr;
 
 	return &m_CommandContext[ index ];
@@ -2934,8 +2932,8 @@ CCommandContext *CBasePlayer::GetCommandContext( int index )
 //-----------------------------------------------------------------------------
 CCommandContext	*CBasePlayer::AllocCommandContext( void )
 {
-	int idx = m_CommandContext.AddToTail();
-	if ( m_CommandContext.Count() > 1000 )
+	int idx = std::ssize( m_CommandContext ); m_CommandContext.emplace_back();
+	if ( std::ssize( m_CommandContext ) > 1000 )
 	{
 		Assert( 0 );
 	}
@@ -2948,7 +2946,7 @@ CCommandContext	*CBasePlayer::AllocCommandContext( void )
 //-----------------------------------------------------------------------------
 void CBasePlayer::RemoveCommandContext( int index )
 {
-	m_CommandContext.Remove( index );
+	m_CommandContext.erase( m_CommandContext.begin() + index );
 }
 
 //-----------------------------------------------------------------------------
@@ -2956,7 +2954,7 @@ void CBasePlayer::RemoveCommandContext( int index )
 //-----------------------------------------------------------------------------
 void CBasePlayer::RemoveAllCommandContexts()
 {
-	m_CommandContext.RemoveAll();
+	m_CommandContext.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -2964,18 +2962,17 @@ void CBasePlayer::RemoveAllCommandContexts()
 //-----------------------------------------------------------------------------
 CCommandContext *CBasePlayer::RemoveAllCommandContextsExceptNewest( void )
 {
-	int count = m_CommandContext.Count();
+	int count = std::ssize( m_CommandContext );
 	int toRemove = count - 1;
 	if ( toRemove > 0 )
 	{
-		m_CommandContext.RemoveMultiple( 0, toRemove );
+		m_CommandContext.erase( m_CommandContext.begin() + 0, m_CommandContext.begin() + 0 + toRemove );
 	}
 
-	if ( !m_CommandContext.Count() )
+	if ( m_CommandContext.empty() )
 	{
 		Assert( 0 );
-		CCommandContext *ctx = AllocCommandContext();
-		Q_memset( ctx, 0, sizeof( *ctx ) );
+		*AllocCommandContext() = CCommandContext();
 	}
 
 	return &m_CommandContext[ 0 ];
@@ -2987,7 +2984,7 @@ CCommandContext *CBasePlayer::RemoveAllCommandContextsExceptNewest( void )
 void CBasePlayer::ReplaceContextCommands( CCommandContext *ctx, CUserCmd *pCommands, int nCommands )
 {
 	// Blow away all of the commands
-	ctx->cmds.RemoveAll();
+	ctx->cmds.clear();
 
 	ctx->numcmds			= nCommands;
 	ctx->totalcmds			= nCommands;
@@ -2996,7 +2993,7 @@ void CBasePlayer::ReplaceContextCommands( CCommandContext *ctx, CUserCmd *pComma
 	// Add them in so the most recent is at slot 0
 	for ( int i = nCommands - 1; i >= 0; --i )
 	{
-		ctx->cmds.AddToTail( pCommands[ i ] );
+		ctx->cmds.push_back( pCommands[ i ] );
 	}
 }
 
@@ -3046,12 +3043,12 @@ void CBasePlayer::AdjustPlayerTimeBase( int simulation_ticks )
 	CPlayerSimInfo *pi = nullptr;
 	if ( sv_playerperfhistorycount.GetInt() > 0 )
 	{
-		while ( m_vecPlayerSimInfo.Count() > sv_playerperfhistorycount.GetInt() )
+		while ( (int)m_vecPlayerSimInfo.size() > sv_playerperfhistorycount.GetInt() )
 		{
-			m_vecPlayerSimInfo.Remove( m_vecPlayerSimInfo.Head() );
+			m_vecPlayerSimInfo.pop_front();
 		}
 
-		pi = &m_vecPlayerSimInfo[ m_vecPlayerSimInfo.AddToTail() ];
+		pi = &m_vecPlayerSimInfo.emplace_back();
 	}
 
 	// Start in the past so that we get to the sv.time that we'll hit at the end of the
@@ -3183,7 +3180,7 @@ void CBasePlayer::PhysicsSimulate( void )
 	
 
 	// Build a list of all available commands
-	CUtlVector< CUserCmd >	vecAvailCommands;
+	std::vector< CUserCmd >	vecAvailCommands;
 
 	// Contexts go from oldest to newest
 	for ( int context_number = 0; context_number < command_context_count; context_number++ )
@@ -3193,7 +3190,7 @@ void CBasePlayer::PhysicsSimulate( void )
 		if ( !ShouldRunCommandsInContext( ctx ) )
 			continue;
 
-		if ( !ctx->cmds.Count() )
+		if ( ctx->cmds.empty() )
 			continue;
 
 		int numbackup = ctx->totalcmds - ctx->numcmds;
@@ -3207,7 +3204,7 @@ void CBasePlayer::PhysicsSimulate( void )
 			while ( droppedcmds > numbackup )
 			{
 				m_LastCmd.tick_count++;
-				vecAvailCommands.AddToTail( m_LastCmd );
+				vecAvailCommands.push_back( m_LastCmd );
 				droppedcmds--;
 			}
 
@@ -3215,7 +3212,7 @@ void CBasePlayer::PhysicsSimulate( void )
 			while ( droppedcmds > 0 )
 			{
 				int cmdnum = ctx->numcmds + droppedcmds - 1;
-				vecAvailCommands.AddToTail( ctx->cmds[cmdnum] );
+				vecAvailCommands.push_back( ctx->cmds[cmdnum] );
 				droppedcmds--;
 			}
 		}
@@ -3223,7 +3220,7 @@ void CBasePlayer::PhysicsSimulate( void )
 		// Now run any new command(s).  Go backward because the most recent command is at index 0.
 		for ( int i = ctx->numcmds - 1; i >= 0; i-- )
 		{
-			vecAvailCommands.AddToTail( ctx->cmds[i] );
+			vecAvailCommands.push_back( ctx->cmds[i] );
 		}
 
 		// Save off the last good command in case we drop > numbackup packets and need to rerun them
@@ -3236,11 +3233,11 @@ void CBasePlayer::PhysicsSimulate( void )
 	// If we're running multiple ticks this frame, don't peel off all of the commands, spread them out over
 	// the server ticks.  Use blocks of two in alternate ticks
 	int commandLimit = CBaseEntity::IsSimulatingOnAlternateTicks() ? 2 : 1;
-	int commandsToRun = vecAvailCommands.Count();
-	if ( gpGlobals->simTicksThisFrame >= commandLimit && vecAvailCommands.Count() > commandLimit )
+	int commandsToRun = std::ssize( vecAvailCommands );
+	if ( gpGlobals->simTicksThisFrame >= commandLimit && std::ssize( vecAvailCommands ) > commandLimit )
 	{
-		int commandsToRollOver = MIN( vecAvailCommands.Count(), ( gpGlobals->simTicksThisFrame - 1 ) );
-		commandsToRun = vecAvailCommands.Count() - commandsToRollOver;
+		int commandsToRollOver = std::min<std::common_type_t<std::common_type_t<long int, long int>, int>>( std::ssize( vecAvailCommands ), ( gpGlobals->simTicksThisFrame - 1 ) );
+		commandsToRun = std::ssize( vecAvailCommands ) - commandsToRollOver;
 		Assert( commandsToRun >= 0 );
 		// Clear all contexts except the last one
 		if ( commandsToRollOver > 0 )
@@ -3313,9 +3310,9 @@ void CBasePlayer::PhysicsSimulate( void )
 
 		// Copy in final origin from simulation
 		CPlayerSimInfo *pi = nullptr;
-		if ( m_vecPlayerSimInfo.Count() > 0 )
+		if ( !m_vecPlayerSimInfo.empty() )
 		{
-			pi = &m_vecPlayerSimInfo[ m_vecPlayerSimInfo.Tail() ];
+			pi = &m_vecPlayerSimInfo.back();
 			pi->m_flTime = gpGlobals->realtime;
 			pi->m_vecAbsOrigin = GetAbsOrigin();
 			pi->m_flGameSimulationTime = gpGlobals->curtime;
@@ -3412,7 +3409,7 @@ void CBasePlayer::ProcessUsercmds( CUserCmd *cmds, int numcmds, int totalcmds,
 	int i;
 	for ( i = totalcmds - 1; i >= 0; i-- )
 	{
-		int iCmdAdded = ctx->cmds.AddToTail( cmds[ totalcmds - 1 - i ] );
+		int iCmdAdded = std::ssize( ctx->cmds ); ctx->cmds.push_back( cmds[ totalcmds - 1 - i ] );
 
 		CUserCmd &cmdFixup = ctx->cmds[ iCmdAdded ];
 		if ( sv_usercmd_custom_random_seed.GetBool() )
@@ -3475,12 +3472,12 @@ void CBasePlayer::ProcessUsercmds( CUserCmd *cmds, int numcmds, int totalcmds,
 		pi.m_nDroppedPackets = dropped_packets;
 		pi.m_nNumCmds = numcmds;
 	
-		while ( m_vecPlayerCmdInfo.Count() >= sv_playerperfhistorycount.GetInt() )
+		while ( (int)m_vecPlayerCmdInfo.size() >= sv_playerperfhistorycount.GetInt() )
 		{
-			m_vecPlayerCmdInfo.Remove( m_vecPlayerCmdInfo.Head() );
+			m_vecPlayerCmdInfo.pop_front();
 		}
 
-		m_vecPlayerCmdInfo.AddToTail( pi );
+		m_vecPlayerCmdInfo.push_back( pi );
 	}
 }
 
@@ -3496,9 +3493,9 @@ void CBasePlayer::DumpPerfToRecipient( CBasePlayer *pRecipient, int nMaxRecords 
 	Vector prevo( 0, 0, 0 );
 	float prevt = 0.0f;
 
-	for ( int i = m_vecPlayerSimInfo.Tail(); i != m_vecPlayerSimInfo.InvalidIndex() ; i = m_vecPlayerSimInfo.Previous( i ) )
+	for ( auto it = m_vecPlayerSimInfo.rbegin(); it != m_vecPlayerSimInfo.rend(); ++it )
 	{
-		const CPlayerSimInfo *pi = &m_vecPlayerSimInfo[ i ];
+		const CPlayerSimInfo *pi = &*it;
 
 		float vel = 0.0f;
 
@@ -3546,9 +3543,9 @@ void CBasePlayer::DumpPerfToRecipient( CBasePlayer *pRecipient, int nMaxRecords 
 	nDumped = 0;
 	curpos = 0;
 
-	for ( int i = m_vecPlayerCmdInfo.Tail(); i != m_vecPlayerCmdInfo.InvalidIndex() ; i = m_vecPlayerCmdInfo.Previous( i ) )
+	for ( auto it = m_vecPlayerCmdInfo.rbegin(); it != m_vecPlayerCmdInfo.rend(); ++it )
 	{
-		const CPlayerCmdInfo *pi = &m_vecPlayerCmdInfo[ i ];
+		const CPlayerCmdInfo *pi = &*it;
 
 		char line[ 128 ];
 		int len = Q_snprintf( line, sizeof( line ), "%.3f %d %d\n",
@@ -3958,7 +3955,7 @@ void CBasePlayer::CheckTimeBasedDamage()
 				// after the player has been drowning and finally takes a breath
 				if (m_idrowndmg > m_idrownrestored)
 				{
-					int idif = MIN(m_idrowndmg - m_idrownrestored, 10);
+					int idif = std::min(m_idrowndmg - m_idrownrestored, 10);
 
 					TakeHealth(idif, DMG_GENERIC);
 					m_idrownrestored += idif;
@@ -3972,7 +3969,7 @@ void CBasePlayer::CheckTimeBasedDamage()
 				// after the player has been poisoned.
 				if (m_nPoisonDmg > m_nPoisonRestored)
 				{
-					int nDif = MIN(m_nPoisonDmg - m_nPoisonRestored, 10);
+					int nDif = std::min(m_nPoisonDmg - m_nPoisonRestored, 10);
 					TakeHealth(nDif, DMG_GENERIC);
 					m_nPoisonRestored += nDif;
 				}
@@ -4431,15 +4428,15 @@ void CBasePlayer::ForceOrigin( const Vector &vecOrigin )
 //--------------------------------------------------------------------------------------------------------
 void CBasePlayer::OnTonemapTriggerStartTouch( CTonemapTrigger *pTonemapTrigger )
 {
-	m_hTriggerTonemapList.FindAndRemove( pTonemapTrigger );
-	m_hTriggerTonemapList.AddToTail( pTonemapTrigger );
+	ks::erase_first( m_hTriggerTonemapList, pTonemapTrigger );
+	m_hTriggerTonemapList.push_back( pTonemapTrigger );
 }
 
 
 //--------------------------------------------------------------------------------------------------------
 void CBasePlayer::OnTonemapTriggerEndTouch( CTonemapTrigger *pTonemapTrigger )
 {
-	m_hTriggerTonemapList.FindAndRemove( pTonemapTrigger );
+	ks::erase_first( m_hTriggerTonemapList, pTonemapTrigger );
 }
 
 
@@ -6402,7 +6399,7 @@ bool CBasePlayer::ClientCommand( const CCommand &args )
 		int nRecords = -1; // all
 		if ( args.ArgC() >= 3 )
 		{
-			nRecords = MAX( Q_atoi( args.Arg( 2 ) ), 1 );
+			nRecords = std::max( Q_atoi( args.Arg( 2 ) ), 1 );
 		}
 
 		CBasePlayer *pl = UTIL_PlayerByIndex( nRecip );
@@ -8965,7 +8962,7 @@ public:
 private:
 
 	// Per messagename bit vector of which player's have seen the message
-	CUtlDict< CPlayerBitVec, int > m_SentMessage;
+	ks::idict< CPlayerBitVec > m_SentMessage;
 };
 
 static CUserMessageThrottleMgr g_ThrottleMgr;
@@ -8976,24 +8973,23 @@ CUserMessageThrottleMgr::CUserMessageThrottleMgr()
 
 void CUserMessageThrottleMgr::Start( char const *pchMessageNames[], int nNumMessageNames )
 {
-	m_SentMessage.Purge();
+	m_SentMessage.clear();
 	for ( int i = 0; i < nNumMessageNames; ++i )
 	{
-		int idx = m_SentMessage.Insert( pchMessageNames[ i ] );
-		m_SentMessage[ idx ].ClearAll();
+		m_SentMessage[ pchMessageNames[ i ] ].reset();
 	}
 }
 
 void CUserMessageThrottleMgr::Finish()
 {
-	m_SentMessage.RemoveAll();
+	m_SentMessage.clear();
 }
 
 bool CUserMessageThrottleMgr::ShouldThrottle( CBasePlayer *pPlayer, char const *pchMessageName )
 {
 
-	int idx = m_SentMessage.Find( pchMessageName );
-	if ( idx == m_SentMessage.InvalidIndex() )
+	CPlayerBitVec *pData = ks::find_ptr( m_SentMessage, pchMessageName );
+	if ( !pData )
 	{
 		// Not in list.
 		return false;
@@ -9002,11 +8998,11 @@ bool CUserMessageThrottleMgr::ShouldThrottle( CBasePlayer *pPlayer, char const *
 	int nPlayerIndex = pPlayer->entindex();
 	nPlayerIndex--;
 
-	CPlayerBitVec &data = m_SentMessage[ idx ];
-	if ( data.IsBitSet( nPlayerIndex ) )
+	CPlayerBitVec &data = *pData;
+	if ( data[ nPlayerIndex ] )
 		return true;
 
-	data.Set( nPlayerIndex );
+	data.set( nPlayerIndex );
 	return false;
 }
 
@@ -9104,7 +9100,7 @@ void CBasePlayer::UpdateFXVolume( void )
 			pColorCorrectionEnt = ColorCorrectionSystem()->GetMasterColorCorrection();
 		}
 	}
-	else if ( TheFogVolumes.Count() > 0 )
+	else if ( !TheFogVolumes.empty() )
 	{
 		// If we're not in a fog volume, clear our fog volume, if the map has any.
 		// This will get us back to using the master fog controller.

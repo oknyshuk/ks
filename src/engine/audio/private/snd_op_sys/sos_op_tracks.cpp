@@ -13,9 +13,6 @@
 
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 
 extern Color OpColor;
@@ -63,12 +60,12 @@ void CSosOperatorGetTrackSyncPoint::SetDefaults( void *pVoidMem ) const
 	pStructMem->m_bSubtractFirstSyncFromLastSync = true;
 }
 
-static int __cdecl ChannelLongestElapsedTimeSortFunc( const int *nChannelIndexA, const int *nChannelIndexB )
+static int ChannelLongestElapsedTimeSortFunc( const int *nChannelIndexA, const int *nChannelIndexB )
 {
 	return ( S_GetElapsedTimeByGuid( channels[ *nChannelIndexA ].guid ) > S_GetElapsedTimeByGuid( channels[ *nChannelIndexB ].guid ) );
 }
 
-// static int __cdecl ChannelLeastVolumeSortFunc( const int *nChannelIndexA, const int *nChannelIndexB )
+// static int ChannelLeastVolumeSortFunc( const int *nChannelIndexA, const int *nChannelIndexB )
 // {
 // 	return ( S_GetElapsedTimeByGuid( channels[ *nChannelIndexA ]. ) < S_GetElapsedTimeByGuid( channels[ *nChannelIndexB ].guid ) );
 // }
@@ -157,12 +154,12 @@ void CSosOperatorGetTrackSyncPoint::Execute( void *pVoidMem, channel_t *pChannel
 	}
 
 
-	CUtlVector< float > vSyncPoints;
+	std::vector< float > vSyncPoints;
 	if( pSyncPointList )
 	{
 		for ( KeyValues *pValue = pSyncPointList->GetFirstValue(); pValue; pValue = pValue->GetNextValue() )
 		{
-			vSyncPoints.AddToTail( pValue->GetFloat() );
+			vSyncPoints.push_back( pValue->GetFloat() );
 		}
 	}
 	else
@@ -172,7 +169,7 @@ void CSosOperatorGetTrackSyncPoint::Execute( void *pVoidMem, channel_t *pChannel
 	}
 
 	float fMinTimeToSyncPoint = pStructMem->m_flInputMaxTimeToNextSync[0];
-	for( int i = 0; i < vSyncPoints.Count(); i++ )
+	for( int i = 0; i < std::ssize( vSyncPoints ); i++ )
 	{
 		float fDiff = vSyncPoints[i] - fElapsedTime;
 		if( fDiff > 0 && fDiff < fMinTimeToSyncPoint && fDiff > pStructMem->m_flInputMinTimeToNextSync[0] )
@@ -185,7 +182,7 @@ void CSosOperatorGetTrackSyncPoint::Execute( void *pVoidMem, channel_t *pChannel
 	pStructMem->m_flOutputTimeToNextSync[0] = fMinTimeToSyncPoint;
 
 	float fLastSyncPoint = 0.0;
-	int nIndexToLastSyncPoint = vSyncPoints.Count() > 0 ? vSyncPoints.Count() - 1 : -1;
+	int nIndexToLastSyncPoint = !vSyncPoints.empty() ? std::ssize( vSyncPoints ) - 1 : -1;
 	if( nIndexToLastSyncPoint >= 0 )
 	{
 		fLastSyncPoint = vSyncPoints[ nIndexToLastSyncPoint ] - ( pStructMem->m_bSubtractMinTimeToSyncFromLastSync ? pStructMem->m_flInputMinTimeToNextSync[0] : 0.0 );
@@ -195,7 +192,7 @@ void CSosOperatorGetTrackSyncPoint::Execute( void *pVoidMem, channel_t *pChannel
 	pStructMem->m_flOutputLastSyncPoint[0] = fLastSyncPoint;
 
 
-	if( vSyncPoints.Count() > 0 )
+	if( !vSyncPoints.empty() )
 	{
 		pStructMem->m_flOutputFirstSyncPoint[0] = vSyncPoints[0];
 	}
@@ -354,10 +351,9 @@ void CSosOperatorQueueToTrack::Execute( void *pVoidMem, channel_t *pChannel, CSc
 
 
 	channel_t *pCurrentChannelOnThisTrack = nullptr;
-	int nThisTrackIndex = g_pSoundOperatorSystem->m_vTrackDict.Find( trackData.m_pTrackName );
-	if( g_pSoundOperatorSystem->m_vTrackDict.IsValidIndex( nThisTrackIndex ) )
+	if( channel_t **ppChannel = ks::find_ptr( g_pSoundOperatorSystem->m_vTrackDict, ks::nz( trackData.m_pTrackName ) ) )
 	{
-		pCurrentChannelOnThisTrack = g_pSoundOperatorSystem->m_vTrackDict[nThisTrackIndex];
+		pCurrentChannelOnThisTrack = *ppChannel;
 
 		if( pCurrentChannelOnThisTrack && pCurrentChannelOnThisTrack->m_nSoundScriptHash != SOUNDEMITTER_INVALID_HASH )
 		{
@@ -385,10 +381,9 @@ void CSosOperatorQueueToTrack::Execute( void *pVoidMem, channel_t *pChannel, CSc
 	// if there's nothing playing on the sync track do we just play? 
 	// currently YES
 	channel_t *pCurrentChannelOnSyncTrack = nullptr;
-	int nTrackIndex = g_pSoundOperatorSystem->m_vTrackDict.Find( trackData.m_pSyncTrackName );
-	if( g_pSoundOperatorSystem->m_vTrackDict.IsValidIndex( nTrackIndex ) )
+	if( channel_t **ppChannel = ks::find_ptr( g_pSoundOperatorSystem->m_vTrackDict, ks::nz( trackData.m_pSyncTrackName ) ) )
 	{
-		pCurrentChannelOnSyncTrack = g_pSoundOperatorSystem->m_vTrackDict[nTrackIndex];
+		pCurrentChannelOnSyncTrack = *ppChannel;
 	
 		if( pCurrentChannelOnSyncTrack && pCurrentChannelOnSyncTrack->m_nSoundScriptHash != SOUNDEMITTER_INVALID_HASH )
 		{
@@ -409,12 +404,12 @@ void CSosOperatorQueueToTrack::Execute( void *pVoidMem, channel_t *pChannel, CSc
 				pSyncPointList = pStack->GetSyncPointsKV( pOperatorKV, pStructMem->m_nSyncPointListName );
 
 				// collect up sync points
-				CUtlVector< float > vSyncPoints;
+				std::vector< float > vSyncPoints;
 				if( pSyncPointList )
 				{
 					for ( KeyValues *pValue = pSyncPointList->GetFirstValue(); pValue; pValue = pValue->GetNextValue() )
 					{
-						vSyncPoints.AddToTail( pValue->GetFloat() );
+						vSyncPoints.push_back( pValue->GetFloat() );
 					}
 				}
 				else
@@ -425,7 +420,7 @@ void CSosOperatorQueueToTrack::Execute( void *pVoidMem, channel_t *pChannel, CSc
 
 				flMinTimeToSyncPoint = fDuration;
 				bool bFoundSyncPoint = false;
-				for( int i = 0; i < vSyncPoints.Count(); i++ )
+				for( int i = 0; i < std::ssize( vSyncPoints ); i++ )
 				{
 					float fDiff = vSyncPoints[i] - fElapsedTime;
 					if( fDiff > 0 && fDiff < flMinTimeToSyncPoint && fDiff > trackData.m_flStartPoint )

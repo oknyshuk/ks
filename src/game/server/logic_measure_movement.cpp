@@ -10,9 +10,6 @@
 #include "reflect_annotations.h"
 #include "baseentity.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // This will measure the movement of a target entity and move
 // another entity to match the movement of the first.

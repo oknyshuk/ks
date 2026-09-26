@@ -29,9 +29,6 @@
 #include "netconsole.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern IVEngineClient *engineClient;
 
 #if SUPPORT_NET_CONSOLE
@@ -177,7 +174,7 @@ void CNetConsoleMgr::RunFrame( void )
 		while( readLen > 0  )
 		{
 			char recvBuf[256];
-			int recvLen = recv( hSocket, recvBuf , MIN( sizeof( recvBuf ) , readLen ), 0 );
+			int recvLen = recv( hSocket, recvBuf , std::min( sizeof( recvBuf ) , readLen ), 0 );
 			if ( recvLen == 0 ) // socket was closed
 			{
 				CloseConnection( i );

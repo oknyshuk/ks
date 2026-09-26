@@ -11,9 +11,6 @@
 #include "baseanimating.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 class [[= ks::reflect::NetTable{ .name = "DT_Prop_Hallucination" } ]]
       CProp_Hallucination : public CBaseAnimating

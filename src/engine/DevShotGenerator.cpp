@@ -11,9 +11,6 @@
 #include "tier0/icommandline.h"
 #include <tier0/dbg.h>
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define PAUSE_FRAMES_BETWEEN_MAPS	300
 #define PAUSE_TIME_BETWEEN_MAPS		2.0f
 
@@ -102,7 +99,7 @@ void CDevShotGenerator::NextMap()
 
 	//Msg("DEVSHOTS: Nextmap command received.\n");
 
-	if (m_Maps.IsValidIndex(m_iCurrentMap))
+	if (ks::is_valid_index( m_Maps, m_iCurrentMap ))
 	{
 		//Msg("DEVSHOTS: Switching to %s (%d).\n", m_Maps[m_iCurrentMap].name, m_iCurrentMap );
 		CFmtStr str("map %s\n", m_Maps[m_iCurrentMap].name);

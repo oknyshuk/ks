@@ -25,12 +25,13 @@
 
 
 #include "tier0/threadtools.h"
+#include <mutex>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <malloc.h>
 #include <string.h>
-#include "tier1/utldict.h"
+#include "tier1/map_ops.h"
 
 #ifdef SUPPORT_VPK
 #include "vpklib/packedstore.h"
@@ -39,22 +40,24 @@
 #include "refcount.h"
 #include "filesystem.h"
 #include "tier1/utlvector.h"
-#include "tier1/UtlStringMap.h"
 #include <stdarg.h>
-#include "tier1/utlrbtree.h"
-#include "tier1/utlsymbol.h"
-#include "tier1/utllinkedlist.h"
+#include "tier1/filename_table.h"
+#include "tier1/intern_pool.h"
+#include "tier1/string_ops.h"
+#include "tier1/slot_pool.h"
 #include "tier1/utlstring.h"
-#include "tier1/utlsortvector.h"
+#include <flat_set>
+#include <optional>
+#include <span>
+#include <vector>
 #include "bspfile.h"
-#include "tier1/utldict.h"
 #include "tier1/tier1.h"
 #include "threadsaferefcountedobject.h"
 #include "filetracker.h"
+#include <utility>
 
 
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 #define CORRECT_PATH_SEPARATOR '/'
 #define INCORRECT_PATH_SEPARATOR '\\'
 
@@ -64,7 +67,9 @@
 
 #define SUPPORT_IODELAY_MONITORING
 
-extern CUtlSymbolTableMT g_PathIDTable;
+// Case-insensitive pool of paths and path IDs. Views from it compare by data(); a null data() is "none".
+extern ks::intern_pool_mt g_PathIDTable;
+inline std::string_view PathIDSymbol( const char *p ) { return p ? g_PathIDTable.intern( p ) : std::string_view(); }
 
 struct DLCCorrupt_t
 {
@@ -81,10 +86,9 @@ struct DLCContent_t
 	bool			m_bCorrupt;
 };
 
-class CDLCLess
+struct CDLCLess
 {
-public:
-	bool Less( const DLCContent_t& lhs, const DLCContent_t& rhs, void *pContext )
+	bool operator()( const DLCContent_t& lhs, const DLCContent_t& rhs ) const
 	{
 		return ( ( lhs.m_LicenseMask & 0xFFFF0000 ) < ( rhs.m_LicenseMask & 0xFFFF0000 ) );
 	}
@@ -246,17 +250,17 @@ public:
 	// is segmented into pack files that aggregate files
 	// meant to be read in one thread. Performance characteristics
 	// tuned for that case
-	CThreadFastMutex	m_mutex;
+	std::recursive_mutex	m_mutex;
 
 	// Path management:
-	void SetPath( const CUtlSymbol &path ) { m_Path = path; }
-	const CUtlSymbol& GetPath() const	{ Assert( m_Path != UTL_INVAL_SYMBOL ); return m_Path; }
-	CUtlSymbol			m_Path;
+	void SetPath( std::string_view path ) { m_Path = path; }
+	std::string_view GetPath() const	{ Assert( m_Path.data() ); return m_Path; }
+	std::string_view	m_Path;
 
 	// possibly embedded pack
 	int64				m_nBaseOffset;
 
-	CUtlString			m_ZipName;
+	std::string			m_ZipName;
 
 	bool				m_bIsMapPath;
 	long				m_lPackFileTime;
@@ -334,17 +338,12 @@ protected:
 		FileNameHandle_t	m_hDebugFilename;
 	};
 
-	class CPackFileLessFunc
-	{
-	public:
-		bool Less( CPackFileEntry const& src1, CPackFileEntry const& src2, void *pCtx );
-	};
-
 	// Find a file inside a pack file:
 	const CPackFileEntry* FindFile( const char* pFileName );
 
-	// Entries to the individual files stored inside the pack file.
-	CUtlSortVector< CPackFileEntry, CPackFileLessFunc > m_PackFiles;
+	// Entries to the individual files stored inside the pack file, sorted by m_HashName.
+	// Positions are the entry indices handed out by FindFile.
+	std::vector< CPackFileEntry > m_PackFiles;
 
 	bool						GetOffsetAndLength( const char *FileName, int &nBaseIndex, int64 &nFileOffset, int &nLength );
 
@@ -361,7 +360,7 @@ protected:
 	void*						m_pPreloadData;
 
 	CRC32_t						m_KVPoolKey;
-	CUtlFilenameSymbolTable		m_KVStringPool;
+	ks::filename_table			m_KVStringPool;
 
 	void						*m_pSection;
 };
@@ -430,17 +429,17 @@ public:
 	virtual char				*ReadLine( char *pOutput, int maxChars, FileHandle_t file );
 	virtual int					FPrintf( FileHandle_t file, PRINTF_FORMAT_STRING const char *pFormat, ... ) FMTFUNCTION( 3, 4 );
 
-	// Reads/writes files to utlbuffers
-	virtual bool				ReadFile( const char *pFileName, const char *pPath, CUtlBuffer &buf, int nMaxBytes, int nStartingByte, FSAllocFunc_t pfnAlloc = nullptr );
-	virtual bool				WriteFile( const char *pFileName, const char *pPath, CUtlBuffer &buf );
+	// Reads/writes whole files
+	virtual std::optional< std::vector< std::byte > >	ReadFile( const char *pFileName, const char *pPath, int nMaxBytes = 0, int nStartingByte = 0 );
+	virtual bool				WriteFile( const char *pFileName, const char *pPath, std::span< const std::byte > data );
 	virtual bool				UnzipFile( const char *pFileName, const char *pPath, const char *pDestination );
 	virtual int					ReadFileEx( const char *pFileName, const char *pPath, void **ppBuf, bool bNullTerminate, bool bOptimalAlloc, int nMaxBytes = 0, int nStartingByte = 0, FSAllocFunc_t pfnAlloc = nullptr );
-	virtual bool				ReadToBuffer( FileHandle_t hFile, CUtlBuffer &buf, int nMaxBytes = 0, FSAllocFunc_t pfnAlloc = nullptr );
+	virtual std::optional< std::vector< std::byte > >	ReadToVector( FileHandle_t hFile, int nMaxBytes = 0 );
 
 	// Optimal buffer
 	bool						GetOptimalIOConstraints( FileHandle_t hFile, unsigned *pOffsetAlign, unsigned *pSizeAlign, unsigned *pBufferAlign );
-	void						*AllocOptimalReadBuffer( FileHandle_t hFile, unsigned nSize, unsigned nOffset )	{ return malloc( nSize ); }
-	void						FreeOptimalReadBuffer( void *p ) { free( p ); }
+	void						*AllocOptimalReadBuffer( FileHandle_t hFile, unsigned nSize, unsigned nOffset )	{ return MemAlloc_Alloc( nSize ); }
+	void						FreeOptimalReadBuffer( void *p ) { g_pMemAlloc->Free( p ); }
 
 	// Gets the current working directory
 	virtual bool				GetCurrentDirectory( char* pDirectory, int maxlen );
@@ -487,7 +486,7 @@ public:
 	virtual bool				FindIsDirectory( FileFindHandle_t handle );
 	virtual void				FindClose( FileFindHandle_t handle );
 
-	virtual void				FindFileAbsoluteList( CUtlVector< CUtlString > &outAbsolutePathNames, const char *pWildCard, const char *pPathID );
+	virtual void				FindFileAbsoluteList( std::vector< std::string > &outAbsolutePathNames, const char *pWildCard, const char *pPathID );
 
 	virtual void				PrintOpenedFiles( void );
 	virtual void				SetWarningFunc( void (*pfnWarning)( const char *fmt, ... ) );
@@ -509,7 +508,7 @@ public:
 	virtual void				RegisterFileWhitelist( IFileList *pWantCRCList, IFileList *pAllowFromDiskList, IFileList **pFilesToReload );
 	virtual	void				MarkAllCRCsUnverified();
 	virtual void				CacheFileCRCs( const char *pPathname, ECacheCRCType eType, IFileList *pFilter );
-	void						CacheFileCRCs_R( const char *pPathname, ECacheCRCType eType, IFileList *pFilter, CUtlDict<int,int> &searchPathNames );
+	void						CacheFileCRCs_R( const char *pPathname, ECacheCRCType eType, IFileList *pFilter, std::set< std::string, ks::iless > &searchPathNames );
 	virtual EFileCRCStatus		CheckCachedFileHash( const char *pPathID, const char *pRelativeFilename, int nFileFraction, FileHash_t *pFileHash );
 	virtual int					GetUnverifiedFileHashes( CUnverifiedFileHash *pFiles, int nMaxFiles );
 	virtual int					GetWhitelistSpewFlags();
@@ -543,7 +542,6 @@ public:
 	virtual FSAsyncStatus_t		AsyncFlush();
 	virtual FSAsyncStatus_t		AsyncAppend(const char *pFileName, const void *pSrc, int nSrcBytes, bool bFreeMemory, FSAsyncControl_t *pControl) { return AsyncWrite( pFileName, pSrc, nSrcBytes, bFreeMemory, true, pControl); }
 	virtual FSAsyncStatus_t		AsyncWrite(const char *pFileName, const void *pSrc, int nSrcBytes, bool bFreeMemory, bool bAppend, FSAsyncControl_t *pControl);
-	virtual FSAsyncStatus_t		AsyncWriteFile(const char *pFileName, const CUtlBuffer *pSrc, int nSrcBytes, bool bFreeMemory, bool bAppend, FSAsyncControl_t *pControl);
 	virtual FSAsyncStatus_t		AsyncAppendFile(const char *pDestFileName, const char *pSrcFileName, FSAsyncControl_t *pControl);
 	virtual void				AsyncFinishAll( int iToPriority = INT_MIN );
 	virtual void				AsyncFinishAllWrites();
@@ -608,7 +606,7 @@ public:
 
 	virtual void AddVPKFile( char const *pszName, SearchPathAdd_t addType = PATH_ADD_TO_TAIL );
 	virtual void RemoveVPKFile( char const *pszName );
-	virtual void GetVPKFileNames( CUtlVector<CUtlString> &destVector );
+	virtual void GetVPKFileNames( std::vector< std::string > &destVector );
 
 	virtual void				RemoveAllMapSearchPaths( void );
 
@@ -637,16 +635,16 @@ public:
 	class CPathIDInfo
 	{
 	public:
-		const CUtlSymbol& GetPathID() const;
+		std::string_view GetPathID() const;
 		const char* GetPathIDString() const;
-		void SetPathID( CUtlSymbol id );
+		void SetPathID( std::string_view id );
 
 	public:
 		// See MarkPathIDByRequestOnly.
 		bool m_bByRequestOnly;
 
 	private:
-		CUtlSymbol m_PathID;
+		std::string_view m_PathID;
 		const char *m_pDebugPathID;
 	};
 
@@ -656,22 +654,38 @@ public:
 
 	class CSearchPath
 	{
+		// One counted reference to a pack file: copies AddRef, moves transfer.
+		class CPackFileRef
+		{
+		public:
+			CPackFileRef() = default;
+			CPackFileRef( const CPackFileRef &src ) : m_p( src.m_p ) { if ( m_p ) m_p->AddRef(); }
+			CPackFileRef( CPackFileRef &&src ) noexcept : m_p( std::exchange( src.m_p, nullptr ) ) {}
+			CPackFileRef &operator=( CPackFileRef src ) noexcept { std::swap( m_p, src.m_p ); return *this; }
+			~CPackFileRef() { if ( m_p ) m_p->Release(); }
+
+			void Adopt( CPackFile *p ) { *this = CPackFileRef(); m_p = p; }	// takes over the caller's reference
+			CPackFile *Get() const { return m_p; }
+
+		private:
+			CPackFile *m_p = nullptr;
+		};
+
 	public:
 							CSearchPath( void );
-							~CSearchPath( void );
 
 		const char* GetPathString() const;
 		
 		// Path ID ("game", "mod", "gamebin") accessors.
-		const CUtlSymbol& GetPathID() const;
+		std::string_view GetPathID() const;
 		const char* GetPathIDString() const;
 
 		// Search path (c:\hl2\hl2) accessors.
-		void SetPath( CUtlSymbol id );
-		const CUtlSymbol& GetPath() const;
+		void SetPath( std::string_view id );
+		std::string_view GetPath() const;
 
-		void SetPackFile(CPackFile *pPackFile) { m_pPackFile = pPackFile; }
-		CPackFile *GetPackFile() const { return m_pPackFile; }
+		void SetPackFile(CPackFile *pPackFile) { m_pPackFile.Adopt( pPackFile ); }
+		CPackFile *GetPackFile() const { return m_pPackFile.Get(); }
 
 		int					m_storeId;
 
@@ -681,9 +695,9 @@ public:
 		bool				m_bIsDvdDevPath;
 
 	private:
-		CUtlSymbol			m_Path;
+		std::string_view	m_Path;
 		const char			*m_pDebugPath;
-		CPackFile			*m_pPackFile;
+		CPackFileRef		m_pPackFile;
 	public:
 		bool				m_bIsLocalizedPath;
 	};
@@ -695,22 +709,22 @@ public:
 	public:
 		void Reset()
 		{
-			m_Visits.RemoveAll();
+			m_Visits.clear();
 		}
 
 		bool MarkVisit( const CSearchPath &searchPath )
 		{
-			if ( m_Visits.Find( searchPath.m_storeId ) == m_Visits.InvalidIndex() )
+			if ( ks::find_index( m_Visits, searchPath.m_storeId ) == -1 )
 			{
 				MEM_ALLOC_CREDIT();
-				m_Visits.AddToTail( searchPath.m_storeId );
+				m_Visits.push_back( searchPath.m_storeId );
 				return false;
 			}
 			return true;
 		}
 
 	private:
-		CUtlVector<int> m_Visits;	// This is a copy of IDs for the search paths we've visited, so 
+		std::vector< int > m_Visits;	// This is a copy of IDs for the search paths we've visited, so 
 	};
 
 	class CSearchPathsIterator
@@ -729,19 +743,15 @@ public:
 			}
 			if ( pszPathID )
 			{
-				m_pathID = g_PathIDTable.AddString( pszPathID );
-			}
-			else
-			{
-				m_pathID = UTL_INVAL_SYMBOL;
+				m_pathID = PathIDSymbol( pszPathID );
 			}
 
 			if ( *ppszFilename && !Q_IsAbsolutePath( *ppszFilename ) )
 			{
 				// Copy paths to minimize mutex lock time
-				pFileSystem->m_SearchPathsMutex.Lock();
+				pFileSystem->m_SearchPathsMutex.lock();
 				CopySearchPaths( pFileSystem->m_SearchPaths );
-				pFileSystem->m_SearchPathsMutex.Unlock();
+				pFileSystem->m_SearchPathsMutex.unlock();
 				V_strncpy( m_Filename, *ppszFilename, sizeof( m_Filename ) );
 				V_FixSlashes( m_Filename );
 			}
@@ -764,16 +774,12 @@ public:
 		{
 			if ( pszPathID ) 
 			{
-				m_pathID =  g_PathIDTable.AddString( pszPathID );
-			}
-			else
-			{
-				m_pathID =  UTL_INVAL_SYMBOL;
+				m_pathID =  PathIDSymbol( pszPathID );
 			}
 			// Copy paths to minimize mutex lock time
-			pFileSystem->m_SearchPathsMutex.Lock();
+			pFileSystem->m_SearchPathsMutex.lock();
 			CopySearchPaths( pFileSystem->m_SearchPaths );
-			pFileSystem->m_SearchPathsMutex.Unlock();
+			pFileSystem->m_SearchPathsMutex.unlock();
 			m_Filename[0] = '\0';
 		}
 
@@ -783,21 +789,14 @@ public:
 	private:
 		CSearchPathsIterator( const  CSearchPathsIterator & );
 		void operator=(const CSearchPathsIterator &);
-		void CopySearchPaths( const CUtlVector<CSearchPath>	&searchPaths )
+		void CopySearchPaths( const std::vector< CSearchPath >	&searchPaths )
 		{
-			m_SearchPaths = searchPaths;
-			for ( int i = 0; i <  m_SearchPaths.Count(); i++ )
-			{
-				if ( m_SearchPaths[i].GetPackFile() )
-				{
-					m_SearchPaths[i].GetPackFile()->AddRef();
-				}
-			}
+			m_SearchPaths = searchPaths;	// each copy AddRefs its pack file
 		}
 
 		int							m_iCurrent;
-		CUtlSymbol					m_pathID;
-		CUtlVector<CSearchPath> 	m_SearchPaths;
+		std::string_view			m_pathID;
+		std::vector< CSearchPath > 	m_SearchPaths;
 		CSearchPathsVisits			m_visits;
 		CSearchPath					m_EmptySearchPath;
 		CPathIDInfo					m_EmptyPathIDInfo;
@@ -812,18 +811,18 @@ public:
 	{
 		WIN32_FIND_DATA		findData;
 		int					currentSearchPathID;
-		CUtlVector<char>	wildCardString;
+		std::vector< char >	wildCardString;
 		HANDLE				findHandle;
 		CSearchPathsVisits	m_VisitedSearchPaths;	// This is a copy of IDs for the search paths we've visited, so avoids searching duplicate paths.
 		int					m_CurrentStoreID;		// CSearchPath::m_storeId of the current search path.
 		
-		CUtlSymbol			m_FilterPathID;			// What path ID are we looking at? Ignore all others. (Only set by FindFirstEx).
+		std::string_view	m_FilterPathID;			// What path ID are we looking at? Ignore all others. (Only set by FindFirstEx).
 		
-		CUtlDict<int,int>	m_VisitedFiles;			// We go through the search paths in priority order, and we use this to make sure
+		std::set< std::string, ks::iless >	m_VisitedFiles;			// We go through the search paths in priority order, and we use this to make sure
 													// that we don't return the same file more than once.
 #ifdef SUPPORT_VPK
-		CUtlStringList		m_fileMatchesFromVPK;
-		CUtlStringList		m_dirMatchesFromVPK;
+		std::vector< std::string >		m_fileMatchesFromVPK;
+		std::vector< std::string >		m_dirMatchesFromVPK;
 #endif
 	};
 
@@ -833,20 +832,20 @@ public:
 	int					m_WhitelistSpewFlags; // Combination of WHITELIST_SPEW_ flags.
 
 	// logging functions
-	CUtlVector< FileSystemLoggingFunc_t > m_LogFuncs;
+	std::vector< FileSystemLoggingFunc_t > m_LogFuncs;
 
-	CThreadMutex m_SearchPathsMutex;
-	CUtlVector< CSearchPath > m_SearchPaths;
-	CUtlVector<CPathIDInfo*> m_PathIDInfos;
-	CUtlLinkedList<FindData_t> m_FindData;
+	std::recursive_mutex m_SearchPathsMutex;
+	std::vector< CSearchPath > m_SearchPaths;
+	std::vector< std::unique_ptr< CPathIDInfo > > m_PathIDInfos;
+	ks::slot_pool< FindData_t, FileFindHandle_t > m_FindData;
 
-	CUtlVector<CFileHandleTimer*> m_FileHandleTimers;				// Used to debug approximate times for each file read
-	CThreadFastMutex m_FileHandleTimersMutex;
+	std::vector< CFileHandleTimer* > m_FileHandleTimers;				// Used to debug approximate times for each file read
+	std::recursive_mutex m_FileHandleTimersMutex;
 
 	int m_iMapLoad;
 
 	// Global list of pack file handles
-	CUtlVector<CPackFile *> m_ZipFiles;
+	std::vector< CPackFile * > m_ZipFiles;
 
 	FILE *m_pLogFile;
 	bool m_bOutputDebugString;
@@ -918,7 +917,7 @@ protected:
 	void BlockingFileAccess_EnterCriticalSection();
 	void BlockingFileAccess_LeaveCriticalSection();
 
-	CThreadMutex m_BlockingFileMutex;
+	std::recursive_mutex m_BlockingFileMutex;
 
 #endif
 
@@ -934,29 +933,21 @@ protected:
 	class COpenedFile
 	{
 	public:
-					COpenedFile( void );
-					~COpenedFile( void );
+		bool operator==( const COpenedFile& src ) const { return src.m_pFile == m_pFile; }
 
-					COpenedFile( const COpenedFile& src );
+		void		SetName( char const *name ) { m_Name = name; }
+		char const	*GetName( void ) const { return m_Name.empty() ? "???" : m_Name.c_str(); }
 
-		bool operator==( const COpenedFile& src ) const;
-
-		void		SetName( char const *name );
-		char const	*GetName( void );
-
-		FILE		*m_pFile;
-		char		*m_pName;
+		FILE		*m_pFile = nullptr;
+		std::string	m_Name;
 	};
 
-	//CUtlRBTree< COpenedFile, int > m_OpenedFiles;
-	CThreadMutex m_OpenedFilesMutex;
-	CUtlVector <COpenedFile>	m_OpenedFiles;
-	CUtlStringMap< bool >		m_NonexistingFilesExtensions;
+	std::recursive_mutex m_OpenedFilesMutex;
+	std::vector< COpenedFile >	m_OpenedFiles;
+	ks::idict< bool >			m_NonexistingFilesExtensions;
 #ifdef NONEXISTING_FILES_CACHE_SUPPORT
-	CUtlStringMap< double >		m_NonexistingFilesCache;
+	ks::idict< double >			m_NonexistingFilesCache;
 #endif
-
-	static bool OpenedFileLessFunc( COpenedFile const& src1, COpenedFile const& src2 );
 
 	FileWarningLevel_t			m_fwLevel;
 	void						(*m_pfnWarning)( const char *fmt, ... );
@@ -977,10 +968,10 @@ protected:
 	const char*					FindFirstHelper( const char *pWildCard, const char *pPathID, FileFindHandle_t *pHandle, int *pFoundStoreID );
 	bool						FindNextFileHelper( FindData_t *pFindData, int *pFoundStoreID );
 
-	void 						FindFileAbsoluteListHelper( CUtlVector< CUtlString > &outAbsolutePathNames, FindData_t &findData, const char *pAbsoluteFindName );
+	void 						FindFileAbsoluteListHelper( std::vector< std::string > &outAbsolutePathNames, FindData_t &findData, const char *pAbsoluteFindName );
 
 	void						AddMapPackFile( const char *pPath, const char *pPathID, SearchPathAdd_t addType );
-	void						AddPackFiles( const char *pPath, const CUtlSymbol &pathID, SearchPathAdd_t addType, int iForceInsertIndex = 0 );
+	void						AddPackFiles( const char *pPath, std::string_view pathID, SearchPathAdd_t addType, int iForceInsertIndex = 0 );
 	bool						PreparePackFile( CPackFile &packfile, int offsetofpackinmetafile, int64 filelen );
 
 	// Goes through all the search paths (or just the one specified) and calls FindFile on them. Returns the first successful result, if any.
@@ -1013,19 +1004,19 @@ protected:
 
 	// If bByRequestOnly is -1, then it will default to false if it doesn't already exist, and it 
 	// won't change it if it does already exist. Otherwise, it will be set to the value of bByRequestOnly.
-	CPathIDInfo*				FindOrAddPathIDInfo( const CUtlSymbol &id, int bByRequestOnly );
-	static bool					FilterByPathID( const CSearchPath *pSearchPath, const CUtlSymbol &pathID );
+	CPathIDInfo*				FindOrAddPathIDInfo( std::string_view id, int bByRequestOnly );
+	static bool					FilterByPathID( const CSearchPath *pSearchPath, std::string_view pathID );
 
 	// Global/shared filename/path table
-	CUtlFilenameSymbolTable		m_FileNames;
+	ks::filename_table			m_FileNames;
 
 	// This manages most of the info we use for pure servers (whether files came from Steam caches or off-disk, their CRCs, which ones are unverified, etc).
 	CFileTracker	m_FileTracker;
 	int				m_WhitelistFileTrackingEnabled;	// -1 if unset, 0 if disabled (single player), 1 if enabled (multiplayer).
 	FSDirtyDiskReportFunc_t m_DirtyDiskReportFunc;
 
-	static CUtlSymbol			m_GamePathID;
-	static CUtlSymbol			m_BSPPathID;
+	static std::string_view		m_GamePathID;
+	static std::string_view		m_BSPPathID;
 
 	static bool					m_bFoundXboxImageInCache;
 	static bool					m_bLaunchedFromXboxHDD;
@@ -1040,18 +1031,18 @@ protected:
 		FileNameHandle_t m_hName;
 		FileNameHandle_t m_hFixedName;
 	};
-	static CUtlVector< FileNameHandle_t > m_ExcludeFilePaths;
+	static std::vector< FileNameHandle_t > m_ExcludeFilePaths;
 #ifdef SUPPORT_VPK
-	CUtlVector< CPackedStore *> m_VPKFiles;
-	CUtlDict<int,int> m_VPKDirectories;
+	std::vector< CPackedStore * > m_VPKFiles;
+	std::set< std::string, ks::iless > m_VPKDirectories;
 	CPackedStoreFileHandle FindFileInVPKs( const char *pFileName );
 #endif
 
-	static CUtlSortVector< DLCContent_t, CDLCLess > m_DLCContents;
-	static CUtlVector< DLCCorrupt_t > m_CorruptDLC;
+	static std::flat_multiset< DLCContent_t, CDLCLess > m_DLCContents;
+	static std::vector< DLCCorrupt_t > m_CorruptDLC;
 };
 
-inline const CUtlSymbol& CBaseFileSystem::CPathIDInfo::GetPathID() const
+inline std::string_view CBaseFileSystem::CPathIDInfo::GetPathID() const
 {
 	return m_PathID;
 }
@@ -1059,24 +1050,24 @@ inline const CUtlSymbol& CBaseFileSystem::CPathIDInfo::GetPathID() const
 
 inline const char* CBaseFileSystem::CPathIDInfo::GetPathIDString() const
 {
-	return g_PathIDTable.String( m_PathID );
+	return ks::nz( m_PathID.data() );
 }
 
 
 inline const char* CBaseFileSystem::CSearchPath::GetPathString() const
 {
-	return g_PathIDTable.String( m_Path );
+	return ks::nz( m_Path.data() );
 }
 
 
-inline void CBaseFileSystem::CPathIDInfo::SetPathID( CUtlSymbol sym )
+inline void CBaseFileSystem::CPathIDInfo::SetPathID( std::string_view sym )
 {
 	m_PathID = sym;
 	m_pDebugPathID = GetPathIDString();
 }
 
 
-inline const CUtlSymbol& CBaseFileSystem::CSearchPath::GetPathID() const
+inline std::string_view CBaseFileSystem::CSearchPath::GetPathID() const
 {
 	return m_pPathIDInfo->GetPathID();
 }
@@ -1088,23 +1079,23 @@ inline const char* CBaseFileSystem::CSearchPath::GetPathIDString() const
 }
 
 
-inline void CBaseFileSystem::CSearchPath::SetPath( CUtlSymbol id )
+inline void CBaseFileSystem::CSearchPath::SetPath( std::string_view id )
 {
 	m_Path = id;
-	m_pDebugPath = g_PathIDTable.String( m_Path );
+	m_pDebugPath = ks::nz( m_Path.data() );
 	MarkLocalizedPath( this );
 }
 
 
-inline const CUtlSymbol& CBaseFileSystem::CSearchPath::GetPath() const
+inline std::string_view CBaseFileSystem::CSearchPath::GetPath() const
 {
 	return m_Path;
 }
 
 
-inline bool CBaseFileSystem::FilterByPathID( const CSearchPath *pSearchPath, const CUtlSymbol &pathID )
+inline bool CBaseFileSystem::FilterByPathID( const CSearchPath *pSearchPath, std::string_view pathID )
 {
-	if ( (UtlSymId_t)pathID == UTL_INVAL_SYMBOL )
+	if ( !pathID.data() )
 	{
 		// They didn't specify a specific search path, so if this search path's path ID is by
 		// request only, then ignore it.
@@ -1113,9 +1104,9 @@ inline bool CBaseFileSystem::FilterByPathID( const CSearchPath *pSearchPath, con
 	else
 	{
 		// Bit of a hack, but specifying "BSP" as the search path will search in "GAME" for only the map/.bsp pack file path
-		if ( pathID == m_BSPPathID )
+		if ( pathID.data() == m_BSPPathID.data() )
 		{
-			if ( pSearchPath->GetPathID() != m_GamePathID )
+			if ( pSearchPath->GetPathID().data() != m_GamePathID.data() )
 				return true;
 
 			if ( !pSearchPath->GetPackFile() )
@@ -1128,7 +1119,7 @@ inline bool CBaseFileSystem::FilterByPathID( const CSearchPath *pSearchPath, con
 		}
 		else
 		{
-			return (pSearchPath->GetPathID() != pathID);
+			return (pSearchPath->GetPathID().data() != pathID.data());
 		}
 	}
 }
@@ -1148,7 +1139,7 @@ inline CPackFileHandle::CPackFileHandle( CPackFile* pOwner, int64 nBase, unsigne
 
 inline CPackFileHandle::~CPackFileHandle()
 {
-	m_pOwner->m_mutex.Lock();
+	m_pOwner->m_mutex.lock();
 	--m_pOwner->m_nOpenFiles;
 	if ( m_pOwner->m_nOpenFiles == 0 && m_pOwner->m_bIsMapPath )
 	{
@@ -1159,7 +1150,7 @@ inline CPackFileHandle::~CPackFileHandle()
 		}
 	}
 	m_pOwner->Release();
-	m_pOwner->m_mutex.Unlock();
+	m_pOwner->m_mutex.unlock();
 }
 
 inline void CPackFileHandle::SetBufferSize( int nBytes ) 
@@ -1207,7 +1198,7 @@ inline CPackFile::~CPackFile()
 		m_hPackFileHandleFS = nullptr;
 	}
 
-	m_fs->m_ZipFiles.FindAndRemove( this );
+	ks::erase_first( m_fs->m_ZipFiles, this );
 }
 
 
@@ -1285,7 +1276,5 @@ private:
 
 // singleton accessor
 CBaseFileSystem *BaseFileSystem();
-
-#include "tier0/memdbgoff.h"
 
 #endif // BASEFILESYSTEM_H

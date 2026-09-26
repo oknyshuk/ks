@@ -12,9 +12,6 @@
 #include "cloak_blended_pass_helper.h"
 #include "flesh_interior_blended_pass_helper.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 BEGIN_VS_SHADER( VertexLitGeneric, "Help for VertexLitGeneric" )
 	BEGIN_SHADER_PARAMS

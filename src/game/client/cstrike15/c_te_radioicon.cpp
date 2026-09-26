@@ -17,9 +17,6 @@
 #include "c_cs_player.h"
 #include "radio_status.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: Kills Player Attachments
 //-----------------------------------------------------------------------------

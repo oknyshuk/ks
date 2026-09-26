@@ -7,14 +7,10 @@
 
 #include "cbase.h"
 // identifier was truncated to '255' characters in the debug information
-//#pragma warning(disable: 4786)
 
 #include "proxyentity.h"
 #include "materialsystem/imaterialvar.h"
 #include "imaterialproxydict.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 
 class CCycleMaterialProxy: public CEntityMaterialProxy

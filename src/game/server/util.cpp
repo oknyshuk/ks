@@ -24,7 +24,7 @@
 #include "hierarchy.h"
 #include "iservervehicle.h"
 #include "te_effect_dispatch.h"
-#include "utldict.h"
+#include "tier1/map_ops.h"
 #include "collisionutils.h"
 #include "movevars_shared.h"
 #include "inetchannelinfo.h"
@@ -35,9 +35,6 @@
 #include "util.h"
 #include "usermessages.h"
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 extern int		g_sModelIndexSmoke;			// (in combatweapon.cpp) holds the index for the smoke cloud
 extern int		g_sModelIndexBloodDrop;		// (in combatweapon.cpp) holds the sprite index for the initial blood
@@ -78,7 +75,7 @@ public:
 private:
 	IEntityFactory *FindFactory( const char *pClassName );
 public:
-	CUtlDict< IEntityFactory *, unsigned short > m_Factories;
+	ks::idict< IEntityFactory * > m_Factories;
 };
 
 //-----------------------------------------------------------------------------
@@ -98,9 +95,9 @@ void DumpEntityFactories_f()
 	CEntityFactoryDictionary *dict = ( CEntityFactoryDictionary * )EntityFactoryDictionary();
 	if ( dict )
 	{
-		for ( int i = dict->m_Factories.First(); i != dict->m_Factories.InvalidIndex(); i = dict->m_Factories.Next( i ) )
+		for ( const auto &[name, pFactory] : dict->m_Factories )
 		{
-			Warning( "%s\n", dict->m_Factories.GetElementName( i ) );
+			Warning( "%s\n", name.c_str() );
 		}
 	}
 }
@@ -123,7 +120,7 @@ CON_COMMAND( dump_entity_sizes, "Print sizeof(entclass)" )
 //-----------------------------------------------------------------------------
 // Constructor
 //-----------------------------------------------------------------------------
-CEntityFactoryDictionary::CEntityFactoryDictionary() : m_Factories( true, 0, 128 )
+CEntityFactoryDictionary::CEntityFactoryDictionary()
 {
 }
 
@@ -133,10 +130,8 @@ CEntityFactoryDictionary::CEntityFactoryDictionary() : m_Factories( true, 0, 128
 //-----------------------------------------------------------------------------
 IEntityFactory *CEntityFactoryDictionary::FindFactory( const char *pClassName )
 {
-	unsigned short nIndex = m_Factories.Find( pClassName );
-	if ( nIndex == m_Factories.InvalidIndex() )
-		return nullptr;
-	return m_Factories[nIndex];
+	IEntityFactory **ppFactory = ks::find_ptr( m_Factories, pClassName );
+	return ppFactory ? *ppFactory : nullptr;
 }
 
 
@@ -146,7 +141,7 @@ IEntityFactory *CEntityFactoryDictionary::FindFactory( const char *pClassName )
 void CEntityFactoryDictionary::InstallFactory( IEntityFactory *pFactory, const char *pClassName )
 {
 	AssertMsg1( FindFactory( pClassName ) == nullptr, "Double installation of factory for %s", pClassName );
-	m_Factories.Insert( pClassName, pFactory );
+	m_Factories.emplace( pClassName, pFactory );
 }
 
 
@@ -161,9 +156,6 @@ IServerNetworkable *CEntityFactoryDictionary::Create( const char *pClassName )
 		Warning("Attempted to create unknown entity type %s!\n", pClassName );
 		return nullptr;
 	}
-#if defined(TRACK_ENTITY_MEMORY) && defined(USE_MEM_DEBUG)
-	MEM_ALLOC_CREDIT_( m_Factories.GetElementName( m_Factories.Find( pClassName ) ) );
-#endif
 	return pFactory->Create( pClassName );
 }
 
@@ -172,7 +164,8 @@ IServerNetworkable *CEntityFactoryDictionary::Create( const char *pClassName )
 //-----------------------------------------------------------------------------
 const char *CEntityFactoryDictionary::GetCannonicalName( const char *pClassName )
 {
-	return m_Factories.GetElementName( m_Factories.Find( pClassName ) );
+	auto it = m_Factories.find( pClassName );
+	return it != m_Factories.end() ? it->first.c_str() : nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -195,9 +188,9 @@ void CEntityFactoryDictionary::Destroy( const char *pClassName, IServerNetworkab
 //-----------------------------------------------------------------------------
 void CEntityFactoryDictionary::ReportEntitySizes()
 {
-	for ( int i = m_Factories.First(); i != m_Factories.InvalidIndex(); i = m_Factories.Next( i ) )
+	for ( const auto &[name, pFactory] : m_Factories )
 	{
-		Msg( " %s: %d", m_Factories.GetElementName( i ), m_Factories[i]->GetEntitySize() );
+		Msg( " %s: %d", name.c_str(), (int)pFactory->GetEntitySize() );
 	}
 }
 
@@ -829,7 +822,7 @@ inline void TransmitShakeEvent( CBasePlayer *pPlayer, float localAmplitude, floa
 //			bAirShake - if this is false, then it will only shake players standing on the ground.
 //-----------------------------------------------------------------------------
 const float MAX_SHAKE_AMPLITUDE = 16.0f;
-void UTIL_ScreenShake( const Vector &center, float amplitude, float frequency, float duration, float radius, ShakeCommand_t eCommand, bool bAirShake, CUtlVector<CBasePlayer *> *ignore )
+void UTIL_ScreenShake( const Vector &center, float amplitude, float frequency, float duration, float radius, ShakeCommand_t eCommand, bool bAirShake, std::vector< CBasePlayer * > *ignore )
 {
 	int			i;
 	float		localAmplitude;
@@ -850,7 +843,7 @@ void UTIL_ScreenShake( const Vector &center, float amplitude, float frequency, f
 			continue;
 		}
 
-		if ( ignore && ignore->HasElement( pPlayer ) )
+		if ( ignore && ks::contains( *ignore, pPlayer ) )
 		{
 			continue;
 		}
@@ -1520,7 +1513,7 @@ void UTIL_BloodStream( const Vector &origin, const Vector &direction, int color,
 		color = 0;
 
 	CPVSFilter filter( origin );
-	te->BloodStream( filter, 0.0, &origin, &direction, 247, 63, 14, 255, MIN( amount, 255 ) );
+	te->BloodStream( filter, 0.0, &origin, &direction, 247, 63, 14, 255, std::min( amount, 255 ) );
 }				
 
 
@@ -1774,7 +1767,7 @@ bool UTIL_IsValidEntity( CBaseEntity *pEnt )
 // UNDONE: Do we need this to avoid doing too much of this?  Measure startup times and see
 #if defined( PRECACHE_OTHER_ONCE )
 
-#include "utlsymbol.h"
+#include "tier1/intern_pool.h"
 class CPrecacheOtherList : public CAutoGameSystem
 {
 public:
@@ -1787,17 +1780,17 @@ public:
 	bool AddOrMarkPrecached( const char *pClassname );
 
 private:
-	CUtlSymbolTable		m_list;
+	ks::intern_pool		m_list;
 };
 
 void CPrecacheOtherList::LevelInitPreEntity()
 {
-	m_list.RemoveAll();
+	m_list.clear();
 }
 
 void CPrecacheOtherList::LevelShutdownPostEntity()
 {
-	m_list.RemoveAll();
+	m_list.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -1807,11 +1800,10 @@ void CPrecacheOtherList::LevelShutdownPostEntity()
 //-----------------------------------------------------------------------------
 bool CPrecacheOtherList::AddOrMarkPrecached( const char *pClassname )
 {
-	CUtlSymbol sym = m_list.Find( pClassname );
-	if ( sym.IsValid() )
+	if ( m_list.contains( pClassname ) )
 		return false;
 
-	m_list.AddString( pClassname );
+	m_list.intern( pClassname );
 	return true;
 }
 
@@ -1955,16 +1947,6 @@ int DispatchSpawn( CBaseEntity *pEntity, bool bRunVScripts )
 			pEntity->RunPrecacheScripts();
 		}
 
-#if defined(TRACK_ENTITY_MEMORY) && defined(USE_MEM_DEBUG)
-		const char *pszClassname = nullptr;
-		int iClassname = ((CEntityFactoryDictionary*)EntityFactoryDictionary())->m_Factories.Find( pEntity->GetClassname() );
-		if ( iClassname != ((CEntityFactoryDictionary*)EntityFactoryDictionary())->m_Factories.InvalidIndex() )
-			pszClassname = ((CEntityFactoryDictionary*)EntityFactoryDictionary())->m_Factories.GetElementName( iClassname );
-		if ( pszClassname )
-		{
-			MemAlloc_PushAllocDbgInfo( pszClassname, __LINE__ );
-		}
-#endif
 		bool bAsyncAnims = mdlcache->SetAsyncLoad( MDLCACHE_ANIMBLOCK, false );
 		CBaseAnimating *pAnimating = pEntity->GetBaseAnimating();
 		if (!pAnimating)
@@ -1980,12 +1962,6 @@ int DispatchSpawn( CBaseEntity *pEntity, bool bRunVScripts )
 		}
 		mdlcache->SetAsyncLoad( MDLCACHE_ANIMBLOCK, bAsyncAnims );
 
-#if defined(TRACK_ENTITY_MEMORY) && defined(USE_MEM_DEBUG)
-		if ( pszClassname )
-		{
-			MemAlloc_PopAllocDbgInfo();
-		}
-#endif
 		// Try to get the pointer again, in case the spawn function deleted the entity.
 		// UNDONE: Spawn() should really return a code to ask that the entity be deleted, but
 		// that would touch too much code for me to do that right now.
@@ -2749,7 +2725,7 @@ void LoadAndSpawnEntities_ParseEntKVBlockHelper( CBaseEntity *pNode, KeyValues *
 //-----------------------------------------------------------------------------
 // Purpose: Loads and parses a file and spawns entities defined in it.
 //-----------------------------------------------------------------------------
-bool UTIL_LoadAndSpawnEntitiesFromScript( CUtlVector <CBaseEntity*> &entities, const char *pScriptFile, const char *pBlock, bool bActivate )
+bool UTIL_LoadAndSpawnEntitiesFromScript( std::vector< CBaseEntity* > &entities, const char *pScriptFile, const char *pBlock, bool bActivate )
 {
 	KeyValues *pkvFile = new KeyValues( pBlock );
 
@@ -2783,7 +2759,7 @@ bool UTIL_LoadAndSpawnEntitiesFromScript( CUtlVector <CBaseEntity*> &entities, c
 			{
 				LoadAndSpawnEntities_ParseEntKVBlockHelper( pNode, pkvNode );
 				DispatchSpawn( pNode );
-				entities.AddToTail( pNode );
+				entities.push_back( pNode );
 			}
 			else
 			{
@@ -2798,7 +2774,7 @@ bool UTIL_LoadAndSpawnEntitiesFromScript( CUtlVector <CBaseEntity*> &entities, c
 		{
 			bool bAsyncAnims = mdlcache->SetAsyncLoad( MDLCACHE_ANIMBLOCK, false );
 			// Then activate all the entities
-			for ( int i = 0; i < entities.Count(); i++ )
+			for ( int i = 0; i < std::ssize( entities ); i++ )
 			{
 				entities[i]->Activate();
 			}

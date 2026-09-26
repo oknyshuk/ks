@@ -14,9 +14,6 @@
 
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar snd_sos_show_operator_stop_entry("snd_sos_show_operator_stop_entry", "0", FCVAR_CHEAT );
 
 extern Color OpColor;
@@ -58,12 +55,12 @@ void CSosOperatorStopEntry::SetDefaults( void *pVoidMem ) const
 
 }
 
-static int __cdecl ChannelLongestElapsedTimeSortFunc( const int *nChannelIndexA, const int *nChannelIndexB )
+static int ChannelLongestElapsedTimeSortFunc( const int *nChannelIndexA, const int *nChannelIndexB )
 {
 	return ( S_GetElapsedTimeByGuid( channels[ *nChannelIndexA ].guid ) > S_GetElapsedTimeByGuid( channels[ *nChannelIndexB ].guid ) );
 }
 
-// static int __cdecl ChannelLeastVolumeSortFunc( const int *nChannelIndexA, const int *nChannelIndexB )
+// static int ChannelLeastVolumeSortFunc( const int *nChannelIndexA, const int *nChannelIndexB )
 // {
 // 	return ( S_GetElapsedTimeByGuid( channels[ *nChannelIndexA ]. ) < S_GetElapsedTimeByGuid( channels[ *nChannelIndexB ].guid ) );
 // }
@@ -116,7 +113,7 @@ void CSosOperatorStopEntry::Execute( void *pVoidMem, channel_t *pChannel, CScrat
 	sosEntryMatch.m_bMatchInt3 = pStructMem->m_bMatchThisEntry;
 	sosEntryMatch.m_nMatchInt3 = pScratchPad->m_nSoundScriptHash;
 
-	CUtlVector< int > vMatchingIndices;
+	std::vector< int > vMatchingIndices;
 	CChannelList list;
 	g_ActiveChannels.GetActiveChannels( list );
 	int nThisIndex = 0;
@@ -189,7 +186,7 @@ void CSosOperatorStopEntry::Execute( void *pVoidMem, channel_t *pChannel, CScrat
 		
 		if ( bIsAMatch || bInvertMatch )
 		{
-			int nNewIndex  = vMatchingIndices.AddToTail( ch_idx );
+			int nNewIndex = std::ssize( vMatchingIndices ); vMatchingIndices.push_back( ch_idx );
 			if( pChannel && &channels[ ch_idx ] == pChannel )
 			{
 				nThisIndex = nNewIndex;
@@ -197,17 +194,17 @@ void CSosOperatorStopEntry::Execute( void *pVoidMem, channel_t *pChannel, CScrat
 		}
 	}
 
-	pStructMem->m_flOutputVoicesMatching[0] = ( float ) vMatchingIndices.Count();
+	pStructMem->m_flOutputVoicesMatching[0] = ( float ) std::ssize( vMatchingIndices );
 	pStructMem->m_flOutputIndexOfThis[0] = ( float ) nThisIndex;
 
 
- 	if ( vMatchingIndices.Count() > (int) pStructMem->m_flInputMaxVoices[0] )
+ 	if ( std::ssize( vMatchingIndices ) > (int) pStructMem->m_flInputMaxVoices[0] )
 	{
 		if( pStructMem->m_bStopOldest )
 		{
-			vMatchingIndices.Sort( &ChannelLongestElapsedTimeSortFunc );
+			ks::qsort( vMatchingIndices, &ChannelLongestElapsedTimeSortFunc );
 		}
-		for( int i = (int) pStructMem->m_flInputMaxVoices[0]; i < vMatchingIndices.Count(); i++ )
+		for( int i = (int) pStructMem->m_flInputMaxVoices[0]; i < std::ssize( vMatchingIndices ); i++ )
 		{
 			if ( snd_sos_show_operator_stop_entry.GetInt() )
 			{

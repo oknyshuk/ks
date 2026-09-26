@@ -11,9 +11,6 @@
 #include "cs_simple_hostage.h"
 #include "cs_bot.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Begin the hunt
@@ -184,10 +181,8 @@ void HuntState::OnUpdate( CCSBot *me )
 			int areaCount = 0;
 			const float minSize = 150.0f;
 
-			FOR_EACH_VEC( TheNavAreas, it )
+			for ( CNavArea *area : TheNavAreas )
 			{
-				CNavArea *area = TheNavAreas[ it ];
-
 				++areaCount;
 
 				// skip the small areas
@@ -209,9 +204,9 @@ void HuntState::OnUpdate( CCSBot *me )
 			int which = RandomInt( 0, areaCount-1 );
 
 			areaCount = 0;
-			FOR_EACH_VEC( TheNavAreas, hit )
+			for ( CNavArea *pArea : TheNavAreas )
 			{
-				m_huntArea = TheNavAreas[ hit ];
+				m_huntArea = pArea;
 
 				if (which == areaCount)
 					break;

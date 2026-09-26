@@ -13,9 +13,6 @@
 #include "tier1/strtools.h"
 #include "tier0/dbg.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static ButtonCode_t s_pVirtualKeyToButtonCode[256];
 
 static ButtonCode_t s_pSKeytoButtonCode[SK_MAX_KEYS];

@@ -19,9 +19,6 @@
 #include "view.h"
 #include "c_cs_player.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffectCSBloodSpray )
 PRECACHE( PARTICLE_SYSTEM, "blood_impact_basic" )
@@ -72,7 +69,7 @@ void InterpolateRamp(
 
 
 void FX_HitEffectSmoke(
-	CSmartPtr<CBloodSprayEmitter> pEmitter, 
+	ks::intrusive_ptr<CBloodSprayEmitter> pEmitter, 
 	int iDamage,
 	const Vector &vEntryPoint,
 	const Vector &vDirection,
@@ -137,15 +134,15 @@ void FX_HitEffectSmoke(
 
 		float colorRamp = random->RandomFloat( 0.5f, 1.25f );
 
-		newParticle.m_uchColor[0] = MIN( 1.0f, colorRamp ) * 255.0f;
-		newParticle.m_uchColor[1] = MIN( 1.0f, colorRamp ) * 255.0f;
-		newParticle.m_uchColor[2] = MIN( 1.0f, colorRamp ) * 255.0f;
+		newParticle.m_uchColor[0] = std::min( 1.0f, colorRamp ) * 255.0f;
+		newParticle.m_uchColor[1] = std::min( 1.0f, colorRamp ) * 255.0f;
+		newParticle.m_uchColor[2] = std::min( 1.0f, colorRamp ) * 255.0f;
 	}	
 }
 
 
 void FX_HitEffectBloodSpray(
-	CSmartPtr<CBloodSprayEmitter> pEmitter, 
+	ks::intrusive_ptr<CBloodSprayEmitter> pEmitter, 
 	int iDamage,
 	const Vector &vEntryPoint, 
 	const Vector &vSprayNormal,
@@ -219,9 +216,9 @@ void FX_HitEffectBloodSpray(
 
 			float colorRamp = random->RandomFloat( 0.5f, 0.75f ) + flLODDistance;
 			
-			pParticle->m_uchColor[0]	= MIN( 1.0f, color[0] * colorRamp ) * 255.0f;
-			pParticle->m_uchColor[1]	= MIN( 1.0f, whiteness * colorRamp ) * 255.0f;
-			pParticle->m_uchColor[2]	= MIN( 1.0f, whiteness * colorRamp ) * 255.0f;
+			pParticle->m_uchColor[0]	= std::min( 1.0f, color[0] * colorRamp ) * 255.0f;
+			pParticle->m_uchColor[1]	= std::min( 1.0f, whiteness * colorRamp ) * 255.0f;
+			pParticle->m_uchColor[2]	= std::min( 1.0f, whiteness * colorRamp ) * 255.0f;
 			
 			pParticle->m_uchStartSize	= random->RandomFloat( interpolatedRamp.m_flMinSize, interpolatedRamp.m_flMaxSize ) * flDistanceScale;
 			pParticle->m_uchEndSize		= pParticle->m_uchStartSize * 4 * flDistanceScale;
@@ -237,7 +234,7 @@ void FX_HitEffectBloodSpray(
 
 
 void FX_HitEffectBloodSplatter(
-	CSmartPtr<CBloodSprayEmitter> pTrailEmitter, 
+	ks::intrusive_ptr<CBloodSprayEmitter> pTrailEmitter, 
 	int iDamage,
 	const Vector &vExitPoint, 
 	const Vector &vSplatterNormal,

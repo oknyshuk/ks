@@ -7,9 +7,6 @@
 
 #include "disp_defs.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // ---------------------------------------------------------------------- //
 // Global tables.
 // ---------------------------------------------------------------------- //
@@ -30,8 +27,8 @@ int g_CoreDispNeighborOrientationMap[4][4] =
 // Global variables.
 // ---------------------------------------------------------------------- //
 
-CUtlVector<unsigned char, CHunkMemory<unsigned char> >	g_DispLightmapSamplePositions;
-CUtlVector<CDispGroup*>		g_DispGroups;
+std::vector< unsigned char >	g_DispLightmapSamplePositions;
+std::vector< std::unique_ptr< CDispGroup > >	g_DispGroups;
 
 bool						g_bDispOrthoRender = false;
 

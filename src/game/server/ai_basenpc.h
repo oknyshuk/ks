@@ -7,6 +7,7 @@
 #ifndef AI_BASENPC_H
 #define AI_BASENPC_H
 
+#include <bitset>
 #include "reflect_annotations.h"
 #include "shareddefs.h"
 
@@ -56,7 +57,6 @@ class CAI_Motor;
 class CAI_MoveProbe;
 class CAI_LocalNavigator;
 class CAI_TacticalServices;
-class CVarBitVec;
 class CAI_ScriptedSequence;
 class CSceneEntity;
 class CBaseGrenade;
@@ -67,7 +67,7 @@ struct AI_Waypoint_t;
 class CBaseFilter;
 class CGlobalEvent;
 
-typedef CBitVec<MAX_CONDITIONS> CAI_ScheduleBits;
+typedef std::bitset<MAX_CONDITIONS> CAI_ScheduleBits;
 
 // Used to control optimizations mostly dealing with pathfinding for NPCs
 extern ConVar ai_strong_optimizations;
@@ -459,7 +459,7 @@ public:
 	void AddAI( CAI_BaseNPC *pAI );
 	void RemoveAI( CAI_BaseNPC *pAI );
 
-	bool FindAI( CAI_BaseNPC *pAI )	{ return ( m_AIs.Find( pAI ) != m_AIs.InvalidIndex() ); }
+	bool FindAI( CAI_BaseNPC *pAI )	{ return ( ks::find_index( m_AIs, pAI ) != -1 ); }
 	
 private:
 	enum
@@ -467,7 +467,7 @@ private:
 		MAX_AIS = 256
 	};
 	
-	typedef CUtlVector<CAI_BaseNPC *> CAIArray;
+	typedef std::vector< CAI_BaseNPC * > CAIArray;
 	
 	CAIArray m_AIs;
 
@@ -858,14 +858,14 @@ public:
 
 	virtual CAI_BehaviorBase **	AccessBehaviors() 	
 	{ 
-		if (m_Behaviors.Count())
-			return m_Behaviors.Base();
+		if ( !m_Behaviors.empty() )
+			return m_Behaviors.data();
 		return nullptr;
 	}
 
 	virtual int	NumBehaviors()		
 	{ 
-		return m_Behaviors.Count();
+		return std::ssize( m_Behaviors );
 
 	}
 
@@ -874,7 +874,7 @@ public:
 
 protected:
 	CAI_BehaviorBase *			   m_pPrimaryBehavior;
-	CUtlVector<CAI_BehaviorBase *> m_Behaviors;
+	std::vector< CAI_BehaviorBase * > m_Behaviors;
 
 public:
 	//-----------------------------------------------------
@@ -1226,7 +1226,7 @@ private:
 	bool								 m_bCannotDieDuringInteraction;
 	int									 m_iInteractionState;
 	int									 m_iInteractionPlaying;
-	CUtlVector<ScriptedNPCInteraction_t> m_ScriptedInteractions;
+	std::vector< ScriptedNPCInteraction_t > m_ScriptedInteractions;
 
 	float								 m_flInteractionYaw;
 
@@ -1440,7 +1440,7 @@ protected:
 	int WalkMove( const Vector& vecPosition, unsigned int mask );
 
 	//  Unreachable Entities
-	CUtlVector<UnreachableEnt_t> m_UnreachableEnts;								// Array of unreachable entities
+	std::vector< UnreachableEnt_t > m_UnreachableEnts;								// Array of unreachable entities
 
 private:
 	CAI_Navigator *		m_pNavigator;
@@ -1584,7 +1584,7 @@ public:
 	//
 	//-----------------------------------------------------
 
-	void				AddSceneLock( float flDuration = 0.2f ) { m_flSceneTime = MAX( gpGlobals->curtime + flDuration, m_flSceneTime ); };
+	void				AddSceneLock( float flDuration = 0.2f ) { m_flSceneTime = std::max( gpGlobals->curtime + flDuration, m_flSceneTime ); };
 	void				ClearSceneLock( float flDuration = 0.2f ) { m_flSceneTime = gpGlobals->curtime + flDuration; };
 	bool				IsInLockedScene( void ) { return m_flSceneTime > gpGlobals->curtime; };
 	float				m_flSceneTime;
@@ -2164,7 +2164,7 @@ public:
 	float				m_flIgnoreDangerSoundsUntil;
 
 #ifdef AI_MONITOR_FOR_OSCILLATION
-	CUtlVector<AIScheduleChoice_t>	m_ScheduleHistory;
+	std::vector< AIScheduleChoice_t >	m_ScheduleHistory;
 #endif//AI_MONITOR_FOR_OSCILLATION
 
 private:
@@ -2407,8 +2407,8 @@ typedef CHandle<CAI_BaseNPC> AIHANDLE;
 		typedef derivedClass CNpc; \
 		const char *pszClassName = #derivedClass; \
 		\
-		CUtlVector<char *> schedulesToLoad; \
-		CUtlVector<AIScheduleLoadFunc_t> reqiredOthers; \
+		std::vector< char * > schedulesToLoad; \
+		std::vector< AIScheduleLoadFunc_t > reqiredOthers; \
 		CAI_NamespaceInfos scheduleIds; \
 		CAI_NamespaceInfos taskIds; \
 		CAI_NamespaceInfos conditionIds;
@@ -2423,8 +2423,8 @@ typedef CHandle<CAI_BaseNPC> AIHANDLE;
 		typedef derivedClass CNpc; \
 		const char *pszClassName = #derivedClass; \
 		\
-		CUtlVector<char *> schedulesToLoad; \
-		CUtlVector<AIScheduleLoadFunc_t> reqiredOthers; \
+		std::vector< char * > schedulesToLoad; \
+		std::vector< AIScheduleLoadFunc_t > reqiredOthers; \
 		CAI_NamespaceInfos scheduleIds; \
 		CAI_NamespaceInfos taskIds; \
 		CAI_NamespaceInfos conditionIds; \
@@ -2435,7 +2435,7 @@ typedef CHandle<CAI_BaseNPC> AIHANDLE;
 #define EXTERN_SCHEDULE( id ) \
 	scheduleIds.PushBack( #id, id ); \
 	extern const char * g_psz##id; \
-	schedulesToLoad.AddToTail( (char *)g_psz##id );
+	schedulesToLoad.push_back( (char *)g_psz##id );
 
 //-----------------
 
@@ -2446,7 +2446,7 @@ typedef CHandle<CAI_BaseNPC> AIHANDLE;
 		"\n		" #id \
 		text \
 		"\n"; \
-	schedulesToLoad.AddToTail( (char *)g_psz##id );
+	schedulesToLoad.push_back( (char *)g_psz##id );
 	
 //-----------------
 
@@ -2495,17 +2495,17 @@ typedef CHandle<CAI_BaseNPC> AIHANDLE;
 		taskIds.Sort(); \
 		conditionIds.Sort(); \
 		\
-		for ( i = 0; i < scheduleIds.Count(); i++ ) \
+		for ( i = 0; i < std::ssize( scheduleIds ); i++ ) \
 		{ \
 			ADD_CUSTOM_SCHEDULE_NAMED( CNpc, scheduleIds[i].pszName, scheduleIds[i].localId );  \
 		} \
 		\
-		for ( i = 0; i < taskIds.Count(); i++ ) \
+		for ( i = 0; i < std::ssize( taskIds ); i++ ) \
 		{ \
 			ADD_CUSTOM_TASK_NAMED( CNpc, taskIds[i].pszName, taskIds[i].localId );  \
 		} \
 		\
-		for ( i = 0; i < conditionIds.Count(); i++ ) \
+		for ( i = 0; i < std::ssize( conditionIds ); i++ ) \
 		{ \
 			if ( ValidateConditionLimits( conditionIds[i].pszName ) ) \
 			{ \
@@ -2513,12 +2513,12 @@ typedef CHandle<CAI_BaseNPC> AIHANDLE;
 			} \
 		} \
 		\
-		for ( i = 0; i < reqiredOthers.Count(); i++ ) \
+		for ( i = 0; i < std::ssize( reqiredOthers ); i++ ) \
 		{ \
 			(*reqiredOthers[i])();  \
 		} \
 		\
-		for ( i = 0; i < schedulesToLoad.Count(); i++ ) \
+		for ( i = 0; i < std::ssize( schedulesToLoad ); i++ ) \
 		{ \
 			if ( CNpc::gm_SchedLoadStatus.fValid ) \
 			{ \
@@ -2557,17 +2557,17 @@ inline bool ValidateConditionLimits( const char *pszNewCondition )
 		conditionIds.Sort(); \
 		squadSlotIds.Sort(); \
 		\
-		for ( i = 0; i < scheduleIds.Count(); i++ ) \
+		for ( i = 0; i < std::ssize( scheduleIds ); i++ ) \
 		{ \
 			ADD_CUSTOM_SCHEDULE_NAMED( CNpc, scheduleIds[i].pszName, scheduleIds[i].localId );  \
 		} \
 		\
-		for ( i = 0; i < taskIds.Count(); i++ ) \
+		for ( i = 0; i < std::ssize( taskIds ); i++ ) \
 		{ \
 			ADD_CUSTOM_TASK_NAMED( CNpc, taskIds[i].pszName, taskIds[i].localId );  \
 		} \
 		\
-		for ( i = 0; i < conditionIds.Count(); i++ ) \
+		for ( i = 0; i < std::ssize( conditionIds ); i++ ) \
 		{ \
 			if ( ValidateConditionLimits( conditionIds[i].pszName ) ) \
 			{ \
@@ -2575,17 +2575,17 @@ inline bool ValidateConditionLimits( const char *pszNewCondition )
 			} \
 		} \
 		\
-		for ( i = 0; i < squadSlotIds.Count(); i++ ) \
+		for ( i = 0; i < std::ssize( squadSlotIds ); i++ ) \
 		{ \
 			ADD_CUSTOM_SQUADSLOT_NAMED( CNpc, squadSlotIds[i].pszName, squadSlotIds[i].localId );  \
 		} \
 		\
-		for ( i = 0; i < reqiredOthers.Count(); i++ ) \
+		for ( i = 0; i < std::ssize( reqiredOthers ); i++ ) \
 		{ \
 			(*reqiredOthers[i])();  \
 		} \
 		\
-		for ( i = 0; i < schedulesToLoad.Count(); i++ ) \
+		for ( i = 0; i < std::ssize( schedulesToLoad ); i++ ) \
 		{ \
 			if ( CNpc::gm_SchedLoadStatus.fValid ) \
 			{ \
@@ -2610,21 +2610,21 @@ struct AI_NamespaceAddInfo_t
 	int			localId;
 };
 
-class CAI_NamespaceInfos : public CUtlVector<AI_NamespaceAddInfo_t>
+class CAI_NamespaceInfos : public std::vector< AI_NamespaceAddInfo_t >
 {
 public:
 	void PushBack(  const char *pszName, int localId )
 	{
-		AddToTail( AI_NamespaceAddInfo_t( pszName, localId ) );
+		this->push_back( AI_NamespaceAddInfo_t( pszName, localId ) );
 	}
 
 	void Sort()
 	{
-		CUtlVector<AI_NamespaceAddInfo_t>::Sort( Compare );
+		ks::qsort( *this, Compare );
 	}
 	
 private:
-	static int __cdecl Compare(const AI_NamespaceAddInfo_t *pLeft, const AI_NamespaceAddInfo_t *pRight )
+	static int Compare(const AI_NamespaceAddInfo_t *pLeft, const AI_NamespaceAddInfo_t *pRight )
 	{
 		return pLeft->localId - pRight->localId;
 	}
@@ -3219,7 +3219,7 @@ public:
 	void EnqueueEntityNavigationQuery( CAI_BaseNPC *pNPC, CFunctor *functor );
 
 private:
-	CUtlVector<CFunctor *>	m_Functors;
+	std::vector< CFunctor * >	m_Functors;
 	bool					m_bGameFrameRunning;
 };
 

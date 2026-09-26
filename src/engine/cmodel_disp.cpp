@@ -18,9 +18,6 @@
 #include "vphysics/virtualmesh.h"
 #include "zone.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 int g_DispCollTreeCount = 0;
 CDispCollTree *g_pDispCollTrees = nullptr;
 alignedbbox_t *g_pDispBounds = nullptr;
@@ -64,11 +61,11 @@ public:
 	{
 		m_pBSPData = pBSPData;
 		// don't want this to resize much, so make the backing buffer large
-		m_dispList.EnsureCapacity( MAX_MAP_DISPINFO * 2 );
+		m_dispList.reserve( MAX_MAP_DISPINFO * 2 );
 
 		// size both of these to the size of the array since there is exactly one per element
-		m_leafCount.SetCount( g_DispCollTreeCount );
-		m_firstIndex.SetCount( g_DispCollTreeCount );
+		m_leafCount.assign( g_DispCollTreeCount, {} );
+		m_firstIndex.assign( g_DispCollTreeCount, {} );
 		for ( int i = 0; i < g_DispCollTreeCount; i++ )
 		{
 			m_leafCount[i] = 0;
@@ -82,7 +79,7 @@ public:
 		CDispCollTree *pDispTree = &g_pDispCollTrees[index];
 		if( !pDispTree || ( pDispTree->GetPower() == 0 ) )
 			return;
-		m_firstIndex[index] = m_dispList.Count();
+		m_firstIndex[index] = std::ssize( m_dispList );
 		m_leafCount[index] = 0;
 		const int MAX_NODES = 1024;
 		int nodeList[MAX_NODES];
@@ -105,7 +102,7 @@ public:
 			if( nodeIndex < 0 )
 			{
 				int leafIndex = -1 - nodeIndex;
-				m_dispList.AddToTail(leafIndex);
+				m_dispList.push_back( leafIndex );
 				m_leafCount[index]++;
 			}
 			else
@@ -135,7 +132,7 @@ public:
 			}
 		}
 	}
-	int GetDispListCount() { return m_dispList.Count(); }
+	int GetDispListCount() { return std::ssize( m_dispList ); }
 	void WriteLeafList( unsigned short *pLeafList )
 	{
 		// clear current count if any
@@ -145,7 +142,7 @@ public:
 			pLeaf->dispCount = 0;
 		}
 		// compute new count per leaf
-		for ( int i = 0; i < m_dispList.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_dispList ); i++ )
 		{
 			int leafIndex = m_dispList[i];
 			cleaf_t *pLeaf = &m_pBSPData->map_leafs[leafIndex];
@@ -162,7 +159,7 @@ public:
 		}
 		// now iterate the references in disp order adding to each leaf's (now compact) list
 		// for each displacement with leaves
-		for ( int i = 0; i < m_leafCount.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_leafCount ); i++ )
 		{
 			// for each leaf in this disp's list
 			int count = m_leafCount[i];
@@ -182,11 +179,11 @@ public:
 private:
 	CCollisionBSPData *m_pBSPData;
 	// this is a list of all of the leaf indices for each displacement
-	CUtlVector<unsigned short> m_dispList;
+	std::vector< unsigned short > m_dispList;
 	// this is the first entry into dispList for each displacement
-	CUtlVector<int> m_firstIndex;
+	std::vector< int > m_firstIndex;
 	// this is the # of leaf entries for each displacement
-	CUtlVector<unsigned short> m_leafCount;
+	std::vector< unsigned short > m_leafCount;
 };
 
 //-----------------------------------------------------------------------------
@@ -271,7 +268,7 @@ public:
 			return;
 		}
 		int totalHullData = 0;
-		m_dispHullOffset.SetCount(g_DispCollTreeCount);
+		m_dispHullOffset.assign( g_DispCollTreeCount, {} );
 		Assert(pLump->numDisplacements==g_DispCollTreeCount);
 		// count the size of the lump
 		unsigned short *pDataSize = (unsigned short *)(pLump+1);
@@ -295,20 +292,20 @@ public:
 	}
 	void LevelShutdown()
 	{
-		m_dispHullOffset.Purge();
+		m_dispHullOffset.clear(); m_dispHullOffset.shrink_to_fit();
 		delete[] m_pDispHullData;
 		m_pDispHullData = nullptr;
 	}
 
 private:
 	byte			*m_pDispHullData;
-	CUtlVector<int> m_dispHullOffset;
+	std::vector< int > m_dispHullOffset;
 };
 
 // Singleton to implement the callbacks
 static CVirtualTerrain g_VirtualTerrain;
 // List of terrain collision models for the currently loaded level, indexed by terrain patch index
-static CUtlVector<CPhysCollide *> g_TerrainList;
+static std::vector< CPhysCollide * > g_TerrainList;
 
 // Find or create virtual terrain collision model.  Note that these will be shared by client & server
 CPhysCollide *CM_PhysCollideForDisp( int index )
@@ -327,7 +324,7 @@ int CM_SurfacepropsForDisp( int index )
 void CM_CreateDispPhysCollide( dphysdisp_t *pDispLump, int dispLumpSize )
 {
 	g_VirtualTerrain.LevelInit(pDispLump, dispLumpSize);
-	g_TerrainList.SetCount( g_DispCollTreeCount );
+	g_TerrainList.assign( g_DispCollTreeCount, {} );
 	for ( int i = 0; i < g_DispCollTreeCount; i++ )
 	{
 		// Don't create a physics collision model for displacements that have been tagged as such.
@@ -350,11 +347,11 @@ void CM_CreateDispPhysCollide( dphysdisp_t *pDispLump, int dispLumpSize )
 void CM_DestroyDispPhysCollide()
 {
 	g_VirtualTerrain.LevelShutdown();
-	for ( int i = g_TerrainList.Count()-1; i>=0; --i )
+	for ( int i = std::ssize( g_TerrainList )-1; i>=0; --i )
 	{
 		physcollision->DestroyCollide( g_TerrainList[i] );
 	}
-	g_TerrainList.Purge();
+	g_TerrainList.clear(); g_TerrainList.shrink_to_fit();
 }
 
 //-----------------------------------------------------------------------------

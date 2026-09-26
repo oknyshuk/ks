@@ -4,16 +4,15 @@
 //
 //=============================================================================//
 
-#include "mempool.h"
-#include "utlmap.h"
+
+#include <map>
+#include <memory>
 
 #ifndef AI_MEMORY_H
 #define AI_MEMORY_H
 #pragma once
 
 class CAI_Network;
-
-DECLARE_POINTER_HANDLE(AIEnemiesIter_t);
 
 const float AI_DEF_ENEMY_DISCARD_TIME = 60.0;
 
@@ -58,15 +57,17 @@ struct AI_EnemyInfo_t
 class CAI_Enemies
 {
 public:
+	typedef std::map< CBaseEntity *, std::unique_ptr< AI_EnemyInfo_t > > CMemMap;
+
 	CAI_Enemies(void);
 	~CAI_Enemies();
 	
-	AI_EnemyInfo_t *GetFirst( AIEnemiesIter_t *pIter );
-	AI_EnemyInfo_t *GetNext( AIEnemiesIter_t *pIter );
+	AI_EnemyInfo_t *GetFirst( CMemMap::iterator *pIter );
+	AI_EnemyInfo_t *GetNext( CMemMap::iterator *pIter );
 	AI_EnemyInfo_t *Find( CBaseEntity *pEntity, bool bTryDangerMemory = false );
 	AI_EnemyInfo_t *GetDangerMemory();
 
-	int				NumEnemies() const		{ return m_Map.Count(); }
+	int				NumEnemies() const		{ return (int)m_Map.size(); }
 	int				GetSerialNumber() const	{ return m_serial;		}
 
 	void			RefreshMemories(void);
@@ -102,8 +103,6 @@ public:
 
 	DECLARE_SIMPLE_DATADESC();
 
-	typedef CUtlMap<CBaseEntity *, AI_EnemyInfo_t*, unsigned char> CMemMap;
-
 private:
 	bool ShouldDiscardMemory( AI_EnemyInfo_t *pMemory );
 
@@ -114,6 +113,9 @@ private:
 	Vector	m_vecDefaultLSP;
 	int		m_serial;
 };
+
+// Cursor for CAI_Enemies::GetFirst/GetNext; survives erasing other memories.
+typedef CAI_Enemies::CMemMap::iterator AIEnemiesIter_t;
 
 //-----------------------------------------------------------------------------
 

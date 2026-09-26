@@ -28,7 +28,7 @@ class CGameClient;
 // sv_main.c
 
 // Which areas are we going to transmit (usually 1, but with portals you can see into multiple other areas).
-extern CUtlVector<int> g_AreasNetworked;
+extern std::vector< int > g_AreasNetworked;
 
 void SV_ProcessVoice( void );
 void SV_Frame( bool send_client_updates );
@@ -45,7 +45,7 @@ void SV_ResetModInfo( void );
 class IRecipientFilter;
 
 void SV_StartSound ( IRecipientFilter& filter, edict_t *pSoundEmittingEntity, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH iSoundEntryHash, const char *pSample, 
-	float flVolume, soundlevel_t iSoundLevel, int iFlags, int iPitch, const Vector *pOrigin, float soundtime, int speakerentity, CUtlVector< Vector >* pUtlVecOrigins, int nSeed );
+	float flVolume, soundlevel_t iSoundLevel, int iFlags, int iPitch, const Vector *pOrigin, float soundtime, int speakerentity, std::vector< Vector >* pUtlVecOrigins, int nSeed );
 
 
 int SV_ModelIndex (const char *name);

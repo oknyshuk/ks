@@ -10,9 +10,6 @@
 #include "foundryhelpers_server.h"
 #include "basetempentity.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: This just marshalls certain FoundryHelpers_ calls to the client.
@@ -68,7 +65,7 @@ CBasePlayer* CheckInFoundryMode()
 }
 
 
-void GetCrosshairOrNamedEntities( const CCommand &args, CUtlVector<CBaseEntity*> &entities )
+void GetCrosshairOrNamedEntities( const CCommand &args, std::vector< CBaseEntity* > &entities )
 {
 	if ( args.ArgC() < 2 )
 	{
@@ -81,7 +78,7 @@ void GetCrosshairOrNamedEntities( const CCommand &args, CUtlVector<CBaseEntity*>
 
 		if ( tr.DidHit() && !tr.DidHitWorld() )
 		{
-			entities.AddToTail( tr.Ent<CBaseEntity>() );
+			entities.push_back( tr.Ent<CBaseEntity>() );
 		}
 	}
 	else
@@ -89,7 +86,7 @@ void GetCrosshairOrNamedEntities( const CCommand &args, CUtlVector<CBaseEntity*>
 		CBaseEntity *pEnt = nullptr;
 		while ((pEnt = gEntList.FindEntityGeneric( pEnt, args[1] ) ) != nullptr)
 		{
-			entities.AddToTail( pEnt );
+			entities.push_back( pEnt );
 		}
 	}
 }
@@ -100,10 +97,10 @@ CON_COMMAND_F( foundry_update_entity, "Updates the entity's position/angles when
 	if ( !CheckInFoundryMode() )
 		return;
 
-	CUtlVector<CBaseEntity*> entities;
+	std::vector< CBaseEntity* > entities;
 	GetCrosshairOrNamedEntities( args, entities );
 
-	for ( int i=0; i < entities.Count(); i++ )
+	for ( int i=0; i < std::ssize( entities ); i++ )
 	{
 		CBaseEntity *pEnt = entities[i];
 		serverfoundry->MoveEntityTo( pEnt->GetHammerID(), pEnt->GetAbsOrigin(), pEnt->GetAbsAngles() );
@@ -144,17 +141,17 @@ CON_COMMAND_F( foundry_select_entity, "Select the entity under the crosshair or 
 	if ( !pPlayer )
 		return;
 
-	CUtlVector<CBaseEntity*> entities;
+	std::vector< CBaseEntity* > entities;
 	GetCrosshairOrNamedEntities( args, entities );
 
-	CUtlVector<int> hammerIDs;
-	for ( int i=0; i < entities.Count(); i++ )
+	std::vector< int > hammerIDs;
+	for ( int i=0; i < std::ssize( entities ); i++ )
 	{
 		CBaseEntity *pEnt = entities[i];
-		hammerIDs.AddToTail( pEnt->GetHammerID() );
+		hammerIDs.push_back( pEnt->GetHammerID() );
 	}
 
-	if ( hammerIDs.Count() == 0 )
+	if ( hammerIDs.empty() )
 	{
 		Vector vPos = pPlayer->EyePosition();
 		QAngle vAngles = pPlayer->pl.v_angle;
@@ -162,7 +159,7 @@ CON_COMMAND_F( foundry_select_entity, "Select the entity under the crosshair or 
 	}
 	else
 	{
-		serverfoundry->SelectEntities( hammerIDs.Base(), hammerIDs.Count() );
+		serverfoundry->SelectEntities( hammerIDs.data(), std::ssize( hammerIDs ) );
 	}
 }
 

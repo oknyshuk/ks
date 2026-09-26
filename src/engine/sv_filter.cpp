@@ -15,13 +15,10 @@
 #include "tier1/commandbuffer.h"
 #include "net.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static ConVar sv_filterban( "sv_filterban", "1", 0, "Set packet filtering by IP mode" );
 
-CUtlVector< ipfilter_t > g_IPFilters;
-CUtlVector< userfilter_t > g_UserFilters;
+std::vector< ipfilter_t > g_IPFilters;
+std::vector< userfilter_t > g_UserFilters;
 
 #define BANNED_IP_FILENAME "banned_ip.cfg"
 #define BANNED_USER_FILENAME "banned_user.cfg"
@@ -57,13 +54,13 @@ bool Filter_ShouldDiscard( const ns_address& adr )
 	unsigned in = adr.AsType<netadr_t>().GetIPNetworkByteOrder();
 
 	// Handle timeouts 
-	for ( int i = g_IPFilters.Count() - 1 ; i >= 0 ; i--)
+	for ( int i = std::ssize( g_IPFilters ) - 1 ; i >= 0 ; i--)
 	{
 		if ( ( g_IPFilters[i].compare != 0xffffffff) &&
 			 ( g_IPFilters[i].banEndTime != 0.0f ) &&
 			 ( g_IPFilters[i].banEndTime <= realtime ) )
 		{
-			g_IPFilters.Remove(i);
+			g_IPFilters.erase( g_IPFilters.begin() + i );
 			continue;
 		}
 
@@ -152,21 +149,21 @@ static void Filter_Add_f( const CCommand& args )
 	if ( !Filter_ConvertString( args[2], &f ) )
 		return;
 
-	for (i=0 ; i<g_IPFilters.Count(); i++)
+	for (i=0 ; i<std::ssize( g_IPFilters ); i++)
 	{
 		if ( g_IPFilters[i].compare == 0xffffffff || ( g_IPFilters[i].compare == f.compare && g_IPFilters[i].mask == f.mask ) )
 			break;		// free spot
 	}
 	
-	if (i == g_IPFilters.Count())
+	if (i == std::ssize( g_IPFilters ))
 	{
-		if (g_IPFilters.Count() == MAX_IPFILTERS)
+		if (std::ssize( g_IPFilters ) == MAX_IPFILTERS)
 		{
 			ConMsg( "addip:  IP filter list is full\n" );
 			return;
 		}
 
-		i = g_IPFilters.AddToTail();
+		i = std::ssize( g_IPFilters ); g_IPFilters.emplace_back();
 	}
 	else
 	{
@@ -277,7 +274,7 @@ CON_COMMAND( removeip, "Remove an IP address from the ban list." )
 	if ( !Q_strstr( args[1], "." ) )
 	{
 		int slot = Q_atoi( args[1] );
-		if ( slot > 0 && slot <= g_IPFilters.Count() )
+		if ( slot > 0 && slot <= std::ssize( g_IPFilters ) )
 		{
 			byte b[4];
 			char szIP[32];
@@ -288,7 +285,7 @@ CON_COMMAND( removeip, "Remove an IP address from the ban list." )
 			*(unsigned *)b = g_IPFilters[slot].compare;
 			Q_snprintf( szIP, sizeof( szIP ), "%3i.%3i.%3i.%3i", b[0], b[1], b[2], b[3] );
 
-			g_IPFilters.Remove( slot );
+			g_IPFilters.erase( g_IPFilters.begin() + slot );
 
 			// Tell server operator
 			ConMsg( "removeip:  filter removed for %s, IP %s\n", args[1], szIP );
@@ -315,12 +312,12 @@ CON_COMMAND( removeip, "Remove an IP address from the ban list." )
 	if ( !Filter_ConvertString( args[1], &f ) )
 		return;
 
-	for ( i = 0 ; i < g_IPFilters.Count() ; i++ )
+	for ( i = 0 ; i < std::ssize( g_IPFilters ) ; i++ )
 	{
 		if ( ( g_IPFilters[i].mask == f.mask ) &&
 			 ( g_IPFilters[i].compare == f.compare ) )
 		{
-			g_IPFilters.Remove(i);
+			g_IPFilters.erase( g_IPFilters.begin() + i );
 			ConMsg( "removeip:  filter removed for %s\n", args[1] );
 
 			// send an event
@@ -348,7 +345,7 @@ CON_COMMAND( listip, "List IP addresses on the ban list." )
 {
 	int		i;
 	byte	b[4];
-	int		count = g_IPFilters.Count();
+	int		count = std::ssize( g_IPFilters );
 
 	if ( !count )
 	{
@@ -404,7 +401,7 @@ CON_COMMAND( writeip, "Save the ban list to " BANNED_IP_FILENAME "." )
 		return;
 	}
 	
-	for ( i = 0 ; i < g_IPFilters.Count() ; i++ )
+	for ( i = 0 ; i < std::ssize( g_IPFilters ) ; i++ )
 	{
 		*(unsigned *)b = g_IPFilters[i].compare;
 
@@ -435,13 +432,13 @@ bool Filter_IsUserBanned( const USERID_t& userid )
 	bool bNegativeFilter = sv_filterban.GetInt() == 1;
 	
 	// Handle timeouts 
-	for ( int i =g_UserFilters.Count() - 1 ; i >= 0 ; i-- )
+	for ( int i =std::ssize( g_UserFilters ) - 1 ; i >= 0 ; i-- )
 	{
 		// Time out old filters
 		if ( ( g_UserFilters[i].banEndTime != 0.0f ) &&
 			 ( g_UserFilters[i].banEndTime <= realtime ) )
 		{
-			g_UserFilters.Remove( i );
+			g_UserFilters.erase( g_UserFilters.begin() + i );
 			continue;
 		}
 
@@ -523,7 +520,7 @@ CON_COMMAND( writeid, "Writes a list of permanently-banned user IDs to " BANNED_
 		return;
 	}
 	
-	for ( i = 0 ; i < g_UserFilters.Count() ; i++ )
+	for ( i = 0 ; i < std::ssize( g_UserFilters ) ; i++ )
 	{
 		banTime = g_UserFilters[i].banTime;
 
@@ -544,8 +541,8 @@ CON_COMMAND( writeid, "Writes a list of permanently-banned user IDs to " BANNED_
 //-----------------------------------------------------------------------------
 CON_COMMAND( removeallids, "Remove all user IDs from the ban list." )
 {
-	int nCount = g_UserFilters.Count();
-	g_UserFilters.RemoveAll();
+	int nCount = std::ssize( g_UserFilters );
+	g_UserFilters.clear();
 	ConMsg( "removeallids:  filter removed for %u user IDs\n", nCount );
 }
 
@@ -593,12 +590,12 @@ CON_COMMAND( removeid, "Remove a user ID from the ban list." )
 			return;
 		}
 
-		for ( i = 0 ; i < g_UserFilters.Count() ; i++ )
+		for ( i = 0 ; i < std::ssize( g_UserFilters ) ; i++ )
 		{
 			if ( Q_stricmp( GetUserIDString( g_UserFilters[i].userid ), szSearchString ) )
 				continue;
 
-			g_UserFilters.Remove( i );
+			g_UserFilters.erase( g_UserFilters.begin() + i );
 			ConMsg( "removeid:  filter removed for %s\n", szSearchString );
 
 			// send an event
@@ -621,7 +618,7 @@ CON_COMMAND( removeid, "Remove a user ID from the ban list." )
 	else
 	{
 		int slot = Q_atoi( pszArg1 );
-		if ( slot > 0 && slot <= g_UserFilters.Count() )
+		if ( slot > 0 && slot <= std::ssize( g_UserFilters ) )
 		{
 			USERID_t id;
 
@@ -631,7 +628,7 @@ CON_COMMAND( removeid, "Remove a user ID from the ban list." )
 			// Copy off slot
 			id = g_UserFilters[slot].userid;
 
-			g_UserFilters.Remove( slot );
+			g_UserFilters.erase( g_UserFilters.begin() + slot );
 
 			// Tell server operator
 			ConMsg( "removeid:  filter removed for %s, ID %s\n", pszArg1, GetUserIDString( id ) );
@@ -660,7 +657,7 @@ CON_COMMAND( removeid, "Remove a user ID from the ban list." )
 CON_COMMAND( listid, "Lists banned users." )
 {
 	int i;
-	int count = g_UserFilters.Count();
+	int count = std::ssize( g_UserFilters );
 
 	if ( !count )
 	{
@@ -857,7 +854,7 @@ CON_COMMAND( banid, "Add a user ID to the ban list." )
 	}
 
 	// See if it's in the list already
-	for ( i = 0 ; i < g_UserFilters.Count() ; i++ )
+	for ( i = 0 ; i < std::ssize( g_UserFilters ) ; i++ )
 	{
 		// We're just updating an existing id
 		if ( Steam3Server().CompareUserID( g_UserFilters[i].userid, *id ) )
@@ -866,17 +863,17 @@ CON_COMMAND( banid, "Add a user ID to the ban list." )
 
 	// 
 	// Adding a new one
-	if ( i >= g_UserFilters.Count() )
+	if ( i >= std::ssize( g_UserFilters ) )
 	{
 		// See if we have space for it
-		if ( g_UserFilters.Count() >= MAX_USERFILTERS )
+		if ( std::ssize( g_UserFilters ) >= MAX_USERFILTERS )
 		{
 			ConMsg( "banid:  user filter list is full\n" );
 			return;
 		}
 		userfilter_t nullUser;
 		memset( &nullUser, 0, sizeof(nullUser) );
-		i = g_UserFilters.AddToTail( nullUser );
+		i = std::ssize( g_UserFilters ); g_UserFilters.push_back( nullUser );
 	}
 
 	g_UserFilters[i].banTime = banTime;

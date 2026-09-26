@@ -31,7 +31,7 @@ protected:
 	CNetworkVar( bool, m_bIsIncGrenade );
 
 private:
-	CUtlReference<CNewParticleEffect> m_molotovParticleEffect;
+	ks::tracked_ref<CNewParticleEffect> m_molotovParticleEffect;
 
 };
 

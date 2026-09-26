@@ -13,7 +13,9 @@
 #include "materialsystem/icustommaterialmanager.h"
 #include "convar.h"
 #include "utlvector.h"
-#include "utlmap.h"
+#include <map>
+#include <memory>
+#include <string>
 
 //#define DISABLE_CUSTOM_MATERIAL_GENERATION
 
@@ -59,7 +61,7 @@ public:
 	void RegenerateTextures();
 	bool ShouldRelease();
 
-	bool Compare( const CUtlVector< SCompositeTextureInfo > &vecTextures );
+	bool Compare( const std::vector< SCompositeTextureInfo > &vecTextures );
 
 	// actually creates the internal material that references the textures (which need to be finalized before calling this)
 	void Finalize();
@@ -69,7 +71,7 @@ private:
 	void DestroyProceduralMaterial();
 
 	CMaterialReference m_Material;
- 	CUtlVector< CCompositeTexture * > m_pTextures;
+ 	std::vector< CCompositeTexture * > m_pTextures;
 
 	bool m_bValid;
 	int m_nModelMaterialIndex;
@@ -89,7 +91,7 @@ public:
 	void Shutdown();
 
 	virtual bool Process();
-	virtual ICustomMaterial *GetOrCreateCustomMaterial( KeyValues *pKeyValues, const CUtlVector< SCompositeTextureInfo > &vecTextureInfos, bool bIgnorePicMip = false  );
+	virtual ICustomMaterial *GetOrCreateCustomMaterial( KeyValues *pKeyValues, const std::vector< SCompositeTextureInfo > &vecTextureInfos, bool bIgnorePicMip = false  );
 
 	virtual int DebugGetNumActiveCustomMaterials();
 	virtual bool GetVMTKeyValues( const char *pszVMTName, KeyValues **ppVMTKeyValues );
@@ -101,8 +103,8 @@ private:
 
 	void DestroyMaterials();
 
-	CUtlVector< CCustomMaterial * > m_pCustomMaterials;
-	CUtlMap< const char *, KeyValues * > m_mapVMTKeyValues;
+	std::vector< CCustomMaterial * > m_pCustomMaterials;
+	std::map< std::string, std::unique_ptr< KeyValues > > m_mapVMTKeyValues;
 };
 
 #endif // CUSTOM_MATERIAL_H

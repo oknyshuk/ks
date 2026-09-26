@@ -10,7 +10,7 @@
 
 #include "particlemgr.h"
 #include "particlesphererenderer.h"
-#include "smartptr.h"
+#include "tier1/intrusive_ptr.h"
 
 
 // ------------------------------------------------------------------------------------------------ //
@@ -28,7 +28,7 @@ class CParticleEffect : public IParticleEffect
 public:
 	DECLARE_CLASS_NOBASE( CParticleEffect );
 
-	friend class CRefCountAccessor;
+	template < class > friend class ks::intrusive_ptr;
 
 	// Call this before adding a bunch of particles to give it a rough estimate of where
 	// your particles are for sorting amongst other translucent entities.
@@ -164,7 +164,7 @@ public:
 
 	DECLARE_CLASS( CSimpleEmitter, CParticleEffect );
 
-	static CSmartPtr<CSimpleEmitter>	Create( const char *pDebugName );
+	static ks::intrusive_ptr<CSimpleEmitter>	Create( const char *pDebugName );
 
 	virtual void	SimulateParticles( CParticleSimulateIterator *pIterator );
 	virtual void	RenderParticles( CParticleRenderIterator *pIterator );
@@ -206,7 +206,7 @@ class CEmberEffect : public CSimpleEmitter
 {
 public:
 	explicit						CEmberEffect( const char *pDebugName );
-	static CSmartPtr<CEmberEffect>	Create( const char *pDebugName );
+	static ks::intrusive_ptr<CEmberEffect>	Create( const char *pDebugName );
 
 	virtual void UpdateVelocity( SimpleParticle *pParticle, float timeDelta );
 	virtual Vector UpdateColor( const SimpleParticle *pParticle );
@@ -224,7 +224,7 @@ class CFireSmokeEffect : public CSimpleEmitter
 {
 public:
 	explicit							CFireSmokeEffect( const char *pDebugName );
-	static CSmartPtr<CFireSmokeEffect>	Create( const char *pDebugName );
+	static ks::intrusive_ptr<CFireSmokeEffect>	Create( const char *pDebugName );
 
 	virtual void UpdateVelocity( SimpleParticle *pParticle, float timeDelta );
 	virtual float UpdateAlpha( const SimpleParticle *pParticle );
@@ -245,7 +245,7 @@ class CFireParticle : public CSimpleEmitter
 {
 public:
 	explicit						CFireParticle( const char *pDebugName );
-	static CSmartPtr<CFireParticle>	Create( const char *pDebugName );
+	static ks::intrusive_ptr<CFireParticle>	Create( const char *pDebugName );
 	
 	virtual Vector UpdateColor( const SimpleParticle *pParticle );
 

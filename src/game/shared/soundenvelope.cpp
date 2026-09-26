@@ -15,13 +15,10 @@
 #include "IEffects.h"
 #include "gamestringpool.h"
 #include "igamesystem.h"
-#include "utlpriorityqueue.h"
-#include "mempool.h"
+#include "tier1/vector_ops.h"
+#include "tier1/fixed_pool.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "tier0/vprof.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 static ConVar soundpatch_captionlength( "soundpatch_captionlength", "2.0", FCVAR_REPLICATED, "How long looping soundpatch captions should display for." );
 
@@ -70,7 +67,7 @@ void CSoundEnvelope::SetTarget( float target, float deltaTime )
 	if ( deltaValue && deltaTime > 0 )
 	{
 		m_target = target;
-		m_rate = MAX( 0.1, fabs(deltaValue / deltaTime) );
+		m_rate = std::max<std::common_type_t<double, float>>( 0.1, fabs(deltaValue / deltaTime) );
 	}
 	else
 	{
@@ -155,7 +152,7 @@ public:
 			int index = pSrc->GetRecipientIndex( i );
 			
 			if ( index >= 0 )
-				m_Recipients.AddToTail( index );
+				m_Recipients.push_back( index );
 		}
 	}
 
@@ -171,7 +168,7 @@ public:
 
 	virtual int	GetRecipientCount( void ) const
 	{
-		return m_Recipients.Count();
+		return std::ssize( m_Recipients );
 	}
 
 	virtual int	GetRecipientIndex( int slot ) const
@@ -194,10 +191,10 @@ public:
 			return false;
 
 		// Already in list
-		if ( m_Recipients.Find( index ) != m_Recipients.InvalidIndex() )
+		if ( ks::find_index( m_Recipients, index ) != -1 )
 			return false;
 
-		m_Recipients.AddToTail( index );
+		m_Recipients.push_back( index );
 		return true;
 	}
 
@@ -210,13 +207,12 @@ private:
 	};
 
 	int m_Flags;
-	CUtlVector< int > m_Recipients;
+	std::vector< int > m_Recipients;
 };
 
 IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CCopyRecipientFilter )
 
 
-#include "tier0/memdbgoff.h"
 // This is the a basic sound controller, a "patch"
 // It has envelopes for pitch and volume and can manage state changes to those
 class CSoundPatch
@@ -309,7 +305,6 @@ private:
 
 	DECLARE_FIXEDSIZE_ALLOCATOR(CSoundPatch);
 };
-#include "tier0/memdbgon.h"
 
 int CSoundPatch::g_SoundPatchCount = 0;
 
@@ -326,7 +321,7 @@ CON_COMMAND( report_soundpatch, "reports sound patch count" )
 
 	Msg("Current sound patches: %d\n", CSoundPatch::g_SoundPatchCount );
 }
-DEFINE_FIXEDSIZE_ALLOCATOR( CSoundPatch, 64, CUtlMemoryPool::GROW_FAST );
+DEFINE_FIXEDSIZE_ALLOCATOR( CSoundPatch, 64, ks::fixed_pool::grow::fast );
 
 IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CSoundPatch )
 
@@ -743,7 +738,6 @@ void CSoundPatch::AddPlayerPost( CBasePlayer *pPlayer )
 // This is an entry in the command queue.  It's used to queue up various pitch and volume changes
 // so you can define an envelope without writing timing code in an entity.  Existing queued commands
 // can be deleted later if the envelope changes dynamically.
-#include "tier0/memdbgoff.h"
 struct SoundCommand_t
 {
 	SoundCommand_t( void ) { memset( this, 0, sizeof(*this) ); }
@@ -760,14 +754,13 @@ struct SoundCommand_t
 	DECLARE_SIMPLE_DATADESC();
 	DECLARE_FIXEDSIZE_ALLOCATOR(SoundCommand_t);
 };
-#include "tier0/memdbgon.h"
 
-DEFINE_FIXEDSIZE_ALLOCATOR( SoundCommand_t, 32, CUtlMemoryPool::GROW_FAST );
+DEFINE_FIXEDSIZE_ALLOCATOR( SoundCommand_t, 32, ks::fixed_pool::grow::fast );
 
 
 IMPLEMENT_REFLECT_DATAMAP_SIMPLE( SoundCommand_t )
 
-typedef SoundCommand_t *SOUNDCOMMANDPTR;
+typedef std::unique_ptr< SoundCommand_t > SOUNDCOMMANDPTR;
 
 bool SoundCommandLessFunc( const SOUNDCOMMANDPTR &lhs, const SOUNDCOMMANDPTR &rhs )	
 { 
@@ -785,7 +778,6 @@ class CSoundControllerImp : public CSoundEnvelopeController, public CAutoGameSys
 public:
 	CSoundControllerImp( void ) : CAutoGameSystemPerFrame( "CSoundControllerImp" )
 	{
-		m_commandList.SetLessFunc( SoundCommandLessFunc );
 	}
 
 	void ProcessCommand( SoundCommand_t *pCmd );
@@ -842,7 +834,7 @@ public:
 	void			CheckLoopingSoundsForPlayer( CBasePlayer *pPlayer );
 
 	// Inserts the command into the list, sorted by time
-	void			CommandInsert( SoundCommand_t *pCommand );
+	void			CommandInsert( SOUNDCOMMANDPTR pCommand );
 
 #ifdef CLIENT_DLL
 	// CAutoClientSystem
@@ -863,8 +855,8 @@ public:
 	}
 	
 private:
-	CUtlVector<CSoundPatch *>			m_soundList;
-	CUtlPriorityQueue<SoundCommand_t *>	m_commandList;
+	std::vector< CSoundPatch * >			m_soundList;
+	std::vector< SOUNDCOMMANDPTR >		m_commandList;	// heap by SoundCommandLessFunc (ks::heap_*)
 	float				m_flLastTime;
 };
 
@@ -901,7 +893,7 @@ void CSoundControllerImp::ProcessCommand( SoundCommand_t *pCmd )
 //-----------------------------------------------------------------------------
 void CSoundControllerImp::RemoveFromList( CSoundPatch *pSound )
 {
-	m_soundList.FindAndRemove( pSound );
+	ks::erase_first( m_soundList, pSound );
 	pSound->Shutdown();
 }
 
@@ -924,7 +916,7 @@ void CSoundControllerImp::Play( CSoundPatch *pSound, float volume, float pitch, 
 	}
 	else
 	{
-		m_soundList.AddToTail( pSound );
+		m_soundList.push_back( pSound );
 		pSound->StartSound( flStartTime );
 	}
 }
@@ -933,9 +925,9 @@ void CSoundControllerImp::Play( CSoundPatch *pSound, float volume, float pitch, 
 //-----------------------------------------------------------------------------
 // Inserts the command into the list, sorted by time
 //-----------------------------------------------------------------------------
-void CSoundControllerImp::CommandInsert( SoundCommand_t *pCommand )
+void CSoundControllerImp::CommandInsert( SOUNDCOMMANDPTR pCommand )
 {
-	m_commandList.Insert( pCommand );
+	ks::heap_push( m_commandList, std::move( pCommand ), SoundCommandLessFunc );
 }
 
 
@@ -950,14 +942,13 @@ void CSoundControllerImp::CommandInsert( SoundCommand_t *pCommand )
 //-----------------------------------------------------------------------------
 void CSoundControllerImp::CommandAdd( CSoundPatch *pSound, float executeDeltaTime, soundcommands_t command, float commandTime, float commandValue )
 {
-	SoundCommand_t *pCommand = new SoundCommand_t( pSound, g_pEffects->Time() + executeDeltaTime, command, commandTime, commandValue );
-	CommandInsert( pCommand );
+	CommandInsert( std::make_unique< SoundCommand_t >( pSound, g_pEffects->Time() + executeDeltaTime, command, commandTime, commandValue ) );
 }
 
 // Reset the whole system (level change, etc.)
 void CSoundControllerImp::SystemReset( void )
 {
-	for ( int i = m_soundList.Count()-1; i >=0; i-- )
+	for ( int i = std::ssize( m_soundList )-1; i >=0; i-- )
 	{
 		CSoundPatch *pNode = m_soundList[i];
 	
@@ -966,10 +957,10 @@ void CSoundControllerImp::SystemReset( void )
 	}
 
 	// clear the list
-	m_soundList.Purge();
+	m_soundList.clear(); m_soundList.shrink_to_fit();
 
 	// clear the command queue
-	m_commandList.RemoveAll();
+	m_commandList.clear();
 }
 
 
@@ -990,16 +981,15 @@ void CSoundControllerImp::SystemUpdate( void )
 
 	{
 		VPROF( "CSoundControllerImp::SystemUpdate:processcommandlist" );
-		while ( m_commandList.Count() )
+		while ( !m_commandList.empty() )
 		{
-			SoundCommand_t *pCmd = m_commandList.ElementAtHead();
 			// Commands are sorted by time.
 			// process any that should occur by the current time
-			if ( time >= pCmd->m_time )
+			if ( time >= m_commandList.front()->m_time )
 			{
-				m_commandList.RemoveAtHead();
-				ProcessCommand( pCmd );
-				delete pCmd;
+				SOUNDCOMMANDPTR pCmd = std::move( m_commandList.front() );
+				ks::heap_pop( m_commandList, SoundCommandLessFunc );
+				ProcessCommand( pCmd.get() );
 			}
 			else
 			{
@@ -1012,13 +1002,13 @@ void CSoundControllerImp::SystemUpdate( void )
 	// we can fast remove inside it without breaking the indexing
 	{
 		VPROF( "CSoundControllerImp::SystemUpdate:removesounds" );
-		for ( int i = m_soundList.Count()-1; i >=0; i-- )
+		for ( int i = std::ssize( m_soundList )-1; i >=0; i-- )
 		{
 			CSoundPatch *pNode = m_soundList[i];
 			if ( !pNode->Update( time, deltaTime ) )
 			{
 				pNode->Reset();
-				m_soundList.FastRemove( i );
+				ks::swap_remove( m_soundList, i );
 			}
 		}
 	}
@@ -1027,13 +1017,11 @@ void CSoundControllerImp::SystemUpdate( void )
 // Remove any envelope commands from the list (dynamically changing envelope)
 void CSoundControllerImp::CommandClear( CSoundPatch *pSound )
 {
-	for ( int i = m_commandList.Count()-1; i >= 0; i-- )
+	for ( int i = std::ssize( m_commandList )-1; i >= 0; i-- )
 	{
-		SoundCommand_t *pCmd = m_commandList.Element( i );
-		if ( pCmd->m_pPatch == pSound )
+		if ( m_commandList[ i ]->m_pPatch == pSound )
 		{
-			m_commandList.RemoveAt(i);
-			delete pCmd;
+			ks::heap_erase( m_commandList, i, SoundCommandLessFunc );
 		}
 	}
 }
@@ -1249,7 +1237,7 @@ float CSoundControllerImp::SoundPlayEnvelope( CSoundPatch *pSound, soundcommands
 //-----------------------------------------------------------------------------
 void CSoundControllerImp::CheckLoopingSoundsForPlayer( CBasePlayer *pPlayer )
 {
-	for ( int i = m_soundList.Count()-1; i >=0; i-- )
+	for ( int i = std::ssize( m_soundList )-1; i >=0; i-- )
 	{
 		CSoundPatch *pNode = m_soundList[i];
 		pNode->AddPlayerPost( pPlayer );
@@ -1261,7 +1249,7 @@ void CSoundControllerImp::CheckLoopingSoundsForPlayer( CBasePlayer *pPlayer )
 //-----------------------------------------------------------------------------
 void CSoundControllerImp::OnRestore()
 {
-	for ( int i = m_soundList.Count()-1; i >=0; i-- )
+	for ( int i = std::ssize( m_soundList )-1; i >=0; i-- )
 	{
 		CSoundPatch *pNode = m_soundList[i];
 		if ( pNode && pNode->IsPlaying() )

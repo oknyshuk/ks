@@ -10,7 +10,6 @@
 #include "materialsystem/MaterialSystemUtil.h"
 #include "materialsystem/itexture.h"
 #include "materialsystem/imesh.h"
-#include "utlsortvector.h"
 #include "materialsystem_global.h"
 #include "IHardwareConfigInternal.h"
 #include "pixelwriter.h"
@@ -26,8 +25,6 @@
 #include "bitmap/imageformat.h"
 #include "materialsystem/IShader.h"
 #include "imaterialinternal.h"
-
-#include "tier0/memdbgon.h"
 
 #define SUBD_TEXTURE_FORMAT IMAGE_FORMAT_RGBA32323232F
 #define SUBD_TEXTURE_WIDTH		30

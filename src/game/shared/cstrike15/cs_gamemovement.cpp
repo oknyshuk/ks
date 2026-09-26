@@ -21,9 +21,6 @@
 	#include "keyvalues.h"
 #endif
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 #define STAMINA_RANGE				100.0
 ConVar sv_staminajumpcost( "sv_staminajumpcost", ".080", FCVAR_RELEASE | FCVAR_REPLICATED, "Stamina penalty for jumping", true, 0.0, false, 0.0 );
 ConVar sv_staminalandcost( "sv_staminalandcost", ".050", FCVAR_RELEASE | FCVAR_REPLICATED, "Stamina penalty for landing", true, 0.0, false, 0.0 );
@@ -184,7 +181,7 @@ void CCSGameMovement::CheckParameters( void )
 	// (this is the only place that IN_RAWDUCK is checked)
 	if ( ( mv->m_nButtons & IN_RAWDUCK ) != ( mv->m_nOldButtons & IN_RAWDUCK ) )
 	{
-		player->m_flDuckSpeed = MAX( 0, player->m_flDuckSpeed - get_sv_crouch_spam_penalty );
+		player->m_flDuckSpeed = std::max<std::common_type_t<int, float>>( 0, player->m_flDuckSpeed - get_sv_crouch_spam_penalty );
 	}
 
 	// Cancel auto-duck if player hits +duck, so cancel our auto duck
@@ -1147,7 +1144,7 @@ void CCSGameMovement::Duck( void )
 		if ( CanUnduck() )
 		{
 			// Always unduck at at least 1.5 to prevent advantageous semi-ducked positions
-			float duckSpeed = MAX( 1.5f, player->m_flDuckSpeed );
+			float duckSpeed = std::max<std::common_type_t<float, CNetworkVarBase<float, CBasePlayer::NetworkVar_m_flDuckSpeed>>>( 1.5f, player->m_flDuckSpeed );
 
 			// Reduce crouch/uncrouch speed significantly while defusing
 			if ( m_pCSPlayer->m_bIsDefusing )
@@ -1221,7 +1218,7 @@ void CCSGameMovement::Duck( void )
 			player->RemoveFlag( FL_ANIMDUCKING | FL_DUCKING );
 		}
 		const float CS_DUCK_TIME_MSECS = 150.0f;
-		int millisecondsDucked = MAX( 0, CS_DUCK_TIME_MSECS - player->m_Local.m_nDuckTimeMsecs );
+		int millisecondsDucked = std::max<std::common_type_t<int, float>>( 0, CS_DUCK_TIME_MSECS - player->m_Local.m_nDuckTimeMsecs );
 		player->m_flDuckAmount = (float)millisecondsDucked / (float)CS_DUCK_TIME_MSECS;
 		SetDuckedEyeOffset( player->m_flDuckAmount );
 	}
@@ -1272,7 +1269,7 @@ void CCSGameMovement::Accelerate( Vector& wishdir, float wishspeed, float accel 
 	bool bIsWalking = ( mv->m_nButtons & ( /*IN_WALK | */ IN_SPEED ) ) != 0 && !bIsDucking;
 
 	float flMaxSpeed = 250.0f;
-	float fAccelerationScale = MAX(flMaxSpeed, wishspeed);
+	float fAccelerationScale = std::max(flMaxSpeed, wishspeed);
 	float flGoalSpeed = fAccelerationScale;
 
 	// if this convar is set, we ignore the passed in accel value (sv_acceleration) and accelerate based on the one below instead
@@ -1289,10 +1286,10 @@ void CCSGameMovement::Accelerate( Vector& wishdir, float wishspeed, float accel 
 		bIsSlowSniperScoped = (csWeapon->GetCSZoomLevel() > 0 && csWeapon->GetZoomLevels() > 1 
 								&& (csWeapon->GetMaxSpeed( ) * CS_PLAYER_SPEED_WALK_MODIFIER) < 110.0);
 
-		flGoalSpeed *= MIN( 1.0f, ( csWeapon->GetMaxSpeed( ) / flMaxSpeed ) );
+		flGoalSpeed *= std::min( 1.0f, ( csWeapon->GetMaxSpeed( ) / flMaxSpeed ) );
 		
 		if ( (!bIsDucking && !bIsWalking) || (( bIsWalking || bIsDucking) && bIsSlowSniperScoped) )
-			fAccelerationScale *= MIN( 1.0f, (csWeapon->GetMaxSpeed() / flMaxSpeed));
+			fAccelerationScale *= std::min( 1.0f, (csWeapon->GetMaxSpeed() / flMaxSpeed));
 	}
 
 	// TODO: make this number not a magic number
@@ -1316,14 +1313,14 @@ void CCSGameMovement::Accelerate( Vector& wishdir, float wishspeed, float accel 
 	bool bShouldStutter = (wishspeed > 200.0f);
 	if ( bShouldStutter == false && bIsDucking == false && bIsWalking == false )
 	{
-		flStoredAccel *= 0.75;//clamp( 1.0f - ( MAX( 0.0f, currentspeed - ( flGoalSpeed - 5 ) ) / MAX( 0.0f, flGoalSpeed - ( flGoalSpeed - 5 ) ) ), 0.0f, 1.0f );
+		flStoredAccel *= 0.75;//clamp( 1.0f - ( std::max( 0.0f, currentspeed - ( flGoalSpeed - 5 ) ) / std::max( 0.0f, flGoalSpeed - ( flGoalSpeed - 5 ) ) ), 0.0f, 1.0f );
 	}
 	// we no longer just clamp player's max speed when they hit the walk key
 	else if (bIsWalking && currentspeed > (flGoalSpeed-5) )*/
 	if (bIsWalking && currentspeed > (flGoalSpeed-5) )
 	{	
 		// we now only clamp it when it's within a certain range of walking, otherwise we stop adding speed to let them decelerate naturally
-		flStoredAccel *= clamp( 1.0f - ( MAX( 0.0f, currentspeed - ( flGoalSpeed - 5 ) ) / MAX( 0.0f, flGoalSpeed - ( flGoalSpeed - 5 ) ) ), 0.0f, 1.0f );
+		flStoredAccel *= clamp( 1.0f - ( std::max( 0.0f, currentspeed - ( flGoalSpeed - 5 ) ) / std::max( 0.0f, flGoalSpeed - ( flGoalSpeed - 5 ) ) ), 0.0f, 1.0f );
 	}
 	
 	// Determine amount of acceleration.
@@ -1334,11 +1331,11 @@ void CCSGameMovement::Accelerate( Vector& wishdir, float wishspeed, float accel 
 
 	if ( flZeroToMaxSpeedTime > 0 )
 	{	
-		currentspeed = MAX( 5, currentspeed );
+		currentspeed = std::max<std::common_type_t<int, float>>( 5, currentspeed );
 
-		float flRawAccelExponent = MAX(1, SV_ACCELERATE_EXPONENT);
+		float flRawAccelExponent = std::max(1, SV_ACCELERATE_EXPONENT);
 		float flAccelExponentTop = (flRawAccelExponent-1);
-		flAccelExponentTop *= MAX( 0.0001, 1-(MAX( 0, (fAccelerationScale-220) )/(flGoalSpeed-220) ) );
+		flAccelExponentTop *= std::max( 0.0001, 1-(std::max<std::common_type_t<double, float>>( 0, (fAccelerationScale-220) )/(flGoalSpeed-220) ) );
 
 		if ( bIsDucking || bIsWalking )
 			flAccelExponentTop *= 0.05;
@@ -1358,7 +1355,7 @@ void CCSGameMovement::Accelerate( Vector& wishdir, float wishspeed, float accel 
 
 		float flTimeSinceStart = (flZeroToMaxSpeedTime * flMoveFracActual);
 		float flNewTime = (flTimeSinceStart + flLastTimeDelta);
-		float flNewFrac = MIN( 1, (flNewTime / flZeroToMaxSpeedTime) );
+		float flNewFrac = std::min<std::common_type_t<int, float>>( 1, (flNewTime / flZeroToMaxSpeedTime) );
 // 		if ( flNewFrac > 1 )
 // 		{
 // 			int x = 1;
@@ -1374,7 +1371,7 @@ void CCSGameMovement::Accelerate( Vector& wishdir, float wishspeed, float accel 
 		flMaxAccelspeed = accel * gpGlobals->frametime * fAccelerationScale * player->m_surfaceFriction;
 
 		// apply the speed
-		accelspeed = MIN( flMaxAccelspeed, (flStoredAccel * gpGlobals->frametime * fAccelerationScale)+flCounterSpeed );
+		accelspeed = std::min( flMaxAccelspeed, (flStoredAccel * gpGlobals->frametime * fAccelerationScale)+flCounterSpeed );
 	}
 	else
 	{

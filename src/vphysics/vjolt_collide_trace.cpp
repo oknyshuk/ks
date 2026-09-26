@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2022 Joshua Ashton and Josh Dowell (Slartibarty)
+
 //=================================================================================================
 //
 // Trace Logic
@@ -14,9 +17,6 @@
 #include "vjolt_util.h"
 
 #include "vjolt_collide.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 namespace VJoltTrace
 {

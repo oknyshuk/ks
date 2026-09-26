@@ -12,9 +12,6 @@
 #include "engine/IEngineTrace.h"
 #include "view.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define SF_EMISSIVE	0x00000001
 
 // ------------------------------------------------------------------------- //

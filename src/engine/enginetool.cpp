@@ -38,9 +38,6 @@
 #include "engineui.h"
 #endif
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 // External variables and APIs needed
 extern CSysModule *g_GameDLL;
@@ -227,7 +224,7 @@ public:
 	virtual bool		PrecacheSound( const char *pName, bool bPreload = false );
 	virtual bool		PrecacheModel( const char *pName, bool bPreload = false );
 
-	virtual float		GetMono16Samples( const char *pszName, CUtlVector< short >& sampleList );
+	virtual float		GetMono16Samples( const char *pszName, std::vector< short >& sampleList );
 
 	virtual void		GetWorldToScreenMatrixForView( const CViewSetup &view, VMatrix *pVMatrix );
 	virtual SpatialPartitionHandle_t CreatePartitionHandle( IHandleEntity *pEntity, SpatialPartitionListMask_t listMask, const Vector& mins, const Vector& maxs );
@@ -259,7 +256,7 @@ private:
 		FnQuitHandler	func;
 	};
 
-	CUtlVector< QuitHandler_t >	m_QuitHandlers;
+	std::vector< QuitHandler_t >	m_QuitHandlers;
 
 	char				m_szScreenshotFile[ MAX_OSPATH ];
 	int					m_nScreenshotWidth;
@@ -854,7 +851,7 @@ void CEngineTool::CreatePickingRay( const CViewSetup &viewSetup, int x, int y, V
 //-----------------------------------------------------------------------------
 bool CEngineTool::CanQuit()
 {
-	int c = m_QuitHandlers.Count();
+	int c = std::ssize( m_QuitHandlers );
 	for ( int i = 0; i < c; ++i )
 	{
 		QuitHandler_t& qh = m_QuitHandlers[ i ];
@@ -877,7 +874,7 @@ void CEngineTool::InstallQuitHandler( void *pvUserData, FnQuitHandler func )
 	qh.userdata = pvUserData;
 	qh.func = func;
 
-	m_QuitHandlers.AddToTail( qh );
+	m_QuitHandlers.push_back( qh );
 }
 
 // precache methods
@@ -1057,7 +1054,7 @@ void CEngineTool::StopRecordingVoiceToFile()
 #endif
 }
 
-float CEngineTool::GetMono16Samples( const char *pszName, CUtlVector< short >& sampleList )
+float CEngineTool::GetMono16Samples( const char *pszName, std::vector< short >& sampleList )
 {
 	return S_GetMono16Samples( pszName, sampleList );
 }

@@ -10,9 +10,6 @@
 #include "tier0/dbg.h"
 #include "gameinterface.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern CTimedEventMgr g_NetworkPropertyEventMgr;
 
 
@@ -267,7 +264,7 @@ bool CServerNetworkProperty::IsInPVS( const CCheckTransmitInfo *pInfo )
 	for ( i = m_PVSInfo.m_nClusterCount; --i >= 0; )
 	{
 		int nCluster = m_PVSInfo.m_pClusters[i];
-		if ( ((int)(pPVS[nCluster >> 3])) & BitVec_BitInByte( nCluster ) )
+		if ( ((int)(pPVS[nCluster >> 3])) & ( 1 << ( nCluster & 7 ) ) )
 			return true;
 	}
 

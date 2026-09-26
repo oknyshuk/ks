@@ -11,9 +11,6 @@
 #include "toolframework/iserverenginetools.h"
 #include "init_factory.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: This is an autogame system which is used to call back into the engine at appropriate points

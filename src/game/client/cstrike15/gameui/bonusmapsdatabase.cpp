@@ -9,16 +9,13 @@
 #include "engineinterface.h"
 
 #include "tier1/convar.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/text_writer.h"
 
 #include "filesystem.h"
 #include "modinfo.h"
 #include "engineinterface.h"
 #include "keyvalues.h"
 #include "gameui_interface.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 #define MOD_DIR ( "MOD" )
@@ -38,7 +35,7 @@ const char *COM_GetModDirectory();
 
 bool WriteBonusMapSavedData( KeyValues *data )
 {
-	CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
+	ks::text_writer buf;
 
 	data->RecursiveSaveToFile( buf, 0 );
 
@@ -46,7 +43,7 @@ bool WriteBonusMapSavedData( KeyValues *data )
 
 Q_snprintf( szFilename, sizeof( szFilename ), "save/bonus_maps_data.bmd" );
 
-	bool bWriteSuccess = g_pFullFileSystem->WriteFile( szFilename, MOD_DIR, buf );
+	bool bWriteSuccess = g_pFullFileSystem->WriteFile( szFilename, MOD_DIR, buf.bytes() );
 
 
 	return bWriteSuccess;
@@ -136,7 +133,7 @@ bool SetBooleanStatus( KeyValues *pBonusFilesKey, const char *pchName, const cha
 float GetChallengeBests( KeyValues *pBonusFilesKey, BonusMapDescription_t &challenge )
 {
 	// There's no challenges, so bail and assume 0% challenge completion
-	if ( challenge.m_pChallenges == nullptr || challenge.m_pChallenges->Count() == 0 )
+	if ( challenge.m_pChallenges == nullptr || std::ssize( *challenge.m_pChallenges ) == 0 )
 		return 0.0f;
 
 	KeyValues *pFileKey = nullptr;
@@ -160,7 +157,7 @@ float GetChallengeBests( KeyValues *pBonusFilesKey, BonusMapDescription_t &chall
 
 	float fChallengePoints = 0.0f;
 
-	for ( int iChallenge = 0; iChallenge < challenge.m_pChallenges->Count(); ++iChallenge )
+	for ( int iChallenge = 0; iChallenge < std::ssize( *challenge.m_pChallenges ); ++iChallenge )
 	{
 		ChallengeDescription_t *pChallengeDescription = &((*challenge.m_pChallenges)[ iChallenge ]);
 		pChallengeDescription->iBest = ( ( pBonusKey ) ? ( pBonusKey->GetInt( pChallengeDescription->szName, -1 ) ) : ( -1 ) );
@@ -176,7 +173,7 @@ float GetChallengeBests( KeyValues *pBonusFilesKey, BonusMapDescription_t &chall
 		}
 	}
 
-	return fChallengePoints / ( challenge.m_pChallenges->Count() * 3.0f );
+	return fChallengePoints / ( std::ssize( *challenge.m_pChallenges ) * 3.0f );
 }
 
 bool UpdateChallengeBest( KeyValues *pBonusFilesKey, const BonusMapChallenge_t &challenge )
@@ -387,7 +384,7 @@ void CBonusMapsDatabase::SetPath( const char *pchPath, int iDirDepth )
 
 void CBonusMapsDatabase::ClearBonusMapsList( void )
 {
-	m_BonusMaps.RemoveAll();
+	m_BonusMaps.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -452,7 +449,7 @@ void CBonusMapsDatabase::RefreshMapData( void )
 	m_iCompletableLevels = 0;
 	m_fCurrentCompletion = 0.0f;
 
-	for ( int iMap = 0; iMap < m_BonusMaps.Count(); ++iMap )
+	for ( int iMap = 0; iMap < std::ssize( m_BonusMaps ); ++iMap )
 	{
 		BonusMapDescription_t *pMap = &m_BonusMaps[ iMap ];
 
@@ -477,10 +474,10 @@ void CBonusMapsDatabase::RefreshMapData( void )
 
 int CBonusMapsDatabase::BonusCount( void )
 {
-	if ( m_BonusMaps.Count() == 0 )
+	if ( m_BonusMaps.empty() )
 		ScanBonusMaps();
 
-	return m_BonusMaps.Count();
+	return std::ssize( m_BonusMaps );
 }
 
 bool CBonusMapsDatabase::GetBlink( void )
@@ -665,7 +662,7 @@ void CBonusMapsDatabase::NumMedals( int piNumMedals[ 3 ] )
 
 		if ( pMap && pMap->m_pChallenges )
 		{
-			for ( int iChallenge = 0; iChallenge < pMap->m_pChallenges->Count(); ++iChallenge )
+			for ( int iChallenge = 0; iChallenge < std::ssize( *pMap->m_pChallenges ); ++iChallenge )
 			{
 				ChallengeDescription_t *pChallengeDescription = &((*pMap->m_pChallenges)[ iChallenge ]);
 
@@ -796,7 +793,7 @@ void CBonusMapsDatabase::ParseBonusMapData( char const *pszFileName, char const 
 
 	while ( kv )
 	{
-		int iMap = m_BonusMaps.AddToTail();
+		int iMap = std::ssize( m_BonusMaps ); m_BonusMaps.emplace_back();
 
 		BonusMapDescription_t *pMap = &m_BonusMaps[ iMap ];
 
@@ -823,9 +820,9 @@ void CBonusMapsDatabase::ParseBonusMapData( char const *pszFileName, char const 
 			for ( KeyValues *pChallengeKey = pChallenges->GetFirstSubKey(); pChallengeKey; pChallengeKey = pChallengeKey->GetNextKey() )
 			{
 				if ( !pMap->m_pChallenges )
-					pMap->m_pChallenges = new CUtlVector<ChallengeDescription_t>;
+					pMap->m_pChallenges = new std::vector< ChallengeDescription_t >;
 
-				int iChallenge = pMap->m_pChallenges->AddToTail();
+				int iChallenge = std::ssize( *pMap->m_pChallenges ); pMap->m_pChallenges->emplace_back();
 
 				ChallengeDescription_t *pChallenge = &(*pMap->m_pChallenges)[ iChallenge ];
 				Q_strcpy( pChallenge->szName, pChallengeKey->GetName() );

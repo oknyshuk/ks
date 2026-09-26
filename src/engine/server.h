@@ -115,10 +115,10 @@ public:
 
 	bool		m_bIsLevelMainMenuBackground;	// true if the level running only as the background to the main menu
 
-	CUtlVector<CEventInfo*>	m_TempEntities;		// temp entities
+	std::vector< CEventInfo* >	m_TempEntities;		// temp entities
 
 	bf_write			m_FullSendTables;
-	CUtlMemory<byte>	m_FullSendTablesBuffer;
+	std::vector< byte >	m_FullSendTablesBuffer;
 
 	bool		m_bLoadedPlugins;
 

@@ -11,6 +11,8 @@
 
 #include "tier0/stacktools.h"
 #include "tier0/threadtools.h"
+#include <mutex>
+#include <shared_mutex>
 
 #if defined ENABLE_RUNTIME_STACK_TRANSLATION
 #define ENABLE_STACK_STATS_GATHERING //uncomment to enable the gathering class
@@ -101,16 +103,16 @@ public:
 
 		if( bLock )
 		{
-			m_IndividualEntryMutexes[iEntryIndex & (SHAREDENTRYMUTEXES - 1)].Lock();
+			m_IndividualEntryMutexes[iEntryIndex & (SHAREDENTRYMUTEXES - 1)].lock();
 		}
 		else
 		{
-			m_IndividualEntryMutexes[iEntryIndex & (SHAREDENTRYMUTEXES - 1)].Unlock();
+			m_IndividualEntryMutexes[iEntryIndex & (SHAREDENTRYMUTEXES - 1)].unlock();
 		}
 #endif
 	}
 protected:
-	CThreadFastMutex m_IndividualEntryMutexes[SHAREDENTRYMUTEXES];
+	std::recursive_mutex m_IndividualEntryMutexes[SHAREDENTRYMUTEXES];
 };
 
 
@@ -234,7 +236,7 @@ private:
 
 	void KeepSubTree( CCallStackStatsGatherer_Standardized_t &SubTree )
 	{
-		AUTO_LOCK_FM( m_SubTreeMutex );
+		std::scoped_lock lock( m_SubTreeMutex );
 		for( StoredSubTreeVector_t::iterator treeIter = m_StoredSubTrees.begin(); treeIter != m_StoredSubTrees.end(); ++treeIter )
 		{
 			if( SubTree.pGatherer == treeIter->pGatherer )
@@ -253,7 +255,7 @@ private:
 			iValidEntries = CAPTUREDCALLSTACKLENGTH;
 		}
 
-		AUTO_LOCK_FM( m_SubTreeMutex );
+		std::scoped_lock lock( m_SubTreeMutex );
 		if( m_PushedSubTrees.size() == 0 )
 		{
 			memcpy( CallStackOut, CallStackIn, sizeof( void * ) * iValidEntries );
@@ -332,13 +334,13 @@ private:
 	typedef std::vector<CCallStackStatsGatherer_Standardized_t, TEMPLATIZEDMEMORYALLOCATOR<CCallStackStatsGatherer_Standardized_t> > StoredSubTreeVector_t;
 	StoredSubTreeVector_t m_StoredSubTrees;
 
-	CThreadFastMutex m_IndexMapMutex;
-	CThreadFastMutex m_SubTreeMutex;
+	std::recursive_mutex m_IndexMapMutex;
+	std::recursive_mutex m_SubTreeMutex;
 
 	//only for locking the memory in place, locked for write when the entry addresses might change.
 	//Locked for read when you've claimed you're manipulating a value.
 	//You're on your own for making sure two threads don't access the same index simultaneously
-	CThreadRWLock m_StatEntryLock;
+	std::shared_mutex m_StatEntryLock;
 
 #else //#if defined( ENABLE_STACK_STATS_GATHERING )	
 
@@ -483,7 +485,7 @@ template <class STATSTRUCT, size_t CAPTUREDCALLSTACKLENGTH, FN_GetCallStack STAC
 uint32 CCallStackStatsGatherer<STATSTRUCT, CAPTUREDCALLSTACKLENGTH, STACKACQUISITIONFUNCTION, STATMUTEXHANDLER, TEMPLATIZEDMEMORYALLOCATOR>::GetEntryIndex( void * const CallStack[CAPTUREDCALLSTACKLENGTH], uint32 iValidEntries ) //index is unchanging, safe to keep and use later (designed for exactly that purpose)
 {
 #if defined( ENABLE_STACK_STATS_GATHERING )
-	AUTO_LOCK_FM( m_IndexMapMutex );
+	std::scoped_lock lock( m_IndexMapMutex );
 	std::pair<IndexMapIter_t, bool> indexMapIter;
 	void *PatchedStack[CAPTUREDCALLSTACKLENGTH];
 
@@ -502,12 +504,11 @@ uint32 CCallStackStatsGatherer<STATSTRUCT, CAPTUREDCALLSTACKLENGTH, STACKACQUISI
 
 	if( indexMapIter.first->second.m_Index == -1 )
 	{
-		m_StatEntryLock.LockForWrite();
+		std::unique_lock statEntryLock( m_StatEntryLock );
 		indexMapIter.first->second.m_Index = (unsigned int)m_StatEntries.size();
 
 		m_StatEntries.push_back( StackAndStats_t() );
 		memcpy( m_StatEntries[indexMapIter.first->second.m_Index].m_CallStack, PatchedStack, sizeof( void * ) * CAPTUREDCALLSTACKLENGTH );
-		m_StatEntryLock.UnlockWrite();
 	}
 
 	return indexMapIter.first->second.m_Index;
@@ -521,12 +522,11 @@ template <class STATSTRUCT, size_t CAPTUREDCALLSTACKLENGTH, FN_GetCallStack STAC
 void CCallStackStatsGatherer<STATSTRUCT, CAPTUREDCALLSTACKLENGTH, STACKACQUISITIONFUNCTION, STATMUTEXHANDLER, TEMPLATIZEDMEMORYALLOCATOR>::GetCallStackForIndex( uint32 iEntryIndex, void *CallStackOut[CAPTUREDCALLSTACKLENGTH] )
 {
 #if defined( ENABLE_STACK_STATS_GATHERING )
-	m_StatEntryLock.LockForRead();
+	std::shared_lock statEntryLock( m_StatEntryLock );
 	for( size_t i = 0; i != CAPTUREDCALLSTACKLENGTH; ++i )
 	{
 		CallStackOut[i] = m_StatEntries[iEntryIndex].m_CallStack[i];
 	}
-	m_StatEntryLock.UnlockRead();
 #else
 	for( size_t i = 0; i != CAPTUREDCALLSTACKLENGTH; ++i )
 		CallStackOut[i] = nullptr;
@@ -609,16 +609,16 @@ void CCallStackStatsGatherer<STATSTRUCT, CAPTUREDCALLSTACKLENGTH, STACKACQUISITI
 	pushVal.iThreadID = ThreadGetCurrentId();
 	pushVal.tree = SubTree;
 
-	memcpy( pushVal.Stack, PushStack.pStack, MIN( CAPTUREDCALLSTACKLENGTH, PushStack.iValidEntries ) * sizeof( void * ) );
+	memcpy( pushVal.Stack, PushStack.pStack, std::min( CAPTUREDCALLSTACKLENGTH, PushStack.iValidEntries ) * sizeof( void * ) );
 
 	for( int i = PushStack.iValidEntries; i < CAPTUREDCALLSTACKLENGTH; ++i )
 	{
 		pushVal.Stack[i] = nullptr;
 	}
 
-	pParentCast->m_SubTreeMutex.Lock();
+	pParentCast->m_SubTreeMutex.lock();
 	pParentCast->m_PushedSubTrees.push_back( pushVal );
-	pParentCast->m_SubTreeMutex.Unlock();
+	pParentCast->m_SubTreeMutex.unlock();
 #endif
 }
 
@@ -636,7 +636,7 @@ void CCallStackStatsGatherer<STATSTRUCT, CAPTUREDCALLSTACKLENGTH, STACKACQUISITI
 {
 #if defined( ENABLE_STACK_STATS_GATHERING )
 	ThisCast *pParentCast = (ThisCast *)pParent;
-	pParentCast->m_SubTreeMutex.Lock();
+	pParentCast->m_SubTreeMutex.lock();
 	unsigned long iThreadID = ThreadGetCurrentId();
 	
 	for( PushedSubTreeVector_t::reverse_iterator treeIter = pParentCast->m_PushedSubTrees.rbegin(); treeIter != pParentCast->m_PushedSubTrees.rend(); ++treeIter )
@@ -650,7 +650,7 @@ void CCallStackStatsGatherer<STATSTRUCT, CAPTUREDCALLSTACKLENGTH, STACKACQUISITI
 		}
 	}
 
-	pParentCast->m_SubTreeMutex.Unlock();
+	pParentCast->m_SubTreeMutex.unlock();
 #endif
 }
 
@@ -661,8 +661,8 @@ void CCallStackStatsGatherer<STATSTRUCT, CAPTUREDCALLSTACKLENGTH, STACKACQUISITI
 	ThisCast *pParentCast = (ThisCast *)pParent;
 	if( bLock )
 	{
-		pParentCast->m_IndexMapMutex.Lock();
-		pParentCast->m_SubTreeMutex.Lock();
+		pParentCast->m_IndexMapMutex.lock();
+		pParentCast->m_SubTreeMutex.lock();
 
 		for( StoredSubTreeVector_t::iterator treeIter = pParentCast->m_StoredSubTrees.begin(); treeIter != pParentCast->m_StoredSubTrees.end(); ++treeIter )
 		{
@@ -676,8 +676,8 @@ void CCallStackStatsGatherer<STATSTRUCT, CAPTUREDCALLSTACKLENGTH, STACKACQUISITI
 			treeIter->pFunctionTable->pfn_SyncMutexes( treeIter->pGatherer, false );
 		}
 
-		pParentCast->m_IndexMapMutex.Unlock();
-		pParentCast->m_SubTreeMutex.Unlock();
+		pParentCast->m_IndexMapMutex.unlock();
+		pParentCast->m_SubTreeMutex.unlock();
 	}
 #endif
 }
@@ -700,11 +700,11 @@ void CCallStackStatsGatherer<STATSTRUCT, CAPTUREDCALLSTACKLENGTH, STACKACQUISITI
 	ThisCast *pParentCast = (ThisCast *)pParent;
 	if( bLock )
 	{
-		pParentCast->m_StatEntryLock.LockForRead();
+		pParentCast->m_StatEntryLock.lock_shared();
 	}
 	else
 	{
-		pParentCast->m_StatEntryLock.UnlockRead();
+		pParentCast->m_StatEntryLock.unlock_shared();
 	}
 #endif
 }
@@ -722,17 +722,17 @@ template <class STATSTRUCT, size_t CAPTUREDCALLSTACKLENGTH, FN_GetCallStack STAC
 void CCallStackStatsGatherer<STATSTRUCT, CAPTUREDCALLSTACKLENGTH, STACKACQUISITIONFUNCTION, STATMUTEXHANDLER, TEMPLATIZEDMEMORYALLOCATOR>::Reset( void )
 {
 #if defined( ENABLE_STACK_STATS_GATHERING )
-	m_StatEntryLock.LockForWrite();
-	m_IndexMapMutex.Lock();
-	m_SubTreeMutex.Lock();
+	m_StatEntryLock.lock();
+	m_IndexMapMutex.lock();
+	m_SubTreeMutex.lock();
 
 	m_StatEntries.clear();
 	m_IndexMap.clear();
 	m_StoredSubTrees.clear();
 
-	m_SubTreeMutex.Unlock();
-	m_IndexMapMutex.Unlock();
-	m_StatEntryLock.UnlockWrite();
+	m_SubTreeMutex.unlock();
+	m_IndexMapMutex.unlock();
+	m_StatEntryLock.unlock();
 #endif
 }
 

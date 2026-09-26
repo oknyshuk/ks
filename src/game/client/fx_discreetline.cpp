@@ -16,9 +16,6 @@
 #include "materialsystem/imesh.h"
 #include "view.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 /*
 ==================================================
 CFXLine
@@ -76,8 +73,8 @@ void CFXDiscreetLine::Draw( double frametime )
 	float	eDistance = sDistance - m_fLength;
 	
 	//Clip to start
-	sDistance = MAX( 0.0f, sDistance );
-	eDistance = MAX( 0.0f, eDistance );
+	sDistance = std::max( 0.0f, sDistance );
+	eDistance = std::max( 0.0f, eDistance );
 
 	if ( ( sDistance == 0.0f ) && ( eDistance == 0.0f ) )
 		return;
@@ -85,8 +82,8 @@ void CFXDiscreetLine::Draw( double frametime )
 	// Clip it
 	if ( m_fClipLength != 0.0f )
 	{
-		sDistance = MIN( sDistance, m_fClipLength );
-		eDistance = MIN( eDistance, m_fClipLength );
+		sDistance = std::min( sDistance, m_fClipLength );
+		eDistance = std::min( eDistance, m_fClipLength );
 	}
 
 	// Get our delta to calculate the tc offset

@@ -9,9 +9,6 @@
 #include "dmxloader/dmxloader.h"
 #include "dmxloader/dmxelement.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 
 // Simple wrapper class to provide access to the CSOAContainer innards
@@ -60,19 +57,19 @@ bool CSOAContainer_Serializable::Serialize( CDmxElement *pRootElement )
 
 	// Now write out the data, as floats (NOTE: we have to at least init the attribute as a zero-element vector or it won't serialize!)
 	CDmxAttribute *pDataMemoryAttribute = pRootElement->AddAttribute( "memory_data" );
-	CUtlVector< float >& dataVector = pDataMemoryAttribute->GetArrayForEdit< float >();
+	std::vector< float >& dataVector = pDataMemoryAttribute->GetArrayForEdit< float >();
 	size_t nDataMemorySize = DataMemorySize();
-	dataVector.SetCount( nDataMemorySize  / sizeof( float ) );
+	dataVector.assign( nDataMemorySize  / sizeof( float ), {} );
 
 	// NOTE: Constant data is always zero for now, but we write it out in case that changes (non-zero constant values seem potentially useful)
 	CDmxAttribute *pConstantMemoryAttribute = pRootElement->AddAttribute( "constant_data" );
-	CUtlVector< float >& constantVector = pConstantMemoryAttribute->GetArrayForEdit< float >();
+	std::vector< float >& constantVector = pConstantMemoryAttribute->GetArrayForEdit< float >();
 	size_t nConstantMemorySize = ConstantMemorySize();
-	constantVector.SetCount( nConstantMemorySize / sizeof( float ) );
+	constantVector.assign( nConstantMemorySize / sizeof( float ), {} );
 
 	// To account for 'separate' memory allocations, we need to copy each attribute one at a time
-	byte *pBaseDataPtr     = (byte *)dataVector.Base();
-	byte *pBaseConstantPtr = (byte *)constantVector.Base();
+	byte *pBaseDataPtr     = (byte *)dataVector.data();
+	byte *pBaseConstantPtr = (byte *)constantVector.data();
 	for( int i = 0; i < MAX_SOA_FIELDS; i++ )
 	{
 		if ( m_nDataType[i] == ATTRDATATYPE_NONE )
@@ -143,21 +140,21 @@ bool CSOAContainer_Serializable::Unserialize( const CDmxElement *pRootElement )
 		// Now copy in the data
 		if ( m_pDataMemory )
 		{
-			const CUtlVector< float >& floatVector = pDataMemoryAttribute->GetArray< float >();
+			const std::vector< float >& floatVector = pDataMemoryAttribute->GetArray< float >();
 			size_t nDataMemorySize = DataMemorySize();
 			int nFloats = nDataMemorySize / sizeof( float );
-			if ( nFloats == floatVector.Count() )
-				memcpy( m_pDataMemory, floatVector.Base(), nDataMemorySize );
+			if ( nFloats == std::ssize( floatVector ) )
+				memcpy( m_pDataMemory, floatVector.data(), nDataMemorySize );
 			else
 				nError = 2;
 		}
 		if ( m_pConstantDataMemory )
 		{
-			const CUtlVector< float >& floatVector = pConstantMemoryAttribute->GetArray< float >();
+			const std::vector< float >& floatVector = pConstantMemoryAttribute->GetArray< float >();
 			size_t nConstantMemorySize = ConstantMemorySize();
 			int nFloats = nConstantMemorySize / sizeof( float );
-			if ( nFloats == floatVector.Count() )
-				memcpy( m_pConstantDataMemory, floatVector.Base(), nConstantMemorySize );
+			if ( nFloats == std::ssize( floatVector ) )
+				memcpy( m_pConstantDataMemory, floatVector.data(), nConstantMemorySize );
 			else
 				nError = 3;
 		}

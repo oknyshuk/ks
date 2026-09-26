@@ -11,9 +11,6 @@
 #include "black_ps20.inc"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // Enables alpha blending workaround for an (apparently) weird color/alpha write disable bug on NVidia GL drivers.
 // For NVidia, the actual bug is in glBlitFramebuffer() (it doesn't ignore the currently set colormask), which we fix in glmgr.cpp Blit2(), so I'm disabling this more expensive workaround.
 ConVar gl_nvidia_occlusion_workaround( "gl_nvidia_occlusion_workaround", "0", FCVAR_MATERIAL_SYSTEM_THREAD );

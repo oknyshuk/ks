@@ -90,12 +90,9 @@ extern ConVar sk_healthkit;
 #include "ai_route.h"
 #include "ai_waypoint.h"
 
-#include "utlbuffer.h"
+#include "tier1/text_writer.h"
 #include "GameStats.h"
 #include "physics_prop_statue.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //#define DEBUG_LOOK
 
@@ -211,14 +208,14 @@ CAI_Manager g_AI_Manager;
 
 CAI_Manager::CAI_Manager()
 {
-	m_AIs.EnsureCapacity( MAX_AIS );
+	m_AIs.reserve( MAX_AIS );
 }
 
 //-------------------------------------
 
 CAI_BaseNPC **CAI_Manager::AccessAIs()
 {
-	if (m_AIs.Count())
+	if ( !m_AIs.empty() )
 		return &m_AIs[0];
 	return nullptr;
 }
@@ -227,24 +224,24 @@ CAI_BaseNPC **CAI_Manager::AccessAIs()
 
 int CAI_Manager::NumAIs()
 {
-	return m_AIs.Count();
+	return std::ssize( m_AIs );
 }
 
 //-------------------------------------
 
 void CAI_Manager::AddAI( CAI_BaseNPC *pAI )
 {
-	m_AIs.AddToTail( pAI );
+	m_AIs.push_back( pAI );
 }
 
 //-------------------------------------
 
 void CAI_Manager::RemoveAI( CAI_BaseNPC *pAI )
 {
-	int i = m_AIs.Find( pAI );
+	int i = ks::find_index( m_AIs, pAI );
 
 	if ( i != -1 )
-		m_AIs.FastRemove( i );
+		ks::swap_remove( m_AIs, i );
 }
 
 
@@ -284,7 +281,7 @@ CPostFrameNavigationHook *PostFrameNavigationSystem( void )
 //-----------------------------------------------------------------------------
 bool CPostFrameNavigationHook::Init( void )
 {
-	m_Functors.Purge();
+	m_Functors.clear(); m_Functors.shrink_to_fit();
 	m_bGameFrameRunning = false;
 	return true;
 }
@@ -311,7 +308,7 @@ void CPostFrameNavigationHook::FrameUpdatePreEntityThink( void )
 	{
 		g_pQueuedNavigationQueryJob->WaitForFinishAndRelease();
 		g_pQueuedNavigationQueryJob = nullptr;
-		m_Functors.Purge();
+		m_Functors.clear(); m_Functors.shrink_to_fit();
 	}
 	
 	if ( ai_post_frame_navigation.GetBool() == false )
@@ -332,7 +329,7 @@ void CPostFrameNavigationHook::FrameUpdatePostEntityThink( void )
 	SetGrameFrameRunning( false );
 
 	// Throw this off to a thread job
-	g_pQueuedNavigationQueryJob = ThreadExecute( &ProcessNavigationQueries, m_Functors.Base(), m_Functors.Count() );
+	g_pQueuedNavigationQueryJob = ThreadExecute( &ProcessNavigationQueries, m_Functors.data(), std::ssize( m_Functors ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -343,7 +340,7 @@ void CPostFrameNavigationHook::EnqueueEntityNavigationQuery( CAI_BaseNPC *pNPC, 
 	if ( ai_post_frame_navigation.GetBool() == false )
 		return;
 
-	m_Functors.AddToTail( pFunctor );
+	m_Functors.push_back( pFunctor );
 	pNPC->SetNavigationDeferred( true );
 }
 
@@ -361,13 +358,13 @@ void CPostFrameNavigationHook::EnqueueEntityNavigationQuery( CAI_BaseNPC *pNPC, 
 void CAI_BaseNPC::AddBehavior( CAI_BehaviorBase *pBehavior )
 {
 #ifdef DEBUG
-	Assert( m_Behaviors.Find( pBehavior ) == m_Behaviors.InvalidIndex() );
-	for ( int i = 0; i < m_Behaviors.Count(); i++)
+	Assert( ks::find_index( m_Behaviors, pBehavior ) == -1 );
+	for ( int i = 0; i < std::ssize( m_Behaviors ); i++)
 	{
 		Assert( typeid(*m_Behaviors[i]) != typeid(*pBehavior) );
 	}
 #endif
-	m_Behaviors.AddToTail( pBehavior );
+	m_Behaviors.push_back( pBehavior );
 	pBehavior->SetOuter( this );
 	pBehavior->SetBackBridge( this );
 }
@@ -378,7 +375,7 @@ void CAI_BaseNPC::RemoveAndDestroyBehavior( CAI_BehaviorBase *pBehavior )
 {
 #ifdef DEBUG
 	bool bFound = false;
-	for ( int i = 0; i < m_Behaviors.Count(); i++)
+	for ( int i = 0; i < std::ssize( m_Behaviors ); i++)
 	{
 		if ( typeid(*m_Behaviors[i]) == typeid(*pBehavior) )
 		{
@@ -389,7 +386,7 @@ void CAI_BaseNPC::RemoveAndDestroyBehavior( CAI_BehaviorBase *pBehavior )
 	Assert( bFound && !pBehavior->IsRunning() );
 #endif
 
-	m_Behaviors.FindAndRemove( pBehavior );
+	ks::erase_first( m_Behaviors, pBehavior );
 	delete pBehavior;
 }
 
@@ -397,7 +394,7 @@ void CAI_BaseNPC::RemoveAndDestroyBehavior( CAI_BehaviorBase *pBehavior )
 
 bool CAI_BaseNPC::BehaviorSelectSchedule()
 {
-	for ( int i = 0; i < m_Behaviors.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Behaviors ); i++ )
 	{
 		if ( m_Behaviors[i]->CanSelectSchedule() && ShouldBehaviorSelectSchedule( m_Behaviors[i] ) )
 		{
@@ -1671,7 +1668,7 @@ void CAI_BaseNPC::SetCondition( int iCondition )
 		OnConditionSet( iCondition );
 	}
 
-	m_Conditions.Set( interrupt );
+	m_Conditions.set( interrupt );
 }
 
 //---------------------------------------------------------
@@ -1686,7 +1683,7 @@ bool CAI_BaseNPC::HasCondition( int iCondition )
 		return false;
 	}
 	
-	bool bReturn = m_Conditions.IsBitSet(interrupt);
+	bool bReturn = m_Conditions[interrupt];
 	return (bReturn);
 }
 
@@ -1705,7 +1702,7 @@ bool CAI_BaseNPC::HasCondition( int iCondition, bool bUseIgnoreConditions )
 		return false;
 	}
 	
-	bool bReturn = m_ConditionsPreIgnore.IsBitSet(interrupt);
+	bool bReturn = m_ConditionsPreIgnore[interrupt];
 	return (bReturn);
 }
 
@@ -1726,7 +1723,7 @@ void CAI_BaseNPC::ClearCondition( int iCondition )
 		OnConditionCleared( iCondition );
 	}
 
-	m_Conditions.Clear(interrupt);
+	m_Conditions.reset( interrupt );
 }
 
 //---------------------------------------------------------
@@ -1744,7 +1741,7 @@ void CAI_BaseNPC::ClearConditions( int *pConditions, int nConditions )
 			continue;
 		}
 		
-		m_Conditions.Clear( interrupt );
+		m_Conditions.reset( interrupt );
 	}
 }
 
@@ -1763,7 +1760,7 @@ void CAI_BaseNPC::SetIgnoreConditions( int *pConditions, int nConditions )
 			continue;
 		}
 		
-		m_InverseIgnoreConditions.Clear( interrupt ); // clear means ignore
+		m_InverseIgnoreConditions.reset( interrupt ); // clear means ignore
 	}
 }
 
@@ -1780,7 +1777,7 @@ void CAI_BaseNPC::ClearIgnoreConditions( int *pConditions, int nConditions )
 			continue;
 		}
 		
-		m_InverseIgnoreConditions.Set( interrupt ); // set means don't ignore
+		m_InverseIgnoreConditions.set( interrupt ); // set means don't ignore
 	}
 }
 
@@ -1800,7 +1797,7 @@ bool CAI_BaseNPC::HasInterruptCondition( int iCondition )
 		Assert(0);
 		return false;
 	}
-	return ( m_Conditions.IsBitSet( interrupt ) && GetCurSchedule()->HasInterrupt( interrupt ) );
+	return ( m_Conditions[interrupt] && GetCurSchedule()->HasInterrupt( interrupt ) );
 }
 
 //---------------------------------------------------------
@@ -1895,10 +1892,9 @@ bool CAI_BaseNPC::HasConditionsToInterruptSchedule( int nLocalScheduleID )
 	CAI_ScheduleBits bitsMask;
 	pSchedule->GetInterruptMask( &bitsMask );
 
-	CAI_ScheduleBits bitsOut;
-	AccessConditionBits().And( bitsMask, &bitsOut );
+	CAI_ScheduleBits bitsOut = AccessConditionBits() & bitsMask;
 	
-	return !bitsOut.IsAllClear();
+	return bitsOut.any();
 }
 
 
@@ -1914,7 +1910,7 @@ bool CAI_BaseNPC::IsCustomInterruptConditionSet( int nCondition )
 		return false;
 	}
 	
-	return m_CustomInterruptConditions.IsBitSet( interrupt );
+	return m_CustomInterruptConditions[interrupt];
 }
 
 //-----------------------------------------------------------------------------
@@ -1931,7 +1927,7 @@ void CAI_BaseNPC::SetCustomInterruptCondition( int nCondition )
 		return;
 	}
 	
-	m_CustomInterruptConditions.Set( interrupt );
+	m_CustomInterruptConditions.set( interrupt );
 }
 
 //-----------------------------------------------------------------------------
@@ -1948,7 +1944,7 @@ void CAI_BaseNPC::ClearCustomInterruptCondition( int nCondition )
 		return;
 	}
 	
-	m_CustomInterruptConditions.Clear( interrupt );
+	m_CustomInterruptConditions.reset( interrupt );
 }
 
 
@@ -1957,7 +1953,7 @@ void CAI_BaseNPC::ClearCustomInterruptCondition( int nCondition )
 //-----------------------------------------------------------------------------
 void CAI_BaseNPC::ClearCustomInterruptConditions()
 {
-	m_CustomInterruptConditions.ClearAll();
+	m_CustomInterruptConditions.reset();
 }
 
 
@@ -3491,7 +3487,7 @@ struct AIRebalanceInfo_t
 	float			distPlayer;
 };
 
-int __cdecl ThinkRebalanceCompare( const AIRebalanceInfo_t *pLeft, const AIRebalanceInfo_t *pRight )
+int ThinkRebalanceCompare( const AIRebalanceInfo_t *pLeft, const AIRebalanceInfo_t *pRight )
 {
 	int base = pLeft->iNextThinkTick - pRight->iNextThinkTick;
 	if ( base != 0 )
@@ -3587,7 +3583,7 @@ void CAI_BaseNPC::RebalanceThinks()
 	{
 		AI_PROFILE_SCOPE(AI_Think_Rebalance );
 
-		static CUtlVector<AIRebalanceInfo_t> rebalanceCandidates( 16, 64 );
+		static std::vector< AIRebalanceInfo_t > rebalanceCandidates;
 		gm_iNextThinkRebalanceTick = gpGlobals->tickcount + TIME_TO_TICKS( random->RandomFloat( 3, 5) );
 
 		int i;
@@ -3615,7 +3611,7 @@ void CAI_BaseNPC::RebalanceThinks()
 				( pCandidate->GetNextThinkTick() >= iMinTickRebalance && 
 				pCandidate->GetNextThinkTick() < iMaxTickRebalance ) )
 			{
-				int iInfo = rebalanceCandidates.AddToTail();
+				int iInfo = std::ssize( rebalanceCandidates ); rebalanceCandidates.emplace_back();
 
 				rebalanceCandidates[iInfo].pNPC = pCandidate;
 				rebalanceCandidates[iInfo].iNextThinkTick = pCandidate->GetNextThinkTick();
@@ -3642,24 +3638,24 @@ void CAI_BaseNPC::RebalanceThinks()
 				DevMsg( "   Ignoring %d\n", pCandidate->GetNextThinkTick() );
 		}
 
-		if ( rebalanceCandidates.Count() )
+		if ( !rebalanceCandidates.empty() )
 		{
-			rebalanceCandidates.Sort( ThinkRebalanceCompare );
+			ks::qsort( rebalanceCandidates, ThinkRebalanceCompare );
 
-			int iMaxThinkersPerTick = ceil( (float)( rebalanceCandidates.Count() + 1 ) / (float)iTicksPer10Hz ); // +1 to account for "this"
+			int iMaxThinkersPerTick = ceil( (float)( std::ssize( rebalanceCandidates ) + 1 ) / (float)iTicksPer10Hz ); // +1 to account for "this"
 
-			int iCurTickDistributing = MIN( gpGlobals->tickcount, rebalanceCandidates[0].iNextThinkTick );
+			int iCurTickDistributing = std::min( gpGlobals->tickcount, rebalanceCandidates[0].iNextThinkTick );
 			int iRemainingThinksToDistribute = iMaxThinkersPerTick - 1; // Start with one fewer first time because "this" is 
 			// always gets a slot in the current tick to avoid complications
 			// in the calculation of "last think"
 
 			if ( bDebugThinkTicks )
 			{
-				DevMsg( "Rebalance %d!\n", rebalanceCandidates.Count() + 1 );
+				DevMsg( "Rebalance %d!\n", (int)std::ssize( rebalanceCandidates ) + 1 );
 				DevMsg( "   Distributing %d\n", iCurTickDistributing );
 			}
 
-			for ( i = 0; i < rebalanceCandidates.Count(); i++ )
+			for ( i = 0; i < std::ssize( rebalanceCandidates ); i++ )
 			{
 				if ( iRemainingThinksToDistribute == 0 || rebalanceCandidates[i].iNextThinkTick > iCurTickDistributing )
 				{
@@ -3694,7 +3690,7 @@ void CAI_BaseNPC::RebalanceThinks()
 			}
 		}
 
-		rebalanceCandidates.RemoveAll();
+		rebalanceCandidates.clear();
 
 		if ( bDebugThinkTicks )
 		{
@@ -4100,7 +4096,7 @@ void CAI_BaseNPC::NPCUse ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TY
 void CAI_BaseNPC::RemoveIgnoredConditions( void )
 {
 	m_ConditionsPreIgnore = m_Conditions;
-	m_Conditions.And( m_InverseIgnoreConditions, &m_Conditions );
+	m_Conditions &= m_InverseIgnoreConditions;
 
 	if ( m_NPCState == NPC_STATE_SCRIPT && m_hCine )
 		m_hCine->RemoveIgnoredConditions();
@@ -5669,7 +5665,7 @@ void CAI_BaseNPC::GatherEnemyConditions( CBaseEntity *pEnemy )
 	float tooFar = m_flDistTooFar;
 	if ( GetActiveWeapon() && HasCondition(COND_SEE_ENEMY) )
 	{
-		tooFar = MAX( m_flDistTooFar, GetActiveWeapon()->m_fMaxRange1 );
+		tooFar = std::max( m_flDistTooFar, GetActiveWeapon()->m_fMaxRange1 );
 	}
 
 	if ( flDistToEnemy >= tooFar )
@@ -5995,15 +5991,15 @@ Activity CAI_BaseNPC::TranslateActivity( Activity idealActivity, Activity *pIdea
 	if ( bWeaponRequired )
 	{
 		// only complain about an activity once
-		static CUtlVector< Activity > sUniqueActivities;
+		static std::vector< Activity > sUniqueActivities;
 
-		if (!sUniqueActivities.Find( weaponTranslation))
+		if (!ks::find_index( sUniqueActivities, weaponTranslation ))
 		{
 			// FIXME: warning
 			DevWarning( "%s missing activity \"%s\" needed by weapon\"%s\"\n", 
 				GetClassname(), GetActivityName( weaponTranslation ), GetActiveWeapon()->GetClassname() );
 
-			sUniqueActivities.AddToTail( weaponTranslation );
+			sUniqueActivities.push_back( weaponTranslation );
 		}
 	}
 
@@ -6693,7 +6689,7 @@ void CAI_BaseNPC::SetHullSizeNormal( bool force )
 	if ( m_fIsUsingSmallHull || force )
 	{
 		// Find out what the height difference will be between the versions and adjust our bbox accordingly to keep us level
-		const float flScale = MIN( 1.0f, GetModelHierarchyScale() );			// NOTE: Cannot scale NPC bounding box up, as pathfinding will fail (hull needs to match the traces used for the node network)
+		const float flScale = std::min( 1.0f, GetModelHierarchyScale() );			// NOTE: Cannot scale NPC bounding box up, as pathfinding will fail (hull needs to match the traces used for the node network)
 		Vector vecMins = ( GetHullMins() * flScale );
 		Vector vecMaxs = ( GetHullMaxs() * flScale );
 		
@@ -6849,7 +6845,7 @@ void CAI_BaseNPC::NPCInit ( void )
 	}
 
 	// Clear conditions
-	m_Conditions.ClearAll();
+	m_Conditions.reset();
 
 	// set eye position
 	SetDefaultEyeOffset();
@@ -6923,7 +6919,7 @@ void CAI_BaseNPC::NPCInit ( void )
 
 	m_EnemiesSerialNumber = -1;
 
-	for( int i = 0; i < m_Behaviors.Count(); i++ )
+	for( int i = 0; i < std::ssize( m_Behaviors ); i++ )
 	{
 		m_Behaviors[i]->Spawn();
 	}
@@ -7614,7 +7610,7 @@ void CAI_BaseNPC::RememberUnreachable(CBaseEntity *pEntity, float duration )
 
 	const float NPC_UNREACHABLE_TIMEOUT = ( duration > 0.0 ) ? duration : 3;
 	// Only add to list if not already on it
-	for (int i=m_UnreachableEnts.Count()-1;i>=0;i--)
+	for (int i=std::ssize( m_UnreachableEnts )-1;i>=0;i--)
 	{
 		// If record already exists just update mark time
 		if (pEntity == m_UnreachableEnts[i].hUnreachableEnt)
@@ -7626,7 +7622,7 @@ void CAI_BaseNPC::RememberUnreachable(CBaseEntity *pEntity, float duration )
 	}
 
 	// Add new unreachabe entity to list
-	int nNewIndex = m_UnreachableEnts.AddToTail();
+	int nNewIndex = std::ssize( m_UnreachableEnts ); m_UnreachableEnts.emplace_back();
 	m_UnreachableEnts[nNewIndex].hUnreachableEnt = pEntity;
 	m_UnreachableEnts[nNewIndex].fExpireTime	 = gpGlobals->curtime + NPC_UNREACHABLE_TIMEOUT;
 	m_UnreachableEnts[nNewIndex].vLocationWhenUnreachable = pEntity->GetAbsOrigin();
@@ -7644,12 +7640,12 @@ bool CAI_BaseNPC::IsUnreachable(CBaseEntity *pEntity)
 
 	// Note that it's ok to remove elements while I'm iterating
 	// as long as I iterate backwards and remove them using FastRemove
-	for (int i=m_UnreachableEnts.Count()-1;i>=0;i--)
+	for (int i=std::ssize( m_UnreachableEnts )-1;i>=0;i--)
 	{
 		// Remove any dead elements
 		if (m_UnreachableEnts[i].hUnreachableEnt == nullptr)
 		{
-			m_UnreachableEnts.FastRemove(i);
+			ks::swap_remove( m_UnreachableEnts, i );
 		}
 		else if (pEntity == m_UnreachableEnts[i].hUnreachableEnt)
 		{
@@ -7657,7 +7653,7 @@ bool CAI_BaseNPC::IsUnreachable(CBaseEntity *pEntity)
 			if ( gpGlobals->curtime > m_UnreachableEnts[i].fExpireTime ||
 				  pEntity->GetAbsOrigin().DistToSqr(m_UnreachableEnts[i].vLocationWhenUnreachable) > UNREACHABLE_DIST_TOLERANCE_SQ)
 			{
-				m_UnreachableEnts.FastRemove(i);
+				ks::swap_remove( m_UnreachableEnts, i );
 				return false;
 			}
 			return true;
@@ -9138,7 +9134,7 @@ int CAI_BaseNPC::DrawDebugTextOverlays(void)
 			bool bHasConditions = false;
 			for (int i = 0; i < MAX_CONDITIONS; i++)
 			{
-				if (m_Conditions.IsBitSet(i))
+				if (m_Conditions[i])
 				{
 					Q_snprintf(tempstr, sizeof(tempstr), "Cond: %s\n", ConditionName(AI_RemapToGlobal(i)));
 					EntityText(text_offset, tempstr, 0,r,g,b);
@@ -9740,7 +9736,7 @@ bool CAI_BaseNPC::ShouldMoveAndShoot()
 //=========================================================
 bool CAI_BaseNPC::FacingIdeal( float flTolerance )
 {
-	flTolerance = MAX( flTolerance, 0.006f );	//!!!BUGBUG - no magic numbers!!!
+	flTolerance = std::max( flTolerance, 0.006f );	//!!!BUGBUG - no magic numbers!!!
 	if ( fabs( GetMotor()->DeltaIdealYaw() ) <= flTolerance )
 	{
 		return true;
@@ -10601,7 +10597,7 @@ void CAI_BaseNPC::DiscardScheduleState()
 	// If we don't have an enemy, clear conditions like see enemy, etc.
 	if ( GetEnemy() == nullptr )
 	{
-		m_Conditions.ClearAll();
+		m_Conditions.reset();
 	}
 
 	// went across a transition and lost my m_hCine
@@ -10751,7 +10747,7 @@ bool CAI_BaseNPC::LoadedSchedules(void)
 // Output :
 //-----------------------------------------------------------------------------
 CAI_BaseNPC::CAI_BaseNPC(void)
- :	m_UnreachableEnts( 0, 4 ),
+ :	
     m_bDeferredNavigation( false ),
 	m_pPrimaryBehavior(nullptr)
 {
@@ -12373,18 +12369,18 @@ bool CAI_BaseNPC::IsAllowedToDodge( void )
 void CAI_BaseNPC::ParseScriptedNPCInteractions( void )
 {
 	// Already parsed them?
-	if ( m_ScriptedInteractions.Count() ) 
+	if ( !m_ScriptedInteractions.empty() ) 
 		return;
 
 	// Parse the model's key values and find any dynamic interactions
 	KeyValues *modelKeyValues = new KeyValues("");
-	CUtlBuffer buf( 1024, 0, CUtlBuffer::TEXT_BUFFER );
+	ks::text_writer buf;
 	KeyValues::AutoDelete autodelete_key( modelKeyValues );
 
 	if (! modelinfo->GetModelKeyValue( GetModel(), buf ))
 		return;
 	
-	if ( modelKeyValues->LoadFromBuffer( modelinfo->GetModelName( GetModel() ), buf ) )
+	if ( modelKeyValues->LoadFromBuffer( modelinfo->GetModelName( GetModel() ), buf.view() ) )
 	{
 		// Do we have a dynamic interactions section?
 		KeyValues *pkvInteractions = modelKeyValues->FindKey("dynamic_interactions");
@@ -12561,7 +12557,7 @@ void CAI_BaseNPC::ParseScriptedNPCInteractions( void )
 //-----------------------------------------------------------------------------
 void CAI_BaseNPC::AddScriptedNPCInteraction( ScriptedNPCInteraction_t *pInteraction  )
 {
-	int nNewIndex = m_ScriptedInteractions.AddToTail();
+	int nNewIndex = std::ssize( m_ScriptedInteractions ); m_ScriptedInteractions.emplace_back();
 
 	if ( ai_debug_dyninteractions.GetBool() )
 	{
@@ -12831,7 +12827,7 @@ void CAI_BaseNPC::CheckForScriptedNPCInteractions( void )
 	}
 
 	// Otherwise, see if we can interaction with our enemy
-	if ( !m_ScriptedInteractions.Count() || !GetEnemy() )
+	if ( m_ScriptedInteractions.empty() || !GetEnemy() )
 		return;
 
 	CAI_BaseNPC *pNPC = GetEnemy()->MyNPCPointer();
@@ -12853,7 +12849,7 @@ void CAI_BaseNPC::CheckForScriptedNPCInteractions( void )
 	if ( pNPC && !pNPC->CanRunAScriptedNPCInteraction() )
 		return;
 
-	for ( int i = 0; i < m_ScriptedInteractions.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_ScriptedInteractions ); i++ )
 	{
 		ScriptedNPCInteraction_t *pInteraction = &m_ScriptedInteractions[i];
 
@@ -12890,7 +12886,7 @@ void CAI_BaseNPC::CalculateValidEnemyInteractions( void )
 	}
 
 	bool bFound = false;
-	for ( int i = 0; i < m_ScriptedInteractions.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_ScriptedInteractions ); i++ )
 	{
 		ScriptedNPCInteraction_t *pInteraction = &m_ScriptedInteractions[i];
 		pInteraction->bValidOnCurrentEnemy = false;
@@ -13293,7 +13289,7 @@ void CAI_BaseNPC::InputForceInteractionWithNPC( inputdata_t &inputdata )
 
 	// Find the interaction from the name, and ensure it's one that the target NPC can play
 	int iInteraction = -1;
-	for ( int i = 0; i < m_ScriptedInteractions.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_ScriptedInteractions ); i++ )
 	{
 		if ( !StringHasPrefixCaseSensitive( STRING(m_ScriptedInteractions[i].iszInteractionName), pszParam ) )
 			continue;

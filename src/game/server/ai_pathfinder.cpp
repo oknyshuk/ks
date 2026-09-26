@@ -24,12 +24,12 @@
 #include "ai_localnavigator.h"
 #include "ai_hint.h"
 #include "bitstring.h"
+#include <algorithm>
+#include <functional>
+#include <vector>
 
 //@todo: bad dependency!
 #include "ai_navigator.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 #define NUM_NPC_DEBUG_OVERLAYS	  50
@@ -348,8 +348,8 @@ AI_Waypoint_t *CAI_Pathfinder::FindBestPath(int startID, int endID)
 	int nNodes = GetNetwork()->NumNodes();
 	CAI_Node **pAInode = GetNetwork()->AccessNodes();
 
-	CVarBitVec	openBS(nNodes);
-	CVarBitVec	closeBS(nNodes);
+	std::vector< bool >	openBS(nNodes);
+	std::vector< bool >	closeBS(nNodes);
 
 	// ------------- INITIALIZE ------------------------
 	float* nodeG = (float *)stackalloc( nNodes * sizeof(float) );
@@ -368,15 +368,15 @@ AI_Waypoint_t *CAI_Pathfinder::FindBestPath(int startID, int endID)
 	nodeH[startID] = 0.1*(pAInode[startID]->GetPosition(GetHullType())-pAInode[endID]->GetPosition(GetHullType())).Length(); // Don't want to over estimate
 	nodeF[startID] = nodeG[startID] + nodeH[startID];
 
-	openBS.Set(startID);
-	closeBS.Set( startID );
+	openBS[startID] = true;
+	closeBS[startID] = true;
 
 	// --------------- FIND BEST PATH ------------------
-	while (!openBS.IsAllClear()) 
+	while (std::ranges::any_of( openBS, std::identity{} )) 
 	{
 		int smallestID = CAI_Network::FindBSSmallest(&openBS,nodeF,nNodes);
 	
-		openBS.Clear(smallestID);
+		openBS[smallestID] = false;
 
 		CAI_Node *pSmallestNode = pAInode[smallestID];
 		
@@ -424,15 +424,15 @@ AI_Waypoint_t *CAI_Pathfinder::FindBestPath(int startID, int endID)
 
 			float new_g  = nodeG[smallestID] + dist;
 
-			if ( !closeBS.IsBitSet(testID) || (new_g < nodeG[testID]) ) 
+			if ( !closeBS[testID] || (new_g < nodeG[testID]) ) 
 			{
 				nodeP[testID] = smallestID;
 				nodeG[testID] = new_g;
 				nodeH[testID] = (pAInode[testID]->GetPosition(GetHullType())-pAInode[endID]->GetPosition(GetHullType())).Length();
 				nodeF[testID] = nodeG[testID] + nodeH[testID];
 
-				closeBS.Set( testID );
-				openBS.Set( testID );
+				closeBS[testID] = true;
+				openBS[testID] = true;
 			}
 		}
 	}
@@ -463,7 +463,7 @@ AI_Waypoint_t* CAI_Pathfinder::FindShortRandomPath(int startID, float minPathLen
 	MARK_TASK_EXPENSIVE();
 
 	int *nodeParent	= (int *)stackalloc( sizeof(int) * nNodes );
-	CVarBitVec closeBS(nNodes);
+	std::vector< bool > closeBS(nNodes);
 	Vector vDirection = directionIn;
 
 	// ------------------------------------------
@@ -573,7 +573,7 @@ AI_Waypoint_t* CAI_Pathfinder::FindShortRandomPath(int startID, float minPathLen
 
 		// Set previous nodes parent
 		nodeParent[neighborID] = lastID;
-		closeBS.Set(neighborID);
+		closeBS[neighborID] = true;
 
 		// Add the new length
 		if (lastID != NO_NODE)
@@ -614,7 +614,7 @@ AI_Waypoint_t* CAI_Pathfinder::FindShortRandomPath(int startID, float minPathLen
 			// --------------------------------------------------------------------------
 			//  Don't loop
 			// --------------------------------------------------------------------------
-			if (closeBS.IsBitSet(testID))
+			if (closeBS[testID])
 			{
 				continue;
 			}

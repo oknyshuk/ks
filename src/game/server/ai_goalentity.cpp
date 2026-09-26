@@ -5,14 +5,11 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include <set>
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 
-#include "utlrbtree.h"
 #include "ai_goalentity.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 //
@@ -63,10 +60,10 @@ void CAI_GoalEntity::DelayedRefresh()
 
 void CAI_GoalEntity::PruneActors()
 {
-	for ( int i = m_actors.Count() - 1; i >= 0; i-- )
+	for ( int i = std::ssize( m_actors ) - 1; i >= 0; i-- )
 	{
 		if ( m_actors[i] == nullptr || m_actors[i]->IsMarkedForDeletion() || m_actors[i]->GetState() == NPC_STATE_DEAD )
-			m_actors.FastRemove( i );
+			ks::swap_remove( m_actors, i );
 	}
 }
 
@@ -74,7 +71,7 @@ void CAI_GoalEntity::PruneActors()
 
 void CAI_GoalEntity::ResolveNames()
 {
-	m_actors.SetCount( 0 );
+	m_actors.assign( 0, {} );
 	
 	CBaseEntity *pEntity = nullptr;
 	for (;;)
@@ -103,7 +100,7 @@ void CAI_GoalEntity::ResolveNames()
 		{
 			AIHANDLE temp;
 			temp = pActor;
-			m_actors.AddToTail( temp );
+			m_actors.push_back( temp );
 		}
 	}
 		
@@ -123,7 +120,7 @@ void CAI_GoalEntity::InputActivate( inputdata_t &inputdata )
 		UpdateActors();
 		m_flags |= ACTIVE;
 		
-		for ( int i = 0; i < m_actors.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_actors ); i++ )
 		{
 			EnableGoal( m_actors[i] );
 		}
@@ -135,36 +132,34 @@ void CAI_GoalEntity::InputActivate( inputdata_t &inputdata )
 void CAI_GoalEntity::InputUpdateActors( inputdata_t &inputdata )
 {
 	int i;
-	CUtlRBTree<CAI_BaseNPC *> prevActors;
-	CUtlRBTree<CAI_BaseNPC *>::IndexType_t index;
-
-	SetDefLessFunc( prevActors );
+	// multiset: m_actors may hold the same NPC more than once
+	std::multiset<CAI_BaseNPC *> prevActors;
 	
 	PruneActors();
 	
-	for ( i = 0; i < m_actors.Count(); i++ )
+	for ( i = 0; i < std::ssize( m_actors ); i++ )
 	{
-		prevActors.Insert( m_actors[i] );
+		prevActors.insert( m_actors[i] );
 	}
 	
 	ResolveNames();
 	
-	for ( i = 0; i < m_actors.Count(); i++ )
+	for ( i = 0; i < std::ssize( m_actors ); i++ )
 	{
-		index = prevActors.Find( m_actors[i] );
-		if ( index == prevActors.InvalidIndex() )
+		auto index = prevActors.find( m_actors[i] );
+		if ( index == prevActors.end() )
 		{
 			if ( m_flags & ACTIVE )
 				EnableGoal( m_actors[i] );
 		}
 		else
-			prevActors.Remove( m_actors[i] );
+			prevActors.erase( index );
 	}
 	
-	for ( index = prevActors.FirstInorder(); index != prevActors.InvalidIndex(); index = prevActors.NextInorder( index ) )
+	for ( CAI_BaseNPC *pPrevActor : prevActors )
 	{
 		if ( m_flags & ACTIVE )
-			DisableGoal( prevActors[ index ] );
+			DisableGoal( pPrevActor );
 	}
 }
 
@@ -180,7 +175,7 @@ void CAI_GoalEntity::InputDeactivate( inputdata_t &inputdata )
 		UpdateActors();
 		m_flags &= ~ACTIVE;
 
-		for ( int i = 0; i < m_actors.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_actors ); i++ )
 		{
 			DisableGoal( m_actors[i] );
 		}		
@@ -194,7 +189,7 @@ void CAI_GoalEntity::EnterDormant( void )
 	if ( m_flags & ACTIVE )
 	{
 		m_flags |= DORMANT;
-		for ( int i = 0; i < m_actors.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_actors ); i++ )
 		{
 			DisableGoal( m_actors[i] );
 		}

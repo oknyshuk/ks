@@ -10,9 +10,6 @@
 #include "reflect_annotations.h"
 #include "baseentity.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 class CTest_ProxyToggle_Networkable;
 static CTest_ProxyToggle_Networkable *g_pTestObj = 0;
 static bool g_bEnableProxy = true;

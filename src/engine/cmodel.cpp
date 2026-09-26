@@ -36,9 +36,6 @@
 #include "debugoverlay.h"
 #include "engine/IEngineTrace.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 CCollisionBSPData g_BSPData;								// the global collision bsp
 #define g_BSPData dont_use_g_BSPData_directly
 
@@ -65,18 +62,18 @@ CTSPool<TraceInfo_t> g_TraceInfoPool;
 TraceInfo_t *BeginTrace()
 {
 	TraceInfo_t *pTraceInfo = g_TraceInfoPool.GetObject();
-	if ( pTraceInfo->m_BrushCounters[0].Count() != GetCollisionBSPData()->numbrushes + 1 )
+	if ( std::ssize( pTraceInfo->m_BrushCounters[0] ) != GetCollisionBSPData()->numbrushes + 1 )
 	{
 		memset( pTraceInfo->m_Count, 0, sizeof( pTraceInfo->m_Count ) );
 		pTraceInfo->m_nCheckDepth = -1;
 
 		for ( int i = 0; i < MAX_CHECK_COUNT_DEPTH; i++ )
 		{
-			pTraceInfo->m_BrushCounters[i].SetCount( GetCollisionBSPData()->numbrushes + 1 );
-			pTraceInfo->m_DispCounters[i].SetCount( g_DispCollTreeCount );
+			pTraceInfo->m_BrushCounters[i].assign( GetCollisionBSPData()->numbrushes + 1, {} );
+			pTraceInfo->m_DispCounters[i].assign( g_DispCollTreeCount, {} );
 
-			memset( pTraceInfo->m_BrushCounters[i].Base(), 0, pTraceInfo->m_BrushCounters[i].Count() * sizeof(TraceCounter_t) );
-			memset( pTraceInfo->m_DispCounters[i].Base(), 0, pTraceInfo->m_DispCounters[i].Count() * sizeof(TraceCounter_t) );
+			memset( pTraceInfo->m_BrushCounters[i].data(), 0, std::ssize( pTraceInfo->m_BrushCounters[i] ) * sizeof(TraceCounter_t) );
+			memset( pTraceInfo->m_DispCounters[i].data(), 0, std::ssize( pTraceInfo->m_DispCounters[i] ) * sizeof(TraceCounter_t) );
 		}
 	}
 
@@ -96,8 +93,8 @@ void PushTraceVisits( TraceInfo_t *pTraceInfo )
 	if ( pTraceInfo->m_Count[i] == 0 )
 	{
 		pTraceInfo->m_Count[i]++;
-		memset( pTraceInfo->m_BrushCounters[i].Base(), 0, pTraceInfo->m_BrushCounters[i].Count() * sizeof(TraceCounter_t) );
-		memset( pTraceInfo->m_DispCounters[i].Base(), 0, pTraceInfo->m_DispCounters[i].Count() * sizeof(TraceCounter_t) );
+		memset( pTraceInfo->m_BrushCounters[i].data(), 0, std::ssize( pTraceInfo->m_BrushCounters[i] ) * sizeof(TraceCounter_t) );
+		memset( pTraceInfo->m_DispCounters[i].data(), 0, std::ssize( pTraceInfo->m_DispCounters[i] ) * sizeof(TraceCounter_t) );
 	}
 }
 
@@ -856,9 +853,9 @@ const int32 ALIGN16 g_CubeFaceIndex1[4] ALIGN16_POST = {3,4,5,-1};
 bool IntersectRayWithBoxBrush( TraceInfo_t *pTraceInfo, const cbrush_t *pBrush, cboxbrush_t *pBox )
 {
 	// Load the unaligned ray/box parameters into SIMD registers
-	fltx4 start = LoadUnaligned3SIMD(pTraceInfo->m_start.Base());
-	fltx4 extents = LoadUnaligned3SIMD(pTraceInfo->m_extents.Base());
-	fltx4 delta = LoadUnaligned3SIMD(pTraceInfo->m_delta.Base());
+	fltx4 start = LoadVector3SIMD(pTraceInfo->m_start.Base());
+	fltx4 extents = LoadVector3SIMD(pTraceInfo->m_extents.Base());
+	fltx4 delta = LoadVector3SIMD(pTraceInfo->m_delta.Base());
 	fltx4 boxMins = LoadAlignedSIMD( pBox->mins.Base() );
 	fltx4 boxMaxs = LoadAlignedSIMD( pBox->maxs.Base() );
 
@@ -882,7 +879,7 @@ bool IntersectRayWithBoxBrush( TraceInfo_t *pTraceInfo, const cbrush_t *pBrush, 
 
 	bi32x4 crossPlane = OrSIMD(XorSIMD(startOutMins,endOutMins), XorSIMD(startOutMaxs,endOutMaxs));
 	// now build the per-axis interval of t for intersections
-	fltx4 invDelta = LoadUnaligned3SIMD(pTraceInfo->m_invDelta.Base());
+	fltx4 invDelta = LoadVector3SIMD(pTraceInfo->m_invDelta.Base());
 	fltx4 tmins = MulSIMD( offsetMinsExpanded, invDelta );
 	fltx4 tmaxs = MulSIMD( offsetMaxsExpanded, invDelta );
 	// now sort the interval per axis
@@ -1021,9 +1018,9 @@ bool IntersectRayWithBox( const Ray_t &ray, const VectorAligned &inInvDelta, con
 	pTrace->fraction = 1.0f;
 
 	// Load the unaligned ray/box parameters into SIMD registers
-	fltx4 start = LoadUnaligned3SIMD(ray.m_Start.Base());
-	fltx4 extents = LoadUnaligned3SIMD(ray.m_Extents.Base());
-	fltx4 delta = LoadUnaligned3SIMD(ray.m_Delta.Base());
+	fltx4 start = LoadVector3SIMD(ray.m_Start.Base());
+	fltx4 extents = LoadVector3SIMD(ray.m_Extents.Base());
+	fltx4 delta = LoadVector3SIMD(ray.m_Delta.Base());
 	fltx4 boxMins = LoadAlignedSIMD( inBoxMins.Base() );
 	fltx4 boxMaxs = LoadAlignedSIMD( inBoxMaxs.Base() );
 
@@ -1589,9 +1586,9 @@ void FASTCALL CM_ClipBoxToBrush( TraceInfo_t * RESTRICT pTraceInfo, const cbrush
 
 inline bool IsTraceBoxIntersectingBoxBrush( TraceInfo_t *pTraceInfo, cboxbrush_t *pBox )
 {
-	fltx4 start = LoadUnaligned3SIMD(pTraceInfo->m_start.Base());
-	fltx4 mins = LoadUnaligned3SIMD(pTraceInfo->m_mins.Base());
-	fltx4 maxs = LoadUnaligned3SIMD(pTraceInfo->m_maxs.Base());
+	fltx4 start = LoadVector3SIMD(pTraceInfo->m_start.Base());
+	fltx4 mins = LoadVector3SIMD(pTraceInfo->m_mins.Base());
+	fltx4 maxs = LoadVector3SIMD(pTraceInfo->m_maxs.Base());
 
 	fltx4 boxMins = LoadAlignedSIMD( pBox->mins.Base() );
 	fltx4 boxMaxs = LoadAlignedSIMD( pBox->maxs.Base() );
@@ -1970,7 +1967,7 @@ void FASTCALL CM_GetTraceDataForLeaf( TraceInfo_t * RESTRICT pTraceInfo, int ndx
 			// make sure we only add this brush once
 			if ( !pTraceInfo->Visit( pBrush, ndxBrush, count, pCounters ) )
 				continue;
-			traceData.m_brushList.AddToTail(ndxBrush);
+			traceData.m_brushList.push_back( ndxBrush );
 		}
 	}
 
@@ -1991,7 +1988,7 @@ void FASTCALL CM_GetTraceDataForLeaf( TraceInfo_t * RESTRICT pTraceInfo, int ndx
 			if ( !IsBoxIntersectingBox( pDispBounds->mins, pDispBounds->maxs, traceData.m_mins, traceData.m_maxs ) )
 				continue;
 
-			traceData.m_dispList.AddToTail(dispIndex);
+			traceData.m_dispList.push_back( dispIndex );
 		}
 	}
 }
@@ -2606,7 +2603,7 @@ void CM_BoxTraceAgainstLeafList( const Ray_t &ray, const CTraceListData &traceDa
 
 	if ( !ray.m_IsSwept )
 	{
-		for ( int i = 0; i < traceData.m_brushList.Count(); i++ )
+		for ( int i = 0; i < std::ssize( traceData.m_brushList ); i++ )
 		{
 			int brushIndex = traceData.m_brushList[i];
 			cbrush_t *pBrush = &pTraceInfo->m_pBSPData->map_brushes[brushIndex];
@@ -2626,7 +2623,7 @@ void CM_BoxTraceAgainstLeafList( const Ray_t &ray, const CTraceListData &traceDa
 		}
 		if( !pTraceInfo->m_trace.startsolid )
 		{
-			CM_TestInDispTree( pTraceInfo, traceData.m_dispList.Base(), traceData.m_dispList.Count(), pTraceInfo->m_start, pTraceInfo->m_mins, pTraceInfo->m_maxs, pTraceInfo->m_contents, &pTraceInfo->m_trace );
+			CM_TestInDispTree( pTraceInfo, traceData.m_dispList.data(), std::ssize( traceData.m_dispList ), pTraceInfo->m_start, pTraceInfo->m_mins, pTraceInfo->m_maxs, pTraceInfo->m_contents, &pTraceInfo->m_trace );
 		}
 
 		if (!traceData.m_bFoundNonSolidLeaf)
@@ -2640,21 +2637,21 @@ void CM_BoxTraceAgainstLeafList( const Ray_t &ray, const CTraceListData &traceDa
 	{
 		if ( ray.m_IsRay )
 		{
-			CM_TraceToBrushList<true, false>( pTraceInfo, traceData.m_brushList.Base(), traceData.m_brushList.Count() );
+			CM_TraceToBrushList<true, false>( pTraceInfo, traceData.m_brushList.data(), std::ssize( traceData.m_brushList ) );
 		}
 		else
 		{
-			CM_TraceToBrushList<false, false>( pTraceInfo, traceData.m_brushList.Base(), traceData.m_brushList.Count() );
+			CM_TraceToBrushList<false, false>( pTraceInfo, traceData.m_brushList.data(), std::ssize( traceData.m_brushList ) );
 		}
 		if ( pTraceInfo->m_trace.fraction > 0 && !pTraceInfo->m_trace.startsolid )
 		{
 			if ( ray.m_IsRay )
 			{
-				CM_TraceToDispList<true, false>( pTraceInfo, traceData.m_dispList.Base(), traceData.m_dispList.Count(), 0, 1 );
+				CM_TraceToDispList<true, false>( pTraceInfo, traceData.m_dispList.data(), std::ssize( traceData.m_dispList ), 0, 1 );
 			}
 			else
 			{
-				CM_TraceToDispList<false, false>( pTraceInfo, traceData.m_dispList.Base(), traceData.m_dispList.Count(), 0, 1 );
+				CM_TraceToDispList<false, false>( pTraceInfo, traceData.m_dispList.data(), std::ssize( traceData.m_dispList ), 0, 1 );
 			}
 		}
 	}
@@ -2689,7 +2686,7 @@ struct OcclusionTestRec_t
 
 
 ConVar occlusion_test_rays( "occlusion_test_rays", "0", FCVAR_DEVELOPMENTONLY );
-static CUtlVector< OcclusionTestRec_t > s_OcclusionTestRecords;
+static std::vector< OcclusionTestRec_t > s_OcclusionTestRecords;
 
 static int s_nOcclusionTestsToCollect = 0, s_nOcclusionTestsCollectionsToRun = 0, s_nOcclusionTestCollectionLock = 0;
 CON_COMMAND_F( occlusion_test_record, "dump occlusion tests - useful on server only", FCVAR_CHEAT )
@@ -2697,9 +2694,9 @@ CON_COMMAND_F( occlusion_test_record, "dump occlusion tests - useful on server o
 	if ( args.ArgC() < 2 )
 	{
 		if ( s_nOcclusionTestsCollectionsToRun == 0 )
-			Msg( "Not recording occlusion tests now, %d in record array\n", s_OcclusionTestRecords.Count() );
+			Msg( "Not recording occlusion tests now, %d in record array\n", (int)std::ssize( s_OcclusionTestRecords ) );
 		else
-			Msg( "Currently recording %d tests in %d passes, %d records collected in this pass so far\n", s_nOcclusionTestsToCollect, s_nOcclusionTestsCollectionsToRun, s_OcclusionTestRecords.Count() );
+			Msg( "Currently recording %d tests in %d passes, %d records collected in this pass so far\n", s_nOcclusionTestsToCollect, s_nOcclusionTestsCollectionsToRun, (int)std::ssize( s_OcclusionTestRecords ) );
 		return;
 	}
 	int nCount = V_atoi( args.Arg( 1 ) );
@@ -2723,15 +2720,15 @@ CON_COMMAND_F( occlusion_test_record, "dump occlusion tests - useful on server o
 			s_OcclusionTestRecords.Purge();
 		}
 */
-		Msg( "Preparing to collect %d occlusion tests. %d collected so far.\n", nCount, s_OcclusionTestRecords.Count() );
-		s_OcclusionTestRecords.EnsureCapacity( nCount );
+		Msg( "Preparing to collect %d occlusion tests. %d collected so far.\n", nCount, (int)std::ssize( s_OcclusionTestRecords ) );
+		s_OcclusionTestRecords.reserve( nCount );
 	}	
 	else if ( nCount == 0 )
 	{
-		Msg( "Stopping all occlusion tests: %dx%d, purging %d\n", s_nOcclusionTestsToCollect, s_nOcclusionTestsCollectionsToRun, s_OcclusionTestRecords.Count() );
+		Msg( "Stopping all occlusion tests: %dx%d, purging %d\n", s_nOcclusionTestsToCollect, s_nOcclusionTestsCollectionsToRun, (int)std::ssize( s_OcclusionTestRecords ) );
 		s_nOcclusionTestsToCollect = 0;
 		s_nOcclusionTestsCollectionsToRun = 0;
-		s_OcclusionTestRecords.Purge();
+		s_OcclusionTestRecords.clear(); s_OcclusionTestRecords.shrink_to_fit();
 	}
 	else
 	{
@@ -2770,13 +2767,13 @@ bool CM_IsFullyOccluded( const VectorAligned &p0, const VectorAligned &vExtents0
 {
 	if ( s_nOcclusionTestsToCollect > 0 && s_nOcclusionTestCollectionLock == 0 )
 	{
-		OcclusionTestRec_t &rec = s_OcclusionTestRecords[ s_OcclusionTestRecords.AddToTail() ];
+		OcclusionTestRec_t &rec = s_OcclusionTestRecords.emplace_back();
 		rec.p0 = p0;
 		rec.vExtents0 = vExtents0;
 		rec.p1 = p1;
 		rec.vExtents1 = vExtents1;
 
-		if ( s_OcclusionTestRecords.Count() >= s_nOcclusionTestsToCollect )
+		if ( std::ssize( s_OcclusionTestRecords ) >= s_nOcclusionTestsToCollect )
 		{
 			// record the file
 			for ( int nAttempt = 0; nAttempt < 10000; ++nAttempt )
@@ -2785,11 +2782,11 @@ bool CM_IsFullyOccluded( const VectorAligned &p0, const VectorAligned &vExtents0
 				CFmtStr fileName( "occlusion_records.%s.%04d.ocr", pMapName, nAttempt );
 				if ( g_pFullFileSystem->FileExists( fileName.Get() ) )
 					continue;
-				Msg( "Saving %d occlusion records to %s (#%d)\n", s_OcclusionTestRecords.Count(), fileName.Get(), nAttempt );
+				Msg( "Saving %d occlusion records to %s (#%d)\n", (int)std::ssize( s_OcclusionTestRecords ), fileName.Get(), nAttempt );
 				FileHandle_t hDump = g_pFullFileSystem->Open( fileName.Get(), "wb" );
-				g_pFullFileSystem->Write( s_OcclusionTestRecords.Base(), s_OcclusionTestRecords.Count() * sizeof( s_OcclusionTestRecords[ 0 ] ), hDump );
+				g_pFullFileSystem->Write( s_OcclusionTestRecords.data(), std::ssize( s_OcclusionTestRecords ) * sizeof( s_OcclusionTestRecords[ 0 ] ), hDump );
 				g_pFullFileSystem->Close( hDump );
-				s_OcclusionTestRecords.Purge();
+				s_OcclusionTestRecords.clear(); s_OcclusionTestRecords.shrink_to_fit();
 				break;
 			}
 			if ( --s_nOcclusionTestsCollectionsToRun <= 0 )
@@ -2892,8 +2889,8 @@ CON_COMMAND_F( occlusion_test_run, "run occlusion test", FCVAR_CHEAT )
 
 	const char *pMapName = GetMapName();
 	CFmtStr fileName( "occlusion_records.%s.%04d.ocr", pMapName, V_atoi( args.Arg( 1 ) ) );
-	CUtlBuffer buf;
-	if ( !g_pFullFileSystem->ReadFile( fileName.Get(), nullptr, buf ) )
+	auto buf = g_pFullFileSystem->ReadFile( fileName.Get(), nullptr );
+	if ( !buf )
 	{
 		Msg( "Cannot read %s\n", fileName.Get() );
 		return;
@@ -2923,8 +2920,8 @@ CON_COMMAND_F( occlusion_test_run, "run occlusion test", FCVAR_CHEAT )
 			Msg( "Will double-check occlusion with %d rays\n", nDoubleCheck );
 		}
 	}
-	int nRecCount = buf.TellPut() / sizeof( OcclusionTestRec_t );
-	OcclusionTestRec_t *pRec = ( OcclusionTestRec_t * )buf.Base();
+	int nRecCount = buf->size() / sizeof( OcclusionTestRec_t );
+	OcclusionTestRec_t *pRec = ( OcclusionTestRec_t * )buf->data();
 	Msg( "Loaded %d occlusion records from %s\n", nRecCount, fileName.Get() );
 	int nRecOccluded = 0, nRecFalseOcclusion = 0, nRecFalseNonOcclusion = 0;
 	int64 nCpuSpeed = cpuInfo.m_Speed;
@@ -3674,10 +3671,10 @@ bool FASTCALL IsBoxIntersectingRayNoLowest( fltx4 boxMin, fltx4  boxMax,
 	{
 		VectorAligned temp;
 		StoreAlignedSIMD(temp.Base(),vt2);
-		closestExit = ReplicateX4( MIN( MIN(temp.x,temp.y), temp.z) );
+		closestExit = ReplicateX4( std::min( std::min(temp.x,temp.y), temp.z) );
 
 		StoreAlignedSIMD(temp.Base(),vt1);
-		furthestEntry = ReplicateX4( MAX( MAX(temp.x,temp.y), temp.z) );
+		furthestEntry = ReplicateX4( std::max( std::max(temp.x,temp.y), temp.z) );
 	}
 
 

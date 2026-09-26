@@ -14,7 +14,6 @@
 #include "sqarray.h"
 #include "sqclass.h"
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#include "memdbgon.h"
 #endif
 
 #define TOP() (_stack._vals[_top-1])

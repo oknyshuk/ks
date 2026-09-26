@@ -48,9 +48,7 @@
 #include "server.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 #define ENABLE_DEMOS_BY_DEFAULT true
 
 static ConVar demo_recordcommands( "demo_recordcommands", "1", FCVAR_CHEAT, "Record commands typed at console into .dem files." );
@@ -81,7 +79,7 @@ CDemoPlayer *g_pClientDemoPlayer = &s_ClientDemoPlayer;
 IDemoPlayer *demoplayer = g_pClientDemoPlayer;
 
 extern CNetworkStringTableContainer *networkStringTableContainerClient;
-CUtlVector<RegisteredDemoCustomDataCallbackPair_t> g_RegisteredDemoCustomDataCallbacks;
+std::vector< RegisteredDemoCustomDataCallbackPair_t > g_RegisteredDemoCustomDataCallbacks;
 
 // This is the number of units under which we are allowed to interpolate, otherwise pop.
 // This fixes problems with in-level transitions.
@@ -402,7 +400,7 @@ void CDemoRecorder::WriteSplitScreenPlayers()
 
 void CDemoRecorder::WriteBSPDecals()
 {
-	decallist_t	*decalList = (decallist_t*)malloc( sizeof(decallist_t) * Draw_DecalMax() );
+	decallist_t	*decalList = (decallist_t*)MemAlloc_Alloc( sizeof(decallist_t) * Draw_DecalMax() );
 	
 	int decalcount = DecalListCreate( decalList );
 
@@ -439,7 +437,7 @@ void CDemoRecorder::WriteBSPDecals()
 
 	WriteMessages( msg );
 	
-	free( decalList );
+	g_pMemAlloc->Free( decalList );
 }
 
 void CDemoRecorder::RecordServerClasses( ServerClass *pClasses )
@@ -449,13 +447,10 @@ void CDemoRecorder::RecordServerClasses( ServerClass *pClasses )
 	if ( !m_DemoFile.IsOpen() )
 		return;
 
-	char *pBigBuffer;
-	CUtlBuffer bigBuff;
-
 	int buffSize = DEMO_RECORD_BUFFER_SIZE;
 	// keep temp large allocations off of stack
-	bigBuff.EnsureCapacity( buffSize );
-	pBigBuffer = (char*)bigBuff.Base();
+	std::vector< std::byte > bigBuff( buffSize );
+	char *pBigBuffer = reinterpret_cast< char * >( bigBuff.data() );
 
 	bf_write buf( "CDemoRecorder::RecordServerClasses", pBigBuffer, buffSize );
 
@@ -481,13 +476,10 @@ void CDemoRecorder::RecordStringTables()
 	if ( !m_DemoFile.IsOpen() )
 		return;
 
-	char *pBigBuffer;
-	CUtlBuffer bigBuff;
-
 	int buffSize = DEMO_RECORD_BUFFER_SIZE;
 	// keep temp large allocations off of stack
-	bigBuff.EnsureCapacity( buffSize );
-	pBigBuffer = (char*)bigBuff.Base();
+	std::vector< std::byte > bigBuff( buffSize );
+	char *pBigBuffer = reinterpret_cast< char * >( bigBuff.data() );
 
 	bf_write buf( pBigBuffer, buffSize );
 
@@ -665,7 +657,7 @@ void CDemoRecorder::StartupDemoFile( void )
 	V_strcpy_safe(szGameDir, com_gamedir );
 	V_FileBase( szGameDir, dh->gamedirectory, sizeof( dh->gamedirectory ) );
 
-	V_strcpy_safe( dh->servername, GetBaseLocalClient().m_Remote.Get( 0 ).m_szRetryAddress );
+	V_strcpy_safe( dh->servername, GetBaseLocalClient().m_Remote.Get( 0 ).m_szRetryAddress.c_str() );
 	V_strcpy_safe( dh->clientname, cl_name.GetString() );
 
 	
@@ -694,7 +686,7 @@ void CDemoRecorder::StartupDemoFile( void )
 	m_DemoFile.WriteCmdHeader( dem_synctick, 0, 0 );
 
 	//write out the custom data callback table if we have any entries
-	int iCustomDataCallbacks = g_RegisteredDemoCustomDataCallbacks.Count();
+	int iCustomDataCallbacks = std::ssize( g_RegisteredDemoCustomDataCallbacks );
 	if( iCustomDataCallbacks != 0 )
 	{
 		size_t iCombinedStringLength = 0;
@@ -731,9 +723,9 @@ void CDemoRecorder::StartupDemoFile( void )
 
 	// Dump all accumulated avatar data messages into the starting portion of the demo file
 	CNETMsg_PlayerAvatarData_t *pMsgMyOwnAvatarData = GetBaseLocalClient().AllocOwnPlayerAvatarData();
-	FOR_EACH_MAP_FAST( GetBaseLocalClient().m_mapPlayerAvatarData, iData )
+	for ( auto &[accountid, pData] : GetBaseLocalClient().m_mapPlayerAvatarData )
 	{
-		CNETMsg_PlayerAvatarData_t &msgPlayerAvatarData = *GetBaseLocalClient().m_mapPlayerAvatarData.Element( iData );
+		CNETMsg_PlayerAvatarData_t &msgPlayerAvatarData = *pData;
 
 		// if the server authoritative data overrides local version of avatar data then don't write local version
 		if ( pMsgMyOwnAvatarData && ( msgPlayerAvatarData.accountid == pMsgMyOwnAvatarData->accountid ) )
@@ -986,7 +978,7 @@ struct DemoUserInfo_t
 	CSteamID steamID;
 };
 
-CUtlVector< DemoUserInfo_t > s_demoUserInfo;
+std::vector< DemoUserInfo_t > s_demoUserInfo;
 
 void Callback_DemoScanUserInfoChanged( void *object, INetworkStringTable *stringTable, int stringNumber, const char *newString, const void *newData )
 {
@@ -996,7 +988,7 @@ void Callback_DemoScanUserInfoChanged( void *object, INetworkStringTable *string
 
 	if ( !player )
 	{
-		if ( s_demoUserInfo.Count() > stringNumber )
+		if ( std::ssize( s_demoUserInfo ) > stringNumber )
 		{
 			// clear out the entry in our user info array
 			s_demoUserInfo[ stringNumber ].userID = -1;
@@ -1006,12 +998,12 @@ void Callback_DemoScanUserInfoChanged( void *object, INetworkStringTable *string
 		return; // player left the game
 	}
 
-	if ( s_demoUserInfo.Count() <= stringNumber )
+	if ( std::ssize( s_demoUserInfo ) <= stringNumber )
 	{
-		s_demoUserInfo.SetCountNonDestructively( stringNumber + 1 );
+		s_demoUserInfo.resize( stringNumber + 1 );
 	}
 
-	DemoUserInfo_t &entry = s_demoUserInfo.Element( stringNumber );
+	DemoUserInfo_t &entry = s_demoUserInfo[ stringNumber ];
 
 	entry.userID = player->userID;
 	entry.name = player->name;
@@ -1024,22 +1016,22 @@ void GetExtraDeathEventInfo( KeyValues *pKeys )
 	int nVictimID = pKeys->GetInt( "userid" );
 	int nAssisterID = pKeys->GetInt( "assister" );
 
-	FOR_EACH_VEC( s_demoUserInfo, i )
+	for ( const auto &userInfo : s_demoUserInfo )
 	{
-		if ( nAttackerID == s_demoUserInfo[ i ].userID )
+		if ( nAttackerID == userInfo.userID )
 		{
-			pKeys->SetString( "attacker_name", s_demoUserInfo[ i ].name );
-			pKeys->SetUint64( "attacker_xuid", s_demoUserInfo[ i ].steamID.ConvertToUint64() );
+			pKeys->SetString( "attacker_name", userInfo.name );
+			pKeys->SetUint64( "attacker_xuid", userInfo.steamID.ConvertToUint64() );
 		}
-		else if ( nVictimID == s_demoUserInfo[ i ].userID )
+		else if ( nVictimID == userInfo.userID )
 		{
-			pKeys->SetString( "victim_name", s_demoUserInfo[ i ].name );
-			pKeys->SetUint64( "victim_xuid", s_demoUserInfo[ i ].steamID.ConvertToUint64() );
+			pKeys->SetString( "victim_name", userInfo.name );
+			pKeys->SetUint64( "victim_xuid", userInfo.steamID.ConvertToUint64() );
 		}
-		else if ( nAssisterID == s_demoUserInfo[ i ].userID )
+		else if ( nAssisterID == userInfo.userID )
 		{
-			pKeys->SetString( "assister_name", s_demoUserInfo[ i ].name );
-			pKeys->SetUint64( "assister_xuid", s_demoUserInfo[ i ].steamID.ConvertToUint64() );
+			pKeys->SetString( "assister_name", userInfo.name );
+			pKeys->SetUint64( "assister_xuid", userInfo.steamID.ConvertToUint64() );
 		}
 	}
 }
@@ -1047,12 +1039,12 @@ void GetExtraDeathEventInfo( KeyValues *pKeys )
 void GetExtraEventInfo( KeyValues *pKeys )
 {
 	int nUserID = pKeys->GetInt( "userid" );
-	FOR_EACH_VEC( s_demoUserInfo, i )
+	for ( const auto &userInfo : s_demoUserInfo )
 	{
-		if ( nUserID == s_demoUserInfo[ i ].userID )
+		if ( nUserID == userInfo.userID )
 		{
-			pKeys->SetString( "player_name", s_demoUserInfo[ i ].name );
-			pKeys->SetUint64( "player_xuid", s_demoUserInfo[ i ].steamID.ConvertToUint64() );
+			pKeys->SetString( "player_name", userInfo.name );
+			pKeys->SetUint64( "player_xuid", userInfo.steamID.ConvertToUint64() );
 		}
 	}
 }
@@ -1106,7 +1098,7 @@ bool CheckKeyXuid( const CSteamID &steamID, KeyValues *pKeys, const char* pKeyWi
 
 int GetPlayerIndex( const CSteamID &steamID )
 {
-	FOR_EACH_VEC( s_demoUserInfo, i )
+	for ( int i = 0; i < std::ssize( s_demoUserInfo ); i++ )
 	{
 		if ( s_demoUserInfo[ i ].steamID.GetAccountID() == steamID.GetAccountID() )
 		{
@@ -1175,16 +1167,16 @@ void CDemoPlayer::StopPlayback( void )
 
 	g_ClientDLL->OnDemoPlaybackStop();
 
-	FOR_EACH_VEC( m_ImportantTicks, i )
+	for ( const auto &importantTick : m_ImportantTicks )
 	{
-		if ( m_ImportantTicks[ i ].pKeys )
+		if ( importantTick.pKeys )
 		{
-			m_ImportantTicks[ i ].pKeys->deleteThis();
+			importantTick.pKeys->deleteThis();
 		}
 	}
-	m_ImportantTicks.RemoveAll();
-	m_ImportantGameEvents.RemoveAll();
-	m_highlights.RemoveAll();
+	m_ImportantTicks.clear();
+	m_ImportantGameEvents.clear();
+	m_highlights.clear();
 	m_nCurrentHighlight = -1;
 	m_highlightSteamID.SetFromUint64( 0 );
 	m_nHighlightPlayerIndex = -1;
@@ -1325,7 +1317,7 @@ bool CDemoPlayer::ParseAheadForInterval( int curtick, int intervalticks )
 	long		starting_position = m_DemoFile.GetCurPos( true );
 
 	// remove all entrys older than 32 ticks
-	while ( m_DestCmdInfo.Count() > 0 )
+	while ( !m_DestCmdInfo.empty() )
 	{
 		DemoCommandQueue& entry = m_DestCmdInfo[ 0 ];
 
@@ -1335,7 +1327,7 @@ bool CDemoPlayer::ParseAheadForInterval( int curtick, int intervalticks )
 		if ( entry.filepos >= starting_position )
 			break;
 
-		 m_DestCmdInfo.Remove( 0 );
+		 m_DestCmdInfo.erase( m_DestCmdInfo.begin() + 0 );
 	}
 
 	if ( m_bTimeDemo ) 
@@ -1409,7 +1401,7 @@ bool CDemoPlayer::ParseAheadForInterval( int curtick, int intervalticks )
 		entry.filepos = curpos;
 
 		int i = 0;
-		int c =  m_DestCmdInfo.Count();
+		int c =  std::ssize( m_DestCmdInfo );
 		for ( ; i < c; ++i )
 		{
 			if (  m_DestCmdInfo[ i ].filepos == entry.filepos )
@@ -1423,11 +1415,11 @@ bool CDemoPlayer::ParseAheadForInterval( int curtick, int intervalticks )
 			{
 				if (  m_DestCmdInfo[ c - 1 ].tick > tick )
 				{
-					 m_DestCmdInfo.RemoveAll();
+					 m_DestCmdInfo.clear();
 				}
 			}
 
-			m_DestCmdInfo.AddToTail( entry );
+			m_DestCmdInfo.push_back( entry );
 		}
 
 		if ( ( tick - curtick ) > intervalticks )
@@ -1471,7 +1463,7 @@ netpacket_t *CDemoPlayer::ReadPacket( void )
 		{	
 			GetImportantGameEventIDs();
 			ScanForImportantTicks();
-			if ( m_bScanMode && m_ImportantTicks.Count() > 0 )
+			if ( m_bScanMode && std::ssize( m_ImportantTicks ) > 0 )
 			{
 				CL_ScanDemoDone( m_szScanMode );
 				return nullptr;
@@ -1495,7 +1487,7 @@ netpacket_t *CDemoPlayer::ReadPacket( void )
 		if ( nCurrentTick >= m_highlights[ m_nCurrentHighlight ].nPlayToTick )
 		{
 			m_nCurrentHighlight++;
-			if ( m_nCurrentHighlight >= m_highlights.Count() )
+			if ( m_nCurrentHighlight >= std::ssize( m_highlights ) )
 			{
 				m_nCurrentHighlight = -1;
 				SetPlaybackTimeScale( 1.0f );
@@ -1657,7 +1649,7 @@ netpacket_t *CDemoPlayer::ReadPacket( void )
 					Msg( "%d dem_datatables\n", tick );
 				}
 
-				void *data = malloc( DEMO_RECORD_BUFFER_SIZE ); // X360TBD: How much memory is really needed here?
+				void *data = MemAlloc_Alloc( DEMO_RECORD_BUFFER_SIZE ); // X360TBD: How much memory is really needed here?
 				bf_read buf( "dem_datatables", data, DEMO_RECORD_BUFFER_SIZE );
 				m_DemoFile.ReadNetworkDataTables( &buf );
 				buf.Seek( 0 );								// re-read data
@@ -1667,12 +1659,12 @@ netpacket_t *CDemoPlayer::ReadPacket( void )
 				{
 					Host_Error( "Error parsing network data tables during demo playback." );
 				}
-				free( data );
+				g_pMemAlloc->Free( data );
 			}
 			break;
 		case dem_stringtables:
 			{
-				void *data = malloc( DEMO_RECORD_BUFFER_SIZE ); // X360TBD: How much memory is really needed here?
+				void *data = MemAlloc_Alloc( DEMO_RECORD_BUFFER_SIZE ); // X360TBD: How much memory is really needed here?
 				bf_read buf( "dem_stringtables", data, DEMO_RECORD_BUFFER_SIZE );
 				m_DemoFile.ReadStringTables( &buf );
 				buf.Seek( 0 );
@@ -1681,7 +1673,7 @@ netpacket_t *CDemoPlayer::ReadPacket( void )
 				{
 					Host_Error( "Error parsing string tables during demo playback." );
 				}
-				free( data );
+				g_pMemAlloc->Free( data );
 
 			}
 			break;
@@ -1721,38 +1713,38 @@ netpacket_t *CDemoPlayer::ReadPacket( void )
 					int iTableEntries = *(int *)pParse;
 					pParse += sizeof( int );
 					iTableEntries = LittleDWord( iTableEntries );
-					m_CustomDataCallbackMap.SetSize( iTableEntries );
+					m_CustomDataCallbackMap.assign( iTableEntries, {} );
 
 					for( int i = 0; i != iTableEntries; ++i )
 					{
-						m_CustomDataCallbackMap[i].name = (char *)pParse;
+						m_CustomDataCallbackMap[i].name = ks::nz( (const char *)pParse );
 						pParse += V_strlen( (char *)pParse ) + 1;
 
 						//now that we have the name, map that to a registered callback function
 						int j;
-						for( j = 0; j != g_RegisteredDemoCustomDataCallbacks.Count(); ++j )
+						for( j = 0; j != std::ssize( g_RegisteredDemoCustomDataCallbacks ); ++j )
 						{
-							if( V_stricmp( m_CustomDataCallbackMap[i].name.Get(), STRING( g_RegisteredDemoCustomDataCallbacks[j].szSaveID ) ) == 0 )
+							if( V_stricmp( m_CustomDataCallbackMap[i].name.data(), STRING( g_RegisteredDemoCustomDataCallbacks[j].szSaveID ) ) == 0 )
 							{
 								//match
 								m_CustomDataCallbackMap[i].pCallback = g_RegisteredDemoCustomDataCallbacks[j].pCallback;
 								break;
 							}
 						}
-						Assert( j != g_RegisteredDemoCustomDataCallbacks.Count() ); //found a match
+						Assert( j != std::ssize( g_RegisteredDemoCustomDataCallbacks ) ); //found a match
 					}
 					Assert( pParse == (pData + iSize) ); //properly parsed the table
 				}
 				else
 				{
 					//send it off
-					Assert( iCallbackIndex < m_CustomDataCallbackMap.Count() );
+					Assert( iCallbackIndex < std::ssize( m_CustomDataCallbackMap ) );
 					Assert( m_CustomDataCallbackMap[iCallbackIndex].pCallback != nullptr );
 
 					if( m_CustomDataCallbackMap[iCallbackIndex].pCallback != nullptr )
 						m_CustomDataCallbackMap[iCallbackIndex].pCallback( pData, iSize );
 					else
-						Warning( "Unable to decode custom demo data, callback \"%s\" not found.\n", m_CustomDataCallbackMap[iCallbackIndex].name.Get() );
+						Warning( "Unable to decode custom demo data, callback \"%s\" not found.\n", m_CustomDataCallbackMap[iCallbackIndex].name.data() );
 				}
 			}
 			break;
@@ -1844,8 +1836,8 @@ netpacket_t *CDemoPlayer::ReadPacket( void )
 
 void CDemoPlayer::InterpolateDemoCommand( int nSlot, int targettick, DemoCommandQueue& prev, DemoCommandQueue& next )
 {
-	CUtlVector< DemoCommandQueue >& list = m_DestCmdInfo;
-	int c = list.Count();
+	std::vector< DemoCommandQueue >& list = m_DestCmdInfo;
+	int c = std::ssize( list );
 
 	prev.info.Reset();
 	next.info.Reset();
@@ -2160,16 +2152,16 @@ bool CDemoPlayer::StartPlayback( const char *filename, bool bAsTimeDemo, CDemoPl
 		ConMsg( "Playing demo from %s.\n", filename );
 	}
 
-	FOR_EACH_VEC( m_ImportantTicks, i )
+	for ( const auto &importantTick : m_ImportantTicks )
 	{
-		if ( m_ImportantTicks[ i ].pKeys )
+		if ( importantTick.pKeys )
 		{
-			m_ImportantTicks[ i ].pKeys->deleteThis();
+			importantTick.pKeys->deleteThis();
 		}
 	}
-	m_ImportantTicks.RemoveAll();
-	m_ImportantGameEvents.RemoveAll();
-	m_highlights.RemoveAll();
+	m_ImportantTicks.clear();
+	m_ImportantGameEvents.clear();
+	m_highlights.clear();
 	m_nCurrentHighlight = -1;
 
 	// Now read in the directory structure.
@@ -2253,7 +2245,7 @@ void CDemoPlayer::RestartPlayback( void )
 		GetBaseLocalClient().chokedcommands = 0;
 		GetBaseLocalClient().lastoutgoingcommand = -1;
 		GetBaseLocalClient().m_flNextCmdTime = net_time;
-		GetBaseLocalClient().events.RemoveAll();
+		GetBaseLocalClient().events.clear();
 
 #ifndef DEDICATED
 		S_StopAllSounds( true );
@@ -2286,24 +2278,24 @@ void ComputeTimedemoResultsFilename( CFmtStr &fileName, CFmtStr &dateString )
 	// Compute prettified GPU name
 	MaterialAdapterInfo_t info;
 	materials->GetDisplayAdapterInfo( materials->GetCurrentAdapter(), info );
-	CUtlString gpuName( info.m_pDriverName );
+	std::string gpuName( ks::nz( info.m_pDriverName ) );
 	const char *pVendors[] = { "nvidia", "ati" };
 	for ( int i = 0; i < ARRAYSIZE( pVendors ); i++ )
 	{
-		const char *pVendor = V_stristr( gpuName.Get(), pVendors[i] );
+		const char *pVendor = V_stristr( gpuName.data(), pVendors[i] );
 		if ( pVendor )
 		{
 			int nVendorLen = V_strlen( pVendors[i] );
 			if ( pVendor[nVendorLen] == ' ' ) nVendorLen++;
-			CUtlString tail = pVendor + nVendorLen;
-			gpuName.SetLength( pVendor - gpuName.Get() );
+			std::string tail = pVendor + nVendorLen;
+			gpuName.resize( pVendor - gpuName.data() );
 			gpuName += tail;
 			break;
 		}
 	}
 	// Now replace any non-alphanumerics with an underscore
-	char *pGPUName = gpuName.Get();
-	for ( int i = 0; i < gpuName.Length(); i++ )
+	char *pGPUName = gpuName.data();
+	for ( int i = 0; i < std::ssize( gpuName ); i++ )
 	{
 		if ( !V_isalnum( pGPUName[i] ) )
 			pGPUName[i] = '_';
@@ -2320,11 +2312,12 @@ void ComputeTimedemoResultsFilename( CFmtStr &fileName, CFmtStr &dateString )
 	host[ length ] = '\0';
 
 	// Get the destination path (default to the gamedir)
-	CUtlString benchmarkPath = CommandLine()->ParmValue( "-benchmark_path" );
-	if ( benchmarkPath.Length() )  // Don't bother on Mac, we can't write to an smb share trivially
+	std::string benchmarkPath = ks::nz( CommandLine()->ParmValue( "-benchmark_path" ) );
+	if ( !benchmarkPath.empty() )  // Don't bother on Mac, we can't write to an smb share trivially
 	{
-		benchmarkPath.StripTrailingSlash();
-		V_FixSlashes( benchmarkPath.Get() );
+		if ( benchmarkPath.back() == '\\' || benchmarkPath.back() == '/' )
+			benchmarkPath.pop_back();
+		V_FixSlashes( benchmarkPath.data() );
 	}
 	else
 	{
@@ -2332,13 +2325,13 @@ void ComputeTimedemoResultsFilename( CFmtStr &fileName, CFmtStr &dateString )
 	}
 
 	// Slap it all together
-	fileName.sprintf( "%s%sSourceBench_%s_%s.csv", benchmarkPath.Get(), CORRECT_PATH_SEPARATOR_S, gpuName.Get(), host );
+	fileName.sprintf( "%s%sSourceBench_%s_%s.csv", benchmarkPath.data(), CORRECT_PATH_SEPARATOR_S, gpuName.data(), host );
 }
 
 void CDemoPlayer::WriteTimeDemoResults( void )
 {
-	int frames = MAX( 1, ( (host_framecount - m_nTimeDemoStartFrame) - 1 ) );
-	float time = MAX( 1, ( Sys_FloatTime() - m_flTimeDemoStartTime ) );
+	int frames = std::max( 1, ( (host_framecount - m_nTimeDemoStartFrame) - 1 ) );
+	float time = std::max<std::common_type_t<int, double>>( 1, ( Sys_FloatTime() - m_flTimeDemoStartTime ) );
 	float flVariability = m_flTotalFPSVariability / (float)frames;
 	ConMsg( "%i frames %5.3f seconds %5.2f fps (%5.2f ms/f) %5.3f fps variability\n", frames, time, frames/time, 1000*time/frames, flVariability );
 
@@ -2428,7 +2421,7 @@ void CDemoPlayer::WriteTimeDemoResults( void )
 	}
 	g_pFileSystem->FPrintf( fileHandle, "%i,", width );
 	g_pFileSystem->FPrintf( fileHandle, "%i,", height );
-	g_pFileSystem->FPrintf( fileHandle, "%i,", MAX( 1, mat_antialias.GetInt() ) );
+	g_pFileSystem->FPrintf( fileHandle, "%i,", std::max( 1, mat_antialias.GetInt() ) );
 	g_pFileSystem->FPrintf( fileHandle, "%i,", mat_forceaniso.GetInt() );
 	g_pFileSystem->FPrintf( fileHandle, "%i,", mat_picmip.GetInt() );
 	g_pFileSystem->FPrintf( fileHandle, "%i,", frames );
@@ -2592,7 +2585,7 @@ void CDemoPlayer::SetImportantEventData( const KeyValues *pData )
 
 void CDemoPlayer::GetImportantGameEventIDs()
 {
-	if ( m_ImportantGameEvents.Count() == 0 )
+	if ( m_ImportantGameEvents.empty() )
 	{
 		KeyValues *pCurrentEvent = m_pImportantEventData->GetFirstSubKey();
 		while( pCurrentEvent != nullptr )
@@ -2610,7 +2603,7 @@ void CDemoPlayer::GetImportantGameEventIDs()
 				event.flSeekForwardOffset = pCurrentEvent->GetFloat( "seek_back_offset", 0.0f );
 				event.flSeekBackwardOffset = pCurrentEvent->GetFloat( "seek_forward_offset", 0.0f );
 				event.bScanOnly = pCurrentEvent->GetBool( "scanonly" );
-				m_ImportantGameEvents.AddToTail( event );
+				m_ImportantGameEvents.push_back( event );
 			}
 			else
 			{
@@ -2687,10 +2680,10 @@ void ParseEventKeys( CSVCMsg_GameEvent_t *msg, CGameEventDescriptor *pDescriptor
 
 void CDemoPlayer::ScanForImportantTicks()
 {
-	if ( m_ImportantTicks.Count() > 0 || m_ImportantGameEvents.Count() == 0 )
+	if ( !m_ImportantTicks.empty() || std::ssize( m_ImportantGameEvents ) == 0 )
 		return;
 
-	s_demoUserInfo.RemoveAll();
+	s_demoUserInfo.clear();
 
 	// setup a string table for use while scanning
 	CNetworkStringTableContainer demoScanStringTables;
@@ -2789,7 +2782,7 @@ void CDemoPlayer::ScanForImportantTicks()
 				break;
 			case dem_stringtables:
 				{
-					void *data = malloc( DEMO_RECORD_BUFFER_SIZE );
+					void *data = MemAlloc_Alloc( DEMO_RECORD_BUFFER_SIZE );
 					bf_read buf( "dem_stringtables", data, DEMO_RECORD_BUFFER_SIZE );
 					m_DemoFile.ReadStringTables( &buf );
 					buf.Seek( 0 );
@@ -2798,7 +2791,7 @@ void CDemoPlayer::ScanForImportantTicks()
 					{
 						Host_Error( "Error parsing string tables during demo scan." );
 					}
-					free( data );
+					g_pMemAlloc->Free( data );
 				}
 				break;
 			case dem_usercmd:
@@ -2862,7 +2855,7 @@ void CDemoPlayer::ScanForImportantTicks()
 						CSVCMsg_GameEvent_t *msg = static_cast< CSVCMsg_GameEvent_t * >( netmsg );
 
 						CGameEventDescriptor *pDescriptor = g_GameEventManager.GetEventDescriptor( msg->eventid );
-						for ( int nEvent = 0; nEvent < m_ImportantGameEvents.Count(); nEvent++ )
+						for ( int nEvent = 0; nEvent < std::ssize( m_ImportantGameEvents ); nEvent++ )
 						{
 							if ( msg->eventid == m_ImportantGameEvents[ nEvent ].nEventID )
 							{
@@ -2892,7 +2885,7 @@ void CDemoPlayer::ScanForImportantTicks()
 									}
 
 									if ( !bIgnore )
-										m_ImportantTicks.AddToTail( importantTick );
+										m_ImportantTicks.push_back( importantTick );
 								}
 								else
 								{
@@ -2950,7 +2943,7 @@ void CDemoPlayer::BuildHighlightList()
 {
 	if ( m_bDoHighlightScan && m_highlightSteamID.ConvertToUint64() != 0 )
 	{
-		m_highlights.RemoveAll();
+		m_highlights.clear();
 
 		DemoHighlightEntry_t entry;
 		int nTicksAfterEvent = demo_highlight_timeafter.GetFloat() / host_state.interval_per_tick;
@@ -3002,7 +2995,7 @@ void CDemoPlayer::BuildHighlightList()
 					nNextImportantTickIndex = FindNextImportantTickByXuid( m_ImportantTicks[ nNextImportantTickIndex ].nTick + 1, m_highlightSteamID );
 				}
 			
-				m_highlights.AddToTail( entry );
+				m_highlights.push_back( entry );
 			}
 
 			nImportantTickIndex = FindNextImportantTickByXuid( m_ImportantTicks[ nImportantTickIndex ].nTick + 1, m_highlightSteamID );
@@ -3011,7 +3004,7 @@ void CDemoPlayer::BuildHighlightList()
 		// when we cross a round start between highlights, we include the round start in the highlight
 		// the playback will fast forward from the round start until nearby the highlight
 		if ( 0 )
-		for ( int i = 1; i < m_highlights.Count(); i++ )
+		for ( int i = 1; i < std::ssize( m_highlights ); i++ )
 		{
 			int nTicksSkipToRoundThreshold = demo_highlight_skipthreshold.GetFloat() / host_state.interval_per_tick;
 			int nRoundTick = FindPreviousImportantTick( m_highlights[ i ].nFastForwardToTick, "round_start" );
@@ -3021,7 +3014,7 @@ void CDemoPlayer::BuildHighlightList()
 			}
 		}
 
-		if ( m_highlights.Count() > 0 )
+		if ( !m_highlights.empty() )
 		{
 			// add on a seek to the end of the match and play from their to the end of the demo, this will show the scoreboard
 			int nEndMatchTickIndex = demoplayer->FindPreviousImportantTick( m_DemoFile.m_DemoHeader.playback_ticks, "announce_phase_end" );
@@ -3035,7 +3028,7 @@ void CDemoPlayer::BuildHighlightList()
 				entry.nNumEvents = 0;
 				entry.unAccountID = m_highlightSteamID.GetAccountID();
 
-				m_highlights.AddToTail( entry );
+				m_highlights.push_back( entry );
 			}
 
 			m_nCurrentHighlight = 0;
@@ -3051,7 +3044,7 @@ void CDemoPlayer::BuildHighlightList()
 
 int CDemoPlayer::FindNextImportantTick( int nCurrentTick, const char *pEventName /* = NULL */ )
 {
-	FOR_EACH_VEC( m_ImportantTicks, i )
+	for ( int i = 0; i < std::ssize( m_ImportantTicks ); i++ )
 	{
 		if ( m_ImportantTicks[ i ].nTick > nCurrentTick )
 		{
@@ -3067,7 +3060,7 @@ int CDemoPlayer::FindNextImportantTick( int nCurrentTick, const char *pEventName
 
 int CDemoPlayer::FindPreviousImportantTick( int nCurrentTick, const char *pEventName /* = NULL */ )
 {
-	FOR_EACH_VEC_BACK( m_ImportantTicks, i )
+	for ( int i = (int)std::ssize( m_ImportantTicks ) - 1; i >= 0; i-- )
 	{
 		if ( m_ImportantTicks[ i ].nTick < nCurrentTick )
 		{
@@ -3083,7 +3076,7 @@ int CDemoPlayer::FindPreviousImportantTick( int nCurrentTick, const char *pEvent
 
 int CDemoPlayer::FindNextImportantTickByXuidAndEvent( int nCurrentTick, const CSteamID &steamID, const char *pKeyWithXuid, const char *pEventName /* = NULL */ )
 {
-	FOR_EACH_VEC( m_ImportantTicks, i )
+	for ( int i = 0; i < std::ssize( m_ImportantTicks ); i++ )
 	{
 		if ( m_ImportantTicks[ i ].nTick > nCurrentTick )
 		{
@@ -3100,7 +3093,7 @@ int CDemoPlayer::FindNextImportantTickByXuidAndEvent( int nCurrentTick, const CS
 
 int CDemoPlayer::FindNextImportantTickByXuid( int nCurrentTick, const CSteamID &steamID )
 {
-	FOR_EACH_VEC( m_ImportantTicks, i )
+	for ( int i = 0; i < std::ssize( m_ImportantTicks ); i++ )
 	{
 		if ( m_ImportantTicks[ i ].nTick > nCurrentTick )
 		{
@@ -3127,7 +3120,7 @@ int CDemoPlayer::FindNextImportantTickByXuid( int nCurrentTick, const CSteamID &
 
 int CDemoPlayer::FindPreviousImportantTickByXuidAndEvent( int nCurrentTick, const CSteamID &steamID, const char *pKeyWithXuid, const char *pEventName /* = NULL */ )
 {
-	FOR_EACH_VEC_BACK( m_ImportantTicks, i )
+	for ( int i = (int)std::ssize( m_ImportantTicks ) - 1; i >= 0; i-- )
 	{
 		if ( m_ImportantTicks[ i ].nTick < nCurrentTick )
 		{
@@ -3144,7 +3137,7 @@ int CDemoPlayer::FindPreviousImportantTickByXuidAndEvent( int nCurrentTick, cons
 
 const DemoImportantTick_t *CDemoPlayer::GetImportantTick( int nIndex )
 {
-	if ( m_ImportantTicks.IsValidIndex( nIndex ) )
+	if ( ks::is_valid_index( m_ImportantTicks, nIndex ) )
 	{
 		return &m_ImportantTicks[ nIndex ];
 	}
@@ -3154,11 +3147,11 @@ const DemoImportantTick_t *CDemoPlayer::GetImportantTick( int nIndex )
 
 const DemoImportantGameEvent_t *CDemoPlayer::GetImportantGameEvent( const char *pszEventName )
 {
-	FOR_EACH_VEC( m_ImportantGameEvents, i )
+	for ( const auto &importantEvent : m_ImportantGameEvents )
 	{
-		if ( V_strcasecmp( m_ImportantGameEvents[ i ].pszEventName, pszEventName ) == 0 )
+		if ( V_strcasecmp( importantEvent.pszEventName, pszEventName ) == 0 )
 		{
-			return &m_ImportantGameEvents[ i ];
+			return &importantEvent;
 		}
 	}
 
@@ -3168,37 +3161,37 @@ const DemoImportantGameEvent_t *CDemoPlayer::GetImportantGameEvent( const char *
 void CDemoPlayer::ListImportantTicks()
 {
 	Msg( "Important Ticks in demo:\n" );
-	FOR_EACH_VEC( m_ImportantTicks, i )
+	for ( const auto &importantTick : m_ImportantTicks )
 	{
-		if ( V_strcasecmp( m_ImportantGameEvents[ m_ImportantTicks[ i ].nImportanGameEventIndex ].pszEventName, "player_death" ) == 0 )
+		if ( V_strcasecmp( m_ImportantGameEvents[ importantTick.nImportanGameEventIndex ].pszEventName, "player_death" ) == 0 )
 		{
-			if ( m_ImportantTicks[ i ].pKeys->GetBool( "headshot" ) )
+			if ( importantTick.pKeys->GetBool( "headshot" ) )
 			{
-				Msg( "Tick: %d : %s killed %s with a headshot using a %s\n", m_ImportantTicks[ i ].nTick, m_ImportantTicks[ i ].pKeys->GetString( "attacker_name" ), 
-					m_ImportantTicks[ i ].pKeys->GetString( "victim_name" ), m_ImportantTicks[ i ].pKeys->GetString( "weapon" ) );
+				Msg( "Tick: %d : %s killed %s with a headshot using a %s\n", importantTick.nTick, importantTick.pKeys->GetString( "attacker_name" ), 
+					importantTick.pKeys->GetString( "victim_name" ), importantTick.pKeys->GetString( "weapon" ) );
 			}
 			else
 			{
-				Msg( "Tick: %d : %s killed %s using a %s\n", m_ImportantTicks[ i ].nTick, m_ImportantTicks[ i ].pKeys->GetString( "attacker_name" ), 
-					m_ImportantTicks[ i ].pKeys->GetString( "victim_name" ), m_ImportantTicks[ i ].pKeys->GetString( "weapon" ) );
+				Msg( "Tick: %d : %s killed %s using a %s\n", importantTick.nTick, importantTick.pKeys->GetString( "attacker_name" ), 
+					importantTick.pKeys->GetString( "victim_name" ), importantTick.pKeys->GetString( "weapon" ) );
 			}
 		}
 		else
 		{
-			Msg( "Tick: %d  Event: %s \n", m_ImportantTicks[ i ].nTick, m_ImportantGameEvents[ m_ImportantTicks[ i ].nImportanGameEventIndex ].pszEventName );
+			Msg( "Tick: %d  Event: %s \n", importantTick.nTick, m_ImportantGameEvents[ importantTick.nImportanGameEventIndex ].pszEventName );
 		}
 	}
 }
 
 void CDemoPlayer::ListHighlightData()
 {
-	if ( m_highlights.Count() > 0 )
+	if ( !m_highlights.empty() )
 	{
 		Msg( "Highlights in demo:\n" );
-		FOR_EACH_VEC( m_highlights, i )
+		for ( const auto &highlight : m_highlights )
 		{
-			Msg( "highlight: %d >> %d -> %d (%d) (%d,%d)\n", m_highlights[ i ].nSeekToTick, m_highlights[ i ].nFastForwardToTick,  m_highlights[ i ].nPlayToTick, 
-				m_highlights[ i ].nNumEvents, m_highlights[ i ].nActualFirstEventTick, m_highlights[ i ].nActualLastEventTick );
+			Msg( "highlight: %d >> %d -> %d (%d) (%d,%d)\n", highlight.nSeekToTick, highlight.nFastForwardToTick,  highlight.nPlayToTick, 
+				highlight.nNumEvents, highlight.nActualFirstEventTick, highlight.nActualLastEventTick );
 		}
 	}
 	else
@@ -3697,13 +3690,13 @@ void CL_PlayOverwatchEvidence_f( const CCommand &args )
 		return;
 	}
 
-	CUtlBuffer bufHeader;
-	if ( !g_pFullFileSystem->ReadFile( name, nullptr, bufHeader, 128 ) )
+	auto bufHeader = g_pFullFileSystem->ReadFile( name, nullptr, 128 );
+	if ( !bufHeader )
 	{
 		DevMsg( "playoverwatchevidence read file error.\n" );
 		return;
 	}
-	if ( bufHeader.TellMaxPut() != 128 )
+	if ( bufHeader->size() != 128 )
 	{
 		DevMsg( "playoverwatchevidence header of invalid size.\n" );
 		return;
@@ -3712,7 +3705,7 @@ void CL_PlayOverwatchEvidence_f( const CCommand &args )
 	static CDemoPlaybackParameters_t params; // make sure these parameters are available throughout demo playback
 	V_memset( &params, 0, sizeof( params ) );
 	params.m_uiHeaderPrefixLength = 128;
-	if ( !g_ClientDLL->ValidateSignedEvidenceHeader( szCaseKey, bufHeader.Base(), &params ) )
+	if ( !g_ClientDLL->ValidateSignedEvidenceHeader( szCaseKey, bufHeader->data(), &params ) )
 		return;
 
 	// set current demo player to client demo player
@@ -3794,7 +3787,7 @@ void CL_BenchFrame_f( const CCommand &args )
 		return;
 	}
 
-	g_pClientDemoPlayer->SetBenchframe( MAX( 0, atoi( args[2] ) ), args[3] );
+	g_pClientDemoPlayer->SetBenchframe( std::max( 0, atoi( args[2] ) ), args[3] );
 
 	s_bBenchframe = true;
 

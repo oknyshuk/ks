@@ -17,9 +17,6 @@
 #include "bot/shared_util.h"
 #include "voice_status.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 DECLARE_HUDELEMENT(CHudChat);
 
 //=====================

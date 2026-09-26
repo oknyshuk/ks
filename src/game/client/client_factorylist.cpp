@@ -7,9 +7,6 @@
 #include "cbase.h"
 #include "client_factorylist.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static factorylist_t s_factories;
 
 // Store off the factories

@@ -6,10 +6,8 @@
 
 #include <stdlib.h>
 #include <ctype.h>
-#include "utlbuffer.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include <wctype.h>
+#include "UnicodeFileHelpers.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: Advances until non-whitespace hit
@@ -189,11 +187,11 @@ ucs2 *ReadToEndOfLine(ucs2 *start)
 //-----------------------------------------------------------------------------
 // Purpose: file writing
 //-----------------------------------------------------------------------------
-void WriteUnicodeString(CUtlBuffer &buf, const wchar_t *string, bool addQuotes)
+void WriteUnicodeString(ks::byte_writer &buf, const wchar_t *string, bool addQuotes)
 {
 	if (addQuotes)
 	{
-		buf.PutUnsignedShort('\"');
+		buf.write< unsigned short >( '\"' );
 	}
 
 	for (const wchar_t *ws = string; *ws != 0; ws++)
@@ -201,26 +199,26 @@ void WriteUnicodeString(CUtlBuffer &buf, const wchar_t *string, bool addQuotes)
 		// handle special characters
 		if (addQuotes && *ws == '\"')
 		{
-			buf.PutUnsignedShort('\\');
+			buf.write< unsigned short >( '\\' );
 		}
 		// write the character
-		buf.PutUnsignedShort(*ws);
+		buf.write< unsigned short >( *ws );
 	}
 
 	if (addQuotes)
 	{
-		buf.PutUnsignedShort('\"');
+		buf.write< unsigned short >( '\"' );
 	}
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: file writing
 //-----------------------------------------------------------------------------
-void WriteAsciiStringAsUnicode(CUtlBuffer &buf, const char *string, bool addQuotes)
+void WriteAsciiStringAsUnicode(ks::byte_writer &buf, const char *string, bool addQuotes)
 {
 	if (addQuotes)
 	{
-		buf.PutUnsignedShort('\"');
+		buf.write< unsigned short >( '\"' );
 	}
 
 	for (const char *sz = string; *sz != 0; sz++)
@@ -228,13 +226,13 @@ void WriteAsciiStringAsUnicode(CUtlBuffer &buf, const char *string, bool addQuot
 		// handle special characters
 		if (addQuotes && *sz == '\"')
 		{
-			buf.PutUnsignedShort('\\');
+			buf.write< unsigned short >( '\\' );
 		}
-		buf.PutUnsignedShort(*sz);
+		buf.write< unsigned short >( *sz );
 	}
 
 	if (addQuotes)
 	{
-		buf.PutUnsignedShort('\"');
+		buf.write< unsigned short >( '\"' );
 	}
 }

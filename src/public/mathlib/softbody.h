@@ -17,10 +17,12 @@
 // #include "collisionfilter.h"
 // #include "rnserialize.h"
 // #include "legacyobject.h"
-#include "tier1/utlbuffer.h"
+#include <vector>
 #include "mathlib/femodel.h"
 #include "tier1/hierarchicalbitvec.h"
 #include "rubikon/serializehelpers.h"
+
+namespace ks { class text_reader; }
 
 class CRnSoftbodyDesc;
 class CSoftbodyEnvironment;
@@ -137,7 +139,7 @@ public:
 
 	void SetDebugNameV( const char* pNameFormat, va_list args ) { m_DebugName.SetV( pNameFormat, args );}
 	const char *GetDebugName() const { return m_DebugName.Get(); }
-	void AppendDebugInfo( CUtlString &line );
+	void AppendDebugInfo( std::string &line );
 	void Draw( const RnDebugDrawOptions_t &options, IVDebugOverlay* pDebugOverlay );
 	void Draw( const RnDebugDrawOptions_t &options, IMesh *pDynamicMesh );
 	void SetPose() { SetPose( m_pFeModel->m_pInitPose ); }
@@ -272,8 +274,8 @@ public:
 	bool IsFrozen()const { return m_bFrozen; }
 	void SetVolumetricSolveAmount( float flVolumetricSolveAmount ) { m_flVolumetricSolveAmount = flVolumetricSolveAmount; }
 	float GetVolumetricSolveAmount()const { return m_flVolumetricSolveAmount; }
-	void ParseParticleState( CUtlBuffer &buf, float flTimeStep );
-	CUtlString PrintParticleState( )const;
+	void ParseParticleState( ks::text_reader &buf, float flTimeStep );
+	std::string PrintParticleState( )const;
 	int16 *GetModelBoneToCtrl() { return m_pModelBoneToCtrl; }
 	void BindModelBoneToCtrl( int nModelBone, int nCtrl );
 	//bool SetupCtrl( uint nCtrl, matrix3x4a_t &writeBone );
@@ -282,7 +284,7 @@ public:
 	void DebugDump( );
 	void UpdateCtrlOffsets( bool bOverridePose );
 
-	uint ComputeVirtualCtrls( CVarBitVec &virtualNodes );
+	uint ComputeVirtualCtrls( std::vector< bool > &virtualNodes );
 
 	matrix3x4a_t &GetAnim( int i ) { return GetAnimatedTransforms()[ i ]; }
 	const matrix3x4a_t &GetAnim( int i ) const { return GetAnimatedTransforms()[ i ]; }
@@ -313,7 +315,7 @@ public:
 	protected:
 		CSoftbody *m_pSoftbody;
 		CSoftbodyEnvironment *m_pEnvironment;
-		CUtlVectorFixedGrowable< VectorAligned, 128 > m_PosBeforeCorrect; // the biggest hero in source1 is Medusa, with 104 nodes (52 useful, 52 virtual)
+		ks::small_vector< VectorAligned, 128 > m_PosBeforeCorrect; // the biggest hero in source1 is Medusa, with 104 nodes (52 useful, 52 virtual)
 	};
 
 	friend class CConstraintIterator;

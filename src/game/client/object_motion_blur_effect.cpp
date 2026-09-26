@@ -18,7 +18,7 @@ int CObjectMotionBlurManager::RegisterObject( C_BaseAnimating *pEntity, float fl
 	int nIndex;
 	if ( m_nFirstFreeSlot == ObjectMotionBlurDefinition_t::END_OF_FREE_LIST )
 	{
-		nIndex = m_ObjectMotionBlurDefinitions.AddToTail();
+		nIndex = std::ssize( m_ObjectMotionBlurDefinitions ); m_ObjectMotionBlurDefinitions.emplace_back();
 	}
 	else
 	{
@@ -43,7 +43,7 @@ void CObjectMotionBlurManager::UnregisterObject( int nObjectHandle )
 
 void CObjectMotionBlurManager::DrawObjects()
 {
-	for ( int i = 0; i < m_ObjectMotionBlurDefinitions.Count(); ++ i )
+	for ( int i = 0; i < std::ssize( m_ObjectMotionBlurDefinitions ); ++ i )
 	{
 		if ( m_ObjectMotionBlurDefinitions[i].ShouldDraw() )
 		{
@@ -55,7 +55,7 @@ void CObjectMotionBlurManager::DrawObjects()
 int CObjectMotionBlurManager::GetDrawableObjectCount()
 {
 	int nCount = 0;
-	for ( int i = 0; i < m_ObjectMotionBlurDefinitions.Count(); ++ i )
+	for ( int i = 0; i < std::ssize( m_ObjectMotionBlurDefinitions ); ++ i )
 	{
 		if ( m_ObjectMotionBlurDefinitions[i].ShouldDraw() )
 		{

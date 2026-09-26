@@ -257,7 +257,7 @@ public:
 	bool				EquipItemInLoadout( int iClass, int iSlot, globalindex_t iGlobalIndex );
 
 	// Fills out pList with all inventory items that could fit into the specified loadout slot for a given class
-	int					GetAllUsableItemsForSlot( int iClass, int iSlot, CUtlVector<CScriptCreatedItem*> *pList );
+	int					GetAllUsableItemsForSlot( int iClass, int iSlot, std::vector< CScriptCreatedItem* > *pList );
 private:
 	CCSPlayerInventory			m_LocalInventory;
 /*

@@ -8,8 +8,10 @@
 #define RESOURCEMANAGER_H
 
 #include "tier0/threadtools.h"
-#include "utlmultilist.h"
-#include "utlvector.h"
+#include "tier1/null_mutex.h"
+
+#include <mutex>
+#include <vector>
 
 FORWARD_DECLARE_HANDLE( memhandle_t );
 
@@ -57,6 +59,9 @@ public:
 	virtual void			Lock() {}
 	virtual bool			TryLock() { return true; }
 	virtual void			Unlock() {}
+	void					lock() { Lock(); }
+	bool					try_lock() { return TryLock(); }
+	void					unlock() { Unlock(); }
 
 	// Iteration
 
@@ -65,8 +70,8 @@ public:
 	void					SetFreeOnDestruct( bool value ) { m_freeOnDestruct = value; }
 
 	// Debugging only!!!!
-	void					GetLRUHandleList( CUtlVector< memhandle_t >& list );
-	void					GetLockHandleList( CUtlVector< memhandle_t >& list );
+	void					GetLRUHandleList( std::vector< memhandle_t >& list );
+	void					GetLockHandleList( std::vector< memhandle_t >& list );
 
 
 protected:
@@ -99,36 +104,123 @@ protected:
 	void					TouchByIndex( unsigned short memoryIndex );
 	void *					GetForFreeByIndex( unsigned short memoryIndex );
 
-	// One of these is stored per active allocation
+	// One of these is stored per handle slot. Slots are never released, so an index stays valid for the
+	// manager's lifetime; serial is bumped on every free so stale handles stop resolving.
 	struct resource_lru_element_t
 	{
-		resource_lru_element_t()
+		unsigned short lockCount = 0;
+		unsigned short serial = 1;
+		void	*pStore = nullptr;
+	};
+
+	// Every slot sits in at most one of these lists; moving between them is O(1) under the lock.
+	enum ListId_t : unsigned char { LRU_LIST, LOCK_LIST, FREE_LIST, NUM_LISTS, NO_LIST = 0xFF };
+
+	class CMemoryLists
+	{
+	public:
+		static constexpr unsigned short INVALID_INDEX = 0xFFFF;
+		static unsigned short InvalidIndex()			{ return INVALID_INDEX; }
+
+		bool IsValidIndex( unsigned short i ) const		{ return i < m_Slots.size(); }
+		resource_lru_element_t &operator[]( unsigned short i )	{ return m_Slots[i].elem; }
+		resource_lru_element_t &Element( unsigned short i )		{ return m_Slots[i].elem; }
+
+		unsigned short Head( ListId_t list ) const		{ return m_Lists[list].head; }
+		unsigned short Tail( ListId_t list ) const		{ return m_Lists[list].tail; }
+		int Count( ListId_t list ) const				{ return m_Lists[list].count; }
+		unsigned short Next( unsigned short i ) const	{ return m_Slots[i].next; }
+		unsigned short Previous( unsigned short i ) const { return m_Slots[i].prev; }
+
+		// New slot at the tail of list.
+		unsigned short AddToTail( ListId_t list )
 		{
-			lockCount = 0;
-			serial = 1;
-			pStore = 0;
+			if ( m_Slots.size() >= INVALID_INDEX )
+				Error( "CDataManager overflow! (exhausted index range)\n" );
+			unsigned short i = (unsigned short)m_Slots.size();
+			m_Slots.emplace_back();
+			LinkToTail( list, i );
+			return i;
 		}
 
-		unsigned short lockCount;
-		unsigned short serial;
-		void	*pStore;
+		// No-op unless i is in list.
+		void Unlink( ListId_t list, unsigned short i )
+		{
+			Slot &s = m_Slots[i];
+			if ( s.list != list )
+			{
+				Assert( s.list == NO_LIST );
+				return;
+			}
+			List &l = m_Lists[list];
+			( s.prev != INVALID_INDEX ? m_Slots[s.prev].next : l.head ) = s.next;
+			( s.next != INVALID_INDEX ? m_Slots[s.next].prev : l.tail ) = s.prev;
+			s.prev = s.next = INVALID_INDEX;
+			s.list = NO_LIST;
+			--l.count;
+		}
+
+		void LinkToTail( ListId_t list, unsigned short i )
+		{
+			Unlink( list, i );
+			Slot &s = m_Slots[i];
+			Assert( s.list == NO_LIST );
+			List &l = m_Lists[list];
+			s.prev = l.tail;
+			s.next = INVALID_INDEX;
+			( l.tail != INVALID_INDEX ? m_Slots[l.tail].next : l.head ) = i;
+			l.tail = i;
+			s.list = list;
+			++l.count;
+		}
+
+		void LinkToHead( ListId_t list, unsigned short i )
+		{
+			Unlink( list, i );
+			Slot &s = m_Slots[i];
+			Assert( s.list == NO_LIST );
+			List &l = m_Lists[list];
+			s.prev = INVALID_INDEX;
+			s.next = l.head;
+			( l.head != INVALID_INDEX ? m_Slots[l.head].prev : l.tail ) = i;
+			l.head = i;
+			s.list = list;
+			++l.count;
+		}
+
+	private:
+		struct Slot
+		{
+			resource_lru_element_t elem;
+			unsigned short prev = INVALID_INDEX;
+			unsigned short next = INVALID_INDEX;
+			ListId_t list = NO_LIST;
+		};
+		struct List
+		{
+			unsigned short head = INVALID_INDEX;
+			unsigned short tail = INVALID_INDEX;
+			int count = 0;
+		};
+		std::vector< Slot > m_Slots;
+		List m_Lists[NUM_LISTS];
 	};
 
 	unsigned int m_targetMemorySize;
 	unsigned int m_memUsed;
 	
-	CUtlMultiList< resource_lru_element_t, unsigned short >  m_memoryLists;
+	CMemoryLists m_memoryLists;
 	
-	unsigned short m_lruList;
-	unsigned short m_lockList;
-	unsigned short m_freeList;
+	static constexpr ListId_t m_lruList = LRU_LIST;
+	static constexpr ListId_t m_lockList = LOCK_LIST;
+	static constexpr ListId_t m_freeList = FREE_LIST;
 	unsigned short m_listsAreFreed : 1;
 	unsigned short m_freeOnDestruct : 1;
 	unsigned short m_unused : 14;
 
 };
 
-template< class STORAGE_TYPE, class CREATE_PARAMS, class LOCK_TYPE = STORAGE_TYPE *, class MUTEX_TYPE = CThreadNullMutex>
+template< class STORAGE_TYPE, class CREATE_PARAMS, class LOCK_TYPE = STORAGE_TYPE *, class MUTEX_TYPE = ks::null_mutex>
 class CDataManager : public CDataManagerBase
 {
 	typedef CDataManagerBase BaseClass;
@@ -196,7 +288,7 @@ public:
 	{
 		BaseClass::EnsureCapacity(STORAGE_TYPE::EstimatedSize(createParams));
 		STORAGE_TYPE *pStore = STORAGE_TYPE::CreateResource( createParams );
-		AUTO_LOCK_( CDataManagerBase, *this );
+		std::scoped_lock lock( *this );
 		unsigned short memoryIndex = BaseClass::CreateHandle( bCreateLocked );
 		return BaseClass::StoreResourceInHandle( memoryIndex, pStore, pStore->Size() );
 	}
@@ -229,7 +321,13 @@ public:
 			return INVALID_MEMHANDLE;
 		}
 
-		unsigned short iNext = m_memoryLists.Next( FromHandle( hPrev ) );
+		unsigned short iPrev = FromHandle( hPrev );
+		if ( iPrev == m_memoryLists.InvalidIndex() )
+		{
+			return INVALID_MEMHANDLE;
+		}
+
+		unsigned short iNext = m_memoryLists.Next( iPrev );
 		if ( iNext == m_memoryLists.InvalidIndex() ) 
 		{
 			return INVALID_MEMHANDLE;
@@ -239,9 +337,9 @@ public:
 	}
 
 	MUTEX_TYPE &AccessMutex()	{ return m_mutex; }
-	virtual void Lock() { m_mutex.Lock(); }
-	virtual bool TryLock() { return m_mutex.TryLock(); }
-	virtual void Unlock() { m_mutex.Unlock(); }
+	virtual void Lock() { m_mutex.lock(); }
+	virtual bool TryLock() { return m_mutex.try_lock(); }
+	virtual void Unlock() { m_mutex.unlock(); }
 
 private:
 	STORAGE_TYPE *StoragePointer( void *pMem )

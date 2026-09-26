@@ -10,6 +10,7 @@
 
 
 #include "ai_speech.h"
+#include <list>
 
 #define AI_RESPONSE_QUEUE_SIZE 64
 
@@ -125,7 +126,7 @@ private:
 
 	//////////////////// Data ////////////////////
 protected:
-	typedef CUtlFixedLinkedList< CDeferredResponse > QueueType_t;
+	typedef std::list< CDeferredResponse > QueueType_t;
 	QueueType_t m_Queue; // the queue of deferred responses, will eventually be sorted
 	/// Note  about the queue type: if you move to replace it with a sorted priority queue,
 	/// make sure it is a type such that an iterator is not invalidated by inserts and deletes.
@@ -134,7 +135,7 @@ protected:
 	/// A crash will result if the iterator used in CResponseQueue::PerFrameDispatch()'s loop
 	/// becomes invalid.
 
-	CUtlVector<EHANDLE> m_ExpresserTargets; // a list of legitimate expresser targets
+	std::vector< EHANDLE > m_ExpresserTargets; // a list of legitimate expresser targets
 };
 
 inline void CResponseQueue::CDeferredResponse::Init(const AIConcept_t &conc, const AI_CriteriaSet * RESTRICT contexts, float dtime, const CFollowupTargetSpec_t &target, CBaseEntity *pIssuer )
@@ -152,7 +153,7 @@ inline void CResponseQueue::CDeferredResponse::Init(const AIConcept_t &conc, con
 
 int CResponseQueue::GetNumExpresserTargets() const
 {
-	return m_ExpresserTargets.Count();
+	return std::ssize( m_ExpresserTargets );
 }
 
 CBaseEntity *CResponseQueue::GetExpresserHost(int which) const

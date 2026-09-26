@@ -6,6 +6,8 @@
 
 
 #include "tier0/dbg.h"
+#include <mutex>
+#include <atomic>
 #include "tier0/tslist.h"
 #include "tier0/icommandline.h"
 #include "tier0/threadtools.h"
@@ -18,8 +20,6 @@
 #include "tier0/fasttimer.h"
 
 
-
-#include "tier0/memdbgon.h"
 
 
 class CJobThread;
@@ -100,22 +100,22 @@ public:
 
 		m_queues[pJob->GetPriority()].PushItem( pJob );
 
-		m_mutex.Lock();
+		m_mutex.lock();
 		if ( ++m_nItems == 1 )
 		{
 			m_JobAvailableEvent.Set();
 		}
-		m_mutex.Unlock();
+		m_mutex.unlock();
 
 		return nOverflow;
 	}
 
 	bool Pop( CJob **ppJob )
 	{
-		m_mutex.Lock();
+		m_mutex.lock();
 		if ( !m_nItems )
 		{
-			m_mutex.Unlock();
+			m_mutex.unlock();
 			*ppJob = nullptr;
 			return false;
 		}
@@ -123,7 +123,7 @@ public:
 		{
 			m_JobAvailableEvent.Reset();
 		}
-		m_mutex.Unlock();
+		m_mutex.unlock();
 
 		for ( int i = JP_NUM_PRIORITIES - 1; i >= m_MinPriority; --i )
 		{
@@ -133,7 +133,7 @@ public:
 			}
 		}
 
-		m_mutex.Lock();
+		m_mutex.lock();
 		AssertMsg( m_MinPriority != JP_LOW, "Expected at least one queue item" );
 
 		if ( ++m_nItems == 1 )
@@ -141,7 +141,7 @@ public:
 			m_JobAvailableEvent.Set();
 			ThreadSleep();
 		}
-		m_mutex.Unlock();
+		m_mutex.unlock();
 
 		*ppJob = nullptr;
 		return false;
@@ -155,7 +155,7 @@ public:
 	void Flush()
 	{
 		// Only safe to call when system is suspended
-		m_mutex.Lock();
+		m_mutex.lock();
 		m_nItems = 0;
 		m_JobAvailableEvent.Reset();
 		CJob *pJob = nullptr;
@@ -167,7 +167,7 @@ public:
 				pJob->Release();
 			}
 		}
-		m_mutex.Unlock();
+		m_mutex.unlock();
 	}
 
 private:
@@ -175,7 +175,7 @@ private:
 	// Read by PrePush/Count without m_mutex, written under it by Push/Pop.
 	std::atomic<int>		m_nItems;
 	int					m_nMaxItems;
-	CThreadMutex	m_mutex;
+	std::recursive_mutex	m_mutex;
 	CThreadManualEvent	m_JobAvailableEvent;
 	static int			m_MinPriority;
 } ALIGN16_POST;
@@ -272,20 +272,20 @@ private:
 	friend class CJobThread;
 
 	CJobQueue				m_SharedQueue;
-	CInterlockedInt			m_nIdleThreads;
-	CUtlVector<CJobThread *> m_Threads;
+	std::atomic<int>			m_nIdleThreads;
+	std::vector< CJobThread * > m_Threads;
 
-	CThreadMutex		m_SuspendMutex;
+	std::recursive_mutex		m_SuspendMutex;
 	int						m_nSuspend;
-	CInterlockedInt			m_nJobs;
+	std::atomic<int>			m_nJobs;
 
 	// Some jobs should only be executed on the threadpool thread(s). Ie: the rendering thread has the GL context
 	//	and the main thread coming in and "helping" with jobs breaks that pretty nicely. This flag states that
 	//	only the threadpool threads should execute these jobs.
 	bool					m_bExecOnThreadPoolThreadsOnly;
 
-	CThreadMutex		m_PerFrameJobListMutex;
-	CUtlVectorFixedGrowable< CJob *, 2048 >	m_PerFrameJobs;
+	std::recursive_mutex		m_PerFrameJobListMutex;
+	ks::small_vector< CJob *, 2048 >	m_PerFrameJobs;
 };
 
 //-----------------------------------------------------------------------------
@@ -521,7 +521,7 @@ CThreadPool::~CThreadPool()
 //---------------------------------------------------------
 int CThreadPool::NumThreads()
 {
-	return m_Threads.Count();
+	return std::ssize( m_Threads );
 }
 
 //---------------------------------------------------------
@@ -537,25 +537,25 @@ int CThreadPool::NumIdleThreads()
 //---------------------------------------------------------
 int CThreadPool::SuspendExecution()
 {
-	AUTO_LOCK( m_SuspendMutex );
+	std::scoped_lock lock( m_SuspendMutex );
 
 	// If not already suspended
 	if ( m_nSuspend == 0 )
 	{
 		int i;
-		for ( i = 0; i < m_Threads.Count(); i++ )
+		for ( i = 0; i < std::ssize( m_Threads ); i++ )
 		{
 			m_Threads[i]->CallWorker( TPM_SUSPEND, 0 );
 		}
 
-		for ( i = 0; i < m_Threads.Count(); i++ )
+		for ( i = 0; i < std::ssize( m_Threads ); i++ )
 		{
 			m_Threads[i]->WaitForReply();
 		}
 
 		// Because worker must signal before suspending, we could reach
 		// here with the thread not actually suspended
-		for ( i = 0; i < m_Threads.Count(); i++ )
+		for ( i = 0; i < std::ssize( m_Threads ); i++ )
 		{
 			while ( !m_Threads[i]->IsSuspended() )
 			{
@@ -571,12 +571,12 @@ int CThreadPool::SuspendExecution()
 
 int CThreadPool::ResumeExecution()
 {
-	AUTO_LOCK( m_SuspendMutex );
+	std::scoped_lock lock( m_SuspendMutex );
 	AssertMsg( m_nSuspend >= 1, "Attempted resume when not suspended");
 	int result = m_nSuspend--;
 	if (m_nSuspend == 0 )
 	{
-		for ( int i = 0; i < m_Threads.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_Threads ); i++ )
 		{
 			m_Threads[i]->Resume();
 		}
@@ -623,18 +623,18 @@ int CThreadPool::YieldWait( CThreadEvent **pEvents, int nEvents, bool bWaitAll, 
 
 int CThreadPool::YieldWait( CJob **ppJobs, int nJobs, bool bWaitAll, unsigned timeout )
 {
-	CUtlVectorFixed<CThreadEvent*, 64> handles;
-	if ( nJobs > handles.NumAllocated() - 2 )
+	std::inplace_vector< CThreadEvent*, 64 > handles;
+	if ( nJobs > int( handles.capacity() ) - 2 )
 	{
 		return TW_FAILED;
 	}
 
 	for ( int i = 0; i < nJobs; i++ )
 	{
-		handles.AddToTail( ppJobs[i]->AccessEvent() );
+		handles.push_back( ppJobs[i]->AccessEvent() );
 	}
 
-	return YieldWait( (CThreadEvent **)handles.Base(), handles.Count(), bWaitAll, timeout);
+	return YieldWait( (CThreadEvent **)handles.data(), std::ssize( handles ), bWaitAll, timeout);
 }
 
 //---------------------------------------------------------
@@ -663,19 +663,19 @@ int CThreadPool::YieldWaitPerFrameJobs( )
 	int nRetVal = 0;
 	while ( true )
 	{
-		m_PerFrameJobListMutex.Lock();
-		int nCount = m_PerFrameJobs.Count();
+		m_PerFrameJobListMutex.lock();
+		int nCount = std::ssize( m_PerFrameJobs );
 		if ( nCount == 0 )
 		{
-			m_PerFrameJobListMutex.Unlock();
+			m_PerFrameJobListMutex.unlock();
 			break;
 		}
 
 		size_t nSize = nCount * sizeof( CJob* );
 		CJob **ppJobs = ( CJob** )stackalloc( nSize );
-		memcpy( ppJobs, m_PerFrameJobs.Base(), nSize );
-		m_PerFrameJobs.RemoveAll();
-		m_PerFrameJobListMutex.Unlock();
+		memcpy( ppJobs, m_PerFrameJobs.data(), nSize );
+		m_PerFrameJobs.clear();
+		m_PerFrameJobListMutex.unlock();
 
 		nRetVal = YieldWait( ppJobs, nCount );
 
@@ -704,7 +704,7 @@ void CThreadPool::AddJob( CJob *pJob )
 		return;
 	}
 
-	if ( m_Threads.Count() == 0 )
+	if ( m_Threads.empty() )
 	{
 		// So only threadpool jobs are supposed to execute the jobs, but there are no threadpool threads?
 		Assert( !m_bExecOnThreadPoolThreadsOnly );
@@ -754,10 +754,10 @@ void CThreadPool::AddJob( CJob *pJob )
 //-----------------------------------------------------
 void CThreadPool::AddPerFrameJob( CJob *pJob )
 {
-	m_PerFrameJobListMutex.Lock();
+	m_PerFrameJobListMutex.lock();
 	pJob->AddRef();
-	m_PerFrameJobs.AddToTail( pJob );
-	m_PerFrameJobListMutex.Unlock();
+	m_PerFrameJobs.push_back( pJob );
+	m_PerFrameJobListMutex.unlock();
 
 	AddJob( pJob );
 }
@@ -773,7 +773,7 @@ void CThreadPool::InsertJobInQueue( CJob *pJob )
 	if ( !( pJob->GetFlags() & JF_SERIAL ) )
 	{
 		int iThread = pJob->GetServiceThread();
-		if ( iThread == -1 || !m_Threads.IsValidIndex( iThread ) )
+		if ( iThread == -1 || !ks::is_valid_index( m_Threads, iThread ) )
 		{
 			pQueue = &m_SharedQueue;
 		}
@@ -850,11 +850,11 @@ int CThreadPool::ExecuteToPriority( JobPriority_t iToPriority, JobFilter_t pfnFi
 		int i;
 		int nExecuted = 0;
 		int nJobsTotal = GetJobCount();
-		CUtlVector<CJob *> jobsToPutBack;
+		std::vector< CJob * > jobsToPutBack;
 
 		for ( int iCurPriority = JP_NUM_PRIORITIES - 1; iCurPriority >= iToPriority; --iCurPriority )
 		{
-			for ( i = 0; i < m_Threads.Count(); i++ )
+			for ( i = 0; i < std::ssize( m_Threads ); i++ )
 			{
 				CJobQueue &queue = m_Threads[i]->AccessDirectQueue();
 				while ( queue.Count( (JobPriority_t)iCurPriority ) )
@@ -864,8 +864,8 @@ int CThreadPool::ExecuteToPriority( JobPriority_t iToPriority, JobFilter_t pfnFi
 					{
 						if ( pJob->CanExecute() )
 						{
-							jobsToPutBack.EnsureCapacity( nJobsTotal );
-							jobsToPutBack.AddToTail( pJob );
+							jobsToPutBack.reserve( nJobsTotal );
+							jobsToPutBack.push_back( pJob );
 						}
 						else
 						{
@@ -888,8 +888,8 @@ int CThreadPool::ExecuteToPriority( JobPriority_t iToPriority, JobFilter_t pfnFi
 				{
 					if ( pJob->CanExecute() )
 					{
-						jobsToPutBack.EnsureCapacity( nJobsTotal );
-						jobsToPutBack.AddToTail( pJob );
+						jobsToPutBack.reserve( nJobsTotal );
+						jobsToPutBack.push_back( pJob );
 					}
 					else
 					{
@@ -905,7 +905,7 @@ int CThreadPool::ExecuteToPriority( JobPriority_t iToPriority, JobFilter_t pfnFi
 			}
 		}
 
-		for ( i = 0; i < jobsToPutBack.Count(); i++ )
+		for ( i = 0; i < std::ssize( jobsToPutBack ); i++ )
 		{
 			InsertJobInQueue( jobsToPutBack[i] );
 			jobsToPutBack[i]->Release();
@@ -921,17 +921,17 @@ int CThreadPool::ExecuteToPriority( JobPriority_t iToPriority, JobFilter_t pfnFi
 
 		CJobQueue::SetMinPriority( iToPriority );
 
-		CUtlVectorFixedGrowable<CThreadEvent*, 64> handles;
+		ks::small_vector< CThreadEvent*, 64 > handles;
 
-		for ( int i = 0; i < m_Threads.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_Threads ); i++ )
 		{
-			handles.AddToTail( &m_Threads[i]->GetIdleEvent() );
+			handles.push_back( &m_Threads[i]->GetIdleEvent() );
 		}
 
 		CJob *pJob = nullptr;
 		do
 		{
-			YieldWait( (CThreadEvent **)handles.Base(), handles.Count(), true, TT_INFINITE );
+			YieldWait( (CThreadEvent **)handles.data(), std::ssize( handles ), true, TT_INFINITE );
 			if ( m_SharedQueue.Pop( &pJob ) )
 			{
 				ServiceJobAndRelease( pJob );
@@ -962,7 +962,7 @@ int CThreadPool::AbortAll()
 		iAborted++;
 	}
 
-	for ( int i = 0; i < m_Threads.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Threads ); i++ )
 	{
 		CJobQueue &queue = m_Threads[i]->AccessDirectQueue();
 		while ( queue.Pop( &pJob ) )
@@ -1060,7 +1060,7 @@ bool CThreadPool::Start( const ThreadPoolStartParams_t &startParams, const char 
 
 	//--------------------------------------------------------
 
-	m_Threads.EnsureCapacity( nThreads );
+	m_Threads.reserve( nThreads );
 	
 	if ( !pszName )
 	{
@@ -1068,7 +1068,7 @@ bool CThreadPool::Start( const ThreadPoolStartParams_t &startParams, const char 
 	}
 	while ( nThreads-- )
 	{
-		int iThread = m_Threads.AddToTail();
+		int iThread = std::ssize( m_Threads ); m_Threads.emplace_back();
 		m_Threads[iThread] = new CJobThread( this, iThread );
 		CFmtStr formattedName( "%s%d", pszName, iThread );
 		m_Threads[iThread]->SetName( formattedName );
@@ -1097,7 +1097,7 @@ void CThreadPool::Distribute( bool bDistribute, int *pAffinityTable )
 			{
 				// no affinity table, distribution is cycled across all available
 				int iProc = 0;
-				for ( int i = 0; i < m_Threads.Count(); i++ )
+				for ( int i = 0; i < std::ssize( m_Threads ); i++ )
 				{
 					iProc += nHwThreadsPer;
 					if ( iProc >= ci.m_nLogicalProcessors )
@@ -1114,7 +1114,7 @@ void CThreadPool::Distribute( bool bDistribute, int *pAffinityTable )
 			else
 			{
 				// distribution is from affinity table
-				for ( int i = 0; i < m_Threads.Count(); i++ )
+				for ( int i = 0; i < std::ssize( m_Threads ); i++ )
 				{
 					ThreadSetAffinity( (ThreadHandle_t)m_Threads[i]->GetThreadHandle(), pAffinityTable[i] );
 				}
@@ -1131,16 +1131,16 @@ void CThreadPool::Distribute( bool bDistribute, int *pAffinityTable )
 bool CThreadPool::Stop( int timeout )
 {
 
-	CUtlVector< ThreadHandle_t > arrHandles;
-	arrHandles.SetCount( m_Threads.Count() );
-	for ( int i = 0; i < m_Threads.Count(); i++ )
+	std::vector< ThreadHandle_t > arrHandles;
+	arrHandles.assign( std::ssize( m_Threads ), {} );
+	for ( int i = 0; i < std::ssize( m_Threads ); i++ )
 	{
 		arrHandles[i] = m_Threads[i]->GetThreadHandle();
 		
 		m_Threads[i]->CallWorker( TPM_EXIT );
 	}
 
-	for ( int i = 0; i < m_Threads.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_Threads ); ++i )
 	{
 		if ( arrHandles[i] )
 		{
@@ -1159,7 +1159,7 @@ bool CThreadPool::Stop( int timeout )
 	m_nJobs = 0;
 	m_SharedQueue.Flush();
 	m_nIdleThreads = 0;
-	m_Threads.RemoveAll();
+	m_Threads.clear();
 
 	return true;
 }
@@ -1222,10 +1222,10 @@ public:
 		return 0;
 	}
 
-	static CInterlockedInt m_nCount;
+	static std::atomic<int> m_nCount;
 	bool bDoWork;
 };
-CInterlockedInt CCountJob::m_nCount;
+std::atomic<int> CCountJob::m_nCount;
 int g_nTotalAtFinish;
 
 void Test( bool bDistribute, bool bSleep = true, bool bFinishExecute = false, bool bDoWork = false, bool bIncludeMain = false, bool bPrioritized = false )
@@ -1327,7 +1327,7 @@ void Test( bool bDistribute, bool bSleep = true, bool bFinishExecute = false, bo
 
 bool g_bOutputError;
 volatile int g_ReadyToExecute;
-CInterlockedInt g_nReady;
+std::atomic<int> g_nReady;
 
 class CExecuteTestJob : public CJob
 {

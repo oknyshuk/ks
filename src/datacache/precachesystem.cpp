@@ -4,14 +4,10 @@
 //
 //===========================================================================//
 
-#include "tier1/utlsymbol.h"
-#include "tier1/UtlStringMap.h"
+#include "tier1/map_ops.h"
 #include "tier2/tier2.h"
 #include "datacache/iprecachesystem.h"
 #include "datacache/iresourceaccesscontrol.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Implementation class
@@ -39,7 +35,7 @@ public:
 
 private:
 	IResourcePrecacher *m_pFirstPrecacher[PRECACHE_SYSTEM_COUNT];
-	CUtlStringMap< ResourceList_t > m_ResourceList[ PRECACHE_SYSTEM_COUNT ];
+	ks::idict< ResourceList_t > m_ResourceList[ PRECACHE_SYSTEM_COUNT ];
 };
 
 //-----------------------------------------------------------------------------
@@ -78,22 +74,26 @@ void CPrecacheSystem::Cache( IPrecacheHandler *pPrecacheHandler, PrecacheSystem_
 		if ( bBuildResourceList && g_pResourceAccessControl )
 		{
 			Assert( hResourceList == RESOURCE_LIST_INVALID );
-			UtlSymId_t idx = m_ResourceList[ nSystem ].Find( pName );
-			if ( idx != UTL_INVAL_SYMBOL )
+			// a null name is never stored, so it gets a fresh list each time
+			ResourceList_t *pFound = pName ? ks::find_ptr( m_ResourceList[ nSystem ], pName ) : nullptr;
+			if ( pFound )
 			{
-				hResourceList = m_ResourceList[ nSystem ][ idx ];
+				hResourceList = *pFound;
 			}
 			else
 			{
 				char pDebugName[256];
 				Q_snprintf( pDebugName, sizeof(pDebugName), "%s \"%s\"", s_pResourceSystemName[nSystem], pName );
 				hResourceList = g_pResourceAccessControl->CreateResourceList( pDebugName );
-				m_ResourceList[ nSystem ][ pName ] = hResourceList;
+				if ( pName )
+				{
+					m_ResourceList[ nSystem ][ pName ] = hResourceList;
+				}
 			}
 		}
 		pPrecacher->Cache( pPrecacheHandler, bPrecache, hResourceList, false );
 
-		if ( !bPrecache )
+		if ( !bPrecache && pName )
 		{
 			m_ResourceList[ nSystem ][ pName ] = nullptr;
 		}
@@ -114,7 +114,7 @@ void CPrecacheSystem::UncacheAll( IPrecacheHandler *pPrecacheHandler )
 			pPrecacher->Cache( pPrecacheHandler, false, RESOURCE_LIST_INVALID, false );
 		}
 
-		m_ResourceList[nSystem].Purge();
+		m_ResourceList[nSystem].clear();
 	}
 }
 
@@ -149,10 +149,10 @@ void CPrecacheSystem::LimitResourceAccess( PrecacheSystem_t nSystem, const char 
 {
 	if ( g_pResourceAccessControl )
 	{
-		UtlSymId_t nSym = ( pName != nullptr ) ? m_ResourceList[nSystem].Find( pName ) : UTL_INVAL_SYMBOL;
-		if ( nSym != UTL_INVAL_SYMBOL )
+		ResourceList_t *pFound = ( pName != nullptr ) ? ks::find_ptr( m_ResourceList[nSystem], pName ) : nullptr;
+		if ( pFound )
 		{
-			g_pResourceAccessControl->LimitAccess( m_ResourceList[nSystem][nSym] );
+			g_pResourceAccessControl->LimitAccess( *pFound );
 		}
 		else
 		{

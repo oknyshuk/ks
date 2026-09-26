@@ -8,9 +8,6 @@
 #include "cbase.h"
 #include "prediction.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static IPredictionSystem g_RecipientFilterPredictionSystem;
 
 //-----------------------------------------------------------------------------
@@ -40,7 +37,7 @@ void C_RecipientFilter::CopyFrom( const C_RecipientFilter& src )
 	int c = src.GetRecipientCount();
 	for ( int i = 0; i < c; ++i )
 	{
-		m_Recipients.AddToTail( src.GetRecipientIndex( i ) );
+		m_Recipients.push_back( src.GetRecipientIndex( i ) );
 	}
 }
 
@@ -50,7 +47,7 @@ void C_RecipientFilter::CopyFrom( const C_RecipientFilter& src )
 void C_RecipientFilter::Reset( void )
 {
 	m_bReliable			= false;
-	m_Recipients.RemoveAll();
+	m_Recipients.clear();
 	m_bUsingPredictionRules = false;
 	m_bIgnorePredictionCull = false;
 }
@@ -67,7 +64,7 @@ bool C_RecipientFilter::IsReliable( void ) const
 
 int C_RecipientFilter::GetRecipientCount( void ) const
 {
-	return m_Recipients.Count();
+	return std::ssize( m_Recipients );
 }
 
 int	C_RecipientFilter::GetRecipientIndex( int slot ) const
@@ -83,7 +80,7 @@ void C_RecipientFilter::AddAllPlayers( void )
 	if ( !C_BasePlayer::HasAnyLocalPlayer() )
 		return;
 
-	m_Recipients.RemoveAll();
+	m_Recipients.clear();
 	FOR_EACH_VALID_SPLITSCREEN_PLAYER( hh )
 	{
 		AddRecipient( C_BasePlayer::GetLocalPlayer( hh ) );
@@ -112,14 +109,14 @@ void C_RecipientFilter::AddRecipient( C_BasePlayer *player )
 	}
 
 	// Already in list
-	if ( m_Recipients.Find( index ) != m_Recipients.InvalidIndex() )
+	if ( ks::find_index( m_Recipients, index ) != -1 )
 		return;
 
 	// this is a client side filter, only add the local player
 	if ( !C_BasePlayer::IsLocalPlayer( player ) )
 		return;
 
-	m_Recipients.AddToTail( index );
+	m_Recipients.push_back( index );
 }
 
 void C_RecipientFilter::RemoveRecipient( C_BasePlayer *player )
@@ -130,7 +127,7 @@ void C_RecipientFilter::RemoveRecipient( C_BasePlayer *player )
 	int index = player->index;
 
 	// Remove it if it's in the list
-	m_Recipients.FindAndRemove( index );
+	ks::erase_first( m_Recipients, index );
 }
 
 void C_RecipientFilter::AddRecipientsByTeam( C_Team *team )
@@ -212,7 +209,7 @@ void C_RecipientFilter::RemoveSplitScreenPlayers()
 		if ( !pPlayer || !pPlayer->IsSplitScreenPlayer() )
 			continue;
 
-		m_Recipients.Remove( i );
+		m_Recipients.erase( m_Recipients.begin() + i );
 	}
 }
 
@@ -225,7 +222,7 @@ void C_RecipientFilter::ReplaceSplitScreenPlayersWithOwners()
 	if( gpGlobals->maxClients >= 2 && C_BasePlayer::HasAnyLocalPlayer() ) 
 	{
 		bool addedHostPlayer = false;
-		const int count = m_Recipients.Count();
+		const int count = std::ssize( m_Recipients );
 		for( int i = 0; i < count; ++i )
 		{
 			// If this is a split screen player
@@ -236,7 +233,7 @@ void C_RecipientFilter::ReplaceSplitScreenPlayersWithOwners()
 				C_BasePlayer* pHostPlayer = C_BasePlayer::GetLocalPlayer( 0 );
 				if( pHostPlayer )
 				{
-					m_Recipients.AddToTail( pHostPlayer->entindex() );
+					m_Recipients.push_back( pHostPlayer->entindex() );
 					addedHostPlayer = true;
 				}
 				break;
@@ -270,13 +267,13 @@ void C_RecipientFilter::SetIgnorePredictionCull( bool ignore )
 
 void C_RecipientFilter::RemoveDuplicateRecipients()
 {
-	for( int i = 0; i < m_Recipients.Count(); ++i )
+	for( int i = 0; i < std::ssize( m_Recipients ); ++i )
 	{
 		int currentElem = m_Recipients[i];
-		for( int j = m_Recipients.Count() - 1; j > i ; --j )
+		for( int j = std::ssize( m_Recipients ) - 1; j > i ; --j )
 		{
 			if( m_Recipients[j] == currentElem )
-				m_Recipients.FastRemove( j );
+				ks::swap_remove( m_Recipients, j );
 		}
 	}
 }

@@ -10,20 +10,16 @@
 #include "kvpacker.h"
 
 #include "tier0/dbg.h"
-#include "utlbuffer.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include <tier0/memdbgon.h>
-
+#include "tier0/memalloc.h"
 #define KEYVALUES_TOKEN_SIZE	1024
 
 // writes KeyValue as binary data to buffer
-bool KVPacker::WriteAsBinary( KeyValues *pNode, CUtlBuffer &buffer )
+bool KVPacker::WriteAsBinary( KeyValues *pNode, ks::byte_writer &buffer )
 {
-	if ( buffer.IsText() ) // must be a binary buffer
-		return false;
-
-	if ( !buffer.IsValid() ) // must be valid, no overflows etc
+	if ( !buffer.ok() ) // must be valid, no overflows etc
 		return false;
 
 	// Write subkeys:
@@ -36,45 +32,45 @@ bool KVPacker::WriteAsBinary( KeyValues *pNode, CUtlBuffer &buffer )
 		{
 		case KeyValues::TYPE_NONE:
 			{
-				buffer.PutUnsignedChar( PACKTYPE_NONE );
+				buffer.write< unsigned char >( PACKTYPE_NONE );
 				break;
 			}
 		case KeyValues::TYPE_STRING:
 			{
-				buffer.PutUnsignedChar( PACKTYPE_STRING );
+				buffer.write< unsigned char >( PACKTYPE_STRING );
 				break;
 			}
 		case KeyValues::TYPE_WSTRING:
 			{
-				buffer.PutUnsignedChar( PACKTYPE_WSTRING );
+				buffer.write< unsigned char >( PACKTYPE_WSTRING );
 				break;
 			}
 
 		case KeyValues::TYPE_INT:
 			{
-				buffer.PutUnsignedChar( PACKTYPE_INT );
+				buffer.write< unsigned char >( PACKTYPE_INT );
 				break;
 			}
 
 		case KeyValues::TYPE_UINT64:
 			{
-				buffer.PutUnsignedChar( PACKTYPE_UINT64 );
+				buffer.write< unsigned char >( PACKTYPE_UINT64 );
 				break;
 			}
 
 		case KeyValues::TYPE_FLOAT:
 			{
-				buffer.PutUnsignedChar( PACKTYPE_FLOAT );
+				buffer.write< unsigned char >( PACKTYPE_FLOAT );
 				break;
 			}
 		case KeyValues::TYPE_COLOR:
 			{
-				buffer.PutUnsignedChar( PACKTYPE_COLOR );
+				buffer.write< unsigned char >( PACKTYPE_COLOR );
 				break;
 			}
 		case KeyValues::TYPE_PTR:
 			{
-				buffer.PutUnsignedChar( PACKTYPE_PTR );
+				buffer.write< unsigned char >( PACKTYPE_PTR );
 				break;
 			}
 
@@ -83,7 +79,7 @@ bool KVPacker::WriteAsBinary( KeyValues *pNode, CUtlBuffer &buffer )
 		}
 
 		// write name
-		buffer.PutString( dat->GetName() );
+		buffer.write_cstring( dat->GetName() );
 
 		// write value
 		switch ( dat->GetDataType() )
@@ -98,54 +94,54 @@ bool KVPacker::WriteAsBinary( KeyValues *pNode, CUtlBuffer &buffer )
 			{
 				if (dat->GetString() && *(dat->GetString()))
 				{
-					buffer.PutString( dat->GetString() );
+					buffer.write_cstring( dat->GetString() );
 				}
 				else
 				{
-					buffer.PutString( "" );
+					buffer.write_cstring( "" );
 				}
 				break;
 			}
 		case KeyValues::TYPE_WSTRING:
 			{
 				int nLength = dat->GetWString() ? Q_wcslen( dat->GetWString() ) : 0;
-				buffer.PutShort( nLength );
+				buffer.write< short >( nLength );
 				for( int k = 0; k < nLength; ++ k )
 				{
-					buffer.PutShort( ( unsigned short ) dat->GetWString()[k] );
+					buffer.write< short >( ( unsigned short ) dat->GetWString()[k] );
 				}
 				break;
 			}
 
 		case KeyValues::TYPE_INT:
 			{
-				buffer.PutInt( dat->GetInt() );				
+				buffer.write< int >( dat->GetInt() );				
 				break;
 			}
 
 		case KeyValues::TYPE_UINT64:
 			{
-				buffer.PutInt64( dat->GetUint64() );
+				buffer.write< int64 >( dat->GetUint64() );
 				break;
 			}
 
 		case KeyValues::TYPE_FLOAT:
 			{
-				buffer.PutFloat( dat->GetFloat() );
+				buffer.write< float >( dat->GetFloat() );
 				break;
 			}
 		case KeyValues::TYPE_COLOR:
 			{
 				Color color = dat->GetColor();
-				buffer.PutUnsignedChar( color[0] );
-				buffer.PutUnsignedChar( color[1] );
-				buffer.PutUnsignedChar( color[2] );
-				buffer.PutUnsignedChar( color[3] );
+				buffer.write< unsigned char >( color[0] );
+				buffer.write< unsigned char >( color[1] );
+				buffer.write< unsigned char >( color[2] );
+				buffer.write< unsigned char >( color[3] );
 				break;
 			}
 		case KeyValues::TYPE_PTR:
 			{
-				buffer.PutPtr( dat->GetPtr() );
+				buffer.write< uint64 >( reinterpret_cast< uintptr_t >( dat->GetPtr() ) );
 				break;
 			}
 
@@ -155,25 +151,22 @@ bool KVPacker::WriteAsBinary( KeyValues *pNode, CUtlBuffer &buffer )
 	}
 
 	// write tail, marks end of peers
-	buffer.PutUnsignedChar( PACKTYPE_NULLMARKER ); 
+	buffer.write< unsigned char >( PACKTYPE_NULLMARKER ); 
 
-	return buffer.IsValid();
+	return buffer.ok();
 }
 
 // read KeyValues from binary buffer, returns true if parsing was successful
-bool KVPacker::ReadAsBinary( KeyValues *pNode, CUtlBuffer &buffer )
+bool KVPacker::ReadAsBinary( KeyValues *pNode, ks::byte_reader &buffer )
 {
-	if ( buffer.IsText() ) // must be a binary buffer
-		return false;
-
-	if ( !buffer.IsValid() ) // must be valid, no overflows etc
+	if ( !buffer.ok() ) // must be valid, no overflows etc
 		return false;
 
 	pNode->Clear();
 
 	char		token[KEYVALUES_TOKEN_SIZE];
 	KeyValues	*dat = pNode;
-	EPackType		ePackType = (EPackType)buffer.GetUnsignedChar();
+	EPackType		ePackType = (EPackType)buffer.read< unsigned char >();
 
 	// loop through all our peers
 	while ( true )
@@ -181,7 +174,7 @@ bool KVPacker::ReadAsBinary( KeyValues *pNode, CUtlBuffer &buffer )
 		if ( ePackType == PACKTYPE_NULLMARKER )
 			break; // no more peers
 
-		buffer.GetString( token, KEYVALUES_TOKEN_SIZE-1 );
+		buffer.read_cstring( token, KEYVALUES_TOKEN_SIZE-1 );
 		token[KEYVALUES_TOKEN_SIZE-1] = 0;
 
 		dat->SetName( token );
@@ -198,29 +191,29 @@ bool KVPacker::ReadAsBinary( KeyValues *pNode, CUtlBuffer &buffer )
 			}
 		case PACKTYPE_STRING:
 			{
-				buffer.GetString( token, KEYVALUES_TOKEN_SIZE-1 );
+				buffer.read_cstring( token, KEYVALUES_TOKEN_SIZE-1 );
 				token[KEYVALUES_TOKEN_SIZE-1] = 0;
 				dat->SetStringValue( token );
 				break;
 			}
 		case PACKTYPE_WSTRING:
 			{
-				int nLength = buffer.GetShort();
-				if ( nLength >= 0 && nLength*sizeof( uint16 ) <= (uint)buffer.GetBytesRemaining() )
+				int nLength = buffer.read< short >();
+				if ( nLength >= 0 && nLength*sizeof( uint16 ) <= buffer.remaining() )
 				{
 					if ( nLength > 0 )
 					{
-						wchar_t *pTemp = (wchar_t *)malloc( sizeof( wchar_t ) * (1 + nLength) );
+						wchar_t *pTemp = (wchar_t *)MemAlloc_Alloc( sizeof( wchar_t ) * (1 + nLength) );
 
 						for ( int k = 0; k < nLength; ++k )
 						{
-							pTemp[k] = buffer.GetShort(); // ugly, but preserving existing behavior
+							pTemp[k] = buffer.read< short >(); // ugly, but preserving existing behavior
 						}
 
 						pTemp[nLength] = 0;
 						dat->SetWString( nullptr, pTemp );
 
-						free( pTemp );
+						g_pMemAlloc->Free( pTemp );
 					}
 					else
 						dat->SetWString( nullptr, L"" );
@@ -231,34 +224,33 @@ bool KVPacker::ReadAsBinary( KeyValues *pNode, CUtlBuffer &buffer )
 
 		case PACKTYPE_INT:
 			{
-				dat->SetInt( nullptr, buffer.GetInt() );
+				dat->SetInt( nullptr, buffer.read< int >() );
 				break;
 			}
 
 		case PACKTYPE_UINT64:
 			{
-				dat->SetUint64( nullptr, (uint64)buffer.GetInt64() );
+				dat->SetUint64( nullptr, (uint64)buffer.read< int64 >() );
 				break;
 			}
 
 		case PACKTYPE_FLOAT:
 			{
-				dat->SetFloat( nullptr, buffer.GetFloat() );
+				dat->SetFloat( nullptr, buffer.read< float >() );
 				break;
 			}
 		case PACKTYPE_COLOR:
 			{
-				Color color( 
-					buffer.GetUnsignedChar(),
-					buffer.GetUnsignedChar(),
-					buffer.GetUnsignedChar(),
-					buffer.GetUnsignedChar() );
-				dat->SetColor( nullptr, color );
+				const unsigned char r = buffer.read< unsigned char >();
+				const unsigned char g = buffer.read< unsigned char >();
+				const unsigned char b = buffer.read< unsigned char >();
+				const unsigned char a = buffer.read< unsigned char >();
+				dat->SetColor( nullptr, Color( r, g, b, a ) );
 				break;
 			}
 		case PACKTYPE_PTR:
 			{
-				dat->SetPtr( nullptr, buffer.GetPtr() );
+				dat->SetPtr( nullptr, reinterpret_cast< void * >( static_cast< uintptr_t >( buffer.read< uint64 >() ) ) );
 				break;
 			}
 
@@ -266,10 +258,10 @@ bool KVPacker::ReadAsBinary( KeyValues *pNode, CUtlBuffer &buffer )
 			break;
 		}
 
-		if ( !buffer.IsValid() ) // error occured
+		if ( !buffer.ok() ) // error occured
 			return false;
 
-		ePackType = (EPackType)buffer.GetUnsignedChar();
+		ePackType = (EPackType)buffer.read< unsigned char >();
 
 		if ( ePackType == PACKTYPE_NULLMARKER )
 			break;
@@ -280,6 +272,6 @@ bool KVPacker::ReadAsBinary( KeyValues *pNode, CUtlBuffer &buffer )
 		dat = pNewPeer;
 	}
 
-	return buffer.IsValid();
+	return buffer.ok();
 }
 

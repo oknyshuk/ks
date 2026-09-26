@@ -36,9 +36,6 @@
 #include "ai_behavior.h"
 #include "global_event_log.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern ConVar ai_task_pre_script;
 extern ConVar ai_use_efficiency;
 extern ConVar ai_use_think_optimizations;
@@ -109,7 +106,7 @@ void CAI_BaseNPC::ClearSchedule( const char *szReason )
 	m_IdealSchedule = SCHED_NONE;
 	m_pSchedule =  nullptr;
 	ResetScheduleCurTaskIndex();
-	m_InverseIgnoreConditions.SetAll();
+	m_InverseIgnoreConditions.set();
 }
 
 //=========================================================
@@ -173,12 +170,12 @@ void CAI_BaseNPC::SetSchedule( CAI_Schedule *pNewSchedule )
 	SetTaskStatus( TASKSTATUS_NEW );
 	m_failSchedule = SCHED_NONE;
 	bool bCondInPVS = HasCondition( COND_IN_PVS );
-	m_Conditions.ClearAll();
+	m_Conditions.reset();
 	if ( bCondInPVS )
 		SetCondition( COND_IN_PVS );
 	m_bConditionsGathered = false;
 	GetNavigator()->ClearGoal();
-	m_InverseIgnoreConditions.SetAll();
+	m_InverseIgnoreConditions.set();
 	Forget( bits_MEMORY_TURNING );
 
 /*
@@ -310,7 +307,7 @@ bool CAI_BaseNPC::IsScheduleValid()
 	// Let the leaf class modify our interrupt test bits, but:
 	// - Don't allow any modifications when scripted
 	// - Don't modify interrupts for Schedules that set the COND_NO_CUSTOM_INTERRUPTS bit.
-	if ( m_NPCState != NPC_STATE_SCRIPT && !IsInLockedScene() && !m_CustomInterruptConditions.IsBitSet( COND_NO_CUSTOM_INTERRUPTS ) )
+	if ( m_NPCState != NPC_STATE_SCRIPT && !IsInLockedScene() && !m_CustomInterruptConditions[COND_NO_CUSTOM_INTERRUPTS] )
 	{
 		BuildScheduleTestBits();
 	}
@@ -319,10 +316,9 @@ bool CAI_BaseNPC::IsScheduleValid()
 	SetCustomInterruptCondition( COND_NPC_FREEZE );
 
 	// This is like: m_CustomInterruptConditions &= m_Conditions;
-	CAI_ScheduleBits testBits;
-	m_CustomInterruptConditions.And( m_Conditions, &testBits  );
+	const CAI_ScheduleBits testBits = m_CustomInterruptConditions & m_Conditions;
 
-	if (!testBits.IsAllClear()) 
+	if (testBits.any()) 
 	{
 		// If in developer mode save the interrupt text for debug output
 		if (g_pDeveloper->GetInt()) 
@@ -334,7 +330,7 @@ bool CAI_BaseNPC::IsScheduleValid()
 			// Find the first non-zero bit
 			for (int i=0;i<MAX_CONDITIONS;i++)
 			{
-				if (testBits.IsBitSet(i))
+				if (testBits[i])
 				{
 					m_interruptText = ConditionName( AI_RemapToGlobal( i ) );
 					if (!m_interruptText)
@@ -622,7 +618,7 @@ void CAI_BaseNPC::MaintainSchedule ( void )
 				m_Conditions = m_ConditionsPreIgnore;
 				SetCondition( COND_SCHEDULE_DONE );
 
-				m_InverseIgnoreConditions.SetAll();
+				m_InverseIgnoreConditions.set();
 			}
 
 			// --------------------------------------------------------
@@ -832,7 +828,7 @@ void CAI_BaseNPC::MaintainSchedule ( void )
 			bStopProcessing = true;
 	}
 
-	for ( i = 0; i < m_Behaviors.Count(); i++ )
+	for ( i = 0; i < std::ssize( m_Behaviors ); i++ )
 	{
 		m_Behaviors[i]->MaintainChannelSchedules();
 	}
@@ -919,11 +915,11 @@ bool CAI_BaseNPC::FindCoverPos( CSound *pSound, Vector *pResult )
 {
 	if ( !GetTacticalServices()->FindCoverPos( pSound->GetSoundReactOrigin(), 
 												pSound->GetSoundReactOrigin(), 
-												MIN( pSound->Volume(), 120.0 ), 
+												std::min<std::common_type_t<int, double>>( pSound->Volume(), 120.0 ), 
 												CoverRadius(), 
 												pResult ) )
 	{
-		return GetTacticalServices()->FindLateralCover( pSound->GetSoundReactOrigin(), MIN( pSound->Volume(), 60.0 ), pResult );
+		return GetTacticalServices()->FindLateralCover( pSound->GetSoundReactOrigin(), std::min<std::common_type_t<int, double>>( pSound->Volume(), 60.0 ), pResult );
 	}
 
 	return true;
@@ -1112,7 +1108,7 @@ float CAI_BaseNPC::GetReasonableFacingDist( void )
 		if ( GetEnemy() )
 		{
 			float distEnemy = ( GetEnemy()->GetAbsOrigin().AsVector2D() - GetAbsOrigin().AsVector2D() ).Length() - 1.0; 
-			return MIN( distEnemy, dist );
+			return std::min( distEnemy, dist );
 		}
 
 		return dist;
@@ -1886,7 +1882,7 @@ void CAI_BaseNPC::StartTask( const Task_t *pTask )
 				}
 				else if ( GetActiveWeapon() )
 				{
-					flRange = MAX( GetActiveWeapon()->m_fMaxRange1, GetActiveWeapon()->m_fMaxRange2 );
+					flRange = std::max( GetActiveWeapon()->m_fMaxRange1, GetActiveWeapon()->m_fMaxRange2 );
 				}
 				else
 				{
@@ -1929,8 +1925,8 @@ void CAI_BaseNPC::StartTask( const Task_t *pTask )
 			
 			if ( GetActiveWeapon() )
 			{
-				flMaxRange = MAX( GetActiveWeapon()->m_fMaxRange1, GetActiveWeapon()->m_fMaxRange2 );
-				flMinRange = MIN( GetActiveWeapon()->m_fMinRange1, GetActiveWeapon()->m_fMinRange2 );
+				flMaxRange = std::max( GetActiveWeapon()->m_fMaxRange1, GetActiveWeapon()->m_fMaxRange2 );
+				flMinRange = std::min( GetActiveWeapon()->m_fMinRange1, GetActiveWeapon()->m_fMinRange2 );
 			}
 			else if ( CapabilitiesGet() & bits_CAP_INNATE_RANGE_ATTACK1 )
 			{
@@ -2097,8 +2093,8 @@ void CAI_BaseNPC::StartTask( const Task_t *pTask )
 
 					if ( GetActiveWeapon() )
 					{
-						flMaxRange = MAX( GetActiveWeapon()->m_fMaxRange1, GetActiveWeapon()->m_fMaxRange2 );
-						flMinRange = MIN( GetActiveWeapon()->m_fMinRange1, GetActiveWeapon()->m_fMinRange2 );
+						flMaxRange = std::max( GetActiveWeapon()->m_fMaxRange1, GetActiveWeapon()->m_fMaxRange2 );
+						flMinRange = std::min( GetActiveWeapon()->m_fMinRange1, GetActiveWeapon()->m_fMinRange2 );
 					}
 					else if ( CapabilitiesGet() & bits_CAP_INNATE_RANGE_ATTACK1 )
 					{
@@ -2253,8 +2249,8 @@ void CAI_BaseNPC::StartTask( const Task_t *pTask )
 		float flMinRange = 0;
 		if ( GetActiveWeapon() )
 		{
-			flMaxRange = MAX(GetActiveWeapon()->m_fMaxRange1,GetActiveWeapon()->m_fMaxRange2);
-			flMinRange = MIN(GetActiveWeapon()->m_fMinRange1,GetActiveWeapon()->m_fMinRange2);
+			flMaxRange = std::max(GetActiveWeapon()->m_fMaxRange1,GetActiveWeapon()->m_fMaxRange2);
+			flMinRange = std::min(GetActiveWeapon()->m_fMinRange1,GetActiveWeapon()->m_fMinRange2);
 		}
 		else if ( CapabilitiesGet() & bits_CAP_INNATE_RANGE_ATTACK1 )
 		{
@@ -3718,7 +3714,7 @@ void CAI_BaseNPC::RunTask( const Task_t *pTask )
 					}
 
 					AngleVectors( ang, &move );
-					if ( GetNavigator()->SetVectorGoal( move, (float)pTask->flTaskData, MIN(36,pTask->flTaskData), true ) && IsValidMoveAwayDest( GetNavigator()->GetGoalPos() ))
+					if ( GetNavigator()->SetVectorGoal( move, (float)pTask->flTaskData, std::min<std::common_type_t<int, float>>(36,pTask->flTaskData), true ) && IsValidMoveAwayDest( GetNavigator()->GetGoalPos() ))
 					{
 						TaskComplete();
 					}
@@ -3727,7 +3723,7 @@ void CAI_BaseNPC::RunTask( const Task_t *pTask )
 						ang.y = GetMotor()->GetIdealYaw() + 91;
 						AngleVectors( ang, &move );
 
-						if ( GetNavigator()->SetVectorGoal( move, (float)pTask->flTaskData, MIN(24,pTask->flTaskData), true ) && IsValidMoveAwayDest( GetNavigator()->GetGoalPos() ) )
+						if ( GetNavigator()->SetVectorGoal( move, (float)pTask->flTaskData, std::min<std::common_type_t<int, float>>(24,pTask->flTaskData), true ) && IsValidMoveAwayDest( GetNavigator()->GetGoalPos() ) )
 						{
 							TaskComplete();
 						}
@@ -3744,7 +3740,7 @@ void CAI_BaseNPC::RunTask( const Task_t *pTask )
 					ang.y = GetMotor()->GetIdealYaw() + 271;
 					AngleVectors( ang, &move );
 
-					if ( GetNavigator()->SetVectorGoal( move, (float)pTask->flTaskData, MIN(24,pTask->flTaskData), true ) && IsValidMoveAwayDest( GetNavigator()->GetGoalPos() ) )
+					if ( GetNavigator()->SetVectorGoal( move, (float)pTask->flTaskData, std::min<std::common_type_t<int, float>>(24,pTask->flTaskData), true ) && IsValidMoveAwayDest( GetNavigator()->GetGoalPos() ) )
 					{
 						TaskComplete();
 					}
@@ -3766,7 +3762,7 @@ void CAI_BaseNPC::RunTask( const Task_t *pTask )
 
 						AngleVectors( ang, &move );
 
-						if ( GetNavigator()->SetVectorGoal( move, (float)pTask->flTaskData, MIN(6,pTask->flTaskData), false ) && IsValidMoveAwayDest( GetNavigator()->GetGoalPos() ) )
+						if ( GetNavigator()->SetVectorGoal( move, (float)pTask->flTaskData, std::min<std::common_type_t<int, float>>(6,pTask->flTaskData), false ) && IsValidMoveAwayDest( GetNavigator()->GetGoalPos() ) )
 						{
 							TaskComplete();
 						}

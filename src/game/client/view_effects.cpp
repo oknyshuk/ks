@@ -16,9 +16,6 @@
 #include "con_nprint.h"
 #include "c_rumble.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern IntroData_t *g_pIntroData;
 
 
@@ -143,13 +140,13 @@ private:
 	void CalcShake_Basic( screenshake_t * pShake, float * RESTRICT pflRumbleAngle );
 	void CalcShake_Directional( screenshake_t * pShake, float * RESTRICT pflRumbleAngle );
 
-	CUtlVector<screenfade_t *>	m_FadeList;
+	std::vector< screenfade_t * >	m_FadeList;
 
-	CUtlVector<screenshake_t *>	m_ShakeList;
+	std::vector< screenshake_t * >	m_ShakeList;
 	Vector m_vecShakeAppliedOffset;
 	float m_flShakeAppliedAngle;
 
-	CUtlVector<screentilt_t *>	m_TiltList;
+	std::vector< screentilt_t * >	m_TiltList;
 	QAngle m_vecTiltAppliedAngle;
 
 	int							m_FadeColorRGBA[4];
@@ -354,11 +351,11 @@ void CViewEffects::CalcShake( void )
 
 	bool bShow = shake_show.GetBool();
 
-	int nShakeCount = m_ShakeList.Count();
+	int nShakeCount = std::ssize( m_ShakeList );
 
 	for ( int nShake = nShakeCount - 1; nShake >= 0; nShake-- )
 	{
-		screenshake_t * RESTRICT pShake = m_ShakeList.Element( nShake );
+		screenshake_t * RESTRICT pShake = m_ShakeList[ nShake ];
 
 		if ( pShake->endtime == 0 )
 		{
@@ -373,8 +370,8 @@ void CViewEffects::CalcShake( void )
 			pShake->frequency <= 0 )
 		{
 			// Retire this shake.
-			delete m_ShakeList.Element( nShake );
-			m_ShakeList.FastRemove( nShake );
+			delete m_ShakeList[ nShake ];
+			ks::swap_remove( m_ShakeList, nShake );
 			continue;
 		}
 
@@ -539,11 +536,11 @@ void CViewEffects::CalcTilt( void )
 {
 	m_vecTiltAppliedAngle.Init();
 
-	int nTiltCount = m_TiltList.Count();
+	int nTiltCount = std::ssize( m_TiltList );
 
 	for ( int nTilt = nTiltCount - 1; nTilt >= 0; nTilt-- )
 	{
-		screentilt_t *pTilt = m_TiltList.Element( nTilt );
+		screentilt_t *pTilt = m_TiltList[ nTilt ];
 
 		if ( pTilt->endtime == 0 )
 		{
@@ -556,8 +553,8 @@ void CViewEffects::CalcTilt( void )
 			pTilt->duration <= 0 || pTilt->angle == QAngle( 0.0f, 0.0f, 0.0f ) )
 		{
 			// Retire this tilt.
-			delete m_TiltList.Element( nTilt );
-			m_TiltList.FastRemove( nTilt );
+			delete m_TiltList[ nTilt ];
+			ks::swap_remove( m_TiltList, nTilt );
 			continue;
 		}
 
@@ -623,13 +620,13 @@ void CViewEffects::ApplyTilt( QAngle& angles, float factor )
 //-----------------------------------------------------------------------------
 void CViewEffects::ClearAllShakes()
 {
-	int nShakeCount = m_ShakeList.Count();
+	int nShakeCount = std::ssize( m_ShakeList );
 	for ( int i = 0; i < nShakeCount; i++ )
 	{
-		delete m_ShakeList.Element( i );
+		delete m_ShakeList[ i ];
 	}
 
-	m_ShakeList.Purge();
+	m_ShakeList.clear(); m_ShakeList.shrink_to_fit();
 }
 
 
@@ -643,10 +640,10 @@ screenshake_t *CViewEffects::FindLongestShake()
 {
 	screenshake_t *pLongestShake = nullptr;
 
-	int nShakeCount = m_ShakeList.Count();
+	int nShakeCount = std::ssize( m_ShakeList );
 	for ( int i = 0; i < nShakeCount; i++ )
 	{
-		screenshake_t *pShake = m_ShakeList.Element( i );
+		screenshake_t *pShake = m_ShakeList[ i ];
 		if ( pShake && ( !pLongestShake || ( pShake->duration > pLongestShake->duration ) ) )
 		{
 			pLongestShake = pShake;
@@ -666,7 +663,7 @@ screenshake_t *CViewEffects::FindLongestShake()
 //-----------------------------------------------------------------------------
 void CViewEffects::Shake( const ScreenShake_t &data )
 {
-	if ( ( data.command == SHAKE_START || data.command == SHAKE_START_RUMBLEONLY ) && ( m_ShakeList.Count() < MAX_SHAKES ) )
+	if ( ( data.command == SHAKE_START || data.command == SHAKE_START_RUMBLEONLY ) && ( std::ssize( m_ShakeList ) < MAX_SHAKES ) )
 	{
 		screenshake_t * RESTRICT pNewShake = new screenshake_t; // ugh, should just make these a static array
 			
@@ -679,7 +676,7 @@ void CViewEffects::Shake( const ScreenShake_t &data )
 		pNewShake->direction = data.direction;
 		pNewShake->nShakeType = data.direction.IsZeroFast() ? screenshake_t::kSHAKE_BASIC : screenshake_t::kSHAKE_DIRECTIONAL;
 
-		m_ShakeList.AddToTail( (screenshake_t *) pNewShake );
+		m_ShakeList.push_back( (screenshake_t *) pNewShake );
 	}
 	else if ( data.command == SHAKE_STOP)
 	{
@@ -710,13 +707,13 @@ void CViewEffects::Shake( const ScreenShake_t &data )
 //-----------------------------------------------------------------------------
 void CViewEffects::ClearAllTilts()
 {
-	int nTiltCount = m_TiltList.Count();
+	int nTiltCount = std::ssize( m_TiltList );
 	for ( int i = 0; i < nTiltCount; i++ )
 	{
-		delete m_TiltList.Element( i );
+		delete m_TiltList[ i ];
 	}
 
-	m_TiltList.Purge();
+	m_TiltList.clear(); m_TiltList.shrink_to_fit();
 }
 
 
@@ -730,10 +727,10 @@ screentilt_t *CViewEffects::FindLongestTilt()
 {
 	screentilt_t *pLongestTilt = nullptr;
 
-	int nTiltCount = m_TiltList.Count();
+	int nTiltCount = std::ssize( m_TiltList );
 	for ( int i = 0; i < nTiltCount; i++ )
 	{
-		screentilt_t *pTilt = m_TiltList.Element( i );
+		screentilt_t *pTilt = m_TiltList[ i ];
 		if ( pTilt && ( !pLongestTilt || ( pTilt->duration > pLongestTilt->duration ) ) )
 		{
 			pLongestTilt = pTilt;
@@ -752,7 +749,7 @@ screentilt_t *CViewEffects::FindLongestTilt()
 //-----------------------------------------------------------------------------
 void CViewEffects::Tilt( ScreenTilt_t &data )
 {
-	if ( ( data.command == SHAKE_START || data.command == SHAKE_START_RUMBLEONLY ) && ( m_ShakeList.Count() < MAX_SHAKES ) )
+	if ( ( data.command == SHAKE_START || data.command == SHAKE_START_RUMBLEONLY ) && ( std::ssize( m_ShakeList ) < MAX_SHAKES ) )
 	{
 		screentilt_t *pNewTilt = new screentilt_t;
 
@@ -764,7 +761,7 @@ void CViewEffects::Tilt( ScreenTilt_t &data )
 		pNewTilt->endtime = pNewTilt->starttime + data.duration;
 		pNewTilt->command = data.command;
 
-		m_TiltList.AddToTail( pNewTilt );
+		m_TiltList.push_back( pNewTilt );
 	}
 	else if ( data.command == SHAKE_STOP)
 	{
@@ -824,7 +821,7 @@ void CViewEffects::Fade( ScreenFade_t &data )
 		ClearAllFades();
 	}
 
-	m_FadeList.AddToTail( pNewFade );
+	m_FadeList.push_back( pNewFade );
 }
 
 //-----------------------------------------------------------------------------
@@ -834,7 +831,7 @@ void CViewEffects::FadeCalculate( void )
 {
 	// Cycle through all fades and remove any that have finished (work backwards)
 	int i;
-	int iSize = m_FadeList.Count();
+	int iSize = std::ssize( m_FadeList );
 	for (i = iSize-1; i >= 0; i-- )
 	{
 		screenfade_t *pFade = m_FadeList[i];
@@ -857,7 +854,7 @@ void CViewEffects::FadeCalculate( void )
 			}
 
 			// Remove this Fade from the list
-			m_FadeList.FindAndRemove( pFade );
+			ks::erase_first( m_FadeList, pFade );
 			delete pFade;
 		}
 	}
@@ -866,7 +863,7 @@ void CViewEffects::FadeCalculate( void )
 	m_FadeColorRGBA[0] = m_FadeColorRGBA[1] = m_FadeColorRGBA[2] = m_FadeColorRGBA[3] = 0;
 
 	// Cycle through all fades in the list and calculate the overall color/alpha
-	for ( i = 0; i < m_FadeList.Count(); i++ )
+	for ( i = 0; i < std::ssize( m_FadeList ); i++ )
 	{
 		screenfade_t *pFade = m_FadeList[i];
 
@@ -884,8 +881,8 @@ void CViewEffects::FadeCalculate( void )
 			{
 				iFadeAlpha += pFade->alpha;
 			}
-			iFadeAlpha = MIN( iFadeAlpha, pFade->alpha );
-			iFadeAlpha = MAX( 0, iFadeAlpha );
+			iFadeAlpha = std::min<std::common_type_t<int, byte>>( iFadeAlpha, pFade->alpha );
+			iFadeAlpha = std::max( 0, iFadeAlpha );
 		}
 		else
 		{
@@ -906,11 +903,11 @@ void CViewEffects::FadeCalculate( void )
 	}
 
 	// Divide colors
-	if ( m_FadeList.Count() )
+	if ( !m_FadeList.empty() )
 	{
-		m_FadeColorRGBA[0] /= m_FadeList.Count();
-		m_FadeColorRGBA[1] /= m_FadeList.Count();
-		m_FadeColorRGBA[2] /= m_FadeList.Count();
+		m_FadeColorRGBA[0] /= std::ssize( m_FadeList );
+		m_FadeColorRGBA[1] /= std::ssize( m_FadeList );
+		m_FadeColorRGBA[2] /= std::ssize( m_FadeList );
 	}
 }
 
@@ -919,7 +916,7 @@ void CViewEffects::FadeCalculate( void )
 //-----------------------------------------------------------------------------
 void CViewEffects::ClearPermanentFades( void )
 {
-	int iSize = m_FadeList.Count();
+	int iSize = std::ssize( m_FadeList );
 	for (int i =  iSize-1; i >= 0; i-- )
 	{
 		screenfade_t *pFade = m_FadeList[i];
@@ -927,7 +924,7 @@ void CViewEffects::ClearPermanentFades( void )
 		if ( pFade->Flags & FFADE_STAYOUT )
 		{
 			// Destroy this fade
-			m_FadeList.FindAndRemove( pFade );
+			ks::erase_first( m_FadeList, pFade );
 			delete pFade;
 		}
 	}
@@ -938,12 +935,12 @@ void CViewEffects::ClearPermanentFades( void )
 //-----------------------------------------------------------------------------
 void CViewEffects::ClearAllFades( void )
 {
-	int iSize = m_FadeList.Count();
+	int iSize = std::ssize( m_FadeList );
 	for (int i =  iSize-1; i >= 0; i-- )
 	{
 		delete m_FadeList[i];
 	}
-	m_FadeList.Purge();
+	m_FadeList.clear(); m_FadeList.shrink_to_fit();
 }
 
 //-----------------------------------------------------------------------------

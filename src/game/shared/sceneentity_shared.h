@@ -13,6 +13,7 @@
 #endif
 
 #include "iscenetokenprocessor.h"
+#include "tier1/utlvector.h"
 
 class CBaseFlex;
 

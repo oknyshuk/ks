@@ -9,9 +9,6 @@
 #include "kbutton.h"
 #include "input.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: TF Input interface

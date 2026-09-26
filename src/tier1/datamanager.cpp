@@ -9,21 +9,13 @@
 #include "basetypes.h"
 #include "datamanager.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 DECLARE_POINTER_HANDLE( memhandle_t );
-
-#define AUTO_LOCK_DM() AUTO_LOCK_( CDataManagerBase, *this )
 
 CDataManagerBase::CDataManagerBase( unsigned int maxSize )
 {
 	m_targetMemorySize = maxSize;
 	m_memUsed = 0;
-	m_lruList = m_memoryLists.CreateList();
-	m_lockList = m_memoryLists.CreateList();
-	m_freeList = m_memoryLists.CreateList();
 	m_listsAreFreed = 0;
 	m_freeOnDestruct = 1;
 }
@@ -35,9 +27,9 @@ CDataManagerBase::~CDataManagerBase()
 
 void CDataManagerBase::NotifySizeChanged( memhandle_t handle, unsigned int oldSize, unsigned int newSize )
 {
-	Lock();
+	lock();
 	m_memUsed += (int)newSize - (int)oldSize;
-	Unlock();
+	unlock();
 }
 
 void CDataManagerBase::SetTargetSize( unsigned int targetSize )
@@ -47,11 +39,11 @@ void CDataManagerBase::SetTargetSize( unsigned int targetSize )
 
 unsigned int CDataManagerBase::FlushAllUnlocked()
 {
-	Lock();
+	lock();
 
 	int nFlush = m_memoryLists.Count( m_lruList );
-	void **pScratch = (void **)stackalloc( nFlush * sizeof(void *) );
-	CUtlVector<void *> destroyList( pScratch, nFlush );
+	std::vector< void * > destroyList;
+	destroyList.reserve( nFlush );
 
 	unsigned nBytesInitial = MemUsed_Inline();
 
@@ -60,11 +52,11 @@ unsigned int CDataManagerBase::FlushAllUnlocked()
 	{
 		int next = m_memoryLists.Next(node);
 		m_memoryLists.Unlink( m_lruList, node );
-		destroyList.AddToTail( GetForFreeByIndex( node ) );
+		destroyList.push_back( GetForFreeByIndex( node ) );
 		node = next;
 	}
 
-	Unlock();
+	unlock();
 
 	for ( int i = 0; i < nFlush; i++ )
 	{
@@ -84,11 +76,11 @@ unsigned int CDataManagerBase::FlushToTargetSize()
 
 unsigned int CDataManagerBase::FlushAll()
 {
-	Lock();
+	lock();
 
 	int nFlush = m_memoryLists.Count( m_lruList ) + m_memoryLists.Count( m_lockList );
-	void **pScratch = (void **) stackalloc( nFlush * sizeof(void *) );
-	CUtlVector<void *> destroyList( pScratch, nFlush );
+	std::vector< void * > destroyList;
+	destroyList.reserve( nFlush );
 
 	unsigned result = MemUsed_Inline();
 	int node;
@@ -99,7 +91,7 @@ unsigned int CDataManagerBase::FlushAll()
 	{
 		nextNode = m_memoryLists.Next(node);
 		m_memoryLists.Unlink( m_lruList, node );
-		destroyList.AddToTail( GetForFreeByIndex( node ) );
+		destroyList.push_back( GetForFreeByIndex( node ) );
 		node = nextNode;
 	}
 
@@ -109,12 +101,12 @@ unsigned int CDataManagerBase::FlushAll()
 		nextNode = m_memoryLists.Next(node);
 		m_memoryLists.Unlink( m_lockList, node );
 		m_memoryLists[node].lockCount = 0;
-		destroyList.AddToTail( GetForFreeByIndex( node ) );
+		destroyList.push_back( GetForFreeByIndex( node ) );
 		node = nextNode;
 	}
 
 	m_listsAreFreed = false;
-	Unlock();
+	unlock();
 
 	for ( int i = 0; i < nFlush; i++ )
 	{
@@ -136,11 +128,11 @@ unsigned int CDataManagerBase::Purge( unsigned int nBytesToPurge )
 
 void CDataManagerBase::DestroyResource( memhandle_t handle )
 {
-	Lock();
+	lock();
 	unsigned short index = FromHandle( handle );
 	if ( !m_memoryLists.IsValidIndex(index) )
 	{
-		Unlock();
+		unlock();
 		return;
 	}
 	
@@ -149,7 +141,7 @@ void CDataManagerBase::DestroyResource( memhandle_t handle )
 		BreakLock( handle );
 	m_memoryLists.Unlink( m_lruList, index );
 	void *p = GetForFreeByIndex( index );
-	Unlock();
+	unlock();
 
 	DestroyResourceStorage( p );
 }
@@ -157,7 +149,7 @@ void CDataManagerBase::DestroyResource( memhandle_t handle )
 
 void *CDataManagerBase::LockResource( memhandle_t handle )
 {
-	AUTO_LOCK_DM();
+	std::scoped_lock lock( *this );
 	unsigned short memoryIndex = FromHandle(handle);
 	if ( memoryIndex != m_memoryLists.InvalidIndex() )
 	{
@@ -176,7 +168,7 @@ void *CDataManagerBase::LockResource( memhandle_t handle )
 
 void *CDataManagerBase::LockResourceReturnCount( int *pCount, memhandle_t handle )
 {
-	AUTO_LOCK_DM();
+	std::scoped_lock lock( *this );
 	unsigned short memoryIndex = FromHandle(handle);
 	if ( memoryIndex != m_memoryLists.InvalidIndex() )
 	{
@@ -196,7 +188,7 @@ void *CDataManagerBase::LockResourceReturnCount( int *pCount, memhandle_t handle
 
 int CDataManagerBase::UnlockResource( memhandle_t handle )
 {
-	AUTO_LOCK_DM();
+	std::scoped_lock lock( *this );
 	unsigned short memoryIndex = FromHandle(handle);
 	if ( memoryIndex != m_memoryLists.InvalidIndex() )
 	{
@@ -218,7 +210,7 @@ int CDataManagerBase::UnlockResource( memhandle_t handle )
 
 void *CDataManagerBase::GetResource_NoLockNoLRUTouch( memhandle_t handle )
 {
-	AUTO_LOCK_DM();
+	std::scoped_lock lock( *this );
 	unsigned short memoryIndex = FromHandle(handle);
 	if ( memoryIndex != m_memoryLists.InvalidIndex() )
 	{
@@ -230,7 +222,7 @@ void *CDataManagerBase::GetResource_NoLockNoLRUTouch( memhandle_t handle )
 
 void *CDataManagerBase::GetResource_NoLock( memhandle_t handle )
 {
-	AUTO_LOCK_DM();
+	std::scoped_lock lock( *this );
 	unsigned short memoryIndex = FromHandle(handle);
 	if ( memoryIndex != m_memoryLists.InvalidIndex() )
 	{
@@ -242,13 +234,13 @@ void *CDataManagerBase::GetResource_NoLock( memhandle_t handle )
 
 void CDataManagerBase::TouchResource( memhandle_t handle )
 {
-	AUTO_LOCK_DM();
+	std::scoped_lock lock( *this );
 	TouchByIndex( FromHandle(handle) );
 }
 
 void CDataManagerBase::MarkAsStale( memhandle_t handle )
 {
-	AUTO_LOCK_DM();
+	std::scoped_lock lock( *this );
 	unsigned short memoryIndex = FromHandle(handle);
 	if ( memoryIndex != m_memoryLists.InvalidIndex() )
 	{
@@ -262,7 +254,7 @@ void CDataManagerBase::MarkAsStale( memhandle_t handle )
 
 int CDataManagerBase::BreakLock( memhandle_t handle )
 {
-	AUTO_LOCK_DM();
+	std::scoped_lock lock( *this );
 	unsigned short memoryIndex = FromHandle(handle);
 	if ( memoryIndex != m_memoryLists.InvalidIndex() && m_memoryLists[memoryIndex].lockCount )
 	{
@@ -278,7 +270,7 @@ int CDataManagerBase::BreakLock( memhandle_t handle )
 
 int CDataManagerBase::BreakAllLocks()
 {
-	AUTO_LOCK_DM();
+	std::scoped_lock lock( *this );
 	int nBroken = 0;
 	int node;
 	int nextNode;
@@ -300,9 +292,9 @@ int CDataManagerBase::BreakAllLocks()
 
 unsigned short CDataManagerBase::CreateHandle( bool bCreateLocked )
 {
-	AUTO_LOCK_DM();
+	std::scoped_lock lock( *this );
 	int memoryIndex = m_memoryLists.Head(m_freeList);
-	unsigned short list = ( bCreateLocked ) ? m_lockList : m_lruList;
+	ListId_t list = ( bCreateLocked ) ? m_lockList : m_lruList;
 	if ( memoryIndex != m_memoryLists.InvalidIndex() )
 	{
 		m_memoryLists.Unlink( m_freeList, memoryIndex );
@@ -323,7 +315,7 @@ unsigned short CDataManagerBase::CreateHandle( bool bCreateLocked )
 
 memhandle_t CDataManagerBase::StoreResourceInHandle( unsigned short memoryIndex, void *pStore, unsigned int realSize )
 {
-	AUTO_LOCK_DM();
+	std::scoped_lock lock( *this );
 	resource_lru_element_t &mem = m_memoryLists[memoryIndex];
 	mem.pStore = pStore;
 	m_memUsed += realSize;
@@ -372,16 +364,16 @@ unsigned int CDataManagerBase::EnsureCapacity( unsigned int size )
 	unsigned nBytesInitial = MemUsed_Inline();
 	while ( MemUsed_Inline() > MemTotal_Inline() || MemAvailable_Inline() < size )
 	{
-		Lock();
+		lock();
 		int lruIndex = m_memoryLists.Head( m_lruList );
 		if ( lruIndex == m_memoryLists.InvalidIndex() )
 		{
-			Unlock();
+			unlock();
 			break;
 		}
 		m_memoryLists.Unlink( m_lruList, lruIndex );
 		void *p = GetForFreeByIndex( lruIndex );
-		Unlock();
+		unlock();
 		DestroyResourceStorage( p );
 	}
 	return ( nBytesInitial - MemUsed_Inline() );
@@ -412,24 +404,24 @@ void *CDataManagerBase::GetForFreeByIndex( unsigned short memoryIndex )
 }
 
 // get a list of everything in the LRU
-void CDataManagerBase::GetLRUHandleList( CUtlVector< memhandle_t >& list )
+void CDataManagerBase::GetLRUHandleList( std::vector< memhandle_t >& list )
 {
 	for ( int node = m_memoryLists.Tail(m_lruList);
 			node != m_memoryLists.InvalidIndex();
 			node = m_memoryLists.Previous(node) )
 	{
-		list.AddToTail( ToHandle( node ) );
+		list.push_back( ToHandle( node ) );
 	}
 }
 
 // get a list of everything locked
-void CDataManagerBase::GetLockHandleList( CUtlVector< memhandle_t >& list )
+void CDataManagerBase::GetLockHandleList( std::vector< memhandle_t >& list )
 {
 	for ( int node = m_memoryLists.Head(m_lockList);
 			node != m_memoryLists.InvalidIndex();
 			node = m_memoryLists.Next(node) )
 	{
-		list.AddToTail( ToHandle( node ) );
+		list.push_back( ToHandle( node ) );
 	}
 }
 

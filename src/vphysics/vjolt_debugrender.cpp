@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2022 Joshua Ashton and Josh Dowell (Slartibarty)
+
 //=================================================================================================
 //
 // Jolt Debug Renderer Implementation
@@ -9,9 +12,6 @@
 #ifdef JPH_DEBUG_RENDERER
 
 #include "vjolt_debugrender.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 // Slart: Not sure if this is still relevant,
 // it's the amount of time a debugoverlay element should stay on-screen

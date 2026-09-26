@@ -16,9 +16,6 @@
 #include "vortwarp_vs30.inc"
 #include "vortwarp_ps30.inc"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 DEFINE_FALLBACK_SHADER( VortWarp, VortWarp_dx9 )
 

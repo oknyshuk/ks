@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2022 Joshua Ashton and Josh Dowell (Slartibarty)
+
 
 #include "cbase.h"
 
@@ -6,9 +9,6 @@
 #include <Jolt/Physics/Collision/InternalEdgeRemovingCollector.h>
 
 #include "vjolt_controller_player.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-------------------------------------------------------------------------------------------------
 

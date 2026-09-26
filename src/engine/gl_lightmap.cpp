@@ -26,10 +26,10 @@
 #include "lightcache.h"
 #include "cl_main.h"
 #include "materialsystem/imaterial.h"
-#include "utlsortvector.h"
+#include <algorithm>
+#include <numeric>
 #include "cache_hints.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier0/memalloc.h"
 
 //-----------------------------------------------------------------------------
 // globals
@@ -973,7 +973,7 @@ static void ComputeLightmapFromLightstyleOLD( msurfacelighting_t *pLighting, boo
 
 // instrumentation to measure locks
 /*
-static CUtlVector<int> g_LightmapLocks;
+static std::vector< int > g_LightmapLocks;
 static int g_Lastdlightframe = -1;
 static int g_lastlock = -1;
 static int g_unsorted = 0;
@@ -1024,7 +1024,7 @@ static void UpdateLightmapTextures( SurfaceHandle_t surfID, bool needsBumpmap )
 		offsetIntoLightmapPage[0] = MSurf_OffsetIntoLightmapPage( surfID )[0];
 		offsetIntoLightmapPage[1] = MSurf_OffsetIntoLightmapPage( surfID )[1];
 		Assert( MSurf_MaterialSortID( surfID ) >= 0 && 
-			MSurf_MaterialSortID( surfID ) < g_WorldStaticMeshes.Count() );
+			MSurf_MaterialSortID( surfID ) < std::ssize( g_WorldStaticMeshes ) );
 		// FIXME: Should differentiate between bumped and unbumped since the perf characteristics
 		// are completely different?
 //		MarkPage( materialSortInfoArray[MSurf_MaterialSortID( surfID )].lightmapPageID );
@@ -1195,7 +1195,7 @@ void R_BuildLightMap( dlight_t *pLights, ICallQueue *pCallQueue, SurfaceHandle_t
 	if( materialSortInfoArray )
 	{
 		Assert( MSurf_MaterialSortID( surfID ) >= 0 && 
-			    MSurf_MaterialSortID( surfID ) < g_WorldStaticMeshes.Count() );
+			    MSurf_MaterialSortID( surfID ) < std::ssize( g_WorldStaticMeshes ) );
 		if (( materialSortInfoArray[MSurf_MaterialSortID( surfID )].lightmapPageID == MATERIAL_SYSTEM_LIGHTMAP_PAGE_WHITE )	||
 		   ( materialSortInfoArray[MSurf_MaterialSortID( surfID )].lightmapPageID == MATERIAL_SYSTEM_LIGHTMAP_PAGE_WHITE_BUMP ) )
 		{
@@ -1238,7 +1238,7 @@ void CacheAndUnloadLightmapData()
 	int numSurfaces = pBrushData->numsurfaces;
 
 	// This will allocate more data than necessary, but only 1-2K max
-	byte *pDestBase = (byte*)malloc( numSurfaces * MAXLIGHTMAPS * sizeof( ColorRGBExp32 ) );
+	byte *pDestBase = (byte*)MemAlloc_Alloc( numSurfaces * MAXLIGHTMAPS * sizeof( ColorRGBExp32 ) );
 	byte *pDest = pDestBase;
 
 	for ( int i = 0; i < numSurfaces; ++i, ++pLighting )
@@ -1270,18 +1270,6 @@ void CacheAndUnloadLightmapData()
 	host_state.worldbrush->m_bUnloadedAllLightmaps = true;
 }
 
-class SurfaceLessFunc
-{
-public:
-	// ascending sort the lighting pointers
-	bool Less( const int &src1, const int &src2, void *pCtx )
-	{
-		msurfacelighting_t *pLighting = (msurfacelighting_t *)pCtx;
-		return ( ( ( uintp )pLighting[src1].m_pSamples ) < ( ( uintp )pLighting[src2].m_pSamples ) );
-	}
-};
-
-
 //-----------------------------------------------------------------------------
 // All lightmaps should have been uploaded, can now compact portions of all
 // the lighting data, fixup those surfaces, and decommit the unused portion
@@ -1305,14 +1293,9 @@ void DiscardStaticLightmapData()
 
 	// sort all the surfaces lighting pointers
 	// want the pointers to be numerically ascending
-	int *pSurfaceIndexes = (int *)stackalloc( numSurfaces * sizeof( int ) );
-	CUtlSortVector< int, SurfaceLessFunc > surfaceSort( pSurfaceIndexes, numSurfaces );
-	surfaceSort.SetLessContext( pLighting );
-	for ( int i = 0; i < numSurfaces; i++ )
-	{
-		surfaceSort.InsertNoSort( i );
-	}
-	surfaceSort.RedoSort();
+	std::vector< int > surfaceSort( numSurfaces );
+	std::iota( surfaceSort.begin(), surfaceSort.end(), 0 );
+	std::ranges::sort( surfaceSort, {}, [pLighting]( int i ) { return (uintp)pLighting[i].m_pSamples; } );
 
 	// for saftey, validate the pointers are sorted as expected, otherwise memory corruption
 	ColorRGBExp32 *pLast = pLighting[surfaceSort[0]].m_pSamples;
@@ -1555,7 +1538,7 @@ void GL_RebuildLightmaps( void )
 ConVar mat_updatelightstyleseveryframe( "mat_updatelightstyleseveryframe", "0" );
 //#endif
 
-int __cdecl LightmapPageCompareFunc( const void *pElem0, const void *pElem1 )
+int LightmapPageCompareFunc( const void *pElem0, const void *pElem1 )
 {
 	const LightmapUpdateInfo_t *pSurf0 = (const LightmapUpdateInfo_t *)pElem0;
 	const LightmapUpdateInfo_t *pSurf1 = (const LightmapUpdateInfo_t *)pElem1;
@@ -1582,10 +1565,10 @@ void R_BuildLightmapUpdateList()
 		threadFrameCount = (threadFrameCount+1) & 1;
 	}
 
-	qsort( g_LightmapUpdateList.Base(), g_LightmapUpdateList.Count(), sizeof(g_LightmapUpdateList.Element(0)), LightmapPageCompareFunc );
-	for ( int i = 0; i < g_LightmapUpdateList.Count(); i++ )
+	qsort( g_LightmapUpdateList.data(), std::ssize( g_LightmapUpdateList ), sizeof(g_LightmapUpdateList[ 0 ]), LightmapPageCompareFunc );
+	for ( int i = 0; i < std::ssize( g_LightmapUpdateList ); i++ )
 	{
-		const LightmapUpdateInfo_t &info = g_LightmapUpdateList.Element(i);
+		const LightmapUpdateInfo_t &info = g_LightmapUpdateList[ i ];
 		if ( !pCallQueue )
 		{
 			R_BuildLightMapGuts( pLights, info.m_SurfHandle, g_LightmapTransformList[info.m_nTransformIndex].xform, 
@@ -1660,7 +1643,7 @@ void R_CheckForLightmapUpdates( SurfaceHandle_t surfID, int nTransformIndex )
         if( materialSortInfoArray )
         {
             int nSortID = MSurf_MaterialSortID( surfID );
-            Assert( nSortID >= 0 && nSortID < g_WorldStaticMeshes.Count() );
+            Assert( nSortID >= 0 && nSortID < std::ssize( g_WorldStaticMeshes ) );
             if (( materialSortInfoArray[nSortID].lightmapPageID == MATERIAL_SYSTEM_LIGHTMAP_PAGE_WHITE )	||
                 ( materialSortInfoArray[nSortID].lightmapPageID == MATERIAL_SYSTEM_LIGHTMAP_PAGE_WHITE_BUMP ) )
             {
@@ -1671,7 +1654,7 @@ void R_CheckForLightmapUpdates( SurfaceHandle_t surfID, int nTransformIndex )
         unsigned int nDlightMask = R_UpdateDlightState( cl_dlights, surfID, g_LightmapTransformList[nTransformIndex].xform, bOnlyUseLightStyles, bDlightsInLightmap );
 
 
-        int nIndex = g_LightmapUpdateList.AddToTail();
+        int nIndex = std::ssize( g_LightmapUpdateList ); g_LightmapUpdateList.emplace_back();
         g_LightmapUpdateList[nIndex].m_SurfHandle = surfID;
         g_LightmapUpdateList[nIndex].m_nTransformIndex = nTransformIndex;
         g_LightmapUpdateList[nIndex].m_nDlightMask= nDlightMask;

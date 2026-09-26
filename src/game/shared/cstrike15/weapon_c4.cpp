@@ -45,9 +45,6 @@
 
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 #define BLINK_INTERVAL 2.5
 #define PLANTED_C4_MODEL "models/weapons/w_ied_dropped.mdl"
@@ -70,15 +67,14 @@ extern ConVar mp_c4_cannot_be_defused;
 
 CON_COMMAND_F( clear_bombs, "", FCVAR_CHEAT )
 {
-	FOR_EACH_VEC( g_PlantedC4s, iBomb )
+	for ( CPlantedC4 *pC4 : g_PlantedC4s )
 	{
-		CPlantedC4 * pC4 = g_PlantedC4s[iBomb];
 		if ( pC4 )
 		{
 			UTIL_Remove( pC4 );
 		}
 	}
-	g_PlantedC4s.RemoveAll();
+	g_PlantedC4s.clear();
 }
 
 LINK_ENTITY_TO_CLASS( planted_c4, CPlantedC4 );
@@ -96,12 +92,12 @@ IMPLEMENT_REFLECT_PREDMAP( CPlantedC4 );
 
 
 
-	CUtlVector< CPlantedC4* > g_PlantedC4s;
+	std::vector< CPlantedC4* > g_PlantedC4s;
 
 
 	CPlantedC4::CPlantedC4()
 	{
-		g_PlantedC4s.AddToTail( this );
+		g_PlantedC4s.push_back( this );
 
 		// [tj] No planter initially
 		m_pPlanter = nullptr;
@@ -118,7 +114,7 @@ IMPLEMENT_REFLECT_PREDMAP( CPlantedC4 );
 
 	CPlantedC4::~CPlantedC4()
 	{
-		g_PlantedC4s.FindAndRemove( this );
+		ks::erase_first( g_PlantedC4s, this );
 
 		RemoveControlPanels();
 	}
@@ -206,7 +202,7 @@ IMPLEMENT_REFLECT_PREDMAP( CPlantedC4 );
 	void CPlantedC4::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
 	{
 		// Are we already marked for transmission?
-		if ( pInfo->m_pTransmitEdict->Get( entindex() ) )
+		if ( (*pInfo->m_pTransmitEdict)[ entindex() ] )
 			return;
 
 		BaseClass::SetTransmit( pInfo, bAlways );
@@ -1887,9 +1883,6 @@ void CC4::OnPickedUp( CBaseCombatCharacter *pNewOwner )
 #ifndef CLIENT_DLL
 	#include "cs_bot.h"
 #endif
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 void CC4::Drop( const Vector &vecVelocity )
 {

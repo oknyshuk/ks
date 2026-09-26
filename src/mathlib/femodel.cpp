@@ -992,16 +992,16 @@ int CFeModel::GetComplexity( )const
 
 uint CFeModel::ComputeCollisionTreeDepthTopDown() const
 {
-	CUtlVector< uint16 > levels;
+	std::vector< uint16 > levels;
 	return ComputeCollisionTreeDepthTopDown( levels );
 }
 
-uint CFeModel::ComputeCollisionTreeDepthTopDown( CUtlVector< uint16 > &levels ) const
+uint CFeModel::ComputeCollisionTreeDepthTopDown( std::vector< uint16 > &levels ) const
 {
 	if ( GetDynamicNodeCount() > 0 )
 	{
-		levels.SetCount( GetDynamicNodeCount() * 2 - 1 );
-		return ComputeCollisionTreeDepthTopDown( levels.Base() );
+		levels.assign( GetDynamicNodeCount() * 2 - 1, {} );
+		return ComputeCollisionTreeDepthTopDown( levels.data() );
 	}
 	else
 	{
@@ -1051,12 +1051,12 @@ uint CFeModel::ComputeCollisionTreeDepthTopDown( uint16 *pLevels ) const
 }
 
 
-uint CFeModel::ComputeCollisionTreeHeightBottomUp( CUtlVector< uint16 > &levels ) const
+uint CFeModel::ComputeCollisionTreeHeightBottomUp( std::vector< uint16 > &levels ) const
 {
 	if ( GetDynamicNodeCount() > 1 )
 	{
-		levels.SetCount( GetDynamicNodeCount() - 1 );
-		return ComputeCollisionTreeDepthTopDown( levels.Base() );
+		levels.assign( GetDynamicNodeCount() - 1, {} );
+		return ComputeCollisionTreeDepthTopDown( levels.data() );
 	}
 	else
 	{
@@ -1067,7 +1067,7 @@ uint CFeModel::ComputeCollisionTreeHeightBottomUp( CUtlVector< uint16 > &levels 
 
 uint CFeModel::ComputeCollisionTreeHeightBottomUp() const
 {
-	CUtlVector< uint16 > levels;
+	std::vector< uint16 > levels;
 	return ComputeCollisionTreeHeightBottomUp( levels );
 }
 

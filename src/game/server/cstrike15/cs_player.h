@@ -10,6 +10,7 @@
 #pragma once
 
 
+#include <bitset>
 #include "basemultiplayerplayer.h"
 #include "server_class.h"
 // the SENDPROP_*_PRIORITY constants the Net annotations below name
@@ -18,7 +19,7 @@
 #include "cs_playeranimstate.h"
 #include "cs_shareddefs.h"
 #include "cs_autobuy.h"
-#include "utldict.h"
+#include "tier1/map_ops.h"
 #include "usermessages.h"
 
 class CWeaponCSBase;
@@ -121,6 +122,8 @@ private:
 	CHandle<CCSPlayer> m_PlayerDamagerControlledBot;
 	CHandle<CCSPlayer> m_PlayerRecipientControlledBot;
 };
+
+typedef std::vector< std::unique_ptr< CDamageRecord > > DamageRecordList_t;
 
 // Message display history (CCSPlayer::m_iDisplayHistoryBits)
 // These bits are set when hint messages are displayed, and cleared at
@@ -357,7 +360,7 @@ public:
 
 	virtual void		TraceAttack( const CTakeDamageInfo &inputInfo, const Vector &vecDir, trace_t *ptr );
 
-	void FindMatchingWeaponsForTeamLoadout( const char *pchName, int nTeam, bool bMustBeTeamSpecific, CUtlVector< CEconItemView* > &matchingWeapons );
+	void FindMatchingWeaponsForTeamLoadout( const char *pchName, int nTeam, bool bMustBeTeamSpecific, std::vector< CEconItemView* > &matchingWeapons );
 	virtual CBaseEntity	*GiveNamedItem( const char *pchName, int iSubType = 0, CEconItemView *pScriptItem = nullptr, bool bForce = false ) OVERRIDE;
 
 	virtual bool		IsBeingGivenItem() const { return m_bIsBeingGivenItem; }
@@ -709,7 +712,7 @@ public:
 
 	// Called whenever this player fires a shot.
 	void NoteWeaponFired();
-	virtual bool WantsLagCompensationOnEntity( const CBaseEntity *pPlayer, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const;
+	virtual bool WantsLagCompensationOnEntity( const CBaseEntity *pPlayer, const CUserCmd *pCmd, const std::bitset<MAX_EDICTS> *pEntityTransmitBits ) const;
 
 	// training map - used to set hud element visibility via script
 	void SetMiniScoreHidden( bool bHidden ) { m_bHud_MiniScoreHidden = bHidden; }
@@ -942,9 +945,9 @@ public:
 	void AddBurnDamageDelt( int entityIndex);
 	int GetNumPlayersDamagedWithFire();
 
-	int GetNumFirearmsHeld() { return m_WeaponTypesHeld.Count(); }
-	int GetNumFirearmsUsed() { return m_WeaponTypesUsed.Count(); }
-	int GetNumFirearmsRanOutOfAmmo() { return m_WeaponTypesRunningOutOfAmmo.Count(); }
+	int GetNumFirearmsHeld() { return std::ssize( m_WeaponTypesHeld ); }
+	int GetNumFirearmsUsed() { return std::ssize( m_WeaponTypesUsed ); }
+	int GetNumFirearmsRanOutOfAmmo() { return std::ssize( m_WeaponTypesRunningOutOfAmmo ); }
 	bool DidPlayerEmptyAmmoForWeapon( CBaseCombatWeapon* pBaseWeapon );
 	void SetLastWeaponBeforeAutoSwitchToC4( CBaseCombatWeapon * weapon ){m_lastWeaponBeforeC4AutoSwitch = weapon;}
 	CBaseCombatWeapon* GetLastWeaponBeforeAutoSwitchToC4( void ){return m_lastWeaponBeforeC4AutoSwitch;}
@@ -1322,7 +1325,7 @@ public:
 
 	void StockPlayerAmmo( CBaseCombatWeapon *pNewWeapon = nullptr );
 
-	CUtlLinkedList< CDamageRecord *, int >& GetDamageList() {return m_DamageList;}
+	DamageRecordList_t& GetDamageList() {return m_DamageList;}
 	int GetNumAttackersFromDamageList( void );
 	int GetMostNumHitsDamageRecordFrom( CCSPlayer *pAttacker );
 
@@ -1333,7 +1336,7 @@ public:
 
 private:
 	//A unified list of recorded damage that includes giver and taker in each entry
-	CUtlLinkedList< CDamageRecord *, int >	m_DamageList;
+	DamageRecordList_t	m_DamageList;
 
 protected:
 	float m_flLastTHWarningTime;
@@ -1348,7 +1351,7 @@ private:
 	bool ShouldRunRateLimitedCommand( const CCommand &args );
 
 	// This lets us rate limit the commands the players can execute so they don't overflow things like reliable buffers.
-	CUtlDict<float,int>	m_RateLimitLastCommandTimes;
+	ks::idict<float>	m_RateLimitLastCommandTimes;
 
 	CNetworkVar(int, m_cycleLatch, [[= ks::reflect::Net{ .bits = 4, .flags = SPROP_UNSIGNED | SPROP_CHANGES_OFTEN } ]] );	// Every so often, we are going to transmit our cycle to the client to correct divergence caused by PVS changes
 	CountdownTimer m_cycleLatchTimer;
@@ -1369,16 +1372,16 @@ public:
 	int GetPercentageOfEnemyTeamKilled();
 
 	//List of times of recent kills to check for sprees
-	CUtlVector<float>			m_killTimes; 
+	std::vector< float >			m_killTimes; 
 
 	//List of all players killed this round
-	CUtlVector<CHandle<CCSPlayer> >		m_enemyPlayersKilledThisRound;
+	std::vector< CHandle<CCSPlayer> >		m_enemyPlayersKilledThisRound;
 
 	//List of weapons we have used to kill players with this round
-	CUtlVector<int>				m_killWeapons; 
+	std::vector< int >				m_killWeapons; 
 
 	//List of weapons we have used to kill players with this match
-	CUtlVector<int>				m_uniqueKillWeaponsMatch;
+	std::vector< int >				m_uniqueKillWeaponsMatch;
 	bool						m_bLastKillUsedUniqueWeaponMatch;
 
 	int m_NumEnemiesKilledThisSpawn;
@@ -1609,10 +1612,10 @@ private:
 
 
 	// [dwenger] adding tracking for which weapons this player has used in a round
-	CUtlVector<CSWeaponID> m_WeaponTypesUsed; 
-	CUtlVector<CSWeaponID> m_WeaponTypesHeld;
-	CUtlVector<CSWeaponID> m_WeaponTypesRunningOutOfAmmo; 
-	CUtlVector<int>		   m_BurnDamageDeltVec;
+	std::vector< CSWeaponID > m_WeaponTypesUsed; 
+	std::vector< CSWeaponID > m_WeaponTypesHeld;
+	std::vector< CSWeaponID > m_WeaponTypesRunningOutOfAmmo; 
+	std::vector< int >		   m_BurnDamageDeltVec;
 
 	CBaseCombatWeapon* m_lastWeaponBeforeC4AutoSwitch;
 

@@ -13,9 +13,6 @@
 #include "triggers.h"
 #include "gamerules.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar soundscape_debug( "soundscape_debug", "0", FCVAR_CHEAT, "When on, draws lines to all env_soundscape entities. Green lines show the active soundscape, red lines show soundscapes that aren't in range, and white lines show soundscapes that are in range, but not the active soundscape." );
 
 // ----------------------------------------------------------------------------- //
@@ -390,10 +387,10 @@ void CEnvSoundscapeTriggerable::DelegateStartTouch( CBaseEntity *pEnt )
 
 	// Just in case.. we shouldn't already be in the player's list because it should have 
 	// called DelegateEndTouch, but this seems to happen when they're noclipping.
-	pPlayer->m_hTriggerSoundscapeList.FindAndRemove( this );
+	ks::erase_first( pPlayer->m_hTriggerSoundscapeList, this );
 
 	// Add us to the player's list of soundscapes and 
-	pPlayer->m_hTriggerSoundscapeList.AddToHead( this );
+	pPlayer->m_hTriggerSoundscapeList.insert( pPlayer->m_hTriggerSoundscapeList.begin(), this );
 	WriteAudioParamsTo( pPlayer->GetAudioParams() );
 }
 
@@ -405,8 +402,8 @@ void CEnvSoundscapeTriggerable::DelegateEndTouch( CBaseEntity *pEnt )
 		return;
 
 	// Remove us from the ent's list of soundscapes.
-	pPlayer->m_hTriggerSoundscapeList.FindAndRemove( this );
-	while ( pPlayer->m_hTriggerSoundscapeList.Count() > 0 )
+	ks::erase_first( pPlayer->m_hTriggerSoundscapeList, this );
+	while ( !pPlayer->m_hTriggerSoundscapeList.empty() )
 	{
 		CEnvSoundscapeTriggerable *pSS = dynamic_cast< CEnvSoundscapeTriggerable* >( pPlayer->m_hTriggerSoundscapeList[0].Get() );
 		if ( pSS )
@@ -417,7 +414,7 @@ void CEnvSoundscapeTriggerable::DelegateEndTouch( CBaseEntity *pEnt )
 		}
 		else
 		{
-			pPlayer->m_hTriggerSoundscapeList.Remove( 0 );
+			pPlayer->m_hTriggerSoundscapeList.erase( pPlayer->m_hTriggerSoundscapeList.begin() + 0 );
 		}
 	}
 
@@ -456,7 +453,7 @@ private:
 	CHandle<CEnvSoundscapeTriggerable> m_hSoundscape;
 	[[= ks::reflect::Key{ .name = "soundscape" } ]] string_t m_SoundscapeName;
 
-	CUtlVector<CBasePlayerHandle> m_spectators; // spectators in our volume
+	std::vector< CBasePlayerHandle > m_spectators; // spectators in our volume
 };
 
 
@@ -511,9 +508,9 @@ void CTriggerSoundscape::PlayerUpdateThink()
 	int i;
 	SetNextThink( gpGlobals->curtime + 0.2 );
 
-	CUtlVector<CBasePlayerHandle> oldSpectators;
+	std::vector< CBasePlayerHandle > oldSpectators;
 	oldSpectators = m_spectators;
-	m_spectators.RemoveAll();
+	m_spectators.clear();
 
 	for ( i=1; i <= gpGlobals->maxClients; ++i )
 	{
@@ -528,23 +525,23 @@ void CTriggerSoundscape::PlayerUpdateThink()
 		// if the spectator is intersecting the trigger, track it, and start a touch if it is just starting to touch
 		if ( Intersects( player ) )
 		{
-			if ( !oldSpectators.HasElement( player ) )
+			if ( !ks::contains( oldSpectators, player ) )
 			{
 				StartTouch( player );
 			}
-			m_spectators.AddToTail( player );
+			m_spectators.push_back( player );
 		}
 	}
 
 	// check for spectators who are no longer intersecting
-	for ( i=0; i<oldSpectators.Count(); ++i )
+	for ( i=0; i<std::ssize( oldSpectators ); ++i )
 	{
 		CBasePlayer *player = oldSpectators[i];
 
 		if ( !player )
 			continue;
 
-		if ( !m_spectators.HasElement( player ) )
+		if ( !ks::contains( m_spectators, player ) )
 		{
 			EndTouch( player );
 		}

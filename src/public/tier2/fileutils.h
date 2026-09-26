@@ -18,6 +18,8 @@
 #endif
 
 #include "tier0/platform.h"
+#include <cstddef>
+#include <vector>
 
 // Builds a directory which is a subdirectory of the current mod
 void GetModSubdirectory( const char *pSubDir, char *pBuf, int nBufLen );
@@ -32,13 +34,13 @@ void ComputeModFilename( const char *pContentFileName, char *pBuf, size_t nBufLe
 void ComputeModContentFilename( const char *pGameFileName, char *pBuf, size_t nBufLen );
 
 // Finds all files matching the a name within a directory and its sub directories. Output entries are paths to found files (relative to and including szStartDirectory)
-void RecursiveFindFilesMatchingName( CUtlVector< CUtlString > *outFileList, const char* szStartDirectory, const char* szTargetFileName, const char *pathID );
+void RecursiveFindFilesMatchingName( std::vector< std::string > *outFileList, const char* szStartDirectory, const char* szTargetFileName, const char *pathID );
 
 // Builds a list of all files under a directory with a particular extension
-void AddFilesToList( CUtlVector< CUtlString > &list, const char *pDirectory, const char *pPath, const char *pExtension );
+void AddFilesToList( std::vector< std::string > &list, const char *pDirectory, const char *pPath, const char *pExtension );
 
 // Returns the search path as a list of paths
-void GetSearchPath( CUtlVector< CUtlString > &path, const char *pPathID );
+void GetSearchPath( std::vector< std::string > &path, const char *pPathID );
 
 // Given file name generate a full path using the following rules.
 // 1. if its full path already return
@@ -104,7 +106,7 @@ public:
 	}
 
 	// read every line of the file into a vector of strings
-	void ReadLines( CUtlStringList &sList, int nMaxLineLength = 2048 );
+	void ReadLines( std::vector< std::string > &sList, int nMaxLineLength = 2048 );
 
 	int Read( void* pOutput, int size )
 	{
@@ -174,7 +176,7 @@ public:
 		return g_pFullFileSystem->Size( m_FileHandle );
 	}
 
-	void ReadFile( CUtlBuffer &dataBuf );
+	std::vector< std::byte > ReadFile();
 };
 
 class COutputFile : public CBaseFile

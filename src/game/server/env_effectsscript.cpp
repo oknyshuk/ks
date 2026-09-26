@@ -16,9 +16,6 @@
 #include "eventlist.h"
 #include "npcevent.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 enum EffectType
 {
 	EFFECT_TYPE_TRAIL = 1,
@@ -124,7 +121,7 @@ private:
 	
 	[[= ks::reflect::Key{ .name = "scriptfile" } ]] string_t m_iszScriptName;
 		
-	CUtlVector< CEffectScriptElement > m_ScriptElements;
+	std::vector< CEffectScriptElement > m_ScriptElements;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -369,7 +366,7 @@ void CEnvEffectsScript::InputSetSequence( inputdata_t &inputdata )
 void CEnvEffectsScript::ParseScriptFile( void )
 {
 	int length = 0;
-	m_ScriptElements.RemoveAll();
+	m_ScriptElements.clear();
 	const char *pScriptName = GetScriptFile();
 
 	//Reset everything.
@@ -519,14 +516,14 @@ void CEnvEffectsScript::ParseNewEffect( void )
 		}
 	}
 
-	m_ScriptElements.AddToTail( NewElement );
+	m_ScriptElements.push_back( NewElement );
 }
 
 CEffectScriptElement *CEnvEffectsScript::GetScriptElementByName( const char *pName )
 {
-	for ( int i = 0; i < m_ScriptElements.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_ScriptElements ); i++ )
 	{
-		CEffectScriptElement *pCurrent = &m_ScriptElements.Element( i );
+		CEffectScriptElement *pCurrent = &m_ScriptElements[ i ];
 
 		if ( pCurrent && !Q_stricmp( pCurrent->m_szEffectName, pName ) ) 
 		{

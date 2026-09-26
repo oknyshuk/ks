@@ -12,6 +12,7 @@
 #include "view_shared.h"
 #include "c_cs_player.h"
 #include "tier2/renderutils.h"
+#include <ranges>
 
 #define FULL_FRAME_TEXTURE "_rt_FullFrameFB"
 
@@ -55,11 +56,11 @@ static void SetRenderTargetAndViewPort( ITexture *rt, int w, int h )
 
 void CGlowObjectManager::RenderGlowBoxes( int iPass, CMatRenderContextPtr &pRenderContext )
 {
-	for ( int n = m_GlowBoxDefinitions.Count() - 1; n >= 0 ; n-- )
+	for ( int n = std::ssize( m_GlowBoxDefinitions ) - 1; n >= 0 ; n-- )
 	{
 		if ( m_GlowBoxDefinitions[n].m_flTerminationTimeIndex < gpGlobals->curtime )
 		{
-			m_GlowBoxDefinitions.FastRemove(n);
+			ks::swap_remove( m_GlowBoxDefinitions, n );
 		}
 		else
 		{
@@ -67,7 +68,7 @@ void CGlowObjectManager::RenderGlowBoxes( int iPass, CMatRenderContextPtr &pRend
 			if ( flLifeLeft > 0.95 )
 				flLifeLeft = (0.05f - ( flLifeLeft - 0.95f )) / 0.05f; //fade in the first 5% of lifetime
 			else
-				flLifeLeft = MIN( flLifeLeft * 4.0f, 1.0f ); //fade out the last 25% of lifetime
+				flLifeLeft = std::min( flLifeLeft * 4.0f, 1.0f ); //fade out the last 25% of lifetime
 
 			m_GlowBoxDefinitions[n].m_colColor[3] = flLifeLeft * 255;
 			
@@ -100,10 +101,10 @@ void CGlowObjectManager::RenderGlowBoxes( int iPass, CMatRenderContextPtr &pRend
 
 // *** Keep in sync with matsys_interface.cpp, where the texture is declared ***
 // Resolution for glow target chosen to be the largest that we can fit in EDRAM after 720p color/depth textures.		
-#define GLOW_360_RT_WIDTH ( MIN( 1120, pSetup->width ) )
-#define GLOW_360_RT_HEIGHT ( MIN( 624, pSetup->height ) )
+#define GLOW_360_RT_WIDTH ( std::min( 1120, pSetup->width ) )
+#define GLOW_360_RT_HEIGHT ( std::min( 624, pSetup->height ) )
 
-void CGlowObjectManager::RenderGlowModels( const CViewSetup *pSetup, int nSplitScreenSlot, CMatRenderContextPtr &pRenderContext, CUtlVector<GlowObjectDefinition_t> &vecGlowObjects )
+void CGlowObjectManager::RenderGlowModels( const CViewSetup *pSetup, int nSplitScreenSlot, CMatRenderContextPtr &pRenderContext, std::vector< GlowObjectDefinition_t > &vecGlowObjects )
 {
 	//==========================================================================================//
 	// This renders solid pixels with the correct coloring for each object that needs the glow.	//
@@ -134,7 +135,7 @@ void CGlowObjectManager::RenderGlowModels( const CViewSetup *pSetup, int nSplitS
 	//==================//
 	// Draw the objects //
 	//==================//
-	for ( int i = 0; i < vecGlowObjects.Count(); ++ i )
+	for ( int i = 0; i < std::ssize( vecGlowObjects ); ++ i )
 	{
 		if ( vecGlowObjects[i].IsUnused() || !vecGlowObjects[i].ShouldDraw( nSplitScreenSlot ) || vecGlowObjects[i].m_nRenderStyle != GLOWRENDERSTYLE_DEFAULT )
 			continue;
@@ -205,7 +206,7 @@ void CGlowObjectManager::RenderGlowModels( const CViewSetup *pSetup, int nSplitS
 		// if set, cap cumulative glow alpha to a maximum value
 		if ( render->GetBlend() > 0 && vecGlowObjects[i].m_flGlowAlphaMax < 1.0f )
 		{
-			float flCappedAlpha = MIN( render->GetBlend(), vecGlowObjects[i].m_flGlowAlphaMax );
+			float flCappedAlpha = std::min( render->GetBlend(), vecGlowObjects[i].m_flGlowAlphaMax );
 			render->SetBlend( flCappedAlpha );
 			vGlowColor *= flCappedAlpha;
 		}
@@ -248,7 +249,7 @@ void CGlowObjectManager::RenderGlowModels( const CViewSetup *pSetup, int nSplitS
 		// dampen overdrive here. Do this at the end, otherwise our framerate may be low enough that we don't see the effect for even one frame
 		if ( vecGlowObjects[i].m_flGlowPulseOverdrive > 0 )
 		{
-			vecGlowObjects[i].m_flGlowPulseOverdrive -= MAX(0, ( vecGlowObjects[i].m_flGlowPulseOverdrive * ( gpGlobals->frametime / GLOW_PULSE_DURATION ) ) ); //return to default over 1/5th a second
+			vecGlowObjects[i].m_flGlowPulseOverdrive -= std::max<std::common_type_t<int, float>>(0, ( vecGlowObjects[i].m_flGlowPulseOverdrive * ( gpGlobals->frametime / GLOW_PULSE_DURATION ) ) ); //return to default over 1/5th a second
 		}
 
 	}
@@ -370,29 +371,29 @@ void CGlowObjectManager::ApplyEntityGlowEffects( const CViewSetup *pSetup, int n
 
 	// gather up special glow styles
 	
-	CUtlVector<GlowObjectDefinition_t> vecGlowObjectsRimGlow3DStyle;
-	vecGlowObjectsRimGlow3DStyle.RemoveAll();
+	std::vector< GlowObjectDefinition_t > vecGlowObjectsRimGlow3DStyle;
+	vecGlowObjectsRimGlow3DStyle.clear();
 	
-	CUtlVector<GlowObjectDefinition_t> vecGlowObjectsEdgeHighlightStyle;
-	vecGlowObjectsEdgeHighlightStyle.RemoveAll();
+	std::vector< GlowObjectDefinition_t > vecGlowObjectsEdgeHighlightStyle;
+	vecGlowObjectsEdgeHighlightStyle.clear();
 	
-	FOR_EACH_VEC_BACK( m_GlowObjectDefinitions, i )
+	for ( auto &glowObject : m_GlowObjectDefinitions | std::views::reverse )
 	{
-		if ( !m_GlowObjectDefinitions[i].IsUnused() && m_GlowObjectDefinitions[i].ShouldDraw( nSplitScreenSlot ) )
+		if ( !glowObject.IsUnused() && glowObject.ShouldDraw( nSplitScreenSlot ) )
 		{
-			if ( m_GlowObjectDefinitions[i].m_nRenderStyle == GLOWRENDERSTYLE_RIMGLOW3D )
+			if ( glowObject.m_nRenderStyle == GLOWRENDERSTYLE_RIMGLOW3D )
 			{
-				vecGlowObjectsRimGlow3DStyle.AddToTail( m_GlowObjectDefinitions[i] );
+				vecGlowObjectsRimGlow3DStyle.push_back( glowObject );
 			}
-			else if ( m_GlowObjectDefinitions[i].m_nRenderStyle == GLOWRENDERSTYLE_EDGE_HIGHLIGHT || m_GlowObjectDefinitions[i].m_nRenderStyle == GLOWRENDERSTYLE_EDGE_HIGHLIGHT_PULSE )
+			else if ( glowObject.m_nRenderStyle == GLOWRENDERSTYLE_EDGE_HIGHLIGHT || glowObject.m_nRenderStyle == GLOWRENDERSTYLE_EDGE_HIGHLIGHT_PULSE )
 			{
-				vecGlowObjectsEdgeHighlightStyle.AddToTail( m_GlowObjectDefinitions[i] );
+				vecGlowObjectsEdgeHighlightStyle.push_back( glowObject );
 			}
 		}
 	}
 
 
-	if ( vecGlowObjectsRimGlow3DStyle.Count() )
+	if ( !vecGlowObjectsRimGlow3DStyle.empty() )
 	{
 		//todo: expose pulse width and frequency parameters
 		float flPulse = 0.5f + 0.5f * sin( gpGlobals->curtime * 12.0f );
@@ -400,7 +401,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects( const CViewSetup *pSetup, int n
 		IMaterial *pMatRim = materials->FindMaterial( "dev/glow_rim3d", TEXTURE_GROUP_OTHER, true );
 		g_pStudioRender->ForcedMaterialOverride( pMatRim );
 
-		for ( int i = 0; i < vecGlowObjectsRimGlow3DStyle.Count(); ++ i )
+		for ( int i = 0; i < std::ssize( vecGlowObjectsRimGlow3DStyle ); ++ i )
 		{
 			if ( vecGlowObjectsRimGlow3DStyle[i].m_flGlowAlpha <= 0 )
 				continue;
@@ -429,7 +430,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects( const CViewSetup *pSetup, int n
 	
 	
 
-	if ( vecGlowObjectsEdgeHighlightStyle.Count() )
+	if ( !vecGlowObjectsEdgeHighlightStyle.empty() )
 	{
 		// render players into the fullscreen rt all white
 		// render in-world 3d imposter players into scene using screenspace UV lookup from fullscreen RT, use glow object alpha and colorize here.
@@ -460,9 +461,9 @@ void CGlowObjectManager::ApplyEntityGlowEffects( const CViewSetup *pSetup, int n
 		render->SetColorModulation( vecOverrideColor.Base() );
 
 		// draw players
-		FOR_EACH_VEC( vecGlowObjectsEdgeHighlightStyle, i )
+		for ( auto &glowObject : vecGlowObjectsEdgeHighlightStyle )
 		{		
-			vecGlowObjectsEdgeHighlightStyle[i].DrawModel();
+			glowObject.DrawModel();
 		}
 
 		g_pStudioRender->ForcedMaterialOverride( nullptr );
@@ -474,18 +475,18 @@ void CGlowObjectManager::ApplyEntityGlowEffects( const CViewSetup *pSetup, int n
 		g_pStudioRender->ForcedMaterialOverride( pMatTemp );
 
 		// draw players
-		FOR_EACH_VEC( vecGlowObjectsEdgeHighlightStyle, i )
+		for ( auto &glowObject : vecGlowObjectsEdgeHighlightStyle )
 		{
-			Vector vecTempColor = vecGlowObjectsEdgeHighlightStyle[i].m_vGlowColor * clamp( vecGlowObjectsEdgeHighlightStyle[i].m_flGlowAlpha, 0.0f, 1.0f ) * 1.4f; // boost a bit
+			Vector vecTempColor = glowObject.m_vGlowColor * clamp( glowObject.m_flGlowAlpha, 0.0f, 1.0f ) * 1.4f; // boost a bit
 
-			if ( vecGlowObjectsEdgeHighlightStyle[i].m_nRenderStyle == GLOWRENDERSTYLE_EDGE_HIGHLIGHT_PULSE )
+			if ( glowObject.m_nRenderStyle == GLOWRENDERSTYLE_EDGE_HIGHLIGHT_PULSE )
 			{
 				float flPulse = 1.5f + 0.5f * sin( gpGlobals->curtime * 16.0f );
 				vecTempColor *= (flPulse * 0.5f);
 			}
 
 			render->SetColorModulation( vecTempColor.Base() );
-			vecGlowObjectsEdgeHighlightStyle[i].DrawModel();
+			glowObject.DrawModel();
 		}
 
 		// restore the modulation from before
@@ -515,7 +516,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects( const CViewSetup *pSetup, int n
 
 	int iNumGlowObjects = 0;
 
-	for ( int i = 0; i < m_GlowObjectDefinitions.Count(); ++ i )
+	for ( int i = 0; i < std::ssize( m_GlowObjectDefinitions ); ++ i )
 	{
 		if ( m_GlowObjectDefinitions[i].IsUnused() || !m_GlowObjectDefinitions[i].ShouldDraw( nSplitScreenSlot ) || m_GlowObjectDefinitions[i].m_nRenderStyle != GLOWRENDERSTYLE_DEFAULT )
 			continue;
@@ -581,7 +582,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects( const CViewSetup *pSetup, int n
 	int iTempHealthBarRenderMaskIndex = 4;
 
 	// Need to do a 2nd pass to warm stencil for objects which are rendered only when occluded
-	for ( int i = 0; i < m_GlowObjectDefinitions.Count(); ++ i )
+	for ( int i = 0; i < std::ssize( m_GlowObjectDefinitions ); ++ i )
 	{
 		if ( m_GlowObjectDefinitions[i].IsUnused() || !m_GlowObjectDefinitions[i].ShouldDraw( nSplitScreenSlot ) || m_GlowObjectDefinitions[i].m_nRenderStyle != GLOWRENDERSTYLE_DEFAULT )
 			continue;
@@ -615,7 +616,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects( const CViewSetup *pSetup, int n
 	}
 
 	RenderGlowBoxes(GLOWBOX_PASS_STENCIL, pRenderContext);
-	iNumGlowObjects += m_GlowBoxDefinitions.Count();
+	iNumGlowObjects += std::ssize( m_GlowBoxDefinitions );
 
 	g_pStudioRender->ForcedMaterialOverride( nullptr );
 	render->SetBlend( 0.0f );
@@ -625,7 +626,7 @@ void CGlowObjectManager::ApplyEntityGlowEffects( const CViewSetup *pSetup, int n
 	IMaterial *pMatGlowHealthColor = nullptr;
 	pMatGlowHealthColor = materials->FindMaterial( "dev/glow_health_color", TEXTURE_GROUP_OTHER, true );
 
-	for ( int i = 0; i < m_GlowObjectDefinitions.Count(); ++ i )
+	for ( int i = 0; i < std::ssize( m_GlowObjectDefinitions ); ++ i )
 	{
 
 		if ( m_GlowObjectDefinitions[i].IsUnused() || !m_GlowObjectDefinitions[i].ShouldDraw( nSplitScreenSlot ) || m_GlowObjectDefinitions[i].m_nRenderStyle != GLOWRENDERSTYLE_DEFAULT )

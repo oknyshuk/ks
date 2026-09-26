@@ -12,9 +12,6 @@
 #include <ctype.h>
 #include "shared_util.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static char s_shared_token[ 1500 ];
 static char s_shared_quote = '\"';
 

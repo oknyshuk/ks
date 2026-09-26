@@ -19,9 +19,7 @@
 #include "filesystem_init.h"
 #include <algorithm>
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 
 //-----------------------------------------------------------------------------
 // constructor, destructor
@@ -32,7 +30,7 @@ extern ILoggingListener *g_pDefaultLoggingListener;
 //-----------------------------------------------------------------------------
 // constructor, destructor
 //-----------------------------------------------------------------------------
-CAppSystemGroup::CAppSystemGroup( CAppSystemGroup *pAppSystemParent ) : m_SystemDict(false, 0, 16)
+CAppSystemGroup::CAppSystemGroup( CAppSystemGroup *pAppSystemParent )
 {
 	m_pParentAppSystem = pAppSystemParent;
 }
@@ -58,7 +56,7 @@ AppModule_t CAppSystemGroup::LoadModule( const char *pDLLName )
 	Q_StripExtension( pDLLName, pModuleName, nLen );
 
 	// See if we already loaded it...
-	for ( int i = m_Modules.Count(); --i >= 0; ) 
+	for ( int i = std::ssize( m_Modules ); --i >= 0; ) 
 	{
 		if ( m_Modules[i].m_pModuleName )
 		{
@@ -74,10 +72,10 @@ AppModule_t CAppSystemGroup::LoadModule( const char *pDLLName )
 		return APP_MODULE_INVALID;
 	}
 
-	int nIndex = m_Modules.AddToTail();
+	int nIndex = std::ssize( m_Modules ); m_Modules.emplace_back();
 	m_Modules[nIndex].m_pModule = pSysModule;
 	m_Modules[nIndex].m_Factory = 0;
-	m_Modules[nIndex].m_pModuleName = (char*)malloc( nLen );
+	m_Modules[nIndex].m_pModuleName = (char*)MemAlloc_Alloc( nLen );
 	Q_strncpy( m_Modules[nIndex].m_pModuleName, pModuleName, nLen );
 
 	return nIndex;
@@ -92,7 +90,7 @@ int CAppSystemGroup::ReloadModule( const char * pDLLName )
 	Q_StripExtension( pDLLName, pModuleName, nLen );
 
 	// See if we already loaded it...
-	for ( int i = m_Modules.Count(); --i >= 0; ) 
+	for ( int i = std::ssize( m_Modules ); --i >= 0; ) 
 	{
 		Module_t &module = m_Modules[i];
 		if ( module.m_pModuleName && !Q_stricmp( pModuleName, module.m_pModuleName ) )
@@ -131,7 +129,7 @@ int CAppSystemGroup::ReloadModule( const char * pDLLName )
 	}
 	
 	Warning( "No such module: '%s' in appsystem @%p. Dumping available modules:\n", pModuleName, this );
-	for ( int i = 0; i < m_Modules.Count(); ++i ) 
+	for ( int i = 0; i < std::ssize( m_Modules ); ++i ) 
 	{
 		Module_t &module = m_Modules[i];
 		Msg("%25s %p %p\n", module.m_pModuleName, (void*)module.m_Factory, module.m_pModule );
@@ -150,7 +148,7 @@ AppModule_t CAppSystemGroup::LoadModule( CreateInterfaceFn factory )
 	}
 
 	// See if we already loaded it...
-	for ( int i = m_Modules.Count(); --i >= 0; ) 
+	for ( int i = std::ssize( m_Modules ); --i >= 0; ) 
 	{
 		if ( m_Modules[i].m_Factory )
 		{
@@ -159,7 +157,7 @@ AppModule_t CAppSystemGroup::LoadModule( CreateInterfaceFn factory )
 		}
 	}
 
-	int nIndex = m_Modules.AddToTail();
+	int nIndex = std::ssize( m_Modules ); m_Modules.emplace_back();
 	m_Modules[nIndex].m_pModule = nullptr;
 	m_Modules[nIndex].m_Factory = factory;
 	m_Modules[nIndex].m_pModuleName = nullptr; 
@@ -170,7 +168,7 @@ void CAppSystemGroup::UnloadAllModules()
 {
 	// NOTE: Iterate in reverse order so they are unloaded in opposite order
 	// from loading
-	for (int i = m_Modules.Count(); --i >= 0; )
+	for (int i = std::ssize( m_Modules ); --i >= 0; )
 	{
 		if ( m_Modules[i].m_pModule )
 		{
@@ -178,10 +176,10 @@ void CAppSystemGroup::UnloadAllModules()
 		}
 		if ( m_Modules[i].m_pModuleName )
 		{
-			free( m_Modules[i].m_pModuleName );
+			g_pMemAlloc->Free( m_Modules[i].m_pModuleName );
 		}
 	}
-	m_Modules.RemoveAll();
+	m_Modules.clear();
 }
 
 
@@ -193,14 +191,14 @@ IAppSystem *CAppSystemGroup::AddSystem( AppModule_t module, const char *pInterfa
 	if (module == APP_MODULE_INVALID)
 		return nullptr;
 
-	int nFoundIndex = m_SystemDict.Find( pInterfaceName );
-	if ( nFoundIndex != m_SystemDict.InvalidIndex() )
+	auto it = m_SystemDict.find( pInterfaceName );
+	if ( it != m_SystemDict.end() )
 	{
 		Warning("AppFramework : Attempted to add two systems with the same interface name %s!\n", pInterfaceName );
-		return m_Systems[ m_SystemDict[nFoundIndex] ];
+		return m_Systems[ it->second ];
 	}
 
-	Assert( (module >= 0) && (module < m_Modules.Count()) );
+	Assert( (module >= 0) && (module < std::ssize( m_Modules )) );
 	CreateInterfaceFn pFactory = m_Modules[module].m_pModule ? Sys_GetFactory( m_Modules[module].m_pModule ) : m_Modules[module].m_Factory;
 
 	int retval;
@@ -213,11 +211,11 @@ IAppSystem *CAppSystemGroup::AddSystem( AppModule_t module, const char *pInterfa
 
 	IAppSystem *pAppSystem = static_cast<IAppSystem*>(pSystem);
 	
-	int sysIndex = m_Systems.AddToTail( pAppSystem );
+	int sysIndex = std::ssize( m_Systems ); m_Systems.push_back( pAppSystem );
 
 	// Inserting into the dict will help us do named lookup later
 	MEM_ALLOC_CREDIT();
-	m_SystemDict.Insert( pInterfaceName, sysIndex );
+	m_SystemDict.emplace( pInterfaceName, sysIndex );
 	return pAppSystem;
 }
 
@@ -248,12 +246,12 @@ void CAppSystemGroup::ReportStartupFailure( int nErrorStage, int nSysIndex )
 	}
 
 	const char *pszSystemName = "(Unknown)";
-	for ( int i = m_SystemDict.First(); i != m_SystemDict.InvalidIndex(); i = m_SystemDict.Next( i ) )
+	for ( auto &[name, sysIndex] : m_SystemDict )
 	{
-		if ( m_SystemDict[ i ] != nSysIndex )
+		if ( sysIndex != nSysIndex )
 			continue;
 
-		pszSystemName = m_SystemDict.GetElementName( i );
+		pszSystemName = name.c_str();
 		break;
 	}
 		 
@@ -266,11 +264,12 @@ void CAppSystemGroup::AddSystem( IAppSystem *pAppSystem, const char *pInterfaceN
 	if ( !pAppSystem )
 		return;
 
-	int sysIndex = m_Systems.AddToTail( pAppSystem );
+	int sysIndex = std::ssize( m_Systems ); m_Systems.push_back( pAppSystem );
 
 	// Inserting into the dict will help us do named lookup later
 	MEM_ALLOC_CREDIT();
-	m_SystemDict.Insert( pInterfaceName, sysIndex );
+	// Keep the first system of a name, as the module overload does.
+	m_SystemDict.emplace( pInterfaceName, sysIndex );
 }
 
 void CAppSystemGroup::RemoveAllSystems()
@@ -279,8 +278,8 @@ void CAppSystemGroup::RemoveAllSystems()
 	// how the allocation has happened. We could add a deallocation method
 	// to the code in interface.h; although when the modules are unloaded
 	// the deallocation will happen anyways
-	m_Systems.RemoveAll();
-	m_SystemDict.RemoveAll();
+	m_Systems.clear();
+	m_SystemDict.clear();
 }
 
 
@@ -310,9 +309,8 @@ bool CAppSystemGroup::AddSystems( AppSystemInfo_t *pSystemList )
 //-----------------------------------------------------------------------------
 void *CAppSystemGroup::FindSystem( const char *pSystemName )
 {
-	unsigned short i = m_SystemDict.Find( pSystemName );
-	if (i != m_SystemDict.InvalidIndex())
-		return m_Systems[m_SystemDict[i]];
+	if ( int *pSysIndex = ks::find_ptr( m_SystemDict, pSystemName ) )
+		return m_Systems[*pSysIndex];
 
 	// If it's not an interface we know about, it could be an older
 	// version of an interface, or maybe something implemented by
@@ -320,15 +318,15 @@ void *CAppSystemGroup::FindSystem( const char *pSystemName )
 
 	// QUESTION: What order should we iterate this in?
 	// It controls who wins if multiple ones implement the same interface
- 	for ( i = 0; i < m_Systems.Count(); ++i )
+ 	for ( int i = 0; i < std::ssize( m_Systems ); ++i )
 	{
 		void *pInterface = m_Systems[i]->QueryInterface( pSystemName );
 		if (pInterface)
 			return pInterface;
 	}
 
-	int nExternalCount = m_NonAppSystemFactories.Count();
-	for ( i = 0; i < nExternalCount; ++i )
+	int nExternalCount = std::ssize( m_NonAppSystemFactories );
+	for ( int i = 0; i < nExternalCount; ++i )
 	{
 		void *pInterface = m_NonAppSystemFactories[i]( pSystemName, nullptr );
 		if (pInterface)
@@ -352,7 +350,7 @@ void *CAppSystemGroup::FindSystem( const char *pSystemName )
 //-----------------------------------------------------------------------------
 void CAppSystemGroup::AddNonAppSystemFactory( CreateInterfaceFn fn )
 {
-	m_NonAppSystemFactories.AddToTail( fn );
+	m_NonAppSystemFactories.push_back( fn );
 }
 
 
@@ -361,7 +359,7 @@ void CAppSystemGroup::AddNonAppSystemFactory( CreateInterfaceFn fn )
 //-----------------------------------------------------------------------------
 void CAppSystemGroup::RemoveNonAppSystemFactory( CreateInterfaceFn fn )
 {
-	m_NonAppSystemFactories.FindAndRemove( fn );
+	ks::erase_first( m_NonAppSystemFactories, fn );
 }
 
 
@@ -371,7 +369,7 @@ void CAppSystemGroup::RemoveNonAppSystemFactory( CreateInterfaceFn fn )
 void CAppSystemGroup::ReconnectSystems( const char *pInterfaceName )
 {
 	// Let the libraries regrab the specified interface
-	for (int i = 0; i < m_Systems.Count(); ++i )
+	for (int i = 0; i < std::ssize( m_Systems ); ++i )
 	{
 		IAppSystem *pSystem = m_Systems[i];
 		pSystem->Reconnect( GetFactory(), pInterfaceName );
@@ -401,34 +399,35 @@ void CAppSystemGroup::ComputeDependencies( LibraryDependencies_t &depend )
 
 		// If i depends on j, then i depends on what j depends on
 		// Add secondary dependencies to i. We stop when no dependencies are added
-		int nCount = depend.GetNumStrings();
+		int nCount = depend.Count();
 		for ( int i = 0; i < nCount; ++i )
 		{
-			int nDependentCount = depend[i].GetNumStrings();
+			int nDependentCount = std::ssize( depend.m_Deps[i] );
 			for ( int j = 0; j < nDependentCount; ++j )
 			{
-				int nIndex = depend.Find( depend[i].String( j ) );
-				if ( nIndex == UTL_INVAL_SYMBOL )
+				int nIndex = depend.Find( depend.m_Deps[i][j].c_str() );
+				if ( nIndex < 0 )
 					continue;
 
-				int nSecondaryDepCount = depend[nIndex].GetNumStrings();
+				int nSecondaryDepCount = std::ssize( depend.m_Deps[nIndex] );
 				for ( int k = 0; k < nSecondaryDepCount; ++k )
 				{
 					// Don't bother if we already contain the secondary dependency
-					const char *pSecondaryDependency = depend[nIndex].String( k );
-					if ( depend[i].Find( pSecondaryDependency ) != UTL_INVAL_SYMBOL )
+					// Only added to m_Deps[i] when nIndex != i, so this stays valid
+					const char *pSecondaryDependency = depend.m_Deps[nIndex][k].c_str();
+					if ( depend.DependsOn( i, pSecondaryDependency ) )
 						continue;
 
 					// Check for circular dependency
-					if ( !Q_stricmp( pSecondaryDependency, depend.String( i ) ) )
+					if ( !Q_stricmp( pSecondaryDependency, depend.m_Names[i].c_str() ) )
 					{
 						Warning( "Encountered a circular dependency with library %s!\n", pSecondaryDependency );
 						continue;
 					}
 
 					bDone = false;
-					depend[i].AddString( pSecondaryDependency );
-					nDependentCount = depend[i].GetNumStrings();
+					depend.AddDependency( i, pSecondaryDependency );
+					nDependentCount = std::ssize( depend.m_Deps[i] );
 				}
 			}
 		}
@@ -442,17 +441,16 @@ void CAppSystemGroup::ComputeDependencies( LibraryDependencies_t &depend )
 CAppSystemGroup::LibraryDependencies_t *CAppSystemGroup::sm_pSortDependencies;
 bool CAppSystemGroup::SortLessFunc( const int &left, const int &right )
 {
-	const char *pLeftInterface = sm_pSortDependencies->String( left );
-	const char *pRightInterface = sm_pSortDependencies->String( right );
-	bool bRightDependsOnLeft = ( (*sm_pSortDependencies)[pRightInterface].Find( pLeftInterface ) != UTL_INVAL_SYMBOL );
+	const char *pLeftInterface = sm_pSortDependencies->m_Names[left].c_str();
+	bool bRightDependsOnLeft = sm_pSortDependencies->DependsOn( right, pLeftInterface );
 	return ( bRightDependsOnLeft );
 }
 
 void CAppSystemGroup::SortDependentLibraries( LibraryDependencies_t &depend )
 {
-	int nCount = depend.GetNumStrings();
+	int nCount = depend.Count();
 
-	int *pIndices = (int*)stackalloc( depend.GetNumStrings() * sizeof(int) );
+	int *pIndices = (int*)stackalloc( nCount * sizeof(int) );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		pIndices[i] = i;
@@ -496,36 +494,34 @@ void CAppSystemGroup::SortDependentLibraries( LibraryDependencies_t &depend )
 			if ( nRight > nLeft )
 				continue;
 
-			const char *pLeftInterface = depend.String( nLeft );
-			const char *pRightInterface = depend.String( nRight );
-			bool bRightDependsOnLeft = ( depend[pRightInterface].Find( pLeftInterface ) != UTL_INVAL_SYMBOL );
+			const char *pLeftInterface = depend.m_Names[nLeft].c_str();
+			bool bRightDependsOnLeft = depend.DependsOn( nRight, pLeftInterface );
 			if ( bRightDependsOnLeft )
 				continue;
-			Assert ( UTL_INVAL_SYMBOL == depend[pRightInterface].Find( pLeftInterface ) );
-			V_swap( pIndices[i], pIndices[i-1] );
+			std::swap( pIndices[i], pIndices[i-1] );
 			bDone = false;
 		}
 	}
 
 	// Reorder appsystem list + dictionary indexing
-	Assert( m_Systems.Count() == nCount );
+	Assert( std::ssize( m_Systems ) == nCount );
 	int nTempSize = nCount * sizeof(IAppSystem*);
 	IAppSystem **pTemp = (IAppSystem**)stackalloc( nTempSize );
-	memcpy( pTemp, m_Systems.Base(), nTempSize );
+	memcpy( pTemp, m_Systems.data(), nTempSize );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		m_Systems[i] = pTemp[ pIndices[i] ];
 	}
 								    
 	// Remap system indices
-	for ( uint16 i = m_SystemDict.First(); i != m_SystemDict.InvalidIndex(); i = m_SystemDict.Next( i ) )
+	for ( auto &[name, sysIndex] : m_SystemDict )
 	{
 		int j = 0;
 		for ( ; j < nCount; ++j )
 		{
-			if ( pIndices[j] == m_SystemDict[i] )
+			if ( pIndices[j] == sysIndex )
 			{
-				m_SystemDict[i] = j;
+				sysIndex = j;
 				break;
 			}
 		}
@@ -542,10 +538,10 @@ void CAppSystemGroup::SortDependentLibraries( LibraryDependencies_t &depend )
 //-----------------------------------------------------------------------------
 const char *CAppSystemGroup::FindSystemName( int nIndex )
 {
-	for ( uint16 i = m_SystemDict.First(); i != m_SystemDict.InvalidIndex(); i = m_SystemDict.Next( i ) )
+	for ( auto &[name, sysIndex] : m_SystemDict )
 	{
-		if ( m_SystemDict[i] == nIndex )
-			return m_SystemDict.GetElementName( i );
+		if ( sysIndex == nIndex )
+			return name.c_str();
 	}
 	return nullptr;
 }
@@ -559,11 +555,11 @@ bool CAppSystemGroup::LoadDependentSystems()
 	LibraryDependencies_t dependencies;
 
 	// First, load dependencies.
-	for ( int i = 0; i < m_Systems.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_Systems ); ++i )
 	{
 		IAppSystem *pSystem = m_Systems[i];
 		const char *pInterfaceName = FindSystemName( i );
-		dependencies.AddString( pInterfaceName );
+		int nDepIndex = dependencies.AddString( pInterfaceName );
 
 		const AppSystemInfo_t *pDependencies = pSystem->GetDependencies();
 		if ( !pDependencies )
@@ -571,7 +567,7 @@ bool CAppSystemGroup::LoadDependentSystems()
 
 		for ( ; pDependencies->m_pInterfaceName && pDependencies->m_pInterfaceName[0]; ++pDependencies )
 		{
-			dependencies[ pInterfaceName ].AddString( pDependencies->m_pInterfaceName );
+			dependencies.AddDependency( nDepIndex, pDependencies->m_pInterfaceName );
 
 			CreateInterfaceFn factory = GetFactory();
 			if ( factory( pDependencies->m_pInterfaceName, nullptr ) ) 
@@ -599,7 +595,7 @@ bool CAppSystemGroup::LoadDependentSystems()
 bool CAppSystemGroup::ConnectSystems()
 {
 	// Let the libraries grab any other interfaces they may need
-	for (int i = 0; i < m_Systems.Count(); ++i )
+	for (int i = 0; i < std::ssize( m_Systems ); ++i )
 	{
 		IAppSystem *pSystem = m_Systems[i];
 		if ( !pSystem->Connect( GetFactory() ) )
@@ -615,7 +611,7 @@ bool CAppSystemGroup::ConnectSystems()
 void CAppSystemGroup::DisconnectSystems()
 {
 	// Disconnect in reverse order of connection
-	for (int i = m_Systems.Count(); --i >= 0; )
+	for (int i = std::ssize( m_Systems ); --i >= 0; )
 	{
 		m_Systems[i]->Disconnect();
 	}
@@ -627,7 +623,7 @@ void CAppSystemGroup::DisconnectSystems()
 //-----------------------------------------------------------------------------
 InitReturnVal_t CAppSystemGroup::InitSystems()
 {
-	for (int nSystemsInitialized = 0; nSystemsInitialized < m_Systems.Count(); ++nSystemsInitialized )
+	for (int nSystemsInitialized = 0; nSystemsInitialized < std::ssize( m_Systems ); ++nSystemsInitialized )
 	{
 		InitReturnVal_t nRetVal = m_Systems[nSystemsInitialized]->Init();
 		if ( nRetVal != INIT_OK )
@@ -647,7 +643,7 @@ InitReturnVal_t CAppSystemGroup::InitSystems()
 void CAppSystemGroup::ShutdownSystems()
 {
 	// Shutdown in reverse order of initialization
-	for (int i = m_Systems.Count(); --i >= 0; )
+	for (int i = std::ssize( m_Systems ); --i >= 0; )
 	{
 		m_Systems[i]->Shutdown();
 	}

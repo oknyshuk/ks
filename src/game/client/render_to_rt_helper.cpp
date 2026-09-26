@@ -9,9 +9,7 @@
 #include "tier2/renderutils.h"
 #include "materialsystem/MaterialSystemUtil.h"
 #include "renderparm.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
+#include "tier1/vector_ops.h"
 
 // uncomment these to write out VTFs of the inventory icons with no lighting to be used for the "default icon images"
 //#define WRITE_OUT_VTF
@@ -122,7 +120,7 @@ RenderToRTData_t *CRenderToRTHelper::CreateRenderToRTData( IRenderToRTHelperObje
 	SetIdentityMatrix( pRenderToRTData->m_rootToWorld );
 	pRenderToRTData->m_stage = RENDER_TO_RT_STAGE_CREATED;
 
-	m_objectsToRender.AddToTail( pRenderToRTData );
+	m_objectsToRender.push_back( pRenderToRTData );
 	
 	return pRenderToRTData;
 }
@@ -144,7 +142,7 @@ void CRenderToRTHelper::DestroyRenderToRTData( RenderToRTData_t *pRenderToRTData
 
 	pRenderToRTData->m_stage = RENDER_TO_RT_STAGE_UNDEFINED;
 
-	m_objectsToRender.FindAndRemove( pRenderToRTData );
+	ks::erase_first( m_objectsToRender, pRenderToRTData );
 	delete pRenderToRTData;
 }
 
@@ -180,17 +178,15 @@ bool CRenderToRTHelper::Process()
 {
 	bool bDidWork = false;
 
-	if ( !m_pCurrentObjectToRender && m_objectsToRender.Count() > 0 )
+	if ( !m_pCurrentObjectToRender && !m_objectsToRender.empty() )
 	{
-		int nIndex = m_objectsToRender.Head();
-		while ( m_objectsToRender.IsValidIndex( nIndex ) )
+		for ( RenderToRTData_t *pData : m_objectsToRender )
 		{
-			if ( m_objectsToRender.Element( nIndex )->m_stage == RENDER_TO_RT_STAGE_STARTED )
+			if ( pData->m_stage == RENDER_TO_RT_STAGE_STARTED )
 			{
-				m_pCurrentObjectToRender = m_objectsToRender.Element( nIndex );
+				m_pCurrentObjectToRender = pData;
 				break;
 			}
-			nIndex = m_objectsToRender.Next( nIndex );
 		}
 	}
 
@@ -272,7 +268,7 @@ bool CRenderToRTHelper::Process()
 
 #ifdef WRITE_OUT_ICON_VTFS
 			static int s_nIconNumber = 0;
-			CUtlBuffer buf;
+			ks::byte_writer buf;
 			m_pCurrentObjectToRender->m_pResultVTF->Serialize(buf);
 
 			char szTextureName[MAX_PATH];
@@ -282,7 +278,7 @@ bool CRenderToRTHelper::Process()
 
 			if ( f != FILESYSTEM_INVALID_HANDLE )
 			{
-				g_pFullFileSystem->Write( buf.Base(), buf.TellMaxPut(), f );
+				g_pFullFileSystem->Write( buf.data(), buf.size(), f );
 				g_pFullFileSystem->Close(f);
 			}
 #endif

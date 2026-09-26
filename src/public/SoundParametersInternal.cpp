@@ -14,9 +14,7 @@
 #include "soundchars.h"
 #include "keyvalues.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 struct SoundChannels
 {
 	int			channel;
@@ -365,9 +363,9 @@ CSoundParametersInternal::CSoundParametersInternal( const CSoundParametersIntern
 CSoundParametersInternal::~CSoundParametersInternal()
 {
 	if ( m_nSoundNames > 1 )
-		free(m_pSoundNames );
+		g_pMemAlloc->Free(m_pSoundNames );
 	if ( m_nConvertedNames > 1 )
-		free( m_pConvertedNames);
+		g_pMemAlloc->Free( m_pConvertedNames);
 
 	if ( m_pOperatorsKV )
 	{
@@ -396,9 +394,9 @@ void CSoundParametersInternal::SetOperatorsKV( KeyValues *src )
 void CSoundParametersInternal::CopyFrom( const CSoundParametersInternal& src )
 {
 	if ( m_nSoundNames > 1 )
-		free(m_pSoundNames);
+		g_pMemAlloc->Free(m_pSoundNames);
 	if ( m_nConvertedNames > 1 )
-		free(m_pConvertedNames);
+		g_pMemAlloc->Free(m_pConvertedNames);
 
 	channel = src.channel;
 	volume = src.volume;
@@ -414,7 +412,7 @@ void CSoundParametersInternal::CopyFrom( const CSoundParametersInternal& src )
 	{
 		if ( m_nSoundNames > 1 )
 		{
-			m_pSoundNames = (SoundFile*)malloc( sizeof(SoundFile)*m_nSoundNames);
+			m_pSoundNames = (SoundFile*)MemAlloc_Alloc( sizeof(SoundFile)*m_nSoundNames);
 			memcpy( m_pSoundNames, src.m_pSoundNames, m_nSoundNames * sizeof(SoundFile) );
 		}
 		else
@@ -432,7 +430,7 @@ void CSoundParametersInternal::CopyFrom( const CSoundParametersInternal& src )
 	{
 		if ( m_nConvertedNames > 1 )
 		{
-			m_pConvertedNames = (SoundFile*)malloc( sizeof(SoundFile)*m_nConvertedNames);
+			m_pConvertedNames = (SoundFile*)MemAlloc_Alloc( sizeof(SoundFile)*m_nConvertedNames);
 			memcpy( m_pConvertedNames, src.m_pConvertedNames, m_nConvertedNames * sizeof(SoundFile) );
 		}
 		else
@@ -610,7 +608,7 @@ void CSoundParametersInternal::AddToTail( SoundFile **pDest, uint16 *pDestCount,
 			*pDest = nullptr;
 		}
 
-		*pDest = (SoundFile *)realloc( *pDest, (*pDestCount) * sizeof(SoundFile) );
+		*pDest = (SoundFile *)g_pMemAlloc->Realloc( *pDest, (*pDestCount) * sizeof(SoundFile) );
 		(*pDest)[ *pDestCount - 1 ] = source;
 
 		if ( *pDestCount == 2 )

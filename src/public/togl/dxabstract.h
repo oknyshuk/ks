@@ -14,12 +14,10 @@
 
 #include "tier0/platform.h"
 #include "tier0/dbg.h"
-#include "tier1/utlmap.h"
 #include "tier1/utlvector.h"
 
 
-typedef class CUtlMemory<D3DMATRIX> CD3DMATRIXAllocator;
-typedef class CUtlVector<D3DMATRIX, CD3DMATRIXAllocator> CD3DMATRIXStack;
+typedef std::vector< D3DMATRIX > CD3DMATRIXStack;
 
 struct TOGL_CLASS ID3DXMatrixStack
 {

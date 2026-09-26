@@ -12,9 +12,6 @@
 
 #include "steam/isteamuserstats.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static ConVar cl_titledataversionblock1( "cl_titledataversionblock1", "14", FCVAR_DEVELOPMENTONLY, "stats for console title data block1 i/o version." );
 static ConVar cl_titledataversionblock2( "cl_titledataversionblock2", "8", FCVAR_DEVELOPMENTONLY, "stats for console title data block2 i/o version." );
 static ConVar cl_titledataversionblock3( "cl_titledataversionblock3", "48", FCVAR_DEVELOPMENTONLY, "stats for console title data block3 i/o version." );
@@ -26,11 +23,11 @@ static TitleDataFieldsDescription_t const * PrepareTitleDataStorageDescription()
 #define TD_ENTRY( szName, nTD, eDataType, numBytesOffset ) \
 	{ \
 	TitleDataFieldsDescription_t aTDFD = { szName, TitleDataFieldsDescription_t::nTD, TitleDataFieldsDescription_t::eDataType, numBytesOffset }; \
-	s_tdfd.AddToTail( aTDFD ); \
+	s_tdfd.push_back( aTDFD ); \
 }
 
 
-	static CUtlVector< TitleDataFieldsDescription_t > s_tdfd;
+	static std::vector< TitleDataFieldsDescription_t > s_tdfd;
 
 
 
@@ -41,7 +38,7 @@ static TitleDataFieldsDescription_t const * PrepareTitleDataStorageDescription()
 #undef TD_ENTRY
 
 
-	return s_tdfd.Base();
+	return s_tdfd.data();
 }
 
 TitleDataFieldsDescription_t const * CMatchTitle::DescribeTitleDataStorage()

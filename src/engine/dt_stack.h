@@ -9,6 +9,7 @@
 #define DATATABLE_STACK_H
 
 
+#include <span>
 #include "dt.h"
 #include "dt_recv_decoder.h"
 
@@ -110,41 +111,34 @@ inline int CDatatableStack::GetObjectID() const
 }
 
 
-// This can be used IF you called Init() with true for bExplicitRoutes.
-// It is faster to use this route if you only are going to ask for a couple props.
-// If you're going to ask for all the props, then you shouldn't use the "explicit" route.
+// "Not routed yet" marker for explicit routes; must match Init's fill.
+inline unsigned char *UnroutedProxy()
+{
+	return reinterpret_cast< unsigned char * >( ~uintptr_t{ 0 } );
+}
+
+// For Init( true, ... ): proxies are called lazily, along the current prop's path only.
 template< class DTStack, class ProxyCaller >
 inline unsigned char* UpdateRoutesExplicit_Template( DTStack *pStack, ProxyCaller *caller )
 {
-	// Early out.
 	unsigned short iPropProxyIndex = pStack->m_pPrecalc->m_PropProxyIndices[pStack->m_iCurProp];
 	unsigned char **pTest = &pStack->m_pProxies[iPropProxyIndex];
-	if ( *pTest != (unsigned char*)0xFFFFFFFF )
+	if ( *pTest != UnroutedProxy() )
 		return *pTest;
 	
-	// Ok.. setup this proxy.
 	unsigned char *pStructBase = pStack->m_pStructBase;
 	
 	CSendTablePrecalc::CProxyPath &proxyPath = pStack->m_pPrecalc->m_ProxyPaths[iPropProxyIndex];
-	for ( unsigned short i=0; i < proxyPath.m_nEntries; i++ )
+	for ( unsigned short i=0; i < proxyPath.m_nEntries && pStructBase; i++ )
 	{
 		CSendTablePrecalc::CProxyPathEntry *pEntry = &pStack->m_pPrecalc->m_ProxyPathEntries[proxyPath.m_iFirstEntry + i];
-		int iProxy = pEntry->m_iProxy;
-		
-		if ( pStack->m_pProxies[iProxy] == (unsigned char*)0xFFFFFFFF )
-		{
-			pStack->m_pProxies[iProxy] = ProxyCaller::CallProxy( pStack, pStructBase, pEntry->m_iDatatableProp );
-			if ( !pStack->m_pProxies[iProxy] )
-			{
-				*pTest = nullptr;
-				pStructBase = nullptr;
-				break;
-			}			
-		}
-		
-		pStructBase = pStack->m_pProxies[iProxy];
+		unsigned char *&slot = pStack->m_pProxies[pEntry->m_iProxy];
+		if ( slot == UnroutedProxy() )
+			slot = ProxyCaller::CallProxy( pStack, pStructBase, pEntry->m_iDatatableProp );
+		pStructBase = slot;
 	}
 	
+	*pTest = pStructBase;
 	return pStructBase;
 }
 
@@ -205,6 +199,8 @@ public:
 		static inline unsigned char* CallProxy( CClientDatatableStack *pStack, unsigned char *pStructBase, unsigned short iDatatableProp )
 		{
 			const RecvProp *pProp = pStack->m_pDecoder->GetDatatableProp( iDatatableProp );
+			if ( !pProp )
+				return nullptr;	// unmatched (demo) table
 
 			void *pVal = nullptr;
 			pProp->GetDataTableProxyFn()( 
@@ -233,11 +229,11 @@ public:
 class CServerDatatableStack : public CDatatableStack
 {
 public:
-						CServerDatatableStack( CSendTablePrecalc *pPrecalc, unsigned char *pStructBase, int objectID, CUtlMemory< CSendProxyRecipients > *pRecipients = nullptr ) :
+						CServerDatatableStack( CSendTablePrecalc *pPrecalc, unsigned char *pStructBase, int objectID, std::span< CSendProxyRecipients > recipients = {} ) :
 							CDatatableStack( pPrecalc, pStructBase, objectID )
 						{
 							m_pPrecalc = pPrecalc;
-							m_pRecipients = pRecipients;
+							m_Recipients = recipients;
 						}
 
 	inline unsigned char*	CallPropProxy( CSendNode *pNode, int iProp, unsigned char *pStructBase )
@@ -246,10 +242,10 @@ public:
 
 		CSendProxyRecipients *pRecipients;
 
-		if ( m_pRecipients && pNode->GetDataTableProxyIndex() != DATATABLE_PROXY_INDEX_NOPROXY )
+		if ( !m_Recipients.empty() && pNode->GetDataTableProxyIndex() != DATATABLE_PROXY_INDEX_NOPROXY )
 		{
 			// set recipients pointer and all clients by default
-			pRecipients = &m_pRecipients->Element( pNode->GetDataTableProxyIndex() );
+			pRecipients = &m_Recipients[ pNode->GetDataTableProxyIndex() ];
 			pRecipients->SetAllRecipients();
 		}
 		else
@@ -266,7 +262,7 @@ public:
 			GetObjectID()
 			);
 
-		if ( m_bLocalNetworkBackDoor && (pRecipients != &s_Recipients) && !pRecipients->m_Bits.IsBitSet( 0 ) )
+		if ( m_bLocalNetworkBackDoor && (pRecipients != &s_Recipients) && !pRecipients->m_Bits[0] )
 			return nullptr;
 	
 		return pRet;
@@ -303,10 +299,10 @@ public:
 
 			CSendProxyRecipients *pRecipients;
 
-			if ( pStack->m_bLocalNetworkBackDoor && pStack->m_pRecipients && pStack->m_pRecipients->Count() > 0 )
+			if ( pStack->m_bLocalNetworkBackDoor && !pStack->m_Recipients.empty() )
 			{
 				// set recipients pointer and all clients by default
-				pRecipients = &pStack->m_pRecipients->Element( 0 );//pNode->GetDataTableProxyIndex() );
+				pRecipients = &pStack->m_Recipients[ 0 ];//pNode->GetDataTableProxyIndex() );
 				pRecipients->SetAllRecipients();
 			}
 			else
@@ -323,7 +319,7 @@ public:
 				pStack->GetObjectID()
 				);
 
-			if ( pStack->m_bLocalNetworkBackDoor && (pRecipients != &s_Recipients) && !pRecipients->m_Bits.IsBitSet( 0 ) )
+			if ( pStack->m_bLocalNetworkBackDoor && (pRecipients != &s_Recipients) && !pRecipients->m_Bits[0] )
 				return nullptr;
 
 			return pRet;
@@ -342,7 +338,7 @@ public:
 public:
 	
 	CSendTablePrecalc					*m_pPrecalc;
-	CUtlMemory<CSendProxyRecipients>	*m_pRecipients;
+	std::span<CSendProxyRecipients>	m_Recipients;
 };
 
 

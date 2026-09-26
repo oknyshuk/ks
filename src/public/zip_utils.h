@@ -7,10 +7,12 @@
 #ifndef ZIP_UTILS_H
 #define ZIP_UTILS_H
 
-#include "utlsymbol.h"
-
-class CUtlBuffer;
+#include <cstddef>
+#include <cstdio>
+#include <optional>
+#include <vector>
 #include "tier0/dbg.h"
+#include "tier1/byte_writer.h"
 
 abstract_class IZip
 {
@@ -24,7 +26,8 @@ public:
 	virtual bool			FileExistsInZip		( const char *pRelativeName ) = 0;
 
 	// Reads a file from the zip - maintains alignement
-	virtual bool			ReadFileFromZip		( const char *pRelativeName, bool bTextMode, CUtlBuffer &buf ) = 0;
+	// bTextMode converts CRLF to LF
+	virtual std::optional< std::vector< std::byte > >	ReadFileFromZip		( const char *pRelativeName, bool bTextMode ) = 0;
 
 	// Removes a single file from the zip - maintains alignment
 	virtual void			RemoveFileFromZip	( const char *relativename ) = 0;
@@ -43,7 +46,7 @@ public:
 
 	// Writes out zip file to a buffer - uses current alignment size 
 	// (set by file's previous alignment, or a call to ForceAlignment)
-	virtual void			SaveToBuffer		( CUtlBuffer& outbuf ) = 0;
+	virtual void			SaveToBuffer		( ks::byte_writer &outbuf ) = 0;
 
 	// Writes out zip file to a filestream - uses current alignment size 
 	// (set by file's previous alignment, or a call to ForceAlignment)

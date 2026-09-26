@@ -10,7 +10,7 @@
 
 #include "irecipientfilter.h"
 #include "const.h"
-#include "bitvec.h"
+#include <bitset>
 
 class CBasePlayer;
 
@@ -70,7 +70,7 @@ protected:
 
 	bool				m_bReliable;
 	bool				m_bInitMessage;
-	CUtlVector< int >	m_Recipients;
+	std::vector< int >	m_Recipients;
 	
 	// If using prediction rules, the filter itself suppresses local player
 	bool				m_bUsingPredictionRules;

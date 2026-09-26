@@ -16,9 +16,6 @@
 #include "tier1/keyvalues.h"
 #include "toolframework_client.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define	OLD_EXPLOSION	0
 
 
@@ -44,14 +41,14 @@ IterationRetval_t CRagdollExplosionEnumerator::EnumElement( IHandleEntity *pHand
 	if ( pModel == nullptr || WasRagdollCreatedOnCurrentTick( pEnt ) )
 		return ITERATION_CONTINUE;
 	
-	m_Entities.AddToTail( pEnt );
+	m_Entities.push_back( pEnt );
 
 	return ITERATION_CONTINUE;
 }
 
 CRagdollExplosionEnumerator::~CRagdollExplosionEnumerator()
 {
-	for (int i = 0; i < m_Entities.Count(); i++ )
+	for (int i = 0; i < std::ssize( m_Entities ); i++ )
 	{
 		C_BaseEntity *pEnt = m_Entities[i];
 		C_BaseAnimating *pModel = static_cast< C_BaseAnimating * >( pEnt );

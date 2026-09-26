@@ -7,9 +7,6 @@
 #include "quakedef.h"
 #include "precache.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: Print out flag names
 // Input  : flags - 

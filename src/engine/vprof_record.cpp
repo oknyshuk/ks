@@ -6,18 +6,16 @@
 
 #undef PROTECT_FILEIO_FUNCTIONS
 #include "tier0/vprof.h"
-#include "utldict.h"
+#include "tier1/map_ops.h"
 #include "client.h"
 #include "cmd.h"
 #include "filesystem_engine.h"
 #include "vprof_record.h"
+#include <memory>
 
 #ifdef VPROF_ENABLED
 
 CVProfile *g_pVProfileForDisplay = &g_VProfCurrentProfile;
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 long GetFileSize( FILE *fp )
 {
@@ -210,7 +208,7 @@ public:
 
 	void Record_WriteTimings_R( const CVProfNode *pIn )
 	{
-		unsigned short curCalls = MIN( pIn->m_nCurFrameCalls, 0xFFFF );
+		unsigned short curCalls = std::min<std::common_type_t<unsigned int, int>>( pIn->m_nCurFrameCalls, 0xFFFF );
 		if ( curCalls >= 255 )
 		{
 			unsigned char token = 255;
@@ -601,9 +599,9 @@ public:
 		int m_nSamples;
 	};
 
-	CNodeAverage* FindNodeAverage( CUtlVector<CNodeAverage> &averages, CVProfNode *pNode )
+	CNodeAverage* FindNodeAverage( std::vector< CNodeAverage > &averages, CVProfNode *pNode )
 	{
-		for ( int i=0; i < averages.Count(); i++ )
+		for ( int i=0; i < std::ssize( averages ); i++ )
 		{
 			if ( averages[i].m_pNode == pNode )
 				return &averages[i];
@@ -611,12 +609,12 @@ public:
 		return nullptr;
 	}
 
-	void UpdateAverages_R( CUtlVector<CNodeAverage> &averages, CVProfNode *pNode )
+	void UpdateAverages_R( std::vector< CNodeAverage > &averages, CVProfNode *pNode )
 	{
 		CNodeAverage *pAverage = FindNodeAverage( averages, pNode );
 		if ( !pAverage )
 		{
-			pAverage = &averages[ averages.AddToTail() ];
+			pAverage = &averages.emplace_back();
 			memset( pAverage, 0, sizeof( *pAverage ) );
 			pAverage->m_pNode = pNode;
 		}
@@ -629,7 +627,7 @@ public:
 			UpdateAverages_R( averages, pCur );
 	}
 
-	void DumpAverages_R( CUtlVector<CNodeAverage> &averages, CVProfNode *pNode )
+	void DumpAverages_R( std::vector< CNodeAverage > &averages, CVProfNode *pNode )
 	{
 		CNodeAverage *pAverage = FindNodeAverage( averages, pNode );
 		if ( pAverage )
@@ -653,7 +651,7 @@ public:
 		int iOldPlaybackTick = m_iPlaybackTick;
 		
 		// Take the average of the next N ticks.
-		CUtlVector<CNodeAverage> averages;
+		std::vector< CNodeAverage > averages;
 		while ( nFrames > 0 && !m_bPlaybackFinished )
 		{
 			Playback_ReadTick();
@@ -801,11 +799,7 @@ private:
 
 	const char* PoolString( const char *pStr )
 	{
-		int i = m_PooledStrings.Find( pStr );
-		if ( i == m_PooledStrings.InvalidIndex() )
-			i = m_PooledStrings.Insert( pStr, 0 );
-
-		return m_PooledStrings.GetElementName( i );
+		return m_PooledStrings.emplace( pStr ).first->c_str();
 	}			
 			
 
@@ -832,7 +826,7 @@ private:
 		Mode_Playback
 	};
 
-	CUtlDict<int,int> m_PooledStrings;
+	std::set< std::string, ks::iless > m_PooledStrings;
 
 	int m_Mode;
 	FileHandle_t m_hFile;
@@ -903,9 +897,8 @@ public:
 
 		while ( !g_VProfRecorder.IsPlaybackFinished() )
 		{
-			CUtlMap< char *, double > *pTickDataMap = new CUtlMap< char *, double >( DefLessFunc( char * ) );
-			m_dataVector.AddToTail( pTickDataMap );
-			WriteNodeDataToDict( g_VProfRecorder.GetRoot(), pTickDataMap );
+			auto &pTickDataMap = m_dataVector.emplace_back( std::make_unique< TickData_t >() );
+			WriteNodeDataToDict( g_VProfRecorder.GetRoot(), pTickDataMap.get() );
 			g_VProfRecorder.Playback_ReadTick();
 		}
 
@@ -918,7 +911,7 @@ public:
 		WriteHeaders( szHeaders, sizeof( szHeaders ) );
 		g_pFileSystem->FPrintf( m_fileHandle, "%s", szHeaders );
 
-		FOR_EACH_VEC( m_dataVector,  i )
+		for ( int i = 0; i < std::ssize( m_dataVector ); i++ )
 		{
 			char szTickNum[16];
 
@@ -926,19 +919,19 @@ public:
 			V_strncpy( szData, szTickNum, sizeof( szData ) );
 			V_strncat( szData, ",", sizeof( szData ) );
 
-			FOR_EACH_VEC( m_labelVector, j )
+			for ( int j = 0; j < std::ssize( m_labelVector ); j++ )
 			{
-				const unsigned short usIndex = m_dataVector[i]->Find( m_labelVector[j] );
+				auto it = m_dataVector[i]->find( m_labelVector[j] );
 
-				if ( usIndex != m_dataVector[i]->InvalidIndex() )
+				if ( it != m_dataVector[i]->end() )
 				{
 					char szFloatValue[32];
 
-					V_snprintf(szFloatValue, sizeof( szFloatValue ), "%f", m_dataVector[i]->Element( usIndex ) );
+					V_snprintf(szFloatValue, sizeof( szFloatValue ), "%f", it->second );
 					V_strncat( szData, szFloatValue, sizeof( szData ) );
 				}
 
-				if ( j != ( m_labelVector.Count() - 1 ) )
+				if ( j != ( std::ssize( m_labelVector ) - 1 ) )
 				{
 					V_strncat( szData, ",", sizeof( szData ) );
 				}
@@ -952,23 +945,27 @@ public:
 		//
 		// Cleanup
 		//
-		m_labelVector.RemoveAll();
-		m_dataVector.PurgeAndDeleteElements();
+		m_labelVector.clear();
+		m_dataVector.clear();
 	}
 
-	void SetNodeFilter( CUtlMap<char*, int> *pTokenMap )
+	// Node names are owned by the vprof nodes / the caller's token strings.
+	typedef std::map< const char *, double, ks::cstr_less > TickData_t;
+	typedef std::set< const char *, ks::cstr_less > TokenSet_t;
+
+	void SetNodeFilter( TokenSet_t *pTokenMap )
 	{
 		m_pTokenMap  = pTokenMap;
 	}
 
 protected:
-	CUtlVector<char *> m_labelVector;
-	CUtlVector< CUtlMap< char *, double > *> m_dataVector;
+	std::vector< char * > m_labelVector;
+	std::vector< std::unique_ptr< TickData_t > > m_dataVector;
 	FileHandle_t m_fileHandle;
-	CUtlMap<char*, int> *m_pTokenMap;
+	TokenSet_t *m_pTokenMap;
 	
 
-	void WriteNodeDataToDict( CVProfNode *pNode, CUtlMap< char *, double > *pTickDataMap )
+	void WriteNodeDataToDict( CVProfNode *pNode, TickData_t *pTickDataMap )
 	{
 		char *pcNodeName = (char*)pNode->GetName();
 
@@ -976,16 +973,16 @@ protected:
 		if ( 0 != V_strcmp( pcNodeName, "Root" ) )
 		{
 			// If there is a token filter and it is populated then use it
-			if ( nullptr == m_pTokenMap || 0 == m_pTokenMap->Count() ||  ( m_pTokenMap->InvalidIndex() != m_pTokenMap->Find( pcNodeName ) ) )
+			if ( nullptr == m_pTokenMap || m_pTokenMap->empty() || m_pTokenMap->contains( pcNodeName ) )
 			{
 				// Store the label in the label vector if we haven't seen it before
-				if (-1 == m_labelVector.Find( pcNodeName ) )
+				if (-1 == ks::find_index( m_labelVector, pcNodeName ) )
 				{
-					m_labelVector.AddToTail( pcNodeName );
+					m_labelVector.push_back( pcNodeName );
 				}
 
-				// Store the keyname and value for this VPROF node
-				pTickDataMap->Insert( pcNodeName, pNode->GetCurTime() );
+				// Store the keyname and value for this VPROF node; a repeated name keeps its first value
+				pTickDataMap->emplace( pcNodeName, pNode->GetCurTime() );
 			}
 		}
 
@@ -1005,12 +1002,12 @@ protected:
 		V_strncpy( szBuffer, "Tick Number,", nBufferSize );
 
 		// We start at 1 instead of 0 because 'Root' is always the first one
-		for ( int i = 0; i < m_labelVector.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_labelVector ); i++ )
 		{
 			V_strncat( szBuffer, m_labelVector[i], nBufferSize );
 
 			// Skip the last comma
-			if ( i !=  ( m_labelVector.Count() - 1 ) )
+			if ( i !=  ( std::ssize( m_labelVector ) - 1 ) )
 			{
 				V_strncat( szBuffer, ",", nBufferSize );
 			}
@@ -1050,18 +1047,16 @@ CON_COMMAND( vprof_to_csv, "Convert a recorded .vprof file to .csv." )
 	}
 
 	//Separate the filter tokens from the arguments
-	CUtlVector<char*, CUtlMemory<char*, int> > argsVector;
-	CUtlMap<char*, int> tokenMap( DefLessFunc( char * ) );
+	std::vector< std::string > argsVector;
 	V_SplitString( szArgs, "|", argsVector );
+	CVPROFToCSVConverter::TokenSet_t tokenMap;
 
-	V_strncpy( szVPROFFilename, argsVector[0], MAX_PATH);
-	delete argsVector[0];
-	argsVector.RemoveMultiple( 0, 1 );
+	V_strncpy( szVPROFFilename, argsVector[0].c_str(), MAX_PATH);
 	
 	// Add the remaining arguments to the map of token filters
-	FOR_EACH_VEC( argsVector, i )
+	for ( size_t i = 1; i < argsVector.size(); i++ )
 	{
-		tokenMap.Insert(argsVector[i], 0);
+		tokenMap.insert( argsVector[i].c_str() );
 	}
 	
 	// Create CSV filename
@@ -1078,8 +1073,7 @@ CON_COMMAND( vprof_to_csv, "Convert a recorded .vprof file to .csv." )
 	//
 	// Cleanup
 	//
-	argsVector.PurgeAndDeleteElements();
-	tokenMap.RemoveAll();
+	tokenMap.clear();
 }
 
 

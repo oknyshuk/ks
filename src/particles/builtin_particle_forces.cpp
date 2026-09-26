@@ -9,7 +9,6 @@
 #include "filesystem.h"
 #include "tier2/tier2.h"
 #include "tier2/fileutils.h"
-#include "tier1/UtlStringMap.h"
 #include "tier1/strtools.h"
 
 #ifdef USE_BLOBULATOR
@@ -18,9 +17,6 @@
 #include "../common/blobulator/physics/physparticlecache_inl.h"
 #include "../common/blobulator/physics/phystiler.h"
 #endif
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 class C_OP_RandomForce : public CParticleOperatorInstance
 {

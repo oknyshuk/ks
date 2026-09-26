@@ -17,9 +17,6 @@
 #include "sv_steamauth.h"
 #include "hltvserver.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 bool g_bEnableMasterServerUpdater = true;
 
 static void SvSearchKeyChangeCallback( IConVar *pConVar, const char *pOldValue, float flOldValue )

@@ -18,9 +18,6 @@
 
 extern ConVar r_flashlightdepthres;
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern ConVar r_flashlightdepthtexture;
 
 static ConVar r_swingflashlight( "r_swingflashlight", "1", FCVAR_CHEAT );
@@ -635,8 +632,8 @@ bool CFlashlightEffect::ComputeLightPosAndOrientation( const Vector &vecPos, con
 			{
 				// We have an intersection behind us as well, so limit our flTargetPullBackDist
 				float flMaxDist = (pmBackTrace.endpos - vOrigin).Length() - flEpsilon;
-				flTargetPullBackDist = MIN( flMaxDist, flTargetPullBackDist );
-				//m_flCurrentPullBackDist = MIN( flMaxDist, m_flCurrentPullBackDist );	// possible pop
+				flTargetPullBackDist = std::min( flMaxDist, flTargetPullBackDist );
+				//m_flCurrentPullBackDist = std::min( flMaxDist, m_flCurrentPullBackDist );	// possible pop
 			}
 		}
 	}
@@ -649,7 +646,7 @@ bool CFlashlightEffect::ComputeLightPosAndOrientation( const Vector &vecPos, con
 	}
 
 	m_flCurrentPullBackDist = Lerp( flDistDrag, m_flCurrentPullBackDist, flTargetPullBackDist );
-	m_flCurrentPullBackDist = MIN( m_flCurrentPullBackDist, flDistCutoff );	// clamp to max pullback dist
+	m_flCurrentPullBackDist = std::min( m_flCurrentPullBackDist, flDistCutoff );	// clamp to max pullback dist
 	vOrigin = vOrigin - vDir * m_flCurrentPullBackDist;
 
 	vecFinalPos = vOrigin;

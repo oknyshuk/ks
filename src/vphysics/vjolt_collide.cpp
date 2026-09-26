@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2022 Joshua Ashton and Josh Dowell (Slartibarty)
+
 
 #include "cbase.h"
 
@@ -12,9 +15,7 @@
 
 #include "vjolt_collide.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 //-------------------------------------------------------------------------------------------------
 
 // Also in vjolt_collide_trace.cpp, should unify or just remove entirely
@@ -553,7 +554,7 @@ namespace ivp_compat
 		return pShape;
 	}
 
-	void GetAllIVPEdges( const compactledgenode_t *pNode, CUtlVector< const compactledge_t * >& vecOut )
+	void GetAllIVPEdges( const compactledgenode_t *pNode, std::vector< const compactledge_t * >& vecOut )
 	{
 		if ( !pNode )
 			return;
@@ -564,7 +565,7 @@ namespace ivp_compat
 			GetAllIVPEdges( pNode->GetLeftChild(), vecOut );
 		}
 		else
-			vecOut.AddToTail( pNode->GetCompactLedge() );
+			vecOut.push_back( pNode->GetCompactLedge() );
 	}
 
 	CPhysCollide *DeserializeIVP_Poly( const compactsurface_t* pSurface )
@@ -572,10 +573,10 @@ namespace ivp_compat
 		const compactledgenode_t *pFirstLedgeNode = reinterpret_cast< const compactledgenode_t * >(
 				reinterpret_cast< const char * >( pSurface ) + pSurface->offset_ledgetree_root );
 
-		CUtlVector< const compactledge_t * > ledges;
+		std::vector< const compactledge_t * > ledges;
 		GetAllIVPEdges( pFirstLedgeNode, ledges );
 
-		VJoltAssert( !ledges.IsEmpty() );
+		VJoltAssert( !ledges.empty() );
 
 		// One convex per ledge. Models with broken collision hulls have ledges Jolt cannot
 		// build a hull from; those are dropped, so such a prop is missing a piece rather
@@ -583,7 +584,7 @@ namespace ivp_compat
 		// which is about 39 units of invisible collision sitting in the level.
 		JPH::StaticCompoundShapeSettings settings{};
 		JPH::Shape *pLastShape = nullptr;
-		for ( int i = 0; i < ledges.Count(); i++ )
+		for ( int i = 0; i < std::ssize( ledges ); i++ )
 		{
 			if ( JPH::Shape *pShape = IVPLedgeToShape( ledges[ i ] ) )
 			{
@@ -903,7 +904,7 @@ void *JoltPhysicsCollision::VCollideAllocUserData( vcollide_t *pVCollide, size_t
 	VCollideFreeUserData( pVCollide );
 
 	if ( userDataSize )
-		pVCollide->pUserData = malloc( userDataSize );
+		pVCollide->pUserData = MemAlloc_Alloc( userDataSize );
 
 	return pVCollide->pUserData;
 #else
@@ -916,7 +917,7 @@ void JoltPhysicsCollision::VCollideFreeUserData( vcollide_t *pVCollide )
 #ifdef GAME_ASW_OR_NEWER
 	if ( pVCollide->pUserData )
 	{
-		free( pVCollide->pUserData );
+		g_pMemAlloc->Free( pVCollide->pUserData );
 		pVCollide->pUserData = nullptr;
 	}
 #endif

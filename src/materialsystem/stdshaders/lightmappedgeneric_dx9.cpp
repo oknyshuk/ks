@@ -11,9 +11,6 @@
 #include "lightmappedgeneric_dx9_helper.h"
 #include "lightmappedpaint_dx9_helper.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 static LightmappedGeneric_DX9_Vars_t s_info;
 

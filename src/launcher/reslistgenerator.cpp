@@ -8,26 +8,24 @@
 
 #include "reslistgenerator.h"
 #include "filesystem.h"
-#include "tier1/utlrbtree.h"
+#include "tier1/map_ops.h"
 #include "tier1/fmtstr.h"
 #include "characterset.h"
 #include "tier1/utlstring.h"
 #include "tier1/utlvector.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/byte_reader.h"
+#include "tier1/text_reader.h"
 #include "tier0/icommandline.h"
 #include "tier1/keyvalues.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
-bool SaveResList( const CUtlRBTree< CUtlString, int > &list, char const *pchFileName, char const *pchSearchPath )
+bool SaveResList( const std::set< std::string, ks::iless > &list, char const *pchFileName, char const *pchSearchPath )
 {
 	FileHandle_t fh = g_pFullFileSystem->Open( pchFileName, "wt", pchSearchPath );
 	if ( fh != FILESYSTEM_INVALID_HANDLE )
 	{
-		for ( int i = list.FirstInorder(); i != list.InvalidIndex(); i = list.NextInorder( i ) )
+		for ( const std::string &s : list )
 		{
-			g_pFullFileSystem->Write( list[ i ].String(), Q_strlen( list[ i ].String() ), fh );
+			g_pFullFileSystem->Write( s.c_str(), Q_strlen( s.c_str() ), fh );
 			g_pFullFileSystem->Write( "\n", 1, fh );
 		}
 
@@ -37,14 +35,15 @@ bool SaveResList( const CUtlRBTree< CUtlString, int > &list, char const *pchFile
 	return false;
 }
 
-void LoadResList( CUtlRBTree< CUtlString, int > &list, char const *pchFileName, char const *pchSearchPath )
+void LoadResList( std::set< std::string, ks::iless > &list, char const *pchFileName, char const *pchSearchPath )
 {
-	CUtlBuffer buffer( 0, 0, CUtlBuffer::TEXT_BUFFER );
-	if ( !g_pFullFileSystem->ReadFile( pchFileName, pchSearchPath, buffer ) )
+	auto file = g_pFullFileSystem->ReadFile( pchFileName, pchSearchPath );
+	if ( !file )
 	{
 		// does not exist
 		return;
 	}
+	ks::text_reader buffer( ks::text_view( *file ) );
 
 	characterset_t breakSet;
 	CharacterSetBuild( &breakSet, "" );
@@ -53,17 +52,20 @@ void LoadResList( CUtlRBTree< CUtlString, int > &list, char const *pchFileName, 
 	char szToken[ MAX_PATH ];
 	for ( ;; )
 	{
-		int nTokenSize = buffer.ParseToken( &breakSet, szToken, sizeof( szToken ) );
-		if ( nTokenSize <= 0 )
+		auto token = buffer.read_token( breakSet );
+		if ( !token || token->empty() )
 		{
 			break;
 		}
+		const size_t nTokenSize = std::min( token->size(), sizeof( szToken ) - 1 );
+		memcpy( szToken, token->data(), nTokenSize );
+		szToken[ nTokenSize ] = 0;
 
 		Q_strlower( szToken );
 		Q_FixSlashes( szToken );
 
 		// Ensure filename has "quotes" around it
-		CUtlString s;
+		std::string s;
 		if ( szToken[ 0 ] == '\"' )
 		{
 			Assert( Q_strlen( szToken ) > 2 );
@@ -75,34 +77,25 @@ void LoadResList( CUtlRBTree< CUtlString, int > &list, char const *pchFileName, 
 			s = CFmtStr( "\"%s\"", szToken );
 		}
 
-		int idx = list.Find( s );
-		if ( idx == list.InvalidIndex() )
-		{
-			list.Insert( s );
-		}
+		list.insert( std::move( s ) );
 	}
-}
-
-static bool ReslistLogLessFunc( CUtlString const &pLHS, CUtlString const &pRHS )
-{
-	return CaselessStringLessThan( pLHS.Get(), pRHS.Get() );
 }
 
 void SortResList( char const *pchFileName, char const *pchSearchPath )
 {
-	CUtlRBTree< CUtlString, int > sorted( 0, 0, ReslistLogLessFunc );
+	std::set< std::string, ks::iless > sorted;
 	LoadResList( sorted, pchFileName, pchSearchPath );
 
 	// Now write it back out
 	SaveResList( sorted, pchFileName, pchSearchPath );
 }
 
-void MergeResLists( CUtlVector< CUtlString > &fileNames, char const *pchOutputFile, char const *pchSearchPath )
+void MergeResLists( std::vector< std::string > &fileNames, char const *pchOutputFile, char const *pchSearchPath )
 {
-	CUtlRBTree< CUtlString, int > sorted( 0, 0, ReslistLogLessFunc );
-	for ( int i = 0; i < fileNames.Count(); ++i )
+	std::set< std::string, ks::iless > sorted;
+	for ( int i = 0; i < std::ssize( fileNames ); ++i )
 	{
-		LoadResList( sorted, fileNames[ i ].String(), pchSearchPath );
+		LoadResList( sorted, fileNames[ i ].c_str(), pchSearchPath );
 	}
 
 	// Now write it back out
@@ -116,8 +109,8 @@ public:
 	{
 	}
 
-	CUtlString		m_sSubDir;
-	CUtlString		m_sAddCommands;
+	std::string		m_sSubDir;
+	std::string		m_sAddCommands;
 };
 class CResListGenerator: public IResListGenerator
 {
@@ -141,27 +134,27 @@ public:
 private:
 
 	bool InitCommandFile( char const *pchGameDir, char const *pchCommandFile );
-	void LoadMapList( char const *pchGameDir, CUtlVector< CUtlString > &vecMaps, char const *pchMapFile );
+	void LoadMapList( char const *pchGameDir, std::vector< std::string > &vecMaps, char const *pchMapFile );
 	void CollateFiles( char const *pchResListFilename );
 	void Collate();
 
 	bool		m_bInitialized;
 	bool		m_bActive;
 
-	CUtlString	m_sBaseDir;
-	CUtlString  m_sGameDir;
-	CUtlString	m_sFullGamePath;
+	std::string	m_sBaseDir;
+	std::string  m_sGameDir;
+	std::string	m_sFullGamePath;
 
-	CUtlString	m_sFinalDir;
-	CUtlString	m_sWorkingDir;
-	CUtlString	m_sBaseCommandLine;
-	CUtlString	m_sOriginalCommandLine;
-	CUtlString	m_sInitialStartMap;
+	std::string	m_sFinalDir;
+	std::string	m_sWorkingDir;
+	std::string	m_sBaseCommandLine;
+	std::string	m_sOriginalCommandLine;
+	std::string	m_sInitialStartMap;
 
 	int			m_nCurrentWorkItem;
-	CUtlVector< CWorkItem >	m_WorkItems;
+	std::vector< CWorkItem >	m_WorkItems;
 
-	CUtlVector< CUtlString > m_MapList;
+	std::vector< std::string > m_MapList;
 	int			m_nCurrentState;
 };
 
@@ -182,16 +175,16 @@ CResListGenerator::CResListGenerator() :
 
 void CResListGenerator::CollateFiles( char const *pchResListFilename )
 {
-	CUtlVector< CUtlString > vecReslists;
+	std::vector< std::string > vecReslists;
 
-	for ( int i = 0; i < m_WorkItems.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_WorkItems ); ++i )
 	{
 		char fn[ MAX_PATH ];
-		Q_snprintf( fn, sizeof( fn ), "%s\\%s\\%s\\%s", m_sFullGamePath.String(), m_sWorkingDir.String(), m_WorkItems[ i ].m_sSubDir.String(), pchResListFilename );
-		vecReslists.AddToTail( fn );
+		Q_snprintf( fn, sizeof( fn ), "%s\\%s\\%s\\%s", m_sFullGamePath.c_str(), m_sWorkingDir.c_str(), m_WorkItems[ i ].m_sSubDir.c_str(), pchResListFilename );
+		vecReslists.push_back( fn );
 	}
 
-	MergeResLists( vecReslists, CFmtStr( "%s\\%s\\%s", m_sFullGamePath.String(), m_sFinalDir.String(), pchResListFilename ), "GAME" );
+	MergeResLists( vecReslists, CFmtStr( "%s\\%s\\%s", m_sFullGamePath.c_str(), m_sFinalDir.c_str(), pchResListFilename ), "GAME" );
 }
 
 void CResListGenerator::Init( char const *pchBaseDir, char const *pchGameDir )
@@ -205,11 +198,11 @@ void CResListGenerator::Init( char const *pchBaseDir, char const *pchGameDir )
 
 	m_bInitialized = true;
 
-	m_sBaseDir = pchBaseDir;
-	m_sGameDir = pchGameDir;
+	m_sBaseDir = ks::nz( pchBaseDir );
+	m_sGameDir = ks::nz( pchGameDir );
 
 	char path[MAX_PATH];
-	Q_snprintf( path, sizeof(path), "%s/%s", m_sBaseDir.String(), m_sGameDir.String() );
+	Q_snprintf( path, sizeof(path), "%s/%s", m_sBaseDir.c_str(), m_sGameDir.c_str() );
 	Q_FixSlashes( path );
 	Q_strlower( path );
 	m_sFullGamePath = path;
@@ -237,15 +230,15 @@ bool CResListGenerator::IsActive()
 void CResListGenerator::Collate()
 {
 	char szDir[MAX_PATH];
-	V_snprintf( szDir, sizeof( szDir ), "%s\\%s", m_sFullGamePath.String(), m_sFinalDir.String() );
+	V_snprintf( szDir, sizeof( szDir ), "%s\\%s", m_sFullGamePath.c_str(), m_sFinalDir.c_str() );
 	g_pFullFileSystem->CreateDirHierarchy( szDir, "GAME" );
 
 	// Now create the collated/merged data
 	CollateFiles( "all.lst" );
 	CollateFiles( "engine.lst" );
-	for ( int i = 0 ; i < m_MapList.Count(); ++i )
+	for ( int i = 0 ; i < std::ssize( m_MapList ); ++i )
 	{
-		CollateFiles( CFmtStr( "%s.lst", m_MapList[ i ].String() ) );
+		CollateFiles( CFmtStr( "%s.lst", m_MapList[ i ].c_str() ) );
 	}
 }
 
@@ -279,7 +272,7 @@ bool CResListGenerator::TickAndFixupCommandLine()
 
 			// Advance to next item
 			++m_nCurrentWorkItem;
-			if ( m_nCurrentWorkItem >= m_WorkItems.Count() )
+			if ( m_nCurrentWorkItem >= std::ssize( m_WorkItems ) )
 			{
 				// out of work, finalize
 				Collate();
@@ -303,16 +296,16 @@ bool CResListGenerator::TickAndFixupCommandLine()
 
 	case STATE_BUILDINGRESLISTS:
 		{
-			Assert( m_nCurrentWorkItem < m_WorkItems.Count() );
+			Assert( m_nCurrentWorkItem < std::ssize( m_WorkItems ) );
 
 			const CWorkItem &work = m_WorkItems[ m_nCurrentWorkItem ];
 
 			// Clean the working dir
 			char szWorkingDir[ 512 ];
-			Q_snprintf( szWorkingDir, sizeof( szWorkingDir ), "%s\\%s", m_sWorkingDir.String(), work.m_sSubDir.String() );
+			Q_snprintf( szWorkingDir, sizeof( szWorkingDir ), "%s\\%s", m_sWorkingDir.c_str(), work.m_sSubDir.c_str() );
 
 			char szFullWorkingDir[MAX_PATH];
-			V_snprintf( szFullWorkingDir, sizeof( szFullWorkingDir ), "%s\\%s", m_sFullGamePath.String(), szWorkingDir );
+			V_snprintf( szFullWorkingDir, sizeof( szFullWorkingDir ), "%s\\%s", m_sFullGamePath.c_str(), szWorkingDir );
 			g_pFullFileSystem->CreateDirHierarchy( szFullWorkingDir, "GAME" );
 
 			// Preserve startmap
@@ -327,7 +320,7 @@ bool CResListGenerator::TickAndFixupCommandLine()
 			// Prepare stuff
 			// Reset command line based on current state
 			char szCmd[ 512 ];
-			Q_snprintf( szCmd, sizeof( szCmd ), "%s %s %s -reslistdir %s", m_sOriginalCommandLine.String(), m_sBaseCommandLine.String(), work.m_sAddCommands.String(), szWorkingDir );
+			Q_snprintf( szCmd, sizeof( szCmd ), "%s %s %s -reslistdir %s", m_sOriginalCommandLine.c_str(), m_sBaseCommandLine.c_str(), work.m_sAddCommands.c_str(), szWorkingDir );
 			CommandLine()->CreateCmdLine( szCmd );
 
 			// Never rebuild caches by default, inly do it in STATE_GENERATINGCACHES
@@ -346,7 +339,7 @@ bool CResListGenerator::TickAndFixupCommandLine()
 			// Prepare stuff
 			// Reset command line based on current state
 			char szCmd[ 512 ];
-			Q_snprintf( szCmd, sizeof( szCmd ), "%s -reslistdir %s -rebuildaudio", m_sOriginalCommandLine.String(), m_sFinalDir.String());
+			Q_snprintf( szCmd, sizeof( szCmd ), "%s -reslistdir %s -rebuildaudio", m_sOriginalCommandLine.c_str(), m_sFinalDir.c_str());
 			CommandLine()->CreateCmdLine( szCmd );
 			
 			CommandLine()->RemoveParm( "-norebuildaudio" );
@@ -380,22 +373,25 @@ bool CResListGenerator::ShouldContinue()
 	return true;
 }
 
-void CResListGenerator::LoadMapList( char const *pchGameDir, CUtlVector< CUtlString > &vecMaps, char const *pchMapFile )
+void CResListGenerator::LoadMapList( char const *pchGameDir, std::vector< std::string > &vecMaps, char const *pchMapFile )
 {
 	char fullpath[ 512 ];
 	Q_snprintf( fullpath, sizeof( fullpath ), "%s/%s", pchGameDir, pchMapFile );
 
 	// Load them in
-	CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
+	auto file = g_pFullFileSystem->ReadFile( fullpath, "GAME" );
 
-	if ( g_pFullFileSystem->ReadFile( fullpath, "GAME", buf ) )
+	if ( file )
 	{
+		ks::text_reader buf( ks::text_view( *file ) );
 		char szMap[ MAX_PATH ];
 		while ( true )
 		{
-			buf.GetLine( szMap, sizeof( szMap ) );
-			if ( !szMap[ 0 ] )
+			const std::string_view line = buf.read_line().substr( 0, sizeof( szMap ) - 1 );
+			if ( line.empty() )
 				break;
+			memcpy( szMap, line.data(), line.size() );
+			szMap[ line.size() ] = 0;
 
 			// Strip trailing CR/LF chars
 			int len = Q_strlen( szMap );
@@ -405,9 +401,9 @@ void CResListGenerator::LoadMapList( char const *pchGameDir, CUtlVector< CUtlStr
 				len = Q_strlen( szMap );
 			}
 
-			CUtlString newMap;
+			std::string newMap;
 			newMap = szMap;
-			vecMaps.AddToTail( newMap );
+			vecMaps.push_back( newMap );
 		}
 	}
 	else
@@ -428,26 +424,26 @@ bool CResListGenerator::InitCommandFile( char const *pchGameDir, char const *pch
 	char fullpath[ 512 ];
 	Q_snprintf( fullpath, sizeof( fullpath ), "%s/%s", pchGameDir, pchCommandFile );
 
-	CUtlBuffer buf;
-	if ( !g_pFullFileSystem->ReadFile( fullpath, "GAME", buf ) )
+	auto file = g_pFullFileSystem->ReadFile( fullpath, "GAME" );
+	if ( !file )
 	{
 		Error( "Unable to load '%s'\n", fullpath );
 		return false;
 	}
 
 	KeyValues *kv = new KeyValues( "reslists" );
-	if ( !kv->LoadFromBuffer( "reslists", (const char *)buf.Base() ) )
+	if ( !kv->LoadFromBuffer( "reslists", ks::text_view( *file ) ) )
 	{
 		Error( "Unable to parse keyvalues from '%s'\n", fullpath );
 		kv->deleteThis();
 		return false;
 	}
 
-	CUtlString sMapListFile = kv->GetString( "maplist", "maplist.txt" );
-	LoadMapList( pchGameDir, m_MapList, sMapListFile );
-	if ( m_MapList.Count() <= 0 )
+	std::string sMapListFile = kv->GetString( "maplist", "maplist.txt" );
+	LoadMapList( pchGameDir, m_MapList, sMapListFile.c_str() );
+	if ( std::ssize( m_MapList ) <= 0 )
 	{
-		Error( "Maplist file '%s' empty or missing!!!\n", sMapListFile.String() );
+		Error( "Maplist file '%s' empty or missing!!!\n", sMapListFile.c_str() );
 		kv->deleteThis();
 		return false;
 	}
@@ -455,11 +451,11 @@ bool CResListGenerator::InitCommandFile( char const *pchGameDir, char const *pch
 	char const *pszSolo = nullptr;
 	if ( CommandLine()->CheckParm( "-reslistmap", &pszSolo ) && pszSolo )
 	{
-		m_MapList.Purge();
+		m_MapList.clear(); m_MapList.shrink_to_fit();
 
-		CUtlString newMap;
-		newMap = pszSolo;
-		m_MapList.AddToTail( newMap );
+		std::string newMap;
+		newMap = ks::nz( pszSolo );
+		m_MapList.push_back( newMap );
 	}
 	
 	m_nCurrentWorkItem = CommandLine()->ParmValue( "-startstage", 0 );
@@ -468,7 +464,7 @@ bool CResListGenerator::InitCommandFile( char const *pchGameDir, char const *pch
 	CommandLine()->CheckParm( "-startmap", &pszStartMap );
 	if ( pszStartMap )
 	{
-		m_sInitialStartMap = pszStartMap;
+		m_sInitialStartMap = ks::nz( pszStartMap );
 	}
 
 	CommandLine()->RemoveParm( "-startstage" );
@@ -477,17 +473,17 @@ bool CResListGenerator::InitCommandFile( char const *pchGameDir, char const *pch
 	CommandLine()->RemoveParm( "-norebuildaudio" );
 	CommandLine()->RemoveParm( "-startmap" );
 
-	m_sOriginalCommandLine = CommandLine()->GetCmdLine();
+	m_sOriginalCommandLine = ks::nz( CommandLine()->GetCmdLine() );
 
 	// Add it back in for first map
 	if ( pszStartMap )
 	{
-		CommandLine()->AppendParm( "-startmap", m_sInitialStartMap.String() );
+		CommandLine()->AppendParm( "-startmap", m_sInitialStartMap.c_str() );
 	}
 
 	m_sBaseCommandLine = kv->GetString( "basecommandline", "" );
-	m_sFinalDir = kv->GetString( "finaldir", m_sFinalDir.String() );
-	m_sWorkingDir = kv->GetString( "workdir", m_sWorkingDir.String() );
+	m_sFinalDir = kv->GetString( "finaldir", m_sFinalDir.c_str() );
+	m_sWorkingDir = kv->GetString( "workdir", m_sWorkingDir.c_str() );
 
 	int i = 0;
 	do
@@ -503,9 +499,9 @@ bool CResListGenerator::InitCommandFile( char const *pchGameDir, char const *pch
 		work.m_sSubDir = subKey->GetString( "subdir", "" );
 		work.m_sAddCommands = subKey->GetString( "addcommands", "" );
 
-		if ( work.m_sSubDir.Length() > 0 )
+		if ( std::ssize( work.m_sSubDir ) > 0 )
 		{
-			m_WorkItems.AddToTail( work );
+			m_WorkItems.push_back( work );
 		}
 		else
 		{
@@ -515,9 +511,9 @@ bool CResListGenerator::InitCommandFile( char const *pchGameDir, char const *pch
 		++i;
 	} while ( true );
 
-	m_bActive = m_WorkItems.Count() > 0;
+	m_bActive = !m_WorkItems.empty();
 	
-	m_nCurrentWorkItem = clamp( m_nCurrentWorkItem, 0, m_WorkItems.Count() - 1 );
+	m_nCurrentWorkItem = clamp( m_nCurrentWorkItem, 0, std::ssize( m_WorkItems ) - 1 );
 
 	bool bCollate = CommandLine()->CheckParm( "-collate" ) ? true : false;
 	if ( bCollate )

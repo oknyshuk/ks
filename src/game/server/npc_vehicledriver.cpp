@@ -26,9 +26,6 @@
 #include "vehicle_base.h"
 #include "npc_vehicledriver.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define	DRIVER_DEBUG_PATH				1
 #define	DRIVER_DEBUG_PATH_SPLINE		2
 
@@ -660,7 +657,7 @@ bool CNPC_VehicleDriver::WaypointReached( void )
 	m_pNextWaypoint = m_Waypoints[1];
 
 	// Drop the spline marker back
-	m_flDistanceAlongSpline = MAX( 0, m_flDistanceAlongSpline - 1.0 );
+	m_flDistanceAlongSpline = std::max<std::common_type_t<int, double>>( 0, m_flDistanceAlongSpline - 1.0 );
 
 	CheckForTeleport();
 

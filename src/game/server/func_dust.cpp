@@ -11,18 +11,14 @@
 #include "te_particlesystem.h"
 #include "IEffects.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
 #include "reflect_annotations.h"
 #include "reflect_sendtable.h"
 
 #define DUST_LIFETIME_NETWORK_BITS 4
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 class [[= ks::reflect::NetTable{ .name = "DT_Func_Dust", .base = false } ]]
       [[= ks::reflect::From<"m_nModelIndex", ks::reflect::Net{ .enc = ks::reflect::WireEnc::ModelIndex } >{} ]]
-      [[= ks::reflect::From<"m_Collision", ks::reflect::Net{}, nullptr, &REFERENCE_SEND_TABLE( DT_CollisionProperty )>{} ]]
+      [[= ks::reflect::FromTable<"m_Collision", &REFERENCE_SEND_TABLE( DT_CollisionProperty )>{} ]]
       CFunc_Dust : public CBaseEntity
 {
 public:

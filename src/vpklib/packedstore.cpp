@@ -6,13 +6,14 @@
 
 #include "vpklib/packedstore.h"
 #include "packedstore_internal.h"
-#include "tier1/utlintrusivelist.h"
 #include "tier1/generichash.h"
 #include "tier1/checksum_crc.h"
 #include "tier1/checksum_md5.h"
-#include "tier1/utldict.h"
+#include "tier1/map_ops.h"
 #include "tier2/fileutils.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/byte_writer.h"
+#include <algorithm>
+#include <functional>
 
 #ifdef VPK_ENABLE_SIGNING
 	#include "crypto.h"
@@ -21,9 +22,7 @@
 
 #include "keyvalues.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 
 typedef uint16 PackFileIndex_t;
 #define PACKFILEINDEX_END 0xffff
@@ -70,7 +69,6 @@ struct CFileHeaderFixedData
 };
 #pragma pack()
 
-#define PACKEDFILE_DIR_HASH_SIZE 43
 
 static int s_FileHeaderSize( char const *pName, int nNumDataParts, int nNumMetaDataBytes )
 {
@@ -81,37 +79,6 @@ static int s_FileHeaderSize( char const *pName, int nNumDataParts, int nNumMetaD
 		nNumDataParts * sizeof( CFilePartDescr ) +			// part data
 		sizeof( PackFileIndex_t );							// part data 0xff end marker
 }
-
-class CFileDirectoryData
-{
-public:
-	CFileDirectoryData *m_pNext;
-	char const *m_Name;
-
-};
-
-
-
-// hash chain for accelerating file lookups. We can find an extension by hash, and find the
-// directories containing files with this extension by another hash
-class CFileExtensionData
-{
-public:
-	CFileExtensionData *m_pNext;							// next one that has the same hash
-	char const *m_Name;						// points at extension string within the directory data
-	// nodes for each directory containing a file of this type
-	CUtlIntrusiveList<CFileDirectoryData> m_pDirectoryHashTable[PACKEDFILE_DIR_HASH_SIZE];
-
-	~CFileExtensionData( void )
-	{
-		for( int i = 0; i < ARRAYSIZE( m_pDirectoryHashTable ); i++ )
-		{
-			m_pDirectoryHashTable[i].Purge();
-		}
-	}
-
-};
-
 
 static int SkipFile( char const * &pData )					// returns highest file index
 {
@@ -125,7 +92,7 @@ static int SkipFile( char const * &pData )					// returns highest file index
 		int nIdx = reinterpret_cast<CFilePartDescr const *>(pData)->m_nFileNumber;
 
 		if ( nIdx != VPKFILENUMBER_EMBEDDED_IN_DIR_FILE )
-			nHighestChunkIndex = MAX( nHighestChunkIndex, nIdx  );
+			nHighestChunkIndex = std::max( nHighestChunkIndex, nIdx  );
 		pData += sizeof( CFilePartDescr );
 	}
 	pData += sizeof( PackFileIndex_t );
@@ -141,7 +108,7 @@ static inline int SkipAllFilesInDir( char const * & pData )
 	while( *pData )									// until we're out of files to look at
 	{
 		int nSkipIndex = SkipFile( pData );
-		nHighestChunkIndex = MAX( nHighestChunkIndex, nSkipIndex );
+		nHighestChunkIndex = std::max( nHighestChunkIndex, nSkipIndex );
 	}
 	pData++;												// skip end marker
 	return nHighestChunkIndex;
@@ -155,19 +122,17 @@ CFileHeaderFixedData *CPackedStore::FindFileEntry( char const *pDirname, char co
 	if ( pNameBaseOut )
 		*pNameBaseOut = nullptr;
 
-	int nExtensionHash = HashString( pExtension ) % PACKEDFILE_EXT_HASH_SIZE;
-	CFileExtensionData const *pExt = m_pExtensionData[nExtensionHash].FindNamedNodeCaseSensitive( pExtension );
-	if ( pExt )
+	auto itExt = m_DirsByExtension.find( pExtension );
+	if ( itExt != m_DirsByExtension.end() )
 	{
-		int nDirHash = HashString( pDirname ) % PACKEDFILE_DIR_HASH_SIZE;
-		CFileDirectoryData const *pDir = pExt->m_pDirectoryHashTable[nDirHash].FindNamedNodeCaseSensitive( pDirname );
-		if ( pDir )
+		auto itDir = itExt->second.find( pDirname );
+		if ( itDir != itExt->second.end() )
 		{
 			if ( pExtBaseOut )
-				*pExtBaseOut = (uint8 *) pDir;
+				*pExtBaseOut = (uint8 *) itDir->data();
 			// we found the right directory. now, sequential search. data is heavily packed, so
 			// this is a little awkward. See fileformat.txt
-			char const *pData = pDir->m_Name;
+			char const *pData = itDir->data();
 			pData += 1 + strlen( pData );					// skip dir name
 			// now, march through all the files
 			while( *pData )									// until we're out of files to look at
@@ -209,41 +174,32 @@ void CPackedStore::Init( void )
 	m_bUseDirFile = false;
 	m_pszFileBaseName[0] = 0;
 	m_pszFullPathName[0] = 0;
-	memset( m_pExtensionData, 0, sizeof( m_pExtensionData ) );
+	m_DirsByExtension.clear();
 	m_nDirectoryDataSize = 0;
 	m_nWriteChunkSize = k_nVPKDefaultChunkSize;
 
 	m_nSizeOfSignedData = 0;
-	m_Signature.Purge();
-	m_SignaturePrivateKey.Purge();
-	m_SignaturePublicKey.Purge();
+	m_Signature.clear(); m_Signature.shrink_to_fit();
+	m_SignaturePrivateKey.clear(); m_SignaturePrivateKey.shrink_to_fit();
+	m_SignaturePublicKey.clear(); m_SignaturePublicKey.shrink_to_fit();
 }
    
 void CPackedStore::BuildHashTables( void )
 {
 	m_nHighestChunkFileIndex = -1;
-	for( int i = 0; i < ARRAYSIZE( m_pExtensionData ) ; i++ )
-	{
-		m_pExtensionData[i].Purge();
-	}
+	m_DirsByExtension.clear();
 	char const *pData = reinterpret_cast< char const *>( DirectoryData() );
 	while( *pData )
 	{
 		// for each extension
-		int nExtensionHash = HashString( pData ) % PACKEDFILE_EXT_HASH_SIZE;
-		CFileExtensionData *pNewExt = new CFileExtensionData;
-		pNewExt->m_Name = pData;
-		m_pExtensionData[nExtensionHash].AddToHead( pNewExt );
+		auto &dirs = m_DirsByExtension[pData];
 		// now, iterate over all directories associated with this extension
 		pData += 1 + strlen( pData );
 		while( *pData )
 		{
-			int nDirHash = HashString( pData ) % PACKEDFILE_DIR_HASH_SIZE;
-			CFileDirectoryData *pNewDir = new CFileDirectoryData;
-			pNewDir->m_Name = pData;
-			pNewExt->m_pDirectoryHashTable[nDirHash].AddToHead( pNewDir );
+			dirs.insert( pData );
 			int nDirChunk = SkipAllFilesInDir( pData );
-			m_nHighestChunkFileIndex = MAX( m_nHighestChunkFileIndex, nDirChunk );
+			m_nHighestChunkFileIndex = std::max( m_nHighestChunkFileIndex, nDirChunk );
 		}
 		// step past \0
 		pData++;
@@ -253,7 +209,7 @@ void CPackedStore::BuildHashTables( void )
 
 bool CPackedStore::IsEmpty( void ) const
 {
-	return ( m_DirectoryData.Count() <= 1 );
+	return ( std::ssize( m_DirectoryData ) <= 1 );
 }
 
 static void StripTrailingString( char *pszBuf, const char *pszStrip )
@@ -272,7 +228,7 @@ CPackedStore::CPackedStore( char const *pFileBasename, char *pszFName, IBaseFile
 	Init();
 	m_pFileSystem = pFS;
 	m_PackedStoreReadCache.m_pPackedStore = this;
-	m_DirectoryData.AddToTail( 0 );
+	m_DirectoryData.push_back( 0 );
 
 	if ( pFileBasename )
 	{
@@ -335,32 +291,31 @@ CPackedStore::CPackedStore( char const *pFileBasename, char *pszFName, IBaseFile
 			m_nDirectoryDataSize = dirHeader.m_nDirectorySize;
 			// Flush out the existing allocation so that we allocate exactly the right size.
 			// This saves about 3 MB of address space currently (5.1 MB was rounded up to 8 MB).
-			m_DirectoryData.Purge();
-			m_DirectoryData.SetCount( nSize );
+			m_DirectoryData.clear(); m_DirectoryData.shrink_to_fit();
+			m_DirectoryData.assign( nSize, {} );
 			dirFile.MustRead( DirectoryData(), nSize );
 			// now, if we are opening for write, read the entire contents of the embedded data chunk in the dir into ram
 			if ( bOpenForWrite && bNewFileFormat )
 			{
 				if ( dirHeader.m_nEmbeddedChunkSize )
 				{
-					CUtlVector<uint8> readBuffer;
+					std::vector< uint8 > readBuffer;
 					int nRemainingSize = dirHeader.m_nEmbeddedChunkSize;
 
-					m_EmbeddedChunkData.EnsureCapacity( dirHeader.m_nEmbeddedChunkSize );
 
 					// We'll allocate around half a meg of contiguous memory for the read. Any more and the SDK's VPK 
 					// utility has a higher chance of choking on low-end machines.
-					readBuffer.SetCount( 524288 );
+					readBuffer.assign( 524288, {} );
 
 					while ( nRemainingSize > 0 ) 
 					{
-						int nReadSize = MIN( nRemainingSize , 524288 );
+						int nReadSize = std::min( nRemainingSize , 524288 );
 
-						dirFile.MustRead( readBuffer.Base(), nReadSize );
+						dirFile.MustRead( readBuffer.data(), nReadSize );
 
 						for ( int i = 0; i < nReadSize; i++ )
 						{
-							m_EmbeddedChunkData.AddToTail( readBuffer[i] );
+							m_EmbeddedChunkData.push_back( readBuffer[i] );
 						}
 						nRemainingSize -= nReadSize;
 					}
@@ -368,13 +323,10 @@ CPackedStore::CPackedStore( char const *pFileBasename, char *pszFName, IBaseFile
 			}
 			int cbVecHashes = dirHeader.m_nChunkHashesSize;
 			int ctHashes = cbVecHashes/sizeof(m_vecChunkHashFraction[0]);
-			m_vecChunkHashFraction.EnsureCount( ctHashes );
-			dirFile.MustRead( m_vecChunkHashFraction.Base(), cbVecHashes );
-			FOR_EACH_VEC( m_vecChunkHashFraction, i )
-			{
-				int idxFound = m_vecChunkHashFraction.Find( m_vecChunkHashFraction[i] );
-				Assert ( idxFound == i ); idxFound;
-			}
+			ks::ensure_size( m_vecChunkHashFraction, ctHashes );
+			dirFile.MustRead( m_vecChunkHashFraction.data(), cbVecHashes );
+			// strictly increasing: sorted, no duplicates
+			Assert( std::ranges::adjacent_find( m_vecChunkHashFraction, std::not_fn( ChunkHashFractionLess_t() ) ) == m_vecChunkHashFraction.end() );
 
 			// now read the self hashes
 			V_memset( m_DirectoryMD5.bits, 0, sizeof(m_DirectoryMD5.bits) );
@@ -408,14 +360,14 @@ CPackedStore::CPackedStore( char const *pFileBasename, char *pszFName, IBaseFile
 				// Read the public key
 				uint32 cubPublicKey = 0;
 				dirFile.MustRead( &cubPublicKey, sizeof(cubPublicKey) );
-				m_SignaturePublicKey.SetCount( cubPublicKey );
-				dirFile.MustRead( m_SignaturePublicKey.Base(), cubPublicKey );
+				m_SignaturePublicKey.assign( cubPublicKey, {} );
+				dirFile.MustRead( m_SignaturePublicKey.data(), cubPublicKey );
 
 				// Read the private key
 				uint32 cubSignature = 0;
 				dirFile.MustRead( &cubSignature, sizeof(cubSignature) );
-				m_Signature.SetCount( cubSignature );
-				dirFile.MustRead( m_Signature.Base(), cubSignature );
+				m_Signature.assign( cubSignature, {} );
+				dirFile.MustRead( m_Signature.data(), cubSignature );
 			}
 		}
 		Q_MakeAbsolutePath( m_pszFullPathName, sizeof( m_pszFullPathName ), m_pszFileBaseName );
@@ -449,11 +401,6 @@ void CPackedStore::GetDataFileName( char *pchFileNameOut, int cchFileNameOut, in
 
 CPackedStore::~CPackedStore( void )
 {
-	for( int i = 0; i < ARRAYSIZE( m_pExtensionData ) ; i++ )
-	{
-		m_pExtensionData[i].Purge();
-	}
-
 	for (int i = 0; i < ARRAYSIZE( m_FileHandles ); i++ )
 	{
 		if ( m_FileHandles[i].m_nFileNumber != -1 )
@@ -463,14 +410,8 @@ CPackedStore::~CPackedStore( void )
 		}
 	}
 
-	// Free the FindFirst cache data
-	m_directoryList.PurgeAndDeleteElements();
-
-	FOR_EACH_MAP( m_dirContents, i )
-	{
-		m_dirContents[i]->PurgeAndDeleteElements();
-		delete m_dirContents[i];
-	}
+	m_directoryList.clear();
+	m_dirContents.clear();
 }
 
 void SplitFileComponents( char const *pFileName, char *pDirOut, char *pBaseOut, char *pExtOut )
@@ -614,21 +555,21 @@ void CPackedStore::Write( void )
 	// !KLUDGE!
 	// Write the whole header into a buffer in memory.
 	// We do this so we can easily sign it.
-	CUtlBuffer bufDirFile;
+	ks::byte_writer bufDirFile;
 
 	VPKDirHeader_t headerOut;
-	headerOut.m_nDirectorySize = m_DirectoryData.Count();
-	headerOut.m_nEmbeddedChunkSize = m_EmbeddedChunkData.Count();
-	headerOut.m_nChunkHashesSize = m_vecChunkHashFraction.Count()*sizeof(m_vecChunkHashFraction[0]);
+	headerOut.m_nDirectorySize = std::ssize( m_DirectoryData );
+	headerOut.m_nEmbeddedChunkSize = std::ssize( m_EmbeddedChunkData );
+	headerOut.m_nChunkHashesSize = std::ssize( m_vecChunkHashFraction )*sizeof(m_vecChunkHashFraction[0]);
 	headerOut.m_nSelfHashesSize = 3*sizeof(m_DirectoryMD5.bits);
 	headerOut.m_nSignatureSize = 0;
 
 	// Do we plan on signing this thing and writing a signature?
-	m_Signature.Purge();
+	m_Signature.clear(); m_Signature.shrink_to_fit();
 	#ifdef VPK_ENABLE_SIGNING
 		uint32 nExpectedSignatureSize = 0;
 	#endif
-	if ( m_SignaturePrivateKey.Count() > 0 && m_SignaturePublicKey.Count() > 0 )
+	if ( !m_SignaturePrivateKey.empty() && std::ssize( m_SignaturePublicKey ) > 0 )
 	{
 		#ifdef VPK_ENABLE_SIGNING
 			nExpectedSignatureSize = k_cubRSASignature;
@@ -638,43 +579,43 @@ void CPackedStore::Write( void )
 		#endif
 	}
 
-	bufDirFile.Put( &headerOut, sizeof( headerOut ) );
-	bufDirFile.Put( DirectoryData(), m_DirectoryData.Count() );
+	bufDirFile.write_bytes( &headerOut, sizeof( headerOut ) );
+	bufDirFile.write_bytes( DirectoryData(), std::ssize( m_DirectoryData ) );
 
-	if ( m_EmbeddedChunkData.Count() )
+	if ( std::ssize( m_EmbeddedChunkData ) )
 	{
-		int nRemainingSize = m_EmbeddedChunkData.Count();
-		CUtlVector<uint8> writeBuffer;
+		int nRemainingSize = std::ssize( m_EmbeddedChunkData );
+		std::vector< uint8 > writeBuffer;
 		
-		writeBuffer.SetCount( 524288 );
+		writeBuffer.assign( 524288, {} );
 		int nChunkOffset = 0;
 
 		while ( nRemainingSize > 0 )
 		{
 			// We'll write around half a meg of contiguous memory at once. Any more and the SDK's VPK 
 			// utility has a higher chance of choking on low-end machines.
-			int nWriteSize = MIN( nRemainingSize, 524288 );
+			int nWriteSize = std::min( nRemainingSize, 524288 );
 			
 			for ( int i = 0; i < nWriteSize; i++ )
 			{
 				writeBuffer[i] = m_EmbeddedChunkData[nChunkOffset++];
 			}
 
-			bufDirFile.Put( writeBuffer.Base(), nWriteSize );
+			bufDirFile.write_bytes( writeBuffer.data(), nWriteSize );
 			nRemainingSize -= nWriteSize;
 		}
 	}
 
 	// write the chunk hashes out
-	bufDirFile.Put( m_vecChunkHashFraction.Base(), m_vecChunkHashFraction.Count()*sizeof(m_vecChunkHashFraction[0]) );
+	bufDirFile.write_bytes( m_vecChunkHashFraction.data(), std::ssize( m_vecChunkHashFraction )*sizeof(m_vecChunkHashFraction[0]) );
 
 	// write out the MD5s of the 2 main pieces of data
-	bufDirFile.Put( m_DirectoryMD5.bits, sizeof( m_DirectoryMD5.bits ) );
-	bufDirFile.Put( m_ChunkHashesMD5.bits, sizeof( m_ChunkHashesMD5.bits ) );
+	bufDirFile.write_bytes( m_DirectoryMD5.bits, sizeof( m_DirectoryMD5.bits ) );
+	bufDirFile.write_bytes( m_ChunkHashesMD5.bits, sizeof( m_ChunkHashesMD5.bits ) );
 
 	// compute the final MD5 ( of everything in the file up to this point )
-	MD5_ProcessSingleBuffer( bufDirFile.Base(), bufDirFile.TellPut(), m_TotalFileMD5 );
-	bufDirFile.Put( m_TotalFileMD5.bits, sizeof( m_TotalFileMD5.bits ) );
+	MD5_ProcessSingleBuffer( bufDirFile.data(), bufDirFile.size(), m_TotalFileMD5 );
+	bufDirFile.write_bytes( m_TotalFileMD5.bits, sizeof( m_TotalFileMD5.bits ) );
 
 	// Should we sign all this stuff?
 	m_nSizeOfSignedData = 0;
@@ -682,7 +623,7 @@ void CPackedStore::Write( void )
 		if ( headerOut.m_nSignatureSize > 0 )
 		{
 
-			m_nSizeOfSignedData = bufDirFile.TellPut();
+			m_nSizeOfSignedData = bufDirFile.size();
 			uint32 nExpectedSignedSize = sizeof(headerOut) + headerOut.ComputeSizeofSignedDataAfterHeader();
 			if ( m_nSizeOfSignedData != nExpectedSignedSize )
 			{
@@ -694,7 +635,7 @@ void CPackedStore::Write( void )
 
 			// Calcuate the signature
 			uint32 cubSignature = m_Signature.Count();
-			if ( !CCrypto::RSASignSHA256( (const uint8 *)bufDirFile.Base(), bufDirFile.TellPut(), 
+			if ( !CCrypto::RSASignSHA256( (const uint8 *)bufDirFile.data(), bufDirFile.size(), 
 				(uint8 *)m_Signature.Base(), &cubSignature, 
 				(const uint8 *)m_SignaturePrivateKey.Base(), m_SignaturePrivateKey.Count() ) )
 			{
@@ -712,7 +653,7 @@ void CPackedStore::Write( void )
 
 			// Now re-check the signature, using the public key that we are about
 			// to burn into the file, to make sure there's no mismatch.
-			if ( !CCrypto::RSAVerifySignatureSHA256( (const uint8 *)bufDirFile.Base(), bufDirFile.TellPut(), 
+			if ( !CCrypto::RSAVerifySignatureSHA256( (const uint8 *)bufDirFile.data(), bufDirFile.size(), 
 				(const uint8 *)m_Signature.Base(), cubSignature, 
 				(const uint8 *)m_SignaturePublicKey.Base(), m_SignaturePublicKey.Count() ) )
 			{
@@ -721,12 +662,12 @@ void CPackedStore::Write( void )
 
 			// Write public key which should be used
 			uint32 cubPublicKey = m_SignaturePublicKey.Count();
-			bufDirFile.Put( &cubPublicKey, sizeof(cubPublicKey) );
-			bufDirFile.Put( m_SignaturePublicKey.Base(), cubPublicKey );
+			bufDirFile.write_bytes( &cubPublicKey, sizeof(cubPublicKey) );
+			bufDirFile.write_bytes( m_SignaturePublicKey.Base(), cubPublicKey );
 
 			// Write signature
-			bufDirFile.Put( &cubSignature, sizeof(cubSignature) );
-			bufDirFile.Put( m_Signature.Base(), cubSignature );
+			bufDirFile.write_bytes( &cubSignature, sizeof(cubSignature) );
+			bufDirFile.write_bytes( m_Signature.Base(), cubSignature );
 		}
 	#endif
 
@@ -751,7 +692,7 @@ void CPackedStore::Write( void )
 
 	// Now actually write the data to disk
 	COutputFile dirFile( szOutFileName );
-	dirFile.Write( bufDirFile.Base(), bufDirFile.TellPut() );
+	dirFile.Write( bufDirFile.data(), bufDirFile.size() );
 	dirFile.Close();
 }
 
@@ -789,17 +730,17 @@ CPackedStore::ESignatureCheckResult CPackedStore::CheckSignature( int nSignature
 	GetDataFileName( szFilename, sizeof( szFilename ), VPKFILENUMBER_EMBEDDED_IN_DIR_FILE );
 
 	// Read the data
-	CUtlBuffer bufSignedData;
-	if ( !g_pFullFileSystem->ReadFile( szFilename, nullptr, bufSignedData, m_nSizeOfSignedData ) )
+	auto bufSignedData = g_pFullFileSystem->ReadFile( szFilename, nullptr, m_nSizeOfSignedData );
+	if ( !bufSignedData )
 		return eSignatureCheckResult_Failed;
-	if ( bufSignedData.TellPut() < (int)m_nSizeOfSignedData )
+	if ( bufSignedData->size() < (size_t)m_nSizeOfSignedData )
 	{
 		Assert( false ); // ?
 		return eSignatureCheckResult_Failed;
 	}
 
 	// Check the signature
-	if ( !CCrypto::RSAVerifySignatureSHA256( (const uint8 *)bufSignedData.Base(), m_nSizeOfSignedData, 
+	if ( !CCrypto::RSAVerifySignatureSHA256( (const uint8 *)bufSignedData->data(), m_nSizeOfSignedData, 
 		(const uint8 *)m_Signature.Base(), m_Signature.Count(), 
 		(const uint8 *)m_SignaturePublicKey.Base(), m_SignaturePublicKey.Count() ) )
 	{
@@ -811,7 +752,7 @@ CPackedStore::ESignatureCheckResult CPackedStore::CheckSignature( int nSignature
 
 #endif
 
-CPackedStoreReadCache::CPackedStoreReadCache( IBaseFileSystem *pFS ):m_treeCachedVPKRead( CachedVPKRead_t::Less )
+CPackedStoreReadCache::CPackedStoreReadCache( IBaseFileSystem *pFS )
 {
 	m_pPackedStore = nullptr;
 	m_cItemsInCache = 0;
@@ -915,7 +856,7 @@ bool CPackedStoreReadCache::CheckMd5Result( CachedVPKRead_t &cachedVPKRead, MD5V
 int CPackedStoreReadCache::FindBufferToUse()
 {
 	int idxLRU = 0;
-	int idxToRemove = m_treeCachedVPKRead.InvalidIndex();
+	CachedVPKReadMap_t::iterator itToRemove = m_rgCurrentCacheIndex[0];
 	uint32 uTimeLowest = (uint32)~0; // MAXINT
 	// find the oldest item, reuse its buffer
 	for ( int i = 0; i < m_cItemsInCache; i++ )
@@ -923,14 +864,13 @@ int CPackedStoreReadCache::FindBufferToUse()
 		if ( m_rgLastUsedTime[i] < uTimeLowest )
 		{
 			uTimeLowest = m_rgLastUsedTime[i];
-			idxToRemove = m_rgCurrentCacheIndex[i];
+			itToRemove = m_rgCurrentCacheIndex[i];
 			idxLRU = i;
 		}
-		int idxCurrent = m_rgCurrentCacheIndex[i];
 		// while we are here check if the MD5 is done
-		if ( m_treeCachedVPKRead[idxCurrent].m_hMD5RequestHandle )
+		if ( m_rgCurrentCacheIndex[i]->second.m_hMD5RequestHandle )
 		{
-			CachedVPKRead_t &cachedVPKRead = m_treeCachedVPKRead[idxCurrent];
+			CachedVPKRead_t &cachedVPKRead = m_rgCurrentCacheIndex[i]->second;
 			MD5Value_t md5Value;
 			if ( m_pFileTracker->IsMD5RequestComplete( cachedVPKRead.m_hMD5RequestHandle, &md5Value ) )
 			{
@@ -944,12 +884,12 @@ int CPackedStoreReadCache::FindBufferToUse()
 	}
 
 	// if we submitted its MD5 for processing, then wait until that is done
-	if ( m_treeCachedVPKRead[idxToRemove].m_hMD5RequestHandle )
+	if ( itToRemove->second.m_hMD5RequestHandle )
 	{
-		CachedVPKRead_t &cachedVPKRead = m_treeCachedVPKRead[idxToRemove];
+		CachedVPKRead_t &cachedVPKRead = itToRemove->second;
 		MD5Value_t md5Value;
 		m_pFileTracker->BlockUntilMD5RequestComplete( cachedVPKRead.m_hMD5RequestHandle, &md5Value );
-		m_treeCachedVPKRead[idxToRemove].m_hMD5RequestHandle = 0;
+		cachedVPKRead.m_hMD5RequestHandle = 0;
 		// make sure it matches what it is supposed to match
 		CheckMd5Result( cachedVPKRead, md5Value );
 	}
@@ -961,22 +901,23 @@ int CPackedStoreReadCache::FindBufferToUse()
 bool CPackedStoreReadCache::BCanSatisfyFromReadCacheInternal( uint8 *pOutData, CPackedStoreFileHandle &handle, FileHandleTracker_t &fHandle, int nDesiredPos, int nNumBytes, int &nRead )
 {
 	bool bSuccess = false;
-	m_rwlock.LockForRead();
+	m_rwlock.lock_shared();
 	bool bLockedForWrite = false;
 
 	CachedVPKRead_t cachedVPKRead;
 	cachedVPKRead.m_nPackFileNumber = handle.m_nFileNumber;
 	cachedVPKRead.m_nFileFraction = nDesiredPos & k_nCacheBufferMask;
-	int idxTrackedVPKFile = m_treeCachedVPKRead.Find( cachedVPKRead );
-	if ( idxTrackedVPKFile == m_treeCachedVPKRead.InvalidIndex() )
+	const std::pair< int, int > key( cachedVPKRead.m_nPackFileNumber, cachedVPKRead.m_nFileFraction );
+	auto itTrackedVPKFile = m_treeCachedVPKRead.find( key );
+	if ( itTrackedVPKFile == m_treeCachedVPKRead.end() )
 	{
-		m_rwlock.UnlockRead();
-		m_rwlock.LockForWrite();
+		m_rwlock.unlock_shared();
+		m_rwlock.lock();
 		bLockedForWrite = true;
 		// if we didnt find it, we had to grab the write lock, it may have been added while we waited
-		idxTrackedVPKFile = m_treeCachedVPKRead.Find( cachedVPKRead );
+		itTrackedVPKFile = m_treeCachedVPKRead.find( key );
 	}
-	if ( idxTrackedVPKFile == m_treeCachedVPKRead.InvalidIndex() )
+	if ( itTrackedVPKFile == m_treeCachedVPKRead.end() )
 	{
 		// if we are over our limit, remove one and reuse the buffer
 		cachedVPKRead.m_pubBuffer = nullptr;
@@ -985,10 +926,10 @@ bool CPackedStoreReadCache::BCanSatisfyFromReadCacheInternal( uint8 *pOutData, C
 		if ( m_cItemsInCache >= k_nCacheBuffersToKeep )
 		{
 			idxLRU = FindBufferToUse();
-			int idxToRemove = m_rgCurrentCacheIndex[idxLRU];
+			CachedVPKRead_t &toRemove = m_rgCurrentCacheIndex[idxLRU]->second;
 
-			cachedVPKRead.m_pubBuffer = m_treeCachedVPKRead[idxToRemove].m_pubBuffer;
-			m_treeCachedVPKRead[idxToRemove].m_pubBuffer = nullptr;
+			cachedVPKRead.m_pubBuffer = toRemove.m_pubBuffer;
+			toRemove.m_pubBuffer = nullptr;
 			m_cDiscardsFromCache++;
 		}
 		else
@@ -998,20 +939,20 @@ bool CPackedStoreReadCache::BCanSatisfyFromReadCacheInternal( uint8 *pOutData, C
 		}
 		if ( cachedVPKRead.m_pubBuffer == nullptr )
 		{
-			cachedVPKRead.m_pubBuffer = (uint8 *)malloc( k_cubCacheBufferSize );
+			cachedVPKRead.m_pubBuffer = (uint8 *)MemAlloc_Alloc( k_cubCacheBufferSize );
 		}
 		cachedVPKRead.m_idxLRU = idxLRU;
 		ReadCacheLine( fHandle, cachedVPKRead, nRead );
-		idxTrackedVPKFile = m_treeCachedVPKRead.Insert( cachedVPKRead );
+		itTrackedVPKFile = m_treeCachedVPKRead.emplace( key, cachedVPKRead ).first;
 		m_cAddedToCache++;
 
 		// this item is in the cache
-		m_rgCurrentCacheIndex[idxLRU] = idxTrackedVPKFile;
+		m_rgCurrentCacheIndex[idxLRU] = itTrackedVPKFile;
 		m_rgLastUsedTime[idxLRU] = Plat_MSTime();
 	}
 	else
 	{
-		cachedVPKRead = m_treeCachedVPKRead[idxTrackedVPKFile];
+		cachedVPKRead = itTrackedVPKFile->second;
 		if ( cachedVPKRead.m_pubBuffer == nullptr )
 		{
 			// this chunk has been read, MD5ed, and then LRUd away
@@ -1024,7 +965,7 @@ bool CPackedStoreReadCache::BCanSatisfyFromReadCacheInternal( uint8 *pOutData, C
 		{
 			m_cubReadFromCache += nNumBytes;
 			m_cReadFromCache ++;
-			m_rgLastUsedTime[m_treeCachedVPKRead[idxTrackedVPKFile].m_idxLRU] = Plat_MSTime();
+			m_rgLastUsedTime[itTrackedVPKFile->second.m_idxLRU] = Plat_MSTime();
 		}
 	}
 	if ( cachedVPKRead.m_pubBuffer != nullptr && cachedVPKRead.m_cubBuffer + cachedVPKRead.m_nFileFraction >= nDesiredPos+nNumBytes )
@@ -1035,9 +976,9 @@ bool CPackedStoreReadCache::BCanSatisfyFromReadCacheInternal( uint8 *pOutData, C
 		bSuccess = true;
 	}
 	if ( bLockedForWrite )
-		m_rwlock.UnlockWrite();
+		m_rwlock.unlock();
 	else
-		m_rwlock.UnlockRead();
+		m_rwlock.unlock_shared();
 
 	return bSuccess;
 }
@@ -1046,17 +987,17 @@ bool CPackedStoreReadCache::BCanSatisfyFromReadCacheInternal( uint8 *pOutData, C
 void CPackedStoreReadCache::RereadBadCacheLine( CachedVPKRead_t &cachedVPKRead )
 {
 	int nRead = cachedVPKRead.m_cubBuffer;
-	cachedVPKRead.m_pubBuffer = (uint8 *)malloc( k_cubCacheBufferSize );
+	cachedVPKRead.m_pubBuffer = (uint8 *)MemAlloc_Alloc( k_cubCacheBufferSize );
 	FileHandleTracker_t &fHandle = m_pPackedStore->GetFileHandle( cachedVPKRead.m_nPackFileNumber );
-	fHandle.m_Mutex.Lock();
+	fHandle.m_Mutex.lock();
 	ReadCacheLine( fHandle, cachedVPKRead, nRead );
-	fHandle.m_Mutex.Unlock();
+	fHandle.m_Mutex.unlock();
 }
 
 // Recheck the MD5 of the cache line - takes the cache lock
 void CPackedStoreReadCache::RecheckBadCacheLine( CachedVPKRead_t &cachedVPKRead )
 {
-	m_rwlock.LockForWrite();
+	std::scoped_lock lock( m_rwlock );
 	ChunkHashFraction_t chunkHashFraction;
 	m_pPackedStore->FindFileHashFraction( cachedVPKRead.m_nPackFileNumber, cachedVPKRead.m_nFileFraction, chunkHashFraction );
 
@@ -1066,8 +1007,7 @@ void CPackedStoreReadCache::RecheckBadCacheLine( CachedVPKRead_t &cachedVPKRead 
 	CheckMd5Result( cachedVPKRead, md5ValueSecondTry );
 	cachedVPKRead.m_pubBuffer = nullptr;
 	// m_listCachedVPKReadsFailed contains all the data about failed reads - for error or OGS reporting
-	m_listCachedVPKReadsFailed.AddToTail( cachedVPKRead );
-	m_rwlock.UnlockWrite();
+	m_listCachedVPKReadsFailed.push_back( cachedVPKRead );
 }
 
 // try reloading anything that failed its md5 check
@@ -1086,35 +1026,35 @@ void CPackedStoreReadCache::RetryAllBadCacheLines()
 	}
 }
 
-void CPackedStore::GetPackFileLoadErrorSummary( CUtlString &sErrors )
+void CPackedStore::GetPackFileLoadErrorSummary( std::string &sErrors )
 {
-	FOR_EACH_LL( m_PackedStoreReadCache.m_listCachedVPKReadsFailed, i )
+	for ( const CachedVPKRead_t &failed : m_PackedStoreReadCache.m_listCachedVPKReadsFailed )
 	{
 		char szDataFileName[MAX_PATH];
 		CPackedStoreFileHandle fhandle = GetHandleForHashingFiles();
-		fhandle.m_nFileNumber = m_PackedStoreReadCache.m_listCachedVPKReadsFailed[i].m_nPackFileNumber;
+		fhandle.m_nFileNumber = failed.m_nPackFileNumber;
 		fhandle.GetPackFileName( szDataFileName, sizeof(szDataFileName) );
 		const char *pszFileName = V_GetFileName( szDataFileName );
 
-		CUtlString sTemp;
-		sTemp.Format( "Pack File %s at offset %x length %x errorcount = %d \n", 
+		std::string sTemp;
+		sTemp = ks::format_printf( "Pack File %s at offset %x length %x errorcount = %d \n", 
 			pszFileName,
-			m_PackedStoreReadCache.m_listCachedVPKReadsFailed[i].m_nFileFraction, 
-			m_PackedStoreReadCache.m_listCachedVPKReadsFailed[i].m_cubBuffer,
-			m_PackedStoreReadCache.m_listCachedVPKReadsFailed[i].m_cFailedHashes );
+			failed.m_nFileFraction, 
+			failed.m_cubBuffer,
+			failed.m_cFailedHashes );
 		sErrors += sTemp ;
 		
 		char hex[sizeof(MD5Value_t)*2 + 1 ];
-		Q_binarytohex( static_cast< byte* >( m_PackedStoreReadCache.m_listCachedVPKReadsFailed[i].m_md5Value.bits ), 
+		Q_binarytohex( failed.m_md5Value.bits, 
 					sizeof(MD5Value_t),	hex, sizeof( hex ) );
 
 		ChunkHashFraction_t chunkHashFraction;
-		FindFileHashFraction( m_PackedStoreReadCache.m_listCachedVPKReadsFailed[i].m_nPackFileNumber, m_PackedStoreReadCache.m_listCachedVPKReadsFailed[i].m_nFileFraction, chunkHashFraction );
+		FindFileHashFraction( failed.m_nPackFileNumber, failed.m_nFileFraction, chunkHashFraction );
 
 		char hex2[sizeof(MD5Value_t)*2 + 1 ];
 		Q_binarytohex( static_cast< byte* >( chunkHashFraction.m_md5contents.bits ), 
 			sizeof(MD5Value_t),	hex2, sizeof( hex2 ) );
-		sTemp.Format( "Last Md5 Value %s Should be %s \n", hex, hex2 );
+		sTemp = ks::format_printf( "Last Md5 Value %s Should be %s \n", hex, hex2 );
 
 		sErrors += sTemp ;
 	}
@@ -1131,29 +1071,29 @@ void CPackedStore::GetPackFileLoadErrorSummaryKV( KeyValues *pKV )
 	pKV->SetInt( "FileErrorsCorrected" ,	m_PackedStoreReadCache.m_cFileErrorsCorrected );
 	pKV->SetInt( "FileResultsDifferent" ,	m_PackedStoreReadCache.m_cFileResultsDifferent );
 
-	FOR_EACH_LL( m_PackedStoreReadCache.m_listCachedVPKReadsFailed, i )
+	for ( const CachedVPKRead_t &failed : m_PackedStoreReadCache.m_listCachedVPKReadsFailed )
 	{
 		char szDataFileName[MAX_PATH];
 		CPackedStoreFileHandle fhandle = GetHandleForHashingFiles();
-		fhandle.m_nFileNumber = m_PackedStoreReadCache.m_listCachedVPKReadsFailed[i].m_nPackFileNumber;
+		fhandle.m_nFileNumber = failed.m_nPackFileNumber;
 		fhandle.GetPackFileName( szDataFileName, sizeof(szDataFileName) );
 
 		KeyValues *pKV1 = pKV->CreateNewKey();
 		pKV1->SetInt( "PackFileID", m_PackFileID );
-		pKV1->SetInt( "PackFileNumber", m_PackedStoreReadCache.m_listCachedVPKReadsFailed[i].m_nPackFileNumber );
-		pKV1->SetInt( "FileFraction", m_PackedStoreReadCache.m_listCachedVPKReadsFailed[i].m_nFileFraction );
+		pKV1->SetInt( "PackFileNumber", failed.m_nPackFileNumber );
+		pKV1->SetInt( "FileFraction", failed.m_nFileFraction );
 
 		char hex[sizeof(MD5Value_t)*2 + 1 ];
-		Q_binarytohex( m_PackedStoreReadCache.m_listCachedVPKReadsFailed[i].m_md5Value.bits, sizeof(MD5Value_t), hex, sizeof( hex ) );
+		Q_binarytohex( failed.m_md5Value.bits, sizeof(MD5Value_t), hex, sizeof( hex ) );
 
 		ChunkHashFraction_t chunkHashFraction;
-		FindFileHashFraction( m_PackedStoreReadCache.m_listCachedVPKReadsFailed[i].m_nPackFileNumber, m_PackedStoreReadCache.m_listCachedVPKReadsFailed[i].m_nFileFraction, chunkHashFraction );
+		FindFileHashFraction( failed.m_nPackFileNumber, failed.m_nFileFraction, chunkHashFraction );
 
 		char hex2[sizeof(MD5Value_t)*2 + 1 ];
 		Q_binarytohex( chunkHashFraction.m_md5contents.bits, sizeof(MD5Value_t), hex2, sizeof( hex2 ) );
 
 		char hex3[sizeof(MD5Value_t)*2 + 1 ];
-		Q_binarytohex( m_PackedStoreReadCache.m_listCachedVPKReadsFailed[i].m_md5ValueRetry.bits, sizeof(MD5Value_t), hex3, sizeof( hex3 ) );
+		Q_binarytohex( failed.m_md5ValueRetry.bits, sizeof(MD5Value_t), hex3, sizeof( hex3 ) );
 
 		pKV1->SetString( "ChunkMd5Master", hex2 );
 		pKV1->SetString( "ChunkMd5First", hex );
@@ -1167,11 +1107,11 @@ int CPackedStore::ReadData( CPackedStoreFileHandle &handle, void *pOutData, int 
 	int nRet = 0;
 
 	// clamp read size to file size
-	nNumBytes = MIN( nNumBytes, handle.m_nFileSize - handle.m_nCurrentFileOffset );
+	nNumBytes = std::min( nNumBytes, handle.m_nFileSize - handle.m_nCurrentFileOffset );
 	if ( nNumBytes > 0 )
 	{
 		// first satisfy from the metadata, if we can
-		int nNumMetaDataBytes = MIN( nNumBytes, handle.m_nMetaDataSize - handle.m_nCurrentFileOffset );
+		int nNumMetaDataBytes = std::min( nNumBytes, handle.m_nMetaDataSize - handle.m_nCurrentFileOffset );
 		if ( nNumMetaDataBytes > 0 )
 		{
 			memcpy( pOutData, reinterpret_cast<uint8 const *>( handle.m_pMetaData )
@@ -1187,7 +1127,7 @@ int CPackedStore::ReadData( CPackedStoreFileHandle &handle, void *pOutData, int 
 			FileHandleTracker_t &fHandle = GetFileHandle( handle.m_nFileNumber );
 			int nDesiredPos = handle.m_nFileOffset + handle.m_nCurrentFileOffset - handle.m_nMetaDataSize;
 			int nRead;
-			fHandle.m_Mutex.Lock();
+			fHandle.m_Mutex.lock();
 			if ( handle.m_nFileNumber == VPKFILENUMBER_EMBEDDED_IN_DIR_FILE )
 			{
 				// for file data in the directory header, all offsets are relative to the size of the dir header.
@@ -1207,7 +1147,7 @@ int CPackedStore::ReadData( CPackedStoreFileHandle &handle, void *pOutData, int 
 			}
 			Assert( nRead == nNumBytes );
 			nRet += nRead;
-			fHandle.m_Mutex.Unlock();
+			fHandle.m_Mutex.unlock();
 		}
 	}
 	m_PackedStoreReadCache.RetryAllBadCacheLines();
@@ -1225,7 +1165,7 @@ bool CPackedStore::HashEntirePackFile( CPackedStoreFileHandle &handle, int64 &nF
 #endif
 
 	FileHandleTracker_t &fHandle = GetFileHandle( handle.m_nFileNumber );
-	fHandle.m_Mutex.Lock();
+	fHandle.m_Mutex.lock();
 	
 	unsigned int fileLength = m_pFileSystem->Size( fHandle.m_hFileHandle );
 	nFileSize = fileLength;
@@ -1243,7 +1183,7 @@ bool CPackedStore::HashEntirePackFile( CPackedStoreFileHandle &handle, int64 &nF
 	unsigned int curStartByte = 0;
 	for ( int iChunk=0; iChunk < nChunks; iChunk++ )
 	{
-		int curEndByte = MIN( curStartByte + CRC_CHUNK_SIZE, (uint)nFractionLength );
+		int curEndByte = std::min( curStartByte + CRC_CHUNK_SIZE, (uint)nFractionLength );
 		int chunkLen = curEndByte - curStartByte;
 		if ( chunkLen == 0 )
 			break;
@@ -1263,7 +1203,7 @@ bool CPackedStore::HashEntirePackFile( CPackedStoreFileHandle &handle, int64 &nF
 
 	// seek back to where it was
 	m_pFileSystem->Seek( fHandle.m_hFileHandle, fHandle.m_nCurOfs, FILESYSTEM_SEEK_HEAD );
-	fHandle.m_Mutex.Unlock();
+	fHandle.m_Mutex.unlock();
 
 #ifdef COMPUTE_HASH_TIMES
 	timer.End();
@@ -1279,16 +1219,12 @@ void CPackedStore::DiscardChunkHashes( int iChunkFileIndex )
 {
 	// Wow, this could be a LOT faster because the list is
 	// sorted.  Probably not worth optimizing
-	FOR_EACH_VEC_BACK( m_vecChunkHashFraction, i )
-	{
-		if ( m_vecChunkHashFraction[i].m_nPackFileNumber == iChunkFileIndex )
-			m_vecChunkHashFraction.Remove( i );
-	}
+	std::erase_if( m_vecChunkHashFraction, [iChunkFileIndex]( const ChunkHashFraction_t &hash ) { return hash.m_nPackFileNumber == iChunkFileIndex; } );
 }
 
 void CPackedStore::HashChunkFile( int iChunkFileIndex )
 {
-	AUTO_LOCK( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 	static const int k_nFileFractionSize = 0x00100000; // 1 MB
 	static const int k_nFileFractionMask = 0xFFF00000; // 1 MB
 
@@ -1313,7 +1249,7 @@ void CPackedStore::HashChunkFile( int iChunkFileIndex )
 		fileHashFraction.m_nPackFileNumber = VPKHandle.m_nFileNumber;
 		fileHashFraction.m_nFileFraction = nFileFraction;
 		Q_memcpy( fileHashFraction.m_md5contents.bits, filehash.m_md5contents.bits, sizeof(fileHashFraction.m_md5contents) );
-		m_vecChunkHashFraction.Insert( fileHashFraction );
+		m_vecChunkHashFraction.insert( std::ranges::upper_bound( m_vecChunkHashFraction, fileHashFraction, ChunkHashFractionLess_t() ), fileHashFraction );
 		// move to next section
 		nFileFraction += k_nFileFractionSize;
 		// if we are at EOF we are done
@@ -1331,7 +1267,7 @@ void CPackedStore::HashAllChunkFiles()
 	BuildHashTables();
 
 	// make brand new hashes
-	m_vecChunkHashFraction.Purge();
+	m_vecChunkHashFraction.clear(); m_vecChunkHashFraction.shrink_to_fit();
 	for ( int iChunkFileIndex = 0 ; iChunkFileIndex <= GetHighestChunkFileIndex() ; ++iChunkFileIndex )
 		HashChunkFile( iChunkFileIndex );
 }
@@ -1341,7 +1277,7 @@ void CPackedStore::ComputeDirectoryHash( MD5Value_t &md5Directory )
 	MD5Context_t ctx;
 	memset(&ctx, 0, sizeof(MD5Context_t));
 	MD5Init(&ctx);
-	MD5Update(&ctx, m_DirectoryData.Base(), m_DirectoryData.Count() );
+	MD5Update(&ctx, m_DirectoryData.data(), std::ssize( m_DirectoryData ) );
 	MD5Final( md5Directory.bits, &ctx);
 }
 
@@ -1351,7 +1287,7 @@ void CPackedStore::ComputeChunkHash( MD5Value_t &md5ChunkHashes )
 	MD5Context_t ctx;
 	memset(&ctx, 0, sizeof(MD5Context_t));
 	MD5Init(&ctx);
-	MD5Update(&ctx, (uint8 *)m_vecChunkHashFraction.Base(), m_vecChunkHashFraction.Count()*sizeof(m_vecChunkHashFraction[0]) );
+	MD5Update(&ctx, (uint8 *)m_vecChunkHashFraction.data(), std::ssize( m_vecChunkHashFraction )*sizeof(m_vecChunkHashFraction[0]) );
 	MD5Final( md5ChunkHashes.bits, &ctx);
 }
 
@@ -1395,13 +1331,13 @@ bool CPackedStore::FindFileHashFraction( int nPackFileNumber, int nFileFraction,
 	fileHashFractionFind.m_nFileFraction = nFileFraction;
 	fileHashFractionFind.m_nPackFileNumber = nPackFileNumber;
 
-	int idx = m_vecChunkHashFraction.Find( fileHashFractionFind );
-	if ( idx == m_vecChunkHashFraction.InvalidIndex() )
+	auto it = std::ranges::lower_bound( m_vecChunkHashFraction, fileHashFractionFind, ChunkHashFractionLess_t() );
+	if ( it == m_vecChunkHashFraction.end() || ChunkHashFractionLess_t()( fileHashFractionFind, *it ) )
 	{
 		Assert( false );
 		return false;
 	}
-	fileHashFraction = m_vecChunkHashFraction[idx];
+	fileHashFraction = *it;
 	return true;
 }
 
@@ -1412,7 +1348,7 @@ void CPackedStore::GetPackFileName( CPackedStoreFileHandle &handle, char *pchFil
 
 FileHandleTracker_t & CPackedStore::GetFileHandle( int nFileNumber )
 {
-	AUTO_LOCK( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 	int nFileHandleIdx = nFileNumber % ARRAYSIZE( m_FileHandles );
 
 	if ( m_FileHandles[nFileHandleIdx].m_nFileNumber == nFileNumber )
@@ -1458,7 +1394,7 @@ bool CPackedStore::InternalRemoveFileFromDirectory( const char *pszName )
 	CFileHeaderFixedData *pHeader = pData.m_pHeaderData;
 	// delete the old header so we can insert a new one with updated contents
 	int nBytesToRemove = ( int )( V_strlen( ( char * ) pData.m_pDirFileNamePtr ) + 1 + pHeader->HeaderSizeIncludingMetaData() );
-	m_DirectoryData.RemoveMultiple( pData.m_pDirFileNamePtr - m_DirectoryData.Base(), nBytesToRemove );
+	{ auto first = m_DirectoryData.begin() + ( pData.m_pDirFileNamePtr - m_DirectoryData.data() ); m_DirectoryData.erase( first, first + nBytesToRemove ); }
 	return true;
 }
 
@@ -1473,13 +1409,13 @@ void CPackedStore::AddFileToDirectory( const VPKContentFileInfo_t &info )
 
 	// First, remove it if it's already there,
 	// without rebuilding the hash tables
-	InternalRemoveFileFromDirectory( info.m_sName );
+	InternalRemoveFileFromDirectory( info.m_sName.c_str() );
 
 	// let's build out a header
 	char pszExt[MAX_PATH];
 	char pszBase[MAX_PATH];
 	char pszDir[MAX_PATH];
-	SplitFileComponents( info.m_sName, pszDir, pszBase, pszExt );
+	SplitFileComponents( info.m_sName.c_str(), pszDir, pszBase, pszExt );
 	int nNumDataParts = 1;
 	int nFileDataSize = s_FileHeaderSize( pszBase, nNumDataParts, info.m_iPreloadSize );
 	int nTotalHeaderSize = ( int )( nFileDataSize + ( 2 + strlen( pszExt ) ) + ( 2 + strlen( pszDir ) ) );
@@ -1498,7 +1434,7 @@ void CPackedStore::AddFileToDirectory( const VPKContentFileInfo_t &info )
 	memcpy( pOut, &nCRC, sizeof( nCRC ) );
 	pOut += sizeof( int );
 	if ( info.m_iPreloadSize > 0xffff )
-		Error( "Preload size for '%s' is too big", info.m_sName.String() );
+		Error( "Preload size for '%s' is too big", info.m_sName.c_str() );
 	uint16 nMetaDataSize = (uint16)info.m_iPreloadSize;
 	memcpy( pOut, &nMetaDataSize, sizeof( uint16 ) );
 	pOut += sizeof( uint16 );
@@ -1526,34 +1462,32 @@ void CPackedStore::AddFileToDirectory( const VPKContentFileInfo_t &info )
 	Assert( pOut - pBuf == nTotalHeaderSize );
 
 	// now, we need to insert our header, figuring out how many of the fields are already there
-	int nExtensionHash = HashString( pszExt ) % PACKEDFILE_EXT_HASH_SIZE;
 	int nInsertOffset = 0;
-	CFileExtensionData const *pExt = m_pExtensionData[nExtensionHash].FindNamedNodeCaseSensitive( pszExt );
+	auto itExt = m_DirsByExtension.find( pszExt );
 	char *pHeaderInsertPtr = pBuf;
 
-	if ( pExt )
+	if ( itExt != m_DirsByExtension.end() )
 	{
 		// this is not a new extension. we should not insert the extension record
 		nTotalHeaderSize -= 2 + strlen( pszExt );		// null + end of dir list marker
 		pHeaderInsertPtr += 1 + strlen( pszExt );					// don't insert the name + null
 		// now, look for the directory
-		int nDirHash = HashString( pszDir ) % PACKEDFILE_DIR_HASH_SIZE;
-		CFileDirectoryData const *pDir = pExt->m_pDirectoryHashTable[nDirHash].FindNamedNodeCaseSensitive( pszDir );
-		if ( pDir )
+		auto itDir = itExt->second.find( pszDir );
+		if ( itDir != itExt->second.end() )
 		{
 			// dir and extension found. all we need to do is insert the file data itself
 			nTotalHeaderSize -= 2 + strlen( pszDir );	// null + end of file list marker
 			pHeaderInsertPtr += 1 + strlen( pszDir );
-			char const *pStartOfDirFileData = pDir->m_Name + 1 + strlen( pDir->m_Name );
-			nInsertOffset = pStartOfDirFileData - ( char const * ) ( m_DirectoryData.Base() );
+			char const *pStartOfDirFileData = itDir->data() + 1 + itDir->size();
+			nInsertOffset = pStartOfDirFileData - ( char const * ) ( m_DirectoryData.data() );
 		}
 		else
 		{
-			char const *pStartOfExtFileData = pExt->m_Name + 1 + strlen( pExt->m_Name );
-			nInsertOffset = pStartOfExtFileData - ( char const * ) ( m_DirectoryData.Base() );
+			char const *pStartOfExtFileData = itExt->first.data() + 1 + itExt->first.size();
+			nInsertOffset = pStartOfExtFileData - ( char const * ) ( m_DirectoryData.data() );
 		}
 	}
-	m_DirectoryData.InsertMultipleBefore( nInsertOffset, nTotalHeaderSize );
+	m_DirectoryData.insert( m_DirectoryData.begin() + nInsertOffset, nTotalHeaderSize, {} );
 	memcpy( &m_DirectoryData[nInsertOffset], pHeaderInsertPtr, nTotalHeaderSize );
 	BuildHashTables();
 }
@@ -1587,7 +1521,7 @@ ePackedStoreAddResultCode CPackedStore::AddFile( char const *pFile, uint16 nMeta
 
 	// Build up the directory info into an interface structure
 	VPKContentFileInfo_t dirEntry;
-	dirEntry.m_sName = pFile;
+	dirEntry.m_sName = ks::nz( pFile );
 	dirEntry.m_iTotalSize = nFileTotalSize;
 	dirEntry.m_iPreloadSize = Min( (uint32)nMetaDataSize, (uint32)nFileTotalSize ) ;
 	dirEntry.m_pPreloadData = ( dirEntry.m_iPreloadSize > 0 ) ? pFileData : nullptr;
@@ -1630,7 +1564,7 @@ ePackedStoreAddResultCode CPackedStore::AddFile( char const *pFile, uint16 nMeta
 			}
 		}
 
-		m_nHighestChunkFileIndex = MAX( m_nHighestChunkFileIndex, dirEntry.m_idxChunk );
+		m_nHighestChunkFileIndex = std::max( m_nHighestChunkFileIndex, dirEntry.m_idxChunk );
 
 		// write the actual data
 		GetDataFileName( szDataFileName, sizeof(szDataFileName), dirEntry.m_idxChunk );
@@ -1651,8 +1585,8 @@ ePackedStoreAddResultCode CPackedStore::AddFile( char const *pFile, uint16 nMeta
 	{
 		// append to the dir data.
 		dirEntry.m_idxChunk = VPKFILENUMBER_EMBEDDED_IN_DIR_FILE;
-		dirEntry.m_iOffsetInChunk = m_EmbeddedChunkData.Count();
-		m_EmbeddedChunkData.AddMultipleToTail( nBytesInChunk, pDataStart );
+		dirEntry.m_iOffsetInChunk = std::ssize( m_EmbeddedChunkData );
+		m_EmbeddedChunkData.insert( m_EmbeddedChunkData.end(), pDataStart, pDataStart + nBytesInChunk );
 	}
 
 	// Update the directory
@@ -1661,12 +1595,12 @@ ePackedStoreAddResultCode CPackedStore::AddFile( char const *pFile, uint16 nMeta
 	return nRslt;
 }
 
-int CPackedStore::GetFileList( CUtlStringList &outFilenames, bool bFormattedOutput, bool bSortedOutput )
+int CPackedStore::GetFileList( std::vector< std::string > &outFilenames, bool bFormattedOutput, bool bSortedOutput )
 {
 	return GetFileList( nullptr, outFilenames, bFormattedOutput, bSortedOutput );
 }
 
-int CPackedStore::GetFileList( const char *pWildCard, CUtlStringList &outFilenames, bool bFormattedOutput, bool bSortedOutput )
+int CPackedStore::GetFileList( const char *pWildCard, std::vector< std::string > &outFilenames, bool bFormattedOutput, bool bSortedOutput )
 {
 	// Separate the wildcard base from the extension
 	char szWildCardPath[MAX_PATH];
@@ -1759,7 +1693,7 @@ int CPackedStore::GetFileList( const char *pWildCard, CUtlStringList &outFilenam
 				{
 					char *pFName = new char[1 + strlen( pszFNameOut ) ];
 					strcpy( pFName, pszFNameOut );
-					outFilenames.AddToTail( pFName );
+					outFilenames.push_back( pFName );
 				}
 			}
 			pData++;												// skip end marker
@@ -1769,29 +1703,29 @@ int CPackedStore::GetFileList( const char *pWildCard, CUtlStringList &outFilenam
 
 	if ( bSortedOutput )
 	{
-		outFilenames.Sort( &CUtlStringList::SortFunc );
+		std::ranges::sort( outFilenames );
 	}
 	
-	return outFilenames.Count();
+	return std::ssize( outFilenames );
 }
 
-void CPackedStore::GetFileList( const char *pWildcard, CUtlVector<VPKContentFileInfo_t> &outVecResults )
+void CPackedStore::GetFileList( const char *pWildcard, std::vector< VPKContentFileInfo_t > &outVecResults )
 {
 
 	// !KLUDGE! Get the filenames first, and then "find" them again.
-	CUtlStringList vecFilenames;
+	std::vector< std::string > vecFilenames;
 	GetFileList( vecFilenames, false, false );
 
-	FOR_EACH_VEC( vecFilenames, i )
+	for ( const std::string &sFilename : vecFilenames )
 	{
 		// Locate where it is in the existing file
-		CPackedStoreFileHandle h = OpenFile( vecFilenames[i] );
+		CPackedStoreFileHandle h = OpenFile( sFilename.c_str() );
 		if ( !h )
-			Error( "File '%s' was returned by GetFileList, but OpenFile() fails?!", vecFilenames[i] );
+			Error( "File '%s' was returned by GetFileList, but OpenFile() fails?!", sFilename.c_str() );
 
 		// Convert to output structure
-		VPKContentFileInfo_t &f = outVecResults[ outVecResults.AddToTail() ];
-		f.m_sName = vecFilenames[i];
+		VPKContentFileInfo_t &f = outVecResults.emplace_back();
+		f.m_sName = sFilename.c_str();
 		f.m_idxChunk = ( h.m_nFileNumber == VPKFILENUMBER_EMBEDDED_IN_DIR_FILE ) ? -1 : h.m_nFileNumber;
 		f.m_iTotalSize = h.m_nFileSize;
 		f.m_iOffsetInChunk = h.m_nFileOffset;
@@ -1801,29 +1735,28 @@ void CPackedStore::GetFileList( const char *pWildcard, CUtlVector<VPKContentFile
 	}
 }
 
-int CPackedStore::GetFileAndDirLists( CUtlStringList &outDirnames, CUtlStringList &outFilenames, bool bSortedOutput )
+int CPackedStore::GetFileAndDirLists( std::vector< std::string > &outDirnames, std::vector< std::string > &outFilenames, bool bSortedOutput )
 {
 	return GetFileAndDirLists( nullptr, outDirnames, outFilenames, bSortedOutput );
 }
 
 void CPackedStore::BuildFindFirstCache()
 {
-	CUtlStringList allVPKFiles;
+	std::vector< std::string > allVPKFiles;
 	char szLastDirFound[MAX_PATH];
 
 	// Init
 	V_strncpy( szLastDirFound, "$$$$$$$HighlyUnlikelyPathForInitializationPurposes#######", sizeof( szLastDirFound ) );
-	m_dirContents.SetLessFunc( DefLessFunc( int ) );
 
 	// Get all files in the VPK
 	GetFileList( allVPKFiles, false, true );
 
 	// Add directories to directory list and files into map
-	FOR_EACH_VEC( allVPKFiles, i )
+	for ( const std::string &sVPKFile : allVPKFiles )
 	{
 		char szFilePath[MAX_PATH];
 
-		V_ExtractFilePath( allVPKFiles[i], szFilePath, sizeof( szFilePath ) );
+		V_ExtractFilePath( sVPKFile.c_str(), szFilePath, sizeof( szFilePath ) );
 		Q_StripTrailingSlash( szFilePath );
 		
 		// New directory
@@ -1833,28 +1766,25 @@ void CPackedStore::BuildFindFirstCache()
 			V_strncpy( szLastDirFound, szFilePath, sizeof( szFilePath ) );
 
 			// Add it
-			m_directoryList.CopyAndAddToTail( szFilePath );
-			m_dirContents.Insert( m_directoryList.Count(), new CUtlStringList() ); // Freed in destructor
+			m_directoryList.emplace_back( szFilePath );
+			m_dirContents.emplace_back();
 		}
-		
-		unsigned short nIndex = m_dirContents.Find( m_directoryList.Count() );
-		CUtlStringList *pList = m_dirContents.Element( nIndex );
 
-		pList->CopyAndAddToTail( V_UnqualifiedFileName( allVPKFiles[i] ) );
+		m_dirContents.back().emplace_back( V_UnqualifiedFileName( sVPKFile.c_str() ) );
 	}
 }
 
-int CPackedStore::GetFileAndDirLists( const char *pWildCard, CUtlStringList &outDirnames, CUtlStringList &outFilenames, bool bSortedOutput )
+int CPackedStore::GetFileAndDirLists( const char *pWildCard, std::vector< std::string > &outDirnames, std::vector< std::string > &outFilenames, bool bSortedOutput )
 {
 
 
 	// If this is the first time we've called FindFirst on this CPackedStore then let's build the caches
-	if ( !m_directoryList.Count() )
+	if ( m_directoryList.empty() )
 	{
 		BuildFindFirstCache();
 #ifdef NEVER
 		printf("CPackedStore::GetFileAndDirLists - list of directories in VPK files\n");
-		FOR_EACH_VEC( m_directoryList, i )
+		for ( int i = 0; i < std::ssize( m_directoryList ); i++ )
 		{
 			printf("\t%d : %s\n", i, m_directoryList[i] );
 		}
@@ -1865,7 +1795,7 @@ int CPackedStore::GetFileAndDirLists( const char *pWildCard, CUtlStringList &out
 
 	if ( pWildCard )
 	{
-		CUtlDict<int,int> AddedDirectories; // Used to remove duplicate paths
+		std::set< std::string, ks::iless > AddedDirectories; // Used to remove duplicate paths
 
 		char szWildCardPath[MAX_PATH];
 		char szWildCardBase[64];
@@ -1908,11 +1838,11 @@ int CPackedStore::GetFileAndDirLists( const char *pWildCard, CUtlStringList &out
 		//
 		// Directories first
 		//
-		FOR_EACH_VEC( m_directoryList, i )
+		for ( const std::string &sDirectory : m_directoryList )
 		{
 			// Does this file's path match the wildcard path?
-			if  (  (  nLenWildcardPath && ( 0 == V_strnicmp( m_directoryList[i], szWildCardPath, nLenWildcardPath ) ) ) 
-				|| ( !nLenWildcardPath && ( 0 == V_strlen( m_directoryList[i] ) ) ) )
+			if  (  (  nLenWildcardPath && ( 0 == V_strnicmp( sDirectory.c_str(), szWildCardPath, nLenWildcardPath ) ) ) 
+				|| ( !nLenWildcardPath && sDirectory.empty() ) )
 			{
 				// Extract the sub-directory name if there is one
 				char szSubDir[64];
@@ -1921,7 +1851,7 @@ int CPackedStore::GetFileAndDirLists( const char *pWildCard, CUtlStringList &out
 				bool bExtMatch = false;
 
 				// Copy everything to the right of the root directory
-				V_strncpy( szSubDir, &m_directoryList[i][nLenWildcardPath], sizeof( szSubDir ) );
+				V_strncpy( szSubDir, &sDirectory[nLenWildcardPath], sizeof( szSubDir ) );
 
 				// Set the next / to NULL and we have our subdirectory
 				char *pSlash = strchr( szSubDir, '/' );
@@ -1957,12 +1887,9 @@ int CPackedStore::GetFileAndDirLists( const char *pWildCard, CUtlStringList &out
 					V_strcat_safe( szFullPathToDir, szSubDir );
 		
 					// Add the subdirectory to the list if it isn't already there
-					if ( -1 == AddedDirectories.Find( szFullPathToDir ) )
+					if ( AddedDirectories.insert( szFullPathToDir ).second )
 					{
-						char *pDName = new char[1 + strlen( szFullPathToDir )];
-						V_strncpy( pDName, szFullPathToDir, 1 + strlen( szFullPathToDir ) );
-						outDirnames.AddToTail( pDName );
-						AddedDirectories.Insert( pDName, 0 );
+						outDirnames.push_back( szFullPathToDir );
 					}
 				}
 			}
@@ -1971,18 +1898,18 @@ int CPackedStore::GetFileAndDirLists( const char *pWildCard, CUtlStringList &out
 		//
 		// Files
 		//
-		FOR_EACH_VEC( m_directoryList, i )
+		for ( int i = 0; i < std::ssize( m_directoryList ); i++ )
 		{
 			// We no longer want the trailing slash
 			Q_StripTrailingSlash( szWildCardPath );
 
 			// Find the directory that matches the wildcard path
-			if ( !V_strnicmp( szWildCardPath, m_directoryList[i], sizeof( szWildCardPath ) ) )
+			if ( !V_strnicmp( szWildCardPath, m_directoryList[i].c_str(), sizeof( szWildCardPath ) ) )
 			{
-				CUtlStringList &filesInDirectory = *(m_dirContents.Element( i ));
+				std::vector< std::string > &filesInDirectory = m_dirContents[i];
 
 				// Use the cached list of files in this directory
-				FOR_EACH_VEC( filesInDirectory, i )
+				for ( const std::string &sFile : filesInDirectory )
 				{
 					bool matches = true;
 
@@ -1991,8 +1918,8 @@ int CPackedStore::GetFileAndDirLists( const char *pWildCard, CUtlStringList &out
 					char szFNameOutBase[64];
 					char szFNameOutExt[20];
 
-					V_FileBase( filesInDirectory[i], szFNameOutBase, sizeof( szFNameOutBase ) );
-					V_ExtractFileExtension( filesInDirectory[i], szFNameOutExt, sizeof( szFNameOutExt ) );
+					V_FileBase( sFile.c_str(), szFNameOutBase, sizeof( szFNameOutBase ) );
+					V_ExtractFileExtension( sFile.c_str(), szFNameOutExt, sizeof( szFNameOutExt ) );
 
 					// Since we have a sorted list we can optimize using the return code of the compare
 					int c = V_strnicmp( szWildCardBase, szFNameOutBase, nLenWildcardBase );
@@ -2007,9 +1934,9 @@ int CPackedStore::GetFileAndDirLists( const char *pWildCard, CUtlStringList &out
 					{	
 						bool bFound = false;
 
-						FOR_EACH_VEC( outFilenames, j )
+						for ( const std::string &sOutFilename : outFilenames )
 						{
-							if ( !V_strncmp( outFilenames[j], filesInDirectory[i], V_strlen( filesInDirectory[i] ) ) )
+							if ( !V_strncmp( sOutFilename.c_str(), sFile.c_str(), (int)sFile.size() ) )
 							{
 								bFound = true;
 								break;
@@ -2018,7 +1945,7 @@ int CPackedStore::GetFileAndDirLists( const char *pWildCard, CUtlStringList &out
 
 						if ( !bFound )
 						{
-							outFilenames.CopyAndAddToTail( filesInDirectory[i] );
+							outFilenames.emplace_back( sFile );
 						}
 					}
 				}
@@ -2028,16 +1955,16 @@ int CPackedStore::GetFileAndDirLists( const char *pWildCard, CUtlStringList &out
 	else // Otherwise, simply return the base data
 	{
 		// Add all the files as well
-		FOR_EACH_VEC( m_directoryList, i )
+		for ( int i = 0; i < std::ssize( m_directoryList ); i++ )
 		{
 			// Add all directories
-			outDirnames.CopyAndAddToTail( m_directoryList[i] );
+			outDirnames.emplace_back( m_directoryList[i] );
 
 			// Now add all files
-			CUtlStringList &filesInDirectory = *(m_dirContents.Element( i ));
-			FOR_EACH_VEC( filesInDirectory, j )
+			std::vector< std::string > &filesInDirectory = m_dirContents[i];
+			for ( const std::string &sFile : filesInDirectory )
 			{
-				outFilenames.CopyAndAddToTail( filesInDirectory[j] );
+				outFilenames.emplace_back( sFile );
 			}
 		}
 	}
@@ -2045,10 +1972,10 @@ int CPackedStore::GetFileAndDirLists( const char *pWildCard, CUtlStringList &out
 	// Sort the output if requested
 	if ( bSortedOutput )
 	{
-		outDirnames.Sort( &CUtlStringList::SortFunc );
-		outFilenames.Sort( &CUtlStringList::SortFunc );
+		std::ranges::sort( outDirnames );
+		std::ranges::sort( outFilenames );
 	}
 
-	return outDirnames.Count();
+	return std::ssize( outDirnames );
 }
 

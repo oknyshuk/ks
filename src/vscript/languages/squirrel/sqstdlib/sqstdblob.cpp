@@ -7,7 +7,6 @@
 #include "sqstdstream.h"
 #include "sqstdblobimpl.h"
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#include "memdbgon.h"
 #endif
 
 #define SQSTD_BLOB_TYPE_TAG (SQSTD_STREAM_TYPE_TAG | 0x00000002)

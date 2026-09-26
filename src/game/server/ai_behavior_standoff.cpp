@@ -19,9 +19,6 @@
 #include "ai_goalentity.h"
 #include "ndebugoverlay.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define GOAL_POSITION_INVALID	Vector( FLT_MAX, FLT_MAX, FLT_MAX )
 
 ConVar DrawBattleLines( "ai_drawbattlelines", "0", FCVAR_CHEAT );
@@ -595,10 +592,10 @@ Activity CAI_MappedActivityBehavior_Temporary::GetMappedActivity( AI_Posture_t p
 {
 	if ( posture != AIP_STANDING )
 	{
-		unsigned short iActivityTranslation = m_ActivityMap.Find( MAKE_ACTMAP_KEY( posture, activity ) );
-		if ( iActivityTranslation != m_ActivityMap.InvalidIndex() )
+		auto it = m_ActivityMap.find( MAKE_ACTMAP_KEY( posture, activity ) );
+		if ( it != m_ActivityMap.end() )
 		{
-			Activity result = m_ActivityMap[iActivityTranslation];
+			Activity result = it->second;
 			return result;
 		}
 	}
@@ -695,7 +692,7 @@ void CAI_StandoffBehavior::UpdateBattleLines()
 	if ( m_UpdateBattleLinesSemaphore.EnterThink() )
 	{
 		// @TODO (toml 06-19-03): This is the quick to code thing. Could use some optimization/caching to not recalc everything (up to) each think
-		m_BattleLines.RemoveAll();
+		m_BattleLines.clear();
 
 		bool bHaveGoalPosition = ( m_vecStandoffGoalPosition != GOAL_POSITION_INVALID );
 
@@ -709,7 +706,7 @@ void CAI_StandoffBehavior::UpdateBattleLines()
 			if ( GetDirectionOfStandoff( &goalLine.normal ) )
 			{
 				goalLine.point = GetStandoffGoalPosition() + goalLine.normal * DIST_GOAL_PLANE;
-				m_BattleLines.AddToTail( goalLine );
+				m_BattleLines.push_back( goalLine );
 			}
 		}
 		else if ( PlayerIsLeading() && GetEnemy() )
@@ -724,7 +721,7 @@ void CAI_StandoffBehavior::UpdateBattleLines()
 				if ( GetDirectionOfStandoff( &playerLine.normal ) )
 				{
 					playerLine.point = pPlayer->GetAbsOrigin() + playerLine.normal * DIST_PLAYER_PLANE;
-					m_BattleLines.AddToTail( playerLine );
+					m_BattleLines.push_back( playerLine );
 				}
 			}
 		}
@@ -744,7 +741,7 @@ void CAI_StandoffBehavior::UpdateBattleLines()
 				battleLine.point = pBattleLine->GetAbsOrigin();
 				battleLine.normal = UTIL_YawToVector( pBattleLine->GetAbsAngles().y );
 
-				m_BattleLines.AddToTail( battleLine );
+				m_BattleLines.push_back( battleLine );
 			}
 				
 		}
@@ -759,7 +756,7 @@ bool CAI_StandoffBehavior::IsBehindBattleLines( const Vector &point )
 
 	Vector vecToPoint;
 	
-	for ( int i = 0; i < m_BattleLines.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_BattleLines ); i++ )
 	{
 		vecToPoint = point - m_BattleLines[i].point;
 		VectorNormalize( vecToPoint );
@@ -1055,7 +1052,7 @@ void CAI_MappedActivityBehavior_Temporary::UpdateTranslateActivityMap()
 		{	AIP_PEEKING,	ACT_RELOAD, 			nullptr, 				ACT_RELOAD_LOW,				},
 	};
 
-	m_ActivityMap.RemoveAll();
+	m_ActivityMap.clear();
 	
 	CBaseCombatWeapon *pWeapon = GetOuter()->GetActiveWeapon();
 	const char *pszWeaponClass = ( pWeapon ) ? pWeapon->GetClassname() : "";
@@ -1065,8 +1062,8 @@ void CAI_MappedActivityBehavior_Temporary::UpdateTranslateActivityMap()
 		{
 			if ( HaveSequenceForActivity( mappings[i].translation ) || HaveSequenceForActivity( GetOuter()->Weapon_TranslateActivity( mappings[i].translation ) ) )
 			{
-				Assert( m_ActivityMap.Find( MAKE_ACTMAP_KEY( mappings[i].posture, mappings[i].activity ) ) == m_ActivityMap.InvalidIndex() );
-				m_ActivityMap.Insert( MAKE_ACTMAP_KEY( mappings[i].posture, mappings[i].activity ), mappings[i].translation );
+				[[maybe_unused]] bool bInserted = m_ActivityMap.emplace( MAKE_ACTMAP_KEY( mappings[i].posture, mappings[i].activity ), mappings[i].translation ).second;
+				Assert( bInserted );
 			}
 		}
 	}
@@ -1195,8 +1192,8 @@ public:
 		
 		UpdateActors();
 
-		const CUtlVector<AIHANDLE> &actors = AccessActors();
-		for ( int i = 0; i < actors.Count(); i++ )
+		const std::vector< AIHANDLE > &actors = AccessActors();
+		for ( int i = 0; i < std::ssize( actors ); i++ )
 		{
 			CAI_BaseNPC *pAI = actors[i];
 			CAI_StandoffBehavior *pBehavior;

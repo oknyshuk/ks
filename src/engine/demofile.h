@@ -7,15 +7,9 @@
 #ifndef DEMOFILE_H
 #define DEMOFILE_H
 
-#define DEMO_FILE_UTLBUFFER 1
-
 #include "demo.h"
 
-#ifdef DEMO_FILE_UTLBUFFER
-#include "tier2/utlstreambuffer.h"
-#else
 #include <filesystem.h>
-#endif
 
 
 #include "tier1/bitbuf.h"

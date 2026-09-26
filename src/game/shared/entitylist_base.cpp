@@ -8,9 +8,6 @@
 #include "entitylist_base.h"
 #include "ihandleentity.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 enum
 {
 	SERIAL_MASK = 0x7fff // the max value of a serial number, rolls back to 0 when it hits this limit

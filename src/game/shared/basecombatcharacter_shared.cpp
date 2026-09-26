@@ -11,9 +11,6 @@
 #include "tier0/vprof.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: Switches to the best weapon that is also better than the given weapon.
 // Input  : pCurrent - The current weapon used by the player.
@@ -144,7 +141,7 @@ void CBaseCombatCharacter::RemoveAmmo( int iCount, int iAmmoIndex )
 		return;
 
 	// Ammo pickup sound
-	m_iAmmo.Set( iAmmoIndex, MAX( m_iAmmo[iAmmoIndex] - iCount, 0 ) );
+	m_iAmmo.Set( iAmmoIndex, std::max( m_iAmmo[iAmmoIndex] - iCount, 0 ) );
 }
 
 void CBaseCombatCharacter::RemoveAmmo( int iCount, const char *szName )
@@ -304,7 +301,7 @@ enum VisCacheResult_t
 
 enum
 {
-	VIS_CACHE_INVALID = 0x80000000
+	VIS_CACHE_MAX_ENTRIES = 0xFFFF
 };
 
 #define VIS_CACHE_ENTRY_LIFE .090f
@@ -315,32 +312,45 @@ public:
 	virtual void FrameUpdatePreEntityThink();
 	virtual void LevelShutdownPreEntity();
 
-	int LookupVisibility( const CBaseCombatCharacter *pChar1, CBaseCombatCharacter *pChar2 );
-	VisCacheResult_t HasVisibility( int iCache ) const;
-	void RegisterVisibility( int iCache, bool bChar1SeesChar2, bool bChar2SeesChar1 );
-
 private:
-	struct VisCacheEntry_t
+	struct VisCacheKey_t
 	{
 		CHandle< CBaseCombatCharacter >	m_hEntity1;
 		CHandle< CBaseCombatCharacter >	m_hEntity2;
+	};
+
+	struct CVisCacheKeyLess
+	{
+		bool operator()( const VisCacheKey_t &lhs, const VisCacheKey_t &rhs ) const
+		{
+			return ( memcmp( &lhs, &rhs, sizeof( VisCacheKey_t ) ) < 0 );
+		}
+	};
+
+	struct VisCacheEntry_t
+	{
 		float							m_flTime;
 		bool							m_bEntity1CanSeeEntity2;
 		bool							m_bEntity2CanSeeEntity1;
 	};
 
-	class CVisCacheEntryLess
+	using VisCacheMap_t = std::map< VisCacheKey_t, VisCacheEntry_t, CVisCacheKeyLess >;
+
+public:
+	// An entry, and whether the caller's pair is stored the other way round.
+	struct VisCacheRef_t
 	{
-	public:
-		CVisCacheEntryLess( int ) {}
-		bool operator!() const { return false; }
-		bool operator()( const VisCacheEntry_t &lhs, const VisCacheEntry_t &rhs ) const
-		{
-			return ( memcmp( &lhs, &rhs, offsetof( VisCacheEntry_t, m_flTime ) ) < 0 );
-		}
+		VisCacheMap_t::iterator	m_it;
+		bool					m_bValid;
+		bool					m_bReverse;
 	};
 
-	CUtlRBTree< VisCacheEntry_t, unsigned short, CVisCacheEntryLess > m_VisCache;
+	VisCacheRef_t LookupVisibility( const CBaseCombatCharacter *pChar1, CBaseCombatCharacter *pChar2 );
+	VisCacheResult_t HasVisibility( const VisCacheRef_t &ref ) const;
+	void RegisterVisibility( const VisCacheRef_t &ref, bool bChar1SeesChar2, bool bChar2SeesChar1 );
+
+private:
+	VisCacheMap_t m_VisCache;
 
 	mutable int m_nTestCount;
 	mutable int m_nHitCount;
@@ -353,70 +363,61 @@ void CCombatCharVisCache::FrameUpdatePreEntityThink()
 	// Lazy retirement of vis cache
 	// NOTE: 256 was chosen heuristically based on a playthrough where 200
 	// was the max # in the viscache where nothing could be retired.
-	if ( m_VisCache.Count() < 256 )
+	if ( m_VisCache.size() < 256 )
 		return;
 
-	int nMaxIndex = m_VisCache.MaxElement() - 1;
 	for ( int i = 0; i < 8; ++i )
 	{
-		int n = RandomInt( 0, nMaxIndex );
-		if ( !m_VisCache.IsValidIndex( n ) )
-			continue;
-
-		const VisCacheEntry_t &entry = m_VisCache[n];
-		if ( !entry.m_hEntity1.IsValid() || !entry.m_hEntity2.IsValid() || ( gpGlobals->curtime - entry.m_flTime > 10.0f ) )
+		auto it = std::next( m_VisCache.begin(), RandomInt( 0, (int)m_VisCache.size() - 1 ) );
+		const VisCacheKey_t &key = it->first;
+		if ( !key.m_hEntity1.IsValid() || !key.m_hEntity2.IsValid() || ( gpGlobals->curtime - it->second.m_flTime > 10.0f ) )
 		{
-			m_VisCache.RemoveAt( n );
+			m_VisCache.erase( it );
 		}
 	}
 }
 
 void CCombatCharVisCache::LevelShutdownPreEntity()
 {
-	m_VisCache.Purge();
+	m_VisCache.clear();
 }
 
-int CCombatCharVisCache::LookupVisibility( const CBaseCombatCharacter *pChar1, CBaseCombatCharacter *pChar2 )
+CCombatCharVisCache::VisCacheRef_t CCombatCharVisCache::LookupVisibility( const CBaseCombatCharacter *pChar1, CBaseCombatCharacter *pChar2 )
 {
-	VisCacheEntry_t cacheEntry;
+	VisCacheKey_t cacheKey;
 	if ( pChar1 < pChar2 )
 	{
-		cacheEntry.m_hEntity1 = pChar1;
-		cacheEntry.m_hEntity2 = pChar2;
+		cacheKey.m_hEntity1 = pChar1;
+		cacheKey.m_hEntity2 = pChar2;
 	}
 	else
 	{
-		cacheEntry.m_hEntity1 = pChar2;
-		cacheEntry.m_hEntity2 = pChar1;
+		cacheKey.m_hEntity1 = pChar2;
+		cacheKey.m_hEntity2 = pChar1;
 	}
 
-	int iCache = m_VisCache.Find( cacheEntry );
-	if ( iCache == m_VisCache.InvalidIndex() )
+	auto it = m_VisCache.find( cacheKey );
+	if ( it == m_VisCache.end() )
 	{
-		if ( m_VisCache.Count() == m_VisCache.InvalidIndex() )
-			return VIS_CACHE_INVALID;
+		if ( m_VisCache.size() >= VIS_CACHE_MAX_ENTRIES )
+			return { m_VisCache.end(), false, false };
 
-		iCache = m_VisCache.Insert( cacheEntry );
-		m_VisCache[iCache].m_flTime = gpGlobals->curtime - 2.0f * VIS_CACHE_ENTRY_LIFE;
+		it = m_VisCache.emplace( cacheKey, VisCacheEntry_t{} ).first;
+		it->second.m_flTime = gpGlobals->curtime - 2.0f * VIS_CACHE_ENTRY_LIFE;
 	}
 
-	return ( pChar1 < pChar2 ) ? iCache : - iCache - 1;
+	return { it, true, !( pChar1 < pChar2 ) };
 }
 
-VisCacheResult_t CCombatCharVisCache::HasVisibility( int iCache ) const
+VisCacheResult_t CCombatCharVisCache::HasVisibility( const VisCacheRef_t &ref ) const
 {
-	if ( iCache == VIS_CACHE_INVALID )
+	if ( !ref.m_bValid )
 		return VISCACHE_UNKNOWN;
 
 	m_nTestCount++;
 
-	bool bReverse = ( iCache < 0 );
-	if ( bReverse )
-	{
-		iCache = - iCache - 1;
-	}
-
-	const VisCacheEntry_t &entry = m_VisCache[iCache];
+	bool bReverse = ref.m_bReverse;
+	const VisCacheEntry_t &entry = ref.m_it->second;
 	if ( gpGlobals->curtime - entry.m_flTime > VIS_CACHE_ENTRY_LIFE )
 		return VISCACHE_UNKNOWN;
 
@@ -426,18 +427,13 @@ VisCacheResult_t CCombatCharVisCache::HasVisibility( int iCache ) const
 	return bIsVisible ? VISCACHE_IS_VISIBLE : VISCACHE_IS_NOT_VISIBLE;
 }
 
-void CCombatCharVisCache::RegisterVisibility( int iCache, bool bEntity1CanSeeEntity2, bool bEntity2CanSeeEntity1 )
+void CCombatCharVisCache::RegisterVisibility( const VisCacheRef_t &ref, bool bEntity1CanSeeEntity2, bool bEntity2CanSeeEntity1 )
 {
-	if ( iCache == VIS_CACHE_INVALID )
+	if ( !ref.m_bValid )
 		return;
 
-	bool bReverse = ( iCache < 0 );
-	if ( bReverse )
-	{
-		iCache = - iCache - 1;
-	}
-
-	VisCacheEntry_t &entry = m_VisCache[iCache];
+	bool bReverse = ref.m_bReverse;
+	VisCacheEntry_t &entry = ref.m_it->second;
 	entry.m_flTime = gpGlobals->curtime;
 	if ( !bReverse )
 	{
@@ -510,8 +506,8 @@ bool CBaseCombatCharacter::IsAbleToSee( CBaseCombatCharacter *pBCC, FieldOfViewC
 #endif
 
 	// Check if we have a cached-off visibility
-	int iCache = s_CombatCharVisCache.LookupVisibility( this, pBCC );
-	VisCacheResult_t nResult = s_CombatCharVisCache.HasVisibility( iCache );
+	CCombatCharVisCache::VisCacheRef_t cacheRef = s_CombatCharVisCache.LookupVisibility( this, pBCC );
+	VisCacheResult_t nResult = s_CombatCharVisCache.HasVisibility( cacheRef );
 
 	// Compute symmetric visibility
 	if ( nResult == VISCACHE_UNKNOWN )
@@ -522,7 +518,7 @@ bool CBaseCombatCharacter::IsAbleToSee( CBaseCombatCharacter *pBCC, FieldOfViewC
 			bThisCanSeeOther = true, bOtherCanSeeThis = true;
 		}
 
-		s_CombatCharVisCache.RegisterVisibility( iCache, bThisCanSeeOther, bOtherCanSeeThis );
+		s_CombatCharVisCache.RegisterVisibility( cacheRef, bThisCanSeeOther, bOtherCanSeeThis );
 		nResult = bThisCanSeeOther ? VISCACHE_IS_VISIBLE : VISCACHE_IS_NOT_VISIBLE;
 	}
 

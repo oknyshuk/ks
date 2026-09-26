@@ -16,7 +16,6 @@
 #include "tier0/vprof.h"
 #include "bone_accessor.h"
 #include "mathlib/ssequaternion.h"
-#include "bitvec.h"
 #include "datamanager.h"
 #include "convar.h"
 #include "tier0/tslist.h"
@@ -30,9 +29,6 @@
 #endif
 
 #include "bone_utils.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 //-----------------------------------------------------------------------------
@@ -569,9 +565,9 @@ static void CalcZeroframeData( const CStudioHdr *pStudioHdr, const studiohdr_t *
 		{
 			s1 = clamp( (fFrame - index * animdesc.zeroframespan) / animdesc.zeroframespan, 0.0f, 1.0f );
 		}
-		int i0 = MAX( index - 1, 0 );
+		int i0 = std::max( index - 1, 0 );
 		int i1 = index;
-		int i2 = MIN( index + 1, animdesc.zeroframecount - 1 );
+		int i2 = std::min( index + 1, animdesc.zeroframecount - 1 );
 		for (j = 0; j < pAnimStudioHdr->numbones; j++)
 		{
 			if (pAnimGroup)

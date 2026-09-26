@@ -107,7 +107,7 @@ public:
 		virtual void	Read( CFileRead *pFile );
 		virtual void	Write( IFileSystem* pFileSystem, FileHandle_t fp );
 
-		CUtlVector<CSPVert>	m_Verts;
+		std::vector< CSPVert >	m_Verts;
 	};
 
 	class CCommand_Matrix : public CBaseCommand
@@ -141,7 +141,7 @@ public:
 		virtual void	Read( CFileRead *pFile );
 		virtual void	Write( IFileSystem* pFileSystem, FileHandle_t fp );
 
-		CUtlVector<char>	m_String;				// The string to render.
+		std::vector< char >	m_String;				// The string to render.
 		CTextParams m_TextParams;
 	};
 
@@ -210,7 +210,7 @@ public:
 public:
 	IFileSystem*				m_pFileSystem;
 	char const					*m_pFilename;
-	CUtlVector<CBaseCommand*>	m_Commands;
+	std::vector< CBaseCommand* >	m_Commands;
 	bool						m_bAutoFlush;
 };
 

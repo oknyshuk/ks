@@ -6,15 +6,13 @@
 //===========================================================================//
 
 #include "pch_tier0.h"
+#include <mutex>
 
 #include "tier0/memalloc.h"
 #include "tier0/valve_off.h"
 #include "tier0/threadtools.h"
 
 #include "vtuneinterface.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 #ifdef VTUNE_ENABLED
 
@@ -35,7 +33,7 @@ public:
 private:
 	
 	__itt_domain* m_pFrameDomain;
-	CThreadFastMutex m_eventCreateMutex;
+	std::recursive_mutex m_eventCreateMutex;
 };
 
 VTuneInterfaceImpl g_VTuneInterface;
@@ -73,7 +71,7 @@ void VTuneInterfaceImpl::EndFrame()
 
 __itt_event VTuneInterfaceImpl::CreateEvent( const char *name )
 {
-	AUTO_LOCK_FM( m_eventCreateMutex );
+	std::scoped_lock lock( m_eventCreateMutex );
 	return __itt_event_create( name, strlen( name ) );
 }
 

@@ -10,9 +10,6 @@
 #include "cbase.h"
 #include "cvisibilitymonitor.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar debug_visibility_monitor("debug_visibility_monitor", "0", FCVAR_CHEAT );
 ConVar vismon_poll_frequency("vismon_poll_frequency", ".5", FCVAR_CHEAT );
 ConVar vismon_trace_limit("vismon_trace_limit", "12", FCVAR_CHEAT );
@@ -61,7 +58,7 @@ public:
 	bool IsTrackingEntity( CBaseEntity *pEntity );
 
 private:
-	CUtlVector< visibility_target_t >	m_Entities;
+	std::vector< visibility_target_t >	m_Entities;
 	float								m_flPollFrequency;
 	float								m_flTimeNextPoll;
 
@@ -97,22 +94,22 @@ void CVisibilityMonitor::FrameUpdatePostEntityThink()
 
 	int iDebugging = debug_visibility_monitor.GetInt();
 
-	if( m_Entities.Count() > m_iMaxEntitiesPerThink )
-		m_iMaxEntitiesPerThink = m_Entities.Count();
+	if( std::ssize( m_Entities ) > m_iMaxEntitiesPerThink )
+		m_iMaxEntitiesPerThink = std::ssize( m_Entities );
 
 	if( iDebugging > 1 )
 	{
 		Msg("\nVisMon: Polling now. (Frequency: %f)\n", m_flPollFrequency );
-		Msg("VisMon: Time: %f - Tracking %d Entities. (Max:%d)\n", gpGlobals->curtime, m_Entities.Count(), m_iMaxEntitiesPerThink );
+		Msg("VisMon: Time: %f - Tracking %d Entities. (Max:%d)\n", gpGlobals->curtime, (int)std::ssize( m_Entities ), m_iMaxEntitiesPerThink );
 	}
 
 	// Cleanup, dump entities that have been removed since we last polled.
-	for ( int i = 0 ; i < m_Entities.Count() ; i++ )
+	for ( int i = 0 ; i < std::ssize( m_Entities ) ; i++ )
 	{
 		if ( m_Entities[i].entity == nullptr )
 		{
-			m_Entities.FastRemove(i);
-			if ( i >= m_Entities.Count() )
+			ks::swap_remove( m_Entities, i );
+			if ( i >= std::ssize( m_Entities ) )
 			{
 				break;
 			}
@@ -122,7 +119,7 @@ void CVisibilityMonitor::FrameUpdatePostEntityThink()
 	int numTraces = 0;
 	bool bHitTraceLimit = false;
 
-	if( m_iStartElement >= m_Entities.Count() )
+	if( m_iStartElement >= std::ssize( m_Entities ) )
 	{
 		if( iDebugging > 1 )
 		{
@@ -137,7 +134,7 @@ void CVisibilityMonitor::FrameUpdatePostEntityThink()
 		Msg("VisMon: Starting at element: %d\n", m_iStartElement );
 	}
 
-	for( int i = m_iStartElement ; i < m_Entities.Count() ; i++ )
+	for( int i = m_iStartElement ; i < std::ssize( m_Entities ) ; i++ )
 	{
 		for( int j = 1 ; j <= gpGlobals->maxClients ; j++ )
 		{
@@ -310,7 +307,7 @@ void CVisibilityMonitor::LevelInitPostEntity()
 //---------------------------------------------------------
 void CVisibilityMonitor::LevelShutdownPreEntity()
 {
-	m_Entities.RemoveAll();
+	m_Entities.clear();
 }
 
 //---------------------------------------------------------
@@ -330,7 +327,7 @@ void CVisibilityMonitor::AddEntity( CBaseEntity *pEntity, float flMinDist, Visib
 		newTarget.pfnEvaluator = pfnEvaluator;
 		newTarget.bNotVisibleThroughGlass = bNotVisibleThroughGlass;
 
-		m_Entities.AddToTail( newTarget );
+		m_Entities.push_back( newTarget );
 
 		if( debug_visibility_monitor.GetBool() )
 		{
@@ -345,11 +342,11 @@ void CVisibilityMonitor::RemoveEntity( CBaseEntity *pEntity )
 {
 	Assert( pEntity != nullptr );
 
-	for( int i = 0 ; i < m_Entities.Count() ; i++ )
+	for( int i = 0 ; i < std::ssize( m_Entities ) ; i++ )
 	{
 		if( m_Entities[i].entity == pEntity )
 		{
-			m_Entities.Remove( i );
+			m_Entities.erase( m_Entities.begin() + i );
 
 			if( debug_visibility_monitor.GetBool() )
 			{
@@ -367,7 +364,7 @@ bool CVisibilityMonitor::IsTrackingEntity( CBaseEntity *pEntity )
 {
 	Assert( pEntity != nullptr );
 
-	for( int i = 0 ; i < m_Entities.Count() ; i++ )
+	for( int i = 0 ; i < std::ssize( m_Entities ) ; i++ )
 	{
 		if( m_Entities[i].entity == pEntity )
 		{

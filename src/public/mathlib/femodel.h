@@ -11,18 +11,15 @@
 #include "tier1/utlvector.h"
 
 template <typename TInt >
-inline void RemapNode( TInt &refNode, const CUtlVector< int > &remap )
+inline void RemapNode( TInt &refNode, const std::vector< int > &remap )
 {
-	Assert( refNode < TInt( remap.Count() )) ;
-	if ( uint( refNode ) < uint( remap.Count() ) )
+	Assert( refNode < TInt( std::ssize( remap ) )) ;
+	if ( uint( refNode ) < uint( std::ssize( remap ) ) )
 	{
 		refNode = remap[ refNode ];
 	}
 }
 
-template< class T >
-class CUtlVectorAligned : public CUtlVector < T, CUtlMemoryAligned<T, VALIGNOF( T ) > >
-{};
 
 //////////////////////////////////////////////////////////////////////////
 // Finite element description structures
@@ -200,7 +197,7 @@ schema struct FeNodeBase_t
 		nNodeY0 += nBaseNode;
 		nNodeY1 += nBaseNode;
 	}
-	void RemapNodes( const CUtlVector< int > &remap )
+	void RemapNodes( const std::vector< int > &remap )
 	{
 		RemapNode( nNode, remap );
 		RemapNode( nNodeX0, remap );
@@ -476,7 +473,7 @@ schema struct FeTaperedCapsuleRigid_t
 	{
 		nNode += nBaseNode;
 	}
-	void RemapNodes( const CUtlVector< int > &remap )
+	void RemapNodes( const std::vector< int > &remap )
 	{
 		RemapNode( nNode, remap );
 	}
@@ -519,7 +516,7 @@ schema struct FeSphereRigid_t
 	{
 		nNode += nBaseNode;
 	}
-	void RemapNodes( const CUtlVector< int > &remap )
+	void RemapNodes( const std::vector< int > &remap )
 	{
 		RemapNode( nNode, remap );
 	}
@@ -559,7 +556,7 @@ schema struct FeTaperedCapsuleStretch_t
 		nNode[ 0 ] += nBaseNode;
 		nNode[ 1 ] += nBaseNode;
 	}
-	void RemapNodes( const CUtlVector< int > &remap )
+	void RemapNodes( const std::vector< int > &remap )
 	{
 		RemapNode( nNode[ 0 ], remap );
 		RemapNode( nNode[ 1 ], remap );
@@ -643,7 +640,7 @@ schema struct FeFitInfluence_t // helper struct
 		nVertexNode += nBaseNode;
 		nMatrixNode += nBaseNode;
 	}
-	void RemapNodes( const CUtlVector< int > &remap )
+	void RemapNodes( const std::vector< int > &remap )
 	{
 		RemapNode( nVertexNode, remap );
 		RemapNode( nMatrixNode, remap );
@@ -689,8 +686,8 @@ public:
 	FeAabb_t(){}
 	explicit FeAabb_t( const AABB_t &aabb )
 	{
-		m_vMinBounds = LoadUnaligned3SIMD( &aabb.m_vMinBounds );
-		m_vMaxBounds = LoadUnaligned3SIMD( &aabb.m_vMaxBounds );
+		m_vMinBounds = LoadVector3SIMD( aabb.m_vMinBounds );
+		m_vMaxBounds = LoadVector3SIMD( aabb.m_vMaxBounds );
 	}
 
 	fltx4 m_vMinBounds;
@@ -789,13 +786,13 @@ public:
 	uint GetTreeRootAabbIndex() const { return m_nNodeCount - m_nStaticNodes - 2;  } // we have dynNodes - 1 tree nodes. The very last one is the root
 
 	uint ComputeCollisionTreeDepthTopDown() const;
-	uint ComputeCollisionTreeDepthTopDown( CUtlVector< uint16 > &levels ) const;
+	uint ComputeCollisionTreeDepthTopDown( std::vector< uint16 > &levels ) const;
 	uint ComputeCollisionTreeDepthTopDown( uint16 *pLevels ) const;
 	uint ComputeCollisionTreeHeightBottomUp() const;
-	uint ComputeCollisionTreeHeightBottomUp( CUtlVector< uint16 > &levels ) const;
+	uint ComputeCollisionTreeHeightBottomUp( std::vector< uint16 > &levels ) const;
 	uint ComputeCollisionTreeHeightBottomUp( uint16 *pLevels ) const;
-	uint ComputeCollisionTreeNodeCount() const { CUtlVector< uint16 > counts;  return ComputeCollisionTreeNodeCount( counts ); }
-	uint ComputeCollisionTreeNodeCount( CUtlVector< uint16 > &counts ) const { counts.SetCount( GetDynamicNodeCount() - 1 ); return ComputeCollisionTreeNodeCount( counts.Base() ); }
+	uint ComputeCollisionTreeNodeCount() const { std::vector< uint16 > counts;  return ComputeCollisionTreeNodeCount( counts ); }
+	uint ComputeCollisionTreeNodeCount( std::vector< uint16 > &counts ) const { counts.assign( GetDynamicNodeCount() - 1, {} ); return ComputeCollisionTreeNodeCount( counts.data() ); }
 	uint ComputeCollisionTreeNodeCount( uint16 *pCounts ) const;
 
 	void ComputeCollisionTreeBounds( const fltx4 *pDynPos, FeAabb_t *pClusters )const;

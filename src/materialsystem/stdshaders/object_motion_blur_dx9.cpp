@@ -6,11 +6,7 @@
 
 #include "BaseVSShader.h"
 #include "object_motion_blur_vs20.inc"
-#include "object_motion_blur_ps20.inc"
 #include "object_motion_blur_ps20b.inc"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 BEGIN_VS_SHADER_FLAGS( ObjectMotionBlur, "Object Motion Blur", SHADER_NOT_EDITABLE )
 	BEGIN_SHADER_PARAMS

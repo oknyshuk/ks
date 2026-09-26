@@ -34,7 +34,9 @@
 //
 
 
-#include "tier1/utlpriorityqueue.h"
+#include <vector>
+#include <memory>
+#include "tier1/vector_ops.h"
 #include "mathlib/aabb.h"
 
 
@@ -59,7 +61,7 @@ public:
 
 	struct LinkLessFunc_t
 	{
-		bool operator()( const CLink &lhs, const CLink &rhs, bool( *lessFuncPtr )( CLink const&, CLink const& ) )
+		bool operator()( const CLink &lhs, const CLink &rhs ) const
 		{
 			return lhs.m_flCost > rhs.m_flCost;
 /*
@@ -74,7 +76,8 @@ public:
 		}
 	};
 
-	typedef CUtlPriorityQueue< CLink, LinkLessFunc_t >ClusterLinkQueue_t;
+	// heap (ks::heap_*) ordered by LinkLessFunc_t: the cheapest link is at the front
+	typedef std::vector< CLink > ClusterLinkQueue_t;
 
 	class CCluster
 	{
@@ -101,7 +104,7 @@ public:
 
 	struct ClusterLessFunc_t
 	{
-		bool operator()( const CCluster *pLeft, const CCluster *pRight, bool( lessFuncPtr )( CCluster*const&, CCluster*const& ) )
+		bool operator()( const CCluster *pLeft, const CCluster *pRight ) const
 		{
 			return pLeft->GetBestCost() > pRight->GetBestCost();
 		}
@@ -109,30 +112,31 @@ public:
 
 	struct ClusterSetIndexFunc_t
 	{
-		inline static void SetIndex( CCluster* heapElement, int nNewIndex )
+		void operator()( CCluster *heapElement, int nNewIndex ) const
 		{
 			heapElement->m_nPriorityIndex = nNewIndex;
 		}
 	};
 
-	int GetClusterCount() const { return m_Clusters.Count(); }
-	CCluster *GetCluster( int nIndex ) const { return m_Clusters[ nIndex ]; }
+	int GetClusterCount() const { return std::ssize( m_Clusters ); }
+	CCluster *GetCluster( int nIndex ) const { return m_Clusters[ nIndex ].get(); }
 public:
 	// Call this to register all links between all nodes before building agglomerated clusters
 	CCluster* SetNode( int nIndex, const Vector &origin )
 	{
 		if ( !m_Clusters[ nIndex ] )
 		{
-			( m_Clusters[ nIndex ] = new CCluster( nIndex, 1 ) )->m_Aabb.SetToPoint( origin );
+			( m_Clusters[ nIndex ] = std::make_unique< CCluster >( nIndex, 1 ) )->m_Aabb.SetToPoint( origin );
 		}
 		else
 		{
 			m_Clusters[ nIndex ]->m_Aabb.SetToPoint( origin );
 		}
-		return m_Clusters[ nIndex ];
+		return m_Clusters[ nIndex ].get();
 	}
 
-	typedef CUtlPriorityQueue< CCluster*, ClusterLessFunc_t, CUtlMemory< CCluster* >, ClusterSetIndexFunc_t > ClustersPriorityQueue_t;
+	// heap (ks::heap_*) ordered by ClusterLessFunc_t; each cluster tracks its slot in m_nPriorityIndex
+	typedef std::vector< CCluster* > ClustersPriorityQueue_t;
 
 	void LinkNodes( int nNode0, int nNode1 ); // call before building priority queue
 
@@ -145,7 +149,7 @@ protected:
 protected:
 	// the first N clusters are the original nodes that have no children, 
 	// the next N-1 (or less) clusters are the parents
-	CUtlVector< CCluster* > m_Clusters;
+	std::vector< std::unique_ptr< CCluster > > m_Clusters;
 };
 
 

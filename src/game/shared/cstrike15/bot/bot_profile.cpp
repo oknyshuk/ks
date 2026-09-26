@@ -9,7 +9,6 @@
 
 #include "cbase.h"
 
-#pragma warning( disable : 4530 )					// STL uses exceptions, but we are not compiling with them - ignore warning
 
 #define DEFINE_DIFFICULTY_NAMES
 #include "bot_profile.h"
@@ -18,9 +17,6 @@
 #include "bot.h"
 #include "bot_util.h"
 #include "cs_bot.h"		// BOTPORT: Remove this CS dependency
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 BotProfileManager *TheBotProfiles = nullptr;
@@ -95,7 +91,7 @@ bool BotProfile::InheritsFrom( const char *name ) const
 	if ( WildcardMatch( name, GetName() ) )
 		return true;
 
-	for ( int i=0; i<m_templates.Count(); ++i )
+	for ( int i=0; i<std::ssize( m_templates ); ++i )
 	{
 		const BotProfile *queryTemplate = m_templates[i];
 		if ( queryTemplate && queryTemplate->InheritsFrom( name ) )
@@ -122,7 +118,7 @@ void BotProfile::SetName( const char* name )
 
 const BotProfile* BotProfile::GetTemplate( int index ) const
 {
-	if ( index > 0 && index < m_templates.Count() )
+	if ( index > 0 && index < std::ssize( m_templates ) )
 	{
 		return m_templates[index];
 	}
@@ -185,7 +181,7 @@ void BotProfile::Clone( const BotProfile* source_profile )
 
 		for ( int i = 0; i < source_profile->GetTemplatesCount(); ++i )
 		{
-			m_templates.AddToTail( source_profile->GetTemplate( i ) );
+			m_templates.push_back( source_profile->GetTemplate( i ) );
 		}
 	}
 }
@@ -375,9 +371,9 @@ void BotProfileManager::Init( const char *filename, unsigned int *checksum )
 					*c = '\000';
 
 				// find the given template name
-				FOR_EACH_LL( m_templateList, it )
+				for ( const auto &pTemplate : m_templateList )
 				{
-					BotProfile *profile = m_templateList[ it ];
+					const BotProfile *profile = pTemplate.get();
 					if ( !stricmp( profile->GetName(), token ))
 					{
 						inherit = profile;
@@ -597,12 +593,12 @@ void BotProfileManager::Init( const char *filename, unsigned int *checksum )
 			if (isTemplate)
 			{
 				// add to template list
-				m_templateList.AddToTail( profile );
+				m_templateList.emplace_back( profile );
 			}
 			else
 			{
 				// add profile to the master list
-				m_profileList.AddToTail( profile );
+				m_profileList.emplace_back( profile );
 			}
 		}
 	}
@@ -676,8 +672,8 @@ BotProfileManager::~BotProfileManager( void )
  */
 void BotProfileManager::Reset( void )
 {
-	m_profileList.PurgeAndDeleteElements();
-	m_templateList.PurgeAndDeleteElements();
+	m_profileList.clear();
+	m_templateList.clear();
 
 	int i;
 
@@ -700,11 +696,11 @@ void BotProfileManager::Reset( void )
 		}
 	}
 
-	for ( i=0; i<m_voiceBanks.Count(); ++i )
+	for ( i=0; i<std::ssize( m_voiceBanks ); ++i )
 	{
 		delete[] m_voiceBanks[i];
 	}
-	m_voiceBanks.RemoveAll();
+	m_voiceBanks.clear();
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -783,7 +779,7 @@ int BotProfileManager::FindVoiceBankIndex( const char *filename )
 {
 	int index = 0;
 
-	for ( int i=0; i<m_voiceBanks.Count(); ++i )
+	for ( int i=0; i<std::ssize( m_voiceBanks ); ++i )
 	{
 		if ( !stricmp( filename, m_voiceBanks[i] ) )
 		{
@@ -791,7 +787,7 @@ int BotProfileManager::FindVoiceBankIndex( const char *filename )
 		}
 	}
 
-	m_voiceBanks.AddToTail( CloneString( filename ) );
+	m_voiceBanks.push_back( CloneString( filename ) );
 	return index;
 }
 
@@ -803,10 +799,10 @@ int BotProfileManager::FindVoiceBankIndex( const char *filename )
 const BotProfile *BotProfileManager::GetRandomProfile( BotDifficultyType difficulty, int team, CSWeaponType weaponType, bool forceMatchHighestDifficulty ) const
 {
 	// count up valid profiles
-	CUtlVector< const BotProfile * > profiles;
-	FOR_EACH_LL( m_profileList, it )
+	std::vector< const BotProfile * > profiles;
+	for ( const auto &pProfile : m_profileList )
 	{
-		const BotProfile *profile = m_profileList[ it ];
+		const BotProfile *profile = pProfile.get();
 
 		// Match difficulty
 		if ( forceMatchHighestDifficulty )
@@ -840,14 +836,14 @@ const BotProfile *BotProfileManager::GetRandomProfile( BotDifficultyType difficu
 				continue;
 		}
 
-		profiles.AddToTail( profile );
+		profiles.push_back( profile );
 	}
 
-	if ( !profiles.Count() )
+	if ( profiles.empty() )
 		return nullptr;
 
 	// select one at random
-	int which = RandomInt( 0, profiles.Count()-1 );
+	int which = RandomInt( 0, std::ssize( profiles )-1 );
 	return profiles[which];
 }
 

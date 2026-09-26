@@ -13,9 +13,6 @@
 #include "TemplateEntities.h"
 #include "point_template.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define SF_ENTMAKER_AUTOSPAWN				0x0001
 #define SF_ENTMAKER_WAITFORDESTRUCTION		0x0002
 #define SF_ENTMAKER_IGNOREFACING			0x0004
@@ -158,12 +155,12 @@ void CEnvEntityMaker::SpawnEntity( Vector vecAlternateOrigin, QAngle vecAlternat
 		vecSpawnAngles = vecAlternateAngles;
 	}
 
-	CUtlVector<CBaseEntity*> hNewEntities;
+	std::vector< CBaseEntity* > hNewEntities;
 	if ( !pTemplate->CreateInstance( vecSpawnOrigin, vecSpawnAngles, &hNewEntities, this ) )
 		return;
 	
 	//Adrian: oops we couldn't spawn the entity (or entities) for some reason!
-	if ( hNewEntities.Count() == 0 )
+	if ( hNewEntities.empty() )
 		 return;
 	
 	m_hCurrentInstance = hNewEntities[0];
@@ -193,7 +190,7 @@ void CEnvEntityMaker::SpawnEntity( Vector vecAlternateOrigin, QAngle vecAlternat
 	// If we have a specified post spawn speed, apply it to all spawned entities
 	if ( m_flPostSpawnSpeed )
 	{
-		for ( int i = 0; i < hNewEntities.Count(); i++ )
+		for ( int i = 0; i < std::ssize( hNewEntities ); i++ )
 		{
 			CBaseEntity *pEntity = hNewEntities[i];
 			if ( pEntity->GetMoveType() == MOVETYPE_NONE )

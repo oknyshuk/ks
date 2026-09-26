@@ -7,8 +7,9 @@
 #ifndef GAMESTATS_H
 #define GAMESTATS_H
 
-#include "tier1/utldict.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/map_ops.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
 #include "igamesystem.h"
 
 const int GAMESTATS_VERSION = 1;
@@ -127,7 +128,7 @@ public:
 		{
 			m_nLookAhead = nLookAhead;
 		}
-		int nCatchUp = MIN( nLookBack, m_nLookBack );
+		int nCatchUp = std::min( nLookBack, m_nLookBack );
 		// exhaust back-stats buffer
 		for ( int i = 0; i < nCatchUp; ++i )
 		{
@@ -213,8 +214,8 @@ public:
 
 	  void		Clear();
 
-	  void		SaveToBuffer( CUtlBuffer& buf );
-	  bool		ParseFromBuffer( CUtlBuffer& buf, int iBufferStatsVersion );
+	  void		SaveToBuffer( ks::byte_writer& buf );
+	  bool		ParseFromBuffer( ks::byte_reader& buf, int iBufferStatsVersion );
 
 	  // Data
 public:
@@ -243,8 +244,8 @@ public:
 
 	  void						Clear();
 
-	  void						SaveToBuffer( CUtlBuffer& buf );
-	  bool						ParseFromBuffer( CUtlBuffer& buf, int iBufferStatsVersion );
+	  void						SaveToBuffer( ks::byte_writer& buf );
+	  bool						ParseFromBuffer( ks::byte_reader& buf, int iBufferStatsVersion );
 
 	  BasicGameStatsRecord_t	*FindOrAddRecordForMap( char const *mapname );
 
@@ -253,7 +254,7 @@ public:
 	int							m_nSecondsToCompleteGame; // 0 means they haven't finished playing yet
 
 	BasicGameStatsRecord_t		m_Summary;			// Summary record
-	CUtlDict< BasicGameStatsRecord_t, unsigned short > m_MapTotals;
+	ks::idict< BasicGameStatsRecord_t > m_MapTotals;
 	bool						m_bSteam;
 	bool						m_bCyberCafe;
 	int							m_nDXLevel;
@@ -350,8 +351,8 @@ public:
 	virtual void Event_WindowShattered( CBasePlayer *pPlayer );
 
 	//custom data to tack onto existing stats if you're not doing a complete overhaul
-	virtual void AppendCustomDataToSaveBuffer( CUtlBuffer &SaveBuffer ) { } //custom data you want thrown into the default save and upload path
-	virtual void LoadCustomDataFromBuffer( CUtlBuffer &LoadBuffer ) { }; //when loading the saved stats file, this will point to where you started saving data to the save buffer
+	virtual void AppendCustomDataToSaveBuffer( ks::byte_writer &SaveBuffer ) { } //custom data you want thrown into the default save and upload path
+	virtual void LoadCustomDataFromBuffer( ks::byte_reader &LoadBuffer ) { }; //when loading the saved stats file, this will point to where you started saving data to the save buffer
 
 	virtual void LoadingEvent_PlayerIDDifferentThanLoadedStats( void ); //Only called if you use the base SaveToFileNOW() and LoadFromFile() functions. Used in case you want to keep/invalidate data that was just loaded. 
 
@@ -359,9 +360,9 @@ public:
 	virtual bool SaveToFileNOW( bool bForceSyncWrite = false ); //saves buffers to their respective files now, returns success or failure
 	virtual bool UploadStatsFileNOW( void ); //uploads data to the CSER now, returns success or failure
 
-	static bool AppendLump( int nMaxLumpCount, CUtlBuffer &SaveBuffer, unsigned short iLump, unsigned short iLumpCount, size_t nSize, void *pData );
-	static bool GetLumpHeader( int nMaxLumpCount, CUtlBuffer &LoadBuffer, unsigned short &iLump, unsigned short &iLumpCount, bool bPermissive = false );
-	static void LoadLump( CUtlBuffer &LoadBuffer, unsigned short iLumpCount, size_t nSize, void *pData );
+	static bool AppendLump( int nMaxLumpCount, ks::byte_writer &SaveBuffer, unsigned short iLump, unsigned short iLumpCount, size_t nSize, void *pData );
+	static bool GetLumpHeader( int nMaxLumpCount, ks::byte_reader &LoadBuffer, unsigned short &iLump, unsigned short &iLumpCount, bool bPermissive = false );
+	static void LoadLump( ks::byte_reader &LoadBuffer, unsigned short iLumpCount, size_t nSize, void *pData );
 
 	//default save behavior is to save on level shutdown, and game shutdown
 	virtual bool AutoSave_OnInit( void ) { return false; }
@@ -401,7 +402,7 @@ public:
 //			iLump - 
 //			iLumpCount - 
 //-----------------------------------------------------------------------------
-inline bool CBaseGameStats::AppendLump( int nMaxLumpCount, CUtlBuffer &SaveBuffer, unsigned short iLump, unsigned short iLumpCount, size_t nSize, void *pData )
+inline bool CBaseGameStats::AppendLump( int nMaxLumpCount, ks::byte_writer &SaveBuffer, unsigned short iLump, unsigned short iLumpCount, size_t nSize, void *pData )
 {
 	// Verify the lump index.
 	Assert( ( iLump > 0 ) && ( iLump < nMaxLumpCount ) );
@@ -414,11 +415,11 @@ inline bool CBaseGameStats::AppendLump( int nMaxLumpCount, CUtlBuffer &SaveBuffe
 		return false;
 
 	// Write the lump id and element count.
-	SaveBuffer.PutUnsignedShort( iLump );
-	SaveBuffer.PutUnsignedShort( iLumpCount );
+	SaveBuffer.write< unsigned short >( iLump );
+	SaveBuffer.write< unsigned short >( iLumpCount );
 
 	size_t nTotalSize = iLumpCount * nSize;
-	SaveBuffer.Put( pData, nTotalSize );
+	SaveBuffer.write_bytes( pData, nTotalSize );
 
 	return true;
 }
@@ -430,16 +431,16 @@ inline bool CBaseGameStats::AppendLump( int nMaxLumpCount, CUtlBuffer &SaveBuffe
 //			&iLumpCount - 
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
-inline bool CBaseGameStats::GetLumpHeader( int nMaxLumpCount, CUtlBuffer &LoadBuffer, unsigned short &iLump, unsigned short &iLumpCount, bool bPermissive /*= false*/ )
+inline bool CBaseGameStats::GetLumpHeader( int nMaxLumpCount, ks::byte_reader &LoadBuffer, unsigned short &iLump, unsigned short &iLumpCount, bool bPermissive /*= false*/ )
 {
 	// Get the lump id and element count.
-	iLump = LoadBuffer.GetUnsignedShort();
-	if ( !LoadBuffer.IsValid() )
+	iLump = LoadBuffer.read< unsigned short >();
+	if ( !LoadBuffer.ok() )
 	{
 		// check for EOF
 		return false;
 	}
-	iLumpCount = LoadBuffer.GetUnsignedShort();
+	iLumpCount = LoadBuffer.read< unsigned short >();
 
 	if ( bPermissive )
 		return true;
@@ -465,9 +466,9 @@ inline bool CBaseGameStats::GetLumpHeader( int nMaxLumpCount, CUtlBuffer &LoadBu
 //			nSize - size of each lump
 //			pData - where to store the data
 //-----------------------------------------------------------------------------
-inline void CBaseGameStats::LoadLump( CUtlBuffer &LoadBuffer, unsigned short iLumpCount, size_t nSize, void *pData )
+inline void CBaseGameStats::LoadLump( ks::byte_reader &LoadBuffer, unsigned short iLumpCount, size_t nSize, void *pData )
 {
-	LoadBuffer.Get( pData, iLumpCount * nSize );
+	LoadBuffer.read_bytes( pData, iLumpCount * nSize );
 }
 
 #endif // GAME_DLL

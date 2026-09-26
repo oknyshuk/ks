@@ -22,15 +22,12 @@
 #include "engine/IEngineSound.h"
 #include "filters.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //#define DEBUG_MICROPHONE
 
 const float MICROPHONE_SETTLE_EPSILON = 0.005;
 
 // List of env_microphones who want to be told whenever a sound is started
-static CUtlVector< CHandle<CEnvMicrophone> > s_Microphones;
+static std::vector< CHandle<CEnvMicrophone> > s_Microphones;
 
 
 LINK_ENTITY_TO_CLASS(env_microphone, CEnvMicrophone);
@@ -43,7 +40,7 @@ IMPLEMENT_REFLECT_DATAMAP( CEnvMicrophone )
 //-----------------------------------------------------------------------------
 CEnvMicrophone::~CEnvMicrophone( void )
 {
-	s_Microphones.FindAndRemove( this );
+	ks::erase_first( s_Microphones, this );
 }
 
 //-----------------------------------------------------------------------------
@@ -163,9 +160,9 @@ void CEnvMicrophone::ActivateSpeaker( void )
 	{
 		// We've got a speaker to play heard sounds through. To do this, we need to add ourselves 
 		// to the list of microphones who want to be told whenever a sound is played.
-		if ( s_Microphones.Find( this ) == -1 )
+		if ( ks::find_index( s_Microphones, this ) == -1 )
 		{
-			s_Microphones.AddToTail( this );
+			s_Microphones.push_back( this );
 		}
 	}
 }
@@ -198,7 +195,7 @@ void CEnvMicrophone::InputDisable( inputdata_t &inputdata )
 		m_szLastSound[0] = 0;
 
 		// Remove ourselves from the list of active mics
-		s_Microphones.FindAndRemove( this );
+		ks::erase_first( s_Microphones, this );
 	}
 	SetNextThink( TICK_NEVER_THINK );
 }
@@ -429,7 +426,7 @@ void CEnvMicrophone::Think(void)
 //-----------------------------------------------------------------------------
 // Purpose: Hook for the sound system to tell us when a sound's been played
 //-----------------------------------------------------------------------------
-MicrophoneResult_t CEnvMicrophone::SoundPlayed( int entindex, const char *soundname, soundlevel_t soundlevel, float flVolume, int iFlags, int iPitch, const Vector *pOrigin, float soundtime, CUtlVector< Vector >& soundorigins )
+MicrophoneResult_t CEnvMicrophone::SoundPlayed( int entindex, const char *soundname, soundlevel_t soundlevel, float flVolume, int iFlags, int iPitch, const Vector *pOrigin, float soundtime, std::vector< Vector >& soundorigins )
 {
 	if ( m_bAvoidFeedback )
 		return MicrophoneResult_Ok;
@@ -492,9 +489,9 @@ MicrophoneResult_t CEnvMicrophone::SoundPlayed( int entindex, const char *soundn
 	m_bAvoidFeedback = false;
 
 	// Copy emitted origin to soundorigins array
-	for ( int i = 0; i < ep.m_UtlVecSoundOrigin.Count(); ++i )
+	for ( int i = 0; i < std::ssize( ep.m_UtlVecSoundOrigin ); ++i )
 	{
-		soundorigins.AddToTail( ep.m_UtlVecSoundOrigin[ i ] );
+		soundorigins.push_back( ep.m_UtlVecSoundOrigin[ i ] );
 	}
 
 	// Do we want to allow the original sound to play?
@@ -521,12 +518,12 @@ void CEnvMicrophone::SoundStopped( const char *soundname )
 // Output : Returns whether or not the sound was swallowed by the microphone.
 //			Swallowed sounds should not be played by the sound system.
 //-----------------------------------------------------------------------------
-bool CEnvMicrophone::OnSoundPlayed( int entindex, const char *soundname, soundlevel_t soundlevel, float flVolume, int iFlags, int iPitch, const Vector *pOrigin, float soundtime, CUtlVector< Vector >& soundorigins )
+bool CEnvMicrophone::OnSoundPlayed( int entindex, const char *soundname, soundlevel_t soundlevel, float flVolume, int iFlags, int iPitch, const Vector *pOrigin, float soundtime, std::vector< Vector >& soundorigins )
 {
 	bool bSwallowed = false;
 
 	// Loop through all registered microphones and tell them the sound was just played
-	int iCount = s_Microphones.Count();
+	int iCount = std::ssize( s_Microphones );
 	if ( iCount > 0 )
 	{
 		// Iterate backwards because we might be deleting microphones.
@@ -552,7 +549,7 @@ bool CEnvMicrophone::OnSoundPlayed( int entindex, const char *soundname, soundle
 				}
 				else if ( eResult == MicrophoneResult_Remove )
 				{
-					s_Microphones.FastRemove( i );
+					ks::swap_remove( s_Microphones, i );
 				}
 			}
 		}
@@ -564,7 +561,7 @@ bool CEnvMicrophone::OnSoundPlayed( int entindex, const char *soundname, soundle
 void CEnvMicrophone::OnSoundStopped( const char *soundname )
 {
 	// Loop through all registered microphones and tell them which sound to stop
-	int iCount = s_Microphones.Count();
+	int iCount = std::ssize( s_Microphones );
 	if ( iCount > 0 )
 	{
 		for ( int i = iCount - 1; i >= 0; i-- )

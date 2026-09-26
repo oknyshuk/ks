@@ -72,9 +72,9 @@ public:
 
 	//Changes made specifically to support the Portal mod (smack Dave Kircher if something breaks) (Added separately to both client and server to not mess with versioning)
 	//===================================================================
-	virtual void GetAllStaticProps( CUtlVector<ICollideable *> *pOutput ) = 0; //testing function that will eventually be removed
-	virtual void GetAllStaticPropsInAABB( const Vector &vMins, const Vector &vMaxs, CUtlVector<ICollideable *> *pOutput ) = 0; //get all static props that exist wholly or partially in an AABB
-	virtual void GetAllStaticPropsInOBB( const Vector &ptOrigin, const Vector &vExtent1, const Vector &vExtent2, const Vector &vExtent3, CUtlVector<ICollideable *> *pOutput ) = 0; //get all static props that exist wholly or partially in an OBB
+	virtual void GetAllStaticProps( std::vector< ICollideable * > *pOutput ) = 0; //testing function that will eventually be removed
+	virtual void GetAllStaticPropsInAABB( const Vector &vMins, const Vector &vMaxs, std::vector< ICollideable * > *pOutput ) = 0; //get all static props that exist wholly or partially in an AABB
+	virtual void GetAllStaticPropsInOBB( const Vector &ptOrigin, const Vector &vExtent1, const Vector &vExtent2, const Vector &vExtent3, std::vector< ICollideable * > *pOutput ) = 0; //get all static props that exist wholly or partially in an OBB
 	//===================================================================
 
 	virtual void DrawStaticProps( IClientRenderable **pProps, const RenderableInstance_t *pInstances, int count, bool bShadowDepth, bool drawVCollideWireframe ) = 0;
@@ -90,9 +90,9 @@ public:
 
 	//Changes made specifically to support the Portal mod (smack Dave Kircher if something breaks) (Added separately to both client and server to not mess with versioning)
 	//===================================================================
-	virtual void GetAllStaticProps( CUtlVector<ICollideable *> *pOutput ) = 0; //testing function that will eventually be removed
-	virtual void GetAllStaticPropsInAABB( const Vector &vMins, const Vector &vMaxs, CUtlVector<ICollideable *> *pOutput ) = 0; //get all static props that exist wholly or partially in an AABB
-	virtual void GetAllStaticPropsInOBB( const Vector &ptOrigin, const Vector &vExtent1, const Vector &vExtent2, const Vector &vExtent3, CUtlVector<ICollideable *> *pOutput ) = 0; //get all static props that exist wholly or partially in an OBB
+	virtual void GetAllStaticProps( std::vector< ICollideable * > *pOutput ) = 0; //testing function that will eventually be removed
+	virtual void GetAllStaticPropsInAABB( const Vector &vMins, const Vector &vMaxs, std::vector< ICollideable * > *pOutput ) = 0; //get all static props that exist wholly or partially in an AABB
+	virtual void GetAllStaticPropsInOBB( const Vector &ptOrigin, const Vector &vExtent1, const Vector &vExtent2, const Vector &vExtent3, std::vector< ICollideable * > *pOutput ) = 0; //get all static props that exist wholly or partially in an OBB
 	//===================================================================
 };
 

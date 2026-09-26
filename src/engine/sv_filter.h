@@ -27,7 +27,7 @@ const char *GetUserIDString( const USERID_t& id );
 
 bool Filter_IsUserBanned( const USERID_t& userid );
 
-extern CUtlVector< ipfilter_t > g_IPFilters;
-extern CUtlVector< userfilter_t > g_UserFilters;
+extern std::vector< ipfilter_t > g_IPFilters;
+extern std::vector< userfilter_t > g_UserFilters;
 
 #endif // SV_FILTER_H

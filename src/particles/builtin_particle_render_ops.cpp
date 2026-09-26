@@ -11,7 +11,6 @@
 #include "tier2/fileutils.h"
 #include "tier2/renderutils.h"
 #include "tier2/beamsegdraw.h"
-#include "tier1/UtlStringMap.h"
 #include "tier1/strtools.h"
 #include "materialsystem/imesh.h"
 #include "materialsystem/itexture.h"
@@ -30,9 +29,6 @@
 	#include "../common/blobulator/iblob_renderer.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // Vertex instancing (1 vert submitted per particle, duplicated to 4 (a quad) on the GPU) is supported only on 360
 const bool bUseInstancing = false;
 
@@ -47,7 +43,7 @@ static inline int GetMaxParticlesPerBatch( IMatRenderContext *pRenderContext, IM
 	if ( bWithInstancing )
 		return nMaxVertices;
 	else
-		return MIN( (nMaxVertices / 4), (nMaxIndices / 6) );
+		return std::min( (nMaxVertices / 4), (nMaxIndices / 6) );
 }
 
 void SetupParticleVisibility( CParticleCollection *pParticles, CParticleVisibilityData *pVisibilityData, const CParticleVisibilityInputs *pVisibilityInputs, int *nQueryHandle, IMatRenderContext *pRenderContext )
@@ -254,7 +250,7 @@ void C_OP_RenderPoints::Render( IMatRenderContext *pRenderContext, CParticleColl
 	{
 		IMesh* pMesh = pRenderContext->GetDynamicMesh( true );
 
-		int nParticlesInBatch = MIN( nMaxVertices, nParticles );
+		int nParticlesInBatch = std::min( nMaxVertices, nParticles );
 		meshBuilder.Begin( pMesh, MATERIAL_POINTS, nParticlesInBatch );
 		nParticles -= nParticlesInBatch;
 		for( int i = 0; i < nParticlesInBatch; i++ )
@@ -434,7 +430,7 @@ const SheetSequenceSample_t *GetSampleForSequence( CSheet *pSheet, float flAge, 
 	unsigned int nFrame = flAge;
 	if ( pSheet->m_SheetInfo[nSequence].m_SeqFlags & SEQ_FLAG_CLAMP )
 	{
-		nFrame = MIN( nFrame, SEQUENCE_SAMPLE_COUNT-1 );
+		nFrame = std::min<std::common_type_t<unsigned int, int>>( nFrame, SEQUENCE_SAMPLE_COUNT-1 );
 	}
 	else
 	{
@@ -509,7 +505,7 @@ void C_OP_RenderSprites::RenderNonSpriteCardCameraFacingOld( CParticleCollection
 	CSheet *pSheet = pParticles->m_Sheet();
 	while ( nParticles )
 	{
-		int nParticlesInBatch = MIN( nMaxParticlesInBatch, nParticles );
+		int nParticlesInBatch = std::min( nMaxParticlesInBatch, nParticles );
 		nParticles -= nParticlesInBatch;
 		IMesh* pMesh = pRenderContext->GetDynamicMesh( true );
 		CMeshBuilder meshBuilder;
@@ -638,7 +634,7 @@ void C_OP_RenderSprites::RenderNonSpriteCardCameraFacing( CParticleCollection *p
 	CSheet *pSheet = pParticles->m_Sheet();
 	while ( nParticles )
 	{
-		int nParticlesInBatch = MIN( nMaxParticlesInBatch, nParticles );
+		int nParticlesInBatch = std::min( nMaxParticlesInBatch, nParticles );
 		nParticles -= nParticlesInBatch;
 		IMesh* pMesh = pRenderContext->GetDynamicMesh( true );
 		CMeshBuilder meshBuilder;
@@ -830,7 +826,7 @@ void C_OP_RenderSprites::RenderNonSpriteCardZRotating( CParticleCollection *pPar
 	int nMaxParticlesInBatch = GetMaxParticlesPerBatch( pRenderContext, pMaterial, false );
 	while ( nParticles )
 	{
-		int nParticlesInBatch = MIN( nMaxParticlesInBatch, nParticles );
+		int nParticlesInBatch = std::min( nMaxParticlesInBatch, nParticles );
 		nParticles -= nParticlesInBatch;
 
 		IMesh* pMesh = pRenderContext->GetDynamicMesh( true );
@@ -997,7 +993,7 @@ void C_OP_RenderSprites::RenderNonSpriteCardOriented( CParticleCollection *pPart
 	int nMaxParticlesInBatch = GetMaxParticlesPerBatch( pRenderContext, pMaterial, false );
 	while ( nParticles )
 	{
-		int nParticlesInBatch = MIN( nMaxParticlesInBatch, nParticles );
+		int nParticlesInBatch = std::min( nMaxParticlesInBatch, nParticles );
 		nParticles -= nParticlesInBatch;
 
 		IMesh* pMesh = pRenderContext->GetDynamicMesh( true );
@@ -1349,7 +1345,7 @@ void C_OP_RenderSprites::Render( IMatRenderContext *pRenderContext, CParticleCol
 	IMaterialVar* pVar = pMaterial->FindVarFast( "$orientation", &pCtx->m_nOrientationVarToken );
 	if ( pVar )
 	{
-		pVar->SetIntValue( MAX( 0, MIN( m_nOrientationType, MAX_PARTICLE_ORIENTATION_TYPES ) ) );
+		pVar->SetIntValue( std::max( 0, std::min( m_nOrientationType, MAX_PARTICLE_ORIENTATION_TYPES ) ) );
 	}
 
 	pRenderContext->Bind( pMaterial );
@@ -1429,7 +1425,7 @@ void C_OP_RenderSprites::Render( IMatRenderContext *pRenderContext, CParticleCol
 			pParticles, pRenderContext, true, &nParticles, &pCtx->m_VisibilityData );
 		while ( nParticles )
 		{
-			int nParticlesInBatch = MIN( nMaxParticlesInBatch, nParticles );
+			int nParticlesInBatch = std::min( nMaxParticlesInBatch, nParticles );
 			nParticles -= nParticlesInBatch;
 			
 			int vertexCount	= bUseInstancing ? nParticlesInBatch	: nParticlesInBatch * 4;
@@ -1505,7 +1501,7 @@ void C_OP_RenderSprites::Render( IMatRenderContext *pRenderContext, CParticleCol
 		}
 		while ( nParticles )
 		{
-			int nParticlesInBatch = MIN( nMaxParticlesInBatch, nParticles );
+			int nParticlesInBatch = std::min( nMaxParticlesInBatch, nParticles );
 			nParticles -= nParticlesInBatch;
 
 			int vertexCount	= bUseInstancing ? nParticlesInBatch	: nParticlesInBatch * 4;
@@ -1826,7 +1822,7 @@ bool C_OP_RenderSpritesTrail::RenderSpriteTrailSpriteCard( CMeshBuilder &meshBui
 	int nCreationTimeIndex = nGroup * info.m_nCreationTimeStride;
 	float flAge = info.m_pParticles->m_flCurTime - SubFloat( info.m_pCreationTimeStamp[ nCreationTimeIndex ], nOffset );
 
-	float flLengthScale = MIN( 1.0, ( flAge / m_flLengthFadeInTime ) );
+	float flLengthScale = std::min<std::common_type_t<double, float>>( 1.0, ( flAge / m_flLengthFadeInTime ) );
 
 	int nXYZIndex = nGroup * info.m_nXYZStride;
 	Vector vecWorldPos( SubFloat( info.m_pXYZ[ nXYZIndex ], nOffset ), SubFloat( info.m_pXYZ[ nXYZIndex+1 ], nOffset ), SubFloat( info.m_pXYZ[ nXYZIndex+2 ], nOffset ) );
@@ -1851,14 +1847,14 @@ bool C_OP_RenderSpritesTrail::RenderSpriteTrailSpriteCard( CMeshBuilder &meshBui
 	if ( flLength <= 0.0f )
 		return false;
 
-	flLength = MAX( m_flMinLength, MIN( m_flMaxLength, flLength ) );
+	flLength = std::max( m_flMinLength, std::min( m_flMaxLength, flLength ) );
 
 	vecDelta *= flLength;
 
 	// Fade the width as the length fades to keep it at a square aspect ratio
 	if ( m_bConstrainRadius )
 	{
-		rad = MIN( rad, flLength );
+		rad = std::min( rad, flLength );
 	}
 
 	Vector p0 = vecWorldPos - vecDelta;
@@ -2043,7 +2039,7 @@ bool C_OP_RenderSpritesTrail::RenderSpriteTrail( CMeshBuilder &meshBuilder,
 	if ( flLength <= 0.0f )
 		return false;
 
-	flLength = MAX( m_flMinLength, MIN( m_flMaxLength, flLength ) );
+	flLength = std::max( m_flMinLength, std::min( m_flMaxLength, flLength ) );
 
 	vecDelta *= flLength;
 
@@ -2156,7 +2152,7 @@ void C_OP_RenderSpritesTrail::Render( IMatRenderContext *pRenderContext, CPartic
 	bool bFirstBatchBatched = false;
 	while ( nParticles )
 	{
-		int nParticlesInBatch = MIN( nMaxParticlesInBatch, nParticles );
+		int nParticlesInBatch = std::min( nMaxParticlesInBatch, nParticles );
 		nParticles -= nParticlesInBatch;
 
 		IMesh* pMesh = pRenderContext->GetDynamicMesh( true );
@@ -2833,10 +2829,10 @@ void C_OP_RenderRope::RenderSpriteCard( CParticleCollection *pParticles, const V
 	int nNumIndicesPerSegment = 6 * m_nSubdivCount;
 	int nNumVerticesPerSegment = 2 * m_nSubdivCount;
 
-	int nNumSegmentsPerBatch = MIN( ( nMaxVertices - 2 )/nNumVerticesPerSegment,
+	int nNumSegmentsPerBatch = std::min( ( nMaxVertices - 2 )/nNumVerticesPerSegment,
 									( nMaxIndices ) / nNumIndicesPerSegment );
 	
-	int nNumSegmentsIWillRenderPerBatch = MIN( nNumSegmentsPerBatch, nSegmentsToRender );
+	int nNumSegmentsIWillRenderPerBatch = std::min( nNumSegmentsPerBatch, nSegmentsToRender );
 	int nSegmentsAvailableInBuffer = nNumSegmentsIWillRenderPerBatch;
 
 	// Early out in the case of having cached batches
@@ -2856,7 +2852,7 @@ void C_OP_RenderRope::RenderSpriteCard( CParticleCollection *pParticles, const V
 				// Next cached batch
 				pCachedBatch = pCachedBatches->GetCachedBatch( ++nBatchCount );
 			}
-			int nSegs = MIN(nSegmentsToRender, nSegmentsAvailableInBuffer);
+			int nSegs = std::min(nSegmentsToRender, nSegmentsAvailableInBuffer);
 			nSegmentsToRender -= nSegs;
 			nSegmentsAvailableInBuffer -= nSegs;
 		} while( nSegmentsToRender );

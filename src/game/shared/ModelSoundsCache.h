@@ -7,41 +7,32 @@
 #ifndef MODELSOUNDSCACHE_H
 #define MODELSOUNDSCACHE_H
 
-#include "UtlCachedFileData.h"
+#include "cached_file_data.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
+#include <flat_set>
 
 #define MODELSOUNDSCACHE_VERSION		5
 
 class CStudioHdr;
 
 
-class CModelSoundsCacheListLess
-{
-public:
-	bool Less( const int &lhs, const int &rhs, void *pCtx )
-	{
-		return lhs < rhs;
-	}
-};
-
-
 #pragma pack(1)
 class CModelSoundsCache : public IBaseCacheInfo
 {
 public:
-	CUtlSortVector< int, CModelSoundsCacheListLess > sounds;
+	std::flat_set< int > sounds;
 
 	CModelSoundsCache();
 	CModelSoundsCache( const CModelSoundsCache& src );
 
 	void PrecacheSoundList();
 
-	virtual void Save( CUtlBuffer& buf  );
-	virtual void Restore( CUtlBuffer& buf  );
+	virtual void Save( ks::byte_writer& buf );
+	virtual void Restore( ks::byte_reader& buf );
 	virtual void Rebuild( char const *filename );
 
-	static void FindOrAddScriptSound( CUtlSortVector< int, CModelSoundsCacheListLess >& sounds, char const *soundname );
-	static void BuildAnimationEventSoundList( CStudioHdr *hdr, CUtlSortVector< int, CModelSoundsCacheListLess >& sounds );
+	static void FindOrAddScriptSound( std::flat_set< int >& sounds, char const *soundname );
+	static void BuildAnimationEventSoundList( CStudioHdr *hdr, std::flat_set< int >& sounds );
 private:
 	char const *GetSoundName( int index );
 };

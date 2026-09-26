@@ -10,9 +10,6 @@
 
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define CRC32_INIT_VALUE 0xFFFFFFFFUL
 #define CRC32_XOR_VALUE  0xFFFFFFFFUL
 
@@ -121,7 +118,12 @@ JustAfew:
         ulCrc  = pulCRCTable[*pb++ ^ (unsigned char)ulCrc] ^ (ulCrc >> 8);
 
     case 4:
-        ulCrc ^= LittleLong( *(CRC32_t *)pb );
+        {
+            // pBuffer may be arbitrarily aligned, so don't dereference a CRC32_t* here.
+            CRC32_t unalignedValue;
+            memcpy( &unalignedValue, pb, sizeof( unalignedValue ) );
+            ulCrc ^= LittleLong( unalignedValue );
+        }
         ulCrc  = pulCRCTable[(unsigned char)ulCrc] ^ (ulCrc >> 8);
         ulCrc  = pulCRCTable[(unsigned char)ulCrc] ^ (ulCrc >> 8);
         ulCrc  = pulCRCTable[(unsigned char)ulCrc] ^ (ulCrc >> 8);

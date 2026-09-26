@@ -31,9 +31,6 @@
 #include "cs_gamerules.h"
 #include "weapon_c4.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // ConVars
@@ -460,7 +457,7 @@ void UTIL_SetOrigin( C_BaseEntity *entity, const Vector &vecOrigin )
 // UNDONE: Do we need this to avoid doing too much of this?  Measure startup times and see
 #if PRECACHE_OTHER_ONCE
 
-#include "utlsymbol.h"
+#include "tier1/intern_pool.h"
 class CPrecacheOtherList : public CAutoServerSystem
 {
 public:
@@ -470,17 +467,17 @@ public:
 	bool AddOrMarkPrecached( const char *pClassname );
 
 private:
-	CUtlSymbolTable		m_list;
+	ks::intern_pool		m_list;
 };
 
 void CPrecacheOtherList::LevelInitPreEntity()
 {
-	m_list.RemoveAll();
+	m_list.clear();
 }
 
 void CPrecacheOtherList::LevelShutdownPostEntity()
 {
-	m_list.RemoveAll();
+	m_list.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -490,11 +487,10 @@ void CPrecacheOtherList::LevelShutdownPostEntity()
 //-----------------------------------------------------------------------------
 bool CPrecacheOtherList::AddOrMarkPrecached( const char *pClassname )
 {
-	CUtlSymbol sym = m_list.Find( pClassname );
-	if ( sym.IsValid() )
+	if ( m_list.contains( pClassname ) )
 		return false;
 
-	m_list.AddString( pClassname );
+	m_list.intern( pClassname );
 	return true;
 }
 
@@ -1053,12 +1049,12 @@ void UTIL_ApproachTarget( float target, float increaseSpeed, float decreaseSpeed
 	if ( *val < target )
 	{
 		*val += gpGlobals->frametime*increaseSpeed;
-		*val = MIN( *val, target );
+		*val = std::min( *val, target );
 	}
 	else if ( *val > target )
 	{
 		*val -= gpGlobals->frametime*decreaseSpeed;
-		*val = MAX( *val, target );
+		*val = std::max( *val, target );
 	}
 }
 
@@ -1131,9 +1127,9 @@ void UTIL_IncrementMapKey( const char *pszCustomKey )
 		// force create this directory incase it doesn't exist
 		filesystem->CreateDirHierarchy( MAP_KEY_FILE_DIR, "MOD");
 
-		CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
+		ks::text_writer buf;
 		kvMapLoadFile->RecursiveSaveToFile( buf, 0 );
-		g_pFullFileSystem->WriteFile( szFilename, "MOD", buf );
+		g_pFullFileSystem->WriteFile( szFilename, "MOD", buf.bytes() );
 
 		kvMapLoadFile->deleteThis();
 	}
@@ -1162,8 +1158,7 @@ int UTIL_GetMapKeyCount( const char *pszCustomKey )
 			// force create this directory incase it doesn't exist
 			filesystem->CreateDirHierarchy( MAP_KEY_FILE_DIR, "MOD");
 
-			CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
-			g_pFullFileSystem->WriteFile( szFilename, "MOD", buf );
+			g_pFullFileSystem->WriteFile( szFilename, "MOD", std::span< const std::byte >() );
 		}
 
 		kvMapLoadFile->LoadFromFile( g_pFullFileSystem, szFilename, "MOD" );

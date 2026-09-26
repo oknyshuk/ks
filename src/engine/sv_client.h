@@ -14,7 +14,7 @@
 #include "checksum_crc.h"
 #include "event_system.h"
 #include "utlvector.h"
-#include "bitvec.h"
+#include <bitset>
 #include "protocol.h"
 #include <inetmsghandler.h>
 #include "baseclient.h"
@@ -199,7 +199,7 @@ public:
 
 	// Identity information.
 	edict_t					*edict;				// EDICT_NUM(clientnum+1)
-	CUtlVector<SoundInfo_t>	m_Sounds;			// game sounds
+	std::vector< SoundInfo_t >	m_Sounds;			// game sounds
 		
 	const edict_t			*m_pViewEntity;		// View Entity (camera or the client itself)
 
@@ -209,7 +209,7 @@ public:
 
 	bool					m_bIsInReplayMode;
 	CCheckTransmitInfo		m_PrevPackInfo;		// Used to speed up CheckTransmit.
-	CBitVec<MAX_EDICTS>		m_PrevTransmitEdict;
+	std::bitset<MAX_EDICTS>		m_PrevTransmitEdict;
 	float					m_flTimeClientBecameFullyConnected;
 	double					m_flLastClientCommandQuotaStart;
 	int						m_numClientCommandsInQuota;
@@ -224,7 +224,7 @@ public:
 	int					m_nHltvLastSendTick;	// last send tick, don't send ticks twice
 	float				m_flHltvLastReplayRequestTime; // tick at which the last time replay was requested
 
-	CUtlVector< INetMessage * > m_HltvQueuedMessages; // it'd probably be more optimal, memory-wise, to make a linked list, but a vector is more readable and debuggable
+	std::vector< std::unique_ptr< INetMessage > > m_HltvQueuedMessages; // it'd probably be more optimal, memory-wise, to make a linked list, but a vector is more readable and debuggable
 
 
 	HltvReplayStats_t	m_HltvReplayStats;

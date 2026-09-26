@@ -9,9 +9,6 @@
 #include <stdio.h>
 #include "voice_wavefile.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static unsigned long ReadDWord(FILE * fp) 
 {
 	unsigned long ret;  

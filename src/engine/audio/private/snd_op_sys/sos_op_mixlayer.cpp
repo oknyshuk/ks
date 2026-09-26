@@ -12,9 +12,6 @@
 // #include "cdll_engine_int.h"
 #include "../../debugoverlay.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 
 extern Color OpColor;

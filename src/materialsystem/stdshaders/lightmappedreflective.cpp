@@ -8,9 +8,6 @@
 #include "lightmappedreflective_ps20.inc"
 #include "lightmappedreflective_ps20b.inc"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 DEFINE_FALLBACK_SHADER( LightmappedReflective, LightmappedReflective_DX90 )
 
 BEGIN_VS_SHADER( LightmappedReflective_DX90, "Help for Lightmapped Reflective" )

@@ -90,11 +90,12 @@ struct AI_FollowNavInfo_t
 };
 
 struct AI_FollowGroup_t;
+struct AI_Follower_t;
 
 struct AI_FollowManagerInfoHandle_t
 {
 	AI_FollowGroup_t *m_pGroup;
-	intp m_hFollower;
+	AI_Follower_t *m_pFollower;
 };
 
 //-------------------------------------

@@ -32,10 +32,18 @@
 #define LOCATOR_ICON_FX_SCALE_BY_DIST	0x00002000	// Scales the icon in the world by how far away it is
 #define LOCATOR_ICON_FX_SCALE_LARGE		0x00004000	// Scales the icon triple the normal size
 
-#include "tier1/utlsymbol.h"
+// Interned game instructor string; equal strings share storage, so == compares pointers.
+class CGameInstructorSymbol
+{
+public:
+	CGameInstructorSymbol() = default;
+	CGameInstructorSymbol( const char *pStr );
+	bool operator==( const CGameInstructorSymbol &src ) const	{ return m_pString == src.m_pString; }
+	const char *String() const									{ return m_pString ? m_pString : ""; }
 
-// See comments in UtlSymbol on why this is useful
-DECLARE_PRIVATE_SYMBOLTYPE( CGameInstructorSymbol );
+private:
+	const char *m_pString = nullptr;
+};
 
 //-----------------------------------------------------------------------------
 // This class represents a single target to be tracked by the locator
@@ -144,8 +152,8 @@ public:
 	bool IsVisible( void );
 
 	void SetCaptionText( const char *pszText, const char *pszParam );
-	const wchar_t *GetCaptionText( void )	{ return (const wchar_t *)m_wszCaption.Base(); }
-	bool HasCaptionText( void )			{ return m_wszCaption.Count() > 1; }
+	const wchar_t *GetCaptionText( void )	{ return (const wchar_t *)m_wszCaption.data(); }
+	bool HasCaptionText( void )			{ return std::ssize( m_wszCaption ) > 1; }
 
 	void DrawBindingName( const char *pchDrawName )		{ m_pchDrawBindingName = pchDrawName; }
 	void DrawBindingNameOffscreen( const char *pchDrawName )	{ m_pchDrawBindingNameOffscreen = pchDrawName; }
@@ -172,7 +180,7 @@ private:
 	const char	*m_pchDrawBindingNameOffscreen;
 	int			m_iEffectsFlags;
 	Color		m_rgbaIconColor;
-	CUtlVector< wchar_t > m_wszCaption;
+	std::vector< wchar_t > m_wszCaption;
 
 public:
 	Color		m_captionColor;

@@ -5,6 +5,7 @@
 //=====================================================================================//
 
 #include <math.h>
+#include <atomic>
 #include <float.h>	// needed for flt_epsilon
 #include "basetypes.h"
 #include <memory.h>
@@ -12,9 +13,6 @@
 #include "mathlib/mathlib.h"
 #include "mathlib/vector.h"
 #include "mathlib/ssemath.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 // see knuth volume 3 for insight.
 
@@ -64,7 +62,7 @@ public:
 
 static SIMDRandStreamContext s_SIMDRandContexts[MAX_SIMULTANEOUS_RANDOM_STREAMS];
 
-static volatile int s_nRandContextsInUse[MAX_SIMULTANEOUS_RANDOM_STREAMS];
+static std::atomic<int> s_nRandContextsInUse[MAX_SIMULTANEOUS_RANDOM_STREAMS];
 
 void SeedRandSIMD(uint32 seed)
 {
@@ -86,9 +84,10 @@ int GetSIMDRandContext( void )
 			if ( ! s_nRandContextsInUse[i] )				// available?
 			{
 				// try to take it!
-				if ( ThreadInterlockedAssignIf( &( s_nRandContextsInUse[i]), 1, 0 ) )
+				int nExpected = 0;
+				if ( s_nRandContextsInUse[i].compare_exchange_strong( nExpected, 1 ) )
 				{
-					ThreadMemoryBarrier();
+					std::atomic_thread_fence( std::memory_order_seq_cst );
 					return i;								// done!
 				}
 			}
@@ -100,7 +99,7 @@ int GetSIMDRandContext( void )
 
 void ReleaseSIMDRandContext( int nContext )
 {
-	ThreadMemoryBarrier();
+	std::atomic_thread_fence( std::memory_order_seq_cst );
 	s_nRandContextsInUse[ nContext ] = 0;
 }
 

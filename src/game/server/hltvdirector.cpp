@@ -13,9 +13,6 @@
 #include "hltvdirector.h"
 #include "keyvalues.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
@@ -27,10 +24,6 @@ static ConVar tv_allow_static_shots( "tv_allow_static_shots", "1", FCVAR_RELEASE
 static ConVar tv_allow_camera_man( "tv_allow_camera_man", "1", FCVAR_RELEASE, "Auto director allows spectators to become camera man" );
 #endif
 
-static bool GameEventLessFunc( CHLTVGameEvent const &e1, CHLTVGameEvent const &e2 )
-{
-	return e1.m_Tick < e2.m_Tick;
-}
 
 #define RANDOM_MAX_ELEMENTS		256
 static int s_RndOrder[RANDOM_MAX_ELEMENTS];
@@ -99,7 +92,6 @@ CHLTVDirector::CHLTVDirector()
 	m_iLastPlayer = 1;
 	m_iCameraMan = 0;
 	m_nNumFixedCameras = 0;
-	m_EventHistory.SetLessFunc( GameEventLessFunc );
 	m_nNextAnalyzeTick = 0;
 	m_iCameraManIndex = 0;
 }
@@ -121,7 +113,7 @@ void CHLTVDirector::Shutdown()
 
 void CHLTVDirector::FireGameEvent( IGameEvent * event )
 {
-	if ( m_HltvServers.IsEmpty() )
+	if ( m_HltvServers.empty() )
 		return;	// don't do anything
 
 	CHLTVGameEvent gameevent;
@@ -130,7 +122,7 @@ void CHLTVDirector::FireGameEvent( IGameEvent * event )
 	gameevent.m_Priority = event->GetInt( "priority", -1 ); // priorities are leveled between 0..10, -1 means ignore
 	gameevent.m_Tick = gpGlobals->tickcount;
 	
-	m_EventHistory.Insert( gameevent );
+	m_EventHistory.insert( gameevent );
 }
 
 
@@ -155,7 +147,7 @@ void CHLTVDirector::AddHLTVServer( IHLTVServer *hltv )
 			Error( "Couldn't find GOTV client player." );
 		}
 
-		if ( m_HltvServers.IsEmpty() )
+		if ( m_HltvServers.empty() )
 		{
 			// register for events the director needs to know
 			ListenForGameEvent( "player_hurt" );
@@ -168,18 +160,18 @@ void CHLTVDirector::AddHLTVServer( IHLTVServer *hltv )
 			ListenForGameEvent( "hltv_rank_entity" );
 			ListenForGameEvent( "hltv_rank_camera" );
 		}
-		m_HltvServers.AddToTail( rec );
+		m_HltvServers.push_back( rec );
 	}
 }
 
 void CHLTVDirector::RemoveHLTVServer( IHLTVServer *hltv )
 {
 	RemoveEventsFromHistory( -1 );
-	for ( int i = 0; i < m_HltvServers.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_HltvServers ); ++i )
 	{
 		if ( m_HltvServers[ i ].m_pHLTVServer == hltv )
 		{
-			m_HltvServers.FastRemove( i );
+			ks::swap_remove( m_HltvServers, i );
 			break;
 		}
 	}
@@ -187,7 +179,7 @@ void CHLTVDirector::RemoveHLTVServer( IHLTVServer *hltv )
 
 bool CHLTVDirector::IsActive( void )
 {
-	return !m_HltvServers.IsEmpty();
+	return !m_HltvServers.empty();
 }
 
 float CHLTVDirector::GetDelay( void )
@@ -245,7 +237,7 @@ void CHLTVDirector::UpdateSettings()
 		}
 	}
 
-   	m_nBroadcastTick = MAX( 0, newBroadcastTick );
+   	m_nBroadcastTick = std::max( 0, newBroadcastTick );
 }
 
 const char** CHLTVDirector::GetModEvents()
@@ -272,7 +264,7 @@ const char** CHLTVDirector::GetModEvents()
 
 void CHLTVDirector::StartAutoRecording()
 {
-	for ( int i = 0; i < m_HltvServers.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_HltvServers ); ++i )
 	{
 		if ( !m_HltvServers[ i ].m_pHLTVServer->IsRecording() )
 		{
@@ -326,7 +318,7 @@ void CHLTVDirector::LevelInitPostEntity( void )
 
 void CHLTVDirector::FrameUpdatePostEntityThink( void )
 {
-	if ( m_HltvServers.IsEmpty() )
+	if ( m_HltvServers.empty() )
 		return;	// don't do anything
 
 	// This function is called each tick
@@ -370,7 +362,7 @@ void CHLTVDirector::StartDelayMessage()
 		msg->SetString("text", "#GOTV_Please_Wait_for_Broadcast_to_Start" );
 
 		// send spectators the HLTV director command as a game event
-		for ( int i = 0; i < m_HltvServers.Count(); ++i )
+		for ( int i = 0; i < std::ssize( m_HltvServers ); ++i )
 		{
 			m_HltvServers[ i ].m_pHLTVServer->BroadcastEvent( msg );
 		}
@@ -386,9 +378,7 @@ void CHLTVDirector::StartBestPlayerCameraShot()
 
 	memset( flPlayerRanking, 0, sizeof(flPlayerRanking) );
 
-	int firstIndex = FindFirstEvent( m_nBroadcastTick );
-
-	int index = firstIndex;
+	auto index = FindFirstEvent( m_nBroadcastTick );
 
 	float flBestRank = -1.0f;
 	int iBestCamera = -1;
@@ -396,9 +386,9 @@ void CHLTVDirector::StartBestPlayerCameraShot()
 
 	// sum all ranking values for the cameras
 
-	while( index != m_EventHistory.InvalidIndex() )
+	while( index != m_EventHistory.end() )
 	{
-		CHLTVGameEvent &dc = m_EventHistory[index];
+		const CHLTVGameEvent &dc = *index;
 
 		if ( dc.m_Tick >= m_nNextShotTick )
 			break; 
@@ -422,7 +412,7 @@ void CHLTVDirector::StartBestPlayerCameraShot()
 			}
 		}
 
-		index = m_EventHistory.NextInorder( index );
+		++index;
 	}
 
 	if ( iBestCamera != -1 )
@@ -460,7 +450,7 @@ void CHLTVDirector::StartFixedCameraShot(int iCamera, int iTarget)
 		shot->SetFloat("fov", RandomFloat(50,110) );
 	
 		// send spectators the HLTV director command as a game event
-		for ( int i = 0; i < m_HltvServers.Count(); ++i )
+		for ( int i = 0; i < std::ssize( m_HltvServers ); ++i )
 		{
 			m_HltvServers[ i ].m_pHLTVServer->BroadcastEvent( shot );
 		}
@@ -485,7 +475,7 @@ void CHLTVDirector::StartChaseCameraShot(int iTarget1, int iTarget2, int distanc
 	m_iPVSEntity = iTarget1;
 
 	// send spectators the HLTV director command as a game event
-	for ( int i = 0; i < m_HltvServers.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_HltvServers ); ++i )
 	{
 		m_HltvServers[ i ].m_pHLTVServer->BroadcastEvent( shot );
 	}
@@ -501,9 +491,7 @@ void CHLTVDirector::StartBestFixedCameraShot( bool bForce )
 
 	memset( flCameraRanking, 0, sizeof(flCameraRanking) );
 
-	int firstIndex = FindFirstEvent( m_nBroadcastTick );
-
-	int index = firstIndex;
+	auto index = FindFirstEvent( m_nBroadcastTick );
 
 	float flBestRank = -1.0f;
 	int iBestCamera = -1;
@@ -511,9 +499,9 @@ void CHLTVDirector::StartBestFixedCameraShot( bool bForce )
 
 	// sum all ranking values for the cameras
 
-	while( index != m_EventHistory.InvalidIndex() )
+	while( index != m_EventHistory.end() )
 	{
-		CHLTVGameEvent &dc = m_EventHistory[index];
+		const CHLTVGameEvent &dc = *index;
 
 		if ( dc.m_Tick >= m_nNextShotTick )
 			break; 
@@ -533,7 +521,7 @@ void CHLTVDirector::StartBestFixedCameraShot( bool bForce )
 			}
 		}
 
-		index = m_EventHistory.NextInorder( index );
+		++index;
 	}
 
 	if ( !bForce && flBestRank == 0 )
@@ -551,13 +539,13 @@ void CHLTVDirector::StartBestFixedCameraShot( bool bForce )
 void CHLTVDirector::StartRandomShot() 
 {
 	int toTick = m_nBroadcastTick + TIME_TO_TICKS ( DEF_SHOT_LENGTH );
-	m_nNextShotTick = MIN( m_nNextShotTick, toTick );
+	m_nNextShotTick = std::min( m_nNextShotTick, toTick );
 
 	// follow a player
 	StartBestPlayerCameraShot();
 }
 
-void CHLTVDirector::CreateShotFromEvent( CHLTVGameEvent *event )
+void CHLTVDirector::CreateShotFromEvent( const CHLTVGameEvent *event )
 {
 	const char *name = event->m_Event->GetName();
 	
@@ -596,7 +584,7 @@ void CHLTVDirector::CreateShotFromEvent( CHLTVGameEvent *event )
 		}
 				
 		// stay on shot for 2 seconds after death/hurt
-		m_nNextShotTick = MIN( m_nNextShotTick, (event->m_Tick+TIME_TO_TICKS(2.0)) );
+		m_nNextShotTick = std::min( m_nNextShotTick, (event->m_Tick+TIME_TO_TICKS(2.0)) );
 	}
 	else if ( bRoundStart || bRoundEnd )
 	{
@@ -610,68 +598,34 @@ void CHLTVDirector::CreateShotFromEvent( CHLTVGameEvent *event )
 
 void CHLTVDirector::CheckHistory()
 {
-	int index = m_EventHistory.FirstInorder();
 	int lastTick = -1;
 
-	while ( index != m_EventHistory.InvalidIndex() )
+	for ( const CHLTVGameEvent &dc : m_EventHistory )
 	{
-		CHLTVGameEvent &dc = m_EventHistory[index];
-
 		Assert( lastTick <= dc.m_Tick );
 		lastTick = dc.m_Tick;
-
-		index = m_EventHistory.NextInorder( index );
 	}
 }
 
 void CHLTVDirector::RemoveEventsFromHistory(int tick)
 {
-	int index = m_EventHistory.FirstInorder();
+	// history is sorted by tick, so the events to remove are a prefix
+	auto last = ( tick == -1 ) ? m_EventHistory.end() : m_EventHistory.lower_bound( tick );
 
-	while ( index != m_EventHistory.InvalidIndex() )
+	for ( auto it = m_EventHistory.begin(); it != last; ++it )
 	{
-		CHLTVGameEvent &dc = m_EventHistory[index];
-
-		if ( (dc.m_Tick < tick) || (tick == -1) )
-		{
-			gameeventmanager->FreeEvent( dc.m_Event );
-			dc.m_Event = nullptr;
-			m_EventHistory.RemoveAt( index );
-			index = m_EventHistory.FirstInorder();	// start again
-		}
-		else
-		{
-			index = m_EventHistory.NextInorder( index );
-		}
+		gameeventmanager->FreeEvent( it->m_Event );
 	}
+	m_EventHistory.erase( m_EventHistory.begin(), last );
 
 #ifdef _DEBUG
 	CheckHistory();
 #endif
 }
 
-int CHLTVDirector::FindFirstEvent( int tick )
+CHLTVDirector::EventHistory_t::const_iterator CHLTVDirector::FindFirstEvent( int tick ) const
 {
-	// TODO cache last queried ticks
-
-	int index = m_EventHistory.FirstInorder();
-
-	if ( index == m_EventHistory.InvalidIndex() )
-		return index; // no commands in list
-
-	CHLTVGameEvent *event = &m_EventHistory[index];
-
-	while ( event->m_Tick < tick )
-	{
-		index = m_EventHistory.NextInorder( index );
-		
-		if ( index == m_EventHistory.InvalidIndex() )
-			break;
-
-		event = &m_EventHistory[index];
-	}
-
-	return index;
+	return m_EventHistory.lower_bound( tick );
 }
 
 bool CHLTVDirector::SetCameraMan( int iPlayerIndex )
@@ -741,9 +695,9 @@ void CHLTVDirector::FinishCameraManShot()
 #ifdef CAMERAMAN_OLD_WAY
 	Assert( m_iCameraMan == m_iPVSEntity );
 
-	int index = FindFirstEvent( m_nBroadcastTick );
+	auto index = FindFirstEvent( m_nBroadcastTick );
 
-	if ( index == m_EventHistory.InvalidIndex() )
+	if ( index == m_EventHistory.end() )
 	{
 		// check next frame again if event history is empty
 		m_nNextShotTick = m_nBroadcastTick+1;
@@ -753,9 +707,9 @@ void CHLTVDirector::FinishCameraManShot()
 	m_nNextShotTick = m_nBroadcastTick + TIME_TO_TICKS( MIN_SHOT_LENGTH );
 
 	//check if camera turns camera off within broadcast time and game time
-	while( index != m_EventHistory.InvalidIndex() )
+	while( index != m_EventHistory.end() )
 	{
-		CHLTVGameEvent &dc = m_EventHistory[index];
+		const CHLTVGameEvent &dc = *index;
 
 		if ( dc.m_Tick >= m_nNextShotTick )
 			break;
@@ -773,7 +727,7 @@ void CHLTVDirector::FinishCameraManShot()
 			}
 		}
 
-		index = m_EventHistory.NextInorder( index );
+		++index;
 	}
 
 	// camera man is still recording and live, resend camera man message
@@ -795,12 +749,12 @@ bool CHLTVDirector::StartCameraManShot()
 #ifdef CAMERAMAN_OLD_WAY
 	Assert( m_nNextShotTick <= m_nBroadcastTick );
 
-	int index = FindFirstEvent( m_nNextShotTick );
+	auto index = FindFirstEvent( m_nNextShotTick );
 
 	// check for cameraman mode
-	while( index != m_EventHistory.InvalidIndex() )
+	while( index != m_EventHistory.end() )
 	{
-		CHLTVGameEvent &dc = m_EventHistory[index];
+		const CHLTVGameEvent &dc = *index;
 
 		// only check if this is the current tick
 		if ( dc.m_Tick > m_nBroadcastTick )
@@ -825,7 +779,7 @@ bool CHLTVDirector::StartCameraManShot()
 			}
 		}
 
-		index = m_EventHistory.NextInorder( index );
+		++index;
 	}
 #endif
 	return false;	// no camera man found
@@ -869,7 +823,7 @@ void CHLTVDirector::StartInstantBroadcastShot()
 void CHLTVDirector::StartNewShot()
 {
 	// we can remove all events the
-	int smallestTick = MAX(0, gpGlobals->tickcount - TIME_TO_TICKS(HLTV_MAX_DELAY) );
+	int smallestTick = std::max(0, gpGlobals->tickcount - TIME_TO_TICKS(HLTV_MAX_DELAY) );
     RemoveEventsFromHistory( smallestTick );
 
 	// if the delay time is too short for autodirector, just show next best thing
@@ -913,7 +867,7 @@ void CHLTVDirector::StartNewShot()
 			msg->SetString("text", "Please wait for broadcast to start ..." );
 			
 			// send spectators the HLTV director command as a game event
-			for ( int i = 0; i < m_HltvServers.Count(); ++i )
+			for ( int i = 0; i < std::ssize( m_HltvServers ); ++i )
 			{
 				m_HltvServers[ i ].m_pHLTVServer->BroadcastEvent( msg );
 			}
@@ -925,11 +879,11 @@ void CHLTVDirector::StartNewShot()
 	}
 	
 #ifdef CAMERAMAN_OLD_WAY
-	int index = FindFirstEvent( m_nBroadcastTick );
+	auto index = FindFirstEvent( m_nBroadcastTick );
 
-	while( index != m_EventHistory.InvalidIndex() )
+	while( index != m_EventHistory.end() )
 	{
-		CHLTVGameEvent &dc = m_EventHistory[index];
+		const CHLTVGameEvent &dc = *index;
 
 		if ( dc.m_Tick >= m_nNextShotTick )
 			break; // we have searched enough
@@ -945,7 +899,7 @@ void CHLTVDirector::StartNewShot()
 			}
 		}
 
-		index = m_EventHistory.NextInorder( index );
+		++index;
 	} 
 #endif
 
@@ -955,7 +909,7 @@ void CHLTVDirector::StartNewShot()
 		return;	// not enough time for a new shot
 
 	// find the most interesting game event for next shot
-	CHLTVGameEvent *dc = FindBestGameEvent();
+	const CHLTVGameEvent *dc = FindBestGameEvent();
 
 	if ( dc )
 	{
@@ -969,21 +923,20 @@ void CHLTVDirector::StartNewShot()
 	}
 }
 
-CHLTVGameEvent *CHLTVDirector::FindBestGameEvent()
+const CHLTVGameEvent *CHLTVDirector::FindBestGameEvent()
 {
-	int	bestEvent[4];
+	const CHLTVGameEvent *bestEvent[4] = {};
 	int	bestEventPrio[4];
 
-	Q_memset( bestEvent, 0, sizeof(bestEvent) );
 	Q_memset( bestEventPrio, 0, sizeof(bestEventPrio) );
 	
-	int index = FindFirstEvent( m_nBroadcastTick );
+	auto index = FindFirstEvent( m_nBroadcastTick );
 		
 	// search for next 4 best events within next 8 seconds
 	for (int i = 0; i<4; i ++)
 	{
 		bestEventPrio[i] = 0;
-		bestEvent[i] = 0;
+		bestEvent[i] = nullptr;
 	
 		int tillTick = m_nBroadcastTick + TIME_TO_TICKS( 2.0f*(1.0f+i) );
 
@@ -991,9 +944,9 @@ CHLTVGameEvent *CHLTVDirector::FindBestGameEvent()
 			break;
 
 		// sum all action for the next time
-		while ( index != m_EventHistory.InvalidIndex()  )
+		while ( index != m_EventHistory.end()  )
 		{
-			CHLTVGameEvent &event = m_EventHistory[index];
+			const CHLTVGameEvent &event = *index;
 
 			if ( event.m_Tick > tillTick )
 				break;
@@ -1002,11 +955,11 @@ CHLTVGameEvent *CHLTVDirector::FindBestGameEvent()
 
 			if ( priority > bestEventPrio[i] )
 			{
-				bestEvent[i] = index;
+				bestEvent[i] = &event;
 				bestEventPrio[i] = priority;
 			}
 			
-			index = m_EventHistory.NextInorder( index );
+			++index;
 		}
 	}
 
@@ -1019,22 +972,22 @@ CHLTVGameEvent *CHLTVDirector::FindBestGameEvent()
 		 bestEventPrio[1] >= bestEventPrio[2] &&
 		 bestEventPrio[1] >= bestEventPrio[3] )
 	{
-		return &m_EventHistory[ bestEvent[1] ];	// best case
+		return bestEvent[1];	// best case
 	}
 	else if ( bestEventPrio[0] > bestEventPrio[1] &&
 			  bestEventPrio[0] > bestEventPrio[2] )
 	{
-		return &m_EventHistory[ bestEvent[0] ];	// event 0 is very important
+		return bestEvent[0];	// event 0 is very important
 	}
 	else if (	bestEventPrio[2] > bestEventPrio[3] ) 
 	{
-		return &m_EventHistory[ bestEvent[2] ];	
+		return bestEvent[2];	
 	}
 	else
 	{
 		// event 4 is the best but too far away, so show event 1 
 		if ( bestEvent[0] )
-			return &m_EventHistory[ bestEvent[0] ];
+			return bestEvent[0];
 		else
 			return nullptr;
 	}

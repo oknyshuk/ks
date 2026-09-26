@@ -11,6 +11,7 @@ class CServerLogHTTPDispatcher : public CAutoGameSystemPerFrame
 {
 public:
 	CServerLogHTTPDispatcher();
+	~CServerLogHTTPDispatcher() override;	// out of line: CServerLogDestination is incomplete here
 	bool LogForHTTPListeners( const char* szLogLine );
 	void AddListener( const char* szURI );
 	void RemoveAllListeners( void );
@@ -34,25 +35,28 @@ public:
 		size_t unOffsetStart; // Offset from start of m_strServerLog storage
 		size_t unLength; // Length of lines for this tick in characters
 	};
-	typedef CUtlLinkedList< LogLineStartForTick_t > LogLinesList_t;
+	// Append-only until Reset, so an index stays valid and monotonic; listeners hold on to them
+	typedef std::vector< LogLineStartForTick_t > LogLinesList_t;
+	typedef int LogLineIndex_t;
+	static constexpr LogLineIndex_t kInvalidLogLine = -1;
 
 private:
 	void Reset( void );
 	void BuildTimestampString( void );
 
-	CUtlVector< class CServerLogDestination* > m_vecListeners; // addresses requesting the server log with server tick they last ack'd
+	std::vector< std::unique_ptr< class CServerLogDestination > > m_vecListeners; // addresses requesting the server log with server tick they last ack'd
 
-	LogLinesList_t m_llLogPerTick; // Linked list of log lines recorded for a tick. Has offsets in to m_strServerLog storage to find the start of the lines.
-	CUtlStringBuilder m_strLogLinesThisTick; // Log lines being gathered this tick
+	LogLinesList_t m_llLogPerTick; // List of log lines recorded for a tick. Has offsets in to m_strServerLog storage to find the start of the lines.
+	std::string m_strLogLinesThisTick; // Log lines being gathered this tick
 
-	CUtlStringBuilder m_strServerLog; // String of all log lines since last map transition. 
+	std::string m_strServerLog; // String of all log lines since last map transition. 
 
 #if defined DBGFLAG_ASSERT // DBG only safety check, nobody should be editing the list while we still have listeners holding on to LL handles
-	LogLinesList_t::IndexType_t m_dbgLastAllocedHandle;
+	LogLineIndex_t m_dbgLastAllocedHandle;
 #endif 
 	time_t	m_localTimeLoggingStart;
 	double m_loggingStartPlatTime;
-	CUtlString m_strTimeStampPrefix;
+	std::string m_strTimeStampPrefix;
 
 };
 

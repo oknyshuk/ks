@@ -16,9 +16,6 @@
 #include "c_te_basebeam.h"
 #include "iviewrender_beams.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: BeamRingPoint TE
 //-----------------------------------------------------------------------------

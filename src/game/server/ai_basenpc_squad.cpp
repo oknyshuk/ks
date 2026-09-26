@@ -18,9 +18,6 @@
 #include "ai_hint.h"
 #include "IEffects.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: If requested slot is available return true and take the slot
 //			Otherwise return false

@@ -17,9 +17,6 @@
 #include "world.h"
 #include "ai_moveprobe.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar ai_no_node_cache( "ai_no_node_cache", "0" );
 
 extern float MOVE_HEIGHT_EPSILON;
@@ -175,13 +172,13 @@ CAI_Network::~CAI_Network()
 //			index of the smallest number in the array whose it is set
 //-----------------------------------------------------------------------------
 
-int	CAI_Network::FindBSSmallest(CVarBitVec *bitString, float *float_array, int array_size) 
+int	CAI_Network::FindBSSmallest(std::vector< bool > *bitString, float *float_array, int array_size) 
 {
 	int	  winIndex = -1;
 	float winSize  = FLT_MAX;
 	for (int i=0;i<array_size;i++) 
 	{
-		if (bitString->IsBitSet(i) && (float_array[i]<winSize)) 
+		if ((*bitString)[i] && (float_array[i]<winSize)) 
 		{
 			winIndex = i;
 			winSize  = float_array[i];
@@ -200,9 +197,7 @@ int	CAI_Network::FindBSSmallest(CVarBitVec *bitString, float *float_array, int a
 
 int CAI_Network::ListNodesInBox( CNodeList &list, int maxListCount, const Vector &mins, const Vector &maxs, INodeListFilter *pFilter )
 {
-	CNodeList result;
-	
-	result.SetLessFunc( CNodeList::RevIsLowerPriority );
+	CNodeList result( maxListCount, CNodeList::RevIsLowerPriority );
 	
 	// NOTE: maxListCount must be > 0 or this will crash
 	bool full = false;
@@ -307,8 +302,7 @@ int	CAI_Network::NearestNodeToPoint( CAI_BaseNPC *pNPC, const Vector &vecOrigin,
 		m_nPerfStatNN++;
 #endif
 
-	AI_NearNode_t *pBuffer = (AI_NearNode_t *)stackalloc( sizeof(AI_NearNode_t) * MAX_NEAR_NODES );
-	CNodeList list( pBuffer, MAX_NEAR_NODES );
+	CNodeList list( MAX_NEAR_NODES );
 
 	// OPTIMIZE: If not flying, this box should be smaller in Z (2 * height?)
 	Vector ext(MAX_NODE_LINK_DIST, MAX_NODE_LINK_DIST, MAX_NODE_LINK_DIST);
@@ -686,7 +680,7 @@ CAI_Node *CAI_Network::FindNodeDistanceAwayFromStart( CAI_Node * RESTRICT pStart
 	// the correctiest ones are first
 	// this is an icky O(n^2) algorithm 
 	const int maxlinks = pStartNode->NumLinks();
-	CUtlVector<AiNetwork_FindNode_linkpair> linkIds( 0, maxlinks );
+	std::vector< AiNetwork_FindNode_linkpair > linkIds; linkIds.reserve( maxlinks );
 	for ( int i = 0 ; i < maxlinks ; ++i )
 	{
 		// can this hull go through this link
@@ -707,15 +701,15 @@ CAI_Node *CAI_Network::FindNodeDistanceAwayFromStart( CAI_Node * RESTRICT pStart
 				// thus our vector will be sorted in descending order of distance
 				// from origin
 				int j;
-				for ( j = 0 ; (j < linkIds.Count()) && (distToDestSq < linkIds[j].distFromStartSq) ; ++j );
-				linkIds.InsertBefore( j, AiNetwork_FindNode_linkpair( destNode, distToDestSq ) );
+				for ( j = 0 ; (j < std::ssize( linkIds )) && (distToDestSq < linkIds[j].distFromStartSq) ; ++j );
+				linkIds.insert( linkIds.begin() + j, AiNetwork_FindNode_linkpair( destNode, distToDestSq ) );
 			}
 		}
 	}
 
 	// now try each of the nodes we have accumulated into this vector and recursively call
 	// into any that may match
-	for ( int i = 0 ; i < linkIds.Count() ; ++i )
+	for ( int i = 0 ; i < std::ssize( linkIds ) ; ++i )
 	{
 		CAI_Node *retval = FindNodeDistanceAwayFromStart( linkIds[i].node, point, minDistSq, maxDistSq, hulltype, movetype, validator );
 		if ( ai_nav_debug_experimental_pathing.GetBool() )

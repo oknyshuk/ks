@@ -16,9 +16,6 @@
 #include "mathlib/vector4d.h"
 #include "trace.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define UNINIT		-99999.0
 
 //-----------------------------------------------------------------------------
@@ -631,6 +628,7 @@ bool IsOBBIntersectingOBB( const Vector &vecOrigin1, const QAngle &vecAngles1, c
 
 // NOTE: This is only very slightly faster on high end PCs and x360
 #define USE_SIMD_RAY_CHECKS 1
+
 //-----------------------------------------------------------------------------
 // returns true if there's an intersection between box and ray
 //-----------------------------------------------------------------------------
@@ -640,10 +638,10 @@ bool FASTCALL IsBoxIntersectingRay( const Vector& boxMin, const Vector& boxMax,
 	
 #if USE_SIMD_RAY_CHECKS
 	// Load the unaligned ray/box parameters into SIMD registers
-	fltx4 start = LoadUnaligned3SIMD(origin.Base());
-	fltx4 delta = LoadUnaligned3SIMD(vecDelta.Base());
-	fltx4 boxMins = LoadUnaligned3SIMD( boxMin.Base() );
-	fltx4 boxMaxs = LoadUnaligned3SIMD( boxMax.Base() );
+	fltx4 start = LoadVector3SIMD(origin);
+	fltx4 delta = LoadVector3SIMD(vecDelta);
+	fltx4 boxMins = LoadVector3SIMD( boxMin );
+	fltx4 boxMaxs = LoadVector3SIMD( boxMax );
 	fltx4 epsilon = ReplicateX4(flTolerance);
 	// compute the mins/maxs of the box expanded by the ray extents
 	// relocate the problem so that the ray start is at the origin.
@@ -753,10 +751,10 @@ bool FASTCALL IsBoxIntersectingRay( const Vector& boxMin, const Vector& boxMax,
 {	
 #if USE_SIMD_RAY_CHECKS
 	// Load the unaligned ray/box parameters into SIMD registers
-	fltx4 start = LoadUnaligned3SIMD(origin.Base());
-	fltx4 delta = LoadUnaligned3SIMD(vecDelta.Base());
-	fltx4 boxMins = LoadUnaligned3SIMD( boxMin.Base() );
-	fltx4 boxMaxs = LoadUnaligned3SIMD( boxMax.Base() );
+	fltx4 start = LoadVector3SIMD(origin);
+	fltx4 delta = LoadVector3SIMD(vecDelta);
+	fltx4 boxMins = LoadVector3SIMD( boxMin );
+	fltx4 boxMaxs = LoadVector3SIMD( boxMax );
 	// compute the mins/maxs of the box expanded by the ray extents
 	// relocate the problem so that the ray start is at the origin.
 	boxMins = SubSIMD(boxMins, start);
@@ -775,7 +773,7 @@ bool FASTCALL IsBoxIntersectingRay( const Vector& boxMin, const Vector& boxMax,
 
 	// now build the per-axis interval of t for intersections
 	fltx4 epsilon = ReplicateX4(flTolerance);
-	fltx4 invDelta = LoadUnaligned3SIMD(vecInvDelta.Base());
+	fltx4 invDelta = LoadVector3SIMD(vecInvDelta);
 	boxMins = SubSIMD(boxMins, epsilon);
 	boxMaxs = AddSIMD(boxMaxs, epsilon);
 

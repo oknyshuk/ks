@@ -20,7 +20,6 @@ enum NormalDecodeMode_t
 //-----------------------------------------------------------------------------
 
 // don't bitch that inline functions aren't used!!!!
-#pragma warning(disable : 4514)
 
 enum ImageFormat 
 {

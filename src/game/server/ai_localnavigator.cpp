@@ -15,9 +15,6 @@
 #include "ai_moveprobe.h"
 #include "ai_motor.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar ai_debug_directnavprobe("ai_debug_directnavprobe", "0");
 
 const float TIME_DELAY_FULL_DIRECT_PROBE[2] = { 0.25, 0.35 };
@@ -108,13 +105,13 @@ bool CAI_LocalNavigator::MoveCalcDirect( AILocalMoveGoal_t *pMoveGoal, bool bOnl
 		CAI_Motor *pMotor = GetOuter()->GetMotor();
 		float  minCheckDist = pMotor->MinCheckDist();
 		float  probeDist	= m_pPlaneSolver->CalcProbeDist( pMoveGoal->speed ); // having this match steering allows one fewer traces
-		float  checkDist	= MAX( minCheckDist, probeDist );
-		float  checkStepDist = MAX( 16.0, probeDist * 0.5 );
+		float  checkDist	= std::max( minCheckDist, probeDist );
+		float  checkStepDist = std::max( 16.0, probeDist * 0.5 );
 
 		if ( pMoveGoal->flags & ( AILMG_TARGET_IS_TRANSITION | AILMG_TARGET_IS_GOAL ) )
 		{
 			// clamp checkDist to be no farther than MAX distance to goal
-			checkDist = MIN( checkDist, pMoveGoal->maxDist );
+			checkDist = std::min( checkDist, pMoveGoal->maxDist );
 		}
 
 		if ( checkDist <= 0.0 )

@@ -11,7 +11,6 @@
 
 
 #include "tier0/platform.h"
-#include "tier1/utlsymbol.h"
 #include "mathlib/vector4d.h"
 class IMaterial;
 class VMatrix;
@@ -42,6 +41,7 @@ enum MaterialVarType_t
 };
 
 typedef unsigned short MaterialVarSym_t;
+inline constexpr MaterialVarSym_t INVALID_MATERIAL_VAR_SYMBOL = (MaterialVarSym_t)~0;
 
 class IMaterialVar
 {
@@ -59,7 +59,7 @@ protected:
 	uint8 m_nNumVectorComps : 3;
 	uint8 m_bFakeMaterialVar : 1;
 	uint8 m_nTempIndex;
-	CUtlSymbol m_Name;
+	MaterialVarSym_t m_Name = INVALID_MATERIAL_VAR_SYMBOL;
 
 public:
 	// class factory methods

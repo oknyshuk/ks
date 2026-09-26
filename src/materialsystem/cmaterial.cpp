@@ -5,6 +5,7 @@
 //===========================================================================//
 
 #include "imaterialinternal.h"
+#include <atomic>
 #include "bitmap/tgaloader.h"
 #include "colorspace.h"
 #include "materialsystem/imaterialvar.h"
@@ -16,20 +17,20 @@
 #include "shadersystem.h"
 #include "materialsystem/imaterialproxyfactory.h"
 #include "IHardwareConfigInternal.h"
-#include "utlsymbol.h"
+#include "tier1/intern_pool.h"
+#include "tier1/string_ops.h"
 #include <malloc.h>
 #include "filesystem.h"
 #include <keyvalues.h>
-#include "mempool.h"
+#include "tier1/fixed_pool.h"
 #include "shaderapi/ishaderutil.h"
 #include "vtf/vtf.h"
 #include "tier1/strtools.h"
 #include <ctype.h>
-#include "utlbuffer.h"
+#include "tier1/byte_reader.h"
 #include "mathlib/vmatrix.h"
 #include "texturemanager.h"
 #include "itextureinternal.h"
-#include "mempool.h"
 #include "tier1/callqueue.h"
 #include "cmaterial_queuefriendly.h"
 #include "ifilelist.h"
@@ -145,10 +146,10 @@ public:
 	void		ReloadTextures( void );
 private:
 	void		Precache_Internal();
-	bool		PrecacheVars_Internal( KeyValues *pKeyValues, KeyValues *pPatchKeyValues, CUtlVector<FileNameHandle_t> *pIncludes );
+	bool		PrecacheVars_Internal( KeyValues *pKeyValues, KeyValues *pPatchKeyValues, std::vector< FileNameHandle_t > *pIncludes );
 public:
 	// If provided, pKeyValues and pPatchKeyValues should come from LoadVMTFile()
-	inline bool	PrecacheVars_Inline( KeyValues *pKeyValues = nullptr, KeyValues *pPatchKeyValues = nullptr, CUtlVector<FileNameHandle_t> *pIncludes = nullptr )
+	inline bool	PrecacheVars_Inline( KeyValues *pKeyValues = nullptr, KeyValues *pPatchKeyValues = nullptr, std::vector< FileNameHandle_t > *pIncludes = nullptr )
 	{
 		// We should get both parameters or neither
 		Assert( !!pKeyValues == !!pPatchKeyValues );
@@ -176,7 +177,7 @@ public:
 		Precache_Inline();
 	}
 
-	bool PrecacheVars( KeyValues *pKeyValues = nullptr, KeyValues *pPatchKeyValues = nullptr, CUtlVector<FileNameHandle_t> *pIncludes = nullptr )
+	bool PrecacheVars( KeyValues *pKeyValues = nullptr, KeyValues *pPatchKeyValues = nullptr, std::vector< FileNameHandle_t > *pIncludes = nullptr )
 	{
 		return PrecacheVars_Inline( pKeyValues, pPatchKeyValues, pIncludes );
 	}
@@ -373,11 +374,11 @@ private:
 	
 	IShader				*m_pShader;
 
-	CUtlSymbol			m_Name;
+	std::string_view	m_Name;					// both in ks::global_symbols()
 	// Any textures created for this material go under this texture group.
-	CUtlSymbol			m_TextureGroupName;
+	std::string_view	m_TextureGroupName;
 
-	CInterlockedInt		m_RefCount;
+	std::atomic<int>		m_RefCount;
 	unsigned short		m_Flags;
 
 	unsigned char		m_VarCount;
@@ -388,7 +389,7 @@ private:
 	ShaderRenderState_t m_ShaderRenderState;
 
 	// This remembers filenames of VMTs that we included so we can sv_pure/flush ourselves if any of them need to be reloaded.
-	CUtlVector<FileNameHandle_t> m_VMTIncludes;
+	std::vector< FileNameHandle_t > m_VMTIncludes;
 	bool m_bShouldReloadFromWhitelist;	// Tells us if the material decided it should be reloaded due to sv_pure whitelist changes.
 
 	ITextureInternal	*m_representativeTexture;
@@ -409,15 +410,14 @@ protected:
 
 
 // NOTE: This must be the last file included
-// Has to exist *after* fixed size allocator declaration
-#include "tier0/memdbgon.h"
+#include "tier0/memalloc.h"
 
 static ConVar mat_processtoolvars( "mat_processtoolvars", "0" ); // 0 = Ignore tool material variables (e.g. %foo) at runtime (default)
                                                                  // 1 = Process tool material variables at runtime (required for dynamic level builds via VBSP2LIB)
 // Forward decls of helper functions for dealing with patch vmts.
 static void ApplyPatchKeyValues( KeyValues &keyValues, KeyValues &patchKeyValues );
 static bool AccumulateRecursiveVmtPatches( KeyValues &patchKeyValuesOut, KeyValues **ppBaseKeyValuesOut,
-										   const KeyValues& keyValues, const char *pPathID, CUtlVector<FileNameHandle_t> *pIncludes );
+										   const KeyValues& keyValues, const char *pPathID, std::vector< FileNameHandle_t > *pIncludes );
 
 
 //-----------------------------------------------------------------------------
@@ -448,7 +448,6 @@ static inline bool IsVector( char const* v )
 //-----------------------------------------------------------------------------
 // Methods to create state snapshots
 //-----------------------------------------------------------------------------
-#include "tier0/memdbgoff.h"
 
 struct EditorRenderStateList_t
 {
@@ -466,16 +465,14 @@ struct StandardRenderStateList_t
 	DECLARE_FIXEDSIZE_ALLOCATOR( StandardRenderStateList_t );
 };
 
-#include "tier0/memdbgon.h"
-
-DEFINE_FIXEDSIZE_ALLOCATOR( EditorRenderStateList_t, 256, true );
-DEFINE_FIXEDSIZE_ALLOCATOR( StandardRenderStateList_t, 256, true );
+DEFINE_FIXEDSIZE_ALLOCATOR( EditorRenderStateList_t, 256, ks::fixed_pool::grow::fast );
+DEFINE_FIXEDSIZE_ALLOCATOR( StandardRenderStateList_t, 256, ks::fixed_pool::grow::fast );
 
 
 //-----------------------------------------------------------------------------
 // class factory methods
 //-----------------------------------------------------------------------------
-DEFINE_FIXEDSIZE_ALLOCATOR( CMaterial, 256, true );
+DEFINE_FIXEDSIZE_ALLOCATOR( CMaterial, 256, ks::fixed_pool::grow::fast );
 
 IMaterialInternal* IMaterialInternal::CreateMaterial( char const* pMaterialName, const char *pTextureGroupName, KeyValues *pVMTKeyValues )
 {
@@ -516,7 +513,7 @@ CMaterial::CMaterial( char const* materialName, const char *pTextureGroupName, K
 
 
 	// Convert it to a symbol
-	m_Name = pTemp;
+	m_Name = ks::global_symbols().intern( pTemp );
 
 #ifdef _DEBUG
 	m_pDebugName = new char[strlen(pTemp) + 1];
@@ -535,7 +532,7 @@ CMaterial::CMaterial( char const* materialName, const char *pTextureGroupName, K
 	m_MappingWidth = m_MappingHeight = 0;
 	m_iEnumerationID = 0;
 	m_minLightmapPageID = m_maxLightmapPageID = 0;
-	m_TextureGroupName = pTextureGroupName;
+	m_TextureGroupName = ks::global_symbols().intern( ks::nz( pTextureGroupName ) );
 	m_pVMTKeyValues = pKeyValues;
 	if (m_pVMTKeyValues)
 	{
@@ -768,7 +765,7 @@ void CMaterial::CleanUpShaderParams()
 			IMaterialVar::Destroy( m_pShaderParams[i] );
 		}
 
-		free( m_pShaderParams );
+		g_pMemAlloc->Free( m_pShaderParams );
 		m_pShaderParams = 0;
 	}
 	m_VarCount = 0;
@@ -825,7 +822,7 @@ void CMaterial::InitializeMaterialProxy( KeyValues* pFallbackKeyValues )
 	m_ProxyCount = proxyCount;
 	if (proxyCount)
 	{
-		m_ppProxies = (IMaterialProxy**)malloc( proxyCount * sizeof(IMaterialProxy*) );
+		m_ppProxies = (IMaterialProxy**)MemAlloc_Alloc( proxyCount * sizeof(IMaterialProxy*) );
 		memcpy( m_ppProxies, ppProxies, proxyCount * sizeof(IMaterialProxy*) );
 	}
 	else
@@ -853,7 +850,7 @@ void CMaterial::CleanUpMaterialProxy()
 	{
 		pMaterialProxyFactory->DeleteProxy( m_ppProxies[i] );
 	}
-	free( m_ppProxies );
+	g_pMemAlloc->Free( m_ppProxies );
 
 	m_ppProxies = nullptr;
 	m_ProxyCount = 0;
@@ -1718,7 +1715,7 @@ KeyValues* CMaterial::InitializeShader( KeyValues &keyValues, KeyValues &patchKe
 
 	// Store off the material vars + flags
 	m_VarCount = varCount;
-	m_pShaderParams = (IMaterialVar**)malloc( varCount * sizeof(IMaterialVar*) );
+	m_pShaderParams = (IMaterialVar**)MemAlloc_Alloc( varCount * sizeof(IMaterialVar*) );
 	memcpy( m_pShaderParams, ppVars, varCount * sizeof(IMaterialVar*) );
 
 #ifdef _DEBUG
@@ -1826,7 +1823,7 @@ void CMaterial::SetupErrorShader()
 
 	// Create undefined vars for all the actual material vars
 	m_VarCount = m_pShader->GetParamCount();
-	m_pShaderParams = (IMaterialVar**)malloc( m_VarCount * sizeof(IMaterialVar*) );
+	m_pShaderParams = (IMaterialVar**)MemAlloc_Alloc( m_VarCount * sizeof(IMaterialVar*) );
 
 	for (int i = 0; i < m_VarCount; ++i)
 	{
@@ -2226,7 +2223,7 @@ void CMaterial::DecideShouldReloadFromWhitelist( IFileList *pFilesToReload )
 	bool bShouldReload = pFilesToReload->IsFileInList( vmtFilename );
 	if ( !bShouldReload )
 	{
-		for ( int i=0; i < m_VMTIncludes.Count(); i++ )
+		for ( int i=0; i < std::ssize( m_VMTIncludes ); i++ )
 		{
 			g_pFullFileSystem->String( m_VMTIncludes[i], vmtFilename, sizeof( vmtFilename ) );
 			bShouldReload = pFilesToReload->IsFileInList( vmtFilename );
@@ -2266,12 +2263,12 @@ bool CMaterial::WasReloadedFromWhitelist()
 //-----------------------------------------------------------------------------
 // Loads the material vars
 //-----------------------------------------------------------------------------
-bool CMaterial::PrecacheVars_Internal( KeyValues *pVMTKeyValues, KeyValues *pPatchKeyValues, CUtlVector<FileNameHandle_t> *pIncludes )
+bool CMaterial::PrecacheVars_Internal( KeyValues *pVMTKeyValues, KeyValues *pPatchKeyValues, std::vector< FileNameHandle_t > *pIncludes )
 {
 	if ( pIncludes )
 		m_VMTIncludes = *pIncludes;
 	else
-		m_VMTIncludes.Purge();
+		m_VMTIncludes.clear();
 
 	MaterialLock_t hMaterialLock = MaterialSystem()->Lock();
 
@@ -2296,7 +2293,7 @@ bool CMaterial::PrecacheVars_Internal( KeyValues *pVMTKeyValues, KeyValues *pPat
 	}
 	else
 	{
-		m_VMTIncludes.Purge();
+		m_VMTIncludes.clear(); m_VMTIncludes.shrink_to_fit();
 
 		// load data from the vmt file
 		vmtKeyValues = new KeyValues( "vmt" );
@@ -2469,13 +2466,13 @@ void CMaterial::RefreshPreservingMaterialVars()
 //-----------------------------------------------------------------------------
 char const* CMaterial::GetName() const
 {
-	return m_Name.String();
+	return m_Name.data();
 }
 
 
 char const* CMaterial::GetTextureGroupName() const
 {
-	return m_TextureGroupName.String();
+	return m_TextureGroupName.data();
 }
 
 
@@ -2613,7 +2610,7 @@ void CMaterial::SetShader( const char *pShaderName )
 
 	// Store off the material vars + flags
 	m_VarCount = iVarCount;
-	m_pShaderParams = (IMaterialVar**)malloc( iVarCount * sizeof(IMaterialVar*) );
+	m_pShaderParams = (IMaterialVar**)MemAlloc_Alloc( iVarCount * sizeof(IMaterialVar*) );
 	memcpy( m_pShaderParams, ppVars, iVarCount * sizeof(IMaterialVar*) );
 
 	// Invokes the SHADER_INIT block in the various shaders,
@@ -2719,16 +2716,16 @@ PreviewImageRetVal_t CMaterial::GetPreviewImageProperties( int *width, int *heig
 	}
 
 	int nHeaderSize = VTFFileHeaderSize( VTF_MAJOR_VERSION );
-	unsigned char *pMem = (unsigned char *)stackalloc( nHeaderSize );
-	CUtlBuffer buf( pMem, nHeaderSize );
-	if( !g_pFullFileSystem->ReadFile( pFileName, nullptr, buf, nHeaderSize ) )
+	auto header = g_pFullFileSystem->ReadFile( pFileName, nullptr, nHeaderSize );
+	if( !header )
 	{
 		Warning( "\"%s\" - \"%s\": cached version doesn't exist\n", GetName(), pFileName );
 		return MATERIAL_PREVIEW_IMAGE_BAD;
 	}
 	
 	IVTFTexture *pVTFTexture = CreateVTFTexture();
-	if (!pVTFTexture->Unserialize( buf, true ))
+	ks::byte_reader headerReader( *header );
+	if (!pVTFTexture->Unserialize( headerReader, true ))
 	{
 		Warning( "Error reading material \"%s\"\n", pFileName );
 		DestroyVTFTexture( pVTFTexture );
@@ -2746,7 +2743,7 @@ PreviewImageRetVal_t CMaterial::GetPreviewImageProperties( int *width, int *heig
 PreviewImageRetVal_t CMaterial::GetPreviewImage( unsigned char *pData, int width, int height,
 					             ImageFormat imageFormat ) const
 {
-	CUtlBuffer buf;
+	std::vector< std::byte > buf;
 	int nHeaderSize;
 	int nImageOffset, nImageSize;
 
@@ -2765,18 +2762,21 @@ PreviewImageRetVal_t CMaterial::GetPreviewImage( unsigned char *pData, int width
 	}
 
 	nHeaderSize = VTFFileHeaderSize( VTF_MAJOR_VERSION );
-	buf.EnsureCapacity( nHeaderSize );
+	buf.resize( nHeaderSize );
 	
 	// read the header first.. it's faster!!
 	int nBytesRead; // GCC won't let this be initialized right away
-	nBytesRead = g_pFullFileSystem->Read( buf.Base(), nHeaderSize, fileHandle );
-	buf.SeekPut( CUtlBuffer::SEEK_HEAD, nBytesRead );
+	nBytesRead = g_pFullFileSystem->Read( buf.data(), nHeaderSize, fileHandle );
+	buf.resize( nBytesRead );
 		
 	// Unserialize the header
-	if (!pVTFTexture->Unserialize( buf, true ))
 	{
-		Warning( "Error reading material \"%s\"\n", pFileName );
-		goto fail;
+		ks::byte_reader headerReader( buf );
+		if (!pVTFTexture->Unserialize( headerReader, true ))
+		{
+			Warning( "Error reading material \"%s\"\n", pFileName );
+			goto fail;
+		}
 	}
 		
 	// FIXME: Make sure the preview image size requested is the same
@@ -2792,17 +2792,15 @@ PreviewImageRetVal_t CMaterial::GetPreviewImage( unsigned char *pData, int width
 		goto fail;
 	}
 		
-	// Prep the utlbuffer for reading
-	buf.EnsureCapacity( nImageSize );
-	buf.SeekPut( CUtlBuffer::SEEK_HEAD, 0 );
+	buf.resize( nImageSize );
 		
 	// Read in the bits at the specified location
 	g_pFullFileSystem->Seek( fileHandle, nImageOffset, FILESYSTEM_SEEK_HEAD );
-	g_pFullFileSystem->Read( buf.Base(), nImageSize, fileHandle );
+	g_pFullFileSystem->Read( buf.data(), nImageSize, fileHandle );
 	g_pFullFileSystem->Close( fileHandle );
 		
 	// Convert from the format read in to the requested format
-	ImageLoader::ConvertImageFormat( (unsigned char*)buf.Base(), pVTFTexture->Format(), 
+	ImageLoader::ConvertImageFormat( (unsigned char*)buf.data(), pVTFTexture->Format(), 
 		pData, imageFormat, width, height );
 
 	DestroyVTFTexture( pVTFTexture );
@@ -2829,7 +2827,7 @@ IMaterialVar *CMaterial::FindVar( char const *pVarName, bool *pFound, bool compl
 	// FIXME: Could look for flags here too...
 
 	MaterialVarSym_t sym = IMaterialVar::FindSymbol(pVarName);
-	if ( sym != UTL_INVAL_SYMBOL )
+	if ( sym != INVALID_MATERIAL_VAR_SYMBOL )
 	{
 		for (int i = m_VarCount; --i >= 0; )
 		{
@@ -2878,7 +2876,7 @@ IMaterialVar *CMaterial::FindVarFast( char const *pVarName, unsigned int *pCache
 		pToken->symbol = IMaterialVar::FindSymbol(pVarName);
 	}
 
-	if ( pToken->symbol != UTL_INVAL_SYMBOL )
+	if ( pToken->symbol != INVALID_MATERIAL_VAR_SYMBOL )
 	{
 		for (int i = m_VarCount; --i >= 0; )
 		{
@@ -3146,7 +3144,7 @@ IMaterialVar *CMaterial::GetShaderParam( int id )
 void CMaterial::AddMaterialVar( IMaterialVar *pMaterialVar )
 {
 	++m_VarCount;
-	m_pShaderParams = (IMaterialVar**)realloc( m_pShaderParams, m_VarCount * sizeof( IMaterialVar*) );
+	m_pShaderParams = (IMaterialVar**)g_pMemAlloc->Realloc( m_pShaderParams, m_VarCount * sizeof( IMaterialVar*) );
 	m_pShaderParams[m_VarCount-1] = pMaterialVar;
 }
 
@@ -3445,11 +3443,11 @@ void AccumulatePatchKeyValues( KeyValues &srcKeyValues, KeyValues &patchKeyValue
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-bool AccumulateRecursiveVmtPatches( KeyValues &patchKeyValuesOut, KeyValues **ppBaseKeyValuesOut, const KeyValues& keyValues, const char *pPathID, CUtlVector<FileNameHandle_t> *pIncludes )
+bool AccumulateRecursiveVmtPatches( KeyValues &patchKeyValuesOut, KeyValues **ppBaseKeyValuesOut, const KeyValues& keyValues, const char *pPathID, std::vector< FileNameHandle_t > *pIncludes )
 {
 	if ( pIncludes )
 	{
-		pIncludes->Purge();
+		pIncludes->clear(); pIncludes->shrink_to_fit();
 	}
 
 	patchKeyValuesOut.Clear();
@@ -3485,15 +3483,15 @@ bool AccumulateRecursiveVmtPatches( KeyValues &patchKeyValuesOut, KeyValues **pp
 			break;
 		}
 
-		CUtlString includeFileName( pIncludeFileName ); // copy off the string before we clear the keyvalues it lives in
+		std::string includeFileName( ks::nz( pIncludeFileName ) ); // copy off the string before we clear the keyvalues it lives in
 		pCurrentKeyValues->Clear();
-		bool bSuccess = pCurrentKeyValues->LoadFromFile( g_pFullFileSystem, includeFileName, pPathID );
+		bool bSuccess = pCurrentKeyValues->LoadFromFile( g_pFullFileSystem, includeFileName.c_str(), pPathID );
 		if( bSuccess )
 		{
 			if ( pIncludes )
 			{
 				// Remember that we included this file for the pure server stuff.
-				pIncludes->AddToTail( g_pFullFileSystem->FindOrAddFileName( includeFileName ) );
+				pIncludes->push_back( g_pFullFileSystem->FindOrAddFileName( includeFileName.c_str() ) );
 			}
 		}
 		else
@@ -3501,7 +3499,7 @@ bool AccumulateRecursiveVmtPatches( KeyValues &patchKeyValuesOut, KeyValues **pp
 			pCurrentKeyValues->deleteThis();
 			#ifndef DEDICATED
 			{
-				Warning( "Failed to load $include VMT file (%s)\n", includeFileName.Get() );
+				Warning( "Failed to load $include VMT file (%s)\n", includeFileName.data() );
 			}
 			#endif
 			Assert( bSuccess );
@@ -3529,7 +3527,7 @@ bool AccumulateRecursiveVmtPatches( KeyValues &patchKeyValuesOut, KeyValues **pp
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void ExpandPatchFile( KeyValues& keyValues, KeyValues &patchKeyValues, const char *pPathID, CUtlVector<FileNameHandle_t> *pIncludes )
+void ExpandPatchFile( KeyValues& keyValues, KeyValues &patchKeyValues, const char *pPathID, std::vector< FileNameHandle_t > *pIncludes )
 {
 	KeyValues *pNonPatchKeyValues = nullptr;
 	bool bSuccess = AccumulateRecursiveVmtPatches( patchKeyValues, &pNonPatchKeyValues, keyValues, pPathID, pIncludes );
@@ -3549,7 +3547,7 @@ void ExpandPatchFile( KeyValues& keyValues, KeyValues &patchKeyValues, const cha
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-bool LoadVMTFile( KeyValues &vmtKeyValues, KeyValues &patchKeyValues, const char *pMaterialName, bool bAbsolutePath, CUtlVector<FileNameHandle_t> *pIncludes )
+bool LoadVMTFile( KeyValues &vmtKeyValues, KeyValues &patchKeyValues, const char *pMaterialName, bool bAbsolutePath, std::vector< FileNameHandle_t > *pIncludes )
 {
 	MEM_ALLOC_CREDIT();
 	char pFileName[MAX_PATH];

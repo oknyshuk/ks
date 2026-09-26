@@ -8,6 +8,7 @@
 //===========================================================================//
 
 #include "client_pch.h"
+#include "tier0/memalloc.h"
 #include "sound.h"
 #include <inetchannel.h>
 #include <time.h>
@@ -71,9 +72,7 @@
 #endif
 
 #include "ConfigManager.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include <set>
 
 extern IVEngineClient *engineClient;
 
@@ -587,16 +586,16 @@ void CL_ClearState ( void )
 
 //-----------------------------------------------------------------------------
 // Purpose: Used for sorting sounds
-// Input  : &sound1 - 
-//			&sound2 - 
-// Output : static bool
 //-----------------------------------------------------------------------------
-static bool CL_SoundMessageLessFunc( SoundInfo_t const &sound1, SoundInfo_t const &sound2 )
+struct CL_SoundMessageLess
 {
-	return sound1.nSequenceNumber < sound2.nSequenceNumber;
-}
+	bool operator()( SoundInfo_t const &sound1, SoundInfo_t const &sound2 ) const
+	{
+		return sound1.nSequenceNumber < sound2.nSequenceNumber;
+	}
+};
 
-static CUtlRBTree< SoundInfo_t, int > g_SoundMessages( 0, 0, CL_SoundMessageLessFunc );
+static std::multiset< SoundInfo_t, CL_SoundMessageLess > g_SoundMessages;
 
 //-----------------------------------------------------------------------------
 // Purpose: Add sound to queue
@@ -604,7 +603,7 @@ static CUtlRBTree< SoundInfo_t, int > g_SoundMessages( 0, 0, CL_SoundMessageLess
 //-----------------------------------------------------------------------------
 void CL_AddSound( const SoundInfo_t &sound )
 {
-	g_SoundMessages.Insert( sound );
+	g_SoundMessages.insert( sound );
 }
 
 void CL_SndShow( const char *pName, const SoundInfo_t &pSound )
@@ -716,23 +715,15 @@ void CL_DispatchSound( const SoundInfo_t &sound )
 //-----------------------------------------------------------------------------
 void CL_DispatchSounds( void )
 {
-	int i;
 	// Walk list in sequence order
-	i = g_SoundMessages.FirstInorder();
-	while ( i != g_SoundMessages.InvalidIndex() )
+	for ( const SoundInfo_t &msg : g_SoundMessages )
 	{
-		SoundInfo_t const *msg = &g_SoundMessages[ i ];
-		Assert( msg );
-		if ( msg )
-		{
-			// Play the sound
-			CL_DispatchSound( *msg );
-		}
-		i = g_SoundMessages.NextInorder( i );
+		// Play the sound
+		CL_DispatchSound( msg );
 	}
 
 	// Reset the queue each time we empty it!!!
-	g_SoundMessages.RemoveAll();
+	g_SoundMessages.clear();
 }
 
 
@@ -749,17 +740,17 @@ void CL_Retry()
 	}
 
 	ConMsg( "Commencing connection retry to " );
-	CUtlString cnx;
+	std::string cnx;
 	for ( int i = 0; i < cl.m_Remote.Count(); ++i )
 	{
 		const Remote_t &remote = cl.m_Remote.Get( i );
-		ConMsg( "%s(%s)", remote.m_szAlias.String(), remote.m_szRetryAddress.String() );
+		ConMsg( "%s(%s)", remote.m_szAlias.c_str(), remote.m_szRetryAddress.c_str() );
 		//cnx += va( "\"%s\" ", remote.m_szRetryAddress.String() );
-		cnx += va( "%s ", remote.m_szRetryAddress.String() );
+		cnx += va( "%s ", remote.m_szRetryAddress.c_str() );
 	}
 	ConMsg( "\n" );
 
-	Cbuf_AddText( Cbuf_GetCurrentPlayer(), va( "connect %s\n", cnx.String() ) );
+	Cbuf_AddText( Cbuf_GetCurrentPlayer(), va( "connect %s\n", cnx.c_str() ) );
 }
 
 //REMOVED FOR PORTAL2:
@@ -769,7 +760,7 @@ CON_COMMAND_F( retry, "Retry connection to last server.", FCVAR_DONTRECORD | FCV
 }
 
 
-void SplitString( char const *pchString, CUtlVector< CUtlString > &list )
+void SplitString( char const *pchString, std::vector< std::string > &list )
 {
 	characterset_t breakOnSpaces;
 	CharacterSetBuild( &breakOnSpaces, " " );
@@ -784,7 +775,7 @@ void SplitString( char const *pchString, CUtlVector< CUtlString > &list )
 		if ( IN_CHARACTERSET( breakOnSpaces, *pIn ) )
 		{
 			*pOut = 0;
-			list.AddToTail( CUtlString( token ) );
+			list.push_back( std::string( token ) );
 			pOut = token;
 			// Skip the space
 			++pIn;
@@ -796,7 +787,7 @@ void SplitString( char const *pchString, CUtlVector< CUtlString > &list )
 	*pOut = 0;
 	if ( Q_strlen( token ) > 0 )
 	{
-		list.AddToTail( CUtlString( token ) );
+		list.push_back( std::string( token ) );
 	}
 }
 
@@ -822,19 +813,19 @@ CON_COMMAND_F( connect, "Connect to specified server.", FCVAR_DONTRECORD )
 	}
 
 	char const *pchArgs = args.ArgS();
-	CUtlVector< CUtlString > argValues;
+	std::vector< std::string > argValues;
 	SplitString( pchArgs, argValues );
 
-	if ( argValues.Count() != 1 && 
-		argValues.Count() != 2 &&
-		argValues.Count() != 3 )
+	if ( std::ssize( argValues ) != 1 && 
+		std::ssize( argValues ) != 2 &&
+		std::ssize( argValues ) != 3 )
 	{
 		ConMsg( "connect:  can't parse '%s'\n", pchArgs );
 		return;
 	}
 	
 	// If it's not a single player connection to "localhost", initialize networking & stop listenserver
-	if ( !StringHasPrefixCaseSensitive( argValues[ 0 ].String(), "localhost" ) )
+	if ( !StringHasPrefixCaseSensitive( argValues[ 0 ].c_str(), "localhost" ) )
 	{
 		Host_Disconnect(false);	
 
@@ -867,19 +858,19 @@ CON_COMMAND_F( connect, "Connect to specified server.", FCVAR_DONTRECORD )
 	int addressCount = 0;
 
 	const char* szJoinType = "UnknownJoinType";
-	for ( int i = 0; i < argValues.Count(); i++ )
+	for ( int i = 0; i < std::ssize( argValues ); i++ )
 	{
 		// Any params starting with dash are join type
-		if ( argValues[ i ].String()[0] == '-' && argValues[ i ].String()[1] )
+		if ( argValues[ i ].c_str()[0] == '-' && argValues[ i ].c_str()[1] )
 		{
-			szJoinType = argValues[ i ].String()+1;
+			szJoinType = argValues[ i ].c_str()+1;
 		}
 		else
 		{
 			if ( addressCount >= 2 )
 				continue; 
 
-			V_strncpy( strAddress[ i ], argValues[ i ].String(), sizeof( strAddress[ i ] ));
+			V_strncpy( strAddress[ i ], argValues[ i ].c_str(), sizeof( strAddress[ i ] ));
 			char* qmindex = strAddress[ i ];
 
 			addressCount++;
@@ -914,19 +905,19 @@ CON_COMMAND_F( connect_splitscreen, "Connect to specified server. With multiple 
 	}
 
 	char const *pchArgs = args.ArgS();
-	CUtlVector< CUtlString > argValues;
+	std::vector< std::string > argValues;
 	SplitString( pchArgs, argValues );
 
-	if ( argValues.Count() != 2 && 
-		argValues.Count() != 3 )
+	if ( std::ssize( argValues ) != 2 && 
+		std::ssize( argValues ) != 3 )
 	{
 		ConMsg( "connect_splitscreen:  can't parse '%s'\n", pchArgs );
 		return;
 	}
 
-	int last = argValues.Count() - 1;
+	int last = std::ssize( argValues ) - 1;
 
-	int numPlayers = Q_atoi( argValues[ last ].String() );
+	int numPlayers = Q_atoi( argValues[ last ].c_str() );
 	if ( numPlayers <= 0 )
 	{
 		ConMsg( "Must have at least one player.\n" );
@@ -941,7 +932,7 @@ CON_COMMAND_F( connect_splitscreen, "Connect to specified server. With multiple 
 	
 
 	// If it's not a single player connection to "localhost", initialize networking & stop listenserver
-	if ( !StringHasPrefixCaseSensitive( argValues[ 0 ].String(), "localhost" ) )
+	if ( !StringHasPrefixCaseSensitive( argValues[ 0 ].c_str(), "localhost" ) )
 	{
 			return;
 
@@ -969,16 +960,16 @@ CON_COMMAND_F( connect_splitscreen, "Connect to specified server. With multiple 
 	}
 
 	const char* szJoinType = "UnknownJoinType";
-	for ( int i = 0; i < argValues.Count(); i++ )
+	for ( int i = 0; i < std::ssize( argValues ); i++ )
 	{
 		// Any params starting with dash are join type
-		if ( argValues[ i ].String()[0] == '-' && argValues[ i ].String()[1] )
+		if ( argValues[ i ].c_str()[0] == '-' && argValues[ i ].c_str()[1] )
 		{
-			szJoinType = argValues[ i ].String()+1;
+			szJoinType = argValues[ i ].c_str()+1;
 		}
 	}
 
-	GetBaseLocalClient().ConnectSplitScreen( argValues[ 0 ].String(), argValues.Count() == 3 ? argValues[ 1 ].String() : argValues[ 0 ].String(), numPlayers, szJoinType );
+	GetBaseLocalClient().ConnectSplitScreen( argValues[ 0 ].c_str(), std::ssize( argValues ) == 3 ? argValues[ 1 ].c_str() : argValues[ 0 ].c_str(), numPlayers, szJoinType );
 
 	// Reset error conditions
 	gfExtendedError = false;
@@ -1020,7 +1011,7 @@ CPureServerWhitelist* CL_LoadWhitelist( INetworkStringTable *pTable, const char 
 	const void *pData = pTable->GetStringUserData( iString, &dataLen );
 	if ( pData )
 	{
-		CUtlBuffer buf( pData, dataLen, CUtlBuffer::READ_ONLY );
+		ks::byte_reader buf( pData, dataLen );
 		
 		CPureServerWhitelist *pWhitelist = CPureServerWhitelist::Create( g_pFullFileSystem );
 		pWhitelist->Decode( buf );
@@ -1229,10 +1220,6 @@ void CL_FullyConnected( void )
 	CM_DiscardEntityString();
 
 	g_pMDLCache->EndMapLoad();
-
-#if defined( _MEMTEST )
-	Cbuf_AddText( Cbuf_GetCurrentPlayer(), "mem_dump\n" );
-#endif
 
 	if ( developer.GetInt() > 0 )
 	{
@@ -1637,7 +1624,7 @@ void CL_TakeSnapshotAndSwap()
 	{
 		double curtime = Plat_FloatTime();
 
-		double dt = MIN( curtime - flLastTime, MAX_FRAMETIME );
+		double dt = std::min( curtime - flLastTime, MAX_FRAMETIME );
 		double desiredInterval = 1.0 / fabsf( host_framerate.GetFloat() );
 
 		double flSleepInterval = desiredInterval - dt;
@@ -2318,7 +2305,7 @@ void CL_Move(float accumulated_extra_samples, bool bFinalTick )
 		{
 			float flTimeOut = cl.m_NetChannel->GetTimeoutSeconds();
 			Assert( flTimeOut != -1.0f );
-			float flRemainingTime = MAX( flTimeOut - cl.m_NetChannel->GetTimeSinceLastReceived(), 0.0f );
+			float flRemainingTime = std::max( flTimeOut - cl.m_NetChannel->GetTimeSinceLastReceived(), 0.0f );
 
 			// write time until connection is dropped to a convar
 			cl_connection_trouble_info.SetValue( CFmtStr( "disconnect(%0.3f)", flRemainingTime ) );
@@ -2379,7 +2366,7 @@ void CL_Move(float accumulated_extra_samples, bool bFinalTick )
 	{
 		// use full update rate when active
 		float commandInterval = 1.0f / cl_cmdrate->GetFloat();
-		float maxDelta = MIN( host_state.interval_per_tick, commandInterval );
+		float maxDelta = std::min( host_state.interval_per_tick, commandInterval );
         float delta = clamp( net_time - cl.m_flNextCmdTime, 0.0f, maxDelta );
 		cl.m_flNextCmdTime = net_time + commandInterval - delta;
 	}
@@ -2513,7 +2500,7 @@ bool CL_ShouldLoadBackgroundLevel( const CCommand &args )
 int CL_GetBackgroundLevelIndex( int nNumChapters )
 {
 	int iChapterIndex = sv_unlockedchapters.GetInt();
-	iChapterIndex = MIN( iChapterIndex, nNumChapters );
+	iChapterIndex = std::min( iChapterIndex, nNumChapters );
 	if ( iChapterIndex <= 0 )
 	{
 		// expected to be [1..N]

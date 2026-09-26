@@ -23,10 +23,7 @@
 #include "tier0/vprof.h"
 #include "tier1/tokenset.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
-CClassMemoryPool< optimized_datamap_t >	g_OptimizedDataMapPool( 20, CUtlMemoryPool::GROW_SLOW );
+ks::object_pool< optimized_datamap_t >	g_OptimizedDataMapPool( 20, ks::fixed_pool::grow::slow );
 
 // --------------------------------------------------------------
 //
@@ -196,7 +193,6 @@ CPredictionCopy::CPredictionCopy( int type, byte *dest, bool dest_packed, const 
 	m_FieldCompareFunc	= func;
 }
 
-static ConVar cl_pred_error_verbose( "cl_pred_error_verbose", "0", 0, "Show more field info when spewing prediction errors." );
 
 template< class T >
 inline void CPredictionCopy::CopyField( difftype_t difftype, T *outvalue, const T *invalue, int count )
@@ -743,40 +739,12 @@ void CPredictionCopy::ReportFieldsDiffer( const datamap_t *pCurrentMap, const ty
 	len = Q_vsnprintf(data, sizeof( data ), fmt, argptr);
 	va_end(argptr);
 
-	bool bUseLongName = cl_pred_error_verbose.GetBool();
-	CUtlString longName;
-	for ( int i = 0; i < m_FieldStack.Count(); ++i )
-	{
-		const typedescription_t *top = m_FieldStack[ i ];
-		if ( !top )
-			continue;
-
-		if ( top->flags & FTYPEDESC_KEY )
-			bUseLongName = true;
-
-		longName += top->fieldName ? top->fieldName : "NULL";
-		longName += "/";
-	}
-	
-	if ( bUseLongName )
-	{
-		Msg( "%2d (%d)%s%s::%s - %s",
-			m_nErrorCount,
-			m_nEntIndex,
-			longName.String(),
-			classname,
-			fieldname,
-			data );
-	}
-	else
-	{
-		Msg( "%2d (%d)%s::%s - %s",
-			m_nErrorCount,
-			m_nEntIndex,
-			classname,
-			fieldname,
-			data );
-	}
+	Msg( "%2d (%d)%s::%s - %s",
+		m_nErrorCount,
+		m_nEntIndex,
+		classname,
+		fieldname,
+		data );
 }
 
 //-----------------------------------------------------------------------------
@@ -822,7 +790,7 @@ void CPredictionCopy::OutputFieldDescription( const datamap_t *pCurrentMap, cons
 	);
 }
 
-void CPredictionCopy::DescribeFields( const CUtlVector< const datamap_t * > &vecGroups, const datamap_t *pCurrentMap, int nPredictionCopyType )
+void CPredictionCopy::DescribeFields( const std::vector< const datamap_t * > &vecGroups, const datamap_t *pCurrentMap, int nPredictionCopyType )
 {
 	int				i;
 	int				flags;
@@ -831,7 +799,7 @@ void CPredictionCopy::DescribeFields( const CUtlVector< const datamap_t * > &vec
 	int				fieldSize;
 
 	const flattenedoffsets_t &flat = pCurrentMap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat;
-	int fieldCount = flat.m_Flattened.Count();
+	int fieldCount = std::ssize( flat.m_Flattened );
 	const typedescription_t * RESTRICT pField = &flat.m_Flattened[ 0 ];
 	PREFETCH360(pField, 0);
 
@@ -851,7 +819,7 @@ void CPredictionCopy::DescribeFields( const CUtlVector< const datamap_t * > &vec
 		pInputData = (m_pSrc + fieldOffsetSrc );
 
 		const datamap_t *sourceGroup = pCurrentMap;
-		if ( pField->flatGroup < vecGroups.Count() )
+		if ( pField->flatGroup < std::ssize( vecGroups ) )
 		{
 			sourceGroup = vecGroups[ pField->flatGroup ];
 		}
@@ -875,7 +843,7 @@ const typedescription_t *CPredictionCopy::FindFlatFieldByName( const char *field
 	for ( int i = 0; i < PC_COPYTYPE_COUNT; ++i )
 	{
 		const flattenedoffsets_t &flat = dmap->m_pOptimizedDataMap->m_Info[ i ].m_Flat;
-		int c = flat.m_Flattened.Count();
+		int c = std::ssize( flat.m_Flattened );
 		for ( int j = 0; j < c; ++j )
 		{
 			const typedescription_t *td = &flat.m_Flattened[ j ];
@@ -938,10 +906,10 @@ void CPredictionCopy::DetermineWatchField( const char *operation, int entindex, 
 	m_pWatchField = CPredictionCopy::FindFlatFieldByName( pwatchvar.GetString(), dmap );
 }
 
-static void RemoveFieldsByName( char const *pchFieldName, CUtlVector< typedescription_t > &build )
+static void RemoveFieldsByName( char const *pchFieldName, std::vector< typedescription_t > &build )
 {
 	// Don't start at final field, since it the one we just added with FTYPEDESC_OVERRIDE
-	for ( int i = build.Count() - 2; i >= 0 ; --i )
+	for ( int i = std::ssize( build ) - 2; i >= 0 ; --i )
 	{
 		// Embedded field "offsets" can be the same as their first data field, so don't remove
 		if ( build[ i ].fieldType == FIELD_EMBEDDED )
@@ -950,12 +918,12 @@ static void RemoveFieldsByName( char const *pchFieldName, CUtlVector< typedescri
 		if ( !Q_stricmp( build[ i ].fieldName, pchFieldName ) )
 		{
 			// Msg( "Removing %s %d due to override\n", build[ i ]->fieldName, build[ i ]->flatOffset[ TD_OFFSET_NORMAL ] );
-			build.Remove( i );
+			build.erase( build.begin() + i );
 		}
 	}
 }
 
-static void BuildGroupList_R( int nPredictionCopyType, int nGroup, const datamap_t *dmap, CUtlVector< const datamap_t * > &vecGroups )
+static void BuildGroupList_R( int nPredictionCopyType, int nGroup, const datamap_t *dmap, std::vector< const datamap_t * > &vecGroups )
 {
 	// Descend to base classes first so FTYPEDESC_OVERRIDE can remove the previous ones
 	if ( dmap->baseMap )
@@ -963,7 +931,7 @@ static void BuildGroupList_R( int nPredictionCopyType, int nGroup, const datamap
 		BuildGroupList_R( nPredictionCopyType, nGroup + 1, dmap->baseMap, vecGroups );
 	}
 
-	vecGroups.AddToTail( dmap );
+	vecGroups.push_back( dmap );
 }
 
 static void BuildFlattenedChains_R( 
@@ -971,7 +939,7 @@ static void BuildFlattenedChains_R(
 	int &nMaxGroupSeen, 
 	int nGroup, 
 	datamap_t *dmap, 
-	CUtlVector< typedescription_t > &build, 
+	std::vector< typedescription_t > &build, 
 	int nBaseOffset )
 {
 	// Descend to base classes first so FTYPEDESC_OVERRIDE can remove the previous ones
@@ -1026,7 +994,7 @@ static void BuildFlattenedChains_R(
 
 		if ( bAdd )
 		{
-			build.AddToTail( *pField );
+			build.push_back( *pField );
 		}
 
 		//	Msg( "Visit %s offset %d\n", pField->fieldName, pField->flatOffset[ nPackType ] );
@@ -1045,7 +1013,7 @@ static void BuildFlattenedChains_R(
 	}	
 }
 
-static int __cdecl CompareFlattenedOffsets( const void *pv1, const void *pv2 )
+static int CompareFlattenedOffsets( const void *pv1, const void *pv2 )
 {
 	const typedescription_t *td1 = (const typedescription_t *)pv1;
 	const typedescription_t *td2 = (const typedescription_t *)pv2;
@@ -1065,7 +1033,7 @@ static int BuildPackedFlattenedOffsets( int nStartOffset, flattenedoffsets_t &fl
 {
 	int current_position = nStartOffset;
 
-	for ( int i = 0; i < flat.m_Flattened.Count(); ++i )
+	for ( int i = 0; i < std::ssize( flat.m_Flattened ); ++i )
 	{
 		typedescription_t *field = &flat.m_Flattened[ i ];
 
@@ -1145,7 +1113,7 @@ static void BuildDataRuns( datamap_t *dmap )
 		datamapinfo_t &info = dmap->m_pOptimizedDataMap->m_Info[ pc ];
 		datacopyruns_t *runs = &info.m_CopyRuns;
 
-		Assert( !info.m_CopyRuns.m_vecRuns.Count() );
+		Assert( !std::ssize( info.m_CopyRuns.m_vecRuns ) );
 
 		const flattenedoffsets_t &flat = info.m_Flat;
 
@@ -1153,10 +1121,10 @@ static void BuildDataRuns( datamap_t *dmap )
 		int nCurrentRunStartOffset = 0;
 		int	nLastFieldEndOffset = 0;
 
-		CUtlVector< datarun_t > &vecRuns = runs->m_vecRuns;
+		std::vector< datarun_t > &vecRuns = runs->m_vecRuns;
 
 		int i;
-		for ( i = 0; i < flat.m_Flattened.Count(); ++i )
+		for ( i = 0; i < std::ssize( flat.m_Flattened ); ++i )
 		{
 			const typedescription_t *td = &flat.m_Flattened[ i ];
 			int offset = td->flatOffset[ TD_OFFSET_NORMAL ];
@@ -1183,7 +1151,7 @@ static void BuildDataRuns( datamap_t *dmap )
 				run.m_nStartOffset[ TD_OFFSET_PACKED ] = flat.m_Flattened[ nRunStartField ].flatOffset[ TD_OFFSET_PACKED ];
 				run.m_nLength = nLastFieldEndOffset - nCurrentRunStartOffset;
 
-				vecRuns.AddToTail( run );
+				vecRuns.push_back( run );
 
 				nRunStartField = i;
 				nCurrentRunStartOffset = offset;
@@ -1202,7 +1170,7 @@ static void BuildDataRuns( datamap_t *dmap )
 			run.m_nStartOffset[ TD_OFFSET_PACKED ] = flat.m_Flattened[ nRunStartField ].flatOffset[ TD_OFFSET_PACKED ];
 			run.m_nLength = nLastFieldEndOffset - nCurrentRunStartOffset;
 
-			vecRuns.AddToTail( run );
+			vecRuns.push_back( run );
 		}
 	}
 }
@@ -1211,13 +1179,13 @@ static void BuildFlattenedChains( datamap_t *dmap )
 {
 	if ( dmap->m_pOptimizedDataMap )
 		return;
-	dmap->m_pOptimizedDataMap = g_OptimizedDataMapPool.AllocZero();
+	dmap->m_pOptimizedDataMap = g_OptimizedDataMapPool.alloc_zero();
 
 	int nMaxGroupSeen[ PC_COPYTYPE_COUNT ] = { 0 };
 
 	for ( int nPredictionCopyType = 0; nPredictionCopyType < PC_COPYTYPE_COUNT; ++nPredictionCopyType )
 	{
-		CUtlVector< typedescription_t > &build = dmap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat.m_Flattened;
+		std::vector< typedescription_t > &build = dmap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat.m_Flattened;
 
 		int nGroupCount = 0;
 		int nBaseOffset = 0;
@@ -1235,9 +1203,9 @@ static void BuildFlattenedChains( datamap_t *dmap )
 	{
 		int nMaxGroup = nMaxGroupSeen[ nPredictionCopyType ];
 
-		CUtlVector< typedescription_t > &build = dmap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat.m_Flattened;
+		std::vector< typedescription_t > &build = dmap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat.m_Flattened;
 
-		for ( int i = 0; i < build.Count(); ++i )
+		for ( int i = 0; i < std::ssize( build ); ++i )
 		{
 			typedescription_t *field = &build[ i ];
 			field->flatGroup = nMaxGroup - field->flatGroup;
@@ -1248,7 +1216,7 @@ static void BuildFlattenedChains( datamap_t *dmap )
 	for ( int nPredictionCopyType = 0; nPredictionCopyType < PC_COPYTYPE_COUNT; ++nPredictionCopyType )
 	{
 		flattenedoffsets_t &flat = dmap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat;
-		qsort( flat.m_Flattened.Base(), flat.m_Flattened.Count(), sizeof( typedescription_t ), (int (__cdecl *)(const void *, const void *))CompareFlattenedOffsets );
+		qsort( flat.m_Flattened.data(), std::ssize( flat.m_Flattened ), sizeof( typedescription_t ), (int (*)(const void *, const void *))CompareFlattenedOffsets );
 
 		nPackedDataStartOffset = BuildPackedFlattenedOffsets( nPackedDataStartOffset, flat );
 		dmap->m_nPackedSize = nPackedDataStartOffset;
@@ -1279,7 +1247,7 @@ static void DescribeRuns( const datamap_t *dmap, int nPredictionCopyType, int pa
 	const datacopyruns_t &runs = dmap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_CopyRuns;
 	flat = &dmap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat;
 	Msg( "   Runs for copy type: %s, packing: %s\n", s_PredCopyType->GetNameByToken( nPredictionCopyType ), s_PredPackType->GetNameByToken( packType ) );
-	for ( int i = 0; i < runs.m_vecRuns.Count(); ++i )
+	for ( int i = 0; i < std::ssize( runs.m_vecRuns ); ++i )
 	{
 		run = &runs.m_vecRuns[ i ];
 		Msg( "     %5d:  %5d -> %5d (%5d bytes): %s to %s\n",
@@ -1304,7 +1272,7 @@ static void DescribeFlattenedList( const datamap_t *dmap, int nPredictionCopyTyp
 	int offset = 0;
 
 	const flattenedoffsets_t &list = dmap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat;
-	for ( int i = 0; i < list.m_Flattened.Count(); ++i )
+	for ( int i = 0; i < std::ssize( list.m_Flattened ); ++i )
 	{
 		const typedescription_t *td = &list.m_Flattened[ i ];
 		offset = td->flatOffset[ packType ];
@@ -1367,7 +1335,7 @@ void CPredictionCopy::CopyFlatFieldsUsingRuns( const datamap_t *pCurrentMap, int
 	PREFETCH360( pSrc, 0 );
 	PREFETCH360( pDest, 0 );
 
-	int c = runs.m_vecRuns.Count();
+	int c = std::ssize( runs.m_vecRuns );
 	for ( int i = 0; i < c; ++i )
 	{
 		const datarun_t * RESTRICT run = &runs.m_vecRuns[ i ];
@@ -1395,7 +1363,7 @@ void CPredictionCopy::CopyFlatFields( const datamap_t *pCurrentMap, int nPredict
 
 	const flattenedoffsets_t &flat = pCurrentMap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat;
 
-	int fieldCount = flat.m_Flattened.Count();
+	int fieldCount = std::ssize( flat.m_Flattened );
 	for ( int i = 0; i < fieldCount; ++i )
 	{
 		const typedescription_t *pField = &flat.m_Flattened[ i ];
@@ -1422,7 +1390,7 @@ void CPredictionCopy::ErrorCheckFlatFields_NoSpew( const datamap_t *pCurrentMap,
 	const flattenedoffsets_t &flat = pCurrentMap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat;
 	const typedescription_t *pBase = &flat.m_Flattened[ 0 ];
 	PREFETCH360( pBase, 0 );
-	int fieldCount = flat.m_Flattened.Count();
+	int fieldCount = std::ssize( flat.m_Flattened );
 
 	const byte * RESTRICT pDest = (const byte * RESTRICT)m_pDest;
 	const byte * RESTRICT pSrc = (const byte * RESTRICT)m_pSrc;
@@ -1465,7 +1433,7 @@ void CPredictionCopy::ErrorCheckFlatFields_Spew( const datamap_t *pCurrentMap, i
 	const flattenedoffsets_t &flat = pCurrentMap->m_pOptimizedDataMap->m_Info[ nPredictionCopyType ].m_Flat;
 	const typedescription_t *pBase = &flat.m_Flattened[ 0 ];
 	PREFETCH360( pBase, 0 );
-	int fieldCount = flat.m_Flattened.Count();
+	int fieldCount = std::ssize( flat.m_Flattened );
 
 	const byte * RESTRICT pDest = m_pDest;
 	const byte * RESTRICT pSrc = m_pSrc;
@@ -1596,7 +1564,7 @@ void CPredictionCopy::TransferDataDescribe( char const *pchOperation, const data
 	{
 		if ( types & (1<<i) )
 		{
-			CUtlVector< const datamap_t * > vecGroups;
+			std::vector< const datamap_t * > vecGroups;
 			int nGroup = 0;
 			BuildGroupList_R( i, nGroup, dmap, vecGroups );
 			DescribeFields( vecGroups, dmap, i );

@@ -4,8 +4,8 @@
 
 
 #include "tier1/utlstring.h"
-#include "tier1/utlhashtable.h"
 #include "tier1/utlvector.h"
+#include <unordered_map>
 
 class CClothBoneMap
 {
@@ -20,19 +20,19 @@ public:
 		Patch_t(): m_nColumnCount( 0 ), m_nRowCount( 0 ) {}
 		int m_nColumnCount;
 		int m_nRowCount;
-		CUtlString m_Name;
+		std::string m_Name;
 	public:
 		void Insert( int nRow, int nColumn, int nBone );
 		int GetBone( int nRow, int nColumn );
 	protected:
-		CUtlHashtable< uint, int > m_Bones; // ( Row << 16 ) | Column  =>  Bone name
+		std::unordered_map< uint, int > m_Bones; // ( Row << 16 ) | Column  =>  Bone name
 	};
 public:
 	Patch_t *GetPatch( int nPatch ) { return m_Patches[nPatch]; }
-	int GetPatchCount() const { return m_Patches.Count(); }
+	int GetPatchCount() const { return std::ssize( m_Patches ); }
 
 protected:
-	CUtlVector< Patch_t* > m_Patches;
+	std::vector< Patch_t* > m_Patches;
 protected:
 	Patch_t *GetPatch( const char *pName, const char *pNameEnd );
 };
@@ -49,7 +49,7 @@ public:
 	char ReadChar( );
 	bool IsValid() { return m_pEnd != nullptr; }
 	const char *GetEnd() const { return m_pEnd; }
-	CUtlString GetRemainder()const;
+	std::string GetRemainder()const;
 
 protected:
 	const char * m_pString;

@@ -8,7 +8,7 @@
 #define SMOOTH_AVERAGE_H
 
 
-#include "utldict.h"
+#include "tier1/map_ops.h"
 
 
 
@@ -50,7 +50,7 @@ public:
 	};
 
 public:	
-	CUtlVector< CEntry > m_Values;
+	std::vector< CEntry > m_Values;
 	int m_iCurValue;
 };
 
@@ -67,7 +67,7 @@ public:
 		T m_Average;
 	};
 	
-	CUtlVector<CEntry> m_Values;
+	std::vector< CEntry > m_Values;
 };
 
 
@@ -83,21 +83,15 @@ inline T CalcSmoothAverage( const T &value, int nTimes, const char *pFilename, i
 template< class T >
 inline CTimingInfo< T > SumOverTimeInterval_Struct( const T &value, float nSeconds, const char *pFilename, int iLine )
 {
-	static CUtlDict< CAveragesInfo_TimeBased< T >*, int > s_SmoothAverages;
+	static ks::idict< CAveragesInfo_TimeBased< T >* > s_SmoothAverages;
 
 	char fullStr[1024];
 	Q_snprintf( fullStr, sizeof( fullStr ), "%s_%i", pFilename, iLine );
 	
-	int index = s_SmoothAverages.Find( fullStr );
-	CAveragesInfo_TimeBased<T> *pInfo;
-	if ( index == s_SmoothAverages.InvalidIndex() )
+	CAveragesInfo_TimeBased<T> *&pInfo = s_SmoothAverages[fullStr];
+	if ( !pInfo )
 	{
 		pInfo = new CAveragesInfo_TimeBased<T>;
-		index = s_SmoothAverages.Insert( fullStr, pInfo );
-	}
-	else
-	{
-		pInfo = s_SmoothAverages[index];
 	}
 	
 	// Get the current time now.
@@ -127,12 +121,12 @@ inline CTimingInfo< T > SumOverTimeInterval_Struct( const T &value, float nSecon
 	{
 		if ( i != newValueIndex )
 		{
-			info.m_HighAverage = MAX( pInfo->m_Values[i].m_Average, info.m_HighAverage );
-			info.m_LowAverage = MIN( pInfo->m_Values[i].m_Average, info.m_LowAverage );
+			info.m_HighAverage = std::max( pInfo->m_Values[i].m_Average, info.m_HighAverage );
+			info.m_LowAverage = std::min( pInfo->m_Values[i].m_Average, info.m_LowAverage );
 		}
 
-		info.m_HighValue = MAX( pInfo->m_Values[i].m_Value, info.m_HighValue );
-		info.m_LowValue = MIN( pInfo->m_Values[i].m_Value, info.m_LowValue );
+		info.m_HighValue = std::max( pInfo->m_Values[i].m_Value, info.m_HighValue );
+		info.m_LowValue = std::min( pInfo->m_Values[i].m_Value, info.m_LowValue );
 
 		info.m_AverageValue += pInfo->m_Values[i].m_Value;
 	}

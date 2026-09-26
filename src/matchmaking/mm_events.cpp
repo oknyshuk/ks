@@ -6,9 +6,6 @@
 
 #include "mm_events.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 CMatchEventsSubscription::CMatchEventsSubscription() :
 	m_bAllowNestedBroadcasts( false ),
 	m_bBroadcasting( false )
@@ -33,20 +30,20 @@ void CMatchEventsSubscription::Subscribe( IMatchEventsSink *pSink )
 	if ( !pSink )
 		return;
 
-	int idx = m_arrSinks.Find( pSink );
-	if ( m_arrSinks.IsValidIndex( idx ) )
+	int idx = ks::find_index( m_arrSinks, pSink );
+	if ( ks::is_valid_index( m_arrSinks, idx ) )
 	{
-		Assert( m_arrRefCount.IsValidIndex( idx ) );
+		Assert( ks::is_valid_index( m_arrRefCount, idx ) );
 		Assert( m_arrRefCount[ idx ] > 0 );
 		
 		++ m_arrRefCount[ idx ];
 	}
 	else
 	{
-		m_arrSinks.AddToTail( pSink );
-		m_arrRefCount.AddToTail( 1 );
+		m_arrSinks.push_back( pSink );
+		m_arrRefCount.push_back( 1 );
 		
-		Assert( m_arrSinks.Count() == m_arrRefCount.Count() );
+		Assert( std::ssize( m_arrSinks ) == std::ssize( m_arrRefCount ) );
 	}
 }
 
@@ -55,24 +52,24 @@ void CMatchEventsSubscription::Unsubscribe( IMatchEventsSink *pSink )
 	if ( !pSink )
 		return;
 
-	int idx = m_arrSinks.Find( pSink );
-	Assert( m_arrSinks.IsValidIndex( idx ) );
-	if ( !m_arrSinks.IsValidIndex( idx ) )
+	int idx = ks::find_index( m_arrSinks, pSink );
+	Assert( ks::is_valid_index( m_arrSinks, idx ) );
+	if ( !ks::is_valid_index( m_arrSinks, idx ) )
 		return;
 
-	Assert( m_arrRefCount.IsValidIndex( idx ) );
+	Assert( ks::is_valid_index( m_arrRefCount, idx ) );
 	Assert( m_arrRefCount[ idx ] > 0 );
 
 	-- m_arrRefCount[ idx ];
 	if ( m_arrRefCount[ idx ] <= 0 )
 	{
-		m_arrSinks.Remove( idx );
-		m_arrRefCount.Remove( idx );
+		m_arrSinks.erase( m_arrSinks.begin() + idx );
+		m_arrRefCount.erase( m_arrRefCount.begin() + idx );
 
-		Assert( m_arrSinks.Count() == m_arrRefCount.Count() );
+		Assert( std::ssize( m_arrSinks ) == std::ssize( m_arrRefCount ) );
 
 		// Update outstanding iterators that are beyond removal point
-		for ( int k = 0; k < m_arrIteratorsOutstanding.Count(); ++ k )
+		for ( int k = 0; k < std::ssize( m_arrIteratorsOutstanding ); ++ k )
 		{
 			if ( m_arrIteratorsOutstanding[k] >= idx )
 				-- m_arrIteratorsOutstanding[k];
@@ -116,7 +113,7 @@ void CMatchEventsSubscription::BroadcastEvent( KeyValues *pEvent )
 	{
 		if ( !m_bAllowNestedBroadcasts )
 		{
-			m_arrQueuedEvents.AddToTail( pEvent );
+			m_arrQueuedEvents.push_back( pEvent );
 			return;
 		}
 	}
@@ -124,36 +121,36 @@ void CMatchEventsSubscription::BroadcastEvent( KeyValues *pEvent )
 	m_bBroadcasting = true;
 
 	KeyValues::AutoDelete autoDeleteEvent( pEvent );
-	m_arrSentEvents.AddToHead( pEvent );
+	m_arrSentEvents.insert( m_arrSentEvents.begin(), pEvent );
 
 	// Internally events are cracked before external subscribers
 	g_pMMF->OnEvent( pEvent );
 
 	// iterate subscribers
-	for ( m_arrIteratorsOutstanding.AddToTail( 0 );
-		  m_arrIteratorsOutstanding.Tail() < m_arrSinks.Count();
-		  ++ m_arrIteratorsOutstanding.Tail() )
+	for ( m_arrIteratorsOutstanding.push_back( 0 );
+		  m_arrIteratorsOutstanding.back() < std::ssize( m_arrSinks );
+		  ++ m_arrIteratorsOutstanding.back() )
 	{
-		int i = m_arrIteratorsOutstanding.Tail();
+		int i = m_arrIteratorsOutstanding.back();
 		IMatchEventsSink *pSink = m_arrSinks[ i ];
 		
-		Assert( m_arrRefCount.IsValidIndex( i ) );
+		Assert( ks::is_valid_index( m_arrRefCount, i ) );
 		Assert( m_arrRefCount[i] > 0 );
 		Assert( pSink );
 
 		pSink->OnEvent( pEvent );
 	}
-	m_arrIteratorsOutstanding.RemoveMultipleFromTail( 1 );
+	m_arrIteratorsOutstanding.resize( m_arrIteratorsOutstanding.size() - 1 );
 
 	m_bBroadcasting = false;
 
 	//
 	// Broadcast queued events
 	//
-	if ( m_arrQueuedEvents.Count() > 0 )
+	if ( !m_arrQueuedEvents.empty() )
 	{
-		KeyValues *pQueued = m_arrQueuedEvents.Head();
-		m_arrQueuedEvents.RemoveMultipleFromHead( 1 );
+		KeyValues *pQueued = m_arrQueuedEvents.front();
+		m_arrQueuedEvents.erase( m_arrQueuedEvents.begin(), m_arrQueuedEvents.begin() + 1 );
 		BroadcastEvent( pQueued );
 		return;
 	}
@@ -161,13 +158,13 @@ void CMatchEventsSubscription::BroadcastEvent( KeyValues *pEvent )
 	//
 	// No more queued events left, clean up registered event data
 	//
-	for ( int k = 0; k < m_arrEventData.Count(); ++ k )
+	for ( int k = 0; k < std::ssize( m_arrEventData ); ++ k )
 	{
 		KeyValues *pRegistered = m_arrEventData[k];
 		pRegistered->deleteThis();
 	}
-	m_arrEventData.Purge();
-	m_arrSentEvents.Purge();
+	m_arrEventData.clear(); m_arrEventData.shrink_to_fit();
+	m_arrSentEvents.clear(); m_arrSentEvents.shrink_to_fit();
 }
 
 void CMatchEventsSubscription::RegisterEventData( KeyValues *pEventData )
@@ -183,7 +180,7 @@ void CMatchEventsSubscription::RegisterEventData( KeyValues *pEventData )
 	if ( !szEventDataKey || !*szEventDataKey )
 		return;
 
-	for ( int k = 0; k < m_arrEventData.Count(); ++ k )
+	for ( int k = 0; k < std::ssize( m_arrEventData ); ++ k )
 	{
 		KeyValues *&pRegistered = m_arrEventData[k];
 		if ( !Q_stricmp( szEventDataKey, pRegistered->GetName() ) )
@@ -194,21 +191,21 @@ void CMatchEventsSubscription::RegisterEventData( KeyValues *pEventData )
 		}
 	}
 
-	m_arrEventData.AddToTail( pEventData );
+	m_arrEventData.push_back( pEventData );
 }
 
 KeyValues * CMatchEventsSubscription::GetEventData( char const *szEventDataKey )
 {
 	Assert( m_bBroadcasting );
 
-	for ( int k = 0; k < m_arrEventData.Count(); ++ k )
+	for ( int k = 0; k < std::ssize( m_arrEventData ); ++ k )
 	{
 		KeyValues *pRegistered = m_arrEventData[k];
 		if ( !Q_stricmp( szEventDataKey, pRegistered->GetName() ) )
 			return pRegistered;
 	}
 
-	for ( int k = 0; k < m_arrSentEvents.Count(); ++ k )
+	for ( int k = 0; k < std::ssize( m_arrSentEvents ); ++ k )
 	{
 		KeyValues *pRegistered = m_arrSentEvents[k];
 		if ( !Q_stricmp( szEventDataKey, pRegistered->GetName() ) )

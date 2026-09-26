@@ -12,9 +12,6 @@
 #include "baseparticleentity.h"
 #include "sendproxy.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 class [[= ks::reflect::NetTable{ .name = "DT_FuncSmokeVolume" } ]]
       [[= ks::reflect::From<"m_spawnflags", ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED }>{} ]]
       CFuncSmokeVolume : public CBaseParticleEntity

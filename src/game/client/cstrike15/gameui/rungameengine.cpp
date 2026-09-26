@@ -12,9 +12,6 @@
 #include "IGameUIFuncs.h"
 #include "tier1/convar.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Interface to running the engine from the UI dlls

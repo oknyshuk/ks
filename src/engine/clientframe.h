@@ -7,9 +7,9 @@
 #ifndef CLIENTFRAME_H
 #define CLIENTFRAME_H
 
-#include <bitvec.h>
+#include <bitset>
 #include <const.h>
-#include <tier1/mempool.h>
+#include "tier1/fixed_pool.h"
 
 class CFrameSnapshot;
 
@@ -40,9 +40,9 @@ public:
 	CClientFrame*		m_pNext;
 
 	// Used by server to indicate if the entity was in the player's pvs
-	CBitVec<MAX_EDICTS>	transmit_entity; // if bit n is set, entity n will be send to client
-	CBitVec<MAX_EDICTS>	*from_baseline;	// if bit n is set, this entity was send as update from baseline
-	CBitVec<MAX_EDICTS>	*transmit_always; // if bit is set, don't do PVS checks before sending (HLTV only)
+	std::bitset<MAX_EDICTS>	transmit_entity; // if bit n is set, entity n will be send to client
+	std::bitset<MAX_EDICTS>	*from_baseline;	// if bit n is set, this entity was send as update from baseline
+	std::bitset<MAX_EDICTS>	*transmit_always; // if bit is set, don't do PVS checks before sending (HLTV only)
 
 private:
 
@@ -56,7 +56,7 @@ private:
 class CClientFrameManager
 {
 public:
-	CClientFrameManager(void)  : m_ClientFramePool( MAX_CLIENT_FRAMES, CUtlMemoryPool::GROW_SLOW ) {	m_Frames = nullptr; }
+	CClientFrameManager(void)  : m_ClientFramePool( MAX_CLIENT_FRAMES, ks::fixed_pool::grow::slow ) {	m_Frames = nullptr; }
 	virtual ~CClientFrameManager(void) { DeleteClientFrames(-1); }
 
 	int				AddClientFrame( CClientFrame *pFrame ); // returns current count
@@ -74,7 +74,7 @@ private:
 	void			FreeFrame( CClientFrame* pFrame );
 
 	CClientFrame	*m_Frames;		// updates can be delta'ed from here
-	CClassMemoryPool< CClientFrame >	m_ClientFramePool;
+	ks::object_pool< CClientFrame >	m_ClientFramePool;
 };
 
 #endif // CLIENTFRAME_H

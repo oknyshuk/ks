@@ -54,7 +54,7 @@ extern ConVar demo_polish_path_frames;					// # of path frames to draw before/af
 //
 inline float LerpScale( float flInLo, float flInHi, float flOutLo, float flOutHi, float flX )
 {
-	float const tt = MIN( 1, MAX( 0, (flX - flInLo) / (flInHi - flInLo) ) );
+	float const tt = std::min( 1, std::max( 0, (flX - flInLo) / (flInHi - flInLo) ) );
 	return Lerp(tt, flOutLo, flOutHi);
 }
 

@@ -11,11 +11,9 @@
 #include "dt_recv.h"
 
 #include "teamplay_gamerules.h"
-#include "teamplay_round_timer.h"
 extern ConVar mp_respawnwavetime;
 
 #ifdef GAME_DLL
-#include "team_control_point.h"
 	extern ConVar mp_showroundtransitions;
 	extern ConVar mp_enableroundwaittime;
 	extern ConVar mp_showcleanedupents;
@@ -291,16 +289,12 @@ public:
 
 	bool IsGameUnderTimeLimit( void );
 
-	CTeamRoundTimer *GetActiveRoundTimer( void );
-
 	void HandleTimeLimitChange( void );
 
 	void SetTeamReadyState( bool bState, int iTeam )
 	{
 		m_bTeamReady.Set( iTeam, bState );
 	}
-
-	virtual void PlayTrainCaptureAlert( CTeamControlPoint *pPoint, bool bFinalPointInMap ){ return; }
 
 protected:
 	virtual void Think( void );
@@ -373,20 +367,13 @@ protected:
 
 	inline void RespawnTeam( int iTeam ) { RespawnPlayers( false, true, iTeam ); }
 
-	void HideActiveTimer( void );
-	void RestoreActiveTimer( void );
-
 	virtual void InternalHandleTeamWin( int iWinningTeam ){ return; }
-
-	bool MapHasActiveTimer( void );
-	void CreateTimeLimitTimer( void );
 
 protected:
 	CGameRulesRoundStateInfo	*m_pCurStateInfo;			// Per-state data 
 	float						m_flStateTransitionTime;	// Timer for round states
 
 	float						m_flWaitingForPlayersTimeEnds;
-	CHandle<CTeamRoundTimer>	m_hWaitingForPlayersTimer;
 
 	float						m_flNextPeriodicThink;
 	bool						m_bChangeLevelOnRoundEnd;
@@ -396,18 +383,14 @@ protected:
 	bool						m_bResetRoundsPlayed;
 
 	// Stalemate
-	EHANDLE						m_hPreviousActiveTimer;
-	CHandle<CTeamRoundTimer>	m_hStalemateTimer;
 	float						m_flStalemateStartTime;
-
-	CHandle<CTeamRoundTimer>	m_hTimeLimitTimer;
 
 	bool						m_bForceMapReset; // should the map be reset when a team wins and the round is restarted?
 	bool						m_bPrevRoundWasWaitingForPlayers;	// was the previous map reset after a waiting for players period
 	bool						m_bInitialSpawn;
 
 	string_t					m_iszRoundToPlayNext;
-	CUtlVector<string_t>		m_iszPreviousRounds; // we'll store the two previous rounds so we won't play them again right away if there are other rounds that can be played first
+	std::vector< string_t >		m_iszPreviousRounds; // we'll store the two previous rounds so we won't play them again right away if there are other rounds that can be played first
 	string_t					m_iszFirstRoundPlayed; // store the first round played after a full restart so we can pick a different one next time if we have other options
 
 	float						m_flOriginalTeamRespawnWaveTime[ MAX_TEAMS ];

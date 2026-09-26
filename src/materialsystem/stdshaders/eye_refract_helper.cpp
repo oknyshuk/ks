@@ -15,9 +15,6 @@
 
 #include "convar.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 static ConVar r_lightwarpidentity( "r_lightwarpidentity","0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 static ConVar mat_displacementmap( "mat_displacementmap", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
@@ -476,7 +473,7 @@ void Draw_Eyes_Refract_Internal( CBaseVSShader *pShader, IMaterialVar** params, 
 			vAmbientOcclusion[3] *= flashlightState.m_flAmbientOcclusion;
 		}
 
-		vAmbientOcclusion[3] = MIN( MAX( vAmbientOcclusion[3], 0.0f ), 1.0f );
+		vAmbientOcclusion[3] = std::min( std::max( vAmbientOcclusion[3], 0.0f ), 1.0f );
 		pShaderAPI->SetPixelShaderConstant( 5, vAmbientOcclusion, 1 );
 	}
 	pShader->Draw();

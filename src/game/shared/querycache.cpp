@@ -8,13 +8,10 @@
 #include "cbase.h"
 #include "querycache.h"
 #include "tier0/vprof.h"
-#include "tier1/utlintrusivelist.h"
+#include "tier1/intrusive_list.h"
 #include "datacache/imdlcache.h"
 #include "vstdlib/jobthread.h"
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 
@@ -25,10 +22,10 @@ static QueryCacheEntry_t s_QCache[QUERYCACHE_SIZE];
 #define QUERYCACHE_HASH_SIZE ( QUERYCACHE_SIZE  * 2 )
 
 // elements available for cache reuse
-static CUtlIntrusiveDList<QueryCacheEntry_t> s_VictimList;
+static ks::intrusive_dlist<QueryCacheEntry_t> s_VictimList;
 
 
-static CUtlIntrusiveDList<QueryCacheEntry_t> s_HashChains[QUERYCACHE_HASH_SIZE];
+static ks::intrusive_dlist<QueryCacheEntry_t> s_HashChains[QUERYCACHE_HASH_SIZE];
 
 
 
@@ -59,7 +56,7 @@ static QueryCacheEntry_t *FindOrAllocateCacheEntry( QueryCacheKey_t const &entry
 {
 	QueryCacheEntry_t *pFound = nullptr;
 	// see if we find it
-	for( QueryCacheEntry_t *pNode = s_HashChains[entry.m_nHashIdx].m_pHead; pNode; pNode = pNode->m_pNext )
+	for( QueryCacheEntry_t *pNode = s_HashChains[entry.m_nHashIdx].head(); pNode; pNode = pNode->m_pNext )
 	{
 		if ( pNode->m_QueryParams.Matches( &entry ) )
 		{
@@ -69,7 +66,7 @@ static QueryCacheEntry_t *FindOrAllocateCacheEntry( QueryCacheKey_t const &entry
 	}
 	if (! pFound )
 	{
-		pFound = s_VictimList.RemoveHead();
+		pFound = s_VictimList.pop_front();
 		if ( ! pFound )
 		{
 			// randomly replace one
@@ -79,11 +76,11 @@ static QueryCacheEntry_t *FindOrAllocateCacheEntry( QueryCacheKey_t const &entry
 				s_nReplaceCtr = QUERYCACHE_SIZE - 1;
 			if ( pFound->m_QueryParams.m_Type != EQUERY_INVALID )
 			{
-				s_HashChains[pFound->m_QueryParams.m_nHashIdx].RemoveNode( pFound );
+				s_HashChains[pFound->m_QueryParams.m_nHashIdx].erase( pFound );
 			}
 		}
 		pFound->m_QueryParams = entry;
-		s_HashChains[pFound->m_QueryParams.m_nHashIdx].AddToHead( pFound );
+		s_HashChains[pFound->m_QueryParams.m_nHashIdx].push_front( pFound );
 		pFound->m_bSpeculativelyDone = false;
 		pFound->IssueQuery();
 	}
@@ -168,7 +165,7 @@ struct QueryCacheUpdateRecord_t
 {
 	int m_nStartHashChain;
 	int m_nNumHashChainsToUpdate;
-	CUtlIntrusiveDListWithTailPtr<QueryCacheEntry_t> m_KilledList;
+	ks::intrusive_dlist_with_tail<QueryCacheEntry_t> m_KilledList;
 };
 
 
@@ -180,7 +177,7 @@ void ProcessQueryCacheUpdate( QueryCacheUpdateRecord_t &workItem )
 	for( int i = 0; i < workItem.m_nNumHashChainsToUpdate; i++ )
 	{
 		QueryCacheEntry_t *pNext;
-		for( QueryCacheEntry_t *pEntry = s_HashChains[i + workItem.m_nStartHashChain].m_pHead ; pEntry; pEntry = pNext )
+		for( QueryCacheEntry_t *pEntry = s_HashChains[i + workItem.m_nStartHashChain].head() ; pEntry; pEntry = pNext )
 		{
 			pNext = pEntry->m_pNext;
 			if ( pEntry->m_bUsedSinceUpdated )
@@ -203,8 +200,8 @@ void ProcessQueryCacheUpdate( QueryCacheUpdateRecord_t &workItem )
 						s_WastedSpeculativeUpdates++;
 					}
 					pEntry->m_QueryParams.m_Type = EQUERY_INVALID;
-					s_HashChains[pEntry->m_QueryParams.m_nHashIdx].RemoveNode( pEntry );
-					workItem.m_KilledList.AddToHead( pEntry );
+					s_HashChains[pEntry->m_QueryParams.m_nHashIdx].erase( pEntry );
+					workItem.m_KilledList.push_front( pEntry );
 				}
 			}
 		}
@@ -246,20 +243,20 @@ void UpdateQueryCache( void )
 	// the victim cache
 	for( int i = 0 ; i < N_WAYS_TO_SPLIT_CACHE_UPDATE; i++ )
 	{
-		PrependDListWithTailToDList( workList[i].m_KilledList, s_VictimList );
+		s_VictimList.splice_front( workList[i].m_KilledList );
 	}
 }
 
 void InvalidateQueryCache( void )
 {
-	s_VictimList.RemoveAll();
+	s_VictimList.clear();
 	for( int i = 0; i < ARRAYSIZE( s_HashChains); i++ )
-		s_HashChains[i].RemoveAll();
+		s_HashChains[i].clear();
 	// now, invalidate all cache entries and add them to the victims
 	for( int i = 0; i < ARRAYSIZE( s_QCache ); i++ )
 	{
 		s_QCache[i].m_QueryParams.m_Type = EQUERY_INVALID;
-		s_VictimList.AddToHead( s_QCache + i );
+		s_VictimList.push_front( s_QCache + i );
 	}
 }
 
@@ -272,8 +269,8 @@ void QueryCacheEntry_t::IssueQuery( void )
 		if (! pEntity )
 		{
 			m_QueryParams.m_Type = EQUERY_INVALID;
-			s_HashChains[m_QueryParams.m_nHashIdx].RemoveNode( this );
-			s_VictimList.AddToHead( this );
+			s_HashChains[m_QueryParams.m_nHashIdx].erase( this );
+			s_VictimList.push_front( this );
 			return;
 		}
 		CalculateOffsettedPosition( pEntity, m_QueryParams.m_nOffsetMode[i],
@@ -330,7 +327,7 @@ CON_COMMAND( sv_querycache_stats, "Display status of the query cache (client onl
 #endif
 {
 	Warning( "%d queries, %d misses (%d free) suc spec = %d wasted spec=%d\n",
-			 s_nNumCacheQueries, s_nNumCacheMisses, s_VictimList.Count(),
+			 s_nNumCacheQueries, s_nNumCacheMisses, (int)s_VictimList.size(),
 			 s_SuccessfulSpeculatives, s_WastedSpeculativeUpdates );
 }
 

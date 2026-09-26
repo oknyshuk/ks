@@ -8,7 +8,6 @@
 #define VIEWRENDER_H
 
 #include "shareddefs.h"
-#include "tier1/utlstack.h"
 #include "tier2/tier2.h"
 #include "iviewrender.h"
 #include "view_shared.h"
@@ -47,7 +46,7 @@ struct IntroData_t
 	Vector	m_vecCameraView;
 	QAngle	m_vecCameraViewAngles;
 	float	m_playerViewFOV;
-	CUtlVector<IntroDataBlendPass_t> m_Passes;
+	std::vector< IntroDataBlendPass_t > m_Passes;
 
 	// Fade overriding for the intro
 	float	m_flCurrentFadeColor[4];
@@ -245,8 +244,8 @@ protected:
 		RENDERABLES_RENDER_PATH_SHADOWDEPTH_BUILD_GEOCACHE		= ( 1 << 1 ),
 		RENDERABLES_RENDER_PATH_SHADOWDEPTH_USE_GEOCACHE		= ( 1 << 2 ),
 	};
-	void			DrawOpaqueRenderables( IMatRenderContext *pRenderContext, RenderablesRenderPath_t eRenderPath, ERenderDepthMode_t DepthMode, CUtlVector< CClientRenderablesList::CEntry * > *pDeferClippedOpaqueRenderables_Out, RenderGroup_t nGroup = RENDER_GROUP_OPAQUE );
-	void			DrawDeferredClippedOpaqueRenderables( IMatRenderContext *pRenderContext, RenderablesRenderPath_t eRenderPath, ERenderDepthMode_t DepthMode, CUtlVector< CClientRenderablesList::CEntry * > *pDeferClippedOpaqueRenderables );
+	void			DrawOpaqueRenderables( IMatRenderContext *pRenderContext, RenderablesRenderPath_t eRenderPath, ERenderDepthMode_t DepthMode, std::vector< CClientRenderablesList::CEntry * > *pDeferClippedOpaqueRenderables_Out, RenderGroup_t nGroup = RENDER_GROUP_OPAQUE );
+	void			DrawDeferredClippedOpaqueRenderables( IMatRenderContext *pRenderContext, RenderablesRenderPath_t eRenderPath, ERenderDepthMode_t DepthMode, std::vector< CClientRenderablesList::CEntry * > *pDeferClippedOpaqueRenderables );
 	void			DrawTranslucentRenderables( bool bInSkybox, bool bShadowDepth );
 
 
@@ -337,7 +336,7 @@ public:
 
 	CVolumeCuller			m_volumeCuller;
 	Frustum_t				m_Frustum;
-	CUtlVector< Frustum_t, CUtlMemoryAligned< Frustum_t,16 > > m_AreaFrustums;
+	std::vector< Frustum_t > m_AreaFrustums;
 	Frustum_t *				m_frustumList[MAX_MAP_AREAS];
 
 	// Lists
@@ -390,10 +389,10 @@ public:
 
 	// Frustum data
 
-	void					CacheFrustumData( const Frustum_t& frustum, const CUtlVector< Frustum_t, CUtlMemoryAligned< Frustum_t,16 > >& aeraFrustums );
+	void					CacheFrustumData( const Frustum_t& frustum, const std::vector< Frustum_t >& aeraFrustums );
 	void					CacheFrustumData( void );
 	const Frustum_t*		GetBuildViewFrustum( int buildViewID = -1 ) const;
-	const CUtlVector< Frustum_t, CUtlMemoryAligned< Frustum_t,16 > >* GetBuildViewAeraFrustums( int buildViewID = -1 ) const;
+	const std::vector< Frustum_t >* GetBuildViewAeraFrustums( int buildViewID = -1 ) const;
 	Frustum_t**				GetBuildViewFrustumList( int buildViewID = -1 );
 
 	// Lists
@@ -443,7 +442,7 @@ private:
 
 	private:
 
-		CUtlVectorFixed<CJob *, 16> m_jobs;
+		std::inplace_vector< CJob *, 16 > m_jobs;
 	};
 
 	bool					m_bThreaded;
@@ -472,7 +471,7 @@ private:
 	// Keeps track of all jobs added to the global threadpool
 	// We can then wait for them in Purge in case a job has been added in the build pass
 	// but we didn't wait for it in the draw pass (because the list wasn't actually drawn)
-	CUtlVector<CJob*>		mJobsAddedToThreadPool;
+	std::vector< CJob* >		mJobsAddedToThreadPool;
 };
 
 extern CConcurrentViewBuilder g_viewBuilder;
@@ -667,8 +666,8 @@ protected:
 	void			SetupMain3DView( int nSlot, const CViewSetup &view, const CViewSetup &hudViewSetup, int &nClearFlags, ITexture *pRenderTarget );
 	void			CleanupMain3DView( const CViewSetup &view );
 
-	void			GetLetterBoxRectangles( int nSlot, const CViewSetup &view, CUtlVector< vrect_t >& vecLetterBoxRectangles );
-	void			DrawLetterBoxRectangles( int nSlot, const CUtlVector< vrect_t >& vecLetterBoxRectangles );
+	void			GetLetterBoxRectangles( int nSlot, const CViewSetup &view, std::vector< vrect_t >& vecLetterBoxRectangles );
+	void			DrawLetterBoxRectangles( int nSlot, const std::vector< vrect_t >& vecLetterBoxRectangles );
 
 	void			EnableWaterDepthFeathing( IMaterial *pWaterMaterial, bool bEnable );
 

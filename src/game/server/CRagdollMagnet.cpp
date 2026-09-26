@@ -13,9 +13,6 @@
 
 ConVar ai_debug_ragdoll_magnets( "ai_debug_ragdoll_magnets", "0");
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 LINK_ENTITY_TO_CLASS( phys_ragdollmagnet, CRagdollMagnet );
 IMPLEMENT_REFLECT_DATAMAP( CRagdollMagnet )
 
@@ -200,7 +197,7 @@ float CRagdollMagnet::DistToPoint( const Vector &vecPoint )
 			axis.InitializePlane( vecUp, GetAbsOrigin() );
 			vDist = fabs( axis.PointDist( vecPoint ) );
 
-			return MAX( hDist, vDist );
+			return std::max( hDist, vDist );
 		}
 		else
 		{

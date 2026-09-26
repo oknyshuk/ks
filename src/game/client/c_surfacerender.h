@@ -21,7 +21,7 @@ void Surface_Draw( IClientRenderable *pClientRenderable, const Vector &vecRender
 void Surface_SafeLightCubeUpdate( const Vector &vecRenderOrigin, Vector4D *cachedCubeColours );
 
 
-extern CUtlVector<ImpParticleWithFourInterpolants, CUtlMemoryAligned<ImpParticleWithFourInterpolants, 16>> g_SurfaceRenderParticles;
+extern ks::aligned_vector< ImpParticleWithFourInterpolants, 16 > g_SurfaceRenderParticles;
 extern const QAngle g_SurfaceRenderAnglesAngles;
 
 #endif

@@ -19,10 +19,8 @@
 #include "vprof.h"
 #include "view.h"
 #include "vstdlib/ikeyvaluessystem.h"
+#include "tier1/intern_pool.h"
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 #define LESSON_PRIORITY_MAX 1000
@@ -31,8 +29,12 @@
 #define LESSON_MIN_TIME_BEFORE_LOCK_ALLOWED 0.1f
 #define LESSON_DISTANCE_UPDATE_RATE 0.25f
 
-// See comments in UtlSymbol on why this is useful and how it works
-IMPLEMENT_PRIVATE_SYMBOLTYPE( CGameInstructorSymbol );
+CGameInstructorSymbol::CGameInstructorSymbol( const char *pStr )
+{
+	// Function-local so symbols built during static init in other TUs find it constructed.
+	static ks::intern_pool s_Pool;
+	m_pString = pStr ? s_Pool.intern( pStr ).data() : nullptr;
+}
 
 extern ConVar gameinstructor_verbose;
 extern ConVar gameinstructor_verbose_lesson;
@@ -53,8 +55,6 @@ Color CBaseLesson::m_rgbaVerboseUpdate = Color( 255, 0, 255, 255  );
 
 CBaseLesson::CBaseLesson( const char *pchName, bool bIsDefaultHolder, bool bIsOpenOpportunity, int nSplitScreenSlot )
 {
-	COMPILE_TIME_ASSERT( sizeof( CGameInstructorSymbol ) == sizeof( CUtlSymbol ) );
-
 	m_nSplitScreenSlot = nSplitScreenSlot;
 	m_stringName = pchName;
 	m_stringReplaceKey = "";
@@ -69,11 +69,11 @@ CBaseLesson::~CBaseLesson( void )
 	if ( m_pRoot )
 	{
 		// Remove from root's children list
-		m_pRoot->m_OpenOpportunities.FindAndRemove( this );
+		ks::erase_first( m_pRoot->m_OpenOpportunities, this );
 	}
 	else
 	{
-		for ( int i = 0; i < m_OpenOpportunities.Count(); ++i )
+		for ( int i = 0; i < std::ssize( m_OpenOpportunities ); ++i )
 		{
 			// Remove from children if they are still around
 			CBaseLesson *pLesson = m_OpenOpportunities[ i ];
@@ -99,16 +99,16 @@ void CBaseLesson::AddPrerequisite( const char *pchLessonName )
 		return;
 	}
 
-	m_Prerequisites.AddToTail( pPrerequisite );
+	m_Prerequisites.push_back( pPrerequisite );
 }
 
 void CBaseLesson::SetRoot( CBaseLesson *pRoot )
 {
 	m_pRoot = pRoot;
 
-	if ( m_pRoot && m_pRoot->m_OpenOpportunities.Find( this ) == -1 )
+	if ( m_pRoot && ks::find_index( m_pRoot->m_OpenOpportunities, this ) == -1 )
 	{
-		m_pRoot->m_OpenOpportunities.AddToTail( this );
+		m_pRoot->m_OpenOpportunities.push_back( this );
 	}
 }
 
@@ -156,7 +156,7 @@ bool CBaseLesson::IsLearned( void ) const
 
 bool CBaseLesson::PrerequisitesHaveBeenMet( void ) const
 {
-	for ( int i = 0; i < m_Prerequisites.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_Prerequisites ); ++i )
 	{
 		if ( !m_Prerequisites[ i ]->IsLearned() )
 		{
@@ -969,7 +969,7 @@ void CIconLesson::UpdateLocatorTarget( CLocatorTarget *pLocatorTarget, C_BaseEnt
 
 #define LESSON_VARIABLE_INIT_SYMBOL( _varEnum, _varName, _varType ) g_n##_varEnum##Symbol = KeyValuesSystem()->GetSymbolForString( #_varEnum );
 
-#define LESSON_SCRIPT_STRING_ADD_TO_MAP( _varEnum, _varName, _varType ) g_NameToTypeMap.Insert( #_varEnum, LESSON_VARIABLE_##_varEnum );
+#define LESSON_SCRIPT_STRING_ADD_TO_MAP( _varEnum, _varName, _varType ) g_NameToTypeMap.emplace( #_varEnum, LESSON_VARIABLE_##_varEnum );
 
 // Create enum value
 #define LESSON_VARIABLE_ENUM( _varEnum, _varName, _varType ) LESSON_VARIABLE_##_varEnum,
@@ -1181,9 +1181,9 @@ const LessonVariableInfo *GetLessonVariableInfo( int iLessonVariable )
 	return &(g_pLessonVariableInfo[ iLessonVariable ]);
 }
 
-static CUtlDict< LessonVariable, int > g_NameToTypeMap;
-static CUtlDict< fieldtype_t, int > g_TypeToParamTypeMap;
-CUtlDict< int, int > CScriptedIconLesson::LessonActionMap;
+static ks::idict< LessonVariable > g_NameToTypeMap;
+static ks::idict< fieldtype_t > g_TypeToParamTypeMap;
+ks::idict< int > CScriptedIconLesson::LessonActionMap;
 
 
 //-----------------------------------------------------------------------------
@@ -1268,7 +1268,7 @@ void CScriptedIconLesson::Init( void )
 #undef LESSON_VARIABLE_MACRO_STRING
 
 			// Listen for open events
-			for ( int iLessonEvent = 0; iLessonEvent < m_OpenEvents.Count(); ++iLessonEvent )
+			for ( int iLessonEvent = 0; iLessonEvent < std::ssize( m_OpenEvents ); ++iLessonEvent )
 			{
 				const LessonEvent_t *pLessonEvent = &(m_OpenEvents[ iLessonEvent ]);
 				ListenForGameEvent( pLessonEvent->szEventName.String() );
@@ -1282,7 +1282,7 @@ void CScriptedIconLesson::Init( void )
 			}
 
 			// Listen for close events
-			for ( int iLessonEvent = 0; iLessonEvent < m_CloseEvents.Count(); ++iLessonEvent )
+			for ( int iLessonEvent = 0; iLessonEvent < std::ssize( m_CloseEvents ); ++iLessonEvent )
 			{
 				const LessonEvent_t *pLessonEvent = &(m_CloseEvents[ iLessonEvent ]);
 				ListenForGameEvent( pLessonEvent->szEventName.String() );
@@ -1296,7 +1296,7 @@ void CScriptedIconLesson::Init( void )
 			}
 
 			// Listen for success events
-			for ( int iLessonEvent = 0; iLessonEvent < m_SuccessEvents.Count(); ++iLessonEvent )
+			for ( int iLessonEvent = 0; iLessonEvent < std::ssize( m_SuccessEvents ); ++iLessonEvent )
 			{
 				const LessonEvent_t *pLessonEvent = &(m_SuccessEvents[ iLessonEvent ]);
 				ListenForGameEvent( pLessonEvent->szEventName.String());
@@ -1328,7 +1328,7 @@ void CScriptedIconLesson::InitPrerequisites( void )
 		ConColorMsg( CBaseLesson::m_rgbaVerbosePlain, "...\n" );
 	}
 
-	for ( int iPrerequisit = 0; iPrerequisit < m_PrerequisiteNames.Count(); ++iPrerequisit )
+	for ( int iPrerequisit = 0; iPrerequisit < std::ssize( m_PrerequisiteNames ); ++iPrerequisit )
 	{
 		const char *pPrerequisiteName = m_PrerequisiteNames[ iPrerequisit ].String();
 		AddPrerequisite( pPrerequisiteName );
@@ -1347,7 +1347,7 @@ void CScriptedIconLesson::OnOpen( void )
 	const CScriptedIconLesson *pLesson = static_cast<const CScriptedIconLesson *>( GetRoot() );
 
 	// Process all update events
-	for ( int iLessonEvent = 0; iLessonEvent < pLesson->m_OnOpenEvents.Count(); ++iLessonEvent )
+	for ( int iLessonEvent = 0; iLessonEvent < std::ssize( pLesson->m_OnOpenEvents ); ++iLessonEvent )
 	{
 		const LessonEvent_t *pLessonEvent = &(pLesson->m_OnOpenEvents[ iLessonEvent ]);
 
@@ -1388,7 +1388,7 @@ void CScriptedIconLesson::Update( void )
 		}
 
 		// Process all update events
-		for ( int iLessonEvent = 0; iLessonEvent < pLesson->m_UpdateEvents.Count(); ++iLessonEvent )
+		for ( int iLessonEvent = 0; iLessonEvent < std::ssize( pLesson->m_UpdateEvents ); ++iLessonEvent )
 		{
 			const LessonEvent_t *pLessonEvent = &(pLesson->m_UpdateEvents[ iLessonEvent ]);
 
@@ -1498,8 +1498,8 @@ void CScriptedIconLesson::FireGameEvent( IGameEvent *event )
 	ProcessOpenGameEvents( this, name, event );
 
 	// Close and success events run on the children
-	const CUtlVector < CBaseLesson * > *pChildren = GetChildren();
-	for ( int iChild = 0; iChild < pChildren->Count(); ++iChild )
+	const std::vector< CBaseLesson * > *pChildren = GetChildren();
+	for ( int iChild = 0; iChild < std::ssize( *pChildren ); ++iChild )
 	{
 		CScriptedIconLesson *pScriptedChild = dynamic_cast<CScriptedIconLesson*>( (*pChildren)[ iChild ] );
 		
@@ -1524,7 +1524,7 @@ void CScriptedIconLesson::ProcessOpenGameEvents( const CScriptedIconLesson *pRoo
 		return;
 	}
 
-	for ( int iLessonEvent = 0; iLessonEvent < pRootLesson->m_OpenEvents.Count(); ++iLessonEvent )
+	for ( int iLessonEvent = 0; iLessonEvent < std::ssize( pRootLesson->m_OpenEvents ); ++iLessonEvent )
 	{
 		const LessonEvent_t *pLessonEvent = &(pRootLesson->m_OpenEvents[ iLessonEvent ]);
 
@@ -1591,7 +1591,7 @@ void CScriptedIconLesson::ProcessOpenGameEvents( const CScriptedIconLesson *pRoo
 
 void CScriptedIconLesson::ProcessCloseGameEvents( const CScriptedIconLesson *pRootLesson, const char *name, IGameEvent *event )
 {
-	for ( int iLessonEvent = 0; iLessonEvent < pRootLesson->m_CloseEvents.Count() && IsOpenOpportunity(); ++iLessonEvent )
+	for ( int iLessonEvent = 0; iLessonEvent < std::ssize( pRootLesson->m_CloseEvents ) && IsOpenOpportunity(); ++iLessonEvent )
 	{
 		const LessonEvent_t *pLessonEvent = &(pRootLesson->m_CloseEvents[ iLessonEvent ]);
 
@@ -1620,7 +1620,7 @@ void CScriptedIconLesson::ProcessCloseGameEvents( const CScriptedIconLesson *pRo
 
 void CScriptedIconLesson::ProcessSuccessGameEvents( const CScriptedIconLesson *pRootLesson, const char *name, IGameEvent *event )
 {
-	for ( int iLessonEvent = 0; iLessonEvent < pRootLesson->m_SuccessEvents.Count(); ++iLessonEvent )
+	for ( int iLessonEvent = 0; iLessonEvent < std::ssize( pRootLesson->m_SuccessEvents ); ++iLessonEvent )
 	{
 		const LessonEvent_t *pLessonEvent = &(pRootLesson->m_SuccessEvents[ iLessonEvent ]);
 
@@ -1649,9 +1649,9 @@ void CScriptedIconLesson::ProcessSuccessGameEvents( const CScriptedIconLesson *p
 
 LessonVariable LessonVariableFromString( const char *pchName, bool bWarnOnInvalidNames )
 {
-	int slot = g_NameToTypeMap.Find( pchName );
-	if ( slot != g_NameToTypeMap.InvalidIndex() )
-		return g_NameToTypeMap[ slot ];
+	auto it = g_NameToTypeMap.find( pchName );
+	if ( it != g_NameToTypeMap.end() )
+		return it->second;
 
 	if ( bWarnOnInvalidNames )
 	{
@@ -1664,14 +1664,14 @@ LessonVariable LessonVariableFromString( const char *pchName, bool bWarnOnInvali
 
 _fieldtypes LessonParamTypeFromString( const char *pchName )
 {
-	if ( g_TypeToParamTypeMap.Count() == 0 )
+	if ( g_TypeToParamTypeMap.empty() )
 	{
 		CScriptedIconLesson::PreReadLessonsFromFile();
 	}
 
-	int slot = g_TypeToParamTypeMap.Find( pchName );
-	if ( slot != g_TypeToParamTypeMap.InvalidIndex() )
-		return g_TypeToParamTypeMap[ slot ];
+	auto it = g_TypeToParamTypeMap.find( pchName );
+	if ( it != g_TypeToParamTypeMap.end() )
+		return it->second;
 
 	DevWarning( "Invalid scripted lesson variable/param type: %s\n", pchName );
 	return FIELD_VOID;
@@ -1679,15 +1679,15 @@ _fieldtypes LessonParamTypeFromString( const char *pchName )
 
 int LessonActionFromString( const char *pchName )
 {
-	int slot = CScriptedIconLesson::LessonActionMap.Find( pchName );
-	if ( slot != CScriptedIconLesson::LessonActionMap.InvalidIndex() )
-		return CScriptedIconLesson::LessonActionMap[ slot ];
+	auto it = CScriptedIconLesson::LessonActionMap.find( pchName );
+	if ( it != CScriptedIconLesson::LessonActionMap.end() )
+		return it->second;
 
 	DevWarning( "Invalid scripted lesson action: %s\n", pchName );
 	return LESSON_ACTION_NONE;
 }
 
-void CScriptedIconLesson::InitElementsFromKeys( CUtlVector< LessonElement_t > *pLessonElements, KeyValues *pKey )
+void CScriptedIconLesson::InitElementsFromKeys( std::vector< LessonElement_t > *pLessonElements, KeyValues *pKey )
 {
 	KeyValues *pSubKey = nullptr;
 	for ( pSubKey = pKey->GetFirstSubKey(); pSubKey; pSubKey = pSubKey->GetNextKey() )
@@ -1751,16 +1751,16 @@ void CScriptedIconLesson::InitElementsFromKeys( CUtlVector< LessonElement_t > *p
 			// See if our param is a scripted var
 			LessonVariable iParamVarIndex = LessonVariableFromString( pchParam, false );
 
-			pLessonElements->AddToTail( LessonElement_t( iVariable, iAction, bNot, bOptionalParam, pchParam, iParamVarIndex, paramType ) );
+			pLessonElements->push_back( LessonElement_t( iVariable, iAction, bNot, bOptionalParam, pchParam, iParamVarIndex, paramType ) );
 		}
 	}
 }
 
-void CScriptedIconLesson::InitElementsFromElements( CUtlVector< LessonElement_t > *pLessonElements, const CUtlVector< LessonElement_t > *pLessonElements2 )
+void CScriptedIconLesson::InitElementsFromElements( std::vector< LessonElement_t > *pLessonElements, const std::vector< LessonElement_t > *pLessonElements2 )
 {
-	for ( int i = 0; i < pLessonElements2->Count(); ++i )
+	for ( int i = 0; i < std::ssize( *pLessonElements2 ); ++i )
 	{
-		pLessonElements->AddToTail( LessonElement_t( (*pLessonElements2)[ i ] ) );
+		pLessonElements->push_back( LessonElement_t( (*pLessonElements2)[ i ] ) );
 	}
 }
 
@@ -1833,7 +1833,7 @@ void CScriptedIconLesson::InitFromKeys( KeyValues *pKey )
 		{
 			CGameInstructorSymbol pName;
 			pName = pSubKey->GetString();
-			m_PrerequisiteNames.AddToTail( pName );
+			m_PrerequisiteNames.push_back( pName );
 		}
 		else if ( pSubKey->GetNameSymbol() == s_nOpenSymbol )
 		{
@@ -1939,7 +1939,7 @@ void CScriptedIconLesson::InitFromKeys( KeyValues *pKey )
 	}
 }
 
-bool CScriptedIconLesson::ProcessElements( IGameEvent *event, const CUtlVector< LessonElement_t > *pElements )
+bool CScriptedIconLesson::ProcessElements( IGameEvent *event, const std::vector< LessonElement_t > *pElements )
 {
 	VPROF_BUDGET( "CScriptedIconLesson::ProcessElements", "GameInstructor" );
 
@@ -1952,7 +1952,7 @@ bool CScriptedIconLesson::ProcessElements( IGameEvent *event, const CUtlVector< 
 	if ( gameinstructor_find_errors.GetBool() )
 	{
 		// Just run them all to check for errors!
-		for ( int iElement = 0; iElement < pElements->Count(); ++iElement )
+		for ( int iElement = 0; iElement < std::ssize( *pElements ); ++iElement )
 		{
 			ProcessElement( event, &((*pElements)[ iElement ] ), false );
 		}
@@ -1961,7 +1961,7 @@ bool CScriptedIconLesson::ProcessElements( IGameEvent *event, const CUtlVector< 
 	}
 
 	// Process each element until a step fails
-	for ( int iElement = 0; iElement < pElements->Count(); ++iElement )
+	for ( int iElement = 0; iElement < std::ssize( *pElements ); ++iElement )
 	{
 		if ( nContinueScope == m_iScopeDepth )
 		{
@@ -3748,31 +3748,31 @@ bool CScriptedIconLesson::ProcessElementAction( int iAction, bool bNot, const ch
 
 LessonEvent_t * CScriptedIconLesson::AddOpenEvent( void )
 {
-	int iNewLessonEvent = m_OpenEvents.AddToTail();
+	int iNewLessonEvent = std::ssize( m_OpenEvents ); m_OpenEvents.emplace_back();
 	return &(m_OpenEvents[ iNewLessonEvent ]);
 }
 
 LessonEvent_t * CScriptedIconLesson::AddCloseEvent( void )
 {
-	int iNewLessonEvent = m_CloseEvents.AddToTail();
+	int iNewLessonEvent = std::ssize( m_CloseEvents ); m_CloseEvents.emplace_back();
 	return &(m_CloseEvents[ iNewLessonEvent ]);
 }
 
 LessonEvent_t * CScriptedIconLesson::AddSuccessEvent( void )
 {
-	int iNewLessonEvent = m_SuccessEvents.AddToTail();
+	int iNewLessonEvent = std::ssize( m_SuccessEvents ); m_SuccessEvents.emplace_back();
 	return &(m_SuccessEvents[ iNewLessonEvent ]);
 }
 
 LessonEvent_t * CScriptedIconLesson::AddOnOpenEvent( void )
 {
-	int iNewLessonEvent = m_OnOpenEvents.AddToTail();
+	int iNewLessonEvent = std::ssize( m_OnOpenEvents ); m_OnOpenEvents.emplace_back();
 	return &(m_OnOpenEvents[ iNewLessonEvent ]);
 }
 
 LessonEvent_t * CScriptedIconLesson::AddUpdateEvent( void )
 {
-	int iNewLessonEvent = m_UpdateEvents.AddToTail();
+	int iNewLessonEvent = std::ssize( m_UpdateEvents ); m_UpdateEvents.emplace_back();
 	return &(m_UpdateEvents[ iNewLessonEvent ]);
 }
 
@@ -3808,66 +3808,66 @@ void CScriptedIconLesson::PreReadLessonsFromFile()
 #undef LESSON_VARIABLE_MACRO_STRING
 
 	// Set up mapping of field types
-	g_TypeToParamTypeMap.Insert( "float", FIELD_FLOAT );
-	g_TypeToParamTypeMap.Insert( "string", FIELD_STRING );
-	g_TypeToParamTypeMap.Insert( "int", FIELD_INTEGER );
-	g_TypeToParamTypeMap.Insert( "integer", FIELD_INTEGER );
-	g_TypeToParamTypeMap.Insert( "short", FIELD_INTEGER );
-	g_TypeToParamTypeMap.Insert( "long", FIELD_INTEGER );
-	g_TypeToParamTypeMap.Insert( "bool", FIELD_BOOLEAN );
-	g_TypeToParamTypeMap.Insert( "player", FIELD_CUSTOM );
-	g_TypeToParamTypeMap.Insert( "entity", FIELD_EHANDLE );
-	g_TypeToParamTypeMap.Insert( "convar", FIELD_EMBEDDED );
-	g_TypeToParamTypeMap.Insert( "void", FIELD_VOID );
+	g_TypeToParamTypeMap.emplace( "float", FIELD_FLOAT );
+	g_TypeToParamTypeMap.emplace( "string", FIELD_STRING );
+	g_TypeToParamTypeMap.emplace( "int", FIELD_INTEGER );
+	g_TypeToParamTypeMap.emplace( "integer", FIELD_INTEGER );
+	g_TypeToParamTypeMap.emplace( "short", FIELD_INTEGER );
+	g_TypeToParamTypeMap.emplace( "long", FIELD_INTEGER );
+	g_TypeToParamTypeMap.emplace( "bool", FIELD_BOOLEAN );
+	g_TypeToParamTypeMap.emplace( "player", FIELD_CUSTOM );
+	g_TypeToParamTypeMap.emplace( "entity", FIELD_EHANDLE );
+	g_TypeToParamTypeMap.emplace( "convar", FIELD_EMBEDDED );
+	g_TypeToParamTypeMap.emplace( "void", FIELD_VOID );
 
 	// Set up the lesson action map
 	
-	CScriptedIconLesson::LessonActionMap.Insert( "scope in", LESSON_ACTION_SCOPE_IN );
-	CScriptedIconLesson::LessonActionMap.Insert( "scope out", LESSON_ACTION_SCOPE_OUT );
-	CScriptedIconLesson::LessonActionMap.Insert( "close", LESSON_ACTION_CLOSE );
-	CScriptedIconLesson::LessonActionMap.Insert( "success", LESSON_ACTION_SUCCESS );
-	CScriptedIconLesson::LessonActionMap.Insert( "lock", LESSON_ACTION_LOCK );
-	CScriptedIconLesson::LessonActionMap.Insert( "present complete", LESSON_ACTION_PRESENT_COMPLETE );
-	CScriptedIconLesson::LessonActionMap.Insert( "present start", LESSON_ACTION_PRESENT_START );
-	CScriptedIconLesson::LessonActionMap.Insert( "present end", LESSON_ACTION_PRESENT_END );
+	CScriptedIconLesson::LessonActionMap.emplace( "scope in", LESSON_ACTION_SCOPE_IN );
+	CScriptedIconLesson::LessonActionMap.emplace( "scope out", LESSON_ACTION_SCOPE_OUT );
+	CScriptedIconLesson::LessonActionMap.emplace( "close", LESSON_ACTION_CLOSE );
+	CScriptedIconLesson::LessonActionMap.emplace( "success", LESSON_ACTION_SUCCESS );
+	CScriptedIconLesson::LessonActionMap.emplace( "lock", LESSON_ACTION_LOCK );
+	CScriptedIconLesson::LessonActionMap.emplace( "present complete", LESSON_ACTION_PRESENT_COMPLETE );
+	CScriptedIconLesson::LessonActionMap.emplace( "present start", LESSON_ACTION_PRESENT_START );
+	CScriptedIconLesson::LessonActionMap.emplace( "present end", LESSON_ACTION_PRESENT_END );
 
-	CScriptedIconLesson::LessonActionMap.Insert( "reference open", LESSON_ACTION_REFERENCE_OPEN );
+	CScriptedIconLesson::LessonActionMap.emplace( "reference open", LESSON_ACTION_REFERENCE_OPEN );
 
-	CScriptedIconLesson::LessonActionMap.Insert( "is multiplayer", LESSON_ACTION_IS_MULTIPLAYER );
+	CScriptedIconLesson::LessonActionMap.emplace( "is multiplayer", LESSON_ACTION_IS_MULTIPLAYER );
 
-	CScriptedIconLesson::LessonActionMap.Insert( "set", LESSON_ACTION_SET );
-	CScriptedIconLesson::LessonActionMap.Insert( "add", LESSON_ACTION_ADD );
-	CScriptedIconLesson::LessonActionMap.Insert( "subtract", LESSON_ACTION_SUBTRACT );
-	CScriptedIconLesson::LessonActionMap.Insert( "multiply", LESSON_ACTION_MULTIPLY );
-	CScriptedIconLesson::LessonActionMap.Insert( "is", LESSON_ACTION_IS );
-	CScriptedIconLesson::LessonActionMap.Insert( "less than", LESSON_ACTION_LESS_THAN );
-	CScriptedIconLesson::LessonActionMap.Insert( "has prefix", LESSON_ACTION_HAS_PREFIX );
-	CScriptedIconLesson::LessonActionMap.Insert( "has bit", LESSON_ACTION_HAS_BIT );
-	CScriptedIconLesson::LessonActionMap.Insert( "bit count is", LESSON_ACTION_BIT_COUNT_IS );
-	CScriptedIconLesson::LessonActionMap.Insert( "bit count less than", LESSON_ACTION_BIT_COUNT_LESS_THAN );
+	CScriptedIconLesson::LessonActionMap.emplace( "set", LESSON_ACTION_SET );
+	CScriptedIconLesson::LessonActionMap.emplace( "add", LESSON_ACTION_ADD );
+	CScriptedIconLesson::LessonActionMap.emplace( "subtract", LESSON_ACTION_SUBTRACT );
+	CScriptedIconLesson::LessonActionMap.emplace( "multiply", LESSON_ACTION_MULTIPLY );
+	CScriptedIconLesson::LessonActionMap.emplace( "is", LESSON_ACTION_IS );
+	CScriptedIconLesson::LessonActionMap.emplace( "less than", LESSON_ACTION_LESS_THAN );
+	CScriptedIconLesson::LessonActionMap.emplace( "has prefix", LESSON_ACTION_HAS_PREFIX );
+	CScriptedIconLesson::LessonActionMap.emplace( "has bit", LESSON_ACTION_HAS_BIT );
+	CScriptedIconLesson::LessonActionMap.emplace( "bit count is", LESSON_ACTION_BIT_COUNT_IS );
+	CScriptedIconLesson::LessonActionMap.emplace( "bit count less than", LESSON_ACTION_BIT_COUNT_LESS_THAN );
 
-	CScriptedIconLesson::LessonActionMap.Insert( "get distance", LESSON_ACTION_GET_DISTANCE );
-	CScriptedIconLesson::LessonActionMap.Insert( "get angular distance", LESSON_ACTION_GET_ANGULAR_DISTANCE );
-	CScriptedIconLesson::LessonActionMap.Insert( "get player display name", LESSON_ACTION_GET_PLAYER_DISPLAY_NAME );
-	CScriptedIconLesson::LessonActionMap.Insert( "classname is", LESSON_ACTION_CLASSNAME_IS );
-	CScriptedIconLesson::LessonActionMap.Insert( "modelname is", LESSON_ACTION_MODELNAME_IS );
-	CScriptedIconLesson::LessonActionMap.Insert( "team is", LESSON_ACTION_TEAM_IS );
-	CScriptedIconLesson::LessonActionMap.Insert( "health less than", LESSON_ACTION_HEALTH_LESS_THAN );
-	CScriptedIconLesson::LessonActionMap.Insert( "health percentage less than", LESSON_ACTION_HEALTH_PERCENTAGE_LESS_THAN );
-	CScriptedIconLesson::LessonActionMap.Insert( "get active weapon", LESSON_ACTION_GET_ACTIVE_WEAPON );
-	CScriptedIconLesson::LessonActionMap.Insert( "weapon is", LESSON_ACTION_WEAPON_IS );
-	CScriptedIconLesson::LessonActionMap.Insert( "weapon has", LESSON_ACTION_WEAPON_HAS );
-	CScriptedIconLesson::LessonActionMap.Insert( "get active weapon slot", LESSON_ACTION_GET_ACTIVE_WEAPON_SLOT );
-	CScriptedIconLesson::LessonActionMap.Insert( "get weapon slot", LESSON_ACTION_GET_WEAPON_SLOT );
-	CScriptedIconLesson::LessonActionMap.Insert( "get weapon in slot", LESSON_ACTION_GET_WEAPON_IN_SLOT );
-	CScriptedIconLesson::LessonActionMap.Insert( "clip percentage less than", LESSON_ACTION_CLIP_PERCENTAGE_LESS_THAN);
-	CScriptedIconLesson::LessonActionMap.Insert( "weapon ammo low", LESSON_ACTION_WEAPON_AMMO_LOW );
-	CScriptedIconLesson::LessonActionMap.Insert( "weapon ammo full", LESSON_ACTION_WEAPON_AMMO_FULL );
-	CScriptedIconLesson::LessonActionMap.Insert( "weapon ammo empty", LESSON_ACTION_WEAPON_AMMO_EMPTY );
-	CScriptedIconLesson::LessonActionMap.Insert( "weapon can use", LESSON_ACTION_WEAPON_CAN_USE );
-	CScriptedIconLesson::LessonActionMap.Insert( "use target is", LESSON_ACTION_USE_TARGET_IS );
-	CScriptedIconLesson::LessonActionMap.Insert( "get use target", LESSON_ACTION_GET_USE_TARGET );
-	CScriptedIconLesson::LessonActionMap.Insert( "get potential use target", LESSON_ACTION_GET_POTENTIAL_USE_TARGET );
+	CScriptedIconLesson::LessonActionMap.emplace( "get distance", LESSON_ACTION_GET_DISTANCE );
+	CScriptedIconLesson::LessonActionMap.emplace( "get angular distance", LESSON_ACTION_GET_ANGULAR_DISTANCE );
+	CScriptedIconLesson::LessonActionMap.emplace( "get player display name", LESSON_ACTION_GET_PLAYER_DISPLAY_NAME );
+	CScriptedIconLesson::LessonActionMap.emplace( "classname is", LESSON_ACTION_CLASSNAME_IS );
+	CScriptedIconLesson::LessonActionMap.emplace( "modelname is", LESSON_ACTION_MODELNAME_IS );
+	CScriptedIconLesson::LessonActionMap.emplace( "team is", LESSON_ACTION_TEAM_IS );
+	CScriptedIconLesson::LessonActionMap.emplace( "health less than", LESSON_ACTION_HEALTH_LESS_THAN );
+	CScriptedIconLesson::LessonActionMap.emplace( "health percentage less than", LESSON_ACTION_HEALTH_PERCENTAGE_LESS_THAN );
+	CScriptedIconLesson::LessonActionMap.emplace( "get active weapon", LESSON_ACTION_GET_ACTIVE_WEAPON );
+	CScriptedIconLesson::LessonActionMap.emplace( "weapon is", LESSON_ACTION_WEAPON_IS );
+	CScriptedIconLesson::LessonActionMap.emplace( "weapon has", LESSON_ACTION_WEAPON_HAS );
+	CScriptedIconLesson::LessonActionMap.emplace( "get active weapon slot", LESSON_ACTION_GET_ACTIVE_WEAPON_SLOT );
+	CScriptedIconLesson::LessonActionMap.emplace( "get weapon slot", LESSON_ACTION_GET_WEAPON_SLOT );
+	CScriptedIconLesson::LessonActionMap.emplace( "get weapon in slot", LESSON_ACTION_GET_WEAPON_IN_SLOT );
+	CScriptedIconLesson::LessonActionMap.emplace( "clip percentage less than", LESSON_ACTION_CLIP_PERCENTAGE_LESS_THAN);
+	CScriptedIconLesson::LessonActionMap.emplace( "weapon ammo low", LESSON_ACTION_WEAPON_AMMO_LOW );
+	CScriptedIconLesson::LessonActionMap.emplace( "weapon ammo full", LESSON_ACTION_WEAPON_AMMO_FULL );
+	CScriptedIconLesson::LessonActionMap.emplace( "weapon ammo empty", LESSON_ACTION_WEAPON_AMMO_EMPTY );
+	CScriptedIconLesson::LessonActionMap.emplace( "weapon can use", LESSON_ACTION_WEAPON_CAN_USE );
+	CScriptedIconLesson::LessonActionMap.emplace( "use target is", LESSON_ACTION_USE_TARGET_IS );
+	CScriptedIconLesson::LessonActionMap.emplace( "get use target", LESSON_ACTION_GET_USE_TARGET );
+	CScriptedIconLesson::LessonActionMap.emplace( "get potential use target", LESSON_ACTION_GET_POTENTIAL_USE_TARGET );
 
 	// Add mod actions to the map
 	Mod_PreReadLessonsFromFile();

@@ -13,9 +13,6 @@
 #include "iengineui.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 ConVar locator_fade_time( "locator_fade_time", "0.3", FCVAR_NONE, "Number of seconds it takes for a lesson to fully fade in/out." );
 ConVar locator_lerp_rest( "locator_lerp_rest", "0.25f", FCVAR_NONE, "Number of seconds before moving from the center." );
@@ -114,8 +111,8 @@ void CLocatorTarget::Deactivate( bool bNoFade )
 		m_flNextOcclusionTest = 0.0f;
 		m_iBindingChoicesCount = 0;
 
-		m_wszCaption.RemoveAll();
-		m_wszCaption.AddToTail( (wchar_t)0 );
+		m_wszCaption.clear();
+		m_wszCaption.push_back( (wchar_t)0 );
 
 		m_bWasControllerLast = false;
 	}
@@ -271,9 +268,9 @@ void CLocatorTarget::SetCaptionText( const char *pszText, const char *pszParam )
 	}
 
 	int len = wcslen( outbuf ) + 1;
-	m_wszCaption.RemoveAll();
-	m_wszCaption.EnsureCount( len );
-	Q_wcsncpy( m_wszCaption.Base(), outbuf, len * sizeof( wchar_t ) );
+	m_wszCaption.clear();
+	ks::ensure_size( m_wszCaption, len );
+	Q_wcsncpy( m_wszCaption.data(), outbuf, len * sizeof( wchar_t ) );
 }
 
 void CLocatorTarget::SetCaptionColor( const char *pszCaptionColor )
@@ -281,13 +278,14 @@ void CLocatorTarget::SetCaptionColor( const char *pszCaptionColor )
 	int r,g,b;
 	r = g = b = 0;
 
-	CSplitString colorValues( pszCaptionColor, "," );
+	std::vector< std::string > colorValues;
+	V_SplitString( pszCaptionColor, ",", colorValues );
 
-	if( colorValues.Count() == 3 )
+	if( std::ssize( colorValues ) == 3 )
 	{
-		r = atoi( colorValues[0] );
-		g = atoi( colorValues[1] );
-		b = atoi( colorValues[2] );
+		r = atoi( colorValues[0].c_str() );
+		g = atoi( colorValues[1].c_str() );
+		b = atoi( colorValues[2].c_str() );
 
 		m_captionColor.SetColor( r,g,b, 255 );
 	}

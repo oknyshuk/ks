@@ -9,9 +9,6 @@
 #include "reflect_annotations.h"
 #include "modelentities.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 class [[= ks::reflect::NetTable{ .name = "DT_FuncReflectiveGlass" } ]]
       CFuncReflectiveGlass : public CFuncBrush
 {

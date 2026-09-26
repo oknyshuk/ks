@@ -6,10 +6,7 @@
 //=============================================================================//
 #include "cbase.h"
 #include "iclassmap.h"
-#include "utldict.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier1/map_ops.h"
 
 class classentry_t
 {
@@ -46,7 +43,7 @@ public:
 	virtual int				GetClassSize( const char *classname );
 
 private:
-	CUtlDict< classentry_t, unsigned short > m_ClassDict;
+	ks::idict< classentry_t > m_ClassDict;
 };
 
 IClassMap& GetClassMap( void )
@@ -61,43 +58,30 @@ void CClassMap::Add( const char *mapname, const char *classname, int size, DISPA
 	if ( map && !Q_strcasecmp( mapname, map ) )
 		return;
 
-	if ( map )
-	{
-		int index = m_ClassDict.Find( classname );
-		Assert( index != m_ClassDict.InvalidIndex() );
-		m_ClassDict.RemoveAt( index );
-	}
-
 	classentry_t element;
 	element.SetMapName( mapname );
 	element.factory = factory;
 	element.size = size;
-	m_ClassDict.Insert( classname, element );
+	m_ClassDict.insert_or_assign( classname, element );
 }
 
 const char *CClassMap::Lookup( const char *classname )
 {
-	unsigned short index;
 	static classentry_t lookup; 
 
-	index = m_ClassDict.Find( classname );
-	if ( index == m_ClassDict.InvalidIndex() )
+	auto it = m_ClassDict.find( classname );
+	if ( it == m_ClassDict.end() )
 		return nullptr;
 
-	lookup = m_ClassDict.Element( index );
+	lookup = it->second;
 	return lookup.GetMapName();
 }
 
 C_BaseEntity *CClassMap::CreateEntity( const char *mapname )
 {
-	int c = m_ClassDict.Count();
-	int i;
-
-	for ( i = 0; i < c; i++ )
+	for ( auto &[classname, entry] : m_ClassDict )
 	{
-		classentry_t *lookup = &m_ClassDict[ i ];
-		if ( !lookup )
-			continue;
+		classentry_t *lookup = &entry;
 
 		if ( Q_stricmp( lookup->GetMapName(), mapname ) )
 			continue;
@@ -105,7 +89,7 @@ C_BaseEntity *CClassMap::CreateEntity( const char *mapname )
 		if ( !lookup->factory )
 		{
 #if defined( _DEBUG )
-			Msg( "No factory for %s/%s\n", lookup->GetMapName(), m_ClassDict.GetElementName( i ) );
+			Msg( "No factory for %s/%s\n", lookup->GetMapName(), classname.c_str() );
 #endif
 			continue;
 		}
@@ -118,14 +102,9 @@ C_BaseEntity *CClassMap::CreateEntity( const char *mapname )
 
 int CClassMap::GetClassSize( const char *classname )
 {
-	int c = m_ClassDict.Count();
-	int i;
-
-	for ( i = 0; i < c; i++ )
+	for ( auto &[name, entry] : m_ClassDict )
 	{
-		classentry_t *lookup = &m_ClassDict[ i ];
-		if ( !lookup )
-			continue;
+		classentry_t *lookup = &entry;
 
 		if ( Q_strcmp( lookup->GetMapName(), classname ) )
 			continue;

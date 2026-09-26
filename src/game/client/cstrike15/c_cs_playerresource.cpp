@@ -18,9 +18,6 @@
 #include "c_cs_team.h"
 #include "cs_item_inventory.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 IMPLEMENT_REFLECT_CLIENTCLASS( C_CS_PlayerResource, DT_CSPlayerResource, CCSPlayerResource )
 #if CS_CONTROLLABLE_BOTS_ENABLED 

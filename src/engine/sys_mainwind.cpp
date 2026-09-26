@@ -1,10 +1,11 @@
 //===== Copyright 1996-2005, Valve Corporation, All rights reserved. ======//
 //
-// Purpose: 
+// Purpose:
 //
 //===========================================================================//
 #undef PROTECTED_THINGS_ENABLE
 #include <SDL3/SDL.h>
+#include "tier1/text_reader.h"
 
 
 	#include "tier0/dynfunction.h"
@@ -54,9 +55,6 @@
 
 #include "cl_steamauth.h"
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 extern ConVar cv_uipanel_active;
 
@@ -189,7 +187,7 @@ struct GameMessageHandler_t
 	void (CGame::*pFn)( const InputEvent_t &event );
 };
 
-GameMessageHandler_t g_GameMessageHandlers[] = 
+GameMessageHandler_t g_GameMessageHandlers[] =
 {
 	{ IE_AppActivated,			&CGame::HandleMsg_ActivateApp },
 	{ IE_WindowMove,			&CGame::HandleMsg_WindowMove },
@@ -234,7 +232,7 @@ void CGame::AppActivate( bool fActive )
 			// Clear keyboard states (should be cleared already but...)
 			// UI_ActivateMouse will reactivate the mouse soon.
 			ClearIOStates();
-			
+
 			UpdateMaterialSystemConfig();
 		}
 		else
@@ -294,7 +292,7 @@ void CGame::DispatchInputEvent( const InputEvent_t &event )
 {
 	switch( event.m_nType )
 	{
-	// Handle button events specially, 
+	// Handle button events specially,
 	// since we have all manner of crazy filtering going on	when dealing with them
 	case IE_ButtonPressed:
 	case IE_ButtonDoubleClicked:
@@ -364,7 +362,7 @@ void VCR_EnterPausedState()
 
 
 //-----------------------------------------------------------------------------
-// Purpose: The user has accepted an invitation to a game, we need to detect if 
+// Purpose: The user has accepted an invitation to a game, we need to detect if
 //			it's our game and restart properly if it is
 //-----------------------------------------------------------------------------
 void XBX_HandleInvite( DWORD nUserId )
@@ -409,7 +407,7 @@ bool CGame::CreateGameWindow( void )
 		V_strcat( windowName, " - ", sizeof( windowName ) );
 		V_strcat( windowName, p, sizeof( windowName ) );
 	}
-		
+
 	modinfo->deleteThis();
 	modinfo = nullptr;
 
@@ -432,14 +430,14 @@ bool CGame::CreateGameWindow( void )
 		Error( "Fatal Error:  Unable to create game window!" );
 		return false;
 	}
-	
+
 	char localPath[ MAX_PATH ];
 	if ( g_pFileSystem->GetLocalPath( "resource/game-icon.bmp", localPath, sizeof(localPath) ) )
 	{
 		g_pFileSystem->GetLocalCopy( localPath );
 		g_pLauncherMgr->SetApplicationIcon( localPath );
 	}
-	
+
 	SetMainWindow( ( HWND )GetGameSDLWindow() );
 
 	AttachToWindow( );
@@ -448,7 +446,7 @@ bool CGame::CreateGameWindow( void )
 
 
 //-----------------------------------------------------------------------------
-// Destroys the game window 
+// Destroys the game window
 //-----------------------------------------------------------------------------
 void CGame::DestroyGameWindow()
 {
@@ -498,7 +496,7 @@ void CGame::DetachFromWindow()
 
 //-----------------------------------------------------------------------------
 // This is used in edit mode to override the default wnd proc associated w/
-// the game window specified in SetGameWindow. 
+// the game window specified in SetGameWindow.
 //-----------------------------------------------------------------------------
 bool CGame::InputAttachToGameWindow()
 {
@@ -547,11 +545,11 @@ void CGame::PlayStartupVideos( void )
 	bool bRecap = CommandLine()->CheckParm("-recapvid") ? true : false;	// FIXME: This is a temp addition until the movie playback is centralized -- jdw
 	bool bNeedHealthWarning = g_pFullFileSystem->FileExists( "media/HealthWarning.txt" );
 
-	if ( !bNeedHealthWarning && 
-		!bEndGame && 
-		!bRecap && 
-		( CommandLine()->CheckParm( "-dev" ) || 
-			CommandLine()->CheckParm( "-novid" ) || 
+	if ( !bNeedHealthWarning &&
+		!bEndGame &&
+		!bRecap &&
+		( CommandLine()->CheckParm( "-dev" ) ||
+			CommandLine()->CheckParm( "-novid" ) ||
 			CommandLine()->CheckParm( "-allowdebug" ) ||
 			CommandLine()->CheckParm( "-console" ) ||
 			CommandLine()->CheckParm( "-toconsole" ) ) )
@@ -563,7 +561,7 @@ void CGame::PlayStartupVideos( void )
 		// Don't go back into the map that triggered this.
 		CommandLine()->RemoveParm( "+map" );
 		CommandLine()->RemoveParm( "+load" );
-		
+
 		pszFile = "media/EndGameVids.txt";
 	}
 	else if ( bRecap )
@@ -577,7 +575,7 @@ void CGame::PlayStartupVideos( void )
 
 #endif // DEDICATED
 }
-	
+
 
 //-----------------------------------------------------------------------------
 // Purpose: Tests for players attempting to skip a movie via keypress
@@ -585,8 +583,8 @@ void CGame::PlayStartupVideos( void )
 bool UserRequestingMovieSkip( void )
 {
 
-	return ( g_pInputSystem->IsButtonDown( KEY_ESCAPE ) || 
-			g_pInputSystem->IsButtonDown( KEY_SPACE ) || 
+	return ( g_pInputSystem->IsButtonDown( KEY_ESCAPE ) ||
+			g_pInputSystem->IsButtonDown( KEY_SPACE ) ||
 			g_pInputSystem->IsButtonDown( KEY_ENTER ) );
 }
 
@@ -595,30 +593,31 @@ void CGame::PlayVideoListAndWait( const char *szVideoFileList, bool bNeedHealthW
 {
 #ifndef DEDICATED
 
-	CUtlBuffer vidBuffer( 0, 0, CUtlBuffer::TEXT_BUFFER );
-	if ( !g_pFullFileSystem->ReadFile( szVideoFileList, "GAME", vidBuffer ) )
+	auto vidData = g_pFullFileSystem->ReadFile( szVideoFileList, "GAME" );
+	if ( !vidData )
 	{
 		return;
 	}
+	ks::text_reader vidBuffer( ks::text_view( *vidData ) );
 
 	bool CursorStateBak = SDL_CursorVisible();
 	SDL_HideCursor();
-	
+
 
 
 	characterset_t breakSet;
 	CharacterSetBuild( &breakSet, "" );
-	char moviePath[MAX_PATH];
 	while ( !IsPS3QuitRequested() )
 	{
-		int nTokenSize = vidBuffer.ParseToken( &breakSet, moviePath, sizeof( moviePath ) );
-		if ( nTokenSize <= 0 )
+		auto token = vidBuffer.read_token( breakSet );
+		if ( !token || token->empty() )
 		{
 			break;
 		}
 
 		// get the path to the file and play it.
-		PlayVideoAndWait( moviePath, bNeedHealthWarning );
+		const std::string moviePath( *token );
+		PlayVideoAndWait( moviePath.c_str(), bNeedHealthWarning );
 	}
 
 
@@ -666,7 +665,7 @@ CGame::~CGame()
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 bool CGame::Init( void *pvInstance )
 {
@@ -743,15 +742,9 @@ void CGame::GetDesktopInfo( int &width, int &height, int &refreshrate )
 
 void CGame::UpdateDesktopInformation( HWND hWnd )
 {
-	// Get the size of the display we will be displayed fullscreen on.
-	static ConVarRef sdl_displayindex( "sdl_displayindex" );
-	int displayIndex = sdl_displayindex.IsValid() ? sdl_displayindex.GetInt() : 0;
-
-	int numDisplays = 0;
-	SDL_DisplayID *displays = SDL_GetDisplays( &numDisplays );
-	SDL_DisplayID displayID = ( displays && displayIndex < numDisplays ) ? displays[displayIndex] : SDL_GetPrimaryDisplay();
-	if ( displays )
-		SDL_free( displays );
+	SDL_DisplayID displayID = SDL_GetDisplayForWindow( (SDL_Window *)hWnd );
+	if ( !displayID )
+		displayID = SDL_GetPrimaryDisplay();
 
 	const SDL_DisplayMode *mode = SDL_GetDesktopDisplayMode( displayID );
 	if ( mode )
@@ -833,4 +826,3 @@ void CGame::OnScreenSizeChanged( int nOldWidth, int nOldHeight )
 		g_ClientDLL->OnScreenSizeChanged( nOldWidth, nOldHeight );
 	}
 }
-

@@ -11,6 +11,7 @@
 #include "ichoreoeventcallback.h"
 
 #include "reflect_annotations.h"
+#include <vector>
 
 // named by the Proxy<> annotation below; defined in c_sceneentity.cpp
 void RecvProxy_ForcedClientTime( const CRecvProxyData *pData, void *pStruct, void *pOut );
@@ -46,7 +47,7 @@ public:
 
 	void					OnResetClientTime();
 
-	CHandle< C_BaseFlex >	GetActor( int i ){ return ( i < m_hActorList.Count() ) ? m_hActorList[i] : INVALID_EHANDLE; }
+	CHandle< C_BaseFlex >	GetActor( int i ){ return ( i < std::ssize( m_hActorList ) ) ? m_hActorList[i] : INVALID_EHANDLE; }
 
 	virtual	void			DispatchStartSpeak( CChoreoScene *scene, C_BaseFlex *actor, CChoreoEvent *event, soundlevel_t iSoundlevel );
 	virtual void			DispatchEndSpeak( CChoreoScene *scene, C_BaseFlex *actor, CChoreoEvent *event );
@@ -101,7 +102,7 @@ private:
 
 	CHandle< C_BaseFlex >	m_hOwner; // if set, this overrides the m_hActorList in FindNamedActor()
 
-	CUtlVector< CHandle< C_BaseFlex > > m_hActorList;		
+	std::vector< CHandle< C_BaseFlex > > m_hActorList;
 
 private:
 	bool		m_bWasPlaying;
@@ -115,7 +116,7 @@ private:
 		CChoreoEvent	*event;
 	};
 
-	CUtlVector< QueuedEvents_t > m_QueuedEvents;
+	std::vector< QueuedEvents_t > m_QueuedEvents;
 };
 
 #endif // C_SCENEENTITY_H

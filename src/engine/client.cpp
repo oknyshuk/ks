@@ -48,9 +48,7 @@
 #include "tier0/platform.h"
 #include "tier0/systeminformation.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 ConVar cl_timeout( "cl_timeout", "30", FCVAR_ARCHIVE, "After this many seconds without receiving a packet from the server, the client will disconnect itself"
 #ifndef _DEBUG
 	, true, 4, true, 30
@@ -687,7 +685,7 @@ float CClientState::GetClientInterpAmount()
 	if ( pBounded )
 		flInterpRatio = pBounded->GetFloat();
 	//#define FIXME_INTERP_RATIO
-	return MAX( flInterpRatio / cl_updaterate->GetFloat(), flInterp );
+	return std::max( flInterpRatio / cl_updaterate->GetFloat(), flInterp );
 }
 
 //-----------------------------------------------------------------------------
@@ -725,7 +723,7 @@ void CClientState::Clear( void )
 	oldtickcount = 0;
 	insimulation = false;
 
-	addangle.RemoveAll();
+	addangle.clear();
 	addangletotal = 0.0f;
 	prevaddangletotal = 0.0f;
 
@@ -770,7 +768,7 @@ bool CClientState::ProcessConnectionlessPacket( netpacket_t *packet )
 void CClientState::ConnectionStart( INetChannel *chan )
 {
 	CBaseClientState::ConnectionStart( chan );
-	m_SVCMsgHltvReplay.Bind< CSVCMsg_HltvReplay_t >( chan, UtlMakeDelegate( this, &CClientState::SVCMsg_HltvReplay ) );
+	m_SVCMsgHltvReplay.Bind< CSVCMsg_HltvReplay_t >( chan, std::bind_front( &CClientState::SVCMsg_HltvReplay, this ) );
 }
 
 void CClientState::ConnectionStop(  )
@@ -1279,7 +1277,7 @@ void CClientState::AddCustomFile( int slot, const char *resourceFile)
 	}
 
 	/* Finally, validate the VTF file. TODO
-	CUtlVector<char> fileData;
+	std::vector< char > fileData;
 	if ( LogoFile_ReadFile( crcValue, fileData ) )
 	{
 		bValid = true;
@@ -1386,7 +1384,7 @@ void CClientState::ReadDeletions( CEntityReadInfo &u )
 		int nDelta = u.m_pBuf->ReadUBitVar();
 		int nSlot = nBase + nDelta;
 
-		Assert( !u.m_pTo->transmit_entity.Get( nSlot ) );
+		Assert( !u.m_pTo->transmit_entity[nSlot] );
 
 		CL_DeleteDLLEntity( nSlot, "ReadDeletions" );
 
@@ -1517,7 +1515,7 @@ void CClientState::ReadPacketEntities( CEntityReadInfo &u )
 					}
 					else
 					{
-						Assert( !u.m_pTo->transmit_entity.Get( oldEntity ) );
+						Assert( !u.m_pTo->transmit_entity[oldEntity] );
 
 						if ( u.m_UpdateFlags & FHDR_DELETE )
 						{
@@ -1545,7 +1543,7 @@ void CClientState::ReadPacketEntities( CEntityReadInfo &u )
 					}
 					else
 					{
-						Assert( u.m_pFrom->transmit_entity.Get(oldEntity) );
+						Assert( u.m_pFrom->transmit_entity[oldEntity] );
 
 						// copy one of the old entities over to the new packet unchanged
 						if ( u.m_nNewEntity < 0 || u.m_nNewEntity >= MAX_EDICTS )
@@ -1554,7 +1552,7 @@ void CClientState::ReadPacketEntities( CEntityReadInfo &u )
 						}
 
 						u.m_pTo->last_entity = oldEntity;
-						u.m_pTo->transmit_entity.Set( oldEntity );
+						u.m_pTo->transmit_entity.set( oldEntity );
 
 						if ( bRecord )
 						{
@@ -2251,7 +2249,7 @@ void CClientState::RunFrame()
 	else if ( s_bLowPagedPoolMemoryWarning )
 	{
 		s_bLowPagedPoolMemoryWarning = false;
-		Msg( "Info: OS Paged Pool Memory restored - currently %d pages free (%d Kb) of total %d pages (%d Kb total).\n",
+		Msg( "Info: OS Paged Pool Memory restored - currently %d pages g_pMemAlloc->Free (%d Kb) of total %d pages (%d Kb total).\n",
 			ppi.numPagesFree, ppi.numPagesFree * Plat_GetMemPageSize(),
 			( ppi.numPagesFree + ppi.numPagesUsed ), ( ppi.numPagesFree + ppi.numPagesUsed ) * Plat_GetMemPageSize() );
 	}

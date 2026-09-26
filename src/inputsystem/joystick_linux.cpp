@@ -12,9 +12,6 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_haptic.h>
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 static ButtonCode_t ControllerButtonToButtonCode( SDL_GamepadButton button );
 static AnalogCode_t ControllerAxisToAnalogCode( SDL_GamepadAxis axis );
 static bool JoystickSDLWatcher( void *userInfo, SDL_Event *event );

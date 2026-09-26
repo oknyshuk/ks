@@ -12,9 +12,6 @@
 //-----------------------------------------------------------------------------
 #include "cbase.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Globals
 //-----------------------------------------------------------------------------
@@ -31,17 +28,11 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CClientEntityList, IClientEntityList, VCLIENT
 CClientEntityList *cl_entitylist = &s_EntityList; 
 
 
-bool PVSNotifierMap_LessFunc( IClientUnknown* const &a, IClientUnknown* const &b )
-{
-	return a < b;
-}
-
 								 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CClientEntityList::CClientEntityList( void ) : 
-	m_PVSNotifierMap( 0, 0, PVSNotifierMap_LessFunc )
+CClientEntityList::CClientEntityList( void )
 {
 	m_iMaxUsedServerIndex = -1;
 	m_iMaxServerEnts = 0;
@@ -254,14 +245,14 @@ void CClientEntityList::AddPVSNotifier( IClientUnknown *pUnknown )
 		IPVSNotify *pNotify = pRen->GetPVSNotifyInterface();
 		if ( pNotify )
 		{
-			unsigned short index = m_PVSNotifyInfos.AddToTail();
-			CPVSNotifyInfo *pInfo = &m_PVSNotifyInfos[index];
+			auto index = m_PVSNotifyInfos.insert( m_PVSNotifyInfos.end(), CPVSNotifyInfo{} );
+			CPVSNotifyInfo *pInfo = &*index;
 			pInfo->m_pNotify = pNotify;
 			pInfo->m_pRenderable = pRen;
 			pInfo->m_InPVSStatus = 0;
-			pInfo->m_PVSNotifiersLink = index;
 
-			m_PVSNotifierMap.Insert( pUnknown, index );
+			[[maybe_unused]] bool bInserted = m_PVSNotifierMap.emplace( pUnknown, index ).second;
+			Assert( bInserted );
 		}
 	}
 }
@@ -275,21 +266,21 @@ void CClientEntityList::RemovePVSNotifier( IClientUnknown *pUnknown )
 		IPVSNotify *pNotify = pRenderable->GetPVSNotifyInterface();
 		if ( pNotify )
 		{
-			unsigned short index = m_PVSNotifierMap.Find( pUnknown );
-			if ( !m_PVSNotifierMap.IsValidIndex( index ) )
+			auto index = m_PVSNotifierMap.find( pUnknown );
+			if ( index == m_PVSNotifierMap.end() )
 			{
 				Warning( "PVS notifier not in m_PVSNotifierMap\n" );
 				Assert( false );
 				return;
 			}
 
-			unsigned short indexIntoPVSNotifyInfos = m_PVSNotifierMap[index];
+			auto indexIntoPVSNotifyInfos = index->second;
 			
-			Assert( m_PVSNotifyInfos[indexIntoPVSNotifyInfos].m_pNotify == pNotify );
-			Assert( m_PVSNotifyInfos[indexIntoPVSNotifyInfos].m_pRenderable == pRenderable );
+			Assert( indexIntoPVSNotifyInfos->m_pNotify == pNotify );
+			Assert( indexIntoPVSNotifyInfos->m_pRenderable == pRenderable );
 			
-			m_PVSNotifyInfos.Remove( indexIntoPVSNotifyInfos );
-			m_PVSNotifierMap.RemoveAt( index );
+			m_PVSNotifyInfos.erase( indexIntoPVSNotifyInfos );
+			m_PVSNotifierMap.erase( index );
 			return;
 		}
 	}
@@ -297,24 +288,23 @@ void CClientEntityList::RemovePVSNotifier( IClientUnknown *pUnknown )
 	// If it didn't report itself as a notifier, let's hope it's not in the notifier list now
 	// (which would mean that it reported itself as a notifier earlier, but not now).
 #ifdef _DEBUG
-	unsigned short index = m_PVSNotifierMap.Find( pUnknown );
-	Assert( !m_PVSNotifierMap.IsValidIndex( index ) );
+	Assert( !m_PVSNotifierMap.contains( pUnknown ) );
 #endif
 }
 
 void CClientEntityList::AddListenerEntity( IClientEntityListener *pListener )
 {
-	if ( m_entityListeners.Find( pListener ) >= 0 )
+	if ( ks::find_index( m_entityListeners, pListener ) >= 0 )
 	{
 		AssertMsg( 0, "Can't add listeners multiple times\n" );
 		return;
 	}
-	m_entityListeners.AddToTail( pListener );
+	m_entityListeners.push_back( pListener );
 }
 
 void CClientEntityList::RemoveListenerEntity( IClientEntityListener *pListener )
 {
-	m_entityListeners.FindAndRemove( pListener );
+	ks::erase_first( m_entityListeners, pListener );
 }
 
 void CClientEntityList::OnAddEntity( IHandleEntity *pEnt, CBaseHandle handle )
@@ -348,7 +338,7 @@ void CClientEntityList::OnAddEntity( IHandleEntity *pEnt, CBaseHandle handle )
 	C_BaseEntity *pBaseEntity = pUnknown->GetBaseEntity();
 	if ( pBaseEntity )
 	{
-		pCache->m_BaseEntitiesIndex = m_BaseEntities.AddToTail( pBaseEntity );
+		pCache->m_BaseEntitiesIndex = m_BaseEntities.emplace( pBaseEntity );
 
 		if ( pBaseEntity->ObjectCaps() & FCAP_SAVE_NON_NETWORKABLE  )
 		{
@@ -356,14 +346,14 @@ void CClientEntityList::OnAddEntity( IHandleEntity *pEnt, CBaseHandle handle )
 		}
 
 		//DevMsg(2,"Created %s\n", pBaseEnt->GetClassname() );
-		for ( int i = m_entityListeners.Count()-1; i >= 0; i-- )
+		for ( int i = std::ssize( m_entityListeners )-1; i >= 0; i-- )
 		{
 			m_entityListeners[i]->OnEntityCreated( pBaseEntity );
 		}
 	}
 	else
 	{
-		pCache->m_BaseEntitiesIndex = m_BaseEntities.InvalidIndex();
+		pCache->m_BaseEntitiesIndex = m_BaseEntities.invalid;
 	}
 
 
@@ -403,16 +393,16 @@ void CClientEntityList::OnRemoveEntity( IHandleEntity *pEnt, CBaseHandle handle 
 		}
 
 		//DevMsg(2,"Deleted %s\n", pBaseEnt->GetClassname() );
-		for ( int i = m_entityListeners.Count()-1; i >= 0; i-- )
+		for ( int i = std::ssize( m_entityListeners )-1; i >= 0; i-- )
 		{
 			m_entityListeners[i]->OnEntityDeleted( pBaseEntity );
 		}
 	}
 
-	if ( pCache->m_BaseEntitiesIndex != m_BaseEntities.InvalidIndex() )
-		m_BaseEntities.Remove( pCache->m_BaseEntitiesIndex );
+	if ( pCache->m_BaseEntitiesIndex != m_BaseEntities.invalid )
+		m_BaseEntities.erase( pCache->m_BaseEntitiesIndex );
 
-	pCache->m_BaseEntitiesIndex = m_BaseEntities.InvalidIndex();
+	pCache->m_BaseEntitiesIndex = m_BaseEntities.invalid;
 }
 
 
@@ -476,18 +466,21 @@ C_AllBaseEntityIterator::C_AllBaseEntityIterator()
 
 void C_AllBaseEntityIterator::Restart()
 {
-	m_CurBaseEntity = ClientEntityList().m_BaseEntities.Head();
+	m_CurBaseEntity = 0;
 }
 
 	
 C_BaseEntity* C_AllBaseEntityIterator::Next()
 {
-	if ( m_CurBaseEntity == ClientEntityList().m_BaseEntities.InvalidIndex() )
-		return nullptr;
-
-	C_BaseEntity *pRet = ClientEntityList().m_BaseEntities[m_CurBaseEntity];
-	m_CurBaseEntity = ClientEntityList().m_BaseEntities.Next( m_CurBaseEntity );
-	return pRet;
+	// Walks slots, so entities removed mid-iteration are simply skipped
+	const auto &list = ClientEntityList().m_BaseEntities;
+	while ( m_CurBaseEntity < list.slot_count() )
+	{
+		unsigned short h = m_CurBaseEntity++;
+		if ( list.contains( h ) )
+			return list[h];
+	}
+	return nullptr;
 }
 
 
@@ -501,17 +494,20 @@ C_BaseEntityIterator::C_BaseEntityIterator()
 
 void C_BaseEntityIterator::Restart()
 {
-	m_CurBaseEntity = ClientEntityList().m_BaseEntities.Head();
+	m_CurBaseEntity = 0;
 }
 
 C_BaseEntity* C_BaseEntityIterator::Next()
 {
 	// Skip dormant entities
-	while ( m_CurBaseEntity != ClientEntityList().m_BaseEntities.InvalidIndex() )
+	const auto &list = ClientEntityList().m_BaseEntities;
+	while ( m_CurBaseEntity < list.slot_count() )
 	{
-		C_BaseEntity *pRet = ClientEntityList().m_BaseEntities[m_CurBaseEntity];
-		m_CurBaseEntity = ClientEntityList().m_BaseEntities.Next( m_CurBaseEntity );
+		unsigned short h = m_CurBaseEntity++;
+		if ( !list.contains( h ) )
+			continue;
 
+		C_BaseEntity *pRet = list[h];
 		if (!pRet->IsDormant())
 			return pRet;
 	}

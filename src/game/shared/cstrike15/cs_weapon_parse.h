@@ -14,6 +14,8 @@
 
 #include "weapon_parse.h"
 #include "cs_shareddefs.h"
+#include <map>
+#include <memory>
 
 class CWeaponCSBase;
 
@@ -162,7 +164,7 @@ private:
 		RecoilOffset				recoilTable[2][64];
 	};
 
-	CUtlMap< item_definition_index_t, RecoilData* > m_mapRecoilTables;
+	std::map< item_definition_index_t, std::unique_ptr< RecoilData > > m_mapRecoilTables;
 
 	void GenerateRecoilTable( RecoilData *data );
 
@@ -306,7 +308,7 @@ public:
 	float		GetThrowVelocity() const { return m_fThrowVelocity; }
 
 	const char* GetAddonModel						( const CEconItemView* pWepView = nullptr ) const;
-	const CUtlVector< WeaponPaintableMaterial_t >* GetPaintData( const CEconItemView* pWepView = nullptr ) const;
+	const std::vector< WeaponPaintableMaterial_t >* GetPaintData( const CEconItemView* pWepView = nullptr ) const;
 
 // recoiltable in csweaponinfo is obsolete. remove this once confirmed that the new implementation generates the same result.
 	void GenerateRecoilTable();

@@ -12,9 +12,6 @@
 #include "cdll_client_int.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 ConVar JiggleBoneDebug( "cl_jiggle_bone_debug", "0", FCVAR_CHEAT, "Display physics-based 'jiggle bone' debugging information" );
 ConVar JiggleBoneDebugYawConstraints( "cl_jiggle_bone_debug_yaw_constraints", "0", FCVAR_CHEAT, "Display physics-based 'jiggle bone' debugging information" );
@@ -45,11 +42,11 @@ char *VarArgs( const char *format, ... )
 //-----------------------------------------------------------------------------
 JiggleData *CJiggleBones::GetJiggleData( int bone, float currenttime, const Vector &initBasePos, const Vector &initTipPos )
 {
-	FOR_EACH_LL( m_jiggleBoneState, it )
+	for ( JiggleData &it : m_jiggleBoneState )
 	{
-		if ( m_jiggleBoneState[it].bone == bone )
+		if ( it.bone == bone )
 		{
-			JiggleData *data = &m_jiggleBoneState[it];
+			JiggleData *data = &it;
 			if ( !IsFinite( data->lastUpdate ) )
 			{
 				Warning( "lastUpdate NaN\n" );
@@ -82,7 +79,7 @@ JiggleData *CJiggleBones::GetJiggleData( int bone, float currenttime, const Vect
 			{
 				Warning( "tipAccel NaN\n" );
 			}
-			return &m_jiggleBoneState[it];
+			return data;
 		}
 	}
 
@@ -90,11 +87,7 @@ JiggleData *CJiggleBones::GetJiggleData( int bone, float currenttime, const Vect
 	data.Init( bone, currenttime, initBasePos, initTipPos );
 	data.id = s_id++;
 
-	int idx = m_jiggleBoneState.AddToHead( data );
-	if ( idx == m_jiggleBoneState.InvalidIndex() )
-		return nullptr;
-
-	return &m_jiggleBoneState[idx];
+	return &m_jiggleBoneState.emplace_back( data );
 }
 
 

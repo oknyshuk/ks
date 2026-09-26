@@ -7,9 +7,6 @@
 #include "mathlib/ssemath.h"
 #include "mathlib/ssequaternion.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 // get the kdop vectors for k=32
 #include "dopvectors.h"
 

@@ -15,9 +15,6 @@
 #include "shaderdevicebase.h"
 #include "tier0/icommandline.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 extern ConVar mat_slopescaledepthbias_shadowmap;
 extern ConVar mat_depthbias_shadowmap;
@@ -221,7 +218,7 @@ void CHardwareConfig::SetupHardwareCaps( int nDXLevel, const HardwareCaps_t &act
 	if ( IsOpenGL() )
 	{
 		// Prevent customers from ever trying to slam the dxlevel too low in GL mode.
-		nMaxDXLevel = MAX( nMaxDXLevel, 90 );
+		nMaxDXLevel = std::max( nMaxDXLevel, 90 );
 	}
 	{
 		// We're falling back to some other dx level
@@ -253,11 +250,11 @@ void CHardwareConfig::SetupHardwareCaps( int nDXLevel, const HardwareCaps_t &act
 
 	if ( IsOpenGL() )
 	{
-		m_Caps.m_MaxNumLights = MIN( m_Caps.m_bSupportsStaticControlFlow ? MAX_NUM_LIGHTS : 2, m_Caps.m_MaxNumLights );
+		m_Caps.m_MaxNumLights = std::min( m_Caps.m_bSupportsStaticControlFlow ? MAX_NUM_LIGHTS : 2, m_Caps.m_MaxNumLights );
 		m_Caps.m_bSupportsShadowDepthTextures = true;
 	}
 	
-	m_Caps.m_MaxNumLights = MIN( m_Caps.m_MaxNumLights, MAX_NUM_LIGHTS );
+	m_Caps.m_MaxNumLights = std::min<int>( m_Caps.m_MaxNumLights, MAX_NUM_LIGHTS );
 
 	memcpy( &m_UnOverriddenCaps, &m_Caps, sizeof(HardwareCaps_t) );
 }

@@ -7,6 +7,7 @@
 #ifndef SOS_OP_H
 #define SOS_OP_H
 
+#include <mutex>
 #include "sos_system.h"
 #include "snd_channels.h"
 
@@ -15,7 +16,7 @@ DECLARE_LOGGING_CHANNEL( LOG_SND_OPERATORS );
 
 
 
-#define THREAD_LOCK_SOUND() AUTO_LOCK( g_SndMutex )
+#define THREAD_LOCK_SOUND() std::scoped_lock soundLock( g_SndMutex )
 
 
 
@@ -45,8 +46,9 @@ DECLARE_LOGGING_CHANNEL( LOG_SND_OPERATORS );
 		inputData.m_nOffsetOffset = offsetof( className##_t, memberName##Offset );		\
 		inputData.m_Type = type;														\
 		inputData.m_nCount = memberCount;												\
-		int nIndex = m_vInputs.AddToTail( inputData );									\
-		m_vInputMap.Insert( memberString, nIndex );										\
+		inputData.m_pName = memberString;												\
+		int nIndex = std::ssize( m_vInputs ); m_vInputs.push_back( inputData );									\
+		m_vInputMap.emplace( memberString, nIndex );										\
 	}
 
 #define SOS_REGISTER_INPUT_FLOAT( className, memberName, memberCount, memberString ) \
@@ -58,8 +60,9 @@ DECLARE_LOGGING_CHANNEL( LOG_SND_OPERATORS );
 		outputData.m_nValueOffset = offsetof( className##_t, memberName );					\
 		outputData.m_Type = type;														\
 		outputData.m_nCount = memberCount;												\
-		int nIndex = m_vOutputs.AddToTail( outputData );								\
-		m_vOutputMap.Insert( memberString, nIndex );									\
+		outputData.m_pName = memberString;												\
+		int nIndex = std::ssize( m_vOutputs ); m_vOutputs.push_back( outputData );								\
+		m_vOutputMap.emplace( memberString, nIndex );									\
 	}
 
 #define SOS_REGISTER_OUTPUT_FLOAT( className, memberName, memberCount, memberString ) \
@@ -73,7 +76,7 @@ classname::classname() \
 
 
 #define SOS_END_OPERATOR_CONSTRUCTOR( classname, operatorstring ) \
-	g_pSoundOperatorSystem->m_vOperatorCollection.Insert(operatorstring, this ); \
+	g_pSoundOperatorSystem->m_vOperatorCollection.emplace(operatorstring, this ); \
 } \
 classname g_##classname;
 
@@ -144,6 +147,7 @@ public:
 
 	struct OutputData_t
 	{
+		const char *m_pName;	// registered name (a literal)
 		size_t m_nValueOffset;
 		SODataType_t m_Type;
 		short m_nCount;
@@ -151,17 +155,18 @@ public:
 
 	struct InputData_t
 	{
+		const char *m_pName;	// registered name (a literal)
 		size_t m_nValueOffset;
 		size_t m_nOffsetOffset;
 		SODataType_t m_Type;
 		short m_nCount;
 	};
 
-	CUtlDict <int, int> m_vOutputMap;
-	CUtlVector < OutputData_t > m_vOutputs;
+	ks::idict< int > m_vOutputMap;	// name -> index in m_vOutputs
+	std::vector< OutputData_t > m_vOutputs;
 
-	CUtlDict <int, int> m_vInputMap;
-	CUtlVector< InputData_t > m_vInputs;
+	ks::idict< int > m_vInputMap;	// name -> index in m_vInputs
+	std::vector< InputData_t > m_vInputs;
 };
 
 #endif // SOS_OP_H

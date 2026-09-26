@@ -9,9 +9,6 @@
 #include "vstdlib/random.h"
 #include "movevars_shared.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define		NUM_LATERAL_CHECKS		13  // how many checks are made on each side of a NPC looking for lateral cover
 #define		NUM_LATERAL_LOS_CHECKS		6  // how many checks are made on each side of a NPC looking for lateral cover
 
@@ -119,7 +116,7 @@ Vector VecCheckToss( CBaseEntity *pEntity, ITraceFilter *pFilter, Vector vecSpot
 		// But don't throw so high that it looks silly. Maximize the height of the
 		// throw above the highest of the two endpoints to a ratio of the throw length.
 		float flHeightMax = flHeightMaxRatio * (vecSpot2 - vecSpot1).Length();
-		float flHighestEndZ = MAX(vecSpot1.z, vecSpot2.z);
+		float flHighestEndZ = std::max(vecSpot1.z, vecSpot2.z);
 		if ((vecMidPoint.z - flHighestEndZ) > flHeightMax)
 		{
 			vecMidPoint.z = flHighestEndZ + flHeightMax;

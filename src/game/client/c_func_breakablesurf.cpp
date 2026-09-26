@@ -18,9 +18,6 @@
 #include "c_physbox.h"
 #include "c_func_breakablesurf.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 //==================================================
 // C_BreakableSurface
@@ -156,7 +153,7 @@ static ITexture* GetBaseTexture( IMaterial* pMaterial )
 //------------------------------------------------------------------------------
 void C_BreakableSurface::InitMaterial(WinEdge_t nEdgeType, int nEdgeStyle, char const* pMaterialName)
 {
-	m_pEdge[nEdgeType][nEdgeStyle].m_nRenderIndex  = m_RenderList.InvalidIndex();
+	m_pEdge[nEdgeType][nEdgeStyle].m_nRenderIndex  = -1;
 	m_pEdge[nEdgeType][nEdgeStyle].m_nStyle		   = nEdgeStyle;
 	m_pEdge[nEdgeType][nEdgeStyle].m_pMaterialEdge.Init(pMaterialName, TEXTURE_GROUP_CLIENT_EFFECTS);
 	m_pEdge[nEdgeType][nEdgeStyle].m_pMaterialEdgeTexture.Init( GetBaseTexture( m_pEdge[nEdgeType][nEdgeStyle].m_pMaterialEdge ) );
@@ -384,14 +381,14 @@ void C_BreakableSurface::DrawRenderList(IBrushSurface* pBrushSurface)
 	int				nCurStyle		= -1;
 	int				nCurEdgeType	= -1;
 	CMatRenderContextPtr pRenderContext( materials );
-	for( unsigned short i = m_RenderList.Head(); i != m_RenderList.InvalidIndex(); i = m_RenderList.Next(i) )
+	for ( const Panel_t &panel : m_RenderList )
 	{
 	
-		if (nCurStyle		!= m_RenderList[i].m_nStyle		||
-			nCurEdgeType	!= m_RenderList[i].m_nEdgeType	)
+		if (nCurStyle		!= panel.m_nStyle		||
+			nCurEdgeType	!= panel.m_nEdgeType	)
 		{
-			nCurStyle	 = m_RenderList[i].m_nStyle;
-			nCurEdgeType = m_RenderList[i].m_nEdgeType;
+			nCurStyle	 = panel.m_nStyle;
+			nCurEdgeType = panel.m_nEdgeType;
 
 			m_pCurrentDetailTexture = m_pEdge[nCurEdgeType][nCurStyle].m_pMaterialEdgeTexture;
 			pRenderContext->Flush(false);
@@ -399,11 +396,11 @@ void C_BreakableSurface::DrawRenderList(IBrushSurface* pBrushSurface)
 		}
 
 		Vector vRenderPos = m_vCorner + 
-							(m_RenderList[i].m_nWidth*vWidthStep)	+ 
-							(m_RenderList[i].m_nHeight*vHeightStep);
+							(panel.m_nWidth*vWidthStep)	+ 
+							(panel.m_nHeight*vHeightStep);
 
 		IMesh* pMesh = pRenderContext->GetDynamicMesh( );
-		DrawOneEdge(pBrushSurface, pMesh,&pMeshBuilder,vRenderPos,vWidthStep,vHeightStep,(WinSide_t)m_RenderList[i].m_nSide);
+		DrawOneEdge(pBrushSurface, pMesh,&pMeshBuilder,vRenderPos,vWidthStep,vHeightStep,(WinSide_t)panel.m_nSide);
 	}
 }
 
@@ -428,19 +425,19 @@ void C_BreakableSurface::DrawRenderListHighlights(IBrushSurface* pBrushSurface)
 	int				nCurStyle		= -1;
 	int				nCurEdgeType	= -1;
 	CMatRenderContextPtr pRenderContext( materials );
-	for( unsigned short i = m_RenderList.Head(); i != m_RenderList.InvalidIndex(); i = m_RenderList.Next(i) )
+	for ( const Panel_t &panel : m_RenderList )
 	{
-		nCurStyle	 = m_RenderList[i].m_nStyle;
-		nCurEdgeType = m_RenderList[i].m_nEdgeType;
+		nCurStyle	 = panel.m_nStyle;
+		nCurEdgeType = panel.m_nEdgeType;
 		IMaterial *pMat = m_pEdge[nCurEdgeType][nCurStyle].m_pMaterialEdge;
 		IMesh *pMesh = pRenderContext->GetDynamicMesh( true, nullptr, nullptr, pMat );
 
 		Vector vRenderPos = m_vCorner + 
-							(m_RenderList[i].m_nWidth*vWidthStep)	+ 
-							(m_RenderList[i].m_nHeight*vHeightStep) +
+							(panel.m_nWidth*vWidthStep)	+ 
+							(panel.m_nHeight*vHeightStep) +
 							(0.30*m_vNormal);
 
-		DrawOneHighlight(pBrushSurface, pMesh,&pMeshBuilder,vRenderPos,vWidthStep,vHeightStep,(WinSide_t)m_RenderList[i].m_nSide);
+		DrawOneHighlight(pBrushSurface, pMesh,&pMeshBuilder,vRenderPos,vWidthStep,vHeightStep,(WinSide_t)panel.m_nSide);
 	}
 }
 
@@ -627,7 +624,7 @@ void C_BreakableSurface::UpdateEdgeType(int nWidth, int nHeight, int forceStyle 
 //--------------------------------------------------------------------------------
 int C_BreakableSurface::FindRenderPanel(int nWidth, int nHeight, WinSide_t nWinSide)
 {
-	for( unsigned short i = m_RenderList.Head(); i != m_RenderList.InvalidIndex(); i = m_RenderList.Next(i) )
+	for ( int i = 0; i < (int)m_RenderList.size(); i++ )
 	{
 		if (m_RenderList[i].m_nSide			== nWinSide	&&
 			m_RenderList[i].m_nWidth		== nWidth		&&
@@ -636,7 +633,7 @@ int C_BreakableSurface::FindRenderPanel(int nWidth, int nHeight, WinSide_t nWinS
 			return i;
 		}
 	}
-	return m_RenderList.InvalidIndex();
+	return -1;
 }
 
 //----------------------------------------------------------------------------------
@@ -646,7 +643,7 @@ int C_BreakableSurface::FindRenderPanel(int nWidth, int nHeight, WinSide_t nWinS
 //----------------------------------------------------------------------------------
 int C_BreakableSurface::FindFirstRenderTexture(WinEdge_t nEdgeType, int nStyle)
 {
-	for( unsigned short i = m_RenderList.Head(); i != m_RenderList.InvalidIndex(); i = m_RenderList.Next(i) )
+	for ( int i = 0; i < (int)m_RenderList.size(); i++ )
 	{
 		if (m_RenderList[i].m_nStyle		== nStyle		&&
 			m_RenderList[i].m_nEdgeType		== nEdgeType	)
@@ -654,7 +651,7 @@ int C_BreakableSurface::FindFirstRenderTexture(WinEdge_t nEdgeType, int nStyle)
 			return i;
 		}
 	}
-	return m_RenderList.InvalidIndex();
+	return -1;
 }
 
 //------------------------------------------------------------------------------
@@ -672,10 +669,10 @@ void C_BreakableSurface::AddToRenderList(int nWidth, int nHeight, WinSide_t nSid
 	// If I have an old panel, get it's style and remove it
 	// otherwise randomly chose a style
 	int nStyle;
-	if (m_RenderList.IsValidIndex(nOldPanelIndex) )
+	if ( nOldPanelIndex >= 0 )
 	{
 		nStyle = m_RenderList[nOldPanelIndex].m_nStyle;
-		m_RenderList.Remove(nOldPanelIndex);
+		m_RenderList.erase( m_RenderList.begin() + nOldPanelIndex );
 	}
 	else
 	{
@@ -693,26 +690,18 @@ void C_BreakableSurface::AddToRenderList(int nWidth, int nHeight, WinSide_t nSid
 	{
 		// Renderlist is sorted by texture type.  Find first element
 		// that shares the same texture as the new panel
-		unsigned short nTexIndex = FindFirstRenderTexture(nEdgeType, nStyle);
+		int nTexIndex = FindFirstRenderTexture(nEdgeType, nStyle);
 
 		// If texture was already in list, add after last use
-		unsigned short nNewIndex;
-		if (m_RenderList.IsValidIndex(nTexIndex))
-		{
-			nNewIndex = m_RenderList.InsertAfter(nTexIndex);
-		}
 		// Otherwise add to send of render list
-		else
-		{
-			nNewIndex = m_RenderList.AddToTail();
-		}
+		auto itNew = m_RenderList.insert( nTexIndex >= 0 ? m_RenderList.begin() + nTexIndex + 1 : m_RenderList.end(), Panel_t{} );
 
 		// Now fill out my data
-		m_RenderList[nNewIndex].m_nHeight	= nHeight;
-		m_RenderList[nNewIndex].m_nWidth	= nWidth;
-		m_RenderList[nNewIndex].m_nEdgeType	= nEdgeType;
-		m_RenderList[nNewIndex].m_nSide		= nSide;
-		m_RenderList[nNewIndex].m_nStyle	= nStyle;
+		itNew->m_nHeight	= nHeight;
+		itNew->m_nWidth		= nWidth;
+		itNew->m_nEdgeType	= nEdgeType;
+		itNew->m_nSide		= nSide;
+		itNew->m_nStyle		= nStyle;
 
 		Assert( nStyle < NUM_EDGE_STYLES );
 		SetStyleType( nWidth, nHeight, nStyle );

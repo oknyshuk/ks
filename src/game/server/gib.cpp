@@ -16,12 +16,9 @@
 #include "ai_utils.h"
 #include "EntityFlame.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern Vector			g_vecAttackDir;		// In globals.cpp
 
-CUtlVector<EHANDLE> CGib::s_ExtantGibs;
+std::vector< EHANDLE > CGib::s_ExtantGibs;
 
 
 
@@ -385,7 +382,7 @@ bool CGib::SUB_AllowedToFade( void )
 	{
 		// We don't want Gibs to fade out while onscreen... but we also can't allow an infinite
 		// number of gibs accumulate, so let the oldest ones fade out if we're over the limit.
-		int nGibsToKill = s_ExtantGibs.Count() - MAX_CONCURRENT_GIBS;
+		int nGibsToKill = std::ssize( s_ExtantGibs ) - MAX_CONCURRENT_GIBS;
 		for ( int i = 0; i < nGibsToKill; i++ )
 		{
 			if ( this == s_ExtantGibs[ i ] )
@@ -527,7 +524,7 @@ void CGib::BounceGibTouch ( CBaseEntity *pOther )
 			float volume;
 			float zvel = fabs(GetAbsVelocity().z);
 		
-			volume = 0.8f * MIN(1.0, ((float)zvel) / 450.0f);
+			volume = 0.8f * std::min<std::common_type_t<double, float>>(1.0, ((float)zvel) / 450.0f);
 
 			CBreakable::MaterialSoundRandom( entindex(), (Materials)m_material, volume );
 		}
@@ -570,9 +567,9 @@ void CGib::StickyGibTouch ( CBaseEntity *pOther )
 CGib::~CGib( void )
 {
 	// NOTE: this should not be slow, because MAX_CONCURRENT_GIBS should not be large
-	int nIndex = s_ExtantGibs.Find( this );
+	int nIndex = ks::find_index( s_ExtantGibs, this );
 	if ( nIndex >= 0 )
-		s_ExtantGibs.Remove( nIndex );
+		s_ExtantGibs.erase( s_ExtantGibs.begin() + nIndex );
 	else
 		ExecuteNTimes( 20, Warning( "CGibs are being created which circumvent Spawn() - this can result in a leak.\n" ) );
 }
@@ -609,7 +606,7 @@ void CGib::Spawn( const char *szGibModel, float flLifetime )
 	m_cBloodDecals = 5;// how many blood decals this gib can place (1 per bounce until none remain). 
 
 	// Make sure the gib dies within its alotted lifetime
-	s_ExtantGibs.AddToTail( this );
+	s_ExtantGibs.push_back( this );
 	SetThink ( &CGib::SUB_FadeOut );
 	SetNextThink( gpGlobals->curtime + m_lifeTime );
 }

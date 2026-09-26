@@ -13,9 +13,6 @@
 #include "rope_physics.h"
 #include "networkvar.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 class CHangRope : public CRopePhysics<512>
 {
 DECLARE_CLASS( CHangRope, CRopePhysics<512> );
@@ -113,7 +110,7 @@ void CalcRopeStartingConditions(
 	rope.m_flRopeLength = (vEndPos - vStartPos).Length();
 	rope.m_flWantedHangDist = desiredHang;
 	
-	rope.m_flStartZ = MIN( vStartPos.z, vEndPos.z );	// Calculate hang as the Z distance from the
+	rope.m_flStartZ = std::min( vStartPos.z, vEndPos.z );	// Calculate hang as the Z distance from the
 														// lowest endpoint to the bottom of the rope.
 	
 	rope.SetNumNodes( nNodes );

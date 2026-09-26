@@ -6,7 +6,6 @@
 
 #include <tier0/dbg.h>
 #include <tier1/strtools.h>
-#include <utlbuffer.h>
 
 #include "demofile.h"
 #include "filesystem_engine.h"
@@ -16,9 +15,6 @@
 #include "host_cmd.h"
 
 #include "cdll_int.h" // For playback parameters
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 
 void Host_EndGame (bool bShowMainMenu, const char *message, ...);
@@ -322,7 +318,7 @@ void CDemoFile::WriteCustomData( int iCallbackIndex, const void *pData, size_t i
 //-----------------------------------------------------------------------------
 int CDemoFile::ReadCustomData( int *pCallbackIndex, uint8 **ppDataChunk )
 {
-	static CUtlVector<uint8> s_TempMemoryBuffer;
+	static std::vector< uint8 > s_TempMemoryBuffer;
 	int size;
 	int iCallbackIndex;
 
@@ -337,12 +333,12 @@ int CDemoFile::ReadCustomData( int *pCallbackIndex, uint8 **ppDataChunk )
 		return 0;
 	}
 
-	s_TempMemoryBuffer.SetSize( size );
-	*ppDataChunk = s_TempMemoryBuffer.Base();
+	s_TempMemoryBuffer.assign( size, {} );
+	*ppDataChunk = s_TempMemoryBuffer.data();
 	*pCallbackIndex = iCallbackIndex;
 
 	// read data into buffer
-	m_pBuffer->Get( s_TempMemoryBuffer.Base(), size );
+	m_pBuffer->Get( s_TempMemoryBuffer.data(), size );
 	if ( !m_pBuffer || !m_pBuffer->IsValid() )
 	{
 		if ( demo_strict_validation.GetInt() )
@@ -539,7 +535,7 @@ bool CDemoFile::Open( const char *name, bool bReadOnly, bool bMemoryBuffer )
 	}
 	else
 	{
-		StreamDemoBufferInitParams_t params( name, nullptr, bReadOnly ? CUtlBuffer::READ_ONLY : 0, 0 );
+		StreamDemoBufferInitParams_t params( name, nullptr, bReadOnly, 0 );
 		m_pBuffer = CreateDemoBuffer( false, params );
 	}
 

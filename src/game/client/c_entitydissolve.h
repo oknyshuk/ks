@@ -10,6 +10,7 @@
 
 #include "cbase.h"
 #include "reflect_annotations.h"
+#include "tier1/intrusive_ptr.h"
 
 //-----------------------------------------------------------------------------
 // Entity Dissolve, client-side implementation
@@ -68,7 +69,7 @@ protected:
 
 private:
 
-	CSmartPtr<CSimpleEmitter>	m_pEmitter;
+	ks::intrusive_ptr<CSimpleEmitter>	m_pEmitter;
 
 	bool	m_bLinkedToServerEnt;
 	IPhysicsMotionController	*m_pController;

@@ -18,9 +18,6 @@
 #include "movevars_shared.h"
 #include "iviewrender.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 int ScreenTransform( const Vector& point, Vector& screen );
 
 extern ConVar default_fov;

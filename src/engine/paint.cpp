@@ -22,9 +22,6 @@
 
 #include "tier1/callqueue.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern ConVar r_redownloadallpaintmaps;
 
 static const BYTE NUM_ALPHA_BITS	= 5;
@@ -116,7 +113,7 @@ void R_UpdatePaintmap( ICallQueue *pCallQueue, int paintmap, BYTE* pPaintData, i
 	}
 	else
 	{
-		pCallQueue->QueueCall( R_UpdatePaintmapRect, paintmap, pPaintData, numRects, CUtlEnvelope<Rect_t>( pRects, numRects ) );
+		pCallQueue->QueueCall( R_UpdatePaintmapRect, paintmap, pPaintData, numRects, ks::envelope<Rect_t>( pRects, numRects ) );
 	}
 }
 
@@ -160,10 +157,10 @@ void CPaintmapDataManager::UpdatePaintmapTextures()
 		}
 		else
 		{
-			CUtlVectorFixedGrowable<Rect_t, 1024> *pRects = m_pPaintTextureDataArray[paintmap].GetDirtyRectList();
-			int count = pRects->Count();
+			ks::small_vector< Rect_t, 1024 > *pRects = m_pPaintTextureDataArray[paintmap].GetDirtyRectList();
+			int count = std::ssize( *pRects );
 			Assert( count > 0 );
-			R_UpdatePaintmap( pCallQueue, paintmap, m_pPaintTextureDataArray[paintmap].GetPaintmapData(), count,  pRects->Base() );
+			R_UpdatePaintmap( pCallQueue, paintmap, m_pPaintTextureDataArray[paintmap].GetPaintmapData(), count,  pRects->data() );
 		}
 
 		m_pPaintTextureDataArray[paintmap].RemoveDirty();
@@ -661,10 +658,10 @@ uint32 CPaintTextureData::Draw2Lines( const PaintRect_t& paintRect, float x, flo
 
 	const Vector2D& uvCenter = paintRect.uvCenter;
 
-	int x1 = MAX( ( int )( uvCenter.x - x - 0.5f ), minX );
-	int y1 = MAX( ( int )( uvCenter.y - y - 0.5f ), minY );
-	int x2 = MIN( ( int )( uvCenter.x + x + 0.5f ), maxX );
-	int y2 = MIN( ( int )( uvCenter.y + y + 0.5f ), maxY );
+	int x1 = std::max( ( int )( uvCenter.x - x - 0.5f ), minX );
+	int y1 = std::max( ( int )( uvCenter.y - y - 0.5f ), minY );
+	int x2 = std::min( ( int )( uvCenter.x + x + 0.5f ), maxX );
+	int y2 = std::min( ( int )( uvCenter.y + y + 0.5f ), maxY );
 
 	// if line is outside the rect, don't do anything
 	if ( x1 > maxX || x2 < minX )
@@ -757,7 +754,7 @@ void CPaintTextureData::ClearTexture()
 	MarkAsDirty();
 }
 
-void CPaintTextureData::GetPixels( const Rect_t& splatRect, CUtlVector<BYTE>& surfColors )
+void CPaintTextureData::GetPixels( const Rect_t& splatRect, std::vector< BYTE >& surfColors )
 {
 	//sample color inside rect
 	for (int y = 0; y < splatRect.height; ++y )
@@ -769,7 +766,7 @@ void CPaintTextureData::GetPixels( const Rect_t& splatRect, CUtlVector<BYTE>& su
 			float flAlpha = GetAlpha( packedColor );
 
 			if( flAlpha > paint_min_valid_alpha_value.GetFloat() )
-				surfColors.AddToTail( colorIndex );
+				surfColors.push_back( colorIndex );
 
 			if( debug_paint_alpha.GetBool() )
 			{
@@ -797,7 +794,7 @@ void CPaintTextureData::PaintAllSurfaces( BYTE colorIndex )
 }
 
 
-void CPaintTextureData::GetSurfacePaintData( SurfaceHandle_t surfID, CUtlVector< BYTE > &data ) const
+void CPaintTextureData::GetSurfacePaintData( SurfaceHandle_t surfID, std::vector< BYTE > &data ) const
 {
 	if ( !m_backbuffer )
 		return;
@@ -813,10 +810,10 @@ void CPaintTextureData::GetSurfacePaintData( SurfaceHandle_t surfID, CUtlVector<
 	uint nAllocSize = nDataCount + ( ( 4 - ( nDataCount % 4 ) ) % 4 );
 	Assert( ( nAllocSize % 4 ) == 0 );
 
-	data.EnsureCount( nAllocSize );
+	ks::ensure_size( data, nAllocSize );
 
-	BYTE* pOut = data.Base();
-	const BYTE* pEnd = data.Base() + nDataCount;
+	BYTE* pOut = data.data();
+	const BYTE* pEnd = data.data() + nDataCount;
 	const BYTE* pRead = &m_backbuffer[ y * m_nPaintWidth + x ];
 	while( pOut < pEnd )
 	{
@@ -828,7 +825,7 @@ void CPaintTextureData::GetSurfacePaintData( SurfaceHandle_t surfID, CUtlVector<
 }
 
 
-void CPaintTextureData::SetSurfacePaintData( SurfaceHandle_t surfID, const CUtlVector< BYTE > &data )
+void CPaintTextureData::SetSurfacePaintData( SurfaceHandle_t surfID, const std::vector< BYTE > &data )
 {
 	if ( !m_backbuffer )
 		return;
@@ -841,8 +838,8 @@ void CPaintTextureData::SetSurfacePaintData( SurfaceHandle_t surfID, const CUtlV
 
 	uint nDataCount = rect.width * rect.height;
 
-	const BYTE* pRead = data.Base();
-	const BYTE* pEnd = data.Base() + nDataCount;
+	const BYTE* pRead = data.data();
+	const BYTE* pEnd = data.data() + nDataCount;
 
 	BYTE *pSet = &m_backbuffer[ rect.y * m_nPaintWidth + rect.x ];
 	while ( pRead < pEnd )
@@ -860,13 +857,13 @@ void CPaintTextureData::SetSurfacePaintData( SurfaceHandle_t surfID, const CUtlV
 }
 
 
-void EncodeDataRLE( const uint32* pBuffer, uint32 nDwordCount, CUtlVector< uint32 > &data )
+void EncodeDataRLE( const uint32* pBuffer, uint32 nDwordCount, std::vector< uint32 > &data )
 {
 	if ( nDwordCount == 0 )
 		return;
 
 	// first build a list of runs into a local utlvector
-	CUtlVectorFixedGrowable<intp, 1024> outList;
+	ks::small_vector< intp, 1024 > outList;
 
 	// this is the start of the run of unique data to copy
 	const uint32 *pCopyStart = pBuffer;
@@ -893,8 +890,8 @@ void EncodeDataRLE( const uint32* pBuffer, uint32 nDwordCount, CUtlVector< uint3
 			if ( nCopyOut )
 			{
 				// note, we're building a list of copies, so just add a record
-				outList.AddToTail( nCopyOut );
-				outList.AddToTail( intp(pCopyStart) );
+				outList.push_back( nCopyOut );
+				outList.push_back( intp(pCopyStart) );
 				nRLESize += nCopyOut + 1;
 				pCopyStart = pRunStart;
 			}
@@ -906,8 +903,8 @@ void EncodeDataRLE( const uint32* pBuffer, uint32 nDwordCount, CUtlVector< uint3
 			}
 			// write out the run
 			int nRunCount = pCurrent - pRunStart;
-			outList.AddToTail( -nRunCount );
-			outList.AddToTail( nSymbol0 );
+			outList.push_back( -nRunCount );
+			outList.push_back( nSymbol0 );
 			nRLESize += 2;
 			if ( pCurrent < pEndOfData )
 			{
@@ -927,18 +924,18 @@ void EncodeDataRLE( const uint32* pBuffer, uint32 nDwordCount, CUtlVector< uint3
 	if ( nCopyOut )
 	{
 		// add another record if the map ends in a copy
-		outList.AddToTail( nCopyOut );
-		outList.AddToTail( (intp)pCopyStart );
+		outList.push_back( nCopyOut );
+		outList.push_back( (intp)pCopyStart );
 		nRLESize += nCopyOut + 1;
 		pCopyStart = pEndOfData;
 	}
 
 	// now build the full RLE output from the records we just made
 	// we can allocate once because we know the output size
-	data.SetCount( nRLESize );
-	uint32 *pOut = data.Base();
-	const intp *pRLE = outList.Base();
-	const intp *pEndRLE = pRLE + outList.Count();
+	data.assign( nRLESize, {} );
+	uint32 *pOut = data.data();
+	const intp *pRLE = outList.data();
+	const intp *pEndRLE = pRLE + std::ssize( outList );
 	while ( pRLE < pEndRLE )
 	{
 		int nCount = *pRLE++;
@@ -961,11 +958,11 @@ void EncodeDataRLE( const uint32* pBuffer, uint32 nDwordCount, CUtlVector< uint3
 	}
 
 	// make sure our buffer contains exactly what the records predicted
-	Assert( (uint32)(pOut - data.Base()) == nRLESize );
+	Assert( (uint32)(pOut - data.data()) == nRLESize );
 }
 
 
-void CPaintmapDataManager::GetPaintmapDataRLE( CUtlVector< uint32 > &data ) const
+void CPaintmapDataManager::GetPaintmapDataRLE( std::vector< uint32 > &data ) const
 {
 	for ( int i=0; i< host_state.worldbrush->numsurfaces; ++i )
 	{
@@ -975,18 +972,18 @@ void CPaintmapDataManager::GetPaintmapDataRLE( CUtlVector< uint32 > &data ) cons
 			int lightmapID = materialSortInfoArray[MSurf_MaterialSortID( surfID )].lightmapPageID;
 
 			// get paint data from a surface
-			CUtlVector< BYTE > surfPaintData;
+			std::vector< BYTE > surfPaintData;
 			m_pPaintTextureDataArray[lightmapID].GetSurfacePaintData( surfID, surfPaintData );
 			
 			// encode into RLE format
-			CUtlVector< uint32 > rleData;
-			uint nDwordCount = surfPaintData.Count() / 4;
-			EncodeDataRLE( (uint32*)surfPaintData.Base(), nDwordCount, rleData );
+			std::vector< uint32 > rleData;
+			uint nDwordCount = std::ssize( surfPaintData ) / 4;
+			EncodeDataRLE( (uint32*)surfPaintData.data(), nDwordCount, rleData );
 
 			// write surface index, RLE size, and RLE data to output data
-			data.AddToTail( i );
-			data.AddToTail( rleData.Count() );
-			data.AddMultipleToTail( rleData.Count(), rleData.Base() );
+			data.push_back( i );
+			data.push_back( std::ssize( rleData ) );
+			data.insert( data.end(), ( rleData.data() ), ( rleData.data() ) + ( std::ssize( rleData ) ) );
 		}
 	}
 }
@@ -1029,10 +1026,10 @@ void DecodeDataRLE( const uint32* pRLEStart, uint rleCount, SurfaceHandle_t surf
 }
 
 
-void CPaintmapDataManager::LoadPaintmapDataRLE( const CUtlVector< uint32 > &data )
+void CPaintmapDataManager::LoadPaintmapDataRLE( const std::vector< uint32 > &data )
 {
-	const uint32* pCurrent = data.Base();
-	const uint32* pEnd = pCurrent + data.Count();
+	const uint32* pCurrent = data.data();
+	const uint32* pEnd = pCurrent + std::ssize( data );
 
 	while ( pCurrent < pEnd )
 	{
@@ -1044,15 +1041,15 @@ void CPaintmapDataManager::LoadPaintmapDataRLE( const CUtlVector< uint32 > &data
 		uint nRLESize = *pCurrent++;
 		
 		// alloc output. make sure the size is divisible by 4 to copy data from array of uint32
-		CUtlVector< BYTE > rawPaintData;
+		std::vector< BYTE > rawPaintData;
 		int width	= MSurf_LightmapExtents( surfID )[0] + 1;
 		int height	= MSurf_LightmapExtents( surfID )[1] + 1;
 		int nByteCount = width * height;
 		uint nAllocSize = nByteCount + ( ( 4 - ( nByteCount % 4 ) ) % 4 );
 		Assert( ( nAllocSize % 4 ) == 0 );
-		rawPaintData.SetCount( nAllocSize );
+		rawPaintData.assign( nAllocSize, {} );
 		uint nDWord = nAllocSize / 4;
-		DecodeDataRLE( pCurrent, nRLESize, surfID, (uint32*)rawPaintData.Base(), nDWord );
+		DecodeDataRLE( pCurrent, nRLESize, surfID, (uint32*)rawPaintData.data(), nDWord );
 		pCurrent += nRLESize;
 
 		m_pPaintTextureDataArray[lightmapID].SetSurfacePaintData( surfID, rawPaintData );
@@ -1062,11 +1059,11 @@ void CPaintmapDataManager::LoadPaintmapDataRLE( const CUtlVector< uint32 > &data
 void CPaintTextureData::AddDirtyRect( const Rect_t& rect )
 {
 	MarkAsDirty( PAINTMAP_DIRTY_SUBRECT );
-	m_dirtyRects.AddToTail( rect );
+	m_dirtyRects.push_back( rect );
 }
 
 
-CUtlVectorFixedGrowable<Rect_t, 1024>* CPaintTextureData::GetDirtyRectList()
+ks::small_vector< Rect_t, 1024 >* CPaintTextureData::GetDirtyRectList()
 {
 	return &m_dirtyRects;
 }
@@ -1075,7 +1072,7 @@ CUtlVectorFixedGrowable<Rect_t, 1024>* CPaintTextureData::GetDirtyRectList()
 void CPaintTextureData::RemoveDirty()
 {
 	m_nDirtyFlag = PAINTMAP_CLEAN;
-	m_dirtyRects.RemoveAll();
+	m_dirtyRects.clear();
 }
 
 
@@ -1152,7 +1149,7 @@ struct paintinfo_t
 	worldbrushdata_t	*m_pBrush;		// The shared brush data for this model
 	float				m_flSize;			// radius of surf searching sphere
 	float				m_flCurrentDistance; // distance away from the center of the sphere
-	CUtlVector<SurfaceHandle_t>	m_aApplySurfs;
+	std::vector< SurfaceHandle_t >	m_aApplySurfs;
 
 	// debug stuff
 	bool				m_bPainting;
@@ -1255,7 +1252,7 @@ void R_AddPaintToSurface( SurfaceHandle_t surfID, paintinfo_t *paintinfo )
 	if ( SurfaceHasDispInfo( surfID ) )
 		return;
 
-	if ( paintinfo->m_aApplySurfs.Find( surfID ) != -1 )
+	if ( ks::find_index( paintinfo->m_aApplySurfs, surfID ) != -1 )
 		return;
 
 	// in multiplayer, materialSortInfoArray is initialized after paint power user objects are active
@@ -1320,7 +1317,7 @@ void R_AddPaintToSurface( SurfaceHandle_t surfID, paintinfo_t *paintinfo )
 			paintinfo->m_plane = plane;
 		}
 
-		paintinfo->m_aApplySurfs.AddToTail( surfID );
+		paintinfo->m_aApplySurfs.push_back( surfID );
 	}
 }
 
@@ -1429,7 +1426,7 @@ bool ShootPaintSphere( const model_t *pModel, const Vector& vPosition, BYTE colo
 	paintinfo.m_flSize = flSphereRadius;
 	paintinfo.m_flCurrentDistance = FLT_MAX;
 	paintinfo.m_pBrush = pModel->brush.pShared;
-	paintinfo.m_aApplySurfs.RemoveAll();
+	paintinfo.m_aApplySurfs.clear();
 	paintinfo.m_bPainting = true;
 
 	mnode_t *pnodes = paintinfo.m_pBrush->nodes + pModel->brush.firstnode;
@@ -1437,7 +1434,7 @@ bool ShootPaintSphere( const model_t *pModel, const Vector& vPosition, BYTE colo
 
 	//do the actual painting
 	bool bChangedPaint = false;
-	int numSurf = paintinfo.m_aApplySurfs.Count();
+	int numSurf = std::ssize( paintinfo.m_aApplySurfs );
 	for ( int i=0; i<numSurf; ++i )
 	{
 		// check if surface is behind main surface
@@ -1456,7 +1453,7 @@ bool ShootPaintSphere( const model_t *pModel, const Vector& vPosition, BYTE colo
 //-----------------------------------------------------------------------------
 // iterate over all surfaces on a model, to find painted surface at the collision point
 //-----------------------------------------------------------------------------
-void GetPaintColorFromSurface( SurfaceHandle_t surfID, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, const VPlane& basePlane, CUtlVector<BYTE>& surfColors )
+void GetPaintColorFromSurface( SurfaceHandle_t surfID, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, const VPlane& basePlane, std::vector< BYTE >& surfColors )
 {
 	if ( (MSurf_Flags( surfID ) & SURFDRAW_PAINTED) == 0 )
 		return;
@@ -1476,7 +1473,7 @@ void GetPaintColorFromSurface( SurfaceHandle_t surfID, const Vector& vPosition, 
 }
 
 
-void TracePaintSphere( const model_t *pModel, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, CUtlVector<BYTE>& surfColors )
+void TracePaintSphere( const model_t *pModel, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, std::vector< BYTE >& surfColors )
 {
 	if ( !g_PaintManager.m_bShouldRegister || g_PaintManager.m_pPaintTextureDataArray == nullptr )
 	{
@@ -1488,20 +1485,20 @@ void TracePaintSphere( const model_t *pModel, const Vector& vPosition, const Vec
 		return;
 
 	//clear paint
- 	surfColors.RemoveAll();
+ 	surfColors.clear();
 
 	paintinfo_t paintinfo;
 	paintinfo.m_vPosition = vPosition;
 	paintinfo.m_flSize = flSphereRadius;
 	paintinfo.m_flCurrentDistance = FLT_MAX;
 	paintinfo.m_pBrush = pModel->brush.pShared;
-	paintinfo.m_aApplySurfs.RemoveAll();
+	paintinfo.m_aApplySurfs.clear();
 	paintinfo.m_bPainting = false;
 
 	mnode_t *pnodes = paintinfo.m_pBrush->nodes + pModel->brush.firstnode;
 	R_PaintNode( pnodes, &paintinfo );
 
-	int numSurf = paintinfo.m_aApplySurfs.Count();
+	int numSurf = std::ssize( paintinfo.m_aApplySurfs );
 	for ( int i=0; i<numSurf; ++i )
 	{
 		GetPaintColorFromSurface( paintinfo.m_aApplySurfs[i], vPosition, vContactNormal, flSphereRadius, paintinfo.m_plane, surfColors );

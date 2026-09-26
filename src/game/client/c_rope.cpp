@@ -5,6 +5,7 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include <mutex>
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 #include "c_rope.h"
@@ -19,13 +20,11 @@
 #include "collisionutils.h"
 #include <keyvalues.h>
 #include <bitbuf.h>
-#include "utllinkedlist.h"
+#include "tier1/vector_ops.h"
+#include <deque>
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "tier1/callqueue.h"
 #include "tier1/memstack.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //int		g_sModelXmasBulb;	// holds the sprite index for splattered blood
 
@@ -88,7 +87,7 @@ static int			g_nRopePointsSimulated;
 
 static IMaterial *g_pSplineCableShadowdepth = nullptr;
 // Active ropes.
-CUtlLinkedList<C_RopeKeyframe*, int> g_Ropes;
+std::vector<C_RopeKeyframe*> g_Ropes;
 
 
 static Vector	g_FullBright_LightValues[ROPE_MAX_SEGMENTS];
@@ -110,8 +109,8 @@ class CRopeDelayedEffects
 {
 public:
 	float m_flTimeProcessedOnMainThread; // gpGlobals->curtime
-	CThreadFastMutex m_mtx;
-	CUtlVector< CEffectData > m_arrEffects;
+	std::recursive_mutex m_mtx;
+	std::vector< CEffectData > m_arrEffects;
 }
 g_RopeDelayedEffects;
 
@@ -150,18 +149,18 @@ private:
 	{
 		RopeRenderData_t *pCaches;
 		int iCacheCount;
-		CThreadFastMutex *m_pRopeDataMutex;
+		std::recursive_mutex *m_pRopeDataMutex;
 		RopeQueuedRenderCache_t( void ) : pCaches(nullptr), iCacheCount(0) { };
 	};
 
-	void DrawRenderCache_NonQueued( bool bShadowDepth, RopeRenderData_t *pRenderCache, int nRenderCacheCount, const Vector &vCurrentViewForward, const Vector &vCurrentViewOrigin, C_RopeKeyframe::BuildRopeQueuedData_t *pBuildRopeQueuedData, CThreadFastMutex *pRopeDataMutex );
+	void DrawRenderCache_NonQueued( bool bShadowDepth, RopeRenderData_t *pRenderCache, int nRenderCacheCount, const Vector &vCurrentViewForward, const Vector &vCurrentViewOrigin, C_RopeKeyframe::BuildRopeQueuedData_t *pBuildRopeQueuedData, std::recursive_mutex *pRopeDataMutex );
 
-	CUtlVector<RopeRenderData_t>	m_aRenderCache;
+	std::vector< RopeRenderData_t >	m_aRenderCache;
 	
 	//in queued material system mode we need to store off data for later use.
 	IMaterial* m_pDepthWriteMaterial;
-	CUtlLinkedList<RopeQueuedRenderCache_t> m_RopeQueuedRenderCaches;	
-	CThreadFastMutex		m_RopeQueuedRenderCaches_Mutex; //mutex just for changing m_RopeQueuedRenderCaches
+	std::deque<RopeQueuedRenderCache_t> m_RopeQueuedRenderCaches;	
+	std::recursive_mutex		m_RopeQueuedRenderCaches_Mutex; //mutex just for changing m_RopeQueuedRenderCaches
 	bool m_bDrawHolidayLights;
 	bool m_bHolidayInitialized;
 	int m_nHolidayLightsStyle;
@@ -180,7 +179,7 @@ IRopeManager *RopeManager()
 //-----------------------------------------------------------------------------
 CRopeManager::CRopeManager()
 {
-	m_aRenderCache.Purge();
+	m_aRenderCache.clear(); m_aRenderCache.shrink_to_fit();
 	m_pDepthWriteMaterial = nullptr;
 	m_bDrawHolidayLights = false;
 	m_bHolidayInitialized = false;
@@ -191,7 +190,7 @@ CRopeManager::CRopeManager()
 //-----------------------------------------------------------------------------
 CRopeManager::~CRopeManager()
 {
-	m_aRenderCache.Purge();
+	m_aRenderCache.clear(); m_aRenderCache.shrink_to_fit();
 }
 
 //-----------------------------------------------------------------------------
@@ -199,7 +198,7 @@ CRopeManager::~CRopeManager()
 //-----------------------------------------------------------------------------
 void CRopeManager::ResetRenderCache( void )
 {
-	int nRenderCacheCount = m_aRenderCache.Count();
+	int nRenderCacheCount = std::ssize( m_aRenderCache );
 	for ( int iRenderCache = 0; iRenderCache < nRenderCacheCount; ++iRenderCache )
 	{
 		m_aRenderCache[iRenderCache].m_nCacheCount = 0;
@@ -218,7 +217,7 @@ void CRopeManager::AddToRenderCache( C_RopeKeyframe *pRope )
 
 	// Find the current rope list.
 	int iRenderCache = 0;
-	int nRenderCacheCount = m_aRenderCache.Count();
+	int nRenderCacheCount = std::ssize( m_aRenderCache );
 	for ( ; iRenderCache < nRenderCacheCount; ++iRenderCache )
 	{
 		if ( pRope->GetSolidMaterial() == m_aRenderCache[iRenderCache].m_pSolidMaterial )
@@ -229,7 +228,7 @@ void CRopeManager::AddToRenderCache( C_RopeKeyframe *pRope )
 	// If we didn't find one, then allocate the mofo.
 	if ( iRenderCache == nRenderCacheCount )
 	{
-		int iRenderCache = m_aRenderCache.AddToTail();
+		int iRenderCache = std::ssize( m_aRenderCache ); m_aRenderCache.emplace_back();
 		m_aRenderCache[iRenderCache].m_pSolidMaterial = pRope->GetSolidMaterial();
 		m_aRenderCache[iRenderCache].m_nCacheCount = 0;
 	}
@@ -267,11 +266,11 @@ void CRopeManager::AddToRenderCache( C_RopeKeyframe *pRope )
 	meshBuilder.FastIndex( i + 5, c + 2 );						\
 	i += 6;														
 
-void CRopeManager::DrawRenderCache_NonQueued( bool bShadowDepth, RopeRenderData_t *pRenderCache, int nRenderCacheCount, const Vector &vCurrentViewForward, const Vector &vCurrentViewOrigin, C_RopeKeyframe::BuildRopeQueuedData_t *pBuildRopeQueuedData, CThreadFastMutex *pRopeDataMutex )
+void CRopeManager::DrawRenderCache_NonQueued( bool bShadowDepth, RopeRenderData_t *pRenderCache, int nRenderCacheCount, const Vector &vCurrentViewForward, const Vector &vCurrentViewOrigin, C_RopeKeyframe::BuildRopeQueuedData_t *pBuildRopeQueuedData, std::recursive_mutex *pRopeDataMutex )
 {
 	VPROF_BUDGET( "CRopeManager::DrawRenderCache", VPROF_BUDGETGROUP_ROPES );
 	
-	CThreadFastMutex dummyMutex;
+	std::recursive_mutex dummyMutex;
 	if( pRopeDataMutex == nullptr )
 		pRopeDataMutex = &dummyMutex;
 
@@ -288,7 +287,7 @@ void CRopeManager::DrawRenderCache_NonQueued( bool bShadowDepth, RopeRenderData_
 	// UNDONE: needs to use the queued data
 	do
 	{
-		AUTO_LOCK_FM( *pRopeDataMutex );
+		std::scoped_lock lock( *pRopeDataMutex );
 		int defaultSubdiv = rope_subdiv.GetInt();
 		for ( int iRenderCache = 0; iRenderCache < nRenderCacheCount; ++iRenderCache )
 		{
@@ -322,8 +321,8 @@ void CRopeManager::DrawRenderCache_NonQueued( bool bShadowDepth, RopeRenderData_
 
 			IMesh* pMesh = pRenderContext->GetDynamicMesh( true );
 			CMeshBuilder meshBuilder;
-			int meshVertCount = MIN(nTotalVerts, nMaxVertices);
-			int meshIndexCount = MIN(nTotalIndices, nMaxIndices);
+			int meshVertCount = std::min(nTotalVerts, nMaxVertices);
+			int meshIndexCount = std::min(nTotalIndices, nMaxIndices);
 			meshBuilder.Begin( pMesh, MATERIAL_TRIANGLES, meshVertCount, meshIndexCount );
 			if ( meshBuilder.m_ActualVertexSize == 0 )
 			{
@@ -356,10 +355,10 @@ void CRopeManager::DrawRenderCache_NonQueued( bool bShadowDepth, RopeRenderData_
 					int nNumIndicesPerSegment = 6 * nSubdivCount;
 					int nNumVerticesPerSegment = 2 * nSubdivCount;
 
-					int nSegmentsAvailableInBuffer = MIN( ( availableVerts - 2 ) / nNumVerticesPerSegment,
+					int nSegmentsAvailableInBuffer = std::min( ( availableVerts - 2 ) / nNumVerticesPerSegment,
 						( availableIndices ) / nNumIndicesPerSegment );
 
-					int segmentsInBuffer = MIN(nSegmentsAvailableInBuffer,nSegmentsToRender);
+					int segmentsInBuffer = std::min(nSegmentsAvailableInBuffer,nSegmentsToRender);
 					availableIndices -= nNumIndicesPerSegment * segmentsInBuffer;
 					availableVerts -= 2 + (nNumVerticesPerSegment * segmentsInBuffer);
 
@@ -421,8 +420,8 @@ void CRopeManager::DrawRenderCache_NonQueued( bool bShadowDepth, RopeRenderData_
 							pMesh->Draw();
 							nTotalVerts -= (meshVertCount - availableVerts);
 							nTotalIndices -= (meshIndexCount - availableIndices);
-							meshVertCount = MIN(nTotalVerts, nMaxVertices);
-							meshIndexCount = MIN(nTotalIndices, nMaxIndices);
+							meshVertCount = std::min(nTotalVerts, nMaxVertices);
+							meshIndexCount = std::min(nTotalIndices, nMaxIndices);
 							meshBuilder.Begin( pMesh, MATERIAL_TRIANGLES, meshVertCount, meshIndexCount );
 							nVertices = 0;
 							nIndices = 0;
@@ -431,7 +430,7 @@ void CRopeManager::DrawRenderCache_NonQueued( bool bShadowDepth, RopeRenderData_
 							// copy the last emitted points
 							OUTPUT_2SPLINE_VERTS( nVertices, flT, flLastU );
 
-							nSegmentsAvailableInBuffer = MIN( ( availableVerts - 2 ) / nNumVerticesPerSegment,
+							nSegmentsAvailableInBuffer = std::min( ( availableVerts - 2 ) / nNumVerticesPerSegment,
 								availableIndices / nNumIndicesPerSegment );
 
 							nCurIDX = 0;
@@ -495,7 +494,7 @@ void CRopeManager::DrawRenderCache_NonQueued( bool bShadowDepth, RopeRenderData_
 								 pRope->m_ropeType == ROPE_TYPE_DEFAULT &&
 								 pRope->m_iDefaultRopeMaterialModelIndex == pRope->m_iRopeMaterialModelIndex &&
 								 pRope->m_RopePhysics.NumNodes() >= 5 &&
-								 m_RopeQueuedRenderCaches.Count() == 1 &&
+								 m_RopeQueuedRenderCaches.size() == 1 &&
 								 r_rope_holiday_light_scale.GetFloat() > 0.0f )
 							{
 								int xy = ( int )( pNode[nSeg].m_vPredicted.x + pNode[nSeg].m_vPredicted.y );
@@ -505,8 +504,8 @@ void CRopeManager::DrawRenderCache_NonQueued( bool bShadowDepth, RopeRenderData_
 								data.m_flScale = r_rope_holiday_light_scale.GetFloat();
 								data.m_vOrigin = pNode[nSeg].m_vPredicted;
 								{
-									AUTO_LOCK( g_RopeDelayedEffects.m_mtx );
-									g_RopeDelayedEffects.m_arrEffects.AddToTail( data );
+									std::scoped_lock lock( g_RopeDelayedEffects.m_mtx );
+									g_RopeDelayedEffects.m_arrEffects.push_back( data );
 								}
 							}
 						}
@@ -528,14 +527,13 @@ void CRopeManager::DrawRenderCache_NonQueued( bool bShadowDepth, RopeRenderData_
 	}
 	while( false ); //wrap in a single execution loop for bail out scenarios
 
-	m_RopeQueuedRenderCaches_Mutex.Lock();
-	if( pBuildRopeQueuedData && (m_RopeQueuedRenderCaches.Count() != 0) )
+	m_RopeQueuedRenderCaches_Mutex.lock();
+	if( pBuildRopeQueuedData && !m_RopeQueuedRenderCaches.empty() )
 	{
-		unsigned short iHeadIndex = m_RopeQueuedRenderCaches.Head();
-		delete m_RopeQueuedRenderCaches[iHeadIndex].m_pRopeDataMutex;
-		m_RopeQueuedRenderCaches.Remove( iHeadIndex );
+		delete m_RopeQueuedRenderCaches.front().m_pRopeDataMutex;
+		m_RopeQueuedRenderCaches.pop_front();
 	}
-	m_RopeQueuedRenderCaches_Mutex.Unlock();
+	m_RopeQueuedRenderCaches_Mutex.unlock();
 }
 
 ConVar r_queued_ropes( "r_queued_ropes", "1" );
@@ -545,7 +543,7 @@ ConVar r_queued_ropes( "r_queued_ropes", "1" );
 //-----------------------------------------------------------------------------
 void CRopeManager::DrawRenderCache( IMatRenderContext *pRenderContext, bool bShadowDepth )
 {
-	int iRenderCacheCount = m_aRenderCache.Count();
+	int iRenderCacheCount = std::ssize( m_aRenderCache );
 
 	if( iRenderCacheCount == 0 )
 		return;
@@ -561,7 +559,7 @@ void CRopeManager::DrawRenderCache( IMatRenderContext *pRenderContext, bool bSha
 	if( r_queued_ropes.GetBool() && (pCallQueue = pRenderContext->GetCallQueue()) != nullptr )
 	{
 		//material queue available and desired
-		CRopeManager::RopeRenderData_t *pRenderCache = m_aRenderCache.Base();
+		CRopeManager::RopeRenderData_t *pRenderCache = m_aRenderCache.data();
 		
 		int iRopeCount = 0;
 		int iNodeCount = 0;
@@ -599,7 +597,7 @@ void CRopeManager::DrawRenderCache( IMatRenderContext *pRenderContext, bool bSha
 		RopeQueuedRenderCache_t cache;
 		cache.pCaches = pRenderCachesStart;
 		cache.iCacheCount = iRenderCacheCount;
-		cache.m_pRopeDataMutex = new CThreadFastMutex;
+		cache.m_pRopeDataMutex = new std::recursive_mutex;
 		
 		C_RopeKeyframe::BuildRopeQueuedData_t *pWriteRopeQueuedData = pBuildRopeQueuedDataStart;
 		Vector *pVectorWrite = (Vector *)pVectorDataStart;
@@ -643,10 +641,10 @@ void CRopeManager::DrawRenderCache( IMatRenderContext *pRenderContext, bool bSha
 			}
 		}
 
-		m_RopeQueuedRenderCaches_Mutex.Lock();
-		unsigned short iLLIndex = m_RopeQueuedRenderCaches.AddToTail( cache );
-		CThreadFastMutex *pRopeDataMutex = m_RopeQueuedRenderCaches[iLLIndex].m_pRopeDataMutex;
-		m_RopeQueuedRenderCaches_Mutex.Unlock();
+		m_RopeQueuedRenderCaches_Mutex.lock();
+		m_RopeQueuedRenderCaches.push_back( cache );
+		std::recursive_mutex *pRopeDataMutex = m_RopeQueuedRenderCaches.back().m_pRopeDataMutex;
+		m_RopeQueuedRenderCaches_Mutex.unlock();
 
 		Assert( ((void *)pVectorWrite == (void *)(((uint8 *)pMemory) + iMemoryNeeded)) && ((void *)pWriteRopeQueuedData == (void *)pVectorDataStart));		
 		pCallQueue->QueueCall( this, &CRopeManager::DrawRenderCache_NonQueued, bShadowDepth, pRenderCachesStart, iRenderCacheCount, vForward, vOrigin, pBuildRopeQueuedDataStart, pRopeDataMutex );
@@ -659,7 +657,7 @@ void CRopeManager::DrawRenderCache( IMatRenderContext *pRenderContext, bool bSha
 	}
 	else
 	{
-		DrawRenderCache_NonQueued( bShadowDepth, m_aRenderCache.Base(), iRenderCacheCount, vForward, vOrigin, nullptr, nullptr );
+		DrawRenderCache_NonQueued( bShadowDepth, m_aRenderCache.data(), iRenderCacheCount, vForward, vOrigin, nullptr, nullptr );
 	}
 }
 
@@ -678,12 +676,10 @@ int CRopeManager::GetHolidayLightStyle( void )
 void CRopeManager::RemoveRopeFromQueuedRenderCaches( C_RopeKeyframe *pRope )
 {
 	//remove this rope from queued render caches
-	AUTO_LOCK_FM( m_RopeQueuedRenderCaches_Mutex );
+	std::scoped_lock lock( m_RopeQueuedRenderCaches_Mutex );
 	
-	int index = m_RopeQueuedRenderCaches.Head();
-	while( m_RopeQueuedRenderCaches.IsValidIndex( index ) )
+	for ( RopeQueuedRenderCache_t &RenderCacheData : m_RopeQueuedRenderCaches )
 	{
-		RopeQueuedRenderCache_t &RenderCacheData = m_RopeQueuedRenderCaches[index];		
 		for( int i = 0; i != RenderCacheData.iCacheCount; ++i )
 		{
 			RopeRenderData_t *pCache = &RenderCacheData.pCaches[i];
@@ -691,14 +687,12 @@ void CRopeManager::RemoveRopeFromQueuedRenderCaches( C_RopeKeyframe *pRope )
 			{
 				if( pCache->m_aCache[j] == pRope )
 				{
-					RenderCacheData.m_pRopeDataMutex->Lock();
+					RenderCacheData.m_pRopeDataMutex->lock();
 					pCache->m_aCache[j] = nullptr;
-					RenderCacheData.m_pRopeDataMutex->Unlock();
+					RenderCacheData.m_pRopeDataMutex->unlock();
 				}
 			}
-		}		
-
-		index = m_RopeQueuedRenderCaches.Next( index );
+		}
 	}
 }
 
@@ -725,10 +719,8 @@ void ShakeRopesCallback( const CEffectData &data )
 	float flMagnitude = data.m_flMagnitude;
 
 	// Now find any nearby ropes and shake them.
-	FOR_EACH_LL( g_Ropes, i )
+	for ( C_RopeKeyframe *pRope : g_Ropes )
 	{
-		C_RopeKeyframe *pRope = g_Ropes[i];
-	
 		pRope->ShakeRope( vCenter, flRadius, flMagnitude );
 	}
 }
@@ -875,7 +867,7 @@ void C_RopeKeyframe::CPhysicsDelegate::ApplyConstraints( CSimplePhysics::CNode *
 			AngleVectors( angles, &forward );
 
 			int parity = 1;
-			int nFalloffNodes = MIN( 2, nNodes - 2 );
+			int nFalloffNodes = std::min( 2, nNodes - 2 );
 			LockNodeDirection( pNodes, parity, nFalloffNodes, g_flLockAmount, g_flLockFalloff, forward );
 		}
 	}
@@ -889,7 +881,7 @@ void C_RopeKeyframe::CPhysicsDelegate::ApplyConstraints( CSimplePhysics::CNode *
 			AngleVectors( angles, &forward );
 			
 			int parity = -1;
-			int nFalloffNodes = MIN( 2, nNodes - 2 );
+			int nFalloffNodes = std::min( 2, nNodes - 2 );
 			LockNodeDirection( &pNodes[nNodes-1], parity, nFalloffNodes, g_flLockAmount, g_flLockFalloff, forward );
 		}
 	}
@@ -927,14 +919,14 @@ C_RopeKeyframe::C_RopeKeyframe()
 
 	m_ropeType = ROPE_TYPE_DEFAULT;
 
-	g_Ropes.AddToTail( this );
+	g_Ropes.push_back( this );
 }
 
 
 C_RopeKeyframe::~C_RopeKeyframe()
 {
 	s_RopeManager.RemoveRopeFromQueuedRenderCaches( this );	
-	g_Ropes.FindAndRemove( this );
+	ks::erase_first( g_Ropes, this );
 }
 
 
@@ -1013,10 +1005,8 @@ int C_RopeKeyframe::GetRopesIntersectingAABB( C_RopeKeyframe **pRopes, int nMaxR
 		return 0;
 	
 	int nRopes = 0;
-	FOR_EACH_LL( g_Ropes, i )
+	for ( C_RopeKeyframe *pRope : g_Ropes )
 	{
-		C_RopeKeyframe *pRope = g_Ropes[i];
-	
 		Vector v1, v2;
 		if ( pRope->GetEndPointPos( 0, v1 ) && pRope->GetEndPointPos( 1, v2 ) )
 		{
@@ -1746,15 +1736,15 @@ void C_RopeKeyframe::UpdateHolidayLights( void )
 	if ( !RopeManager()->IsHolidayLightMode() )
 		return;
 
-	if ( ( gpGlobals->curtime != g_RopeDelayedEffects.m_flTimeProcessedOnMainThread ) && g_RopeDelayedEffects.m_arrEffects.Count() )
+	if ( ( gpGlobals->curtime != g_RopeDelayedEffects.m_flTimeProcessedOnMainThread ) && std::ssize( g_RopeDelayedEffects.m_arrEffects ) )
 	{
 		g_RopeDelayedEffects.m_flTimeProcessedOnMainThread = gpGlobals->curtime;
-		AUTO_LOCK( g_RopeDelayedEffects.m_mtx );
-		FOR_EACH_VEC( g_RopeDelayedEffects.m_arrEffects, iEffect )
+		std::scoped_lock lock( g_RopeDelayedEffects.m_mtx );
+		for ( const auto &effect : g_RopeDelayedEffects.m_arrEffects )
 		{
-			DispatchEffect( "CS_HolidayLight", g_RopeDelayedEffects.m_arrEffects[iEffect] );
+			DispatchEffect( "CS_HolidayLight", effect );
 		}
-		g_RopeDelayedEffects.m_arrEffects.RemoveAll();
+		g_RopeDelayedEffects.m_arrEffects.clear();
 	}
 }
 
@@ -1777,12 +1767,12 @@ void C_RopeKeyframe::CalcLightValues()
 			for ( int iSide=0; iSide < 6; iSide++ )
 			{
 				float flLen = boxColors[iSide].Length();
-				flMaxIntensity = MAX( flMaxIntensity, flLen );
+				flMaxIntensity = std::max( flMaxIntensity, flLen );
 			}
 
 			VectorNormalize( m_LightValues[i] );
 			m_LightValues[i] *= flMaxIntensity;
-			float flMax = MAX( m_LightValues[i].x, MAX( m_LightValues[i].y, m_LightValues[i].z ) );
+			float flMax = std::max( m_LightValues[i].x, std::max( m_LightValues[i].y, m_LightValues[i].z ) );
 			if ( flMax > 1 )
 				m_LightValues[i] /= flMax;
 		}

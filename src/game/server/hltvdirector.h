@@ -12,7 +12,7 @@
 #include <igamesystem.h>
 #include <ihltvdirector.h>
 #include <ihltv.h>
-#include <utlrbtree.h>
+#include <set>
 
 #define	HLTV_MIN_DIRECTOR_DELAY		3	// minimum delay if director is enabled
 #define	HLTV_MAX_DELAY				120	// maximum delay
@@ -32,6 +32,15 @@ public:
 		IGameEvent	*m_Event;	// IGameEvent
 };
 
+// Orders events by tick; transparent so the history can be searched by tick.
+struct CHLTVGameEventLess
+{
+	using is_transparent = void;
+	bool operator()( const CHLTVGameEvent &e1, const CHLTVGameEvent &e2 ) const { return e1.m_Tick < e2.m_Tick; }
+	bool operator()( const CHLTVGameEvent &e, int tick ) const { return e.m_Tick < tick; }
+	bool operator()( int tick, const CHLTVGameEvent &e ) const { return tick < e.m_Tick; }
+};
+
 class CHLTVDirector : public CGameEventListener, public CBaseGameSystemPerFrame, public IHLTVDirector
 {
 public:
@@ -45,7 +54,7 @@ public:
 	virtual void AddHLTVServer( IHLTVServer *hltv )OVERRIDE; // give the director an HLTV interface 
 	virtual void RemoveHLTVServer( IHLTVServer *hltv ) OVERRIDE;
 	virtual IHLTVServer* GetHLTVServer( int nIndex ) OVERRIDE { return m_HltvServers[ nIndex ].m_pHLTVServer; }
-	virtual int GetHLTVServerCount() OVERRIDE { return m_HltvServers.Count(); }
+	virtual int GetHLTVServerCount() OVERRIDE { return std::ssize( m_HltvServers ); }
 	int		GetDirectorTick( void );	// get current broadcast tick from director
 	int		GetPVSEntity( void ); // get current view entity (PVS)
 	Vector	GetPVSOrigin( void ); // get current PVS origin, if PVS entity is 0
@@ -91,10 +100,13 @@ protected:
 	virtual void	StartInstantBroadcastShot();
 	virtual void	FinishCameraManShot();
 	virtual void	BuildActivePlayerList();
-	virtual CHLTVGameEvent *FindBestGameEvent();
-	virtual void	CreateShotFromEvent( CHLTVGameEvent *ge );
+	virtual const CHLTVGameEvent *FindBestGameEvent();
+	virtual void	CreateShotFromEvent( const CHLTVGameEvent *ge );
 
-	int		FindFirstEvent( int tick ); // finds first event >= tick
+	// events with equal ticks stay in arrival order
+	using EventHistory_t = std::multiset<CHLTVGameEvent, CHLTVGameEventLess>;
+
+	EventHistory_t::const_iterator FindFirstEvent( int tick ) const; // finds first event >= tick
 	void	CheckHistory();
 	void	RemoveEventsFromHistory(int tick); // removes all commands < tick, or all if tick -1
 	
@@ -103,7 +115,7 @@ protected:
 		IHLTVServer		*m_pHLTVServer;	// interface to servers HLTV object
 		CBasePlayer		*m_pHLTVClient; // the HLTV fake client
 	};
-	CUtlVector< HltvServerRecord_t > m_HltvServers;
+	std::vector< HltvServerRecord_t > m_HltvServers;
 
 	float			m_fDelay;	// hltv delay in seconds
 	int				m_nBroadcastTick; // world time that is currently "on the air"
@@ -122,7 +134,7 @@ protected:
 	CBasePlayer		*m_pActivePlayers[MAX_PLAYERS]; // fixed cameras (point_viewcontrol)
 	int				m_iCameraManIndex;		// entity index of current camera man or 0
 	
-	CUtlRBTree<CHLTVGameEvent>	m_EventHistory;
+	EventHistory_t	m_EventHistory;
 };
 
 extern IGameSystem* HLTVDirectorSystem();

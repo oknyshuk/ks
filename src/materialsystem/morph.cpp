@@ -10,7 +10,8 @@
 #include "materialsystem/MaterialSystemUtil.h"
 #include "materialsystem/itexture.h"
 #include "materialsystem/imesh.h"
-#include "utlsortvector.h"
+#include <algorithm>
+#include <vector>
 #include "materialsystem_global.h"
 #include "IHardwareConfigInternal.h"
 #include "pixelwriter.h"
@@ -28,8 +29,7 @@
 #include "imaterialinternal.h"
 
 
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 //-----------------------------------------------------------------------------
 // Activate to get stats
 //-----------------------------------------------------------------------------
@@ -67,46 +67,18 @@ public:
 	void SortDeltas();
 
 private:
-	// Sort method for each morph target's vertices
-	class CMorphVertexListLess
-	{
-	public:
-		bool Less( const MorphVertexInfo_t& src1, const MorphVertexInfo_t& src2, void *pCtx )
-		{
-			return src1.m_nVertexId < src2.m_nVertexId;
-		}
-	};
-
-	// A list of all vertices affecting a particular morph target
+	// A list of all vertices affecting a particular morph target; sorted by vertex by SortDeltas
 	struct MorphVertexList_t
 	{
-		MorphVertexList_t() {}
-		MorphVertexList_t( const MorphVertexList_t& src ) : m_nMorphTargetId( src.m_nMorphTargetId ) {}
-
 		int m_nMorphTargetId;
-		CUtlSortVector< MorphVertexInfo_t, CMorphVertexListLess > m_MorphInfo;
-	};
-
-	// Sort function for the morph lists
-	class VertexMorphDictLess
-	{
-	public:
-		bool Less( const MorphVertexList_t& src1, const MorphVertexList_t& src2, void *pCtx );
+		std::vector< MorphVertexInfo_t > m_MorphInfo;
 	};
 
 	// For each morph, store all target vertex indices 
 	// List of all morphs affecting all vertices, used for constructing the morph only
-	CUtlSortVector<	MorphVertexList_t, VertexMorphDictLess > m_MorphLists;
+	// Sorted by m_nMorphTargetId; morph target indices are positions in it.
+	std::vector< MorphVertexList_t > m_MorphLists;
 };
-
-
-//-----------------------------------------------------------------------------
-// Used to sort the morphs affecting a particular vertex
-//-----------------------------------------------------------------------------
-bool CVertexMorphDict::VertexMorphDictLess::Less( const CVertexMorphDict::MorphVertexList_t& src1, const CVertexMorphDict::MorphVertexList_t& src2, void *pCtx )
-{
-	return src1.m_nMorphTargetId < src2.m_nMorphTargetId;
-}
 
 
 //-----------------------------------------------------------------------------
@@ -124,16 +96,13 @@ void CVertexMorphDict::AddMorph( const MorphVertexInfo_t &info )
 {
 	Assert( info.m_nVertexId != 65535 );
 
-	MorphVertexList_t find;
-	find.m_nMorphTargetId = info.m_nMorphTargetId;
-	int nIndex = m_MorphLists.Find( find );
-	if ( nIndex == m_MorphLists.InvalidIndex() )
+	auto it = std::ranges::lower_bound( m_MorphLists, info.m_nMorphTargetId, {}, &MorphVertexList_t::m_nMorphTargetId );
+	if ( it == m_MorphLists.end() || it->m_nMorphTargetId != info.m_nMorphTargetId )
 	{
-		m_MorphLists.Insert( find );
-		nIndex = m_MorphLists.Find( find );
+		it = m_MorphLists.insert( it, MorphVertexList_t{ info.m_nMorphTargetId, {} } );
 	}
 
-	m_MorphLists[nIndex].m_MorphInfo.InsertNoSort( info );
+	it->m_MorphInfo.push_back( info );
 }
 
 
@@ -142,7 +111,7 @@ void CVertexMorphDict::AddMorph( const MorphVertexInfo_t &info )
 //-----------------------------------------------------------------------------
 void CVertexMorphDict::Setup(  )
 {
-	m_MorphLists.Purge();
+	m_MorphLists.clear(); m_MorphLists.shrink_to_fit();
 }
 
 void CVertexMorphDict::CleanUp(  )
@@ -155,12 +124,12 @@ void CVertexMorphDict::CleanUp(  )
 //-----------------------------------------------------------------------------
 int CVertexMorphDict::MorphCount() const
 {
-	return m_MorphLists.Count();
+	return std::ssize( m_MorphLists );
 }
 
 int CVertexMorphDict::GetMorphTargetId( int i ) const
 {
-	if ( i >= m_MorphLists.Count() )
+	if ( i >= std::ssize( m_MorphLists ) )
 		return -1;
 
 	return m_MorphLists[i].m_nMorphTargetId;
@@ -168,7 +137,7 @@ int CVertexMorphDict::GetMorphTargetId( int i ) const
 
 int CVertexMorphDict::GetMorphVertexCount( int nMorphTarget ) const
 {
-	return m_MorphLists[nMorphTarget].m_MorphInfo.Count();
+	return std::ssize( m_MorphLists[nMorphTarget].m_MorphInfo );
 }
 
 const MorphVertexInfo_t &CVertexMorphDict::GetMorphVertexInfo( int nMorphTarget, int j ) const
@@ -182,10 +151,10 @@ const MorphVertexInfo_t &CVertexMorphDict::GetMorphVertexInfo( int nMorphTarget,
 //-----------------------------------------------------------------------------
 void CVertexMorphDict::SortDeltas()
 {
-	int nMorphTargetCount = m_MorphLists.Count();
+	int nMorphTargetCount = std::ssize( m_MorphLists );
 	for ( int i = 0; i < nMorphTargetCount; ++i )
 	{
-		m_MorphLists[i].m_MorphInfo.RedoSort();
+		std::ranges::sort( m_MorphLists[i].m_MorphInfo, {}, &MorphVertexInfo_t::m_nVertexId );
 	}
 }
 
@@ -245,8 +214,8 @@ private:
 
 	typedef void (CMorph::*MorphPixelWriter_t)( CPixelWriter &pixelWriter, int x, int y, const MorphVertexInfo_t &info );
 
-	typedef CUtlVector< MorphSegment_t > MorphSegmentList_t;
-	typedef CUtlVector< MorphQuad_t > MorphQuadList_t;
+	typedef std::vector< MorphSegment_t > MorphSegmentList_t;
+	typedef std::vector< MorphQuad_t > MorphQuadList_t;
 
 private:
 	// Inherited from ITextureRegenerator
@@ -257,13 +226,13 @@ private:
 	void PackMorphData( );
 
 	// Builds the list of segments to render, returns total # of src texels to read from
-	void BuildSegmentList( CUtlVector< MorphSegmentList_t > &morphSegments );
+	void BuildSegmentList( std::vector< MorphSegmentList_t > &morphSegments );
 
 	// Builds the list of quads to render
-	void BuildQuadList( const CUtlVector< MorphSegmentList_t > &morphSegments );
+	void BuildQuadList( const std::vector< MorphSegmentList_t > &morphSegments );
 
 	// Computes the vertex texture width
-	void ComputeTextureDimensions( const CUtlVector< MorphSegmentList_t > &morphSegments );
+	void ComputeTextureDimensions( const std::vector< MorphSegmentList_t > &morphSegments );
 
 	// Writes a morph delta into the texture
 	void WriteDeltaPositionNormalToTexture( CPixelWriter &pixelWriter, int x, int y, const MorphVertexInfo_t &info );
@@ -309,7 +278,7 @@ private:
 	int BuildNonZeroMorphList( int *pWeightIndices, int nWeightCount, const MorphWeight_t* pWeights );
 
 	// Determines the total number of deltas
-	int DetermineTotalDeltaCount( const CUtlVector< MorphSegmentList_t > &morphSegments ) const;
+	int DetermineTotalDeltaCount( const std::vector< MorphSegmentList_t > &morphSegments ) const;
 
 	// Binds the morph weight texture
 	void BindMorphWeight( int nRenderId );
@@ -329,8 +298,8 @@ private:
 	IMesh* m_pMorphBuffer;
 
 	// Describes all morph line segments required to draw a particular morph
-	CUtlVector< MorphQuadList_t > m_MorphQuads;
-	CUtlVector< int > m_MorphTargetIdToQuadIndex;
+	std::vector< MorphQuadList_t > m_MorphQuads;
+	std::vector< int > m_MorphTargetIdToQuadIndex;
 
 	// Caches off the morph weights when in the middle of performing morph accumulation
 	int m_nMaxMorphTargetCount;
@@ -346,7 +315,7 @@ private:
 	int m_nTextureHeight;
 
 #ifdef _DEBUG
-	CUtlString m_pDebugName;
+	std::string m_pDebugName;
 #endif
 
 	// Used to unique-ify morph texture names
@@ -645,8 +614,8 @@ void CMorph::Lock( float flFloatToFixedScale )
 	m_bLocked = true;
 	CleanUp();
 	m_flFloatToFixedScale = flFloatToFixedScale;
-	m_MorphQuads.Purge();
-	m_MorphTargetIdToQuadIndex.RemoveAll();
+	m_MorphQuads.clear(); m_MorphQuads.shrink_to_fit();
+	m_MorphTargetIdToQuadIndex.clear();
 	m_MorphDict.Setup( );
 }
 
@@ -740,14 +709,14 @@ int CMorph::Get4TupleCount( MorphFormat_t format ) const
 //-----------------------------------------------------------------------------
 // Determines the total number of deltas
 //-----------------------------------------------------------------------------
-int CMorph::DetermineTotalDeltaCount( const CUtlVector< MorphSegmentList_t > &morphSegments ) const
+int CMorph::DetermineTotalDeltaCount( const std::vector< MorphSegmentList_t > &morphSegments ) const
 {
 	int nDeltaCount = 0;
-	int nMorphCount = morphSegments.Count();
+	int nMorphCount = std::ssize( morphSegments );
 	for ( int i = 0; i < nMorphCount; ++i )
 	{
 		const MorphSegmentList_t& list = morphSegments[i];
-		int nSegmentCount = list.Count();
+		int nSegmentCount = std::ssize( list );
 		for ( int j = 0; j < nSegmentCount; ++j )
 		{
 			nDeltaCount += list[j].m_nCount;	
@@ -760,7 +729,7 @@ int CMorph::DetermineTotalDeltaCount( const CUtlVector< MorphSegmentList_t > &mo
 //-----------------------------------------------------------------------------
 // Computes the texture width
 //-----------------------------------------------------------------------------
-void CMorph::ComputeTextureDimensions( const CUtlVector< MorphSegmentList_t > &morphSegments )
+void CMorph::ComputeTextureDimensions( const std::vector< MorphSegmentList_t > &morphSegments )
 {
 	int nTotalDeltas = DetermineTotalDeltaCount( morphSegments );
 	m_nTextureHeight = ceil( sqrt( (float)nTotalDeltas ) );
@@ -799,23 +768,23 @@ void CMorph::DisplayMorphStats()
 	int nDestTextureHeight = pDest->GetActualHeight();
 
 #ifdef _DEBUG
-	Msg( "Morph %s:\n", m_pDebugName.String() );
+	Msg( "Morph %s:\n", m_pDebugName.c_str() );
 #else
 	Msg( "Morph :\n" );
 #endif
 
-	int nMorphCount = m_MorphQuads.Count();
+	int nMorphCount = std::ssize( m_MorphQuads );
 	Msg( "\tMorph Target Count : %d\n", nMorphCount );
 
 	int nTotalQuadCount = 0;
 	int nTotalVertexCount = 0;
-	CUtlVector<int> quadHisto;
-	CUtlVector<int> vertexHisto;
-	CUtlVector<int> gapSizeHisto;
+	std::vector< int > quadHisto;
+	std::vector< int > vertexHisto;
+	std::vector< int > gapSizeHisto;
 	for ( int i = 0; i < nMorphCount; ++i )
 	{
 		MorphQuadList_t &list = m_MorphQuads[i];
-		int nQuadCount = list.Count();
+		int nQuadCount = std::ssize( list );
 		int nVertexCount = 0;
 		for ( int j = 0; j < nQuadCount; ++j )
 		{
@@ -827,21 +796,21 @@ void CMorph::DisplayMorphStats()
 					 ( list[j].m_nFirstSrc / m_nTextureHeight == list[j-1].m_nFirstSrc / m_nTextureHeight ) )
 				{
 					int nGapSize = list[j].m_nFirstDest - ( list[j-1].m_nFirstDest + list[j-1].m_nCount );
-					while ( nGapSize >= gapSizeHisto.Count() )
+					while ( nGapSize >= std::ssize( gapSizeHisto ) )
 					{
-						gapSizeHisto.AddToTail( 0 );
+						gapSizeHisto.push_back( 0 );
 					}
 					gapSizeHisto[nGapSize] += 1;
 				}
 			}
 		}
-		while ( nQuadCount >= quadHisto.Count() )
+		while ( nQuadCount >= std::ssize( quadHisto ) )
 		{
-			quadHisto.AddToTail( 0 );
+			quadHisto.push_back( 0 );
 		}
-		while ( nVertexCount >= vertexHisto.Count() )
+		while ( nVertexCount >= std::ssize( vertexHisto ) )
 		{
-			vertexHisto.AddToTail( 0 );
+			vertexHisto.push_back( 0 );
 		}
 		quadHisto[nQuadCount]+=1;
 		vertexHisto[nVertexCount]+=1;
@@ -853,21 +822,21 @@ void CMorph::DisplayMorphStats()
 	Msg( "\tAverage # of quad draws per target: %d\n", nTotalQuadCount / nMorphCount );
 
 	Msg( "\tQuad Count Histogram :\n\t\t" );
-	for ( int i = 0; i < quadHisto.Count(); ++i )
+	for ( int i = 0; i < std::ssize( quadHisto ); ++i )
 	{
 		if ( quadHisto[i] == 0 )
 			continue;
 		Msg( "[%d : %d] ", i, quadHisto[i] );
 	}
 	Msg( "\n\tVertex Count Histogram :\n\t\t" );
-	for ( int i = 0; i < vertexHisto.Count(); ++i )
+	for ( int i = 0; i < std::ssize( vertexHisto ); ++i )
 	{
 		if ( vertexHisto[i] == 0 )
 			continue;
 		Msg( "[%d : %d] ", i, vertexHisto[i] );
 	}
 	Msg( "\n\tGap size Count Histogram :\n\t\t" );
-	for ( int i = 0; i < gapSizeHisto.Count(); ++i )
+	for ( int i = 0; i < std::ssize( gapSizeHisto ); ++i )
 	{
 		if ( gapSizeHisto[i] == 0 )
 			continue;
@@ -882,7 +851,7 @@ void CMorph::DisplayMorphStats()
 //-----------------------------------------------------------------------------
 void CMorph::PackMorphData( )
 {
-	CUtlVector< MorphSegmentList_t > morphSegments;
+	std::vector< MorphSegmentList_t > morphSegments;
 		  
 	BuildSegmentList( morphSegments );
 	ComputeTextureDimensions( morphSegments );
@@ -1007,7 +976,7 @@ void CMorph::WriteSideSpeedToTexture( CPixelWriter &pixelWriter, int x, int y, c
 //-----------------------------------------------------------------------------
 // Builds the list of segments to render
 //-----------------------------------------------------------------------------
-void CMorph::BuildSegmentList( CUtlVector< MorphSegmentList_t > &morphSegments )
+void CMorph::BuildSegmentList( std::vector< MorphSegmentList_t > &morphSegments )
 {
 	// Find the dimensions of the destination texture
 	int nDestTextureWidth, nDestTextureHeight;
@@ -1029,8 +998,8 @@ void CMorph::BuildSegmentList( CUtlVector< MorphSegmentList_t > &morphSegments )
 	m_pRenderMorphWeight = new MorphWeight_t[ m_nMaxMorphTargetCount ];
 
 	Assert( m_nMaxMorphTargetCount < 1024 );	// This algorithm of storing a full array is bogus if this isn't true
-	m_MorphTargetIdToQuadIndex.SetCount( m_nMaxMorphTargetCount );
-	memset( m_MorphTargetIdToQuadIndex.Base(), 0xFF, m_nMaxMorphTargetCount * sizeof(int) );
+	m_MorphTargetIdToQuadIndex.assign( m_nMaxMorphTargetCount, {} );
+	memset( m_MorphTargetIdToQuadIndex.data(), 0xFF, m_nMaxMorphTargetCount * sizeof(int) );
 
 	// Builds the segment list
 	int nSrcIndex = 0;
@@ -1039,7 +1008,7 @@ void CMorph::BuildSegmentList( CUtlVector< MorphSegmentList_t > &morphSegments )
 		int nMorphTargetId = m_MorphDict.GetMorphTargetId( i );
 		m_MorphTargetIdToQuadIndex[nMorphTargetId] = i;
 
-		int nSegmentIndex = morphSegments.AddToTail();
+		int nSegmentIndex = std::ssize( morphSegments ); morphSegments.emplace_back();
 		MorphSegmentList_t &list = morphSegments[nSegmentIndex];
 		Assert( nSegmentIndex == i );
 
@@ -1060,7 +1029,7 @@ void CMorph::BuildSegmentList( CUtlVector< MorphSegmentList_t > &morphSegments )
 				if ( ( nLastDestIndex < 0 ) || ( info.m_nVertexId > nLastDestIndex + MIN_SEGMENT_GAP_SIZE ) || 
 					 ( info.m_nVertexId / nDestTextureHeight != nLastDestIndex / nDestTextureHeight ) )
 				{
-					list.AddToTail( segment );
+					list.push_back( segment );
 					nLastDestIndex = -1;
 				}
 			}
@@ -1085,7 +1054,7 @@ void CMorph::BuildSegmentList( CUtlVector< MorphSegmentList_t > &morphSegments )
 		// Add any trailing segment
 		if ( segment.m_nCount )
 		{
-			list.AddToTail( segment );
+			list.push_back( segment );
 		}
 	}
 }
@@ -1094,19 +1063,19 @@ void CMorph::BuildSegmentList( CUtlVector< MorphSegmentList_t > &morphSegments )
 //-----------------------------------------------------------------------------
 // Builds the list of quads to render
 //-----------------------------------------------------------------------------
-void CMorph::BuildQuadList( const CUtlVector< MorphSegmentList_t > &morphSegments )
+void CMorph::BuildQuadList( const std::vector< MorphSegmentList_t > &morphSegments )
 {
-	m_MorphQuads.RemoveAll();
+	m_MorphQuads.clear();
 
 	int nQuadIndex = 0;
-	int nMorphCount = morphSegments.Count();
+	int nMorphCount = std::ssize( morphSegments );
 	for ( int i = 0; i < nMorphCount; ++i )
 	{
-		int k = m_MorphQuads.AddToTail();
+		int k = std::ssize( m_MorphQuads ); m_MorphQuads.emplace_back();
 		MorphQuadList_t &quadList = m_MorphQuads[k];
 
 		const MorphSegmentList_t& segmentList = morphSegments[i];
-		int nSegmentCount = segmentList.Count();
+		int nSegmentCount = std::ssize( segmentList );
 		for ( int j = 0; j < nSegmentCount; ++j )
 		{
 			const MorphSegment_t &segment = segmentList[j];
@@ -1121,10 +1090,10 @@ void CMorph::BuildQuadList( const CUtlVector< MorphSegmentList_t > &morphSegment
 				int sy = nSrc - sx * m_nTextureHeight;
 
 				int nMaxCount = m_nTextureHeight - sy;
-				int nCount = MIN( nMaxCount, nTotalCount );
+				int nCount = std::min( nMaxCount, nTotalCount );
 				nTotalCount -= nCount;
 
-				int l = quadList.AddToTail();
+				int l = std::ssize( quadList ); quadList.emplace_back();
 				MorphQuad_t &quad = quadList[l];
 				quad.m_nQuadIndex = nQuadIndex++;
 				quad.m_nCount = nCount;
@@ -1148,11 +1117,11 @@ int CMorph::CountStaticMeshVertices() const
 	// I believe I should be able to share any edge that isn't on the edges of the texture
 	// so I should be able to get down to nearly 2 (or is it 1?) verts per segment.
 	int nVertexCount = 0;
-	int nMorphCount = m_MorphQuads.Count();
+	int nMorphCount = std::ssize( m_MorphQuads );
 	for ( int i = 0; i < nMorphCount; ++i )
 	{
 		const MorphQuadList_t& quadList = m_MorphQuads[i];
-		nVertexCount += quadList.Count() * 4;
+		nVertexCount += std::ssize( quadList ) * 4;
 	}
 
 	return nVertexCount;
@@ -1203,11 +1172,11 @@ void CMorph::CreateStaticMesh()
 	CMeshBuilder meshBuilder;
 	meshBuilder.Begin( m_pMorphBuffer, MATERIAL_TRIANGLES, nVertexCount, 0 ); 
 
-	int nMorphCount = m_MorphQuads.Count();
+	int nMorphCount = std::ssize( m_MorphQuads );
 	for ( int i = 0; i < nMorphCount; ++i )
 	{
 		MorphQuadList_t& quadList = m_MorphQuads[i];
-		int nQuadCount = quadList.Count();
+		int nQuadCount = std::ssize( quadList );
 		for ( int j = 0; j < nQuadCount; ++j )
 		{
 			MorphQuad_t &quad = quadList[j];
@@ -1288,11 +1257,11 @@ void CMorph::RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture
 		}
 	}
 
-	int nQuadListCount = m_MorphQuads.Count();
+	int nQuadListCount = std::ssize( m_MorphQuads );
 	for ( int i = 0; i < nQuadListCount; ++i )
 	{
 		MorphQuadList_t &quadList = m_MorphQuads[i];
-		int nQuadCount = quadList.Count();
+		int nQuadCount = std::ssize( quadList );
 		int nVertIndex = 0;
 		for ( int j = 0; j < nQuadCount; ++j )
 		{
@@ -1323,9 +1292,9 @@ void CMorph::RegenerateTextureBits( ITexture *pTexture, IVTFTexture *pVTFTexture
 // Deals with morph stats
 //-----------------------------------------------------------------------------
 static ConVar mat_morphstats( "mat_morphstats", "0", FCVAR_CHEAT );
-static CUtlVector<int> s_ActiveMorphHisto;
-static CUtlVector<int> s_RenderedQuadHisto;
-static CUtlVector<int> s_RenderedTexelHisto;
+static std::vector< int > s_ActiveMorphHisto;
+static std::vector< int > s_RenderedQuadHisto;
+static std::vector< int > s_RenderedTexelHisto;
 static int s_nStatFrameCount = 0;
 static int s_nStatMorphCount = 0;
 static int s_nTotalMorphCount = 0;
@@ -1334,9 +1303,9 @@ static int s_nTotalTexelCount = 0;
 
 void CMorph::ClearMorphStats()
 {
-	s_ActiveMorphHisto.Purge();
-	s_RenderedQuadHisto.Purge();
-	s_RenderedTexelHisto.Purge();
+	s_ActiveMorphHisto.clear(); s_ActiveMorphHisto.shrink_to_fit();
+	s_RenderedQuadHisto.clear(); s_RenderedQuadHisto.shrink_to_fit();
+	s_RenderedTexelHisto.clear(); s_RenderedTexelHisto.shrink_to_fit();
 
 	s_nStatFrameCount = 0;
 	s_nTotalMorphCount = 0;
@@ -1346,17 +1315,17 @@ void CMorph::ClearMorphStats()
 
 void CMorph::AccumulateMorphStats( int nActiveMorphCount, int nQuadsRendered, int nTexelsRendered )
 {
-	while ( nActiveMorphCount >= s_ActiveMorphHisto.Count() )
+	while ( nActiveMorphCount >= std::ssize( s_ActiveMorphHisto ) )
 	{
-		s_ActiveMorphHisto.AddToTail( 0 );
+		s_ActiveMorphHisto.push_back( 0 );
 	}
-	while ( nQuadsRendered >= s_RenderedQuadHisto.Count() )
+	while ( nQuadsRendered >= std::ssize( s_RenderedQuadHisto ) )
 	{
-		s_RenderedQuadHisto.AddToTail( 0 );
+		s_RenderedQuadHisto.push_back( 0 );
 	}
-	while ( nTexelsRendered >= s_RenderedTexelHisto.Count() )
+	while ( nTexelsRendered >= std::ssize( s_RenderedTexelHisto ) )
 	{
-		s_RenderedTexelHisto.AddToTail( 0 );
+		s_RenderedTexelHisto.push_back( 0 );
 	}
 	s_ActiveMorphHisto[nActiveMorphCount] += 1;
 	s_RenderedQuadHisto[nQuadsRendered] += 1;
@@ -1382,21 +1351,21 @@ void CMorph::ReportMorphStats( )
 	Msg( "\tAverage # of actual rendered texels per morph: %d\n", s_nTotalTexelCount / s_nStatMorphCount );
 
 	Msg( "\tRendered Quad Count Histogram :\n\t\t" );
-	for ( int i = 0; i < s_RenderedQuadHisto.Count(); ++i )
+	for ( int i = 0; i < std::ssize( s_RenderedQuadHisto ); ++i )
 	{
 		if ( s_RenderedQuadHisto[i] == 0 )
 			continue;
 		Msg( "[%d : %d] ", i, s_RenderedQuadHisto[i] );
 	}
 	Msg( "\n\tRendered Texel Count Histogram :\n\t\t" );
-	for ( int i = 0; i < s_RenderedTexelHisto.Count(); ++i )
+	for ( int i = 0; i < std::ssize( s_RenderedTexelHisto ); ++i )
 	{
 		if ( s_RenderedTexelHisto[i] == 0 )
 			continue;
 		Msg( "[%d : %d] ", i, s_RenderedTexelHisto[i] );
 	}
 	Msg( "\n\tActive morph target Count Histogram :\n\t\t" );
-	for ( int i = 0; i < s_ActiveMorphHisto.Count(); ++i )
+	for ( int i = 0; i < std::ssize( s_ActiveMorphHisto ); ++i )
 	{
 		if ( s_ActiveMorphHisto[i] == 0 )
 			continue;
@@ -1463,7 +1432,7 @@ void CMorph::RenderMorphQuads( IMatRenderContext *pRenderContext, int nRenderId,
 			continue;
 
 		const MorphQuadList_t& quadList = m_MorphQuads[nMorphIndex];
-		int nQuadCount = quadList.Count();
+		int nQuadCount = std::ssize( quadList );
 		for ( int j = 0; j < nQuadCount; ++j )
 		{
 			const MorphQuad_t &quad = quadList[j];
@@ -1546,7 +1515,7 @@ bool CMorph::RenderMorphWeights( IMatRenderContext *pRenderContext, int nRenderI
 		return false;
 
 	// Cache off the weights, we need them when we accumulate the morphs later.
-	int nCountToCopy = MIN( nWeightCount, m_nMaxMorphTargetCount );
+	int nCountToCopy = std::min( nWeightCount, m_nMaxMorphTargetCount );
 	memcpy( m_pRenderMorphWeight, pWeights, nCountToCopy * sizeof(MorphWeight_t) );
 	int nCountToClear = m_nMaxMorphTargetCount - nWeightCount;
 	if ( nCountToClear > 0 )
@@ -1615,7 +1584,7 @@ void CMorph::AccumulateMorph( int nRenderId )
 			continue;
 
 		const MorphQuadList_t& quadList = m_MorphQuads[ nMorphIndex ];
-		nTotalQuadCount += quadList.Count();
+		nTotalQuadCount += std::ssize( quadList );
 	}
 
 	// Clear the morph accumulator
@@ -1980,7 +1949,7 @@ void CMorphMgr::DebugMorphAccumulator( IMatRenderContext *pRenderContext )
 	int nDestWidth = pDest->GetActualWidth();
 	int nDestHeight = pDest->GetActualHeight();
 
-	float* pBuf = (float*)malloc( nDestWidth * nDestHeight * 4 * sizeof(float) );
+	float* pBuf = (float*)MemAlloc_Alloc( nDestWidth * nDestHeight * 4 * sizeof(float) );
 	pRenderContext->ReadPixels( 0, 0, nDestWidth, nDestHeight, (unsigned char*)pBuf, IMAGE_FORMAT_RGBA32323232F );
 
 	Msg( "Morph Accumulator:\n" );
@@ -2003,7 +1972,7 @@ void CMorphMgr::DebugMorphAccumulator( IMatRenderContext *pRenderContext )
 			Display32FTextureData( pBuf, i, pSubRect, pDest, MORPH_ACCUMULATOR_4TUPLES );
 		}
 	}
-	free( pBuf );
+	g_pMemAlloc->Free( pBuf );
 }
 
 
@@ -2023,7 +1992,7 @@ void CMorphMgr::DebugMorphWeights( IMatRenderContext *pRenderContext )
 		return;
 
 	pRenderContext->Flush();
-	float* pBuf = (float*)malloc( nWidth * nHeight * 4 * sizeof(float) );
+	float* pBuf = (float*)MemAlloc_Alloc( nWidth * nHeight * 4 * sizeof(float) );
 	pRenderContext->ReadPixels( 0, 0, nWidth, nHeight, (unsigned char*)pBuf, IMAGE_FORMAT_RGBA32323232F );
 
 	Msg( "Morph Weights:\n" );
@@ -2046,7 +2015,7 @@ void CMorphMgr::DebugMorphWeights( IMatRenderContext *pRenderContext )
 			Display32FTextureData( pBuf, i, pSubRect, pTexture, 1 );
 		}
 	}
-	free( pBuf );
+	g_pMemAlloc->Free( pBuf );
 }
 
 

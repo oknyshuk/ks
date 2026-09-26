@@ -5,6 +5,7 @@
 //=============================================================================//
 
 #include "audio_pch.h"
+#include <mutex>
 
 #include "mouthinfo.h"
 #include "../../cl_main.h"
@@ -18,9 +19,7 @@
 // we don't suport the ASM in this file right now under GCC, fallback to C libs
 #undef id386
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 
 // NOTE: !!!!!! YOU MUST UPDATE SND_MIXA.S IF THIS VALUE IS CHANGED !!!!!
 #define SND_SCALE_BITS		7
@@ -138,7 +137,7 @@ int		snd_scaletable[SND_SCALE_LEVELS][256];	// 32k*4 = 128K
 int 	*snd_p, snd_linear_count, snd_vol;
 short	*snd_out;
 
-extern CThreadFastMutex g_SoundMapMutex; // From snd_dma.cpp
+extern std::recursive_mutex g_SoundMapMutex; // From snd_dma.cpp
 
 bool DSP_CheckDspAutoEnabled( void );
 int Get_idsp_room ( void );
@@ -154,12 +153,15 @@ char* Status_UpdateAudioBuffer()
 	static char buffer[4094];
 
 	buffer[0] = 0;
-	CUtlBuffer buf( buffer, sizeof(buffer),  CUtlBuffer::TEXT_BUFFER );
+	ks::text_writer buf;
 
-	buf.Printf( "Audio: total_channels=%d, Active Channels=%d, g_bdirectionalfx=%d, g_bDspOff=%d\n", total_channels, g_ActiveChannels.GetActiveCount(), g_bdirectionalfx, g_bDspOff );
+	buf.printf( "Audio: total_channels=%d, Active Channels=%d, g_bdirectionalfx=%d, g_bDspOff=%d\n", total_channels, g_ActiveChannels.GetActiveCount(), g_bdirectionalfx, g_bDspOff );
 
 	g_ActiveChannels.DumpChannelInfo( buf );
-	
+
+	const size_t len = std::min( buf.size(), sizeof( buffer ) - 1 );
+	Q_memcpy( buffer, buf.c_str(), len );
+	buffer[len] = 0;
 
 	return buffer;
 }
@@ -175,7 +177,7 @@ void MIX_FreeAllPaintbuffers(void)
 	{
 		if ( g_temppaintbuffer )
 		{
-			_aligned_free( g_temppaintbuffer );
+			MemAlloc_FreeAligned( g_temppaintbuffer );
 			g_temppaintbuffer = nullptr;
 		}
 
@@ -183,19 +185,19 @@ void MIX_FreeAllPaintbuffers(void)
 		{
 			if ( g_paintBuffers[i].pbuf )
 			{
-				_aligned_free( g_paintBuffers[i].pbuf );
+				MemAlloc_FreeAligned( g_paintBuffers[i].pbuf );
 			}
 			if ( g_paintBuffers[i].pbufrear )
 			{
-				_aligned_free( g_paintBuffers[i].pbufrear );
+				MemAlloc_FreeAligned( g_paintBuffers[i].pbufrear );
 			}
 			if ( g_paintBuffers[i].pbufcenter )
 			{
-				_aligned_free( g_paintBuffers[i].pbufcenter );
+				MemAlloc_FreeAligned( g_paintBuffers[i].pbufcenter );
 			}
 		}
 
-		free( g_paintBuffers );
+		g_pMemAlloc->Free( g_paintBuffers );
 		g_paintBuffers = nullptr;
 	}
 }
@@ -213,25 +215,25 @@ bool MIX_InitAllPaintbuffers(void)
 	bSurroundCenter = g_AudioDevice->IsSurroundCenter();
 	bSurround = g_AudioDevice->IsSurround() || bSurroundCenter;
 
-	g_paintBuffers = (paintbuffer_t *)malloc( CPAINTBUFFERS*sizeof( paintbuffer_t ) );
+	g_paintBuffers = (paintbuffer_t *)MemAlloc_Alloc( CPAINTBUFFERS*sizeof( paintbuffer_t ) );
 	V_memset( g_paintBuffers, 0, CPAINTBUFFERS*sizeof( paintbuffer_t ) );
 
-	g_temppaintbuffer = (portable_samplepair_t*)_aligned_malloc( TEMP_COPY_BUFFER_SIZE*sizeof(portable_samplepair_t), 16 );
+	g_temppaintbuffer = (portable_samplepair_t*)MemAlloc_AllocAligned( TEMP_COPY_BUFFER_SIZE*sizeof(portable_samplepair_t), 16 );
 	V_memset( g_temppaintbuffer, 0, TEMP_COPY_BUFFER_SIZE*sizeof(portable_samplepair_t) );
 
 	for ( i=0; i<CPAINTBUFFERS; i++ )
 	{
-		g_paintBuffers[i].pbuf = (portable_samplepair_t *)_aligned_malloc( PAINTBUFFER_MEM_SIZE*sizeof(portable_samplepair_t), 16 );
+		g_paintBuffers[i].pbuf = (portable_samplepair_t *)MemAlloc_AllocAligned( PAINTBUFFER_MEM_SIZE*sizeof(portable_samplepair_t), 16 );
 		V_memset( g_paintBuffers[i].pbuf, 0, PAINTBUFFER_MEM_SIZE*sizeof(portable_samplepair_t) );
 
 		if ( bSurround )
 		{
-			g_paintBuffers[i].pbufrear = (portable_samplepair_t *)_aligned_malloc( PAINTBUFFER_MEM_SIZE*sizeof(portable_samplepair_t), 16 );
+			g_paintBuffers[i].pbufrear = (portable_samplepair_t *)MemAlloc_AllocAligned( PAINTBUFFER_MEM_SIZE*sizeof(portable_samplepair_t), 16 );
 			V_memset( g_paintBuffers[i].pbufrear, 0, PAINTBUFFER_MEM_SIZE*sizeof(portable_samplepair_t) );
 		}
 		if ( bSurroundCenter )
 		{
-			g_paintBuffers[i].pbufcenter = (portable_samplepair_t *)_aligned_malloc( PAINTBUFFER_MEM_SIZE*sizeof(portable_samplepair_t), 16 );
+			g_paintBuffers[i].pbufcenter = (portable_samplepair_t *)MemAlloc_AllocAligned( PAINTBUFFER_MEM_SIZE*sizeof(portable_samplepair_t), 16 );
 			V_memset( g_paintBuffers[i].pbufcenter, 0, PAINTBUFFER_MEM_SIZE*sizeof(portable_samplepair_t) );
 		}
 	}
@@ -1230,7 +1232,7 @@ void MIX_ClearAllPaintBuffers( int SampleCount, bool clearFilters )
 		return;
 	}
 	int i;
-	int count = MIN(SampleCount, PAINTBUFFER_SIZE);
+	int count = std::min(SampleCount, PAINTBUFFER_SIZE);
 
 	// zero out all paintbuffer data (ignore sampleCount)
 
@@ -2454,7 +2456,7 @@ protected:
 
 // comparator for qsort as used below (eg a lambda)
 // returns < 0 if a should come before b, > 0 if a should come after, 0 otherwise
-static int __cdecl ChannelVolComparator ( const void * a, const void * b ) 
+static int ChannelVolComparator ( const void * a, const void * b ) 
 {
 	// greater numbers come first.
 	return static_cast<const CChannelCullList::sChannelVolData *>(b)->m_vol - static_cast<const CChannelCullList::sChannelVolData *>(a)->m_vol;
@@ -2552,7 +2554,7 @@ void MIX_BuildChannelList( CChannelList &list )
 		cullList.Initialize(list);
 	}
 
-	AUTO_LOCK( g_SoundMapMutex );
+	std::scoped_lock lock( g_SoundMapMutex );
 
 	// int numQuashed = 0;
 	for ( int i = list.Count(); --i >= 0; )
@@ -2949,7 +2951,7 @@ bool MIX_ScaleChannelVolume( paintbuffer_t *ppaint, channel_t *pChannel, float v
 	
 	// duck all sound volumes except speaker's voice
 #if !defined( NO_VOICE )
-	int duckScale = MIN(g_DuckScaleInt256, g_SND_VoiceOverdriveInt);		// g_SND_VoiceOverdriveInt is already multipled by 256
+	int duckScale = std::min(g_DuckScaleInt256, g_SND_VoiceOverdriveInt);		// g_SND_VoiceOverdriveInt is already multipled by 256
 #else
 	int duckScale = g_DuckScaleInt256;
 #endif
@@ -4818,8 +4820,8 @@ struct mouthenvelope_t
 };
 
 // a couple of simple arrays for queuing the mouth data
-static CUtlVector<mouthoutput_t> g_MouthOutput;
-static CUtlVector<mouthenvelope_t> g_MouthEnvelope;
+static std::vector< mouthoutput_t > g_MouthOutput;
+static std::vector< mouthenvelope_t > g_MouthEnvelope;
 #define CAVGSAMPLES 10
 
 // queue up a command to remove the channel's mouth source if playing
@@ -4834,7 +4836,7 @@ void SND_CloseMouth(channel_t *pChannel)
 			CMouthInfo *pMouth = pClientEntity->GetMouth();
 			if ( pMouth )
 			{
-				int index = g_MouthOutput.AddToTail();
+				int index = std::ssize( g_MouthOutput ); g_MouthOutput.emplace_back();
 				g_MouthOutput[index].entityId = mouthentity;
 				g_MouthOutput[index].pSource = pChannel->sfx->pSource;
 				g_MouthOutput[index].elapsedTime = -1;
@@ -4849,7 +4851,7 @@ void SND_CloseMouth(channel_t *pChannel)
 // Call this from the main thread to avoid callbacks while the client thread is running
 void SND_MouthUpdateAll()
 {
-	for ( int i = 0; i < g_MouthOutput.Count(); i++ )
+	for ( int i = 0; i < std::ssize( g_MouthOutput ); i++ )
 	{
 		const mouthoutput_t &rec = g_MouthOutput[i];
 		IClientEntity *pClientEntity = entitylist->GetClientEntity( rec.entityId );
@@ -4893,9 +4895,9 @@ void SND_MouthUpdateAll()
 			vd->SetElapsedTime( rec.elapsedTime );
 		}
 	}
-	g_MouthOutput.RemoveAll();
+	g_MouthOutput.clear();
 
-	for ( int i = 0; i < g_MouthEnvelope.Count(); i++ )
+	for ( int i = 0; i < std::ssize( g_MouthEnvelope ); i++ )
 	{
 		const mouthenvelope_t &rec = g_MouthEnvelope[i];
 		IClientEntity *pClientEntity = entitylist->GetClientEntity( rec.entityId );
@@ -4925,7 +4927,7 @@ void SND_MouthUpdateAll()
 			pMouth->mouthopen = 0;
 		}
 	}
-	g_MouthEnvelope.RemoveAll();
+	g_MouthEnvelope.clear();
 }
 
 // need this to make the debug code below work.
@@ -4942,7 +4944,7 @@ void SND_MoveMouth8( channel_t *ch, CAudioSource *pSource, int count )
 	{
 		if ( pSource->GetSentence() )
 		{
-			int index = g_MouthOutput.AddToTail();
+			int index = std::ssize( g_MouthOutput ); g_MouthOutput.emplace_back();
 			g_MouthOutput[index].entityId = mouthentity;
 			g_MouthOutput[index].pSource = pSource;
 			Assert( pSource->SampleRate() > 0 );
@@ -4989,7 +4991,7 @@ void SND_MouthEnvelopeFollower( channel_t *pChannel, char *pData, int count )
 		scount++;
 	} 
 
-	int index = g_MouthEnvelope.AddToTail();
+	int index = std::ssize( g_MouthEnvelope ); g_MouthEnvelope.emplace_back();
 	g_MouthEnvelope[index].entityId = mouthentity;
 	g_MouthEnvelope[index].sampleTotal = savg;
 	g_MouthEnvelope[index].sampleCount = scount;
@@ -5004,7 +5006,7 @@ void SND_ClearMouth( channel_t *pChannel )
 	{
 		int mouthentity = pChannel->speakerentity == -1 ? pChannel->soundsource : pChannel->speakerentity;
 
-		int index = g_MouthOutput.AddToTail();
+		int index = std::ssize( g_MouthOutput ); g_MouthOutput.emplace_back();
 		g_MouthOutput[index].entityId = mouthentity;
 		g_MouthOutput[index].pSource = pChannel->sfx->pSource;
 		g_MouthOutput[index].elapsedTime = -1;

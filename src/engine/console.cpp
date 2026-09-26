@@ -6,7 +6,9 @@
 
 #include "client_pch.h"
 #include <time.h>
+#include <mutex>
 #include "console.h"
+#include "tier1/text_writer.h"
 #include "ivideomode.h"
 #include "zone.h"
 #include "sv_main.h"
@@ -18,9 +20,6 @@
 #include "host_cmd.h"
 #include "cmd.h"
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 #define	MAXPRINTMSG	4096
 
@@ -46,7 +45,7 @@ public:
 	~ConsoleLogManager();
 
 	void RemoveConsoleLogFile();
-	bool ReadConsoleLogFile( CUtlBuffer& buf );
+	bool ReadConsoleLogFile( ks::text_writer& buf );
 	FileHandle_t GetConsoleLogFileHandleForAppend();
 	void CloseFileIfOpen();
 
@@ -493,15 +492,17 @@ void ConsoleLogManager::RemoveConsoleLogFile()
 	g_pFileSystem->RemoveFile( GetConsoleLogFilename(), "GAME" );
 }
 
-bool ConsoleLogManager::ReadConsoleLogFile( CUtlBuffer& buf )
+bool ConsoleLogManager::ReadConsoleLogFile( ks::text_writer& buf )
 {
 	// Make sure the log file is closed before we try reading it.
 	CloseFileIfOpen();
 	const char *pLogFile = GetConsoleLogFilename();
-	if ( g_pFullFileSystem->ReadFile( pLogFile, "GAME", buf ) )
-		return true;
+	auto data = g_pFullFileSystem->ReadFile( pLogFile, "GAME" );
+	if ( !data )
+		return false;
 
-	return false;
+	buf.put_raw( ks::text_view( *data ) );
+	return true;
 }
 
 FileHandle_t ConsoleLogManager::GetConsoleLogFileHandleForAppend()
@@ -585,11 +586,11 @@ void Con_Shutdown (void)
 /*
 ================
 Read the console log from disk and return it in 'buf'. Buf should come
-in as an empty TEXT_BUFFER CUtlBuffer.
+in as an empty text_writer.
 Returns true if the log file is successfully read.
 ================
 */
-bool GetConsoleLogFileData( CUtlBuffer& buf )
+bool GetConsoleLogFileData( ks::text_writer& buf )
 {
 	return GetConsoleLogManager().ReadConsoleLogFile( buf );
 }
@@ -839,7 +840,8 @@ void Con_ColorPrintf( const Color& clr, const char *fmt, ... )
 	Q_vsnprintf (msg,sizeof( msg ), fmt,argptr);
 	va_end (argptr);
 
-	LOCAL_THREAD_LOCK();
+	static std::recursive_mutex autoMutex;
+	std::scoped_lock lock( autoMutex );
 	if ( !HandleRedirectAndDebugLog( msg ) )
 	{
 		return;

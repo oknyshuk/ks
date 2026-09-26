@@ -31,7 +31,7 @@ public:
 	~CConnectionlessLanMgr();
 
 protected:
-	CUtlBuffer m_buffer;
+	std::vector< std::byte > m_buffer;
 };
 
 // Match events subscription singleton

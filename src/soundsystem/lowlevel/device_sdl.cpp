@@ -1,9 +1,9 @@
 #include "basetypes.h"
 #include "commonmacros.h"
 
+#include <mutex>
 #include <SDL3/SDL.h>
 
-#include "mix.h"
 #include "soundsystem/lowlevel.h"
 
 #define DEFAULT_DEVICE_NAME "SDLDefaultDevice"
@@ -80,7 +80,7 @@ private:
 	int m_nReadBuffer, m_nWriteBuffer;
 	int m_nPartialRead;
 	bool m_bAudioStarted;
-	CThreadMutex m_mutexBuffer;
+	std::recursive_mutex m_mutexBuffer;
 
 	bool m_bSilenced;
 	float m_fSilencedVol;
@@ -197,7 +197,7 @@ bool CAudioSDL::Init( const audio_device_init_params_t &params )
 
 void CAudioSDL::OutputBuffer( int nChannels, CAudioMixBuffer *pChannelArray )
 {
-	AUTO_LOCK( m_mutexBuffer );
+	std::scoped_lock lock( m_mutexBuffer );
 	m_bAudioStarted = true;
 	if ( ( (m_nWriteBuffer+1) % kNumBuffers ) == m_nReadBuffer )
 	{
@@ -234,7 +234,7 @@ void CAudioSDL::Shutdown()
 
 int CAudioSDL::QueuedBufferCount()
 {
-	AUTO_LOCK( m_mutexBuffer );
+	std::scoped_lock lock( m_mutexBuffer );
 	if ( m_nWriteBuffer >= m_nReadBuffer )
 	{
 		return m_nWriteBuffer - m_nReadBuffer;
@@ -292,7 +292,7 @@ void CAudioSDL::FillAudioBuffer( SDL_AudioStream *stream, int additional_amount 
 	// Temporary buffer to build audio data into before pushing to the stream
 	Uint8 tmpbuf[4096];
 
-	m_mutexBuffer.Lock();
+	m_mutexBuffer.lock();
 
 	bool bFailedToGetMore = false;
 	while ( m_bAudioStarted && len > 0 && !bFailedToGetMore )
@@ -300,8 +300,8 @@ void CAudioSDL::FillAudioBuffer( SDL_AudioStream *stream, int additional_amount 
 
 		if ( m_nReadBuffer == m_nWriteBuffer )
 		{
-			m_mutexBuffer.Unlock();
-			m_mutexBuffer.Lock();
+			m_mutexBuffer.unlock();
+			m_mutexBuffer.lock();
 
 			if ( m_nReadBuffer == m_nWriteBuffer )
 			{
@@ -384,7 +384,7 @@ void CAudioSDL::FillAudioBuffer( SDL_AudioStream *stream, int additional_amount 
 		}
 	}
 
-	m_mutexBuffer.Unlock();
+	m_mutexBuffer.unlock();
 
 	if ( len > 0 )
 	{
@@ -436,7 +436,7 @@ int Audio_EnumerateSDLDevices( audio_device_description_t *pDeviceListOut, int n
 	int nOutputDeviceCount = 0;
 	SDL_AudioDeviceID *pDevices = SDL_GetAudioPlaybackDevices( &nOutputDeviceCount );
 
-	int nIterateCount = MIN(nListCount-1, nOutputDeviceCount);
+	int nIterateCount = std::min(nListCount-1, nOutputDeviceCount);
 	for ( int i = 0; i < nIterateCount; i++ )
 	{
 		const char *pNameUTF8 = SDL_GetAudioDeviceName( pDevices[i] );

@@ -69,9 +69,6 @@
 #include "playerdecals_signature.h"
 
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 //
 // WARNING!! WARNING!! WARNING!! WARNING!! WARNING!! WARNING!! WARNING!! WARNING!!
 //
@@ -149,7 +146,7 @@ struct PlayerSprayClientRequestData_t
 	float m_flCreationTime;
 };
 static uint64 s_flLastDigitalSignatureTime = 0;
-static CUtlMap< int, PlayerSprayClientRequestData_t, int, CDefLess< int > > s_mapClientDigitalSignatureRequests;
+static std::map< int, PlayerSprayClientRequestData_t > s_mapClientDigitalSignatureRequests;
 
 
 //--------------------------------------------------------------------------------------------------------
@@ -545,11 +542,11 @@ void ClientModeCSNormal::Init()
 	// WARNING!! WARNING!! WARNING!! WARNING!! WARNING!! WARNING!! WARNING!! WARNING!!
 	//
 
-	m_UMCMsgKillCam.Bind< ks::net::CS_UM_KillCam ,ks::net::CCSUsrMsg_KillCam >( UtlMakeDelegate ( MsgFunc_KillCam ) );
+	m_UMCMsgKillCam.Bind< ks::net::CS_UM_KillCam ,ks::net::CCSUsrMsg_KillCam >( MsgFunc_KillCam );
 
 	if ( this != GetFullscreenClientMode() )
 	{
-		m_UMCMsgDisplayInventory.Bind< ks::net::CS_UM_DisplayInventory, ks::net::CCSUsrMsg_DisplayInventory>( UtlMakeDelegate(MsgFunc_DisplayInventory) );
+		m_UMCMsgDisplayInventory.Bind< ks::net::CS_UM_DisplayInventory, ks::net::CCSUsrMsg_DisplayInventory>( MsgFunc_DisplayInventory );
 	}
 
 	char szName[ MAX_PATH ] = "";
@@ -660,7 +657,7 @@ void ClientModeCSNormal::InitViewport( bool bOnlyBaseClass )
 
 void ClientModeCSNormal::SetupStaticCameras()
 {
-	m_SpecCameraPositions.RemoveAll();
+	m_SpecCameraPositions.clear();
 
 	char szMapName[MAX_MAP_NAME];
 	Q_FileBase( engine->GetLevelName(), szMapName, sizeof(szMapName) );
@@ -674,23 +671,21 @@ void ClientModeCSNormal::SetupStaticCameras()
 	{
 		for ( KeyValues *entry = m_pCamKV->GetFirstSubKey(); entry != nullptr; entry = entry->GetNextKey() )
 		{
-			CUtlVector< char* > coordNum;
+			std::vector< std::string > coordNum;
 			V_SplitString( entry->GetString(), " ", coordNum );
 
-			if ( coordNum.Count() < 5 )
+			if ( std::ssize( coordNum ) < 5 )
 			{
 				Msg( "Bad coordinate entry in %s (%s).  Each entry needs 5 numbers, 'x y z pitch yaw'", szFileName, entry->GetString() );
 				continue;
 			}
 
 			SpecCameraPosition_t spot;
-			spot.vecPosition = Vector( atoi(coordNum[0]), atoi(coordNum[1]), atoi(coordNum[2]) );
-			spot.vecAngles = Vector( atoi(coordNum[3]), atoi(coordNum[4]), 0.0f );
+			spot.vecPosition = Vector( atoi(coordNum[0].c_str()), atoi(coordNum[1].c_str()), atoi(coordNum[2].c_str()) );
+			spot.vecAngles = Vector( atoi(coordNum[3].c_str()), atoi(coordNum[4].c_str()), 0.0f );
 			spot.flWeight = 0.0f;
 
-			m_SpecCameraPositions.AddToTail( spot );
-
-			coordNum.PurgeAndDeleteElements();
+			m_SpecCameraPositions.push_back( spot );
 		}
 	}
 }
@@ -711,7 +706,7 @@ int ClientModeCSNormalCameraSortFunction( const SpecCameraPosition_t* entry1, co
 
 bool ClientModeCSNormal::GetIdealCameraPosForPlayer( int playerindex )
 {
-	CUtlVector<SpecCameraPosition_t>	m_IdealCameras;
+	std::vector< SpecCameraPosition_t >	m_IdealCameras;
 	CCSPlayer* pPlayer = ToCSPlayer( UTIL_PlayerByIndex( playerindex ) );
 	if ( !pPlayer )
 		return false;
@@ -720,7 +715,7 @@ bool ClientModeCSNormal::GetIdealCameraPosForPlayer( int playerindex )
 	if ( !pLocalPlayer )
 		return false;
 
-	for ( int i=0; i<m_SpecCameraPositions.Count(); ++i )
+	for ( int i=0; i<std::ssize( m_SpecCameraPositions ); ++i )
 	{
 		// build a list of cameras that can see the target player
 		Vector vecCam = Vector( m_SpecCameraPositions[i].vecPosition[0], m_SpecCameraPositions[i].vecPosition[1], m_SpecCameraPositions[i].vecPosition[2] );
@@ -743,14 +738,14 @@ bool ClientModeCSNormal::GetIdealCameraPosForPlayer( int playerindex )
 				m_SpecCameraPositions[i].flWeight = (flCone*1.5);
 				// weight by closer
 				m_SpecCameraPositions[i].flWeight += ((flMaxLength - flLength)/flMaxLength)*2;
-				m_IdealCameras.AddToTail( m_SpecCameraPositions[i] );
+				m_IdealCameras.push_back( m_SpecCameraPositions[i] );
 			}
 		}
 	}
 
-	if ( m_IdealCameras.Count() > 0 )
+	if ( !m_IdealCameras.empty() )
 	{
-		for ( int i=0; i<m_IdealCameras.Count(); ++i )
+		for ( int i=0; i<std::ssize( m_IdealCameras ); ++i )
 		{
 			// now find all other entities/players in view 
 			Vector vecCam = Vector( m_IdealCameras[i].vecPosition[0], m_IdealCameras[i].vecPosition[1], m_IdealCameras[i].vecPosition[2] );
@@ -831,8 +826,8 @@ bool ClientModeCSNormal::GetIdealCameraPosForPlayer( int playerindex )
 			m_IdealCameras[i].vecAngles[1] = cameraAngles[1];
 		}
 
-		if ( m_IdealCameras.Count() > 1 )
-			m_IdealCameras.Sort( ClientModeCSNormalCameraSortFunction );
+		if ( std::ssize( m_IdealCameras ) > 1 )
+			ks::qsort( m_IdealCameras, ClientModeCSNormalCameraSortFunction );
 
 		int slot = 0;
 		char commandBuffer[128];
@@ -848,7 +843,7 @@ bool ClientModeCSNormal::GetIdealCameraPosForPlayer( int playerindex )
 		V_snprintf( commandBuffer, sizeof( commandBuffer ), "%s %f %f %f %f %f %d %f", commandB, m_IdealCameras[slot].vecPosition[0], m_IdealCameras[slot].vecPosition[1], m_IdealCameras[slot].vecPosition[2], m_IdealCameras[slot].vecAngles[0], m_IdealCameras[slot].vecAngles[1], playerindex, flLerpTime );
 		
 		engine->ClientCmd( commandBuffer );
-		m_IdealCameras.RemoveAll();
+		m_IdealCameras.clear();
 
 		return true;
 	}
@@ -877,11 +872,11 @@ void ClientModeCSNormal::LevelShutdown( void )
 	GlowObjectManager().UnregisterAllGlowBoxes();
 
 	// Clear out all uncommitted quest progress
-	sm_mapQuestProgressUncommitted.Purge();
+	sm_mapQuestProgressUncommitted.clear();
 	s_ScoreLeaderboardData = {};
 
 	// Shutdown outstanding player spray signature requests
-	s_mapClientDigitalSignatureRequests.Purge();
+	s_mapClientDigitalSignatureRequests.clear();
 	s_flLastDigitalSignatureTime = 0;
 
 	// Shutdown decals system
@@ -961,11 +956,8 @@ void ClientModeCSNormal::Update()
 	//
 	// Check if quests need chat confirmation
 	//
-	for ( uint32 i = sm_mapQuestProgressUncommitted.FirstInorder();
-		i != sm_mapQuestProgressUncommitted.InvalidIndex();
-		i = sm_mapQuestProgressUncommitted.NextInorder( i ) )
+	for ( auto &[uiQuestID, questProgress] : sm_mapQuestProgressUncommitted )
 	{
-		CQuestUncommittedProgress_t &questProgress = sm_mapQuestProgressUncommitted.Element( i );
 		if ( !questProgress.m_dblNormalPointsProgressTime )
 			continue;
 		if ( Plat_FloatTime() - questProgress.m_dblNormalPointsProgressTime < 1.6 )
@@ -973,7 +965,7 @@ void ClientModeCSNormal::Update()
 		questProgress.m_dblNormalPointsProgressTime = 0;
 		if ( questProgress.m_numNormalPointsProgressBaseline < questProgress.m_numNormalPoints )
 		{
-			if ( const CEconQuestDefinition *pQuestDef = GetItemSchema()->GetQuestDefinition( sm_mapQuestProgressUncommitted.Key( i ) ) )
+			if ( const CEconQuestDefinition *pQuestDef = GetItemSchema()->GetQuestDefinition( uiQuestID ) )
 			{
 				uint32 numPointsEarned = questProgress.m_numNormalPoints - questProgress.m_numNormalPointsProgressBaseline;
 				char const *fmtToken = ( numPointsEarned > 1 ) ? "#quest_uncommitted_points_chat_plural" : "#quest_uncommitted_points_chat_singular";
@@ -1012,7 +1004,7 @@ void ClientModeCSNormal::Update()
 				}
 				else
 				{
-					if ( ( !pQuestDef->GetQuestPoints().Count() || ( pQuestDef->GetQuestPoints().Head() <= 1 ) )
+					if ( ( !std::ssize( pQuestDef->GetQuestPoints() ) || ( pQuestDef->GetQuestPoints().front() <= 1 ) )
 						&& ( numPointsEarned == 1 )
 						&& !questProgress.m_numNormalPointsProgressBaseline )	// Missions requiring a single point to score print a custom string
 						fmtToken = "#quest_uncommitted_points_chat_one";
@@ -1197,7 +1189,7 @@ void ClientModeCSNormal::UpdateColorCorrectionWeights( void )
  		if ( CSGameRules()->IsPlayingCooperativeGametype() && pPlayer->GetTeamNumber() == nTeam )
  		{
 			m_CCFreezePeriodPercent_T = 0;
-			m_CCFreezePeriodPercent_CT = MIN( 1.0f, pPlayer->m_flGuardianTooFarDistFrac * 3);
+			m_CCFreezePeriodPercent_CT = std::min( 1.0f, pPlayer->m_flGuardianTooFarDistFrac * 3);
  		}
 		else
 		{
@@ -1337,7 +1329,7 @@ void ClientModeCSNormal::UpdatePostProcessingEffects()
 		if ( pWeapon && pWeapon->GetWeaponType() == WEAPONTYPE_SNIPER_RIFLE )
 		{
 			float flBaseAccuracy = pWeapon->GetInaccuracyStand();
-			float flInacc = MAX( pWeapon->GetInaccuracy() - flBaseAccuracy, 0 );
+			float flInacc = std::max<std::common_type_t<float, int>>( pWeapon->GetInaccuracy() - flBaseAccuracy, 0 );
 			if ( flInacc * 100 > 5 )
 				PostProcessLerpTo( POST_EFFECT_ZOOMED_SNIPER_MOVING, 0.01f );
 			else
@@ -1806,7 +1798,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		C_PhysPropClientside::RecreateAll();
 
 		// remove hostage ragdolls
-		for ( int i=0; i<g_HostageRagdolls.Count(); ++i )
+		for ( int i=0; i<std::ssize( g_HostageRagdolls ); ++i )
 		{
 			// double-check that the EHANDLE is still valid
 			if ( g_HostageRagdolls[i] )
@@ -1814,7 +1806,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 				g_HostageRagdolls[i]->Remove();
 			}
 		}
-		g_HostageRagdolls.RemoveAll();
+		g_HostageRagdolls.clear();
 
 		// Just tell engine to clear decals
 		engine->ClientCmd( "r_cleardecals\n" );
@@ -2134,7 +2126,7 @@ void ClientModeCSNormal::FireGameEvent( IGameEvent *event )
 		if ( this == GetFullscreenClientMode() )
 			return;
 
-		if ( g_PlantedC4s.Count() > 0 )
+		if ( !g_PlantedC4s.empty() )
 		{
 			// bomb is planted
 			C_PlantedC4 *pC4 = g_PlantedC4s[0];
@@ -2789,19 +2781,12 @@ bool __MsgFunc_XpUpdate( const ks::net::CCSUsrMsg_XpUpdate &msg )
 	return true;
 }
 
-CUtlMap< uint32, ClientModeCSNormal::CQuestUncommittedProgress_t, uint32, CDefLess< uint32 > > ClientModeCSNormal::sm_mapQuestProgressUncommitted;
+std::map< uint32, ClientModeCSNormal::CQuestUncommittedProgress_t > ClientModeCSNormal::sm_mapQuestProgressUncommitted;
 
 bool __MsgFunc_QuestProgress( const ks::net::CCSUsrMsg_QuestProgress &msg )
 {
-	uint32 uidxMap = ClientModeCSNormal::sm_mapQuestProgressUncommitted.Find( msg.quest_id );
-	if ( uidxMap == ClientModeCSNormal::sm_mapQuestProgressUncommitted.InvalidIndex() )
-	{
-		ClientModeCSNormal::CQuestUncommittedProgress_t questProgressDefault;
-		V_memset( &questProgressDefault, 0, sizeof( questProgressDefault ) );
-		uidxMap = ClientModeCSNormal::sm_mapQuestProgressUncommitted.InsertOrReplace( msg.quest_id, questProgressDefault );
-	}
-
-	ClientModeCSNormal::CQuestUncommittedProgress_t &questProgress = ClientModeCSNormal::sm_mapQuestProgressUncommitted.Element( uidxMap );
+	// a new entry is value-initialized (zeroed)
+	ClientModeCSNormal::CQuestUncommittedProgress_t &questProgress = ClientModeCSNormal::sm_mapQuestProgressUncommitted[ msg.quest_id ];
 	if ( msg.normal_points > questProgress.m_numNormalPoints )
 	{
 		if ( !questProgress.m_dblNormalPointsProgressTime )
@@ -2838,12 +2823,12 @@ bool __MsgFunc_PlayerDecalDigitalSignature( const ks::net::CCSUsrMsg_PlayerDecal
 	s_flLastDigitalSignatureTime = Plat_FloatTime();
 
 	// Find the trace ID that server is referring to
-	int idx = s_mapClientDigitalSignatureRequests.Find( msg.data->trace_id );
-	if ( idx == s_mapClientDigitalSignatureRequests.InvalidIndex() )
+	auto itRequest = s_mapClientDigitalSignatureRequests.find( msg.data->trace_id );
+	if ( itRequest == s_mapClientDigitalSignatureRequests.end() )
 		return true;
 
-	PlayerSprayClientRequestData_t data = s_mapClientDigitalSignatureRequests.Element( idx );
-	s_mapClientDigitalSignatureRequests.RemoveAt( idx );
+	PlayerSprayClientRequestData_t data = itRequest->second;
+	s_mapClientDigitalSignatureRequests.erase( itRequest );
 
 	static CSteamID s_mysteamid = steamapicontext->SteamUser()->GetSteamID();
 
@@ -2927,8 +2912,8 @@ void PlayerDecalDataSendActionSprayToServer( int nSlot )
 	data.m_flCreationTime = gpGlobals->curtime;
 	
 	s_flLastDigitalSignatureTime = 0;
-	s_mapClientDigitalSignatureRequests.RemoveAll();
-	s_mapClientDigitalSignatureRequests.InsertOrReplace( nRandomKey, data );
+	s_mapClientDigitalSignatureRequests.clear();
+	s_mapClientDigitalSignatureRequests.insert_or_assign( nRandomKey, data );
 
 	static CSteamID s_mysteamid = steamapicontext->SteamUser()->GetSteamID();
 

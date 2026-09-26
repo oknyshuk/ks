@@ -15,7 +15,9 @@
 
 #include "imageutils.h"
 #include "filesystem.h"
-#include "utlbuffer.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
+#include <vector>
 #include "bitmap/bitmap.h"
 #include "vtf/vtf.h"
 
@@ -69,9 +71,7 @@ extern void longjmp( jmp_buf, int ) __attribute__((noreturn));
 #if ( defined(GAME_DLL) || defined(CLIENT_DLL) )
 #endif //!defined( _GAMECONSOLE )
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include <tier0/memdbgon.h>
-
+#include "tier0/memalloc.h"
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -89,7 +89,7 @@ struct JPEGDestinationManager_t
 {
 	struct jpeg_destination_mgr pub; // public fields
 
-	CUtlBuffer  *pBuffer;       // target/final buffer
+	ks::byte_writer *pBuffer;    // target/final buffer
 	byte        *buffer;        // start of temp buffer
 };
 
@@ -165,7 +165,7 @@ public:
 	}
 
 public:
-	//	CUtlVector<char> m_Data;
+	//	std::vector< char > m_Data;
 };
 
 // convert the JPEG file given to a TGA file at the given output path.
@@ -245,7 +245,7 @@ ConversionErrorType ImgUtl_ConvertJPEGToTGA( const char *jpegpath, const char *t
 	int mem_required = jpegInfo.image_height * jpegInfo.image_width * jpegInfo.output_components;
 
 	// allocate the memory to read the image data into.
-	unsigned char *buf = (unsigned char *)malloc(mem_required);
+	unsigned char *buf = (unsigned char *)MemAlloc_Alloc(mem_required);
 	if (buf == nullptr)
 	{
 		jpeg_destroy_decompress(&jpegInfo);
@@ -267,7 +267,7 @@ ConversionErrorType ImgUtl_ConvertJPEGToTGA( const char *jpegpath, const char *t
 
 	if (!working)
 	{
-		free(buf);
+		g_pMemAlloc->Free(buf);
 		jpeg_destroy_decompress(&jpegInfo);
 		fclose(infile);
 		return CE_ERROR_PARSING_SOURCE;
@@ -278,17 +278,17 @@ ConversionErrorType ImgUtl_ConvertJPEGToTGA( const char *jpegpath, const char *t
 	fclose(infile);
 	
 	// ok, at this point we have read in the JPEG image to our buffer, now we need to write it out as a TGA file.
-	CUtlBuffer outBuf;
+	ks::byte_writer outBuf;
 	bool bRetVal = TGAWriter::WriteToBuffer( buf, outBuf, image_width, image_height, IMAGE_FORMAT_RGB888, IMAGE_FORMAT_RGB888 );
 	if ( bRetVal )
 	{
-		if ( !g_pFullFileSystem->WriteFile( tgaPath, nullptr, outBuf ) )
+		if ( !g_pFullFileSystem->WriteFile( tgaPath, nullptr, outBuf.bytes() ) )
 		{
 			bRetVal = false;
 		}
 	}
 
-	free(buf);
+	g_pMemAlloc->Free(buf);
 	return bRetVal ? CE_SUCCESS : CE_ERROR_WRITING_OUTPUT_FILE;
 
 }
@@ -303,13 +303,14 @@ ConversionErrorType ImgUtl_ConvertBMPToTGA(const char *bmpPath, const char *tgaP
 unsigned char *ImgUtl_ReadVTFAsRGBA( const char *vtfPath, int &width, int &height, ConversionErrorType &errcode )
 {
 	// Just load the whole file into a memory buffer
-	CUtlBuffer bufFileContents;
-	if ( !g_pFullFileSystem->ReadFile( vtfPath, nullptr, bufFileContents ) )
+	auto fileContents = g_pFullFileSystem->ReadFile( vtfPath, nullptr );
+	if ( !fileContents )
 	{
 		errcode = CE_CANT_OPEN_SOURCE_FILE;
 		return nullptr;
 	}
 
+	ks::byte_reader bufFileContents( *fileContents );
 	IVTFTexture *pVTFTexture = CreateVTFTexture();
 	if ( !pVTFTexture->Unserialize( bufFileContents ) )
 	{
@@ -323,7 +324,7 @@ unsigned char *ImgUtl_ReadVTFAsRGBA( const char *vtfPath, int &width, int &heigh
 	pVTFTexture->ConvertImageFormat( IMAGE_FORMAT_RGBA8888, false );
 
 	int nMemSize = ImageLoader::GetMemRequired( width, height, 1, IMAGE_FORMAT_RGBA8888, false );
-	unsigned char *pMemImage = (unsigned char *)malloc(nMemSize);
+	unsigned char *pMemImage = (unsigned char *)MemAlloc_Alloc(nMemSize);
 	if ( pMemImage == nullptr )
 	{
 		DestroyVTFTexture( pVTFTexture );
@@ -408,7 +409,7 @@ unsigned char * ImgUtl_ReadTGAAsRGBA(const char *tgaPath, int &width, int &heigh
 	}
 
 	int tgaDataSize = tgaHeader.width * tgaHeader.height * tgaHeader.bits / 8;
-	unsigned char *tgaData = (unsigned char *)malloc(tgaDataSize);
+	unsigned char *tgaData = (unsigned char *)MemAlloc_Alloc(tgaDataSize);
 	if (tgaData == nullptr)
 	{
 		fclose(tgaFile);
@@ -429,10 +430,10 @@ unsigned char * ImgUtl_ReadTGAAsRGBA(const char *tgaPath, int &width, int &heigh
 	{
 		// image needs to be converted to a 32-bit image.
 
-		unsigned char *retBuf = (unsigned char *)malloc(numPixels * 4);
+		unsigned char *retBuf = (unsigned char *)MemAlloc_Alloc(numPixels * 4);
 		if (retBuf == nullptr)
 		{
-			free(tgaData);
+			g_pMemAlloc->Free(tgaData);
 
 			errcode = CE_MEMORY_ERROR;
 			return nullptr;
@@ -447,7 +448,7 @@ unsigned char * ImgUtl_ReadTGAAsRGBA(const char *tgaPath, int &width, int &heigh
 			retBuf[index * 4 + 3] = 0xff;
 		}
 
-		free(tgaData);
+		g_pMemAlloc->Free(tgaData);
 		tgaData = retBuf;
 		tgaHeader.bits = 32;
 	}
@@ -578,7 +579,7 @@ unsigned char *ImgUtl_ReadJPEGAsRGBA( const char *jpegPath, int &width, int &hei
 	int mem_required = jpegInfo.image_height * row_stride;
 
 	// allocate the memory to read the image data into.
-	unsigned char *buf = (unsigned char *)malloc(mem_required);
+	unsigned char *buf = (unsigned char *)MemAlloc_Alloc(mem_required);
 	if (buf == nullptr)
 	{
 		jpeg_destroy_decompress(&jpegInfo);
@@ -619,7 +620,7 @@ unsigned char *ImgUtl_ReadJPEGAsRGBA( const char *jpegPath, int &width, int &hei
 	// Check success status
 	if (!working)
 	{
-		free(buf);
+		g_pMemAlloc->Free(buf);
 		errcode = CE_ERROR_PARSING_SOURCE;
 		return nullptr;
 	}
@@ -632,12 +633,12 @@ unsigned char *ImgUtl_ReadJPEGAsRGBA( const char *jpegPath, int &width, int &hei
 
 }
 
-ConversionErrorType ImgUtl_ReadJPEGAsRGBA( CUtlBuffer &srcBuf, CUtlBuffer &dstBuf, int &width, int &height )
+ConversionErrorType ImgUtl_ReadJPEGAsRGBA( ks::byte_reader &srcBuf, ks::byte_writer &dstBuf, int &width, int &height )
 {
-	// Point directly to our CUtlBuffer data
+	// Point directly to our byte_reader data
 	CJpegSourceMgr jpgMgr;
-	jpgMgr.bytes_in_buffer = srcBuf.Size();
-	jpgMgr.next_input_byte = (unsigned char*) srcBuf.Base();
+	jpgMgr.bytes_in_buffer = srcBuf.size();
+	jpgMgr.next_input_byte = reinterpret_cast< const unsigned char * >( srcBuf.bytes().data() );
 
 	// Load the jpeg
 	struct jpeg_decompress_struct jpegInfo;
@@ -698,8 +699,13 @@ ConversionErrorType ImgUtl_ReadJPEGAsRGBA( CUtlBuffer &srcBuf, CUtlBuffer &dstBu
 	int mem_required = jpegInfo.image_height * row_stride;
 
 	// Alloc a temporary buffer to serialize to
-	dstBuf.EnsureCapacity( mem_required  );
-	unsigned char *pDstBuf = (unsigned char *) dstBuf.PeekPut();
+	std::span< std::byte > dstSpan = dstBuf.claim_span( mem_required );
+	if ( dstSpan.size() != static_cast< size_t >( mem_required ) )
+	{
+		jpeg_destroy_decompress(&jpegInfo);
+		return CE_MEMORY_ERROR;
+	}
+	unsigned char *pDstBuf = reinterpret_cast< unsigned char * >( dstSpan.data() );
 
 	// read in all the scan lines of the image into our image data buffer.
 	bool working = true;
@@ -732,12 +738,9 @@ ConversionErrorType ImgUtl_ReadJPEGAsRGBA( CUtlBuffer &srcBuf, CUtlBuffer &dstBu
 	// Check success status
 	if ( !working )
 	{
-		dstBuf.Purge();
+		dstBuf.clear();
 		return CE_ERROR_PARSING_SOURCE;
 	}
-
-	// Place our read point at the end of the file
-	dstBuf.SeekPut( CUtlBuffer::SEEK_CURRENT, mem_required );
 
 	// OK!
 	width = image_width;
@@ -750,11 +753,11 @@ static void ReadPNGData( png_structp png_ptr, png_bytep outBytes, png_size_t byt
 {
 
 	// Cast pointer
-	CUtlBuffer *pBuf = (CUtlBuffer *)png_get_io_ptr( png_ptr );
+	ks::byte_reader *pBuf = (ks::byte_reader *)png_get_io_ptr( png_ptr );
 	Assert( pBuf );
 
 	// Check for IO error
-	if ( pBuf->TellGet() + (int)byteCountToRead > pBuf->TellPut() )
+	if ( pBuf->remaining() < byteCountToRead )
 	{
 		// Attempt to read past the end of the buffer.
 		// Use longjmp to report the error
@@ -762,7 +765,7 @@ static void ReadPNGData( png_structp png_ptr, png_bytep outBytes, png_size_t byt
 	}
 
 	// Read the bytes
-	pBuf->Get( outBytes, byteCountToRead );
+	pBuf->read_bytes( outBytes, byteCountToRead );
 }
 
 
@@ -770,19 +773,20 @@ unsigned char *ImgUtl_ReadPNGAsRGBA( const char *pngPath, int &width, int &heigh
 {
 
 	// Just load the whole file into a memory buffer
-	CUtlBuffer bufFileContents;
-	if ( !g_pFullFileSystem->ReadFile( pngPath, nullptr, bufFileContents ) )
+	auto fileContents = g_pFullFileSystem->ReadFile( pngPath, nullptr );
+	if ( !fileContents )
 	{
 		errcode = CE_CANT_OPEN_SOURCE_FILE;
 		return nullptr;
 	}
 
 	// Load it
+	ks::byte_reader bufFileContents( *fileContents );
 	return ImgUtl_ReadPNGAsRGBAFromBuffer( bufFileContents, width, height, errcode );
 
 }
 
-unsigned char		*ImgUtl_ReadPNGAsRGBAFromBuffer( CUtlBuffer &buffer, int &width, int &height, ConversionErrorType &errcode )
+unsigned char		*ImgUtl_ReadPNGAsRGBAFromBuffer( ks::byte_reader &buffer, int &width, int &height, ConversionErrorType &errcode )
 {
 	errcode = CE_SOURCE_FILE_FORMAT_NOT_SUPPORTED;
 	return nullptr;
@@ -847,7 +851,7 @@ ConversionErrorType ImgUtl_ConvertTGA(const char *tgaPath, int nMaxWidth/*=-1*/,
 
 	if ((tgaWidth <= 0) || (tgaHeight <= 0))
 	{
-		free(srcBuffer);
+		g_pMemAlloc->Free(srcBuffer);
 		return CE_ERROR_PARSING_SOURCE;
 	}
 
@@ -918,24 +922,24 @@ ConversionErrorType ImgUtl_ConvertTGA(const char *tgaPath, int nMaxWidth/*=-1*/,
 		finalWidth = paddedImageWidth;
 	}
 
-	unsigned char *resizeBuffer = (unsigned char *)malloc(finalWidth * finalHeight * 4);
+	unsigned char *resizeBuffer = (unsigned char *)MemAlloc_Alloc(finalWidth * finalHeight * 4);
 
 	// do the actual stretching
 	ImgUtl_StretchRGBAImage(srcBuffer, tgaWidth, tgaHeight, resizeBuffer, finalWidth, finalHeight);
 
-	free(srcBuffer);  // don't need this anymore.
+	g_pMemAlloc->Free(srcBuffer);  // don't need this anymore.
 
 	///////////////////////////////////////////////////////////////////////
 	///// need to pad the image so both dimensions are power of two's /////
 	///////////////////////////////////////////////////////////////////////
-	unsigned char *finalBuffer = (unsigned char *)malloc(paddedImageWidth * paddedImageHeight * 4);
+	unsigned char *finalBuffer = (unsigned char *)MemAlloc_Alloc(paddedImageWidth * paddedImageHeight * 4);
 	ImgUtl_PadRGBAImage(resizeBuffer, finalWidth, finalHeight, finalBuffer, paddedImageWidth, paddedImageHeight);
 
 	FILE *outfile = fopen(tgaPath, "wb");
 	if (outfile == nullptr)
 	{
-		free(resizeBuffer);
-		free(finalBuffer);
+		g_pMemAlloc->Free(resizeBuffer);
+		g_pMemAlloc->Free(finalBuffer);
 
 		return CE_ERROR_WRITING_OUTPUT_FILE;
 	}
@@ -957,8 +961,8 @@ ConversionErrorType ImgUtl_ConvertTGA(const char *tgaPath, int nMaxWidth/*=-1*/,
 
 	fclose(outfile);
 
-	free(resizeBuffer);
-	free(finalBuffer);
+	g_pMemAlloc->Free(resizeBuffer);
+	g_pMemAlloc->Free(finalBuffer);
 
 	return CE_SUCCESS;
 }
@@ -1069,10 +1073,10 @@ ConversionErrorType ImgUtl_StretchRGBAImage(const unsigned char *srcBuf, const i
 			}
 
 			// assign the computed color to the destination pixel, round to the nearest value.  Make sure the value doesn't exceed 255.
-			destBuf[(destRow * destWidth * 4) + (destColumn * 4)] = MIN((int)(destRed + 0.5f), 255);
-			destBuf[(destRow * destWidth * 4) + (destColumn * 4) + 1] = MIN((int)(destGreen + 0.5f), 255);
-			destBuf[(destRow * destWidth * 4) + (destColumn * 4) + 2] = MIN((int)(destBlue + 0.5f), 255);
-			destBuf[(destRow * destWidth * 4) + (destColumn * 4) + 3] = MIN((int)(destAlpha + 0.5f), 255);
+			destBuf[(destRow * destWidth * 4) + (destColumn * 4)] = std::min((int)(destRed + 0.5f), 255);
+			destBuf[(destRow * destWidth * 4) + (destColumn * 4) + 1] = std::min((int)(destGreen + 0.5f), 255);
+			destBuf[(destRow * destWidth * 4) + (destColumn * 4) + 2] = std::min((int)(destBlue + 0.5f), 255);
+			destBuf[(destRow * destWidth * 4) + (destColumn * 4) + 3] = std::min((int)(destAlpha + 0.5f), 255);
 		} // column loop
 	} // row loop
 
@@ -1154,13 +1158,12 @@ ConversionErrorType ImgUtl_ConvertTGAToVTF(const char *tgaPath, int nMaxWidth/*=
 
 	int imageMemoryFootprint = header.width * header.height * header.bits / 8;
 
-	CUtlBuffer inbuf(0, imageMemoryFootprint);
+	std::vector< std::byte > inbuf( imageMemoryFootprint );
 
 	// read in the image
-	int nBytesRead = fread(inbuf.Base(), imageMemoryFootprint, 1, infile);
+	fread(inbuf.data(), imageMemoryFootprint, 1, infile);
 
 	fclose(infile);
-	inbuf.SeekPut( CUtlBuffer::SEEK_HEAD, nBytesRead );
 
 	// load vtex_dll.dll and get the interface to it.
 	CSysModule *vtexmod = Sys_LoadModule("vtex_dll");
@@ -1476,13 +1479,12 @@ static void WritePNGData( png_structp png_ptr, png_bytep inBytes, png_size_t byt
 {
 
 	// Cast pointer
-	CUtlBuffer *pBuf = (CUtlBuffer *)png_get_io_ptr( png_ptr );
+	ks::byte_writer *pBuf = (ks::byte_writer *)png_get_io_ptr( png_ptr );
 	Assert( pBuf );
 
 	// Write the bytes
-	pBuf->Put( inBytes, byteCountToWrite );
+	pBuf->write_bytes( inBytes, byteCountToWrite );
 
-	// What?  Put() returns void.  No way to detect error?
 }
 
 static void FlushPNGData( png_structp png_ptr )
@@ -1490,7 +1492,7 @@ static void FlushPNGData( png_structp png_ptr )
 	// We're writing to a memory buffer, it's a NOP
 }
 
-ConversionErrorType ImgUtl_WriteRGBAAsPNGToBuffer( const unsigned char *pRGBAData, int nWidth, int nHeight, CUtlBuffer &bufOutData, int nStride )
+ConversionErrorType ImgUtl_WriteRGBAAsPNGToBuffer( const unsigned char *pRGBAData, int nWidth, int nHeight, ks::byte_writer &bufOutData, int nStride )
 {
 	return CE_SOURCE_FILE_FORMAT_NOT_SUPPORTED;
 }
@@ -1520,10 +1522,10 @@ METHODDEF(boolean) empty_output_buffer (j_compress_ptr cinfo)
 {
 	JPEGDestinationManager_t *dest = ( JPEGDestinationManager_t * ) cinfo->dest;
 
-	CUtlBuffer *buf = dest->pBuffer;
+	ks::byte_writer *buf = dest->pBuffer;
 
 	// Add some data
-	buf->Put( dest->buffer, JPEG_OUTPUT_BUF_SIZE );
+	buf->write_bytes( dest->buffer, JPEG_OUTPUT_BUF_SIZE );
 
 	dest->pub.next_output_byte = dest->buffer;
 	dest->pub.free_in_buffer = JPEG_OUTPUT_BUF_SIZE;
@@ -1544,19 +1546,19 @@ METHODDEF(void) term_destination (j_compress_ptr cinfo)
 	JPEGDestinationManager_t *dest = (JPEGDestinationManager_t *) cinfo->dest;
 	size_t datacount = JPEG_OUTPUT_BUF_SIZE - dest->pub.free_in_buffer;
 
-	CUtlBuffer *buf = dest->pBuffer;
+	ks::byte_writer *buf = dest->pBuffer;
 
 	/* Write any data remaining in the buffer */
 	if (datacount > 0) 
 	{
-		buf->Put( dest->buffer, datacount );
+		buf->write_bytes( dest->buffer, datacount );
 	}
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Set up functions for writing data to a CUtlBuffer instead of FILE *
+// Purpose: Set up functions for writing data to a byte_writer instead of FILE *
 //-----------------------------------------------------------------------------
-GLOBAL(void) jpeg_UtlBuffer_dest (j_compress_ptr cinfo, CUtlBuffer *pBuffer )
+GLOBAL(void) jpeg_ByteWriter_dest (j_compress_ptr cinfo, ks::byte_writer *pBuffer )
 {
     JPEGDestinationManager_t *dest;
     
@@ -1585,7 +1587,7 @@ GLOBAL(void) jpeg_UtlBuffer_dest (j_compress_ptr cinfo, CUtlBuffer *pBuffer )
 //-----------------------------------------------------------------------------
 bool ImgUtl_WriteRGBToJPEG( unsigned char *pSrcBuf, unsigned int nSrcWidth, unsigned int nSrcHeight, const char *lpszFilename )
 {
-	CUtlBuffer dstBuf;
+	ks::byte_writer dstBuf;
 
 	JSAMPROW row_pointer[1];     // pointer to JSAMPLE row[s]
 	int row_stride;              // physical row width in image buffer
@@ -1604,8 +1606,8 @@ bool ImgUtl_WriteRGBToJPEG( unsigned char *pSrcBuf, unsigned int nSrcWidth, unsi
 	// create compressor
 	jpeg_create_compress(&cinfo);
 
-	// Hook CUtlBuffer to compression
-	jpeg_UtlBuffer_dest(&cinfo, &dstBuf );
+	// Hook byte_writer to compression
+	jpeg_ByteWriter_dest(&cinfo, &dstBuf );
 
 	// image width and height, in pixels
 	cinfo.image_width = nSrcWidth;
@@ -1638,7 +1640,7 @@ bool ImgUtl_WriteRGBToJPEG( unsigned char *pSrcBuf, unsigned int nSrcWidth, unsi
 	return CE_SUCCESS;
 }
 
-ConversionErrorType ImgUtl_WriteRGBAAsJPEGToBuffer( const unsigned char *pRGBAData, int nWidth, int nHeight, CUtlBuffer &bufOutData, int nStride )
+ConversionErrorType ImgUtl_WriteRGBAAsJPEGToBuffer( const unsigned char *pRGBAData, int nWidth, int nHeight, ks::byte_writer &bufOutData, int nStride )
 {
 
 	JSAMPROW row_pointer[1];     // pointer to JSAMPLE row[s]
@@ -1658,8 +1660,8 @@ ConversionErrorType ImgUtl_WriteRGBAAsJPEGToBuffer( const unsigned char *pRGBADa
 	// create compressor
 	jpeg_create_compress(&cinfo);
 
-	// Hook CUtlBuffer to compression
-	jpeg_UtlBuffer_dest(&cinfo, &bufOutData );
+	// Hook byte_writer to compression
+	jpeg_ByteWriter_dest(&cinfo, &bufOutData );
 
 	// image width and height, in pixels
 	cinfo.image_width = nWidth;
@@ -1677,7 +1679,7 @@ ConversionErrorType ImgUtl_WriteRGBAAsJPEGToBuffer( const unsigned char *pRGBADa
 	jpeg_start_compress(&cinfo, TRUE);
 
 	// Write scanlines
-	unsigned char *pDstRow = (unsigned char *)malloc( sizeof(unsigned char) * nWidth * 4 );
+	unsigned char *pDstRow = (unsigned char *)MemAlloc_Alloc( sizeof(unsigned char) * nWidth * 4 );
 	while ( cinfo.next_scanline < cinfo.image_height ) 
 	{
 		const unsigned char *pSrcRow = &(pRGBAData[cinfo.next_scanline * row_stride]);
@@ -1698,7 +1700,7 @@ ConversionErrorType ImgUtl_WriteRGBAAsJPEGToBuffer( const unsigned char *pRGBADa
 	// Cleanup
 	jpeg_destroy_compress(&cinfo);
 
-	free( pDstRow );
+	g_pMemAlloc->Free( pDstRow );
 
 	return CE_SUCCESS;
 }
@@ -1719,13 +1721,13 @@ ConversionErrorType ImgUtl_LoadBitmap( const char *pszFilename, Bitmap_t &bitmap
 	return CE_SUCCESS;
 }
 
-static ConversionErrorType ImgUtl_LoadJPEGBitmapFromBuffer( CUtlBuffer &fileData, Bitmap_t &bitmap )
+static ConversionErrorType ImgUtl_LoadJPEGBitmapFromBuffer( ks::byte_reader &fileData, Bitmap_t &bitmap )
 {
 	// @todo implement
 	return CE_SOURCE_FILE_FORMAT_NOT_SUPPORTED;
 }
 
-static ConversionErrorType ImgUtl_SaveJPEGBitmapToBuffer( CUtlBuffer &fileData, const Bitmap_t &bitmap )
+static ConversionErrorType ImgUtl_SaveJPEGBitmapToBuffer( ks::byte_writer &fileData, const Bitmap_t &bitmap )
 {
 	if ( !bitmap.IsValid() )
 	{
@@ -1751,7 +1753,7 @@ static ConversionErrorType ImgUtl_SaveJPEGBitmapToBuffer( CUtlBuffer &fileData, 
 	return result;
 }
 
-ConversionErrorType ImgUtl_LoadBitmapFromBuffer( CUtlBuffer &fileData, Bitmap_t &bitmap, ImageFileFormat eImageFileFormat )
+ConversionErrorType ImgUtl_LoadBitmapFromBuffer( ks::byte_reader &fileData, Bitmap_t &bitmap, ImageFileFormat eImageFileFormat )
 {
 	switch ( eImageFileFormat )
 	{
@@ -1763,7 +1765,7 @@ ConversionErrorType ImgUtl_LoadBitmapFromBuffer( CUtlBuffer &fileData, Bitmap_t 
 	return CE_SOURCE_FILE_FORMAT_NOT_SUPPORTED;
 }
 
-ConversionErrorType ImgUtl_SaveBitmapToBuffer( CUtlBuffer &fileData, const Bitmap_t &bitmap, ImageFileFormat eImageFileFormat )
+ConversionErrorType ImgUtl_SaveBitmapToBuffer( ks::byte_writer &fileData, const Bitmap_t &bitmap, ImageFileFormat eImageFileFormat )
 {
 	switch ( eImageFileFormat )
 	{
@@ -1775,7 +1777,7 @@ ConversionErrorType ImgUtl_SaveBitmapToBuffer( CUtlBuffer &fileData, const Bitma
 	return CE_SOURCE_FILE_FORMAT_NOT_SUPPORTED;
 }
 
-ConversionErrorType ImgUtl_LoadPNGBitmapFromBuffer( CUtlBuffer &fileData, Bitmap_t &bitmap )
+ConversionErrorType ImgUtl_LoadPNGBitmapFromBuffer( ks::byte_reader &fileData, Bitmap_t &bitmap )
 {
 	bitmap.Clear();
 	ConversionErrorType nErrorCode;
@@ -1791,7 +1793,7 @@ ConversionErrorType ImgUtl_LoadPNGBitmapFromBuffer( CUtlBuffer &fileData, Bitmap
 	return CE_SUCCESS;
 }
 
-ConversionErrorType ImgUtl_SavePNGBitmapToBuffer( CUtlBuffer &fileData, const Bitmap_t &bitmap )
+ConversionErrorType ImgUtl_SavePNGBitmapToBuffer( ks::byte_writer &fileData, const Bitmap_t &bitmap )
 {
 	if ( !bitmap.IsValid() )
 	{
@@ -1865,12 +1867,12 @@ ConversionErrorType ImgUtl_ResizeBitmap( Bitmap_t &destBitmap, int nWidth, int n
 //-----------------------------------------------------------------------------
 // Purpose: Read a JPEG from disk
 //-----------------------------------------------------------------------------
-ConversionErrorType ImgUtl_ReadJPEGToRGB( CUtlBuffer &srcBuf, CUtlBuffer &dstBuf, int &width, int &height )
+ConversionErrorType ImgUtl_ReadJPEGToRGB( ks::byte_reader &srcBuf, ks::byte_writer &dstBuf, int &width, int &height )
 {
-	// Point directly to our CUtlBuffer data
+	// Point directly to our byte_reader data
 	CJpegSourceMgr jpgMgr;
-	jpgMgr.bytes_in_buffer = srcBuf.Size();
-	jpgMgr.next_input_byte = (unsigned char*) srcBuf.Base();
+	jpgMgr.bytes_in_buffer = srcBuf.size();
+	jpgMgr.next_input_byte = reinterpret_cast< const unsigned char * >( srcBuf.bytes().data() );
 
 	// Load the jpeg.
 	struct jpeg_decompress_struct jpegInfo;
@@ -1904,8 +1906,13 @@ ConversionErrorType ImgUtl_ReadJPEGToRGB( CUtlBuffer &srcBuf, CUtlBuffer &dstBuf
 	height = jpegInfo.output_height;
 
 	// Alloc a temporary buffer to serialize to
-	dstBuf.EnsureCapacity( mem_required  );
-	unsigned char *pDstBuf = (unsigned char *) dstBuf.PeekPut();
+	std::span< std::byte > dstSpan = dstBuf.claim_span( mem_required );
+	if ( dstSpan.size() != static_cast< size_t >( mem_required ) )
+	{
+		jpeg_destroy_decompress(&jpegInfo);
+		return CE_MEMORY_ERROR;
+	}
+	unsigned char *pDstBuf = reinterpret_cast< unsigned char * >( dstSpan.data() );
  
 	// read in all the scan lines of the image into our image data buffer.
 	bool working = true;
@@ -1926,9 +1933,6 @@ ConversionErrorType ImgUtl_ReadJPEGToRGB( CUtlBuffer &srcBuf, CUtlBuffer &dstBuf
 	}
 
 	jpeg_finish_decompress(&jpegInfo);
-
-	// Place our read point at the end of the file
-	dstBuf.SeekPut( CUtlBuffer::SEEK_CURRENT, mem_required );
 
 	return CE_SUCCESS;
 }
@@ -1955,7 +1959,7 @@ ConversionErrorType ImgUtl_CropRGBA( int x0, int y0, int nSrcWidth, int nSrcHeig
 //-----------------------------------------------------------------------------
 bool ImgUtl_WriteRGBAToJPEG( unsigned char *pSrcBuf, unsigned int nSrcWidth, unsigned int nSrcHeight, const char *lpszFilename )
 {
-	CUtlBuffer dstBuf;
+	ks::byte_writer dstBuf;
 
 	JSAMPROW row_pointer[1];     // pointer to JSAMPLE row[s]
 	int row_stride;              // physical row width in image buffer
@@ -1964,7 +1968,7 @@ bool ImgUtl_WriteRGBAToJPEG( unsigned char *pSrcBuf, unsigned int nSrcWidth, uns
 	struct jpeg_compress_struct cinfo;
 
 	unsigned char *pConvBuf;
-	pConvBuf = (unsigned char *) malloc( nSrcHeight * nSrcWidth * ImageLoader::SizeInBytes( IMAGE_FORMAT_RGB888 ) );
+	pConvBuf = (unsigned char *) MemAlloc_Alloc( nSrcHeight * nSrcWidth * ImageLoader::SizeInBytes( IMAGE_FORMAT_RGB888 ) );
 	if ( pConvBuf == nullptr )
 		return CE_MEMORY_ERROR;
 	
@@ -1979,13 +1983,13 @@ bool ImgUtl_WriteRGBAToJPEG( unsigned char *pSrcBuf, unsigned int nSrcWidth, uns
 	// create compressor
 	jpeg_create_compress(&cinfo);
 
-	// Hook CUtlBuffer to compression
-	jpeg_UtlBuffer_dest(&cinfo, &dstBuf );
+	// Hook byte_writer to compression
+	jpeg_ByteWriter_dest(&cinfo, &dstBuf );
 
 	// Handle our error case
 	if ( setjmp( jerr.m_ErrorContext ) )
 	{
-		free( pConvBuf );
+		g_pMemAlloc->Free( pConvBuf );
 		return CE_ERROR_PARSING_SOURCE;
 	}
 
@@ -2017,13 +2021,13 @@ bool ImgUtl_WriteRGBAToJPEG( unsigned char *pSrcBuf, unsigned int nSrcWidth, uns
 	// Cleanup
 	jpeg_destroy_compress(&cinfo);
 
-	free( pConvBuf );
+	g_pMemAlloc->Free( pConvBuf );
 
 	int finalSize = 0;
 	FileHandle_t fh = g_pFullFileSystem->Open( lpszFilename, "wb", "LOCAL" );
 	if ( FILESYSTEM_INVALID_HANDLE != fh )
 	{
-		g_pFullFileSystem->Write( dstBuf.Base(), dstBuf.TellPut(), fh );
+		g_pFullFileSystem->Write( dstBuf.data(), dstBuf.tell(), fh );
 		finalSize = g_pFullFileSystem->Tell( fh );
 		g_pFullFileSystem->Close( fh );
 	}

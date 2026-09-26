@@ -9,14 +9,13 @@
 
 #include "render_pch.h"
 #include "shadowmgr.h"
-#include "utllinkedlist.h"
 #include "utlvector.h"
 #include "interface.h"
 #include "mathlib/vmatrix.h"
 #include "bsptreedata.h"
 #include "materialsystem/itexture.h"
 #include "filesystem.h"
-#include "utlbidirectionalset.h"
+#include "tier1/bidirectional_set.h"
 #include "l_studio.h"
 #include "shaderapi/ishaderapi.h"
 #include "istudiorender.h"
@@ -34,11 +33,11 @@
 #include "sys_dll.h"
 #include "render.h"
 #include "vstdlib/jobthread.h"
-#include "tier1/utlstack.h"
+#include <vector>
+#include <array>
+#include "chain_pool.h"
+#include "tier1/slot_pool.h"
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Shadow-related functionality exported by the engine
@@ -218,7 +217,7 @@ private:
 		SHADOW_DISABLED = (SHADOW_LAST_FLAG << 1),
 	};
 
-	typedef CUtlFixedLinkedList< ShadowDecalHandle_t >::IndexType_t ShadowSurfaceIndex_t;
+	typedef int ShadowSurfaceIndex_t;
 
 	struct SurfaceBounds_t
 	{
@@ -333,7 +332,7 @@ private:
 	typedef void (*ShadowDebugFunc_t)( ShadowHandle_t shadowHandle, const Vector &vecCentroid );
 
 	// m_FlashlightWorldMaterialBuckets is where surfaces are stored per flashlight each frame.
-	typedef CUtlVector<FlashlightHandle_t> WorldMaterialBuckets_t;
+	typedef std::vector< FlashlightHandle_t > WorldMaterialBuckets_t;
 
 #pragma pack(16)
 	struct FlashlightInfo_t
@@ -472,44 +471,46 @@ private:
 private:
 	// List of all shadows (one per cast shadow)
 	// Align it so the Ray in the Shadow_t is aligned
-	CUtlLinkedList< Shadow_t, ShadowHandle_t, false, int, CUtlMemoryAligned< UtlLinkedListElem_t< Shadow_t, ShadowHandle_t >, 16 > > m_Shadows;
+	ks::slot_pool< Shadow_t, ShadowHandle_t > m_Shadows;
 	
-	// List of all shadow decals (one per surface hit by a shadow)
-	CUtlLinkedList< ShadowDecal_t, ShadowDecalHandle_t, true, int > m_ShadowDecals;
+	// List of all shadow decals (one per surface hit by a shadow), chained per surface (MSurf_ShadowDecals)
+	ks::chain_pool< ShadowDecal_t, ShadowDecalHandle_t > m_ShadowDecals;
 
-	// List of all shadow decals associated with a particular shadow
-	CUtlFixedLinkedList< ShadowDecalHandle_t > m_ShadowSurfaces;
+	// List of all shadow decals associated with a particular shadow, chained per shadow (Shadow_t::m_FirstDecal)
+	ks::chain_pool< ShadowDecalHandle_t, ShadowSurfaceIndex_t > m_ShadowSurfaces;
 
 	// List of queued decals waiting to be rendered....
-	CUtlVector<ShadowDecalHandle_t>	m_RenderQueue;
+	std::vector< ShadowDecalHandle_t >	m_RenderQueue;
 
-	// Used to assign sort order handles
-	CUtlLinkedList<SortOrderInfo_t, unsigned short>	m_SortOrderIds;
+	// Used to assign sort order handles (they index m_RenderQueue)
+	ks::slot_pool< SortOrderInfo_t, unsigned short >	m_SortOrderIds;
 
 	// A cache of shadow vertex data...
-	CUtlLinkedList<ShadowVertexCache_t, unsigned short>	m_VertexCache;
+	ks::slot_pool< ShadowVertexCache_t, unsigned short >	m_VertexCache;
 
 	// This is temporary, not saved off....
-	CUtlVector<ShadowVertexCache_t>	m_TempVertexCache;
+	std::vector< ShadowVertexCache_t >	m_TempVertexCache;
 
 	// Vertex data
-	CUtlLinkedList<ShadowVertexSmallList_t, unsigned short>	m_SmallVertexList;
-	CUtlLinkedList<ShadowVertexLargeList_t, unsigned short>	m_LargeVertexList;
+	ks::slot_pool< ShadowVertexSmallList_t, unsigned short >	m_SmallVertexList;
+	ks::slot_pool< ShadowVertexLargeList_t, unsigned short >	m_LargeVertexList;
 
 	// Model-shadow association
-	CBidirectionalSet< ModelInstanceHandle_t, ShadowHandle_t, unsigned short >	m_ShadowsOnModels;
+	ks::bidirectional_set< ModelInstanceHandle_t, ShadowHandle_t, unsigned short >	m_ShadowsOnModels;
 
-	// Cache of information for surface bounds
-	typedef CUtlLinkedList< SurfaceBounds_t, unsigned short, false, int, CUtlMemoryFixed< UtlLinkedListElem_t< SurfaceBounds_t, unsigned short >, SURFACE_BOUNDS_CACHE_COUNT, 16 > > SurfaceBoundsCache_t;
-	typedef SurfaceBoundsCache_t::IndexType_t SurfaceBoundsCacheIndex_t;
-	SurfaceBoundsCache_t m_SurfaceBoundsCache;
+	// Cache of information for surface bounds; full, it recycles the oldest entry (FIFO ring)
+	typedef unsigned short SurfaceBoundsCacheIndex_t;
+	static constexpr SurfaceBoundsCacheIndex_t SURFACE_BOUNDS_INVALID = 0xFFFF;
+	std::array< SurfaceBounds_t, SURFACE_BOUNDS_CACHE_COUNT > m_SurfaceBoundsCache;
+	int m_nSurfaceBoundsCount;	// Entries in use
+	int m_nSurfaceBoundsNext;	// Next entry to fill once full
 	SurfaceBoundsCacheIndex_t *m_pSurfaceBounds;
 
 	// The number of decals we're gonna need to render
 	int	m_DecalsToRender;
 
-	typedef CUtlLinkedList< FlashlightInfo_t, unsigned short, false, unsigned short, CUtlMemoryAligned< UtlLinkedListElem_t< FlashlightInfo_t,unsigned short > ,16 > > FlashlightList_t;
-	FlashlightList_t m_FlashlightStates;
+	// Walked in creation order; handles are stored in Shadow_t::m_FlashlightHandle
+	ks::linked_slot_pool< FlashlightInfo_t, FlashlightHandle_t > m_FlashlightStates;
 	int m_NumWorldMaterialBuckets;
 	bool m_bInitialized;
 
@@ -517,8 +518,8 @@ private:
 	// HPE_BEGIN:
 	// [smessick] These used to be dynamically allocated on the stack.
 	//=============================================================================
-	CUtlMemory<int> m_ShadowDecalCache;
-	CUtlMemory<DispShadowHandle_t> m_DispShadowDecalCache;
+	std::vector<int> m_ShadowDecalCache;
+	std::vector<DispShadowHandle_t> m_DispShadowDecalCache;
 	//=============================================================================
 	// HPE_END
 	//=============================================================================
@@ -526,7 +527,7 @@ private:
 	ShadowHandle_t	m_hSinglePassFlashlightState;
 	bool			m_bSinglePassFlashlightStateEnabled;
 	bool			m_bShadowsDisabled;
-	CUtlStack<bool> m_bStack_SinglePassFlashlightStateEnabled;
+	std::vector<bool> m_bStack_SinglePassFlashlightStateEnabled;
 
 	int m_nSkipShadowForEntIndex;
 
@@ -542,8 +543,8 @@ private:
 #endif
 	};
 
-	CUtlVector<FlashLightScissorStateBackup_t> m_ScissorStateBackups;
-	CUtlVector<int> m_ScissorStateEntryStart;
+	std::vector< FlashLightScissorStateBackup_t > m_ScissorStateBackups;
+	std::vector< int > m_ScissorStateEntryStart;
 };
 
 
@@ -577,12 +578,12 @@ unsigned short& FirstModelInShadow( ShadowHandle_t h )
 CShadowMgr::CShadowMgr()
 {
 	m_bShadowsDisabled = false;
-	m_ShadowSurfaces.SetGrowSize( 4096 );
-	m_ShadowDecals.SetGrowSize( 4096 );
 
-	m_ShadowsOnModels.Init( ::FirstShadowOnModel, ::FirstModelInShadow );
+	m_ShadowsOnModels.init( ::FirstShadowOnModel, ::FirstModelInShadow );
 	m_NumWorldMaterialBuckets = 0;
 	m_pSurfaceBounds = nullptr;
+	m_nSurfaceBoundsCount = 0;
+	m_nSurfaceBoundsNext = 0;
 	m_bInitialized = false;
 	m_hSinglePassFlashlightState = SHADOW_HANDLE_INVALID;
 	m_bSinglePassFlashlightStateEnabled = false;
@@ -597,11 +598,8 @@ CShadowMgr::CShadowMgr()
 	// allocated on the stack, but we were getting stack overflows.
 	//=============================================================================
 
-	m_ShadowDecalCache.SetGrowSize( 4096 );
-	m_DispShadowDecalCache.SetGrowSize( 4096 );
-
-	m_ShadowDecalCache.Grow( SHADOW_DECAL_CACHE_COUNT );
-	m_DispShadowDecalCache.Grow( SHADOW_DECAL_CACHE_COUNT );
+	m_ShadowDecalCache.resize( SHADOW_DECAL_CACHE_COUNT );
+	m_DispShadowDecalCache.resize( SHADOW_DECAL_CACHE_COUNT );
 
 	//=============================================================================
 	// HPE_END
@@ -638,7 +636,8 @@ void CShadowMgr::LevelShutdown()
 		m_pSurfaceBounds = nullptr;
 	}
 
-	m_SurfaceBoundsCache.RemoveAll();
+	m_nSurfaceBoundsCount = 0;
+	m_nSurfaceBoundsNext = 0;
 	m_bInitialized = false;
 }
 
@@ -683,31 +682,31 @@ void CShadowMgr::SetMaterial( Shadow_t& shadow, IMaterial* pMaterial, IMaterial*
 
 	// Search the sort order handles for an enumeration id match
 	intp materialEnum = (intp)pMaterial;
-	for (int i = m_SortOrderIds.Head(); i != m_SortOrderIds.InvalidIndex(); i = m_SortOrderIds.Next(i) )
+	for ( auto it = m_SortOrderIds.begin(); it != m_SortOrderIds.end(); ++it )
 	{
 		// Found a match, lets increment the refcount of this sort order id
-		if (m_SortOrderIds[i].m_MaterialEnum == materialEnum)
+		if (it->m_MaterialEnum == materialEnum)
 		{
-			++m_SortOrderIds[i].m_RefCount;
-			shadow.m_SortOrder = i;
+			++it->m_RefCount;
+			shadow.m_SortOrder = it.handle();
 			return;
 		}
 	}
 
 	// Didn't find it, lets assign a new sort order ID, with a refcount of 1
-	GrowSpew( m_SortOrderIds.Count(), m_SortOrderIdsMax, "m_SortOrderIds" );
-	shadow.m_SortOrder = m_SortOrderIds.AddToTail();
+	GrowSpew( (int)m_SortOrderIds.size(), m_SortOrderIdsMax, "m_SortOrderIds" );
+	shadow.m_SortOrder = m_SortOrderIds.emplace();
 	m_SortOrderIds[shadow.m_SortOrder].m_MaterialEnum  = materialEnum;
 	m_SortOrderIds[shadow.m_SortOrder].m_RefCount = 1;
 
 
 	// Make sure the render queue has as many entries as the max sort order id.
-	int count = m_RenderQueue.Count();
-	GrowSpew( m_RenderQueue.Count(), m_RenderQueueMax, "m_RenderQueue" );
-	while( count < m_SortOrderIds.MaxElementIndex() )
+	int count = std::ssize( m_RenderQueue );
+	GrowSpew( std::ssize( m_RenderQueue ), m_RenderQueueMax, "m_RenderQueue" );
+	while( count < (int)m_SortOrderIds.slot_count() )
 	{
 		MEM_ALLOC_CREDIT();
-		m_RenderQueue.AddToTail( SHADOW_DECAL_HANDLE_INVALID );
+		m_RenderQueue.push_back( SHADOW_DECAL_HANDLE_INVALID );
 		++count;
 	}
 }
@@ -719,7 +718,7 @@ void CShadowMgr::CleanupMaterial( Shadow_t& shadow )
 	{
 		// No one referencing the sort order number?
 		// Then lets clean up the sort order id
-		m_SortOrderIds.Remove(shadow.m_SortOrder);
+		m_SortOrderIds.erase(shadow.m_SortOrder);
 	}
 
 	// We're done with this material
@@ -739,7 +738,7 @@ void CShadowMgr::CleanupMaterial( Shadow_t& shadow )
 //-----------------------------------------------------------------------------
 unsigned short CShadowMgr::InvalidShadowIndex( )
 {
-	return m_ShadowsOnModels.InvalidIndex();
+	return m_ShadowsOnModels.invalid;
 }
 
 void CShadowMgr::RemoveAllDecalsFromShadow( ShadowHandle_t handle )
@@ -760,16 +759,16 @@ ShadowHandle_t CShadowMgr::CreateShadow( IMaterial* pMaterial, IMaterial* pModel
 ShadowHandle_t CShadowMgr::CreateShadowEx( IMaterial* pMaterial, IMaterial* pModelMaterial, void* pBindProxy, int creationFlags, int nEntIndex )
 {
 #ifndef DEDICATED
-	ShadowHandle_t h = m_Shadows.AddToTail();
 	//=============================================================================
 	// HPE_BEGIN:
 	// [smessick] Check for overflow.
 	//=============================================================================
-	if ( h == m_Shadows.InvalidIndex() )
+	if ( m_Shadows.size() >= SHADOW_HANDLE_INVALID )
 	{
 		ExecuteNTimes( 10, Warning( "CShadowMgr::CreateShadowEx - overflowed m_Shadows linked list!\n" ) );
-		return h;
+		return SHADOW_HANDLE_INVALID;
 	}
+	ShadowHandle_t h = m_Shadows.emplace();
 	//=============================================================================
 	// HPE_END
 	//=============================================================================
@@ -777,20 +776,20 @@ ShadowHandle_t CShadowMgr::CreateShadowEx( IMaterial* pMaterial, IMaterial* pMod
 	Shadow_t& shadow = m_Shadows[h];
 	SetMaterial( shadow, pMaterial, pModelMaterial, pBindProxy );
 	shadow.m_Flags = creationFlags;
-	shadow.m_FirstDecal = m_ShadowSurfaces.InvalidIndex();
-	shadow.m_FirstModel = m_ShadowsOnModels.InvalidIndex(); 
+	shadow.m_FirstDecal = m_ShadowSurfaces.invalid;
+	shadow.m_FirstModel = m_ShadowsOnModels.invalid; 
 	shadow.m_ProjectionDir.Init( 0, 0, 1 );
 	shadow.m_TexOrigin.Init( 0, 0 );
 	shadow.m_TexSize.Init( 1, 1 );
 	shadow.m_ClipPlaneCount = 0;
 	shadow.m_FalloffBias = 0;
 	shadow.m_pFlashlightDepthTexture = nullptr;
-	shadow.m_FlashlightHandle = m_FlashlightStates.InvalidIndex();
+	shadow.m_FlashlightHandle = m_FlashlightStates.invalid;
 	shadow.m_nEntIndex = nEntIndex;
 
 	if ( ( creationFlags & ( SHADOW_FLASHLIGHT | SHADOW_SIMPLE_PROJECTION ) ) != 0 )
 	{
-		shadow.m_FlashlightHandle = m_FlashlightStates.AddToTail();
+		shadow.m_FlashlightHandle = m_FlashlightStates.emplace_back();
 		m_FlashlightStates[shadow.m_FlashlightHandle].m_Shadow = h;
 		
 		ASSERT_LOCAL_PLAYER_RESOLVABLE();
@@ -812,12 +811,12 @@ void CShadowMgr::DestroyShadow( ShadowHandle_t handle )
 	CleanupMaterial( m_Shadows[handle] );
 	RemoveAllSurfacesFromShadow( handle );
 	RemoveAllModelsFromShadow( handle );
-	if( m_Shadows[handle].m_FlashlightHandle != m_FlashlightStates.InvalidIndex() )
+	if( m_Shadows[handle].m_FlashlightHandle != m_FlashlightStates.invalid )
 	{
-		m_FlashlightStates.Remove( m_Shadows[handle].m_FlashlightHandle );
+		m_FlashlightStates.erase( m_Shadows[handle].m_FlashlightHandle );
 	}
 
-	m_Shadows.Remove(handle);
+	m_Shadows.erase(handle);
 }
 
 
@@ -900,15 +899,15 @@ inline ShadowVertex_t* CShadowMgr::AllocateVertices( ShadowVertexCache_t& cache,
 	if (count <= SHADOW_VERTEX_SMALL_CACHE_COUNT)
 	{
 		cache.m_Count = count;
-		GrowSpew( m_SmallVertexList.NumAllocated(), m_SmallVertexListMax, "m_SmallVertexList" );
-		cache.m_CachedVerts = m_SmallVertexList.AddToTail( );
+		GrowSpew( (int)m_SmallVertexList.slot_count(), m_SmallVertexListMax, "m_SmallVertexList" );
+		cache.m_CachedVerts = m_SmallVertexList.emplace();
 		return m_SmallVertexList[cache.m_CachedVerts].m_Verts;
 	}
 	else if (count <= SHADOW_VERTEX_LARGE_CACHE_COUNT)
 	{
 		cache.m_Count = count;
-		GrowSpew( m_LargeVertexList.NumAllocated(), m_LargeVertexListMax, "m_LargeVertexList" );
-		cache.m_CachedVerts = m_LargeVertexList.AddToTail( );
+		GrowSpew( (int)m_LargeVertexList.slot_count(), m_LargeVertexListMax, "m_LargeVertexList" );
+		cache.m_CachedVerts = m_LargeVertexList.emplace();
 		return m_LargeVertexList[cache.m_CachedVerts].m_Verts;
 	}
 
@@ -917,7 +916,7 @@ inline ShadowVertex_t* CShadowMgr::AllocateVertices( ShadowVertexCache_t& cache,
 	{
 		cache.m_pVerts = new ShadowVertex_t[count];
 	}
-	cache.m_CachedVerts = m_LargeVertexList.InvalidIndex();
+	cache.m_CachedVerts = m_LargeVertexList.invalid;
 	return cache.m_pVerts;
 }
 
@@ -932,11 +931,11 @@ inline void CShadowMgr::FreeVertices( ShadowVertexCache_t& cache )
 	}
 	else if (cache.m_Count <= SHADOW_VERTEX_SMALL_CACHE_COUNT)
 	{
-		m_SmallVertexList.Remove( cache.m_CachedVerts );
+		m_SmallVertexList.erase( cache.m_CachedVerts );
 	}
 	else
 	{
-		m_LargeVertexList.Remove( cache.m_CachedVerts );
+		m_LargeVertexList.erase( cache.m_CachedVerts );
 	}
 }
 
@@ -947,12 +946,12 @@ inline void CShadowMgr::FreeVertices( ShadowVertexCache_t& cache )
 void CShadowMgr::ClearTempCache( )
 {
 	// Clear out the vertices
-	for (int i = m_TempVertexCache.Count(); --i >= 0; ) 
+	for (int i = std::ssize( m_TempVertexCache ); --i >= 0; ) 
 	{
 		FreeVertices( m_TempVertexCache[i] );
 	}
 
-	m_TempVertexCache.RemoveAll();
+	m_TempVertexCache.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -961,20 +960,15 @@ void CShadowMgr::ClearTempCache( )
 bool CShadowMgr::AddDecalToShadowList( ShadowHandle_t handle, ShadowDecalHandle_t decalHandle )
 {
 	// Add the shadow to the list of surfaces affected by this shadow
-	GrowSpew( m_ShadowSurfaces.NumAllocated(), m_ShadowSurfacesMax, "m_ShadowSurfaces", 8192 );
-  	ShadowSurfaceIndex_t idx = m_ShadowSurfaces.Alloc( true );
-	if ( idx == m_ShadowSurfaces.InvalidIndex() )
+	GrowSpew( (int)m_ShadowSurfaces.slot_count(), m_ShadowSurfacesMax, "m_ShadowSurfaces", 8192 );
+	if ( m_ShadowSurfaces.full() )
 	{
 		ExecuteNTimes( 10, Warning( "CShadowMgr::AddDecalToShadowList - overflowed m_ShadowSurfaces linked list!\n" ) );
 		return false;
 	}
 
-	m_ShadowSurfaces[idx] = decalHandle;
-	if ( m_Shadows[handle].m_FirstDecal != m_ShadowSurfaces.InvalidIndex() )
-	{
-		m_ShadowSurfaces.LinkBefore( m_Shadows[handle].m_FirstDecal, idx );
-	}
-	m_Shadows[handle].m_FirstDecal = idx;
+	ShadowSurfaceIndex_t idx = m_ShadowSurfaces.alloc( decalHandle );
+	m_ShadowSurfaces.push_front( m_Shadows[handle].m_FirstDecal, idx );
 	m_ShadowDecals[decalHandle].m_ShadowListIndex = idx;
 
 	return true;
@@ -988,17 +982,11 @@ void CShadowMgr::RemoveDecalFromShadowList( ShadowHandle_t handle, ShadowDecalHa
 {
 	ShadowSurfaceIndex_t idx = m_ShadowDecals[decalHandle].m_ShadowListIndex;
 
-	// Make sure the list of shadow decals for a single shadow is ok
-	if ( m_Shadows[handle].m_FirstDecal == idx )
-	{
-		m_Shadows[handle].m_FirstDecal = m_ShadowSurfaces.Next(idx);
-	}
-
 	// Remove it from the shadow surfaces list
-	m_ShadowSurfaces.Free(idx);
+	m_ShadowSurfaces.free( m_Shadows[handle].m_FirstDecal, idx );
 
 	// Blat out the decal index
-	m_ShadowDecals[decalHandle].m_ShadowListIndex = m_ShadowSurfaces.InvalidIndex();
+	m_ShadowDecals[decalHandle].m_ShadowListIndex = m_ShadowSurfaces.invalid;
 }
 
 
@@ -1017,7 +1005,7 @@ void CShadowMgr::ComputeSurfaceBounds( SurfaceBounds_t* pBounds, SurfaceHandle_t
 		const Vector &position = host_state.worldbrush->vertexes[ nVertIndex ].position;
 		pBounds->m_vecCenter += position;
 
-		fltx4 pos4 = LoadUnaligned3SIMD( position.Base() );
+		fltx4 pos4 = LoadVector3SIMD( position );
 		pBounds->m_vecMins = MinSIMD( pos4, pBounds->m_vecMins );
 		pBounds->m_vecMaxs = MaxSIMD( pos4, pBounds->m_vecMaxs );
 	}
@@ -1053,23 +1041,21 @@ const CShadowMgr::SurfaceBounds_t* CShadowMgr::GetSurfaceBounds( SurfaceHandle_t
 	// here, but I think if we did the cost doing that would exceed the cost
 	// of anything else in this path.
 	// If this turns out to not be true, then we should make this a true LRU
-	if ( m_pSurfaceBounds[nSurfaceIndex] != m_SurfaceBoundsCache.InvalidIndex() )
+	if ( m_pSurfaceBounds[nSurfaceIndex] != SURFACE_BOUNDS_INVALID )
 		return &m_SurfaceBoundsCache[ m_pSurfaceBounds[nSurfaceIndex] ];
 
 	SurfaceBoundsCacheIndex_t nIndex;
-	if ( m_SurfaceBoundsCache.Count() >= SURFACE_BOUNDS_CACHE_COUNT )
+	if ( m_nSurfaceBoundsCount >= SURFACE_BOUNDS_CACHE_COUNT )
 	{
-		// Retire existing cache entry if we're out of space,
-		// move it to the head of the LRU cache
-		nIndex = m_SurfaceBoundsCache.Tail( );
-		m_SurfaceBoundsCache.Unlink( nIndex );
-		m_SurfaceBoundsCache.LinkToHead( nIndex );
-		m_pSurfaceBounds[ m_SurfaceBoundsCache[nIndex].m_nSurfaceIndex ] = m_SurfaceBoundsCache.InvalidIndex();
+		// Retire the oldest cache entry if we're out of space
+		nIndex = m_nSurfaceBoundsNext;
+		m_nSurfaceBoundsNext = ( m_nSurfaceBoundsNext + 1 ) % SURFACE_BOUNDS_CACHE_COUNT;
+		m_pSurfaceBounds[ m_SurfaceBoundsCache[nIndex].m_nSurfaceIndex ] = SURFACE_BOUNDS_INVALID;
 	}
 	else
 	{
 		// Allocate new cache entry if we have more room
-		nIndex = m_SurfaceBoundsCache.AddToHead( );
+		nIndex = m_nSurfaceBoundsCount++;
 	}
 	m_pSurfaceBounds[ nSurfaceIndex ] = nIndex;
 
@@ -1127,18 +1113,17 @@ bool CShadowMgr::IsShadowNearSurface( ShadowHandle_t h, SurfaceHandle_t nSurfID,
 //-----------------------------------------------------------------------------
 inline ShadowDecalHandle_t CShadowMgr::AddShadowDecalToSurface( SurfaceHandle_t surfID, ShadowHandle_t handle )
 {
-	GrowSpew( m_ShadowDecals.NumAllocated(), m_ShadowDecalsMax, "m_ShadowDecals", 8192 );
-	ShadowDecalHandle_t decalHandle = m_ShadowDecals.Alloc( true );
-	if ( decalHandle == m_ShadowDecals.InvalidIndex() )
+	GrowSpew( (int)m_ShadowDecals.slot_count(), m_ShadowDecalsMax, "m_ShadowDecals", 8192 );
+	if ( m_ShadowDecals.full() )
 	{
 		ExecuteNTimes( 10, Warning( "CShadowMgr::AddShadowDecalToSurface - overflowed m_ShadowDecals linked list!\n" ) );
-		return decalHandle;
+		return SHADOW_DECAL_HANDLE_INVALID;
 	}
+	ShadowDecalHandle_t decalHandle = m_ShadowDecals.alloc();
 
 	ShadowDecal_t& decal = m_ShadowDecals[decalHandle];
 	decal.m_SurfID = surfID;
-	m_ShadowDecals.LinkBefore( MSurf_ShadowDecals( surfID ), decalHandle );
-	MSurf_ShadowDecals( surfID ) = decalHandle;
+	m_ShadowDecals.push_front( MSurf_ShadowDecals( surfID ), decalHandle );
 
 	// Hook the shadow into the displacement system....
 	if ( !SurfaceHasDispInfo( surfID ) )
@@ -1151,9 +1136,9 @@ inline ShadowDecalHandle_t CShadowMgr::AddShadowDecalToSurface( SurfaceHandle_t 
 	}
 
 	decal.m_Shadow = handle;
-	decal.m_ShadowVerts = m_VertexCache.InvalidIndex();
+	decal.m_ShadowVerts = m_VertexCache.invalid;
 	decal.m_NextRender = SHADOW_DECAL_HANDLE_INVALID;
-	decal.m_ShadowListIndex = m_ShadowSurfaces.InvalidIndex();
+	decal.m_ShadowListIndex = m_ShadowSurfaces.invalid;
 
 	//=============================================================================
 	// HPE_BEGIN:
@@ -1162,8 +1147,8 @@ inline ShadowDecalHandle_t CShadowMgr::AddShadowDecalToSurface( SurfaceHandle_t 
 	//=============================================================================
 	if ( !AddDecalToShadowList( handle, decalHandle ) )
 	{
-		m_ShadowDecals.Free( decalHandle );
-		decalHandle = m_ShadowDecals.InvalidIndex();
+		m_ShadowDecals.free( MSurf_ShadowDecals( surfID ), decalHandle );
+		decalHandle = SHADOW_DECAL_HANDLE_INVALID;
 	}
 	//=============================================================================
 	// HPE_END
@@ -1176,11 +1161,11 @@ inline void CShadowMgr::RemoveShadowDecalFromSurface( SurfaceHandle_t surfID, Sh
 {
 	// Clean up its shadow verts if it has any
 	ShadowDecal_t& decal = m_ShadowDecals[decalHandle];
-	if (decal.m_ShadowVerts != m_VertexCache.InvalidIndex())
+	if (decal.m_ShadowVerts != m_VertexCache.invalid)
 	{
 		FreeVertices( m_VertexCache[decal.m_ShadowVerts] );
-		m_VertexCache.Remove(decal.m_ShadowVerts);
-		decal.m_ShadowVerts = m_VertexCache.InvalidIndex();
+		m_VertexCache.erase(decal.m_ShadowVerts);
+		decal.m_ShadowVerts = m_VertexCache.invalid;
 	}
 
 	// Clean up displacement...
@@ -1189,16 +1174,10 @@ inline void CShadowMgr::RemoveShadowDecalFromSurface( SurfaceHandle_t surfID, Sh
 		MSurf_DispInfo( decal.m_SurfID )->RemoveShadowDecal( decal.m_DispShadow );
 	}
 
-	// Make sure the list of shadow decals on a surface is set up correctly
-	if ( MSurf_ShadowDecals( surfID ) == decalHandle )
-	{
-		MSurf_ShadowDecals( surfID ) = m_ShadowDecals.Next(decalHandle);
-	}
-
 	RemoveDecalFromShadowList( decal.m_Shadow, decalHandle );
 
-	// Kill the shadow decal
-	m_ShadowDecals.Free( decalHandle );
+	// Kill the shadow decal, keeping the surface's list of shadow decals set up correctly
+	m_ShadowDecals.free( MSurf_ShadowDecals( surfID ), decalHandle );
 }
 
 void CShadowMgr::AddSurfaceToFlashlightMaterialBuckets( ShadowHandle_t handle, SurfaceHandle_t surfID )
@@ -1211,7 +1190,7 @@ void CShadowMgr::AddSurfaceToFlashlightMaterialBuckets( ShadowHandle_t handle, S
 	
 	// Get the flashlight id for this particular shadow handle and make sure that it's valid.
 	FlashlightHandle_t flashlightID = m_Shadows[handle].m_FlashlightHandle;
-	Assert( flashlightID != m_FlashlightStates.InvalidIndex() );
+	Assert( flashlightID != m_FlashlightStates.invalid );
 	
 	if ( m_FlashlightStates[ flashlightID ].m_nSplitscreenOwner >= 0 )
 	{
@@ -1255,7 +1234,7 @@ void CShadowMgr::RemoveSurfaceFromShadow( ShadowHandle_t handle, SurfaceHandle_t
 	// in the shadow surface list if we find a match
 	ASSERT_SURF_VALID( surfID );
 	ShadowSurfaceIndex_t i = m_Shadows[handle].m_FirstDecal;
-	while ( i != m_ShadowSurfaces.InvalidIndex() )
+	while ( i != m_ShadowSurfaces.invalid )
 	{
 		ShadowDecalHandle_t decalHandle = m_ShadowSurfaces[i];
 		if ( m_ShadowDecals[decalHandle].m_SurfID == surfID )
@@ -1268,17 +1247,17 @@ void CShadowMgr::RemoveSurfaceFromShadow( ShadowHandle_t handle, SurfaceHandle_t
 			return;			
 		}
 
-		i = m_ShadowSurfaces.Next(i);
+		i = m_ShadowSurfaces.next(i);
 	}
 
 #ifdef _DEBUG
 	// Here, the shadow didn't have the surface in its list
 	// let's make sure the surface doesn't think it's got the shadow in its list
 	ShadowDecalHandle_t	dh = MSurf_ShadowDecals( surfID );
-	while (dh != m_ShadowDecals.InvalidIndex() )
+	while (dh != m_ShadowDecals.invalid )
 	{
 		Assert ( m_ShadowDecals[dh].m_Shadow != handle );
-		dh = m_ShadowDecals.Next(dh);
+		dh = m_ShadowDecals.next(dh);
 	}
 
 #endif
@@ -1290,18 +1269,18 @@ void CShadowMgr::RemoveAllSurfacesFromShadow( ShadowHandle_t handle )
 	// Remove the decals from the surfaces they are associated with
 	ShadowSurfaceIndex_t i = m_Shadows[handle].m_FirstDecal;
 	ShadowSurfaceIndex_t next;
-	while ( i != m_ShadowSurfaces.InvalidIndex() )
+	while ( i != m_ShadowSurfaces.invalid )
 	{
 		ShadowDecalHandle_t decalHandle = m_ShadowSurfaces[i];
 
-		next = m_ShadowSurfaces.Next(i);
+		next = m_ShadowSurfaces.next(i);
 
 		RemoveShadowDecalFromSurface( m_ShadowDecals[decalHandle].m_SurfID, decalHandle );
 
 		i = next;
 	}
 
-	m_Shadows[handle].m_FirstDecal = m_ShadowSurfaces.InvalidIndex();
+	m_Shadows[handle].m_FirstDecal = m_ShadowSurfaces.invalid;
 }
 
 void CShadowMgr::RemoveAllShadowsFromSurface( SurfaceHandle_t surfID )
@@ -1309,10 +1288,10 @@ void CShadowMgr::RemoveAllShadowsFromSurface( SurfaceHandle_t surfID )
 	// Iterate over all the decals associated with a particular shadow
 	// Remove the decals from the surfaces they are associated with
 	ShadowDecalHandle_t	dh = MSurf_ShadowDecals( surfID );
-	while (dh != m_ShadowDecals.InvalidIndex() )
+	while (dh != m_ShadowDecals.invalid )
 	{
 		// Remove this shadow from the surface 
-		ShadowDecalHandle_t next = m_ShadowDecals.Next(dh);
+		ShadowDecalHandle_t next = m_ShadowDecals.next(dh);
 
 		// Remove the surface from the shadow
 		RemoveShadowDecalFromSurface( m_ShadowDecals[dh].m_SurfID, dh );
@@ -1320,7 +1299,7 @@ void CShadowMgr::RemoveAllShadowsFromSurface( SurfaceHandle_t surfID )
 		dh = next;
 	}
 
-	MSurf_ShadowDecals( surfID ) = m_ShadowDecals.InvalidIndex();
+	MSurf_ShadowDecals( surfID ) = m_ShadowDecals.invalid;
 }
 
 
@@ -1350,15 +1329,15 @@ void CShadowMgr::AddShadowToModel( ShadowHandle_t handle, ModelInstanceHandle_t 
 	if( r_flashlightrender.GetBool()==false )
 		return;
 
-	GrowSpew( m_ShadowsOnModels.NumAllocated(), m_ShadowsOnModelsMax, "m_ShadowsOnModels" );
-	m_ShadowsOnModels.AddElementToBucket( model, handle );
+	GrowSpew( (int)m_ShadowsOnModels.slot_count(), m_ShadowsOnModelsMax, "m_ShadowsOnModels" );
+	m_ShadowsOnModels.add( model, handle );
 }
 
 void CShadowMgr::RemoveAllShadowsFromModel( ModelInstanceHandle_t model )
 {
 	if( model != MODEL_INSTANCE_INVALID )
 	{
-		m_ShadowsOnModels.RemoveBucket( model );
+		m_ShadowsOnModels.remove_bucket( model );
 	}
 }
 
@@ -1370,14 +1349,13 @@ int CShadowMgr::GetNumShadowsOnModel( ModelInstanceHandle_t instance )
 		return 0;
 	}
 
-	int i = m_ShadowsOnModels.FirstElement( instance );
+	int i = m_ShadowsOnModels.first_element( instance );
 	int nCount = 0;
 
-	// TODO: Add method to query num elements in a bucket to CUtlBidirectionalSet
-	while ( i != m_ShadowsOnModels.InvalidIndex() )
+	while ( i != m_ShadowsOnModels.invalid )
 	{
 		nCount++;
-		i = m_ShadowsOnModels.NextElement(i);
+		i = m_ShadowsOnModels.next_element(i);
 	}
 
 	return nCount;
@@ -1391,23 +1369,23 @@ int CShadowMgr::GetShadowsOnModel( ModelInstanceHandle_t instance, ShadowHandle_
 		return 0;
 	}
 
-	int i = m_ShadowsOnModels.FirstElement( instance );
+	int i = m_ShadowsOnModels.first_element( instance );
 	int nCount = 0;
 
-	while ( i != m_ShadowsOnModels.InvalidIndex() )
+	while ( i != m_ShadowsOnModels.invalid )
 	{
-		Shadow_t& shadow = m_Shadows[m_ShadowsOnModels.Element(i)];
+		Shadow_t& shadow = m_Shadows[m_ShadowsOnModels.element(i)];
 
 		bool bFlashlight = ( ( shadow.m_Flags & ( SHADOW_FLASHLIGHT | SHADOW_SIMPLE_PROJECTION ) ) != 0 );
 		if ( ( bFlashlight && bFlashlightShadows ) || 
 			 ( !bFlashlight && bNormalShadows ) )
 		{
-			*pShadowArray = m_ShadowsOnModels.Element(i);
+			*pShadowArray = m_ShadowsOnModels.element(i);
 			pShadowArray++;
 			nCount++;
 		}
 
-		i = m_ShadowsOnModels.NextElement(i);
+		i = m_ShadowsOnModels.next_element(i);
 	}
 
 	return nCount;
@@ -1415,7 +1393,7 @@ int CShadowMgr::GetShadowsOnModel( ModelInstanceHandle_t instance, ShadowHandle_
 
 void CShadowMgr::RemoveAllModelsFromShadow( ShadowHandle_t handle )
 {
-	m_ShadowsOnModels.RemoveElement( handle );
+	m_ShadowsOnModels.remove_element( handle );
 }						   
 
 
@@ -1431,9 +1409,9 @@ void CShadowMgr::SetModelShadowState( ModelInstanceHandle_t instance )
 		return;
 
 	bool bWireframe = r_shadowwireframe.GetBool();
-	for ( int i = m_ShadowsOnModels.FirstElement( instance ); i != m_ShadowsOnModels.InvalidIndex(); i = m_ShadowsOnModels.NextElement( i ) )
+	for ( int i = m_ShadowsOnModels.first_element( instance ); i != m_ShadowsOnModels.invalid; i = m_ShadowsOnModels.next_element( i ) )
 	{
-		Shadow_t& shadow = m_Shadows[m_ShadowsOnModels.Element(i)];
+		Shadow_t& shadow = m_Shadows[m_ShadowsOnModels.element(i)];
 
 		if ( shadow.m_Flags & ( SHADOW_FLASHLIGHT | SHADOW_SIMPLE_PROJECTION ) )
 		{
@@ -1474,7 +1452,7 @@ bool CShadowMgr::ModelHasShadows( ModelInstanceHandle_t instance )
 {
 	if ( instance != MODEL_INSTANCE_INVALID )
 	{
-		if ( m_ShadowsOnModels.FirstElement(instance) != m_ShadowsOnModels.InvalidIndex() )
+		if ( m_ShadowsOnModels.first_element(instance) != m_ShadowsOnModels.invalid )
 			return true;
 	}
 	return false;
@@ -1499,10 +1477,10 @@ int CShadowMgr::SetupFlashlightRenderInstanceInfo( ShadowHandle_t *pShadowHandle
 		if ( instance == MODEL_INSTANCE_INVALID )
 			continue;
 
-		int j = m_ShadowsOnModels.FirstElement( instance );
-		for ( ; j != m_ShadowsOnModels.InvalidIndex(); j = m_ShadowsOnModels.NextElement(j) )
+		int j = m_ShadowsOnModels.first_element( instance );
+		for ( ; j != m_ShadowsOnModels.invalid; j = m_ShadowsOnModels.next_element(j) )
 		{
-			ShadowHandle_t hFlashlight = m_ShadowsOnModels.Element(j);
+			ShadowHandle_t hFlashlight = m_ShadowsOnModels.element(j);
 			Shadow_t& shadow = m_Shadows[ hFlashlight ];
 			if ( ( shadow.m_Flags & ( SHADOW_FLASHLIGHT | SHADOW_SIMPLE_PROJECTION ) ) == 0 )
 				continue;
@@ -2128,7 +2106,7 @@ void CShadowMgr::AddShadowsOnSurfaceToRenderList( ShadowDecalHandle_t decalHandl
 		return;
 
 	// Add all surface decals into the appropriate render lists
-	while ( decalHandle != m_ShadowDecals.InvalidIndex() )
+	while ( decalHandle != m_ShadowDecals.invalid )
 	{
 		ShadowDecal_t& shadowDecal = m_ShadowDecals[decalHandle];
 
@@ -2150,7 +2128,7 @@ void CShadowMgr::AddShadowsOnSurfaceToRenderList( ShadowDecalHandle_t decalHandl
 			// We've got one more decal to render
 			++m_DecalsToRender;
 		}
-		decalHandle = m_ShadowDecals.Next(decalHandle);
+		decalHandle = m_ShadowDecals.next(decalHandle);
 	}
 }
 
@@ -2159,9 +2137,9 @@ void CShadowMgr::ClearShadowRenderList()
 	COMPILE_TIME_ASSERT( sizeof(ShadowDecalHandle_t) == 2 );
 
 	// Clear out the render list
-	if (m_RenderQueue.Count() > 0)
+	if (!m_RenderQueue.empty())
 	{
-		memset( m_RenderQueue.Base(), 0xFF, m_RenderQueue.Count() * sizeof(ShadowDecalHandle_t) );
+		memset( m_RenderQueue.data(), 0xFF, std::ssize( m_RenderQueue ) * sizeof(ShadowDecalHandle_t) );
 	}
 	m_DecalsToRender = 0;
 	// Clear all lists pertaining to flashlight decals that need to be rendered.
@@ -2177,9 +2155,9 @@ void CShadowMgr::RenderShadows( IMatRenderContext *pRenderContext, const VMatrix
 		bool bFound = false;
 	#endif
 
-	for ( int i = 0; i < m_RenderQueue.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_RenderQueue ); i++ )
 	{
-		if ( m_RenderQueue[i] != m_ShadowDecals.InvalidIndex() )
+		if ( m_RenderQueue[i] != m_ShadowDecals.invalid )
 		{
 			#if PIX_ENABLE
 				if ( !bFound )
@@ -2670,7 +2648,7 @@ inline bool CShadowMgr::GenerateNormalShadowRenderInfo( IMatRenderContext *pRend
 
 	// Look for a cache hit
 	ShadowVertexCache_t* pVertexCache;
-	if (decal.m_ShadowVerts != m_VertexCache.InvalidIndex())
+	if (decal.m_ShadowVerts != m_VertexCache.invalid)
 	{
 		// Ok, we've already computed the data, lets use it
 		info.m_pCache[info.m_Count] = decal.m_ShadowVerts;
@@ -2688,15 +2666,15 @@ inline bool CShadowMgr::GenerateNormalShadowRenderInfo( IMatRenderContext *pRend
 		bool shouldCacheVerts = ShouldCacheVertices( decal );
 		if (shouldCacheVerts)
 		{
-			GrowSpew( m_VertexCache.NumAllocated(), m_VertexCacheMax, "m_VertexCache" );
-			decal.m_ShadowVerts = m_VertexCache.AddToTail();
+			GrowSpew( (int)m_VertexCache.slot_count(), m_VertexCacheMax, "m_VertexCache" );
+			decal.m_ShadowVerts = m_VertexCache.emplace();
 			info.m_pCache[info.m_Count] = decal.m_ShadowVerts;
 			pVertexCache = &m_VertexCache[decal.m_ShadowVerts];
 		}
 		else
 		{
-			GrowSpew( m_TempVertexCache.NumAllocated(), m_TempVertexCacheMax, "m_TempVertexCache" );
-			int i = m_TempVertexCache.AddToTail();
+			GrowSpew( int( m_TempVertexCache.capacity() ), m_TempVertexCacheMax, "m_TempVertexCache" );
+			int i = std::ssize( m_TempVertexCache ); m_TempVertexCache.emplace_back();
 			info.m_pCache[info.m_Count] = -i-1;
 			pVertexCache = &m_TempVertexCache[i];
 			Assert( info.m_pCache[info.m_Count] < 0 );
@@ -2740,7 +2718,7 @@ void CShadowMgr::GenerateShadowRenderInfo( IMatRenderContext *pRenderContext, Sh
 	// Keep the lists only full of valid decals; that way we can preserve
 	// the render lists in the case that we discover a shadow isn't needed.
 	ShadowDecalHandle_t next;
-	for ( ; decalHandle != m_ShadowDecals.InvalidIndex(); decalHandle = next )
+	for ( ; decalHandle != m_ShadowDecals.invalid; decalHandle = next )
 	{
 		ShadowDecal_t& decal = m_ShadowDecals[decalHandle];
 		next = m_ShadowDecals[decalHandle].m_NextRender;
@@ -2787,7 +2765,7 @@ void CShadowMgr::GenerateShadowRenderInfoThreaded( IMatRenderContext *pRenderCon
 	// Keep the lists only full of valid decals; that way we can preserve
 	// the render lists in the case that we discover a shadow isn't needed.
 	ShadowDecalHandle_t next;
-	for ( ; decalHandle != m_ShadowDecals.InvalidIndex(); decalHandle = next )
+	for ( ; decalHandle != m_ShadowDecals.invalid; decalHandle = next )
 	{
 		ShadowDecal_t& decal = m_ShadowDecals[decalHandle];
 		next = m_ShadowDecals[decalHandle].m_NextRender;
@@ -3042,27 +3020,27 @@ void CShadowMgr::RenderShadowList( IMatRenderContext *pRenderContext, ShadowDeca
 	// [smessick] Make sure we don't overflow our caches.
 	//=============================================================================
 
-	if ( m_DecalsToRender > m_ShadowDecalCache.Count() )
+	if ( m_DecalsToRender > std::ssize( m_ShadowDecalCache ) )
 	{
 		// Don't grow past the MAX_SHADOW_DECAL_CACHE_COUNT cap.
-		int diff = MIN( m_DecalsToRender, MAX_SHADOW_DECAL_CACHE_COUNT ) - m_ShadowDecalCache.Count();
+		int diff = std::min<int>( m_DecalsToRender, MAX_SHADOW_DECAL_CACHE_COUNT ) - std::ssize( m_ShadowDecalCache );
 		if ( diff > 0 )
 		{
 			// Grow the cache.
-			m_ShadowDecalCache.Grow( diff );
-			DevMsg( "[CShadowMgr::RenderShadowList] growing shadow decal cache (decals: %d, cache: %d, diff: %d).\n", m_DecalsToRender, m_ShadowDecalCache.Count(), diff );
+			m_ShadowDecalCache.resize( m_ShadowDecalCache.size() + diff );
+			DevMsg( "[CShadowMgr::RenderShadowList] growing shadow decal cache (decals: %d, cache: %d, diff: %d).\n", m_DecalsToRender, std::ssize( m_ShadowDecalCache ), diff );
 		}
 	}
 
-	if ( m_DecalsToRender > m_DispShadowDecalCache.Count() )
+	if ( m_DecalsToRender > std::ssize( m_DispShadowDecalCache ) )
 	{
 		// Don't grow past the MAX_SHADOW_DECAL_CACHE_COUNT cap.
-		int diff = MIN( m_DecalsToRender, MAX_SHADOW_DECAL_CACHE_COUNT ) - m_DispShadowDecalCache.Count();
+		int diff = std::min<int>( m_DecalsToRender, MAX_SHADOW_DECAL_CACHE_COUNT ) - std::ssize( m_DispShadowDecalCache );
 		if ( diff > 0 )
 		{
 			// Grow the cache.
-			m_DispShadowDecalCache.Grow( diff );
-			DevMsg( "[CShadowMgr::RenderShadowList] growing disp shadow decal cache (decals: %d, cache: %d, diff: %d).\n", m_DecalsToRender, m_DispShadowDecalCache.Count(), diff );
+			m_DispShadowDecalCache.resize( m_DispShadowDecalCache.size() + diff );
+			DevMsg( "[CShadowMgr::RenderShadowList] growing disp shadow decal cache (decals: %d, cache: %d, diff: %d).\n", m_DecalsToRender, std::ssize( m_DispShadowDecalCache ), diff );
 		}
 	}
 
@@ -3092,8 +3070,8 @@ void CShadowMgr::RenderShadowList( IMatRenderContext *pRenderContext, ShadowDeca
 	// HPE_BEGIN:
 	// [smessick] This code used to create the cache dynamically on the stack.
 	//=============================================================================
-	info.m_pCache = m_ShadowDecalCache.Base();
-	info.m_pDispCache = m_DispShadowDecalCache.Base();
+	info.m_pCache = m_ShadowDecalCache.data();
+	info.m_pDispCache = m_DispShadowDecalCache.data();
 	//=============================================================================
 	// HPE_END
 	//=============================================================================
@@ -3122,9 +3100,9 @@ void CShadowMgr::RenderShadowList( IMatRenderContext *pRenderContext, ShadowDeca
 	// HPE_BEGIN:
 	// [smessick] Also check against the max.
 	//=============================================================================
-	Assert( info.m_Count <= m_ShadowDecalCache.Count() &&
+	Assert( info.m_Count <= std::ssize( m_ShadowDecalCache ) &&
 			info.m_Count <= MAX_SHADOW_DECAL_CACHE_COUNT );
-	Assert( info.m_DispCount <= m_DispShadowDecalCache.Count() &&
+	Assert( info.m_DispCount <= std::ssize( m_DispShadowDecalCache ) &&
 			info.m_DispCount <= MAX_SHADOW_DECAL_CACHE_COUNT );
 	//=============================================================================
 	// HPE_END
@@ -3155,9 +3133,9 @@ void CShadowMgr::SetNumWorldMaterialBuckets( int numMaterialSortBins )
 {
 	m_NumWorldMaterialBuckets = numMaterialSortBins;
 	FlashlightHandle_t flashlightID;
-	for( flashlightID = m_FlashlightStates.Head(); 
-	     flashlightID != m_FlashlightStates.InvalidIndex(); 
-		 flashlightID = m_FlashlightStates.Next( flashlightID ) )
+	for( flashlightID = m_FlashlightStates.head(); 
+	     flashlightID != m_FlashlightStates.invalid; 
+		 flashlightID = m_FlashlightStates.next( flashlightID ) )
 	{
 		m_FlashlightStates[flashlightID].m_MaterialBuckets.SetNumMaterialSortIDs( numMaterialSortBins );
 		m_FlashlightStates[flashlightID].m_OccluderBuckets.SetNumMaterialSortIDs( numMaterialSortBins );
@@ -3174,9 +3152,9 @@ void CShadowMgr::ClearAllFlashlightMaterialBuckets( void )
 		return;
 
 	FlashlightHandle_t flashlightID;
-	for( flashlightID = m_FlashlightStates.Head(); 
-	     flashlightID != m_FlashlightStates.InvalidIndex(); 
-		 flashlightID = m_FlashlightStates.Next( flashlightID ) )
+	for( flashlightID = m_FlashlightStates.head(); 
+	     flashlightID != m_FlashlightStates.invalid; 
+		 flashlightID = m_FlashlightStates.next( flashlightID ) )
 	{
 		m_FlashlightStates[flashlightID].m_MaterialBuckets.Flush();
 	}
@@ -3187,7 +3165,7 @@ void CShadowMgr::ClearAllFlashlightMaterialBuckets( void )
 //-----------------------------------------------------------------------------
 void CShadowMgr::AllocFlashlightMaterialBuckets( FlashlightHandle_t flashlightID )
 {
-	Assert( m_FlashlightStates.MaxElementIndex() >= flashlightID );
+	Assert( m_FlashlightStates.contains( flashlightID ) );
 	m_FlashlightStates[flashlightID].m_MaterialBuckets.SetNumMaterialSortIDs( m_NumWorldMaterialBuckets );
 	m_FlashlightStates[flashlightID].m_OccluderBuckets.SetNumMaterialSortIDs( m_NumWorldMaterialBuckets );
 }
@@ -3644,15 +3622,15 @@ void CShadowMgr::SetFlashlightStencilMasks( bool bDoMasking )
 	if ( !( r_flashlightclip.GetBool() || r_flashlightscissor.GetBool()) )
 		return;
 
-	FlashlightHandle_t flashlightID = m_FlashlightStates.Head();
-	if ( flashlightID == m_FlashlightStates.InvalidIndex() )
+	FlashlightHandle_t flashlightID = m_FlashlightStates.head();
+	if ( flashlightID == m_FlashlightStates.invalid )
 		return;
 
 	CMatRenderContextPtr pRenderContext( materials );
 
 	for( ; 
-		 flashlightID != m_FlashlightStates.InvalidIndex(); 
-		 flashlightID = m_FlashlightStates.Next( flashlightID ) )
+		 flashlightID != m_FlashlightStates.invalid; 
+		 flashlightID = m_FlashlightStates.next( flashlightID ) )
 	{
 		FlashlightInfo_t &flashlightInfo = m_FlashlightStates[flashlightID];
 
@@ -3670,10 +3648,10 @@ void CShadowMgr::SetFlashlightStencilMasks( bool bDoMasking )
 
 void CShadowMgr::PushFlashlightScissorBounds( void )
 {
-	m_ScissorStateEntryStart.AddToTail( m_ScissorStateBackups.Count() ); //push the location of the end of our current backup set
+	m_ScissorStateEntryStart.push_back( std::ssize( m_ScissorStateBackups ) ); //push the location of the end of our current backup set
 
-	FlashlightHandle_t flashlightID = m_FlashlightStates.Head();
-	if ( flashlightID != m_FlashlightStates.InvalidIndex() )
+	FlashlightHandle_t flashlightID = m_FlashlightStates.head();
+	if ( flashlightID != m_FlashlightStates.invalid )
 	{
 		ASSERT_LOCAL_PLAYER_RESOLVABLE();
 		int iSplitScreenSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
@@ -3681,8 +3659,8 @@ void CShadowMgr::PushFlashlightScissorBounds( void )
 		//count the number of entries we need
 		int iStateCount = 0;
 		for( ; 
-			flashlightID != m_FlashlightStates.InvalidIndex(); 
-			flashlightID = m_FlashlightStates.Next( flashlightID ) )
+			flashlightID != m_FlashlightStates.invalid; 
+			flashlightID = m_FlashlightStates.next( flashlightID ) )
 		{
 			FlashlightInfo_t &flashlightInfo = m_FlashlightStates[flashlightID];
 
@@ -3696,15 +3674,15 @@ void CShadowMgr::PushFlashlightScissorBounds( void )
 		}
 
 		//add the entry space
-		int iWriteSlot = m_ScissorStateBackups.Count();
-		m_ScissorStateBackups.AddMultipleToTail( iStateCount );
-		FlashLightScissorStateBackup_t *pBackups = m_ScissorStateBackups.Base();
+		int iWriteSlot = std::ssize( m_ScissorStateBackups );
+		m_ScissorStateBackups.resize( m_ScissorStateBackups.size() + iStateCount );
+		FlashLightScissorStateBackup_t *pBackups = m_ScissorStateBackups.data();
 		
 		//write out the entries
-		flashlightID = m_FlashlightStates.Head();
+		flashlightID = m_FlashlightStates.head();
 		for( ; 
-			flashlightID != m_FlashlightStates.InvalidIndex(); 
-			flashlightID = m_FlashlightStates.Next( flashlightID ) )
+			flashlightID != m_FlashlightStates.invalid; 
+			flashlightID = m_FlashlightStates.next( flashlightID ) )
 		{
 			FlashlightInfo_t &flashlightInfo = m_FlashlightStates[flashlightID];
 
@@ -3730,23 +3708,23 @@ void CShadowMgr::PushFlashlightScissorBounds( void )
 }
 void CShadowMgr::PopFlashlightScissorBounds( void )
 {
-	int iPopStart = m_ScissorStateEntryStart.Tail();
-	m_ScissorStateEntryStart.RemoveMultipleFromTail( 1 );
+	int iPopStart = m_ScissorStateEntryStart.back();
+	m_ScissorStateEntryStart.resize( m_ScissorStateEntryStart.size() - 1 );
 
-	if( iPopStart == m_ScissorStateBackups.Count() )
+	if( iPopStart == std::ssize( m_ScissorStateBackups ) )
 		return; //nothing in the backup
 
 	ASSERT_LOCAL_PLAYER_RESOLVABLE();
 	int iSplitScreenSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
 
 	int iReadSlot = iPopStart;
-	FlashLightScissorStateBackup_t *pBackups = m_ScissorStateBackups.Base();
+	FlashLightScissorStateBackup_t *pBackups = m_ScissorStateBackups.data();
 
 	//read back the entries
-	FlashlightHandle_t flashlightID = m_FlashlightStates.Head();
+	FlashlightHandle_t flashlightID = m_FlashlightStates.head();
 	for( ; 
-		flashlightID != m_FlashlightStates.InvalidIndex(); 
-		flashlightID = m_FlashlightStates.Next( flashlightID ) )
+		flashlightID != m_FlashlightStates.invalid; 
+		flashlightID = m_FlashlightStates.next( flashlightID ) )
 	{
 		FlashlightInfo_t &flashlightInfo = m_FlashlightStates[flashlightID];
 
@@ -3769,7 +3747,7 @@ void CShadowMgr::PopFlashlightScissorBounds( void )
 		++iReadSlot;
 	}
 
-	m_ScissorStateBackups.RemoveMultipleFromTail( m_ScissorStateBackups.Count() - iPopStart );
+	m_ScissorStateBackups.resize( m_ScissorStateBackups.size() - ( std::ssize( m_ScissorStateBackups ) - iPopStart ) );
 }
 
 
@@ -3874,8 +3852,8 @@ void CShadowMgr::RenderFlashlights( bool bDoMasking, bool bDoSimpleProjections, 
 	// Draw the projective light sources, which get their material
 	// from the surface and not from the shadow.
 	// Tell the materialsystem that we are drawing additive flashlight lighting.
-	FlashlightHandle_t flashlightID = m_FlashlightStates.Head();
-	if ( flashlightID == m_FlashlightStates.InvalidIndex() )
+	FlashlightHandle_t flashlightID = m_FlashlightStates.head();
+	if ( flashlightID == m_FlashlightStates.invalid )
 		return;
 
 	bool bWireframe = r_shadowwireframe.GetBool();
@@ -3896,14 +3874,14 @@ void CShadowMgr::RenderFlashlights( bool bDoMasking, bool bDoSimpleProjections, 
 	}
 
 	// PORTAL 2 PAINT RENDERING
-	CUtlVectorFixedGrowable< SurfaceHandle_t, 64 > paintableSurfaces;
-	CUtlVectorFixedGrowable< int, 16 > batchPaintableSurfaceCount;
-	CUtlVectorFixedGrowable< int, 16 > batchPaintableSurfaceIndexCount;
-	CUtlVectorFixedGrowable< FlashlightInfo_t *, 16 > flashlightInfos;
+	ks::small_vector< SurfaceHandle_t, 64 > paintableSurfaces;
+	ks::small_vector< int, 16 > batchPaintableSurfaceCount;
+	ks::small_vector< int, 16 > batchPaintableSurfaceIndexCount;
+	ks::small_vector< FlashlightInfo_t *, 16 > flashlightInfos;
 
 	for( ; 
-		 flashlightID != m_FlashlightStates.InvalidIndex(); 
-		 flashlightID = m_FlashlightStates.Next( flashlightID ) )
+		 flashlightID != m_FlashlightStates.invalid; 
+		 flashlightID = m_FlashlightStates.next( flashlightID ) )
 	{
 		FlashlightInfo_t &flashlightInfo = m_FlashlightStates[flashlightID];
 
@@ -3920,23 +3898,19 @@ void CShadowMgr::RenderFlashlights( bool bDoMasking, bool bDoSimpleProjections, 
 		}
 
 		CMaterialsBuckets<SurfaceHandle_t> &materialBuckets = flashlightInfo.m_MaterialBuckets;
-		CMaterialsBuckets<SurfaceHandle_t>::SortIDHandle_t sortIDHandle = materialBuckets.GetFirstUsedSortID();
-		if ( sortIDHandle == materialBuckets.InvalidSortIDHandle() )
+		if ( materialBuckets.UsedSortIDs().empty() )
 			continue;
 
-		flashlightInfos.AddToTail( &flashlightInfo );
+		flashlightInfos.push_back( &flashlightInfo );
 		
 		pRenderContext->SetFlashlightStateEx(flashlightInfo.m_FlashlightState, m_Shadows[flashlightInfo.m_Shadow].m_WorldToShadow, m_Shadows[flashlightInfo.m_Shadow].m_pFlashlightDepthTexture );
 		EnableStencilAndScissorMasking( pRenderContext, flashlightInfo, bDoMasking );
 
-		for( ; sortIDHandle != materialBuckets.InvalidSortIDHandle();
-			 sortIDHandle = materialBuckets.GetNextUsedSortID( sortIDHandle ) )
+		for( int sortID : materialBuckets.UsedSortIDs() )
 		{
-			int nBatchIndex = batchPaintableSurfaceCount.Count();
-			batchPaintableSurfaceCount.AddToTail( 0 );
-			batchPaintableSurfaceIndexCount.AddToTail( 0 );
-
-			int sortID = materialBuckets.GetSortID( sortIDHandle );
+			int nBatchIndex = std::ssize( batchPaintableSurfaceCount );
+			batchPaintableSurfaceCount.push_back( 0 );
+			batchPaintableSurfaceIndexCount.push_back( 0 );
 
 			if( bWireframe )
 			{
@@ -3967,7 +3941,7 @@ void CShadowMgr::RenderFlashlights( bool bDoMasking, bool bDoSimpleProjections, 
 				// PORTAL 2 PAINT RENDERING
 				if ( !SurfaceHasDispInfo( surfID ) && !bWireframe && ( MSurf_Flags( surfID ) & SURFDRAW_PAINTED ) )
 				{
-					paintableSurfaces.AddToTail( surfID );
+					paintableSurfaces.push_back( surfID );
 					++ batchPaintableSurfaceCount[ nBatchIndex ];
 
 					int nVertCount, nIndexCount;
@@ -4033,27 +4007,24 @@ void CShadowMgr::RenderFlashlights( bool bDoMasking, bool bDoSimpleProjections, 
 	}
 
 	// PORTAL 2 PAINT RENDERING
-	if ( paintableSurfaces.Count() )
+	if ( std::ssize( paintableSurfaces ) )
 	{
 		pRenderContext->SetRenderingPaint( true );
 		PIXEVENT( pRenderContext, "Paint" );
 
 		int nBatchIndex = 0;
 		int nSurfaceIndex = 0;
-		for ( int i = 0; i < flashlightInfos.Count(); i++ )
+		for ( int i = 0; i < std::ssize( flashlightInfos ); i++ )
 		{
 			FlashlightInfo_t &flashlightInfo = *( flashlightInfos[ i ] );
 
 			CMaterialsBuckets<SurfaceHandle_t> &materialBuckets = flashlightInfo.m_MaterialBuckets;
-			CMaterialsBuckets<SurfaceHandle_t>::SortIDHandle_t sortIDHandle = materialBuckets.GetFirstUsedSortID();
-			
+
 			pRenderContext->SetFlashlightStateEx(flashlightInfo.m_FlashlightState, m_Shadows[flashlightInfo.m_Shadow].m_WorldToShadow, m_Shadows[flashlightInfo.m_Shadow].m_pFlashlightDepthTexture );
 			EnableStencilAndScissorMasking( pRenderContext, flashlightInfo, bDoMasking );
 
-			for( ; sortIDHandle != materialBuckets.InvalidSortIDHandle();
-				sortIDHandle = materialBuckets.GetNextUsedSortID( sortIDHandle ) )
+			for( int sortID : materialBuckets.UsedSortIDs() )
 			{
-				int sortID = materialBuckets.GetSortID( sortIDHandle );
 				int nSurfaceCount = batchPaintableSurfaceCount[ nBatchIndex ];
 				if ( nSurfaceCount > 0 )
 				{
@@ -4104,14 +4075,14 @@ void CShadowMgr::RenderFlashlights( bool bDoMasking, bool bDoSimpleProjections, 
 const Frustum_t &CShadowMgr::GetFlashlightFrustum( ShadowHandle_t handle )
 {
 	Assert( m_Shadows[handle].m_Flags & ( SHADOW_FLASHLIGHT | SHADOW_SIMPLE_PROJECTION ) );
-	Assert( m_Shadows[handle].m_FlashlightHandle != m_Shadows.InvalidIndex() );
+	Assert( m_Shadows[handle].m_FlashlightHandle != m_FlashlightStates.invalid );
 	return m_FlashlightStates[m_Shadows[handle].m_FlashlightHandle].m_Frustum;
 }
 
 const FlashlightState_t &CShadowMgr::GetFlashlightState( ShadowHandle_t handle )
 {
 	Assert( m_Shadows[handle].m_Flags & ( SHADOW_FLASHLIGHT | SHADOW_SIMPLE_PROJECTION ) );
-	Assert( m_Shadows[handle].m_FlashlightHandle != m_Shadows.InvalidIndex() );
+	Assert( m_Shadows[handle].m_FlashlightHandle != m_FlashlightStates.invalid );
 	return m_FlashlightStates[m_Shadows[handle].m_FlashlightHandle].m_FlashlightState;
 }
 
@@ -4121,14 +4092,14 @@ void CShadowMgr::DrawVolumetrics()
 {
 	VPROF_BUDGET( "CShadowMgr::DrawVolumetrics", VPROF_BUDGETGROUP_SHADOW_RENDERING );
 
-	FlashlightHandle_t flashlightID = m_FlashlightStates.Head();
-	if ( flashlightID == m_FlashlightStates.InvalidIndex() )
+	FlashlightHandle_t flashlightID = m_FlashlightStates.head();
+	if ( flashlightID == m_FlashlightStates.invalid )
 		return;
 
 	CMatRenderContextPtr pRenderContext( materials );
 
-	for( ; flashlightID != m_FlashlightStates.InvalidIndex(); 
-		flashlightID = m_FlashlightStates.Next( flashlightID ) )
+	for( ; flashlightID != m_FlashlightStates.invalid; 
+		flashlightID = m_FlashlightStates.next( flashlightID ) )
 	{
 		FlashlightInfo_t &flashlightInfo = m_FlashlightStates[flashlightID];
 
@@ -4358,15 +4329,15 @@ void CShadowMgr::DrawFlashlightDecals( IMatRenderContext *pRenderContext, int so
 	if ( m_bSinglePassFlashlightStateEnabled )
 		return;
 
-	FlashlightHandle_t flashlightID = m_FlashlightStates.Head();
-	if ( flashlightID == m_FlashlightStates.InvalidIndex() )
+	FlashlightHandle_t flashlightID = m_FlashlightStates.head();
+	if ( flashlightID == m_FlashlightStates.invalid )
 		return;
 
 	pRenderContext->SetFlashlightMode( true );
 
 	for( ; 
-		 flashlightID != m_FlashlightStates.InvalidIndex(); 
-		 flashlightID = m_FlashlightStates.Next( flashlightID ) )
+		 flashlightID != m_FlashlightStates.invalid; 
+		 flashlightID = m_FlashlightStates.next( flashlightID ) )
 	{
 		FlashlightInfo_t &flashlightInfo = m_FlashlightStates[flashlightID];
 		if ( ( m_Shadows[flashlightInfo.m_Shadow].m_Flags & ( SHADOW_SIMPLE_PROJECTION ) ) != 0 )
@@ -4401,8 +4372,8 @@ void CShadowMgr::FlashlightDrawCallback( ShadowDrawCallbackFn_t pCallback, void 
 	if ( m_bSinglePassFlashlightStateEnabled )
 		return;
 
-	FlashlightHandle_t flashlightID = m_FlashlightStates.Head();
-	if ( flashlightID == m_FlashlightStates.InvalidIndex() )
+	FlashlightHandle_t flashlightID = m_FlashlightStates.head();
+	if ( flashlightID == m_FlashlightStates.invalid )
 		return;
 
 	CMatRenderContextPtr pRenderContext( materials );
@@ -4410,8 +4381,8 @@ void CShadowMgr::FlashlightDrawCallback( ShadowDrawCallbackFn_t pCallback, void 
 	pRenderContext->SetFlashlightMode( true );
 
 	for( ; 
-		flashlightID != m_FlashlightStates.InvalidIndex(); 
-		flashlightID = m_FlashlightStates.Next( flashlightID ) )
+		flashlightID != m_FlashlightStates.invalid; 
+		flashlightID = m_FlashlightStates.next( flashlightID ) )
 	{
 		FlashlightInfo_t &flashlightInfo = m_FlashlightStates[flashlightID];
 
@@ -4452,7 +4423,7 @@ void CShadowMgr::SetSinglePassFlashlightRenderState( ShadowHandle_t handle )
 
 void CShadowMgr::PushSinglePassFlashlightStateEnabled( bool bEnable )
 {
-	m_bStack_SinglePassFlashlightStateEnabled.Push( bEnable );	
+	m_bStack_SinglePassFlashlightStateEnabled.push_back( bEnable );	
 	if( m_bSinglePassFlashlightStateEnabled != bEnable )
 	{
 		materials->GetRenderContext()->EnableSinglePassFlashlightMode( bEnable );
@@ -4473,11 +4444,11 @@ void CShadowMgr::PushSinglePassFlashlightStateEnabled( bool bEnable )
 
 void CShadowMgr::PopSinglePassFlashlightStateEnabled( void )
 {
-	m_bStack_SinglePassFlashlightStateEnabled.Pop();
+	m_bStack_SinglePassFlashlightStateEnabled.pop_back();
 	bool bEnable = false;
-	if( m_bStack_SinglePassFlashlightStateEnabled.Count() != 0 )
+	if( !m_bStack_SinglePassFlashlightStateEnabled.empty() )
 	{
-		bEnable = m_bStack_SinglePassFlashlightStateEnabled.Top();
+		bEnable = m_bStack_SinglePassFlashlightStateEnabled.back();
 	}
 
 	if( m_bSinglePassFlashlightStateEnabled != bEnable )
@@ -4510,8 +4481,8 @@ void CShadowMgr::DrawFlashlightDecalsOnDisplacements( IMatRenderContext *pRender
 	if ( m_bSinglePassFlashlightStateEnabled )
 		return;
 
-	FlashlightHandle_t flashlightID = m_FlashlightStates.Head();
-	if ( flashlightID == m_FlashlightStates.InvalidIndex() )
+	FlashlightHandle_t flashlightID = m_FlashlightStates.head();
+	if ( flashlightID == m_FlashlightStates.invalid )
 		return;
 
 	pRenderContext->SetFlashlightMode( true );
@@ -4519,8 +4490,8 @@ void CShadowMgr::DrawFlashlightDecalsOnDisplacements( IMatRenderContext *pRender
 	DispInfo_BatchDecals( visibleDisps, nVisibleDisps );
 
 	for( ; 
-		flashlightID != m_FlashlightStates.InvalidIndex(); 
-		flashlightID = m_FlashlightStates.Next( flashlightID ) )
+		flashlightID != m_FlashlightStates.invalid; 
+		flashlightID = m_FlashlightStates.next( flashlightID ) )
 	{
 		FlashlightInfo_t &flashlightInfo = m_FlashlightStates[flashlightID];
 
@@ -4551,15 +4522,15 @@ void CShadowMgr::DrawFlashlightDecalsOnSurfaceList( IMatRenderContext *pRenderCo
 	if ( m_bSinglePassFlashlightStateEnabled )
 		return;
 
-	FlashlightHandle_t flashlightID = m_FlashlightStates.Head();
-	if ( flashlightID == m_FlashlightStates.InvalidIndex() )
+	FlashlightHandle_t flashlightID = m_FlashlightStates.head();
+	if ( flashlightID == m_FlashlightStates.invalid )
 		return;
 
 	pRenderContext->SetFlashlightMode( true );
 
 	for( ; 
-		 flashlightID != m_FlashlightStates.InvalidIndex(); 
-		 flashlightID = m_FlashlightStates.Next( flashlightID ) )
+		 flashlightID != m_FlashlightStates.invalid; 
+		 flashlightID = m_FlashlightStates.next( flashlightID ) )
 	{
 		FlashlightInfo_t &flashlightInfo = m_FlashlightStates[flashlightID];
 
@@ -4596,8 +4567,8 @@ void CShadowMgr::DrawFlashlightOverlays( IMatRenderContext *pRenderContext, int 
 	if ( m_bSinglePassFlashlightStateEnabled )
 		return;
 
-	FlashlightHandle_t flashlightID = m_FlashlightStates.Head();
-	if ( flashlightID == m_FlashlightStates.InvalidIndex() )
+	FlashlightHandle_t flashlightID = m_FlashlightStates.head();
+	if ( flashlightID == m_FlashlightStates.invalid )
 		return;
 
 	if ( r_flashlightrender.GetBool()==false )
@@ -4606,8 +4577,8 @@ void CShadowMgr::DrawFlashlightOverlays( IMatRenderContext *pRenderContext, int 
 	pRenderContext->SetFlashlightMode( true );
 
 	for( ; 
-		 flashlightID != m_FlashlightStates.InvalidIndex(); 
-		 flashlightID = m_FlashlightStates.Next( flashlightID ) )
+		 flashlightID != m_FlashlightStates.invalid; 
+		 flashlightID = m_FlashlightStates.next( flashlightID ) )
 	{
 		FlashlightInfo_t &flashlightInfo = m_FlashlightStates[flashlightID];
 
@@ -4634,9 +4605,9 @@ void CShadowMgr::DrawFlashlightOverlays( IMatRenderContext *pRenderContext, int 
 void CShadowMgr::DrawFlashlightDepthTexture( )
 {
 	int i = 0;
-	for ( FlashlightHandle_t flashlightID = m_FlashlightStates.Head();
-		  flashlightID != m_FlashlightStates.InvalidIndex();
-		  flashlightID = m_FlashlightStates.Next( flashlightID ) ) // Count up the shadows
+	for ( FlashlightHandle_t flashlightID = m_FlashlightStates.head();
+		  flashlightID != m_FlashlightStates.invalid;
+		  flashlightID = m_FlashlightStates.next( flashlightID ) ) // Count up the shadows
 	{
 		FlashlightInfo_t &flashlightInfo = m_FlashlightStates[ flashlightID ];
 		

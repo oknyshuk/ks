@@ -66,13 +66,13 @@ void InitMaterialSystemConfig( bool bInEditMode );
 
 #ifndef DEDICATED
 #	ifdef NEWMESH
-extern CUtlVector<IVertexBuffer *> g_WorldStaticMeshes;
+extern std::vector< IVertexBuffer * > g_WorldStaticMeshes;
 #	else
-extern CUtlVector<IMesh *> g_WorldStaticMeshes;
+extern std::vector< IMesh * > g_WorldStaticMeshes;
 #	endif
 #endif
 
-extern CUtlVector<IMesh *> g_DepthMeshForSortID;
+extern std::vector< IMesh * > g_DepthMeshForSortID;
 
 struct materiallist_t
 {
@@ -102,7 +102,7 @@ public:
 	void Reset();
 	void AddSurfaceToTail( msurface2_t *pSurface, int nSortGroup, int sortID );
 	msurface2_t *GetSurfaceAtHead( const surfacesortgroup_t &group ) const;
-	void GetSurfaceListForGroup( CUtlVector<msurface2_t *> &list, const surfacesortgroup_t &group ) const;
+	void GetSurfaceListForGroup( std::vector< msurface2_t * > &list, const surfacesortgroup_t &group ) const;
 	inline int GetIndexForSortID( int nSortGroup, int sortID ) const
 	{
 		Assert(sortID<m_maxSortIDs);
@@ -116,7 +116,7 @@ public:
 		return m_groups[groupIndex];
 	}
 
-	inline const CUtlVector<surfacesortgroup_t *> &GetSortList( int nSortGroup ) const
+	inline const std::vector< surfacesortgroup_t * > &GetSortList( int nSortGroup ) const
 	{
 		return m_sortGroupLists[nSortGroup];
 	}
@@ -142,16 +142,16 @@ private:
 	inline void MarkGroupUsed( int groupIndex ) { m_groupUsed[groupIndex>>3] |= (1<<(groupIndex&7)); }
 	inline void MarkGroupNotUsed( int groupIndex ) { m_groupUsed[groupIndex>>3] &= ~(1<<(groupIndex&7)); }
 
-	CUtlVector<materiallist_t>			m_list;
+	std::vector< materiallist_t >			m_list;
 
 	// On PS3, the sparse array is smaller so that we fit on SPU
 	// and the Used flags, just become the indirection to remove the sparseness
 
-	CUtlVector<surfacesortgroup_t>		m_groups;		// one per sortID per MAT_SORT_GROUP, sparse
-	CUtlVector<byte>					m_groupUsed;
+	std::vector< surfacesortgroup_t >		m_groups;		// one per sortID per MAT_SORT_GROUP, sparse
+	std::vector< byte >					m_groupUsed;
 
 	// list of indices into m_groups in order per MAT_SORT_GROUP, compact
-	CUtlVector<surfacesortgroup_t *>	m_sortGroupLists[MAX_MAT_SORT_GROUPS];
+	std::vector< surfacesortgroup_t * >	m_sortGroupLists[MAX_MAT_SORT_GROUPS];
 	surfacesortgroup_t					m_emptyGroup;
 	int									m_maxSortIDs;
 	int									groupOffset[MAX_MAT_SORT_GROUPS];
@@ -174,8 +174,8 @@ private:
 
 #define MSL_FOREACH_GROUP_BEGIN( _sortList, _sortGroup, _group )							\
 	{																						\
-		const CUtlVector<surfacesortgroup_t *> &_groupList = (_sortList).GetSortList(_sortGroup);	\
-		int _count = _groupList.Count();													\
+		const std::vector< surfacesortgroup_t * > &_groupList = (_sortList).GetSortList(_sortGroup);	\
+		int _count = std::ssize( _groupList );													\
 		for ( int _listIndex = 0; _listIndex < _count; ++_listIndex )						\
 		{																					\
 			const surfacesortgroup_t &_group = *_groupList[_listIndex];

@@ -62,7 +62,7 @@ void FX_MuzzleEffect( const Vector &origin, const QAngle &angles, float scale, C
 void FX_MuzzleEffectAttached( float scale, ClientEntityHandle_t hEntity, int attachmentIndex, unsigned char *pFlashColor = nullptr, bool bOneFrame = false  );
 void FX_StriderMuzzleEffect( const Vector &origin, const QAngle &angles, float scale, ClientEntityHandle_t hEntity, unsigned char *pFlashColor = nullptr );
 void FX_GunshipMuzzleEffect( const Vector &origin, const QAngle &angles, float scale, ClientEntityHandle_t hEntity, unsigned char *pFlashColor = nullptr );
-CSmartPtr<CSimpleEmitter> FX_Smoke( const Vector &origin, const Vector &velocity, float scale, int numParticles, float flDietime, unsigned char *pColor, int iAlpha, const char *pMaterial, float flRoll, float flRollDelta );
+ks::intrusive_ptr<CSimpleEmitter> FX_Smoke( const Vector &origin, const Vector &velocity, float scale, int numParticles, float flDietime, unsigned char *pColor, int iAlpha, const char *pMaterial, float flRoll, float flRollDelta );
 void FX_Smoke( const Vector &origin, const QAngle &angles, float scale, int numParticles, unsigned char *pColor = nullptr, int iAlpha = -1 );
 void FX_Dust( const Vector &vecOrigin, const Vector &vecDirection, float flSize, float flSpeed );
 void FX_CreateGaussExplosion( const Vector &pos, const Vector &dir, int type );

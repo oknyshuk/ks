@@ -8,9 +8,8 @@
 #include "net_chan.h"
 #include "dmxloader/dmxelement.h"
 #include <time.h>
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include <memory>
+#include <vector>
 
 //----------------------------------------------------------------------------------------
 
@@ -69,27 +68,27 @@ public:
 	virtual void Shutdown()
 	{
 		m_bInit = false;
-		m_lstEntries.PurgeAndDeleteElements();
+		m_lstEntries.clear();
 	}
 
 	virtual int GetNumEntries() const
 	{
-		return m_lstEntries.Count();
+		return std::ssize( m_lstEntries );
 	}
 
 	virtual const CBaseReplayHistoryEntryData *GetEntryAtIndex( int iIndex ) const
 	{
 		Assert( iIndex >= 0 && iIndex < GetNumEntries() );
-		return static_cast< CBaseReplayHistoryEntryData *>( m_lstEntries[ iIndex ] );
+		return m_lstEntries[ iIndex ].get();
 	}
 
 	virtual CBaseReplayHistoryEntryData *FindEntry( const char *pFilename )
 	{
-		FOR_EACH_LL( m_lstEntries, i )
+		for ( const auto &pEntry : m_lstEntries )
 		{
-			if ( !V_stricmp( pFilename, m_lstEntries[ i ]->m_szFilename ) )
+			if ( !V_stricmp( pFilename, pEntry->m_szFilename ) )
 			{
-				return static_cast< T *>( m_lstEntries[ i ] );
+				return pEntry.get();
 			}
 		}
 
@@ -105,17 +104,17 @@ public:
 		CDmxElement* pEntries = CreateDmxElement( "Entries" );
 		CDmxElementModifyScope modify( pEntries );
 
-		int const nNumDemos = m_lstEntries.Count();
+		int const nNumDemos = std::ssize( m_lstEntries );
 		pEntries->SetValue( "num_demos", nNumDemos );
 
 		CDmxAttribute* pDemoEntriesAttr = pEntries->AddAttribute( "demos" );
-		CUtlVector< CDmxElement* >& entries = pDemoEntriesAttr->GetArrayForEdit< CDmxElement* >();
+		std::vector< CDmxElement* >& entries = pDemoEntriesAttr->GetArrayForEdit< CDmxElement* >();
 
 		modify.Release();
 
-		FOR_EACH_LL( m_lstEntries, i )
+		for ( const auto &pEntry : m_lstEntries )
 		{
-			T *pEntryData = m_lstEntries[ i ];
+			T *pEntryData = pEntry.get();
 
 			CDmxElement* pEntryElement = CreateDmxElement( "demo" );
 			entries.AddToTail( pEntryElement );
@@ -154,14 +153,13 @@ public:
 		if ( !UnserializeDMX( pFilename, "GAME", false, &pDemos ) )
 			return false;
 
-		CUtlVector< CDmxElement* > const& demos = pDemos->GetArray< CDmxElement* >( "demos" );
+		std::vector< CDmxElement* > const& demos = pDemos->GetArray< CDmxElement* >( "demos" );
 		for ( int i = 0; i < demos.Count(); ++i )
 		{
 			CDmxElement* pCurDemoInput = demos[ i ];
 
 			// Create a new ragdoll entry and add to list
-			T *pNewEntry = new T();
-			m_lstEntries.AddToTail( pNewEntry );
+			T *pNewEntry = m_lstEntries.emplace_back( std::make_unique< T >() ).get();
 
 			// Read
 			pCurDemoInput->UnpackIntoStructure( pNewEntry, s_ClientEntryDataUnpack );
@@ -185,9 +183,9 @@ public:
 
 	virtual void StopDownloads()
 	{
-		FOR_EACH_LL( m_lstEntries, i )
+		for ( const auto &pEntry : m_lstEntries )
 		{
-			m_lstEntries[ i ]->m_bTransferring = false;
+			pEntry->m_bTransferring = false;
 		}
 	}
 
@@ -211,7 +209,7 @@ protected:
 
 	virtual void Update() {}
 
-	CUtlLinkedList< T* > m_lstEntries;
+	std::vector< std::unique_ptr< T > > m_lstEntries;
 
 private:
 	bool m_bInit;
@@ -258,9 +256,8 @@ public:
 		if ( !GetBaseLocalClient().m_NetChannel )
 			return;
 
-		FOR_EACH_LL( m_lstEntries, i )
+		for ( const auto &pEntry : m_lstEntries )
 		{
-			CClientReplayHistoryEntryData *pEntry = m_lstEntries[ i ];
 			if ( !pEntry->m_bTransferComplete )
 			{
 				GetBaseLocalClient().m_NetChannel->GetStreamProgress( FLOW_INCOMING, &pEntry->m_nBytesTransferred, &pEntry->m_nSize );
@@ -273,7 +270,7 @@ public:
 		if ( !IsInitialized() || !pNewEntry )
 			return false;
 
-		m_lstEntries.AddToTail( static_cast< CClientReplayHistoryEntryData * >( pNewEntry ) );
+		m_lstEntries.emplace_back( static_cast< CClientReplayHistoryEntryData * >( pNewEntry ) );
 
 		// Write all entries to disk now, just to be safe
 		FlushEntriesToDisk();
@@ -328,10 +325,9 @@ public:
 			Msg( "----------------------------------------------------\n" );
 		}
 
-		int i = m_lstEntries.Head();
-		while ( i != m_lstEntries.InvalidIndex() )
+		for ( auto it = m_lstEntries.begin(); it != m_lstEntries.end(); )
 		{
-			CServerReplayHistoryEntryData *pEntry = static_cast< CServerReplayHistoryEntryData *>( m_lstEntries[ i ] );
+			CServerReplayHistoryEntryData *pEntry = it->get();
 
 			time_t recordtime = static_cast< time_t >( pEntry->m_nRecordTime + pEntry->m_nLifeSpan );
 			double delta = difftime( recordtime, now );
@@ -394,21 +390,18 @@ public:
 				}
 			}
 
-			int itCurrent = i;
-
-			// Update iterator before we do any syncing
-			i = m_lstEntries.Next( i );
-
 			// Sync what's in memory with what's actually on disk
 			if ( ( nFlags & UPDATE_REMOVEEXPIREDENTRIES ) &&
 				 pEntry->m_nFileStatus == CServerReplayHistoryEntryData::FILESTATUS_EXPIRED )
 			{
 				// Remove the element
-				m_lstEntries.Remove( itCurrent );
-
-				AssertValidReadWritePtr( pEntry );	// TODO: Make sure this test fails!
+				it = m_lstEntries.erase( it );
 
 				bFlushToDisk = true;
+			}
+			else
+			{
+				++it;
 			}
 		}
 
@@ -442,7 +435,7 @@ public:
 		if ( !IsInitialized() || !pNewEntry )
 			return false;
 
-		m_lstEntries.AddToTail( static_cast< CServerReplayHistoryEntryData * >( pNewEntry ) );
+		m_lstEntries.emplace_back( static_cast< CServerReplayHistoryEntryData * >( pNewEntry ) );
 
 		// Write all entries to disk now, just to be safe
 		FlushEntriesToDisk();

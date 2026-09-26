@@ -100,9 +100,6 @@ class IMatchExtPortal2 *g_pMatchExtPortal2 = &g_MatchExtPortal2;
 #include "engine/IEngineSound.h"
 #include "gameui_util.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 IEngineUI *engineuifuncs = nullptr;
 // dgoodenough - xonline only exists on the 360.  All uses of xonline have had their
 // protection changed like this one
@@ -278,7 +275,7 @@ void CGameUI::PlayGameStartupSound()
 
 	FileFindHandle_t fh;
 
-	CUtlVector<char *> fileNames;
+	std::vector< std::string > fileNames;
 
 	char path[ 512 ];
 	Q_snprintf( path, sizeof( path ), "sound/ui/gamestartup*.mp3" );
@@ -297,11 +294,8 @@ void CGameUI::PlayGameStartupSound()
 				char temp[ 512 ];
 				Q_snprintf( temp, sizeof( temp ), "ui/%s", fn );
 
-				char *found = new char[ strlen( temp ) + 1 ];
-				Q_strncpy( found, temp, strlen( temp ) + 1 );
-
-				Q_FixSlashes( found );
-				fileNames.AddToTail( found );
+				Q_FixSlashes( temp );
+				fileNames.push_back( temp );
 			}
 	
 			fn = g_pFullFileSystem->FindNext( fh );
@@ -312,24 +306,22 @@ void CGameUI::PlayGameStartupSound()
 	}
 
 	// did we find any?
-	if ( fileNames.Count() > 0 )
+	if ( !fileNames.empty() )
 	{
 // dgoodenough - SystemTime is absent on PS3, just select first file for now
 // PS3_BUILDFIX
 // FIXME - we need to find some sort of entropy here and select based on that.
 // @wge Fix for OSX too.
 		int index = 0;
-		if ( fileNames.IsValidIndex( index ) && fileNames[index] )
+		if ( ks::is_valid_index( fileNames, index ) )
 		{
 			char found[ 512 ];
 
 			// escape chars "*#" make it stream, and be affected by snd_musicvolume
-			Q_snprintf( found, sizeof( found ), "play *#%s", fileNames[index] );
+			Q_snprintf( found, sizeof( found ), "play *#%s", fileNames[index].c_str() );
 
 			engine->ClientCmd_Unrestricted( found );
 		}
-
-		fileNames.PurgeAndDeleteElements();
 	}
 }
 

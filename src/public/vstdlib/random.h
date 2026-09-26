@@ -12,14 +12,13 @@
 
 #include "vstdlib/vstdlib.h"
 #include "tier0/basetypes.h"
+#include <mutex>
 #include "tier0/threadtools.h"
 
 #include "tier1/interface.h"
 
 #define NTAB 32
 
-#pragma warning(push)
-#pragma warning( disable:4251 )
 
 //-----------------------------------------------------------------------------
 // A generator of uniformly distributed random numbers
@@ -60,7 +59,7 @@ private:
 	int m_iy;
 	int m_iv[NTAB];
 
-	CThreadFastMutex m_mutex;
+	std::recursive_mutex m_mutex;
 };
 
 
@@ -85,7 +84,7 @@ private:
 	bool	m_bHaveValue;
 	float	m_flRandomValue;
 
-	CThreadFastMutex m_mutex;
+	std::recursive_mutex m_mutex;
 };
 
 
@@ -104,7 +103,6 @@ VSTDLIB_INTERFACE float	RandomGaussianFloat( float flMean = 0.0f, float flStdDev
 //-----------------------------------------------------------------------------
 VSTDLIB_INTERFACE void	InstallUniformRandomStream( IUniformRandomStream *pStream );
 
-#pragma warning(pop)
 
 
 

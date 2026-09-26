@@ -7,9 +7,6 @@
 
 #include "flexrenderdata.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Constructor
 //-----------------------------------------------------------------------------
@@ -67,7 +64,7 @@ void CCachedRenderData::StartModel()
 void CCachedRenderData::SetBodyPart( int bodypart )
 {
 	m_Body = bodypart;
-	m_CacheDict.EnsureCount(m_Body+1);
+	ks::ensure_size( m_CacheDict, m_Body+1 );
 	m_Model = m_Mesh = -1;
 	m_pFirstFlexIndex = 0;
 	m_pFirstThinFlexIndex = 0;
@@ -78,7 +75,7 @@ void CCachedRenderData::SetModel( int model )
 {
 	Assert(m_Body >= 0);
 	m_Model = model;
-	m_CacheDict[m_Body].EnsureCount(m_Model+1);
+	ks::ensure_size( m_CacheDict[m_Body], m_Model+1 );
 	m_Mesh = -1;
 	m_pFirstFlexIndex = 0;
 	m_pFirstThinFlexIndex = 0;
@@ -90,7 +87,7 @@ void CCachedRenderData::SetMesh( int mesh )
 	Assert((m_Model >= 0) && (m_Body >= 0));
 
 	m_Mesh = mesh;
-	m_CacheDict[m_Body][m_Model].EnsureCount(m_Mesh+1);
+	ks::ensure_size( m_CacheDict[m_Body][m_Model], m_Mesh+1 );
 
 	// At this point, we should have all 3 defined.
 	CacheDict_t& dict = m_CacheDict[m_Body][m_Model][m_Mesh];
@@ -213,7 +210,7 @@ void CCachedRenderData::RenormalizeFlexVertices( bool bHasTangentData, bool bQua
 
 			if ( bQuadList )
 			{
-				float flClampedWrinkle = MAX( MIN( m_pFlexVerts[i].m_Position.w, 1 ), -1 );	// -1 to 1
+				float flClampedWrinkle = std::max<std::common_type_t<float, int>>( std::min<std::common_type_t<vec_t, int>>( m_pFlexVerts[i].m_Position.w, 1 ), -1 );	// -1 to 1
 				float fl1to3Wrinkle = flClampedWrinkle + 2;									//  1 to 3
 				m_pFlexVerts[i].m_Position.w = m_pFlexVerts[i].m_TangentS.w * fl1to3Wrinkle;// Sign is tangent flip
 			}

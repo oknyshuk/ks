@@ -7,13 +7,8 @@
 
 #include "character_vs30.inc"
 #include "character_ps30.inc"
-#include "character_vs20.inc"
-#include "character_ps20b.inc"
 
 #include "../materialsystem_global.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 //#define CHARACTER_LIMIT_LIGHTS_WITH_PHONGWARP 1
 
@@ -965,7 +960,7 @@ BEGIN_VS_SHADER( Character, "Help for Character Shader" )
 
 			int nNumLights = lightState.m_nNumLights;
             
-            nNumLights = bUseStaticControlFlow ? nNumLights : MIN( 2, nNumLights );
+            nNumLights = bUseStaticControlFlow ? nNumLights : std::min( 2, nNumLights );
             
 			// need to turn off some features for shadercompile to complete, otherwise it runs out of memory before all combos are compiled
 			if ( bPreview )

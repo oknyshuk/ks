@@ -208,25 +208,25 @@ public:
 		{
 			m_nLastPhysicsObjectTick = nNextSpawnTick;
 			
-			if ( m_PhysicsObjects.Count() < s_nBenchmarkPhysicsObjects )
+			if ( std::ssize( m_PhysicsObjects ) < s_nBenchmarkPhysicsObjects )
 			{
 				// Find a bot to spawn it from.
-				CUtlVector<CBasePlayer*> curPlayers;
+				std::vector< CBasePlayer* > curPlayers;
 				for ( int i = 1; i <= gpGlobals->maxClients; i++ )
 				{
 					CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
 					if ( pPlayer && (pPlayer->GetFlags() & FL_FAKECLIENT) )
 					{
-						curPlayers.AddToTail( pPlayer );
+						curPlayers.push_back( pPlayer );
 					}
 				}
 
-				if ( curPlayers.Count() > 0 && m_PhysicsModelNames.Count() > 0 )
+				if ( !curPlayers.empty() && std::ssize( m_PhysicsModelNames ) > 0 )
 				{
-					int iModelName = this->RandomInt( 0, m_PhysicsModelNames.Count() - 1 );
+					int iModelName = this->RandomInt( 0, std::ssize( m_PhysicsModelNames ) - 1 );
 					const char *pModelName = m_PhysicsModelNames[iModelName];
 
-					int iPlayer = this->RandomInt( 0, curPlayers.Count() - 1 );
+					int iPlayer = this->RandomInt( 0, std::ssize( curPlayers ) - 1 );
 						
 					Vector vSpawnPos = curPlayers[iPlayer]->EyePosition() + Vector( 0, 0, 50 );
 					
@@ -237,7 +237,7 @@ public:
 						CPhysicsProp *pProp = CreatePhysicsProp( pModelName, vSpawnPos, vSpawnPos+vOffset, curPlayers[iPlayer], false, "prop_physics_multiplayer" );
 						if ( pProp )
 						{
-							m_PhysicsObjects.AddToTail( pProp );
+							m_PhysicsObjects.push_back( pProp );
 							pProp->SetAbsVelocity( Vector( this->RandomFloat(-500,500), this->RandomFloat(-500,500), this->RandomFloat(-500,500) ) );
 							break;
 						}
@@ -254,7 +254,7 @@ public:
 		{
 			m_nLastPhysicsForceTick = nNextForceTick;
 
-			for ( int i=0; i < m_PhysicsObjects.Count(); i++ )
+			for ( int i=0; i < std::ssize( m_PhysicsObjects ); i++ )
 			{
 				CBaseEntity *pEnt = m_PhysicsObjects[i];
 				if ( pEnt )
@@ -389,9 +389,9 @@ private:
 	int m_nLastPhysicsForceTick;
 
 	int m_nBotsCreated;
-	CUtlVector< EHANDLE > m_PhysicsObjects;
+	std::vector< EHANDLE > m_PhysicsObjects;
 
-	CUtlVector<char*> m_PhysicsModelNames;
+	std::vector< char* > m_PhysicsModelNames;
 	int m_nBenchmarkMode;
 
 	CUniformRandomStream m_RandomStream;

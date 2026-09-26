@@ -53,7 +53,7 @@
     #include "vote_controller.h"
     #include "cs_voteissues.h"
     #include "bot.h"
-    #include "utldict.h"
+    #include "tier1/map_ops.h"
     #include "cs_player.h"
     #include "cs_team.h"
     #include "cs_gamerules.h"
@@ -91,9 +91,6 @@
 #endif
 
 #include "gametypes.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 #ifndef CLIENT_DLL
 
@@ -192,13 +189,13 @@ CON_COMMAND_F( print_mapgroup_sv, "Prints the current mapgroup and the contained
 #else
 	const char* szMapGroup = STRING( gpGlobals->mapGroupName );
 #endif
-	const CUtlStringList *pMaps = g_pGameTypes->GetMapGroupMapList( szMapGroup );
+	const std::vector< std::string > *pMaps = g_pGameTypes->GetMapGroupMapList( szMapGroup );
 	Msg( "Map group: %s\n", szMapGroup );
 	if ( pMaps )
 	{
-		FOR_EACH_VEC( *pMaps, i )
+		for ( const std::string &sMap : *pMaps )
 		{
-			const char* szMap = (*pMaps)[i];
+			const char* szMap = sMap.c_str();
 			Msg( "     %s\n", szMap );
 		}
 	}
@@ -536,7 +533,7 @@ void CCoopBonusCoin::CoinFadeOut( void )
 		dt = 0.1f;
 
 	m_nRenderMode = kRenderTransTexture;
-	int speed = MAX( 0.35, 256 * dt ); // fade out
+	int speed = std::max<std::common_type_t<double, float>>( 0.35, 256 * dt ); // fade out
 	SetRenderAlpha( UTIL_Approach( 0, m_clrRender->a, speed ) );
 
 	if ( m_clrRender->a == 0 )
@@ -866,7 +863,7 @@ static void Helper_FilenameTokenReplace( char* pchBufFilename, int nSize, const 
 			break;
 		}
 	
-		Q_memmove( pchReplace + lenValue, pchReplace + lenReplace, pchEndFilename - pchReplace - MAX( lenReplace, lenValue ) );
+		Q_memmove( pchReplace + lenValue, pchReplace + lenReplace, pchEndFilename - pchReplace - std::max( lenReplace, lenValue ) );
 		Q_memmove( pchReplace, pchActualValue, lenValue );
 
 	}
@@ -905,9 +902,9 @@ static void Helper_FillScoreLeaderboardData( ks::net::ScoreLeaderboardData &sld 
 	//
 	// Per player stats
 	//
-	FOR_EACH_MAP( CSGameRules()->m_mapQueuedMatchmakingPlayersData, i )
+	for ( const auto &[uiAccountID, pQMM] : CSGameRules()->m_mapQueuedMatchmakingPlayersData )
 	{
-		CCSGameRules::CQMMPlayerData_t const &qmm = *CSGameRules()->m_mapQueuedMatchmakingPlayersData.Element( i );
+		CCSGameRules::CQMMPlayerData_t const &qmm = *pQMM;
 		ks::net::ScoreLeaderboardData::AccountEntries *pAcc = &sld.accountentries.emplace_back();
 		pAcc->accountid = qmm.m_uiPlayerAccountId;
 		if ( int n = qmm.m_numEnemyKills )
@@ -1094,7 +1091,7 @@ bool IsAssassinationQuestActive( const CEconQuestDefinition *pQuest )
 static char const * const g_szRoundBackupZeroZero = "0:0";
 static char const * const g_szRoundBackupZeroZeroFileName = "00restart";
 #endif
-class CBackupFilesEnumerator : public CUtlVector< char const * >
+class CBackupFilesEnumerator : public std::vector< char const * >
 {
 public:
 	CBackupFilesEnumerator()
@@ -1109,14 +1106,9 @@ public:
 
 		FileFindHandle_t hFind = 0;
 
-		CUtlBuffer bufFilename;
+		constexpr int nBufSize = 1024;
+		char pchBufFilename[ nBufSize ] = {};
 
-		int nBufSize = 1024;
-
-		bufFilename.EnsureCapacity( nBufSize );
-		char *pchBufFilename = ( char * ) bufFilename.Base();
-
-		Q_memset( pchBufFilename, 0, nBufSize );
 		Q_snprintf( pchBufFilename, nBufSize, "%s", mp_backup_round_file_pattern.GetString() );
 
 		Helper_FilenameTokenReplace( pchBufFilename, nBufSize, "%prefix%", mp_backup_round_file.GetString() );
@@ -1174,17 +1166,17 @@ public:
 		for ( char const *szFileName = filesystem->FindFirst( pchBufFilename, &hFind );
 			szFileName && *szFileName; szFileName = filesystem->FindNext( hFind ) )
 		{
-			m_mapFiles.AddString( szFileName );
+			m_mapFiles.insert( szFileName );
 		}
 
 		filesystem->FindClose( hFind );
 
-		for ( int iStr = 0; iStr < m_mapFiles.GetNumStrings(); ++ iStr )
+		for ( const std::string &file : m_mapFiles )
 		{
-			AddToTail( m_mapFiles.String( iStr ) );
+			this->push_back( file.c_str() );
 		}
 
-		Sort( Helper_mp_backup_restore_from_file_sorter );
+		ks::qsort( *this, Helper_mp_backup_restore_from_file_sorter );
 
 		#if BACKUPSUPPORTZEROZERO
 		// add 0:0 backup
@@ -1195,7 +1187,7 @@ public:
 	}
 
 private:
-	CUtlStringMap< bool > m_mapFiles;
+	std::set< std::string, ks::iless > m_mapFiles;	// owns the strings this vector points at
 };
 
 
@@ -1213,33 +1205,29 @@ CON_COMMAND_F ( send_round_backup_file_list, "", FCVAR_GAMEDLL | FCVAR_RELEASE |
 	if ( !pPlayer )
 		return;
 
-	static CUtlMap<int, int > s_mapLastRequestTime;
-	if ( s_mapLastRequestTime.Count() == 0 )
-	{
-		s_mapLastRequestTime.SetLessFunc( DefLessFunc( int ) );
-	}
+	static std::map< int, int > s_mapLastRequestTime;
 
 	// prevent spamming of the command. store each user's previous request time.
 
-	int nIndex = s_mapLastRequestTime.Find( pPlayer->entindex() );
+	auto itLast = s_mapLastRequestTime.find( pPlayer->entindex() );
 
-	if 	( ( s_mapLastRequestTime.IsValidIndex( nIndex ) ) &&
-		( gpGlobals->curtime > s_mapLastRequestTime[ nIndex ] ) &&
-		( ( gpGlobals->curtime - s_mapLastRequestTime[ nIndex ] ) <= ROUND_BACKUP_REQUEST_RATE_LIMIT ) )
+	if 	( ( itLast != s_mapLastRequestTime.end() ) &&
+		( gpGlobals->curtime > itLast->second ) &&
+		( ( gpGlobals->curtime - itLast->second ) <= ROUND_BACKUP_REQUEST_RATE_LIMIT ) )
 		return;
 
-	s_mapLastRequestTime.InsertOrReplace( pPlayer->entindex(), ( int )gpGlobals->curtime );
+	s_mapLastRequestTime.insert_or_assign( pPlayer->entindex(), ( int )gpGlobals->curtime );
 
 	ks::net::CCSUsrMsg_RoundBackupFilenames msg;
 
 	CBackupFilesEnumerator arrStrings;
 
 	// to avoid the proto message limit we're sending these in individual messages rather than one.
-	for ( int idx = 0; idx < Min( 10, arrStrings.Count() ); idx++ )
+	for ( int idx = 0; idx < Min( 10, (int)std::ssize( arrStrings ) ); idx++ )
 	{
 		ks::net::CCSUsrMsg_RoundBackupFilenames msg;
 
-		msg.count = Min( 10, arrStrings.Count() );
+		msg.count = Min( 10, (int)std::ssize( arrStrings ) );
 
 		msg.index = idx;
 
@@ -1250,7 +1238,7 @@ CON_COMMAND_F ( send_round_backup_file_list, "", FCVAR_GAMEDLL | FCVAR_RELEASE |
 		KeyValues::AutoDelete autodelete_kvSaveFile( kvSaveFile );
 		autodelete_kvSaveFile->UsesEscapeSequences( true );
 
-		CUtlString nicefilename = arrStrings[ idx ];
+		std::string nicefilename = arrStrings[ idx ];
 
 		#if BACKUPSUPPORTZEROZERO
 		if ( !V_strcmp( arrStrings[ idx ], g_szRoundBackupZeroZeroFileName ) )
@@ -1290,23 +1278,23 @@ CON_COMMAND_F ( mp_backup_restore_list_files, "Lists recent backup round files m
 
 	CBackupFilesEnumerator arrStrings;
 
-	FOR_EACH_VEC( arrStrings, idxString )
+	for ( int idxString = 0; idxString < std::ssize( arrStrings ); idxString++ )
 	{
 		if ( idxString >= numFilesToList )
 			break;
 		Warning( " %s\n", arrStrings[idxString] );
 	}
-	if ( !arrStrings.Count() )
+	if ( arrStrings.empty() )
 	{
 		Warning( "No matching backup files found.\n" );
 	}
-	else if ( numFilesToList < arrStrings.Count() )
+	else if ( numFilesToList < std::ssize( arrStrings ) )
 	{
-		Warning( "%d backup files found, %d most recent listed, use 'mp_backup_restore_list_files %d' to list all.\n", arrStrings.Count(), numFilesToList, arrStrings.Count() );
+		Warning( "%d backup files found, %d most recent listed, use 'mp_backup_restore_list_files %d' to list all.\n", (int)std::ssize( arrStrings ), numFilesToList, (int)std::ssize( arrStrings ) );
 	}
 	else
 	{
-		Warning( "%d backup files listed.\n", arrStrings.Count() );
+		Warning( "%d backup files listed.\n", (int)std::ssize( arrStrings ) );
 	}
 
 }
@@ -2117,13 +2105,14 @@ void ProhibitedItemsCallback( IConVar *var, const char *pOldValue, float flOldVa
 
 	ConVar *pCvar = static_cast<ConVar*>(var);
 
-	CUtlStringList pProhibitedWeapons( pCvar->GetString(), "," );
+	std::vector< std::string > pProhibitedWeapons;
+	V_SplitString( pCvar->GetString(), ",", pProhibitedWeapons );
 
 	for( int i = 0; i < MAX_PROHIBITED_ITEMS; i++ )
 	{
-		if ( i < (pProhibitedWeapons.Count()) && ( GetItemSchema()->GetItemDefinition( i ) ) )
+		if ( i < (std::ssize( pProhibitedWeapons )) && ( GetItemSchema()->GetItemDefinition( i ) ) )
 		{
-			int nDefIndex = V_atoi( pProhibitedWeapons[ i ] );
+			int nDefIndex = V_atoi( pProhibitedWeapons[ i ].c_str() );
 
 			CSGameRules()->m_arrProhibitedItemIndices.Set( i, nDefIndex );
 			DevMsg( "Prohibiting %s\n", GetItemSchema()->GetItemDefinition( nDefIndex )->GetDefinitionName() );
@@ -3275,7 +3264,7 @@ ConVar cl_autohelp(
 		}
 
 		// reduce # of kills needed
-		m_nGuardianModeSpecialKillsRemaining = MAX( m_nGuardianModeSpecialKillsRemaining - 1, 0 );
+		m_nGuardianModeSpecialKillsRemaining = std::max( m_nGuardianModeSpecialKillsRemaining - 1, 0 );
 
 		// REI: Should we send a game event message here?  Right now we rely on network synchronization of
 		//      m_nGuardianModeSpecialKillsRemaining and notice when it changes on the client to update
@@ -3520,9 +3509,9 @@ ConVar cl_autohelp(
         }
     }
 
-    template < class T > void VectorShuffle( CUtlVector< T > &arrayToShuffle )
+    template < class T > void VectorShuffle( std::vector< T > &arrayToShuffle )
     {
-        int numEntries = arrayToShuffle.Count();
+        int numEntries = std::ssize( arrayToShuffle );
 
         // Shuffle entries
         for ( int i = 0; i < numEntries - 1; ++i )
@@ -3532,7 +3521,7 @@ ConVar cl_autohelp(
             if ( randVal != i )
             {
                 // Swap values
-                V_swap( arrayToShuffle[ i ], arrayToShuffle[ randVal ] );
+                std::swap( arrayToShuffle[ i ], arrayToShuffle[ randVal ] );
             }
         }
     }
@@ -3689,7 +3678,7 @@ ConVar cl_autohelp(
 		m_nMatchInfoShowType = k_MapMatchInfoShownCounts_None;
 		m_flMatchInfoDecidedTime = gpGlobals->curtime;
 		
-		m_mapQueuedMatchmakingPlayersData.PurgeAndDeleteElements();
+		m_mapQueuedMatchmakingPlayersData.clear();
 
 		for ( int j = 0; j < MAX_MATCH_STATS_ROUNDS; ++ j )
 		{
@@ -3715,12 +3704,10 @@ ConVar cl_autohelp(
 				{
 					++ m_numQueuedMatchmakingAccounts;
 
-					CQMMPlayerData_t *pqmmPlayerData = new CQMMPlayerData_t;
+					auto pqmmPlayerData = std::make_unique< CQMMPlayerData_t >();
 					pqmmPlayerData->m_uiPlayerAccountId = uiAccountId;
 					pqmmPlayerData->m_iDraftIndex = iDraftIndex;
-					if ( CCSGameRules::CQMMPlayerData_t *pQMM = CSGameRules()->QueuedMatchmakingPlayersDataFind( uiAccountId ) )
-						delete pQMM;
-					m_mapQueuedMatchmakingPlayersData.InsertOrReplace( uiAccountId, pqmmPlayerData );
+					m_mapQueuedMatchmakingPlayersData.insert_or_assign( uiAccountId, std::move( pqmmPlayerData ) );
 				}
 			}
 
@@ -3754,7 +3741,7 @@ ConVar cl_autohelp(
 		m_bCanDonateWeapons = true;
 
 		// [dwenger] Reset rescue-related achievement values
-		m_arrRescuers.RemoveAll();
+		m_arrRescuers.clear();
 
 		m_hostageWasInjured = false;
 		m_hostageWasKilled = false;
@@ -3800,7 +3787,7 @@ ConVar cl_autohelp(
 			CTeam *pTeam = static_cast<CTeam*>(CreateEntityByName( "cs_team_manager" ));
 			pTeam->Init( sTeamNames[i], i );
 
-			g_Teams.AddToTail( pTeam );
+			g_Teams.push_back( pTeam );
 		}
 
 		m_bHasTriggeredRoundStartMusic = false;
@@ -3898,7 +3885,7 @@ ConVar cl_autohelp(
     {
         // Note, don't delete each team since they are in the gEntList and will 
         // automatically be deleted from there, instead.
-        g_Teams.Purge();
+        g_Teams.clear(); g_Teams.shrink_to_fit();
         
 		delete m_pFunFactManager;
 		m_pFunFactManager = nullptr;
@@ -3906,10 +3893,10 @@ ConVar cl_autohelp(
 		delete m_pQueuedMatchmakingReportedRoundStats;
 		m_pQueuedMatchmakingReportedRoundStats = nullptr;
 
-		delete m_pQueuedMatchmakingReservationString;
+		delete[] m_pQueuedMatchmakingReservationString;
 		m_pQueuedMatchmakingReservationString = nullptr;
 
-		m_mapQueuedMatchmakingPlayersData.PurgeAndDeleteElements();
+		m_mapQueuedMatchmakingPlayersData.clear();
 
 		ClearItemsDroppedDuringMatch();
     }
@@ -4035,10 +4022,10 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 			( gpGlobals->curtime - m_flMatchInfoDecidedTime > mp_teammatchstat_cycletime.GetFloat() ) )
 		{
 			m_nMatchInfoShowType = k_MapMatchInfoShownCounts_None;
-			CUtlVectorFixedGrowable< int32, 10 > arrOptions;
+			ks::small_vector< int32, 10 > arrOptions;
 			bool bTeamsAreSwitched = AreTeamsPlayingSwitchedSides();
 			if ( nWantPrediction )
-				arrOptions.AddToTail( k_MapMatchInfoShownCounts_Predictions );
+				arrOptions.push_back( k_MapMatchInfoShownCounts_Predictions );
 			for ( int j = 0; j < sm_QueuedServerReservation.pre_match_data->stats.size(); ++ j )
 			{
 				if ( sm_QueuedServerReservation.pre_match_data->stats[ j ].match_info_teams.size() < 2 ) continue;
@@ -4061,25 +4048,25 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 				if ( Helper_CheckFieldAppliesToTeam( sm_QueuedServerReservation.pre_match_data->stats[ j ].match_info_teams[ 0 ].c_str(), bTeamsAreSwitched ? TEAM_TERRORIST : TEAM_CT ) ||
 					Helper_CheckFieldAppliesToTeam( sm_QueuedServerReservation.pre_match_data->stats[ j ].match_info_teams[ 1 ].c_str(), bTeamsAreSwitched ? TEAM_CT : TEAM_TERRORIST ) )
 				{
-					arrOptions.AddToTail( j );
+					arrOptions.push_back( j );
 				}
 			}
-			if ( ( !arrOptions.Count() || !sm_QueuedServerReservation.pre_match_data->stats.size() ) && *szWantMatchStatTxt )
-				arrOptions.AddToTail( 0 );
-			if ( arrOptions.Count() && ( m_nMatchInfoShowType == k_MapMatchInfoShownCounts_None ) )
+			if ( ( !std::ssize( arrOptions ) || !sm_QueuedServerReservation.pre_match_data->stats.size() ) && *szWantMatchStatTxt )
+				arrOptions.push_back( 0 );
+			if ( std::ssize( arrOptions ) && ( m_nMatchInfoShowType == k_MapMatchInfoShownCounts_None ) )
 			{
 				// Pick the option that was shown the least number of times
 				uint32 nLeastNumberOfTimesShown = ~uint32( 0 );
-				FOR_EACH_VEC( arrOptions, iOption )
+				for ( int32 nOption : arrOptions )
 				{
-					MapMatchInfoShownCounts::IndexType_t lookupIdx = m_mapMatchInfoShownCounts.Find( arrOptions[iOption] );
+					auto lookupIdx = m_mapMatchInfoShownCounts.find( nOption );
 					uint32 nThisNumberOfTimesShown = 0;
-					if ( lookupIdx != m_mapMatchInfoShownCounts.InvalidIndex() )
-						nThisNumberOfTimesShown = m_mapMatchInfoShownCounts.Element( lookupIdx );
+					if ( lookupIdx != m_mapMatchInfoShownCounts.end() )
+						nThisNumberOfTimesShown = lookupIdx->second;
 					if ( nThisNumberOfTimesShown < nLeastNumberOfTimesShown )
 					{
 						nLeastNumberOfTimesShown = nThisNumberOfTimesShown;
-						m_nMatchInfoShowType = arrOptions[iOption];
+						m_nMatchInfoShowType = nOption;
 					}
 				}
 			}
@@ -4087,18 +4074,17 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 			{
 				// Even if some stat was never picked prevent it from showing more than twice in a row
 				uint32 numShown = 1;
-				MapMatchInfoShownCounts::IndexType_t lookupIdx = m_mapMatchInfoShownCounts.Find( m_nMatchInfoShowType );
-				if ( lookupIdx != m_mapMatchInfoShownCounts.InvalidIndex() )
-					numShown = m_mapMatchInfoShownCounts.Element( lookupIdx ) + 1;
-				FOR_EACH_MAP_FAST( m_mapMatchInfoShownCounts, iSCFast )
+				auto lookupIdx = m_mapMatchInfoShownCounts.find( m_nMatchInfoShowType );
+				if ( lookupIdx != m_mapMatchInfoShownCounts.end() )
+					numShown = lookupIdx->second + 1;
+				for ( const auto &[nOtherType, numOtherShown] : m_mapMatchInfoShownCounts )
 				{
-					uint32 numOtherShown = m_mapMatchInfoShownCounts.Element( iSCFast );
 					if ( numOtherShown > numShown + 1 )
 						numShown = numOtherShown - 1;
 				}
 
 				// Track the option that was picked
-				m_mapMatchInfoShownCounts.InsertOrReplace( m_nMatchInfoShowType, numShown );
+				m_mapMatchInfoShownCounts.insert_or_assign( m_nMatchInfoShowType, numShown );
 			}
 			m_flMatchInfoDecidedTime = gpGlobals->curtime;
 		}
@@ -5209,20 +5195,20 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 
     CCSPlayer* CCSGameRules::CheckAndAwardAssists( CCSPlayer* pCSVictim, CCSPlayer* pKiller )
     {  
-        CUtlLinkedList< CDamageRecord *, int >& victimDamageTakenList = pCSVictim->GetDamageList();
+        DamageRecordList_t& victimDamageTakenList = pCSVictim->GetDamageList();
         float maxDamage = 0.0f;
         CCSPlayer* maxDamagePlayer = nullptr;
 
-        FOR_EACH_LL( victimDamageTakenList, ii )
+        for ( const auto &pDamageRecord : victimDamageTakenList )
         {
-			if ( victimDamageTakenList[ii]->GetPlayerRecipientPtr() == pCSVictim )
+			if ( pDamageRecord->GetPlayerRecipientPtr() == pCSVictim )
 			{
-				CCSPlayer* pAttackerPlayer = victimDamageTakenList[ii]->GetPlayerDamagerPtr();
+				CCSPlayer* pAttackerPlayer = pDamageRecord->GetPlayerDamagerPtr();
 				if ( pAttackerPlayer )
 				{
-					if ( (victimDamageTakenList[ii]->GetDamage() > maxDamage) && (pAttackerPlayer != pKiller) && ( pAttackerPlayer != pCSVictim ) )
+					if ( (pDamageRecord->GetDamage() > maxDamage) && (pAttackerPlayer != pKiller) && ( pAttackerPlayer != pCSVictim ) )
 					{
-						maxDamage = victimDamageTakenList[ii]->GetDamage();
+						maxDamage = pDamageRecord->GetDamage();
 						maxDamagePlayer = pAttackerPlayer;
 					}
 				}
@@ -6196,7 +6182,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
         // Check to see if 50% of the hostages have been rescued.
         CHostage* hostage = nullptr;
 
-        int iNumHostages = g_Hostages.Count();
+        int iNumHostages = std::ssize( g_Hostages );
         int iNumLeftToRescue = 0;
         int i;
 
@@ -6209,8 +6195,8 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
         }
 
 		// the number of hostages that can be left un rescued, but still win
-		int iNumRescuedToWin = mp_hostages_rescuetowin.GetInt() == 0 ? iNumHostages : MIN( iNumHostages, mp_hostages_rescuetowin.GetInt() );
-		int iNumLeftCanWin = MAX( 0, iNumHostages - iNumRescuedToWin );
+		int iNumRescuedToWin = mp_hostages_rescuetowin.GetInt() == 0 ? iNumHostages : std::min( iNumHostages, mp_hostages_rescuetowin.GetInt() );
+		int iNumLeftCanWin = std::max( 0, iNumHostages - iNumRescuedToWin );
 
         m_iHostagesRemaining = iNumLeftToRescue;
 
@@ -6719,7 +6705,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 				{
 					bool nowin = false;
 
-					for ( int iGrenade=0; iGrenade < g_PlantedC4s.Count(); iGrenade++ )
+					for ( int iGrenade=0; iGrenade < std::ssize( g_PlantedC4s ); iGrenade++ )
 					{
 						CPlantedC4 *pC4 = g_PlantedC4s[iGrenade];
 
@@ -6780,7 +6766,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 							float flNextRespawn = gpGlobals->curtime + GetRespawnWaveMaxLength( nOtherTeam );
 							m_flNextRespawnWave.Set( nOtherTeam, flNextRespawn );
 
-							m_flCoopRespawnAndHealTime = gpGlobals->curtime + MIN( 2.0f, GetRespawnWaveMaxLength( nOtherTeam ) );
+							m_flCoopRespawnAndHealTime = gpGlobals->curtime + std::min( 2.0f, GetRespawnWaveMaxLength( nOtherTeam ) );
 										
 							// decide if the players can buy now
 							int iBuyStatus = sv_buy_status_override.GetInt();
@@ -6831,23 +6817,23 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 							// increase difficulty of 2 bots
 							for ( int i=0; i < sv_bots_get_harder_after_each_wave.GetInt(); i++ )
 							{
-								CUtlVector < CCSBot* > vecBotsOnTeam;
+								std::vector< CCSBot* > vecBotsOnTeam;
 								if ( pTeam->GetBotMembers( &vecBotsOnTeam ) )
 								{
 									CCSBot *pLeadBot = nullptr;
 									BotDifficultyType botHighDifficulty = BOT_EXPERT;
-									FOR_EACH_VEC( vecBotsOnTeam, i )
+									for ( CCSBot *pTeamBot : vecBotsOnTeam )
 									{
-										const BotProfile *pProfile = vecBotsOnTeam[i]->GetProfile();
+										const BotProfile *pProfile = pTeamBot->GetProfile();
 										if ( pProfile->GetMaxDifficulty() < botHighDifficulty )
 										{
-											pLeadBot = vecBotsOnTeam[i];
+											pLeadBot = pTeamBot;
 											botHighDifficulty = ( BotDifficultyType )pProfile->GetMaxDifficulty();
 										}
 									}
 									if ( pLeadBot )
 									{
-										const BotProfile* pNewProfileData = TheBotProfiles->GetRandomProfile( MIN( ( BotDifficultyType )( botHighDifficulty + 1 ), BOT_EXPERT ), pLeadBot->GetTeamNumber(), WEAPONTYPE_UNKNOWN, true );
+										const BotProfile* pNewProfileData = TheBotProfiles->GetRandomProfile( std::min( ( BotDifficultyType )( botHighDifficulty + 1 ), BOT_EXPERT ), pLeadBot->GetTeamNumber(), WEAPONTYPE_UNKNOWN, true );
 										if ( pNewProfileData )
 										{
 											pLeadBot->Initialize( pNewProfileData, pLeadBot->GetTeamNumber() );
@@ -6857,16 +6843,16 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 							}
 
 							// now just randomize all of the profiles
-							CUtlVector < CCSBot* > vecBotsOnTeam;
+							std::vector< CCSBot* > vecBotsOnTeam;
 							if ( pTeam->GetBotMembers( &vecBotsOnTeam ) )
 							{
-								FOR_EACH_VEC( vecBotsOnTeam, i )
+								for ( CCSBot *pTeamBot : vecBotsOnTeam )
 								{
-									const BotProfile *pProfile = vecBotsOnTeam[i]->GetProfile();
-									const BotProfile* pNewProfileData = TheBotProfiles->GetRandomProfile( ( BotDifficultyType )( pProfile->GetMaxDifficulty() ), vecBotsOnTeam[i]->GetTeamNumber(), WEAPONTYPE_UNKNOWN, true );
+									const BotProfile *pProfile = pTeamBot->GetProfile();
+									const BotProfile* pNewProfileData = TheBotProfiles->GetRandomProfile( ( BotDifficultyType )( pProfile->GetMaxDifficulty() ), pTeamBot->GetTeamNumber(), WEAPONTYPE_UNKNOWN, true );
 									if ( pNewProfileData )
 									{
-										vecBotsOnTeam[i]->Initialize( pNewProfileData, vecBotsOnTeam[i]->GetTeamNumber() );
+										pTeamBot->Initialize( pNewProfileData, pTeamBot->GetTeamNumber() );
 									}
 								}
 							}
@@ -7075,7 +7061,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
         // Update accounts based on number of hostages remaining.. 
         int iRescuedHostageBonus = 0;
 
-        for ( int iHostage=0; iHostage < g_Hostages.Count(); iHostage++ )
+        for ( int iHostage=0; iHostage < std::ssize( g_Hostages ); iHostage++ )
         {
             CHostage *pHostage = g_Hostages[iHostage];
 
@@ -7100,17 +7086,17 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 				{
 					for ( int i = 0; i < sv_bots_get_easier_each_win.GetInt(); i++ )
 					{
-						CUtlVector < CCSBot* > vecBotsOnTeam;
+						std::vector< CCSBot* > vecBotsOnTeam;
 						if ( pTeam->GetBotMembers( &vecBotsOnTeam ) )
 						{
 							CCSBot *pLeadBot = nullptr;
 							BotDifficultyType botHighDifficulty = BOT_EASY;
-							FOR_EACH_VEC( vecBotsOnTeam, i )
+							for ( CCSBot *pTeamBot : vecBotsOnTeam )
 							{
-								const BotProfile *pProfile = vecBotsOnTeam[i]->GetProfile();
+								const BotProfile *pProfile = pTeamBot->GetProfile();
 								if ( pProfile->GetMaxDifficulty() > botHighDifficulty )
 								{
-									pLeadBot = vecBotsOnTeam[i];
+									pLeadBot = pTeamBot;
 									botHighDifficulty = ( BotDifficultyType )pProfile->GetMaxDifficulty();
 								}
 							}
@@ -7118,7 +7104,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 							{
 								// dont go lower than the map set bot difficulty
 								ConVarRef bot_difficulty( "bot_difficulty" );
-								const BotProfile* pNewProfileData = TheBotProfiles->GetRandomProfile( MAX( ( BotDifficultyType )( botHighDifficulty - 1 ), ( BotDifficultyType )bot_difficulty.GetInt() ), pLeadBot->GetTeamNumber(), WEAPONTYPE_UNKNOWN, true );
+								const BotProfile* pNewProfileData = TheBotProfiles->GetRandomProfile( std::max( ( BotDifficultyType )( botHighDifficulty - 1 ), ( BotDifficultyType )bot_difficulty.GetInt() ), pLeadBot->GetTeamNumber(), WEAPONTYPE_UNKNOWN, true );
 								if ( pNewProfileData )
 								{
 									pLeadBot->Initialize( pNewProfileData, pLeadBot->GetTeamNumber() );
@@ -7143,18 +7129,18 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 						}
 
 						ConVarRef sv_bots_get_harder_after_each_wave( "sv_bots_get_harder_after_each_wave" );
-						sv_bots_get_harder_after_each_wave.SetValue( MAX( 1, sv_bots_get_harder_after_each_wave.GetInt()-1) );
+						sv_bots_get_harder_after_each_wave.SetValue( std::max( 1, sv_bots_get_harder_after_each_wave.GetInt()-1) );
 
 						ConVarRef bot_difficulty( "bot_difficulty" );
 						int nBotDifficulty = bot_difficulty.GetInt();
 						if ( nRoundsPlayed > 9 )
 							nBotDifficulty = 0;
 						else if ( nRoundsPlayed > 5 )
-							nBotDifficulty = MIN( nBotDifficulty, 1 );
+							nBotDifficulty = std::min( nBotDifficulty, 1 );
 						else if ( nRoundsPlayed > 3 )
-							nBotDifficulty = MIN( nBotDifficulty, 2 );
+							nBotDifficulty = std::min( nBotDifficulty, 2 );
 
-						bot_difficulty.SetValue( MAX( 0, sv_bots_get_harder_after_each_wave.GetInt()-1) );
+						bot_difficulty.SetValue( std::max( 0, sv_bots_get_harder_after_each_wave.GetInt()-1) );
 					}
 				}
 			}
@@ -7216,13 +7202,13 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 			bool bCTsRespawn = mp_respawn_on_death_ct.GetBool();
 			bool bTsRespawn = mp_respawn_on_death_t.GetBool();
 
-			int iNumRescuedToWin = mp_hostages_rescuetowin.GetInt() == 0 ? g_Hostages.Count() : MIN( g_Hostages.Count(), mp_hostages_rescuetowin.GetInt() );
+			int iNumRescuedToWin = mp_hostages_rescuetowin.GetInt() == 0 ? std::ssize( g_Hostages ) : std::min<std::common_type_t<std::common_type_t<long int, long int>, int>>( std::ssize( g_Hostages ), mp_hostages_rescuetowin.GetInt() );
 
 			int nStatToModify = GetTotalRoundsPlayed() - 1;
 
 			if ( nStatToModify >= 0 )
 			{
-				nStatToModify = MIN( nStatToModify, m_iMatchStats_RoundResults.Count() - 1 );
+				nStatToModify = std::min( nStatToModify, m_iMatchStats_RoundResults.Count() - 1 );
 
 				m_iMatchStats_PlayersAlive_T.GetForModify( nStatToModify ) = NumAliveTerrorist;
 				DevMsg( "NumAliveTerrorist = %d", NumAliveTerrorist );
@@ -7322,7 +7308,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 
 			if ( nStatToModify >= 0 )
 			{
-				nStatToModify = MIN( nStatToModify, m_iMatchStats_PlayersAlive_T.Count() - 1 );
+				nStatToModify = std::min( nStatToModify, m_iMatchStats_PlayersAlive_T.Count() - 1 );
 
 				m_iMatchStats_PlayersAlive_T.GetForModify( nStatToModify ) = NumAliveTerrorist;
 				DevMsg( "NumAliveTerrorist = %d", NumAliveTerrorist );
@@ -7551,15 +7537,15 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 			// For queued matchmaking mode reset KDA/MVPs as well and initialize money for start
 			if ( IsQueuedMatchmaking() )
 			{
-				FOR_EACH_MAP( m_mapQueuedMatchmakingPlayersData, idxQueuedPlayer )
+				for ( auto &[uiAccountID, pQMM] : m_mapQueuedMatchmakingPlayersData )
 				{
-					m_mapQueuedMatchmakingPlayersData.Element( idxQueuedPlayer )->Reset();
-					m_mapQueuedMatchmakingPlayersData.Element( idxQueuedPlayer )->m_cash = GetStartMoney();
+					pQMM->Reset();
+					pQMM->m_cash = GetStartMoney();
 				}
 			}
 			else
 			{
-				m_mapQueuedMatchmakingPlayersData.PurgeAndDeleteElements();
+				m_mapQueuedMatchmakingPlayersData.clear();
 			}
 
 			// Save a zeroeth round backup
@@ -7838,63 +7824,62 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 			iHostageCount = g_pMapInfo->m_iHostageCount;
 		}
 
-		if ( g_Hostages.Count() > iHostageCount )
+		if ( std::ssize( g_Hostages ) > iHostageCount )
 		{
-			CUtlVector< CHostage * > arrCopyOfOriginalHostageIndices;
-			arrCopyOfOriginalHostageIndices.AddMultipleToTail( g_Hostages.Count(), g_Hostages.Base() );
+			std::vector< CHostage * > arrCopyOfOriginalHostageIndices;
+			arrCopyOfOriginalHostageIndices.insert( arrCopyOfOriginalHostageIndices.end(), ( g_Hostages.data() ), ( g_Hostages.data() ) + ( std::ssize( g_Hostages ) ) );
 
 			if ( !mp_hostages_spawn_same_every_round.GetBool() )
-				m_arrSelectedHostageSpawnIndices.RemoveAll();
+				m_arrSelectedHostageSpawnIndices.clear();
 
-			if ( m_arrSelectedHostageSpawnIndices.Count() )
+			if ( !m_arrSelectedHostageSpawnIndices.empty() )
 			{
 				// We have pre-selected hostage indices, keep only them
-				FOR_EACH_VEC_BACK( g_Hostages, idxGlobalHostage )
+				for ( int idxGlobalHostage = (int)std::ssize( g_Hostages ) - 1; idxGlobalHostage >= 0; idxGlobalHostage-- )
 				{
-					if ( m_arrSelectedHostageSpawnIndices.Find( idxGlobalHostage ) != m_arrSelectedHostageSpawnIndices.InvalidIndex() )
+					if ( ks::find_index( m_arrSelectedHostageSpawnIndices, idxGlobalHostage ) != -1 )
 						continue;
 					CHostage *pHostage = g_Hostages[ idxGlobalHostage ];
 					UTIL_Remove( pHostage );
-					g_Hostages.Remove( idxGlobalHostage );
+					g_Hostages.erase( g_Hostages.begin() + idxGlobalHostage );
 
 				}
 			}
 			else if ( mp_hostages_spawn_force_positions.GetString()[0] )
 			{
-				CUtlVector< int > arrBestHostageIdx;
-				CUtlVector< char* > tagStrings;
+				std::vector< int > arrBestHostageIdx;
+				std::vector< std::string > tagStrings;
 				V_SplitString( mp_hostages_spawn_force_positions.GetString(), ",", tagStrings );
-				arrBestHostageIdx.EnsureCapacity( tagStrings.Count() );
-				FOR_EACH_VEC( tagStrings, iTagString )
+				arrBestHostageIdx.reserve( std::ssize( tagStrings ) );
+				for ( const std::string &sTagString : tagStrings )
 				{
-					arrBestHostageIdx.AddToTail( Q_atoi( tagStrings[iTagString] ) );
+					arrBestHostageIdx.push_back( Q_atoi( sTagString.c_str() ) );
 				}
-				tagStrings.PurgeAndDeleteElements();
 
 				// Now we have selected best hostage indices, keep only them
-				FOR_EACH_VEC_BACK( g_Hostages, idxGlobalHostage )
+				for ( int idxGlobalHostage = (int)std::ssize( g_Hostages ) - 1; idxGlobalHostage >= 0; idxGlobalHostage-- )
 				{
-					if ( arrBestHostageIdx.Find( idxGlobalHostage ) != arrBestHostageIdx.InvalidIndex() )
+					if ( ks::find_index( arrBestHostageIdx, idxGlobalHostage ) != -1 )
 						continue;
 					CHostage *pHostage = g_Hostages[ idxGlobalHostage ];
 					UTIL_Remove( pHostage );
-					g_Hostages.Remove( idxGlobalHostage );
+					g_Hostages.erase( g_Hostages.begin() + idxGlobalHostage );
 				}
 			}
 			else if ( mp_hostages_spawn_farthest.GetBool() )
 			{
-				CUtlVector< int > arrBestHostageIdx;
+				std::vector< int > arrBestHostageIdx;
 				vec_t bestMetric = 0;
-				CUtlVector< int > arrTryHostageIdx;
+				std::vector< int > arrTryHostageIdx;
 				for ( int iStartIdx = 0; iStartIdx < mp_hostages_max.GetInt(); ++ iStartIdx )
-					arrTryHostageIdx.AddToTail( iStartIdx );
-				arrBestHostageIdx.AddMultipleToTail( arrTryHostageIdx.Count(), arrTryHostageIdx.Base() );
+					arrTryHostageIdx.push_back( iStartIdx );
+				arrBestHostageIdx.insert( arrBestHostageIdx.end(), ( arrTryHostageIdx.data() ), ( arrTryHostageIdx.data() ) + ( std::ssize( arrTryHostageIdx ) ) );
 				while ( 1 )
 				{
 					vec_t metricThisCombo = 0;
-					for ( int iFirstHostage = 0; iFirstHostage < arrTryHostageIdx.Count(); ++ iFirstHostage )
+					for ( int iFirstHostage = 0; iFirstHostage < std::ssize( arrTryHostageIdx ); ++ iFirstHostage )
 					{
-						for ( int iSecondHostage = iFirstHostage + 1; iSecondHostage < arrTryHostageIdx.Count(); ++ iSecondHostage )
+						for ( int iSecondHostage = iFirstHostage + 1; iSecondHostage < std::ssize( arrTryHostageIdx ); ++ iSecondHostage )
 						{
 							vec_t len2Dsq = ( g_Hostages[ arrTryHostageIdx[iFirstHostage] ]->GetAbsOrigin() - g_Hostages[ arrTryHostageIdx[iSecondHostage] ]->GetAbsOrigin() ).Length2DSqr();
 							metricThisCombo += len2Dsq;
@@ -7903,44 +7888,44 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 
 					if ( metricThisCombo > bestMetric )
 					{
-						arrBestHostageIdx.RemoveAll();
-						arrBestHostageIdx.AddMultipleToTail( arrTryHostageIdx.Count(), arrTryHostageIdx.Base() );
+						arrBestHostageIdx.clear();
+						arrBestHostageIdx.insert( arrBestHostageIdx.end(), ( arrTryHostageIdx.data() ), ( arrTryHostageIdx.data() ) + ( std::ssize( arrTryHostageIdx ) ) );
 						bestMetric = metricThisCombo;
 					}
 
 					// Advance to next permutation
 					int iAdvanceIdx = 0;
-					while ( ( iAdvanceIdx < arrTryHostageIdx.Count() ) && ( arrTryHostageIdx[ arrTryHostageIdx.Count() - 1 - iAdvanceIdx ] >= g_Hostages.Count() - 1 - iAdvanceIdx ) )
+					while ( ( iAdvanceIdx < std::ssize( arrTryHostageIdx ) ) && ( arrTryHostageIdx[ std::ssize( arrTryHostageIdx ) - 1 - iAdvanceIdx ] >= std::ssize( g_Hostages ) - 1 - iAdvanceIdx ) )
 						iAdvanceIdx ++;
-					if ( iAdvanceIdx >= arrTryHostageIdx.Count() )
+					if ( iAdvanceIdx >= std::ssize( arrTryHostageIdx ) )
 						break;	// Cannot set a valid permutation
 					// Increment the index 
-					arrTryHostageIdx[ arrTryHostageIdx.Count() - 1 - iAdvanceIdx ] ++;
+					arrTryHostageIdx[ std::ssize( arrTryHostageIdx ) - 1 - iAdvanceIdx ] ++;
 					// Set all the following indices
-					for ( int iFollowingIdx = arrTryHostageIdx.Count() - iAdvanceIdx; iFollowingIdx < arrTryHostageIdx.Count(); ++ iFollowingIdx )
-						arrTryHostageIdx[iFollowingIdx] = arrTryHostageIdx[ arrTryHostageIdx.Count() - 1 - iAdvanceIdx ] + ( iFollowingIdx - ( arrTryHostageIdx.Count() - iAdvanceIdx ) + 1 );
+					for ( int iFollowingIdx = std::ssize( arrTryHostageIdx ) - iAdvanceIdx; iFollowingIdx < std::ssize( arrTryHostageIdx ); ++ iFollowingIdx )
+						arrTryHostageIdx[iFollowingIdx] = arrTryHostageIdx[ std::ssize( arrTryHostageIdx ) - 1 - iAdvanceIdx ] + ( iFollowingIdx - ( std::ssize( arrTryHostageIdx ) - iAdvanceIdx ) + 1 );
 				}
 
 				// Now we have selected best hostage indices, keep only them
-				FOR_EACH_VEC_BACK( g_Hostages, idxGlobalHostage )
+				for ( int idxGlobalHostage = (int)std::ssize( g_Hostages ) - 1; idxGlobalHostage >= 0; idxGlobalHostage-- )
 				{
-					if ( arrBestHostageIdx.Find( idxGlobalHostage ) != arrBestHostageIdx.InvalidIndex() )
+					if ( ks::find_index( arrBestHostageIdx, idxGlobalHostage ) != -1 )
 						continue;
 					CHostage *pHostage = g_Hostages[ idxGlobalHostage ];
 					UTIL_Remove( pHostage );
-					g_Hostages.Remove( idxGlobalHostage );
+					g_Hostages.erase( g_Hostages.begin() + idxGlobalHostage );
 				}
 			}
 			else
 			{
 				// Enforce spawn exclusion groups
-				CUtlVector< CHostage * > arrSelectedSpawns;
-				while ( ( arrSelectedSpawns.Count() < mp_hostages_max.GetInt() ) && g_Hostages.Count() )
+				std::vector< CHostage * > arrSelectedSpawns;
+				while ( ( std::ssize( arrSelectedSpawns ) < mp_hostages_max.GetInt() ) && std::ssize( g_Hostages ) )
 				{
 					uint32 uiTotalSpawnWeightFactor = 0;
-					FOR_EACH_VEC( g_Hostages, idxGlobalHostage )
+					for ( CHostage *pCheckHostage : g_Hostages )
 					{
-						if ( CHostage *pCheckHostage = g_Hostages[idxGlobalHostage] )
+						if ( pCheckHostage )
 							uiTotalSpawnWeightFactor += pCheckHostage->GetHostageSpawnRandomFactor();
 					}
 					if ( !uiTotalSpawnWeightFactor )
@@ -7948,7 +7933,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 
 					uint32 iKeepHostage = ( uint32 ) RandomInt( 0, uiTotalSpawnWeightFactor - 1 );
 					CHostage *pKeepHostage = nullptr;
-					FOR_EACH_VEC( g_Hostages, idxGlobalHostage )
+					for ( int idxGlobalHostage = 0; idxGlobalHostage < std::ssize( g_Hostages ); idxGlobalHostage++ )
 					{
 						if ( CHostage *pCheckHostage = g_Hostages[idxGlobalHostage] )
 						{
@@ -7956,7 +7941,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 							if ( iKeepHostage < uiThisFactor )
 							{
 								pKeepHostage = pCheckHostage;
-								g_Hostages.Remove( idxGlobalHostage );
+								g_Hostages.erase( g_Hostages.begin() + idxGlobalHostage );
 								break;
 							}
 							else
@@ -7969,60 +7954,60 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 						break;
 
 					uint32 uiHostageSpawnExclusionGroup = pKeepHostage->GetHostageSpawnExclusionGroup();
-					arrSelectedSpawns.AddToTail( pKeepHostage );
+					arrSelectedSpawns.push_back( pKeepHostage );
 
 					if ( uiHostageSpawnExclusionGroup )
 					{
-						FOR_EACH_VEC_BACK( g_Hostages, idxGlobalHostage )
+						for ( int idxGlobalHostage = (int)std::ssize( g_Hostages ) - 1; idxGlobalHostage >= 0; idxGlobalHostage-- )
 						{
 							CHostage *pCheckHostage = g_Hostages[ idxGlobalHostage ];
 							if ( ( pCheckHostage != pKeepHostage ) && !!( pCheckHostage->GetHostageSpawnExclusionGroup() & uiHostageSpawnExclusionGroup ) )
 							{	// They share the same exclusion group
 								UTIL_Remove( pCheckHostage );
-								g_Hostages.Remove( idxGlobalHostage );
+								g_Hostages.erase( g_Hostages.begin() + idxGlobalHostage );
 							}
 						}
 					}
 				}
 				// Remove all the remaining hostages that we didn't pick
-				while ( g_Hostages.Count() )
+				while ( !g_Hostages.empty() )
 				{
-					CHostage *pHostage = g_Hostages.Tail();
+					CHostage *pHostage = g_Hostages.back();
 					UTIL_Remove( pHostage );
-					g_Hostages.RemoveMultipleFromTail( 1 );
+					g_Hostages.resize( g_Hostages.size() - 1 );
 				}
 				// Add back the hostages that we decided to keep
-				g_Hostages.AddMultipleToTail( arrSelectedSpawns.Count(), arrSelectedSpawns.Base() );
+				g_Hostages.insert( g_Hostages.end(), ( arrSelectedSpawns.data() ), ( arrSelectedSpawns.data() ) + ( std::ssize( arrSelectedSpawns ) ) );
 			}
 
 			// Keep removing randomly now until we reach needed number of hostages remaining
-			while ( g_Hostages.Count() > mp_hostages_max.GetInt() )
+			while ( std::ssize( g_Hostages ) > mp_hostages_max.GetInt() )
 			{
-				int randHostage = RandomInt( 0, g_Hostages.Count() - 1 );
+				int randHostage = RandomInt( 0, std::ssize( g_Hostages ) - 1 );
 
 				CHostage *pHostage = g_Hostages[ randHostage ];
 				UTIL_Remove( pHostage );
-				g_Hostages.Remove( randHostage );
+				g_Hostages.erase( g_Hostages.begin() + randHostage );
 			}
 
 			// Remember which spots ended up picked, so that players could disable randomization and keep the spots
-			if ( !m_arrSelectedHostageSpawnIndices.Count() )
+			if ( m_arrSelectedHostageSpawnIndices.empty() )
 			{
-				FOR_EACH_VEC( g_Hostages, iPickedHostage )
+				for ( CHostage *pPickedHostage : g_Hostages )
 				{
-					int idxOriginalSpawnPoint = arrCopyOfOriginalHostageIndices.Find( g_Hostages[iPickedHostage] );
-					Assert( idxOriginalSpawnPoint != arrCopyOfOriginalHostageIndices.InvalidIndex() );
-					m_arrSelectedHostageSpawnIndices.AddToTail( idxOriginalSpawnPoint );
+					int idxOriginalSpawnPoint = ks::find_index( arrCopyOfOriginalHostageIndices, pPickedHostage );
+					Assert( idxOriginalSpawnPoint != -1 );
+					m_arrSelectedHostageSpawnIndices.push_back( idxOriginalSpawnPoint );
 				}
 			}
 
 			// Show information about which hostage positions were selected for the round
 			CFmtStr fmtHostagePositions;
-			fmtHostagePositions.AppendFormat( "Selected %d hostage positions '", g_Hostages.Count() );
-			FOR_EACH_VEC( g_Hostages, iPickedHostage )
+			fmtHostagePositions.AppendFormat( "Selected %d hostage positions '", (int)std::ssize( g_Hostages ) );
+			for ( CHostage *pPickedHostage : g_Hostages )
 			{
-				int idxOriginalSpawnPoint = arrCopyOfOriginalHostageIndices.Find( g_Hostages[iPickedHostage] );
-				Assert( idxOriginalSpawnPoint != arrCopyOfOriginalHostageIndices.InvalidIndex() );
+				int idxOriginalSpawnPoint = ks::find_index( arrCopyOfOriginalHostageIndices, pPickedHostage );
+				Assert( idxOriginalSpawnPoint != -1 );
 				fmtHostagePositions.AppendFormat( "%d,", idxOriginalSpawnPoint );
 			}
 			fmtHostagePositions.Access()[ fmtHostagePositions.Length() - 1 ] = '\'';
@@ -8092,7 +8077,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
         int numberOfCts = 0;
 
         // Now respawn all players
-        CUtlVector< CCSPlayer* > respawningPlayersList;
+        std::vector< CCSPlayer* > respawningPlayersList;
         for ( int i = 1; i <= gpGlobals->maxClients; i++ )
         {
             CCSPlayer *pPlayer = (CCSPlayer*) UTIL_PlayerByIndex( i );
@@ -8113,7 +8098,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
                     allCtsWearingSameUniform = false;
                 }
 
-                respawningPlayersList.AddToTail( pPlayer );
+                respawningPlayersList.push_back( pPlayer );
             }
             else if ( pPlayer->GetTeamNumber() == TEAM_TERRORIST && PlayerModelInfo::GetPtr()->IsTClass( pPlayer->PlayerClass() ) )
             {
@@ -8128,7 +8113,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
                     allTerroristsWearingSameUniform = false;
                 }
 
-                respawningPlayersList.AddToTail( pPlayer );
+                respawningPlayersList.push_back( pPlayer );
             }
             else
             {
@@ -8150,7 +8135,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 		}
 
 		// Spawn the players
-        for ( int i = 0; i < respawningPlayersList.Count(); ++i )
+        for ( int i = 0; i < std::ssize( respawningPlayersList ); ++i )
         {
             respawningPlayersList[ i ]->RoundRespawn();
         }
@@ -8182,9 +8167,9 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 		}
 
 		// Mark all QMM records as eligible for receiving money next round
-		FOR_EACH_MAP_FAST( m_mapQueuedMatchmakingPlayersData, idxQMMEntry )
+		for ( auto &[uiAccountID, pQMM] : m_mapQueuedMatchmakingPlayersData )
 		{
-			m_mapQueuedMatchmakingPlayersData.Element( idxQMMEntry )->m_bReceiveNoMoneyNextRound = false;
+			pQMM->m_bReceiveNoMoneyNextRound = false;
 		}
 
 
@@ -8327,7 +8312,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
         m_iHostagesRemaining = 0;
 		m_bAnyHostageReached = false;
 
-        m_arrRescuers.RemoveAll();
+        m_arrRescuers.clear();
 
         m_hostageWasInjured = false;
         m_hostageWasKilled = false;
@@ -8338,7 +8323,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
         m_bCompleteReset = false;
         m_flNextHostageAnnouncement = gpGlobals->curtime;
 
-        m_iHostagesRemaining = g_Hostages.Count();
+        m_iHostagesRemaining = std::ssize( g_Hostages );
 
 		m_flDMBonusStartTime = gpGlobals->curtime + random->RandomFloat( mp_dm_time_between_bonus_min.GetFloat(), mp_dm_time_between_bonus_max.GetFloat() );
 		m_flDMBonusTimeLength = random->RandomFloat( mp_dm_bonus_length_min.GetFloat(), mp_dm_bonus_length_max.GetFloat() );
@@ -8567,8 +8552,8 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
             return;
         }
 
-        CUtlVector<CCSPlayer*> candidates;
-        candidates.EnsureCapacity(MAX_PLAYERS);
+        std::vector< CCSPlayer* > candidates;
+        candidates.reserve( MAX_PLAYERS );
 
         // add all eligible terrorist candidates to a list
         for ( int i = 1; i <= gpGlobals->maxClients; i++ )
@@ -8576,21 +8561,21 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
             CCSPlayer *pPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
             if ( pPlayer && pPlayer->IsAlive() && pPlayer->GetTeamNumber() == TEAM_TERRORIST )
             {
-                candidates.AddToTail(pPlayer);
+                candidates.push_back( pPlayer );
             }
         }
 
         // randomly shuffle the list; this will keep the selection random in case of ties
-        FOR_EACH_VEC(candidates, i)
+        for ( int i = 0; i < std::ssize( candidates ); i++ )
         {
-            V_swap(candidates[i], candidates[random->RandomInt( 0, candidates.Count() - 1)] );
+            V_swap(candidates[i], candidates[random->RandomInt( 0, std::ssize( candidates ) - 1)] );
         }
 
         // now sort the list
-        candidates.Sort(BombSortPredicate);
+        ks::qsort( candidates, BombSortPredicate );
 
         // give bomb to the first candidate
-        if ( candidates.Count() > 0 )
+        if ( !candidates.empty() )
         {
             CCSPlayer *pPlayer = candidates[0];
             Assert( pPlayer && pPlayer->GetTeamNumber() == TEAM_TERRORIST && pPlayer->IsAlive() );
@@ -8629,8 +8614,8 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
     void CCSGameRules::GiveDefuserToRandomPlayer()
     {
         int iDefusersToGive = 2;
-        CUtlVector<CCSPlayer*> candidates;
-        candidates.EnsureCapacity(MAX_PLAYERS);
+        std::vector< CCSPlayer* > candidates;
+        candidates.reserve( MAX_PLAYERS );
 
         // add all CT candidates to a list
         for ( int i = 1; i <= gpGlobals->maxClients; i++ )
@@ -8638,21 +8623,21 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
             CCSPlayer *pPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
             if ( pPlayer && pPlayer->IsAlive() && pPlayer->GetTeamNumber() == TEAM_CT )
             {
-                candidates.AddToTail(pPlayer);
+                candidates.push_back( pPlayer );
             }
         }
 
         // randomly shuffle the list; this will keep the selection random in case of ties
-        FOR_EACH_VEC(candidates, i)
+        for ( int i = 0; i < std::ssize( candidates ); i++ )
         {
-            V_swap(candidates[i], candidates[random->RandomInt( 0, candidates.Count() - 1)] );
+            V_swap(candidates[i], candidates[random->RandomInt( 0, std::ssize( candidates ) - 1)] );
         }
 
         // now sort the shuffled list into subgroups
-        candidates.Sort(DefuserSortPredicate);
+        ks::qsort( candidates, DefuserSortPredicate );
 
         // give defusers to the first N candidates
-        for ( int i = 0; i < iDefusersToGive && i < candidates.Count(); ++i )
+        for ( int i = 0; i < iDefusersToGive && i < std::ssize( candidates ); ++i )
         {
             CCSPlayer *pPlayer = candidates[i];
             Assert( pPlayer && pPlayer->GetTeamNumber() == TEAM_CT && pPlayer->IsAlive() );
@@ -8677,7 +8662,7 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 		int nCooldownMode = sv_kick_players_with_cooldown.GetInt();
 		if ( ( nCooldownMode <= 0 ) && steamgameserverapicontext && steamgameserverapicontext->SteamGameServer() && steamgameserverapicontext->SteamGameServer()->BSecure() )
 			nCooldownMode = 1; // On VAC secure servers enforce global cooldowns
-		if ( ( nCooldownMode > 0 ) && CCSGameRules::sm_mapGcBanInformation.Count() )
+		if ( ( nCooldownMode > 0 ) && !CCSGameRules::sm_mapGcBanInformation.empty() )
 		{
 			for ( int i = 1; i <= gpGlobals->maxClients; i++ )
 			{
@@ -8689,10 +8674,10 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
 				if ( pBasePlayer->GetSteamID( &steamID ) && steamID.IsValid() &&
 					steamID.GetAccountID() )
 				{
-					CCSGameRules::GcBanInformationMap_t::IndexType_t idx = CCSGameRules::sm_mapGcBanInformation.Find( steamID.GetAccountID() );
-					if ( idx != CCSGameRules::sm_mapGcBanInformation.InvalidIndex() )
+					auto itBan = CCSGameRules::sm_mapGcBanInformation.find( steamID.GetAccountID() );
+					if ( itBan != CCSGameRules::sm_mapGcBanInformation.end() )
 					{
-						CCSGameRules::CGcBanInformation_t &banInfo = CCSGameRules::sm_mapGcBanInformation.Element( idx );
+						CCSGameRules::CGcBanInformation_t &banInfo = itBan->second;
 						if ((banInfo.m_dblExpiration > Plat_FloatTime()) && !EMsgGCCStrike15_v2_MatchmakingKickBanReason_IsGreen(banInfo.m_uiReason) &&
 							( ( nCooldownMode > 1 ) || EMsgGCCStrike15_v2_MatchmakingKickBanReason_IsGlobal( banInfo.m_uiReason ) ) )
 						{
@@ -8812,9 +8797,9 @@ static bool Helper_CheckFieldAppliesToTeam( char const *szField, int nTeam )
         }
         else if ( m_match.GetPhase() == GAMEPHASE_MATCH_ENDED )
         {     
-			float flIntermissionDuration = IsQueuedMatchmaking() ? MIN( mp_competitive_endofmatch_extra_time.GetFloat(), GetIntermissionDuration() ) : GetIntermissionDuration();
+			float flIntermissionDuration = IsQueuedMatchmaking() ? std::min( mp_competitive_endofmatch_extra_time.GetFloat(), GetIntermissionDuration() ) : GetIntermissionDuration();
 
-			if ( m_ItemsPtrDroppedDuringMatch.Count() > 0 )
+			if ( !m_ItemsPtrDroppedDuringMatch.empty() )
 			{
 				// synch up the server's list of items recieved during this match to the ones on every client
 				if ( !m_bPlayerItemsHaveBeenDisplayed && ( m_phaseChangeAnnouncementTime > 0 && gpGlobals->curtime > m_phaseChangeAnnouncementTime ) )
@@ -9550,7 +9535,7 @@ void ServerThinkReplayUploader()
 				{
 				case k_EQueuedMatchmakingRematchState_MatchInProgress:
 					// give the clients several seconds for the scoreboard to be displayed
-					if ( gpGlobals->curtime < m_flIntermissionStartTime + MAX( mp_match_restart_delay.GetInt(), ( m_flCMMItemDropRevealStartTime - m_flIntermissionStartTime + (GetCMMItemDropRevealDuration() + 4.0f) ) ) )
+					if ( gpGlobals->curtime < m_flIntermissionStartTime + std::max<std::common_type_t<int, float>>( mp_match_restart_delay.GetInt(), ( m_flCMMItemDropRevealStartTime - m_flIntermissionStartTime + (GetCMMItemDropRevealDuration() + 4.0f) ) ) )
 						return true;
 					// else fallthrough
 
@@ -9619,8 +9604,8 @@ void ServerThinkReplayUploader()
 					// fall through:
 				case k_EQueuedMatchmakingRematchState_VoteToRematchFailed:
 					// This condition will then cause all people to disconnect
-					if ( m_flIntermissionStartTime + MIN( mp_competitive_endofmatch_extra_time.GetFloat(), GetIntermissionDuration() ) < gpGlobals->curtime + mp_competitive_endofmatch_extra_time.GetFloat() )
-						m_flIntermissionStartTime = ( gpGlobals->curtime + mp_competitive_endofmatch_extra_time.GetFloat() ) - MIN( mp_competitive_endofmatch_extra_time.GetFloat(), GetIntermissionDuration() );
+					if ( m_flIntermissionStartTime + std::min( mp_competitive_endofmatch_extra_time.GetFloat(), GetIntermissionDuration() ) < gpGlobals->curtime + mp_competitive_endofmatch_extra_time.GetFloat() )
+						m_flIntermissionStartTime = ( gpGlobals->curtime + mp_competitive_endofmatch_extra_time.GetFloat() ) - std::min( mp_competitive_endofmatch_extra_time.GetFloat(), GetIntermissionDuration() );
 
 					m_eQueuedMatchmakingRematchState = k_EQueuedMatchmakingRematchState_VoteToRematchFailed_Done;
 
@@ -9629,7 +9614,7 @@ void ServerThinkReplayUploader()
 						ks::net::CCSUsrMsg_ServerRankRevealAll msg;
 						static char const * s_pchTournamentServer = CommandLine()->ParmValue( "-tournament", ( char const * ) nullptr );
 						if ( s_pchTournamentServer )
-							msg.seconds_till_shutdown = MAX( 0, mp_competitive_endofmatch_extra_time.GetInt() );
+							msg.seconds_till_shutdown = std::max( 0, mp_competitive_endofmatch_extra_time.GetInt() );
 						SendUserMessage( filter, ks::net::CS_UM_ServerRankRevealAll, msg );
 					}
 					break;
@@ -9646,7 +9631,7 @@ void ServerThinkReplayUploader()
 					break;	// let the normal logic proceed and change level
 				case k_EQueuedMatchmakingRematchState_VoteToRematchFailed_Done:
 					if ( IsQueuedMatchmaking() && ( m_eQueuedMatchmakingRematchState == k_EQueuedMatchmakingRematchState_VoteToRematchFailed_Done )
-						&& m_flIntermissionStartTime && ( m_flIntermissionStartTime + MIN( mp_competitive_endofmatch_extra_time.GetFloat(), GetIntermissionDuration() ) < gpGlobals->curtime ) )
+						&& m_flIntermissionStartTime && ( m_flIntermissionStartTime + std::min( mp_competitive_endofmatch_extra_time.GetFloat(), GetIntermissionDuration() ) < gpGlobals->curtime ) )
 					{
 						// Tell all clients to return to the lobby
 						CReliableBroadcastRecipientFilter filter;
@@ -9694,8 +9679,7 @@ void ServerThinkReplayUploader()
 						// TODO: make a function out of this
 						typedef int NumberOfVotes_t;
 						typedef int MapInCollection_t;
-						CUtlMap< MapInCollection_t, NumberOfVotes_t > mapMaps2Votes;
-						mapMaps2Votes.SetLessFunc( DefLessFunc( int ) );
+						std::map< MapInCollection_t, NumberOfVotes_t > mapMaps2Votes;
 
 						// ask all players what they voted for and store it
 						// someone voted for a map in the mapgroup, see if we've recorded a vote for this map yet
@@ -9727,38 +9711,34 @@ void ServerThinkReplayUploader()
 
 								// store the number of votes sorted by the map index
 								// someone voted for a map in the mapgroup, see if we've recorded a vote for this map yet
-								CUtlMap< MapInCollection_t, NumberOfVotes_t >::IndexType_t iMapEntry = mapMaps2Votes.Find( nDesiredMapIndex );
-								if ( iMapEntry == mapMaps2Votes.InvalidIndex() )
-									mapMaps2Votes.Insert( nDesiredMapIndex, 1 ); // we don't have a vote for this map, so insert one
-								else
-									mapMaps2Votes.Element( iMapEntry ) ++; // someone voted for this map already so increment it by one
+								// an unseen map starts at zero votes
+								mapMaps2Votes[ nDesiredMapIndex ] ++;
 							}
 						}
 
 						// now takes the votes and do this so we can sort them my the total number of votes for each map in ascending order
-						CUtlMap< NumberOfVotes_t, MapInCollection_t > mapVotesInOrder;
-						mapVotesInOrder.SetLessFunc( DefLessFunc( int ) );
-						FOR_EACH_MAP( mapMaps2Votes, itMap2Vote )
+						// several maps can share a vote count
+						std::multimap< NumberOfVotes_t, MapInCollection_t > mapVotesInOrder;
+						for ( const auto &[nMap, nVotes] : mapMaps2Votes )
 						{
-							mapVotesInOrder.Insert( mapMaps2Votes.Element( itMap2Vote ), mapMaps2Votes.Key( itMap2Vote ) );
+							mapVotesInOrder.emplace( nVotes, nMap );
 							if ( mp_verbose_changelevel_spew.GetInt() >= 2 )
 							{
-								Msg( "NEXTLEVELVOTE: Total %d votes for map %d\n", mapMaps2Votes.Element( itMap2Vote ), mapMaps2Votes.Key( itMap2Vote ) );
+								Msg( "NEXTLEVELVOTE: Total %d votes for map %d\n", nVotes, nMap );
 							}
 						}
 
 						// clear the tie votes in our global list
-						m_nEndMatchTiedVotes.RemoveAll();
-						for ( CUtlMap< NumberOfVotes_t, MapInCollection_t >::IndexType_t idxVotesInOrder = mapVotesInOrder.LastInorder();
-							idxVotesInOrder != mapVotesInOrder.InvalidIndex(); idxVotesInOrder = mapVotesInOrder.PrevInorder( idxVotesInOrder ) )
+						m_nEndMatchTiedVotes.clear();
+						for ( auto itVotesInOrder = mapVotesInOrder.rbegin(); itVotesInOrder != mapVotesInOrder.rend(); ++itVotesInOrder )
 						{
 							// compare the first to the last in the list and add any to it that matches because we have a tie
-							if ( mapVotesInOrder.Key( idxVotesInOrder ) == mapVotesInOrder.Key( mapVotesInOrder.LastInorder() ) )
+							if ( itVotesInOrder->first == mapVotesInOrder.rbegin()->first )
 							{
-								m_nEndMatchTiedVotes.AddToTail( mapVotesInOrder.Element( idxVotesInOrder ) );
+								m_nEndMatchTiedVotes.push_back( itVotesInOrder->second );
 								if ( mp_verbose_changelevel_spew.GetInt() >= 2 )
 								{
-									Msg( "NEXTLEVELVOTE: Considering best map %d with %d votes\n", mapVotesInOrder.Element( idxVotesInOrder ), mapVotesInOrder.Key( idxVotesInOrder ) );
+									Msg( "NEXTLEVELVOTE: Considering best map %d with %d votes\n", itVotesInOrder->second, itVotesInOrder->first );
 								}
 							}
 							else
@@ -9767,13 +9747,13 @@ void ServerThinkReplayUploader()
 
 						m_nEndMatchMapVoteWinner = -1;
 						// if we don't have any ties at all, it means no one voted, so add all of the maps to the "tie" list
-						if ( !m_nEndMatchTiedVotes.Count() )
+						if ( m_nEndMatchTiedVotes.empty() )
 						{
 							for ( int iVoteOption = 0; iVoteOption < MAX_ENDMATCH_VOTE_PANELS; ++ iVoteOption )
 							{
 								if ( m_nEndMatchMapGroupVoteOptions[iVoteOption] >= 0 )
 								{
-									m_nEndMatchTiedVotes.AddToTail( m_nEndMatchMapGroupVoteOptions[iVoteOption] );
+									m_nEndMatchTiedVotes.push_back( m_nEndMatchMapGroupVoteOptions[iVoteOption] );
 									if ( mp_verbose_changelevel_spew.GetInt() >= 2 )
 									{
 										Msg( "NEXTLEVELVOTE: No votes considering map %d\n", m_nEndMatchMapGroupVoteOptions[iVoteOption] );
@@ -9782,9 +9762,9 @@ void ServerThinkReplayUploader()
 							}
 						}
 						// if there is only one in the list, it means at least one player votes, but one of the maps is a clear winner
-						if ( m_nEndMatchTiedVotes.Count() == 1 )
+						if ( std::ssize( m_nEndMatchTiedVotes ) == 1 )
 						{
-							m_nEndMatchMapVoteWinner = m_nEndMatchTiedVotes.Head();
+							m_nEndMatchMapVoteWinner = m_nEndMatchTiedVotes.front();
 							if ( mp_verbose_changelevel_spew.GetInt() >= 2 )
 							{
 								Msg( "NEXTLEVELVOTE: Absolute winner map %d\n", m_nEndMatchMapVoteWinner );
@@ -9794,16 +9774,16 @@ void ServerThinkReplayUploader()
 						if ( m_nEndMatchMapVoteWinner == -1 )
 						{
 							// if we have a tie, goto SelectingWinner and tell the client to do something
-							m_flIntermissionStartTime = MAX( m_flIntermissionStartTime, ( (gpGlobals->curtime + 4.0f) - (GetIntermissionDuration()) ) );
+							m_flIntermissionStartTime = std::max( m_flIntermissionStartTime, ( (gpGlobals->curtime + 4.0f) - (GetIntermissionDuration()) ) );
 							m_eEndMatchMapVoteState = k_EEndMatchMapVoteState_SelectingWinner;
 
 							IGameEvent * event = gameeventmanager->CreateEvent( "endmatch_mapvote_selecting_map" );
 							if( event )
 							{
 								// we want to send all of the "ties" to the client.  We send ten because technically we could have a 10 person server with each player voting for different maps
-								event->SetInt( "count", m_nEndMatchTiedVotes.Count() );
+								event->SetInt( "count", std::ssize( m_nEndMatchTiedVotes ) );
 								char sz[16];
-								for ( int i = 0 ; i < m_nEndMatchTiedVotes.Count() ; ++i) 
+								for ( int i = 0 ; i < std::ssize( m_nEndMatchTiedVotes ) ; ++i) 
 								{
 									V_sprintf_safe( sz, "slot%d", i+1 );
 
@@ -9838,32 +9818,32 @@ void ServerThinkReplayUploader()
 
 				case k_EEndMatchMapVoteState_SettingNextLevel:
 					{
-						m_flIntermissionStartTime = MAX( m_flIntermissionStartTime, ( (gpGlobals->curtime + 5.0f) - GetIntermissionDuration() ) );
+						m_flIntermissionStartTime = std::max( m_flIntermissionStartTime, ( (gpGlobals->curtime + 5.0f) - GetIntermissionDuration() ) );
 						m_eEndMatchMapVoteState = k_EEndMatchMapVoteState_VoteAllDone;
 
 						if ( g_pGameTypes )
 						{
 							const char* mapGroupName = gpGlobals->mapGroupName.ToCStr();
-							const CUtlStringList* mapsInGroup = g_pGameTypes->GetMapGroupMapList( mapGroupName );
+							const std::vector< std::string >* mapsInGroup = g_pGameTypes->GetMapGroupMapList( mapGroupName );
 
 							if ( mapsInGroup )
 							{
-								int nNumMaps = mapsInGroup->Count();
+								int nNumMaps = std::ssize( *mapsInGroup );
 								// we don't have a clear winner
 								if ( m_nEndMatchMapVoteWinner == -1 )
 								{
 									// if we have a tie for first place, randomly pick between the ones in the lead
-									m_nEndMatchMapVoteWinner = m_nEndMatchTiedVotes[ RandomInt( 0, (m_nEndMatchTiedVotes.Count()-1) ) ];
+									m_nEndMatchMapVoteWinner = m_nEndMatchTiedVotes[ RandomInt( 0, (std::ssize( m_nEndMatchTiedVotes )-1) ) ];
 									if ( mp_verbose_changelevel_spew.GetInt() >= 2 )
 									{
-										Msg( "NEXTLEVELVOTE: Randomly picked winner map=%d from %d tied for nextlevel\n", m_nEndMatchMapVoteWinner, m_nEndMatchTiedVotes.Count() );
+										Msg( "NEXTLEVELVOTE: Randomly picked winner map=%d from %d tied for nextlevel\n", m_nEndMatchMapVoteWinner, (int)std::ssize( m_nEndMatchTiedVotes ) );
 									}
 								}
 
 								if ( m_nEndMatchMapVoteWinner < 0 || m_nEndMatchMapVoteWinner >= nNumMaps )
 									return true;
 
-								const char* internalMapName = (*mapsInGroup)[m_nEndMatchMapVoteWinner];
+								const char* internalMapName = (*mapsInGroup)[m_nEndMatchMapVoteWinner].c_str();
 								if ( internalMapName && V_strcmp( "undefined", internalMapName ) != 0 && V_strlen( internalMapName ) > 0 )
 								{
 									engine->ServerCommand( CFmtStr( "nextlevel %s;", internalMapName ) );
@@ -10496,16 +10476,16 @@ void ServerThinkReplayUploader()
 		if ( g_pGameTypes )
 		{
 			const char* mapGroupName = gpGlobals->mapGroupName.ToCStr();
-			const CUtlStringList* mapsInGroup = g_pGameTypes->GetMapGroupMapList( mapGroupName );
+			const std::vector< std::string >* mapsInGroup = g_pGameTypes->GetMapGroupMapList( mapGroupName );
 			if ( mapsInGroup )
-				numMaps = mapsInGroup->Count();
+				numMaps = std::ssize( *mapsInGroup );
 		}
 
 		if ( numMaps > 1 )
 		{
 			m_eEndMatchMapVoteState = k_EEndMatchMapVoteState_VoteInProgress;
 
-			m_nEndMatchTiedVotes.RemoveAll();
+			m_nEndMatchTiedVotes.clear();
 
 			// artificially set the m_flIntermissionStartTime
 			if ( m_flIntermissionStartTime &&
@@ -10802,9 +10782,8 @@ void ServerThinkReplayUploader()
             const float fRadiusInner = score_planted_bomb_proximity_damage_radius_inner.GetFloat();
             const float fRadiusOuter = score_planted_bomb_proximity_damage_radius_outer.GetFloat();
             const float fRadiusOuterSquared = fRadiusOuter * fRadiusOuter;
-            FOR_EACH_VEC( g_PlantedC4s, iBomb )
+            for ( CPlantedC4 *pC4 : g_PlantedC4s )
             {
-                CPlantedC4 *pC4 = g_PlantedC4s[iBomb];
                 if ( pC4 && pC4->IsBombActive() )
                 {
                     Vector bombPos = pC4->GetAbsOrigin();
@@ -10825,9 +10804,8 @@ void ServerThinkReplayUploader()
         const float fRadiusInner = score_hostage_proximity_damage_radius_inner.GetFloat();
         const float fRadiusOuter = score_hostage_proximity_damage_radius_outer.GetFloat();
         float fClosestSquared = FLT_MAX;
-        FOR_EACH_VEC( g_Hostages, iHostage )
+        for ( CHostage* pHostage : g_Hostages )
         {
-            CHostage* pHostage = g_Hostages[iHostage];
             if ( pHostage->m_iHealth > 0 && !pHostage->IsRescued() )
             {
                 float fDistanceSquared = pHostage->GetAbsOrigin().DistToSqr( pPlayer->GetAbsOrigin() );
@@ -11132,8 +11110,8 @@ void ServerThinkReplayUploader()
             nNumSlots = g_pGameTypes->GetMaxPlayersForTypeAndMode( iGameType, iGameMode );
 
             // for the training map, our max is 1 CT and 0 T's, diving 1 in half doesn't work for us in this case, so make sure our min is 1
-            m_iMaxNumTerrorists = MAX( nNumSlots / 2, 1 );
-            m_iMaxNumCTs = MAX( nNumSlots / 2, 1 );
+            m_iMaxNumTerrorists = std::max( nNumSlots / 2, 1 );
+            m_iMaxNumCTs = std::max( nNumSlots / 2, 1 );
 
             m_iSpectatorSlotCount = mp_spectators_max.GetInt();
 
@@ -11200,24 +11178,24 @@ void ServerThinkReplayUploader()
 			 FClassnameIs( pSpawnPoint, "info_armsrace_terrorist" )  )
 		{
 			// check to make sure it isn't already in the list
-			if ( m_TerroristSpawnPointsMasterList.Find( pSpawnPoint ) != m_TerroristSpawnPointsMasterList.InvalidIndex() )
+			if ( ks::find_index( m_TerroristSpawnPointsMasterList, pSpawnPoint ) != -1 )
 			{
 				AssertMsg( false, "AddSpawnPointToMasterList tried to add a spawn point to the list, but it already exists in the list!" );
 				return;
 			}
 
-			m_TerroristSpawnPointsMasterList.AddToTail( pSpawnPoint );
+			m_TerroristSpawnPointsMasterList.push_back( pSpawnPoint );
 		}
 		else if ( FClassnameIs( pSpawnPoint, "info_player_counterterrorist" ) ||
 				  FClassnameIs( pSpawnPoint, "info_armsrace_counterterrorist" ) )
 		{
-			if ( m_CTSpawnPointsMasterList.Find( pSpawnPoint ) != m_CTSpawnPointsMasterList.InvalidIndex() )
+			if ( ks::find_index( m_CTSpawnPointsMasterList, pSpawnPoint ) != -1 )
 			{
 				AssertMsg( false, "AddSpawnPointToMasterList tried to add a spawn point to the list, but it already exists in the list!" );
 				return;
 			}
 
-			m_CTSpawnPointsMasterList.AddToTail( pSpawnPoint );
+			m_CTSpawnPointsMasterList.push_back( pSpawnPoint );
 		}
 		else if ( FClassnameIs( pSpawnPoint, "info_deathmatch_spawn" ) )
 		{
@@ -11234,12 +11212,12 @@ void ServerThinkReplayUploader()
 
 	void CCSGameRules::GenerateSpawnPointListsFirstTime( void )
 	{
-		//CUtlVector< SpawnPoint* >	m_CTSpawnPointsMasterList;			// The master list of CT spawn points (contains all points whether enabled or disabled)
-		//CUtlVector< SpawnPoint* >	m_TerroristSpawnPointsMasterList;	// The master list of Terrorist spawn points (contains all points whether enabled or disabled)
+		//std::vector< SpawnPoint* >	m_CTSpawnPointsMasterList;			// The master list of CT spawn points (contains all points whether enabled or disabled)
+		//std::vector< SpawnPoint* >	m_TerroristSpawnPointsMasterList;	// The master list of Terrorist spawn points (contains all points whether enabled or disabled)
 
 		// Clear out existing spawn point lists
-		m_TerroristSpawnPointsMasterList.RemoveAll();
-		m_CTSpawnPointsMasterList.RemoveAll();
+		m_TerroristSpawnPointsMasterList.clear();
+		m_CTSpawnPointsMasterList.clear();
 
 		const char* szTSpawnEntName = "info_player_terrorist";
 		CBaseEntity* ent = nullptr; 
@@ -11254,7 +11232,7 @@ void ServerThinkReplayUploader()
 				if ( pSpawnPoint )
 				{
 					// Store off the terrorist spawn point
-					m_TerroristSpawnPointsMasterList.AddToTail( pSpawnPoint );
+					m_TerroristSpawnPointsMasterList.push_back( pSpawnPoint );
 				}
 			}
 			else
@@ -11272,7 +11250,7 @@ void ServerThinkReplayUploader()
 				if ( pSpawnPoint )
 				{
 					// Store off the CT spawn point
-					m_CTSpawnPointsMasterList.AddToTail( pSpawnPoint );
+					m_CTSpawnPointsMasterList.push_back( pSpawnPoint );
 				}
 			}
 			else
@@ -11295,7 +11273,7 @@ void ServerThinkReplayUploader()
 					{
 						pSpawnPoint->m_nType = SpawnPoint::ArmsRace;
 						// Store off the terrorist spawn point
-						m_TerroristSpawnPointsMasterList.AddToTail( pSpawnPoint );
+						m_TerroristSpawnPointsMasterList.push_back( pSpawnPoint );
 					}
 				}
 				else
@@ -11314,7 +11292,7 @@ void ServerThinkReplayUploader()
 					{
 						pSpawnPoint->m_nType = SpawnPoint::ArmsRace;
 						// Store off the CT spawn point
-						m_CTSpawnPointsMasterList.AddToTail( pSpawnPoint );
+						m_CTSpawnPointsMasterList.push_back( pSpawnPoint );
 					}
 				}
 				else
@@ -11338,33 +11316,31 @@ void ServerThinkReplayUploader()
 	void CCSGameRules::RefreshCurrentSpawnPointLists( void )
 	{
 		// Clear out existing spawn point lists
-		m_TerroristSpawnPoints.RemoveAll();
-		m_CTSpawnPoints.RemoveAll();
+		m_TerroristSpawnPoints.clear();
+		m_CTSpawnPoints.clear();
 
 		m_iSpawnPointCount_Terrorist = 0;
 		m_iSpawnPointCount_CT = 0;
 
-		FOR_EACH_VEC( m_TerroristSpawnPointsMasterList, i )
+		for ( SpawnPoint *pSpawnPoint : m_TerroristSpawnPointsMasterList )
 		{
-			SpawnPoint* pSpawnPoint = m_TerroristSpawnPointsMasterList[i];
 			if ( pSpawnPoint && pSpawnPoint->IsEnabled() )
 			{
 				m_iSpawnPointCount_Terrorist++;
 
 				// Store off the terrorist spawn point
-				m_TerroristSpawnPoints.AddToTail( pSpawnPoint );
+				m_TerroristSpawnPoints.push_back( pSpawnPoint );
 			}
 		}
 
-		FOR_EACH_VEC( m_CTSpawnPointsMasterList, i )
+		for ( SpawnPoint *pSpawnPoint : m_CTSpawnPointsMasterList )
 		{
-			SpawnPoint* pSpawnPoint = m_CTSpawnPointsMasterList[i];
 			if ( pSpawnPoint && pSpawnPoint->IsEnabled() )
 			{
 				m_iSpawnPointCount_CT++;
 
 				// Store off the CT spawn point
-				m_CTSpawnPoints.AddToTail( pSpawnPoint );
+				m_CTSpawnPoints.push_back( pSpawnPoint );
 			}
 		}
 
@@ -11375,7 +11351,7 @@ void ServerThinkReplayUploader()
 
 			// make sure that there are always enough bots
 			ConVarRef bot_quota( "bot_quota" );
-			int nQuota = UTIL_HumansInGame( true, true ) + MIN( m_iMaxNumTerrorists, m_iSpawnPointCount_Terrorist );
+			int nQuota = UTIL_HumansInGame( true, true ) + std::min( m_iMaxNumTerrorists, m_iSpawnPointCount_Terrorist );
 			bot_quota.SetValue( nQuota );
 
 			//DevMsg( ">> Setting bot_quota to %d\n", nQuota );
@@ -11396,14 +11372,14 @@ void ServerThinkReplayUploader()
 		if ( CSGameRules()->IsPlayingGunGameProgressive() )
 		{
 			// Sort the spawn point lists
-			m_TerroristSpawnPoints.Sort( ArmsRaceSpawnPointSortFunction );
-			m_CTSpawnPoints.Sort( ArmsRaceSpawnPointSortFunction );
+			ks::qsort( m_TerroristSpawnPoints, ArmsRaceSpawnPointSortFunction );
+			ks::qsort( m_CTSpawnPoints, ArmsRaceSpawnPointSortFunction );
 		}
 		else
 		{
 			// Sort the spawn point lists
-			m_TerroristSpawnPoints.Sort( SpawnPointSortFunction );
-			m_CTSpawnPoints.Sort( SpawnPointSortFunction );
+			ks::qsort( m_TerroristSpawnPoints, SpawnPointSortFunction );
+			ks::qsort( m_CTSpawnPoints, SpawnPointSortFunction );
 		}
     }
 
@@ -11430,15 +11406,14 @@ void ServerThinkReplayUploader()
 		if ( CSGameRules()->IsPlayingGunGameProgressive() )
 		{
 			// Sort the spawn point lists
-			m_TerroristSpawnPointsMasterList.Sort( ArmsRaceSpawnPointSortFunction );
-			m_CTSpawnPointsMasterList.Sort( ArmsRaceSpawnPointSortFunction );
+			ks::qsort( m_TerroristSpawnPointsMasterList, ArmsRaceSpawnPointSortFunction );
+			ks::qsort( m_CTSpawnPointsMasterList, ArmsRaceSpawnPointSortFunction );
 
 			int nSpots = 0;
 			// disable all spawns over 10 because we already shoved teh arms race ones up front and
 			// if there are enough, disable the ones that aren't flagged as arms race
-			FOR_EACH_VEC( m_TerroristSpawnPointsMasterList, i )
+			for ( SpawnPoint *pSpawnPoint : m_TerroristSpawnPointsMasterList )
 			{
-				SpawnPoint* pSpawnPoint = m_TerroristSpawnPointsMasterList[i];
 				if ( pSpawnPoint && pSpawnPoint->IsEnabled() )
 				{
 					if ( IsSpawnPointValid( pSpawnPoint, nullptr ) == false )
@@ -11455,9 +11430,8 @@ void ServerThinkReplayUploader()
 
 			nSpots = 0;
 			// disable for the CTs as well
-			FOR_EACH_VEC( m_CTSpawnPointsMasterList, i )
+			for ( SpawnPoint *pSpawnPoint : m_CTSpawnPointsMasterList )
 			{
-				SpawnPoint* pSpawnPoint = m_CTSpawnPointsMasterList[i];
 				if ( pSpawnPoint && pSpawnPoint->IsEnabled() )
 				{
 					if ( IsSpawnPointValid( pSpawnPoint, nullptr ) == false )
@@ -11476,14 +11450,14 @@ void ServerThinkReplayUploader()
 		{
 
 			if ( !IsPlayingCoopMission() )
-				m_TerroristSpawnPointsMasterList.Sort( SpawnPointSortFunction );
+				ks::qsort( m_TerroristSpawnPointsMasterList, SpawnPointSortFunction );
 
 
-			m_CTSpawnPointsMasterList.Sort( SpawnPointSortFunction );
+			ks::qsort( m_CTSpawnPointsMasterList, SpawnPointSortFunction );
 		}
 	}
 
-    void CCSGameRules::ShufflePlayerList( CUtlVector< CCSPlayer* > &playersList )
+    void CCSGameRules::ShufflePlayerList( std::vector< CCSPlayer* > &playersList )
     {
         // Shuffle players
         VectorShuffle( playersList );
@@ -11503,12 +11477,12 @@ void ServerThinkReplayUploader()
 
         if ( teamNumber == TEAM_CT )
         {
-            if ( m_iNextCTSpawnPoint >= m_CTSpawnPoints.Count() )
+            if ( m_iNextCTSpawnPoint >= std::ssize( m_CTSpawnPoints ) )
             {
                 m_iNextCTSpawnPoint = 0;
             }
 
-            if ( m_iNextCTSpawnPoint < m_CTSpawnPoints.Count() )
+            if ( m_iNextCTSpawnPoint < std::ssize( m_CTSpawnPoints ) )
             {
                 pRetVal = m_CTSpawnPoints[ m_iNextCTSpawnPoint ];
                 m_iNextCTSpawnPoint++;
@@ -11516,12 +11490,12 @@ void ServerThinkReplayUploader()
         }
         else if ( teamNumber == TEAM_TERRORIST )
         {
-            if ( m_iNextTerroristSpawnPoint >= m_TerroristSpawnPoints.Count() )
+            if ( m_iNextTerroristSpawnPoint >= std::ssize( m_TerroristSpawnPoints ) )
             {
                 m_iNextTerroristSpawnPoint = 0;
             }
 
-            if ( m_iNextTerroristSpawnPoint < m_TerroristSpawnPoints.Count() )
+            if ( m_iNextTerroristSpawnPoint < std::ssize( m_TerroristSpawnPoints ) )
             {
                 pRetVal = m_TerroristSpawnPoints[ m_iNextTerroristSpawnPoint ];
                 m_iNextTerroristSpawnPoint++;
@@ -11829,20 +11803,20 @@ void ServerThinkReplayUploader()
 		// NOTE: dont check is removeable here because weapons just thrown aren't removeable, just clean up when we actually do the removals
 		if ( pWeapon /*&& pWeapon->IsRemoveable()*/ && weapon_max_before_cleanup.GetInt() > 0 )
 		{
-			for ( int i = 0; i < m_weaponsDroppedInWorld.Count(); i++ )
+			for ( int i = 0; i < std::ssize( m_weaponsDroppedInWorld ); i++ )
 			{
 				if ( pWeapon == m_weaponsDroppedInWorld[i] )
 					return;
 			}
 
-			m_weaponsDroppedInWorld.AddToTail( pWeapon );
+			m_weaponsDroppedInWorld.push_back( pWeapon );
 		}
 		
-		while ( weapon_max_before_cleanup.GetInt() > 0 && m_weaponsDroppedInWorld.Count() > weapon_max_before_cleanup.GetInt() )
+		while ( weapon_max_before_cleanup.GetInt() > 0 && std::ssize( m_weaponsDroppedInWorld ) > weapon_max_before_cleanup.GetInt() )
 		{
-			//CUtlVector< float> m_weaponsDist;
+			//std::vector< float > m_weaponsDist;
 			// get the oldest 5 (or max) weapons
-			int nMaxIndex = Min( 5, m_weaponsDroppedInWorld.Count() );
+			int nMaxIndex = Min( 5, (int)std::ssize( m_weaponsDroppedInWorld ) );
 // 				for ( int i = 0; i < nMaxIndex; i++ )
 // 				{	
 // 					m_weaponsDist.AddToTail( 0 );
@@ -11879,7 +11853,7 @@ void ServerThinkReplayUploader()
 			{
 				UTIL_Remove( pWep );
 			}
-			m_weaponsDroppedInWorld.Remove( index );
+			m_weaponsDroppedInWorld.erase( m_weaponsDroppedInWorld.begin() + index );
 		}
 	}
 
@@ -11888,11 +11862,11 @@ void ServerThinkReplayUploader()
 		if ( !pWeapon )
 			return;
 
-		for ( int i = 0; i < m_weaponsDroppedInWorld.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_weaponsDroppedInWorld ); i++ )
 		{
 			if ( pWeapon == m_weaponsDroppedInWorld[i] )
 			{
-				m_weaponsDroppedInWorld.Remove( i );
+				m_weaponsDroppedInWorld.erase( m_weaponsDroppedInWorld.begin() + i );
 				return;
 			}
 		}
@@ -12037,7 +12011,7 @@ void ServerThinkReplayUploader()
     void CCSGameRules::HandleScrambleTeams( void )
     {
         CCSPlayer *pCSPlayer = nullptr;
-        CUtlVector<CCSPlayer *> pListPlayers;
+        std::vector< CCSPlayer * > pListPlayers;
 
         // add all the players (that are on CT or Terrorist) to our temp list
         for ( int i = 1 ; i <= gpGlobals->maxClients ; i++ )
@@ -12045,16 +12019,16 @@ void ServerThinkReplayUploader()
             pCSPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
             if ( pCSPlayer && ( pCSPlayer->GetTeamNumber() == TEAM_TERRORIST || pCSPlayer->GetTeamNumber() == TEAM_CT ) )
             {
-                pListPlayers.AddToHead( pCSPlayer );
+                pListPlayers.insert( pListPlayers.begin(), pCSPlayer );
             }
         }
 
         // sort the list
-        pListPlayers.Sort( ScramblePlayersSort );
+        ks::qsort( pListPlayers, ScramblePlayersSort );
 
         int team = TEAM_INVALID;
         bool assignToOpposingTeam = false;
-        for ( int i = 0 ; i < pListPlayers.Count() ; i++ )
+        for ( int i = 0 ; i < std::ssize( pListPlayers ) ; i++ )
         {
             pCSPlayer = pListPlayers[i];
 
@@ -12118,8 +12092,8 @@ void ServerThinkReplayUploader()
     void CCSGameRules::HandleSwapTeams( void )
     {
         CCSPlayer *pCSPlayer = nullptr;
-        CUtlVector<CCSPlayer *> pListPlayers;
-		CUtlVector<CCSPlayer *> pListCoaches;
+        std::vector< CCSPlayer * > pListPlayers;
+		std::vector< CCSPlayer * > pListCoaches;
 
         // add all the players (that are on CT or Terrorist) to our temp list
         for ( int i = 1 ; i <= gpGlobals->maxClients ; i++ )
@@ -12127,16 +12101,16 @@ void ServerThinkReplayUploader()
             pCSPlayer = ToCSPlayer( UTIL_PlayerByIndex( i ) );
 			if ( pCSPlayer && ( pCSPlayer->GetTeamNumber() == TEAM_TERRORIST || pCSPlayer->GetTeamNumber() == TEAM_CT ) )
             {
-                pListPlayers.AddToHead( pCSPlayer );
+                pListPlayers.insert( pListPlayers.begin(), pCSPlayer );
             }
 			else if ( pCSPlayer && pCSPlayer->IsCoach() )
 			{
-				pListCoaches.AddToHead( pCSPlayer );
+				pListCoaches.insert( pListCoaches.begin(), pCSPlayer );
 			}
 
         }
         
-        for ( int i = 0 ; i < pListPlayers.Count() ; i++ )
+        for ( int i = 0 ; i < std::ssize( pListPlayers ) ; i++ )
         {
             pCSPlayer = pListPlayers[i];
 
@@ -12149,7 +12123,7 @@ void ServerThinkReplayUploader()
         }
 
 		//coaches last
-		for ( int i = 0 ; i < pListCoaches.Count() ; i++ )
+		for ( int i = 0 ; i < std::ssize( pListCoaches ) ; i++ )
 		{
 			pCSPlayer = pListCoaches[i];
 
@@ -12165,26 +12139,26 @@ void ServerThinkReplayUploader()
 		// Flip the convars for custom team names and flags as well
 		//
 
-		CUtlString sTemp;
+		std::string sTemp;
 		sTemp = mp_teamname_1.GetString();
 		mp_teamname_1.SetValue( mp_teamname_2.GetString() );
-		mp_teamname_2.SetValue( sTemp.Get() );
+		mp_teamname_2.SetValue( sTemp.data() );
 
 		sTemp = mp_teamflag_1.GetString();
 		mp_teamflag_1.SetValue( mp_teamflag_2.GetString() );
-		mp_teamflag_2.SetValue( sTemp.Get() );
+		mp_teamflag_2.SetValue( sTemp.data() );
 
 		sTemp = mp_teamlogo_1.GetString();
 		mp_teamlogo_1.SetValue( mp_teamlogo_2.GetString() );
-		mp_teamlogo_2.SetValue( sTemp.Get() );
+		mp_teamlogo_2.SetValue( sTemp.data() );
 
 		sTemp = mp_teammatchstat_1.GetString();
 		mp_teammatchstat_1.SetValue( mp_teammatchstat_2.GetString() );
-		mp_teammatchstat_2.SetValue( sTemp.Get() );
+		mp_teammatchstat_2.SetValue( sTemp.data() );
 
 		sTemp = mp_teamscore_1.GetString();
 		mp_teamscore_1.SetValue( mp_teamscore_2.GetString() );
-		mp_teamscore_2.SetValue( sTemp.Get() );
+		mp_teamscore_2.SetValue( sTemp.data() );
 
 		if ( ( mp_teamprediction_pct.GetInt() >= 1 ) && ( mp_teamprediction_pct.GetInt() <= 99 ) )
 			mp_teamprediction_pct.SetValue( 100 - mp_teamprediction_pct.GetInt() );
@@ -12200,13 +12174,13 @@ void ServerThinkReplayUploader()
 			return m_iSpawnPointCount_Terrorist;
 
 		bool bRandomTSpawn = mp_randomspawn.GetInt() == 1 || mp_randomspawn.GetInt() == TEAM_TERRORIST;
-        return MIN(m_iMaxNumTerrorists, bRandomTSpawn ? MAX_PLAYERS : m_iSpawnPointCount_Terrorist);
+        return std::min(m_iMaxNumTerrorists, bRandomTSpawn ? MAX_PLAYERS : m_iSpawnPointCount_Terrorist);
     }
 
     int CCSGameRules::MaxNumPlayersOnCTTeam()
     {
 		bool bRandomCTSpawn = mp_randomspawn.GetInt() == 1 || mp_randomspawn.GetInt() == TEAM_CT;
-        return MIN(m_iMaxNumCTs, bRandomCTSpawn ? MAX_PLAYERS : m_iSpawnPointCount_CT);
+        return std::min(m_iMaxNumCTs, bRandomCTSpawn ? MAX_PLAYERS : m_iSpawnPointCount_CT);
     }
 
     bool CCSGameRules::TeamFull( int team_id )
@@ -12533,7 +12507,7 @@ void ServerThinkReplayUploader()
 		// Wipe cached accounts information and team assignments
 		if ( !IsQueuedMatchmaking() )
 		{
-			m_mapQueuedMatchmakingPlayersData.PurgeAndDeleteElements();
+			m_mapQueuedMatchmakingPlayersData.clear();
 		}
 
 		//
@@ -12553,17 +12527,16 @@ void ServerThinkReplayUploader()
 			m_iLoserBonus					= bResetPlayerAccounts ? TeamCashAwardValue( TeamCashAward::LOSER_BONUS ) : kvSaveFile->GetInt( "History/LoserBonus" );
 
 			// Reset hostage spawn indices
-			m_arrSelectedHostageSpawnIndices.RemoveAll();
+			m_arrSelectedHostageSpawnIndices.clear();
 			if ( char const *szHostageSpawnIndices = kvSaveFile->GetString( "History/HostageSpawnIndices", nullptr ) )
 			{
-				CUtlVector< char* > tagStrings;
+				std::vector< std::string > tagStrings;
 				V_SplitString( szHostageSpawnIndices, ",", tagStrings );
-				m_arrSelectedHostageSpawnIndices.EnsureCapacity( tagStrings.Count() );
-				FOR_EACH_VEC( tagStrings, iTagString )
+				m_arrSelectedHostageSpawnIndices.reserve( std::ssize( tagStrings ) );
+				for ( const std::string &sTagString : tagStrings )
 				{
-					m_arrSelectedHostageSpawnIndices.AddToTail( Q_atoi( tagStrings[iTagString] ) );
+					m_arrSelectedHostageSpawnIndices.push_back( Q_atoi( sTagString.c_str() ) );
 				}
-				tagStrings.PurgeAndDeleteElements();
 			}
 		}
 
@@ -12582,7 +12555,7 @@ void ServerThinkReplayUploader()
 		if ( ( numRoundsPlayed >= mp_maxrounds.GetInt() ) || numOvertimePlaying )
 		{
 			int nOvertimeBasedOnRoundsPlayed = mp_overtime_maxrounds.GetInt() ? ( numRoundsPlayed - mp_maxrounds.GetInt() ) / mp_overtime_maxrounds.GetInt() : 0;
-			numOvertimePlaying = MAX( numOvertimePlaying, nOvertimeBasedOnRoundsPlayed + 1 );
+			numOvertimePlaying = std::max( numOvertimePlaying, nOvertimeBasedOnRoundsPlayed + 1 );
 			m_match.GoToOvertime( numOvertimePlaying );
 
 			if ( mp_overtime_maxrounds.GetInt() &&
@@ -12837,7 +12810,8 @@ void ServerThinkReplayUploader()
 		//
 		// Otherwise it is valid to create a new entry
 		//
-		CQMMPlayerData_t &qmmPlayerData = *new CQMMPlayerData_t;
+		auto pNewQMM = std::make_unique< CQMMPlayerData_t >();
+		CQMMPlayerData_t &qmmPlayerData = *pNewQMM;
 		qmmPlayerData.m_uiPlayerAccountId = steamIdHumanPlayer.GetAccountID();
 		qmmPlayerData.m_iDraftIndex = iTeamOrder * 5;
 		Q_strncpy( qmmPlayerData.m_chPlayerName, pPlayer->GetPlayerName(), sizeof( qmmPlayerData.m_chPlayerName ) );
@@ -12878,7 +12852,7 @@ void ServerThinkReplayUploader()
 			qmmPlayerData.m_iMatchStats_EnemiesFlashed[ i ] = pPlayer->m_iMatchStats_EnemiesFlashed.Get( i );
 		}
 
-		m_mapQueuedMatchmakingPlayersData.InsertOrReplace( qmmPlayerData.m_uiPlayerAccountId, &qmmPlayerData );
+		m_mapQueuedMatchmakingPlayersData.insert_or_assign( qmmPlayerData.m_uiPlayerAccountId, std::move( pNewQMM ) );
 
 		return &qmmPlayerData;
 	}
@@ -12932,7 +12906,7 @@ void ServerThinkReplayUploader()
 		// extend the time a bit if we have items to display
 		float flItemDelay = tmDelay;
 // 		if ( m_ItemsPtrDroppedDuringMatch.Count() > 0 && !IsPlayingAnyCompetitiveStrictRuleset() )
-// 			flItemDelay += MIN(5, m_ItemsPtrDroppedDuringMatch.Count())*0.75;
+// 			flItemDelay += std::min(5, m_ItemsPtrDroppedDuringMatch.Count())*0.75;
                 
         // UTIL_ClientPrintAll( HUD_PRINTCENTER, sentence );
 
@@ -13065,13 +13039,13 @@ void ServerThinkReplayUploader()
 
         if ( iWinnerTeam == WINNER_CT )
         {
-            for( int i=0;i<g_Hostages.Count();i++ )
+            for( int i=0;i<std::ssize( g_Hostages );i++ )
                 g_Hostages[i]->AcceptInput( "CTsWin", nullptr, nullptr, emptyVariant, 0 );
         }
 
         else if ( iWinnerTeam == WINNER_TER )
         {
-            for( int i=0;i<g_Hostages.Count();i++ )
+            for( int i=0;i<std::ssize( g_Hostages );i++ )
                 g_Hostages[i]->AcceptInput( "TerroristsWin", nullptr, nullptr, emptyVariant, 0 );
         }
         else
@@ -13322,41 +13296,41 @@ void ServerThinkReplayUploader()
 
 	void CCSGameRules::CreateEndMatchMapGroupVoteOptions( void )
 	{
-		CUtlVector< int > arrVoteCandidates;
+		std::vector< int > arrVoteCandidates;
 		if ( g_pGameTypes )
 		{
 			const char* mapGroupName = gpGlobals->mapGroupName.ToCStr();
-			const CUtlStringList* mapsInGroup = g_pGameTypes->GetMapGroupMapList( mapGroupName );
+			const std::vector< std::string >* mapsInGroup = g_pGameTypes->GetMapGroupMapList( mapGroupName );
 
 			if ( mapsInGroup )
 			{
-				int nCount = mapsInGroup->Count();
+				int nCount = std::ssize( *mapsInGroup );
 				int nCurrentMapIndex = -1;
 				for ( int iMap = 0; iMap < nCount; ++ iMap )
 				{
-					arrVoteCandidates.AddToTail( iMap );
-					if ( !V_stricmp( mapsInGroup->Element( iMap ), STRING( gpGlobals->mapname ) ) )
+					arrVoteCandidates.push_back( iMap );
+					if ( !V_stricmp( (*mapsInGroup)[ iMap ].c_str(), STRING( gpGlobals->mapname ) ) )
 						nCurrentMapIndex = iMap;
 				}
 
 				// Remove current map from pool if mp_endmatch_votenextmap_keepcurrent is set to 0.
 				if ( !mp_endmatch_votenextmap_keepcurrent.GetBool() && nCurrentMapIndex >= 0 )
-					arrVoteCandidates.Remove( nCurrentMapIndex );
+					arrVoteCandidates.erase( arrVoteCandidates.begin() + nCurrentMapIndex );
 				
-				while ( arrVoteCandidates.Count() > 10 )
+				while ( std::ssize( arrVoteCandidates ) > 10 )
 				{
-					int nRemoveIndex = RandomInt( 0, arrVoteCandidates.Count() - 1 );
+					int nRemoveIndex = RandomInt( 0, std::ssize( arrVoteCandidates ) - 1 );
 					if ( mp_endmatch_votenextmap_keepcurrent.GetBool() && ( arrVoteCandidates[nRemoveIndex] == nCurrentMapIndex ) )
 					{
 						nRemoveIndex ++;
-						nRemoveIndex %= arrVoteCandidates.Count();
+						nRemoveIndex %= std::ssize( arrVoteCandidates );
 					}
-					arrVoteCandidates.Remove( nRemoveIndex );
+					arrVoteCandidates.erase( arrVoteCandidates.begin() + nRemoveIndex );
 				}
 			}
 		}
 		for ( int iVoteOption = 0; iVoteOption < MAX_ENDMATCH_VOTE_PANELS; ++ iVoteOption )
-			m_nEndMatchMapGroupVoteOptions.Set( iVoteOption, arrVoteCandidates.IsValidIndex( iVoteOption ) ? arrVoteCandidates[iVoteOption] : -1 );
+			m_nEndMatchMapGroupVoteOptions.Set( iVoteOption, ks::is_valid_index( arrVoteCandidates, iVoteOption ) ? arrVoteCandidates[iVoteOption] : -1 );
 	}
 
 	void CCSGameRules::ReportRoundEndStatsToGC( ks::net::CMsgGCCStrike15_v2_MatchmakingServerRoundStats **ppAllocateStats )
@@ -14013,8 +13987,8 @@ void ServerThinkReplayUploader()
                 else
                 {
                     // Increment our iterator since it's not going to call CreateNextEntity for this ent.
-                    if ( m_iIterator != g_MapEntityRefs.InvalidIndex() )
-                        m_iIterator = g_MapEntityRefs.Next( m_iIterator );
+                    if ( m_iIterator < std::ssize( g_MapEntityRefs ) )
+                        ++m_iIterator;
                 
                     return false;
                 }
@@ -14023,7 +13997,7 @@ void ServerThinkReplayUploader()
 
             virtual CBaseEntity* CreateNextEntity( const char *pClassname )
             {
-                if ( m_iIterator == g_MapEntityRefs.InvalidIndex() )
+                if ( m_iIterator >= std::ssize( g_MapEntityRefs ) )
                 {
                     // This shouldn't be possible. When we loaded the map, it should have used 
                     // CCSMapLoadEntityFilter, which should have built the g_MapEntityRefs list
@@ -14034,7 +14008,7 @@ void ServerThinkReplayUploader()
                 else
                 {
                     CMapEntityRef &ref = g_MapEntityRefs[m_iIterator];
-                    m_iIterator = g_MapEntityRefs.Next( m_iIterator );	// Seek to the next entity.
+                    ++m_iIterator;	// Seek to the next entity.
 
                     if ( ref.m_iEdict == -1 || INDEXENT( ref.m_iEdict ) )
                     {
@@ -14055,7 +14029,7 @@ void ServerThinkReplayUploader()
             int m_iIterator; // Iterator into g_MapEntityRefs.
         };
         CCSMapEntityFilter filter;
-        filter.m_iIterator = g_MapEntityRefs.Head();
+        filter.m_iIterator = 0;
 
         // DO NOT CALL SPAWN ON info_node ENTITIES!
 
@@ -15371,7 +15345,7 @@ void CCSGameRules::CheckRespawnWaves( void )
 
 						engine->SetFakeClientConVarValue( bot->edict(), "name", botName );
 					}
-					m_nGuardianGrenadesToGiveBots = RandomInt( 2, MIN( 5, m_nGuardianModeWaveNumber ) );
+					m_nGuardianGrenadesToGiveBots = RandomInt( 2, std::min<std::common_type_t<int, CNetworkVarBase<int, CCSGameRules::NetworkVar_m_nGuardianModeWaveNumber>>>( 5, m_nGuardianModeWaveNumber ) );
 
 					// respawn
 					pPlayer->State_Transition( STATE_GUNGAME_RESPAWN );
@@ -15452,9 +15426,9 @@ bool CCSGameRules::IsEndMatchVotingForNextMapEnabled()
 #else
 			const char* mapGroupName = engine->GetMapGroupName();
 #endif
-			const CUtlStringList* mapsInGroup = g_pGameTypes->GetMapGroupMapList( mapGroupName );
+			const std::vector< std::string >* mapsInGroup = g_pGameTypes->GetMapGroupMapList( mapGroupName );
 			if ( mapsInGroup )
-				return (mapsInGroup->Count() > 1);
+				return (std::ssize( *mapsInGroup ) > 1);
 		}
 	}
 
@@ -15506,7 +15480,7 @@ float CCSGameRules::GetRespawnWaveMaxLength( int iTeam, bool bScaleWithNumPlayer
 	// For long respawn times, scale the time as the number of players drops
 	if ( bScaleWithNumPlayers && flTime > 5 )
 	{
-		flTime = MAX( 5, flTime * GetRespawnTimeScalar(iTeam) );
+		flTime = std::max<std::common_type_t<int, float>>( 5, flTime * GetRespawnTimeScalar(iTeam) );
 	}
 
 	return flTime;
@@ -15649,7 +15623,7 @@ void CCSGameRules::ClearItemsDroppedDuringMatch( void )
 #ifndef CLIENT_DLL
 	m_bPlayerItemsHaveBeenDisplayed = false; 
 #endif
-	m_ItemsPtrDroppedDuringMatch.PurgeAndDeleteElements(); 
+	m_ItemsPtrDroppedDuringMatch.clear();
 }
 
 void CCSGameRules::RecordPlayerItemDrop( const ks::net::CEconItemPreviewDataBlock &iteminfo )
@@ -15657,7 +15631,7 @@ void CCSGameRules::RecordPlayerItemDrop( const ks::net::CEconItemPreviewDataBloc
 	if ( !iteminfo.accountid )
 		return;
 
-	for ( int i = 0; i < m_ItemsPtrDroppedDuringMatch.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_ItemsPtrDroppedDuringMatch ); i++ )
 	{
 		// if we've recorded this item already, don't record it again
 		if ( m_ItemsPtrDroppedDuringMatch[i]->itemid == iteminfo.itemid &&
@@ -15706,10 +15680,10 @@ void CCSGameRules::RecordPlayerItemDrop( const ks::net::CEconItemPreviewDataBloc
 	
 	// check to see if this player is still connected
 	if ( bFoundPlayer )
-		m_ItemsPtrDroppedDuringMatch.AddToTail( new ks::net::CEconItemPreviewDataBlock( iteminfo ) );
+		m_ItemsPtrDroppedDuringMatch.push_back( std::make_unique< ks::net::CEconItemPreviewDataBlock >( iteminfo ) );
 
 #else
-	m_ItemsPtrDroppedDuringMatch.AddToTail( new ks::net::CEconItemPreviewDataBlock( iteminfo ) );
+	m_ItemsPtrDroppedDuringMatch.push_back( std::make_unique< ks::net::CEconItemPreviewDataBlock >( iteminfo ) );
 #endif
 }
 
@@ -16132,8 +16106,8 @@ void CCSGameRules::SendPlayerItemDropsToClient()
 	// first randomize the list before we send it
 	VectorShuffle( m_ItemsPtrDroppedDuringMatch );
 
-	msg.entity_updates.reserve( m_ItemsPtrDroppedDuringMatch.Count() );
-	for ( int i = 0; i < m_ItemsPtrDroppedDuringMatch.Count(); i++ )
+	msg.entity_updates.reserve( std::ssize( m_ItemsPtrDroppedDuringMatch ) );
+	for ( int i = 0; i < std::ssize( m_ItemsPtrDroppedDuringMatch ); i++ )
 	{
 		msg.entity_updates.emplace_back() = *m_ItemsPtrDroppedDuringMatch[i];
 	}
@@ -16318,9 +16292,9 @@ void CCSGameRules::AddTeamAccount( int team, TeamCashAward::Type reason, int amo
 
 	// Update all QMM records for the teams
 	bool bTeamsArePlayingSwitchedSides = AreTeamsPlayingSwitchedSides();
-	FOR_EACH_MAP_FAST( m_mapQueuedMatchmakingPlayersData, idxQMMEntry )
+	for ( auto &[uiAccountID, pQMM] : m_mapQueuedMatchmakingPlayersData )
 	{
-		CQMMPlayerData_t &qmmData = * m_mapQueuedMatchmakingPlayersData.Element( idxQMMEntry );
+		CQMMPlayerData_t &qmmData = *pQMM;
 		int iRulesTeam = bTeamsArePlayingSwitchedSides ? ( (qmmData.m_iDraftIndex < 5)?TEAM_TERRORIST:TEAM_CT ) : ( (qmmData.m_iDraftIndex < 5)?TEAM_CT:TEAM_TERRORIST );
 		if ( ( iRulesTeam == team ) && !qmmData.m_bReceiveNoMoneyNextRound )
 		{	// we set all records even though alive players will stomp them when receiving money in the loop right below
@@ -16589,8 +16563,8 @@ int CCSGameRules::GetWeaponScoreForDeathmatch( int nPos )
 	if ( pWeaponInfo )
 	{
 		// 					float flScore1 = ((pWeaponInfo->m_flCycleTime / pWeaponInfo->m_iDamage)-0.001f) * 10;
-		// 					float flScore2 = ((pWeaponInfo->m_iKillAward / MAX( 500, pWeaponInfo->m_iWeaponPrice )) + flScore1) * 100;
-		// 					int nScore = MAX( 1, ceil(flScore2) );
+		// 					float flScore2 = ((pWeaponInfo->m_iKillAward / std::max( 500, pWeaponInfo->m_iWeaponPrice )) + flScore1) * 100;
+		// 					int nScore = std::max( 1, ceil(flScore2) );
 		// 					pPlayer->AddContributionScore( nScore );
 
 		if ( wepID == WEAPON_KNIFE )
@@ -16599,11 +16573,11 @@ int CCSGameRules::GetWeaponScoreForDeathmatch( int nPos )
 		}
 		else
 		{
-			int nPrice = MIN( 4500, MAX(100, pWeaponInfo->GetWeaponPrice() - (pWeaponInfo->GetKillAward()/2)) );
-			float flScore1 = MAX( 0.05f, ((1 - ((float)nPrice/4500.0f)) * 10)/5);
-			float flScore2 = flScore1 + MIN( 2.0f, (((pWeaponInfo->GetCycleTime() / pWeaponInfo->GetDamage() ) *10 ) + ( ( 2.0f-pWeaponInfo->GetArmorRatio() ) /2 ) ) / 4 );
+			int nPrice = std::min( 4500, std::max(100, pWeaponInfo->GetWeaponPrice() - (pWeaponInfo->GetKillAward()/2)) );
+			float flScore1 = std::max( 0.05f, ((1 - ((float)nPrice/4500.0f)) * 10)/5);
+			float flScore2 = flScore1 + std::min( 2.0f, (((pWeaponInfo->GetCycleTime() / pWeaponInfo->GetDamage() ) *10 ) + ( ( 2.0f-pWeaponInfo->GetArmorRatio() ) /2 ) ) / 4 );
 			float flFinal = ceil(flScore2-0.5f);//ceil((flScore2/6) * 10 );
-			nScore = MAX( 0, flFinal ) + 10;
+			nScore = std::max<std::common_type_t<int, float>>( 0, flFinal ) + 10;
 		}
 	}
 
@@ -16647,7 +16621,7 @@ void CCSGameRules::CoopSetBotQuotaAndRefreshSpawns( int nMaxEnemiesToSpawn )
 	m_iMaxNumTerrorists = nMaxEnemiesToSpawn;
 
 	ConVarRef bot_quota( "bot_quota" );
-	int nQuota = UTIL_HumansInGame( true, true ) + MIN( m_iMaxNumTerrorists, m_iSpawnPointCount_Terrorist );
+	int nQuota = UTIL_HumansInGame( true, true ) + std::min( m_iMaxNumTerrorists, m_iSpawnPointCount_Terrorist );
 	bot_quota.SetValue( nQuota );
 
 	ShuffleSpawnPointLists();
@@ -16704,7 +16678,7 @@ void CCSGameRules::CoopMissionSpawnNextWave( int nMaxEnemiesToSpawn )
 
 	// make sure that there are always enough bots
 	ConVarRef bot_quota( "bot_quota" );
-	int nQuota = UTIL_HumansInGame( true, true ) + MIN( m_iMaxNumTerrorists, m_iSpawnPointCount_Terrorist );
+	int nQuota = UTIL_HumansInGame( true, true ) + std::min( m_iMaxNumTerrorists, m_iSpawnPointCount_Terrorist );
 	bot_quota.SetValue( nQuota );
 
 	//DevMsg( ">> Setting bot_quota to %d\n", nQuota );
@@ -16724,15 +16698,15 @@ void CCSGameRules::CoopMissionRespawnDeadPlayers( void )
 
 	// the CT spawn points for respawn are enabled, respawn now - we can work on the appropriate timings later
 	CTeam *pTeam = GetGlobalTeam( TEAM_CT );
-	CUtlVector < CCSPlayer* > vecPlayers;
+	std::vector< CCSPlayer* > vecPlayers;
 	if ( pTeam->GetHumanMembers( &vecPlayers ) )
 	{
-		FOR_EACH_VEC( vecPlayers, i )
+		for ( CCSPlayer *pCTPlayer : vecPlayers )
 		{
 			// respawn any dead CTs as well
-			if ( vecPlayers[i]->IsAlive() == false )
+			if ( pCTPlayer->IsAlive() == false )
 			{
-				vecPlayers[i]->State_Transition( STATE_GUNGAME_RESPAWN );
+				pCTPlayer->State_Transition( STATE_GUNGAME_RESPAWN );
 			}
 		}
 	}
@@ -17022,13 +16996,13 @@ CEconQuestDefinition* CCSGameRules::GetActiveAssassinationQuest( void ) const
 
 float CCSGameRules::GetCMMItemDropRevealDuration()
 {
-	if ( m_flCMMItemDropRevealEndTime == 0 && m_ItemsPtrDroppedDuringMatch.Count() <= 0 )
+	if ( m_flCMMItemDropRevealEndTime == 0 && std::ssize( m_ItemsPtrDroppedDuringMatch ) <= 0 )
 		return 2;
 
 	if ( m_flCMMItemDropRevealEndTime == 0 && m_flCMMItemDropRevealStartTime != 0 )
 	{
 		float flItemDropTime = 2.0f;
-		for ( int i = 0; i < m_ItemsPtrDroppedDuringMatch.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_ItemsPtrDroppedDuringMatch ); i++ )
 		{
 			switch ( m_ItemsPtrDroppedDuringMatch[i]->rarity )
 			{
@@ -17064,7 +17038,7 @@ float CCSGameRules::GetCMMItemDropRevealDuration()
 		m_flCMMItemDropRevealEndTime = (m_flCMMItemDropRevealStartTime + flItemDropTime);
 	}
 
-	return MAX( 2, (m_flCMMItemDropRevealEndTime - m_flCMMItemDropRevealStartTime) );
+	return std::max<std::common_type_t<int, float>>( 2, (m_flCMMItemDropRevealEndTime - m_flCMMItemDropRevealStartTime) );
 }
 
 void CCSGameRules::CreateFriendlyMapNameToken( const char* szShortName, char* szOutBuffer, int nBuffSize )
@@ -17206,24 +17180,24 @@ void CCSGameRules::InitializeGameTypeAndMode( void )
 		{
 			// this is where we build the list of GG progressive weapons
 			// collect all of the weapons here
-			CUtlVector< GGWeaponAliasName > pSMGs;
+			std::vector< GGWeaponAliasName > pSMGs;
 			for ( int i=GGLIST_SMGS_START; i<(GGLIST_SMGS_LAST+1); i++ )
-				pSMGs.AddToTail(ggWeaponAliasNameList[i]);
-			CUtlVector< GGWeaponAliasName > pShotguns;
+				pSMGs.push_back( ggWeaponAliasNameList[i] );
+			std::vector< GGWeaponAliasName > pShotguns;
 			for ( int i=GGLIST_SGS_START; i<(GGLIST_SGS_LAST+1); i++ )
-				pShotguns.AddToTail(ggWeaponAliasNameList[i]);
-			CUtlVector< GGWeaponAliasName > pRifles;
+				pShotguns.push_back( ggWeaponAliasNameList[i] );
+			std::vector< GGWeaponAliasName > pRifles;
 			for ( int i=GGLIST_RIFLES_START; i<(GGLIST_RIFLES_LAST+1); i++ )
-				pRifles.AddToTail(ggWeaponAliasNameList[i]);
-			CUtlVector< GGWeaponAliasName > pSnipers;
+				pRifles.push_back( ggWeaponAliasNameList[i] );
+			std::vector< GGWeaponAliasName > pSnipers;
 			for ( int i=GGLIST_SNIPERS_START; i<(GGLIST_SNIPERS_LAST+1); i++ )
-				pSnipers.AddToTail(ggWeaponAliasNameList[i]);
-			CUtlVector< GGWeaponAliasName > pMGs;
+				pSnipers.push_back( ggWeaponAliasNameList[i] );
+			std::vector< GGWeaponAliasName > pMGs;
 			for ( int i=GGLIST_MGS_START; i<(GGLIST_MGS_LAST+1); i++ )
-				pMGs.AddToTail(ggWeaponAliasNameList[i]);
-			CUtlVector< GGWeaponAliasName > pPistols;
+				pMGs.push_back( ggWeaponAliasNameList[i] );
+			std::vector< GGWeaponAliasName > pPistols;
 			for ( int i=GGLIST_PISTOLS_START; i<(GGLIST_PISTOLS_LAST+1); i++ )
-				pPistols.AddToTail(ggWeaponAliasNameList[i]);
+				pPistols.push_back( ggWeaponAliasNameList[i] );
 
 			int nNumSMGs = 3;
 			int nNumRifles = 4;
@@ -17233,51 +17207,50 @@ void CCSGameRules::InitializeGameTypeAndMode( void )
 			int nNumPistols = 4;
 			// this should total 16 weapons
 
-			int nKillsNeeded = MAX( 1, mp_ggprogressive_random_weapon_kills_needed.GetInt() );
+			int nKillsNeeded = std::max( 1, mp_ggprogressive_random_weapon_kills_needed.GetInt() );
 
 			// now pick a random one from the list we created above for each category
-			CUtlVector< GGWeaponAliasName > pWeaponProgression;
+			std::vector< GGWeaponAliasName > pWeaponProgression;
 			for ( int i=0; i<nNumSMGs; i++ )
 			{
-				int nPick = RandomInt( 0, pSMGs.Count()-1 );
-				pWeaponProgression.AddToTail(pSMGs[nPick]);
-				pSMGs.FastRemove( nPick );
+				int nPick = RandomInt( 0, std::ssize( pSMGs )-1 );
+				pWeaponProgression.push_back( pSMGs[nPick] );
+				ks::swap_remove( pSMGs, nPick );
 			}
 			for ( int i=0; i<nNumRifles; i++ )
 			{
-				int nPick = RandomInt( 0, pRifles.Count()-1 );
-				pWeaponProgression.AddToTail(pRifles[nPick]);
-				pRifles.FastRemove( nPick );
+				int nPick = RandomInt( 0, std::ssize( pRifles )-1 );
+				pWeaponProgression.push_back( pRifles[nPick] );
+				ks::swap_remove( pRifles, nPick );
 			}
 			for ( int i=0; i<nNumShotguns; i++ )
 			{
-				int nPick = RandomInt( 0, pShotguns.Count()-1 );
-				pWeaponProgression.AddToTail(pShotguns[nPick]);
-				pShotguns.FastRemove( nPick );
+				int nPick = RandomInt( 0, std::ssize( pShotguns )-1 );
+				pWeaponProgression.push_back( pShotguns[nPick] );
+				ks::swap_remove( pShotguns, nPick );
 			}
 			for ( int i=0; i<nNumSnipers; i++ )
 			{
-				int nPick = RandomInt( 0, pSnipers.Count()-1 );
-				pWeaponProgression.AddToTail(pSnipers[nPick]);
-				pSnipers.FastRemove( nPick );
+				int nPick = RandomInt( 0, std::ssize( pSnipers )-1 );
+				pWeaponProgression.push_back( pSnipers[nPick] );
+				ks::swap_remove( pSnipers, nPick );
 			}
 			for ( int i=0; i<nNumMGs; i++ )
 			{
-				int nPick = RandomInt( 0, pMGs.Count()-1 );
-				pWeaponProgression.AddToTail(pMGs[nPick]);
-				pMGs.FastRemove( nPick );
+				int nPick = RandomInt( 0, std::ssize( pMGs )-1 );
+				pWeaponProgression.push_back( pMGs[nPick] );
+				ks::swap_remove( pMGs, nPick );
 			}
 			for ( int i=0; i<nNumPistols; i++ )
 			{
-				int nPick = RandomInt( 0, pPistols.Count()-1 );
-				pWeaponProgression.AddToTail(pPistols[nPick]);
-				pPistols.FastRemove( nPick );
+				int nPick = RandomInt( 0, std::ssize( pPistols )-1 );
+				pWeaponProgression.push_back( pPistols[nPick] );
+				ks::swap_remove( pPistols, nPick );
 			}
 
 			// go through the list we build and add them to the final list that will get used in the game
-			FOR_EACH_VEC( pWeaponProgression, iWeaponProgression )
+			for ( const GGWeaponAliasName &wp : pWeaponProgression )
 			{
-				const GGWeaponAliasName &wp = (pWeaponProgression)[iWeaponProgression];
 				AddGunGameWeapon( wp.aliasName, nKillsNeeded, TEAM_CT );
 				AddGunGameWeapon( wp.aliasName, nKillsNeeded, TEAM_TERRORIST );
 			}
@@ -17289,23 +17262,21 @@ void CCSGameRules::InitializeGameTypeAndMode( void )
 		// Add the gun game weapons.
         else if ( IsPlayingGunGameTRBomb() || IsPlayingGunGameProgressive() )
         {
-            const CUtlVector< IGameTypes::WeaponProgression > *pWeaponProgressionCT = g_pGameTypes->GetWeaponProgressionForCurrentModeCT();
+            const std::vector< IGameTypes::WeaponProgression > *pWeaponProgressionCT = g_pGameTypes->GetWeaponProgressionForCurrentModeCT();
             if ( pWeaponProgressionCT )
             {
-                FOR_EACH_VEC( *pWeaponProgressionCT, iWeaponProgression )
+                for ( const IGameTypes::WeaponProgression &wp : *pWeaponProgressionCT )
                 {
-                    const IGameTypes::WeaponProgression &wp = (*pWeaponProgressionCT)[iWeaponProgression];
-                    AddGunGameWeapon( wp.m_Name, wp.m_Kills, TEAM_CT );
+                    AddGunGameWeapon( wp.m_Name.c_str(), wp.m_Kills, TEAM_CT );
                 }
             }
 
-            const CUtlVector< IGameTypes::WeaponProgression > *pWeaponProgressionT = g_pGameTypes->GetWeaponProgressionForCurrentModeT();
+            const std::vector< IGameTypes::WeaponProgression > *pWeaponProgressionT = g_pGameTypes->GetWeaponProgressionForCurrentModeT();
             if ( pWeaponProgressionT )
             {
-                FOR_EACH_VEC( * pWeaponProgressionT, iWeaponProgression )
+                for ( const IGameTypes::WeaponProgression &wp : *pWeaponProgressionT )
                 {
-                    const IGameTypes::WeaponProgression &wp = (* pWeaponProgressionT )[iWeaponProgression];
-                    AddGunGameWeapon( wp.m_Name, wp.m_Kills, TEAM_TERRORIST );
+                    AddGunGameWeapon( wp.m_Name.c_str(), wp.m_Kills, TEAM_TERRORIST );
                 }
             }
         }
@@ -17415,7 +17386,7 @@ int CCSGameRules::GetMaxPlayers()
 	}
 #endif
 
-	return MIN( g_pGameTypes->GetCurrentServerNumSlots(), 24 );
+	return std::min( g_pGameTypes->GetCurrentServerNumSlots(), 24 );
 }
 
 void CCSGameRules::CoopResetRoundStartTime( void )
@@ -17428,9 +17399,9 @@ void CCSGameRules::CoopResetRoundStartTime( void )
 	if ( IsPlayingCoopMission() )
 	{
 		// Reset certain player stats when this happens
-		FOR_EACH_MAP( m_mapQueuedMatchmakingPlayersData, idxQueuedPlayer )
+		for ( auto &[uiAccountID, pQMM] : m_mapQueuedMatchmakingPlayersData )
 		{
-			CQMMPlayerData_t &qmm = *m_mapQueuedMatchmakingPlayersData.Element( idxQueuedPlayer );
+			CQMMPlayerData_t &qmm = *pQMM;
 			qmm.m_numHealthPointsRemovedTotal = 0;
 			qmm.m_numHealthPointsDealtTotal = 0;
 			qmm.m_numShotsFiredTotal = 0;
@@ -17443,12 +17414,12 @@ void CCSGameRules::CoopResetRoundStartTime( void )
 
 	// we also want to refresh the difficulty of the bots here
 	CTeam *pTeam = GetGlobalTeam( TEAM_TERRORIST );
-	CUtlVector < CCSBot* > vecBotsOnTeam;
+	std::vector< CCSBot* > vecBotsOnTeam;
 	if ( pTeam->GetBotMembers( &vecBotsOnTeam ) )
 	{
-		FOR_EACH_VEC( vecBotsOnTeam, i )
+		for ( CCSBot *pTeamBot : vecBotsOnTeam )
 		{
-			vecBotsOnTeam[i]->CoopInitialize();
+			pTeamBot->CoopInitialize();
 		}
 	}
 #endif
@@ -17458,13 +17429,13 @@ void CCSGameRules::CoopGiveC4sToCTs( int nC4sToGive )
 {
 #ifdef GAME_DLL
 	CTeam *pTeam = GetGlobalTeam( TEAM_CT );
-	CUtlVector < CCSPlayer* > vecPlayers;
+	std::vector< CCSPlayer* > vecPlayers;
 	int nC4s = nC4sToGive;
 	if ( pTeam->GetHumanMembers( &vecPlayers ) )
 	{
-		FOR_EACH_VEC( vecPlayers, i )
+		for ( CCSPlayer *pCTPlayer : vecPlayers )
 		{
-			if ( vecPlayers[i]->Weapon_OwnsThisType( WEAPON_C4_CLASSNAME ) )
+			if ( pCTPlayer->Weapon_OwnsThisType( WEAPON_C4_CLASSNAME ) )
 				nC4s--;
 		}
 
@@ -17472,10 +17443,10 @@ void CCSGameRules::CoopGiveC4sToCTs( int nC4sToGive )
 		if ( nC4s == 0 )
 			return;
 
-		FOR_EACH_VEC( vecPlayers, i )
+		for ( CCSPlayer *pCTPlayer : vecPlayers )
 		{
-			if ( vecPlayers[i]->IsAlive() && !vecPlayers[i]->Weapon_OwnsThisType( WEAPON_C4_CLASSNAME ) )
-				vecPlayers[i]->GiveNamedItem( WEAPON_C4_CLASSNAME );
+			if ( pCTPlayer->IsAlive() && !pCTPlayer->Weapon_OwnsThisType( WEAPON_C4_CLASSNAME ) )
+				pCTPlayer->GiveNamedItem( WEAPON_C4_CLASSNAME );
 		}
 	}
 #endif

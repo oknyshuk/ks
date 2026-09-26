@@ -9,13 +9,13 @@
 #define AI_NETWORK_H
 
 
+#include <vector>
 #include "ispatialpartition.h"
-#include "utlpriorityqueue.h"
+#include "tier1/vector_ops.h"
 
 // ------------------------------------
 
 class CAI_Node;
-class CVarBitVec;
 class INodeListFilter;
 
 struct AI_Waypoint_t;
@@ -57,9 +57,12 @@ struct AI_NearNode_t
 
 //-------------------------------------
 
-class CNodeList : public CUtlPriorityQueue<AI_NearNode_t>
+// Heap of nodes; the head is the nearest node (or the farthest, with RevIsLowerPriority).
+class CNodeList
 {
 public:
+	typedef bool ( *LessFunc_t )( const AI_NearNode_t &, const AI_NearNode_t & );
+
 	static bool IsLowerPriority( const AI_NearNode_t &node1, const AI_NearNode_t &node2 )
 	{
 		// nodes with greater distance are lower priority
@@ -71,8 +74,17 @@ public:
 		return node2.dist > node1.dist;
 	}
 
-	CNodeList( int growSize = 0, int initSize = 0 ) : CUtlPriorityQueue<AI_NearNode_t>( growSize, initSize, IsLowerPriority ) {}
-	CNodeList( AI_NearNode_t *pMemory, int count ) : CUtlPriorityQueue<AI_NearNode_t>( pMemory, count, IsLowerPriority ) {}
+	explicit CNodeList( int nReserve = 0, LessFunc_t lessFunc = IsLowerPriority ) : m_LessFunc( lessFunc ) { m_Heap.reserve( nReserve ); }
+
+	int Count() const { return std::ssize( m_Heap ); }
+	const AI_NearNode_t &ElementAtHead() const { return m_Heap.front(); }
+	void Insert( const AI_NearNode_t &node ) { ks::heap_push( m_Heap, node, m_LessFunc ); }
+	void RemoveAtHead() { ks::heap_pop( m_Heap, m_LessFunc ); }
+	void RemoveAll() { m_Heap.clear(); }
+
+private:
+	std::vector< AI_NearNode_t > m_Heap;
+	LessFunc_t m_LessFunc;
 };
 
 //-----------------------------------------------------------------------------
@@ -98,7 +110,7 @@ public:
 	Vector			GetNodePosition( Hull_t hull, int nodeID );
 	float			GetNodeYaw( int nodeID );
 
-	static int		FindBSSmallest(CVarBitVec *bitString, float *float_array, int array_size); 
+	static int		FindBSSmallest(std::vector< bool > *bitString, float *float_array, int array_size); 
 	
 	int				NumNodes() const 	{ return m_iNumNodes; }
 	CAI_Node*		GetNode( int id, bool bHandleError = true ) const
@@ -190,7 +202,7 @@ private:
 
 #ifdef AI_NODE_TREE
 	ISpatialPartition * m_pNodeTree;
-	CUtlVector<int>		m_GatheredNodes;
+	std::vector< int >		m_GatheredNodes;
 #endif
 };
 

@@ -14,13 +14,13 @@
 #include <iservernetworkable.h>
 #include <bspfile.h>
 #include <keyvalues.h>
-#include <bitvec.h>
+#include <bitset>
 #include <igameevents.h>
-#include "smartptr.h"
+#include "tier1/intrusive_ptr.h"
 #include "userid.h"
 #include "tier1/bitbuf.h"
 #include "steam/steamclientpublic.h"
-#include "tier1/utlarray.h"
+#include <array>
 #include "netmessages.h"
 
 // class CClientFrame;
@@ -55,7 +55,7 @@ public:
 	int						m_nMinWarningBytes;
 	int						m_nStartBit;
 	int						m_nCurBit;
-	CUtlVector< Spike_t >	m_Records;
+	std::vector< Spike_t >	m_Records;
 };
 
 
@@ -177,7 +177,7 @@ public: // Message Handlers
 		NETMSG_Max
 	};
 
-	CUtlArray< CNetMessageBinder, NETMSG_Max > m_NetMessages;
+	std::array< CNetMessageBinder, NETMSG_Max > m_NetMessages;
 
 	virtual void	ConnectionStart(INetChannel *chan) OVERRIDE;
 	virtual void	ConnectionStop()OVERRIDE;
@@ -307,12 +307,12 @@ public:
 										// compressed info from.
 	int				m_nStringTableAckTick; // Highest tick acked for string tables (usually m_nDeltaTick, except when it's -1)
 	int				m_nSignonTick;		// tick the client got his signon data
-	CSmartPtr<CFrameSnapshot,CRefCountAccessorLongName> m_pLastSnapshot;	// last send snapshot
+	ks::intrusive_ptr<CFrameSnapshot> m_pLastSnapshot;	// last send snapshot
 	int				m_nLoadingProgress;	// 0..100 progress, only valid during loading
 
 	CFrameSnapshot	*m_pBaseline;			// current entity baselines as a snapshot
 	int				m_nBaselineUpdateTick;	// last tick we send client a update baseline signal or -1
-	CBitVec<MAX_EDICTS>	m_BaselinesSent;	// baselines sent with last update
+	std::bitset<MAX_EDICTS>	m_BaselinesSent;	// baselines sent with last update
 	int				m_nBaselineUsed;		// 0/1 toggling flag, singaling client what baseline to use
 	
 		

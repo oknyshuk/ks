@@ -11,9 +11,6 @@
 #include "filesystem.h"
 #include "cdll_client_int.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define BANMGR_FILEVERSION	1
 const char *g_pBanMgrFilename = "voice_ban.dt";
 

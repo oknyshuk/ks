@@ -9,8 +9,6 @@
 #include "viewangleanim.h"
 #include "keyvalues.h"
 
-#include "tier0/memdbgon.h"
-
 extern ConVar cl_pitchdown;
 extern ConVar cl_pitchup;
 
@@ -163,12 +161,12 @@ void CViewAngleAnimation::DeleteKeyFrames()
 {
 	int i, c;
 
-	c = m_KeyFrames.Count();
+	c = std::ssize( m_KeyFrames );
 	for ( i = c - 1; i >= 0 ; --i )
 	{
 		delete m_KeyFrames[ i ];
 	}
-	m_KeyFrames.RemoveAll();
+	m_KeyFrames.clear();
 }
 
 void CViewAngleAnimation::LoadViewAnimFile( const char *pKeyFrameFileName )
@@ -220,7 +218,7 @@ void CViewAngleAnimation::SaveAsAnimFile( const char *pKeyFrameFileName )
 
 	KeyValues *pKey = new KeyValues( "keyframe" );
 	int i;
-	int c = m_KeyFrames.Count();
+	int c = std::ssize( m_KeyFrames );
 	char buf[64];
 	for ( i=0;i<c;i++ )
 	{
@@ -243,7 +241,7 @@ void CViewAngleAnimation::SaveAsAnimFile( const char *pKeyFrameFileName )
 void CViewAngleAnimation::AddKeyFrame( CViewAngleKeyFrame *pKeyFrame )
 {
 	pKeyFrame->m_vecAngles -= m_vecBaseAngles;
-	m_KeyFrames.AddToTail( pKeyFrame );
+	m_KeyFrames.push_back( pKeyFrame );
 }
 
 bool CViewAngleAnimation::IsFinished( void )
@@ -253,7 +251,7 @@ bool CViewAngleAnimation::IsFinished( void )
 
 void CViewAngleAnimation::RunAnimation( QAngle angles )
 {
-	if ( m_KeyFrames.Count() == 0 )
+	if ( m_KeyFrames.empty() )
 	{
 		Warning( "CViewAngleAnimation::RunAnimation called on an empty view animation\n" );
 		return;
@@ -283,7 +281,7 @@ void CViewAngleAnimation::ClientThink()
 
 	// find two nearest points
 	int i, c;
-	c = m_KeyFrames.Count();
+	c = std::ssize( m_KeyFrames );
 	float flTime = 0;
 	for ( i=0;i<c;i++ )
 	{

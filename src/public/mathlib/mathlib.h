@@ -364,12 +364,12 @@ FORCEINLINE void VectorClear(vec_t *a)
 
 FORCEINLINE float VectorMaximum(const vec_t *v)
 {
-	return MAX( v[0], MAX( v[1], v[2] ) );
+	return std::max( v[0], std::max( v[1], v[2] ) );
 }
 
 FORCEINLINE float VectorMaximum(const Vector& v)
 {
-	return MAX( v.x, MAX( v.y, v.z ) );
+	return std::max( v.x, std::max( v.y, v.z ) );
 }
 
 FORCEINLINE void VectorScale (const float* in, vec_t scale, float* out)
@@ -857,7 +857,7 @@ inline float MatrixColumnDotProduct( const matrix3x4_t &in1, int col, const Vect
 	return in1[0][col] * in2[0] + in1[1][col] * in2[1] + in1[2][col] * in2[2]; 
 }
 
-int __cdecl BoxOnPlaneSide (const float *emins, const float *emaxs, const cplane_t *plane);
+int BoxOnPlaneSide (const float *emins, const float *emaxs, const cplane_t *plane);
 
 inline float anglemod(float a)
 {
@@ -1701,7 +1701,7 @@ FORCEINLINE unsigned char LinearToLightmap( float f )
 
 FORCEINLINE void ColorClamp( Vector& color )
 {
-	float maxc = MAX( color.x, MAX( color.y, color.z ) );
+	float maxc = std::max( color.x, std::max( color.y, color.z ) );
 	if ( maxc > 1.0f )
 	{
 		float ooMax = 1.0f / maxc;
@@ -2233,10 +2233,10 @@ FORCEINLINE unsigned int * PackNormal_SHORT2( float nx, float ny, float nz, unsi
 	ny *= 16384.0f;
 
 	// '0' and '32768' values are invalid encodings
-	nx = MAX( nx, 1.0f );		// Make sure there are no zero values
-	ny = MAX( ny, 1.0f );
-	nx = MIN( nx, 32767.0f );	// Make sure there are no 32768 values
-	ny = MIN( ny, 32767.0f );
+	nx = std::max( nx, 1.0f );		// Make sure there are no zero values
+	ny = std::max( ny, 1.0f );
+	nx = std::min( nx, 32767.0f );	// Make sure there are no 32768 values
+	ny = std::min( ny, 32767.0f );
 
 	if ( nz < 0.0f )
 		nx = -nx;				// Set the sign bit for z
@@ -2397,7 +2397,7 @@ FORCEINLINE void RGB2YUV( int &nR, int &nG, int &nB, float &fY, float &fU, float
 		dY    = 2*( fV - 0.5f );
 		sat   = sqrtf( dX*dX + dY*dY );
 		sat   = clamp( ( sat*( 1 + SNAP_TO_GREY ) - SNAP_TO_GREY ), 0, 1 );
-		scale = ( sat == 0 ) ? 0 : MIN( ( sqrtf( sat ) / sat ), 4.0f );
+		scale = ( sat == 0 ) ? 0 : std::min( ( sqrtf( sat ) / sat ), 4.0f );
 		fU    = 0.5f + scale*( fU - 0.5f );
 		fV    = 0.5f + scale*( fV - 0.5f );
 	}
@@ -2710,7 +2710,7 @@ inline float matrix3x4_t::GetSylvestersCriterion()const
 	float flDet1 = m_flMatVal[ 0 ][ 0 ];
 	float flDet2 = m_flMatVal[ 0 ][ 0 ] * m_flMatVal[ 1 ][ 1 ] - m_flMatVal[ 1 ][ 0 ] * m_flMatVal[ 0 ][ 1 ];
 	float flDet3 = GetDeterminant();
-	return MIN( MIN( flDet1, flDet2 ), flDet3 );
+	return std::min( std::min( flDet1, flDet2 ), flDet3 );
 }
 
 

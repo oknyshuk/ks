@@ -10,9 +10,8 @@
 #pragma once
 
 #include "qlimits.h"
-#include "bitvec.h"
 #include "bspfile.h"
-#include "utlbuffer.h"
+#include <vector>
 
 #include "filesystem.h"
 #include "filesystem_engine.h"
@@ -27,12 +26,12 @@ struct cbrush_t;
 
 struct TraceVisits_t
 {
-	CVarBitVec m_Brushes;
-	CVarBitVec m_Disps;
+	std::vector< bool > m_Brushes;
+	std::vector< bool > m_Disps;
 };
 
 typedef uint32 TraceCounter_t;
-typedef CUtlVector<TraceCounter_t> CTraceCounterVec;
+typedef std::vector< TraceCounter_t > CTraceCounterVec;
 
 struct TraceInfo_t
 {
@@ -72,8 +71,8 @@ struct TraceInfo_t
 	CTraceCounterVec m_DispCounters[MAX_CHECK_COUNT_DEPTH];
 
 	TraceCounter_t GetCount()				{ return m_Count[m_nCheckDepth]; }
-	TraceCounter_t *GetBrushCounters()		{ return m_BrushCounters[m_nCheckDepth].Base(); }
-	TraceCounter_t *GetDispCounters()		{ return m_DispCounters[m_nCheckDepth].Base(); }
+	TraceCounter_t *GetBrushCounters()		{ return m_BrushCounters[m_nCheckDepth].data(); }
+	TraceCounter_t *GetDispCounters()		{ return m_DispCounters[m_nCheckDepth].data(); }
 
 	bool Visit( cbrush_t *pBrush, int ndxBrush );
 	bool Visit( int dispIndex );
@@ -296,7 +295,6 @@ inline T *CRangeValidatedArray<T>::Base()
 //-----------------------------------------------------------------------------
 // A dumpable version of RangeValidatedArray
 //-----------------------------------------------------------------------------
-#include "tier0/memdbgon.h"
 template <class T> 
 class CDiscardableArray 
 {
@@ -314,7 +312,7 @@ public:
 
 	void Init( char* pFilename, int nOffset, int nCount, void *pData = nullptr )
 	{
-		if ( m_buf.TellPut() )
+		if ( !m_data.empty() )
 		{
 			Discard();
 		}
@@ -326,38 +324,41 @@ public:
 		// can preload as required
 		if ( pData )
 		{
-			m_buf.Put( pData, nCount );
+			const std::byte *pBytes = static_cast< const std::byte * >( pData );
+			m_data.assign( pBytes, pBytes + nCount );
 		}
 	}
 
 	// Either get or load the array as needed:
 	T* Get()
 	{
-		if ( !m_buf.TellPut() )
+		if ( m_data.empty() )
 		{
 			MEM_ALLOC_CREDIT();
 
-			if ( !g_pFileSystem->ReadFile( m_pFilename, nullptr, m_buf, sizeof(T) * m_nCount, m_nOffset ) )
+			auto data = g_pFileSystem->ReadFile( m_pFilename, nullptr, sizeof(T) * m_nCount, m_nOffset );
+			if ( !data )
 			{
 				return nullptr;
 			}
+			m_data = std::move( *data );
 		}
 
-		return (T *)m_buf.PeekGet();
+		return (T *)m_data.data();
 	}
 
 	void Discard()
 	{
-		m_buf.Purge();
+		m_data.clear();
+		m_data.shrink_to_fit();
 	}
 
 protected:
 	int			m_nCount;
-	CUtlBuffer	m_buf;
+	std::vector< std::byte >	m_data;
 	char		m_pFilename[256];
 	int			m_nOffset;
 };
-#include "tier0/memdbgoff.h"
 
 const int SURFACE_INDEX_INVALID = 0xFFFF;
 
@@ -554,10 +555,10 @@ public:
 
 	void Reset()
 	{
-		m_brushList.RemoveAll();
-		m_dispList.RemoveAll();
-		m_entityList.RemoveAll();
-		m_staticPropList.RemoveAll();
+		m_brushList.clear();
+		m_dispList.clear();
+		m_entityList.clear();
+		m_staticPropList.clear();
 		m_mins.Init();
 		m_maxs.Init();
 		m_pEngineTrace = nullptr;
@@ -571,10 +572,10 @@ public:
 
 public:
 
-	CUtlVectorFixedGrowable<unsigned short, TLD_DEF_BRUSH_MAX>	m_brushList;
-	CUtlVectorFixedGrowable<unsigned short, TLD_DEF_DISP_MAX>	m_dispList;
-	CUtlVectorFixedGrowable<collideable_handleentity_t, TLD_DEF_ENTITY_MAX>	m_entityList;
-	CUtlVectorFixedGrowable<collideable_handleentity_t, TLD_DEF_ENTITY_MAX>	m_staticPropList;
+	ks::small_vector< unsigned short, TLD_DEF_BRUSH_MAX >	m_brushList;
+	ks::small_vector< unsigned short, TLD_DEF_DISP_MAX >	m_dispList;
+	ks::small_vector< collideable_handleentity_t, TLD_DEF_ENTITY_MAX >	m_entityList;
+	ks::small_vector< collideable_handleentity_t, TLD_DEF_ENTITY_MAX >	m_staticPropList;
 
 	Vector	m_mins;
 	Vector	m_maxs;

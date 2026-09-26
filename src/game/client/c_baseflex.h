@@ -159,63 +159,14 @@ private:
 		const flexsettinghdr_t *pSettinghdr, bool newexpression );
 
 	// Array of active SceneEvents, in order oldest to newest
-	CUtlVector < CSceneEventInfo >		m_SceneEvents;
-	CUtlVector < CChoreoScene * >		m_ActiveChoreoScenes;
+	std::vector< CSceneEventInfo >		m_SceneEvents;
+	std::vector< CChoreoScene * >		m_ActiveChoreoScenes;
 
 	bool				HasSceneEvents() const;
 
 private:
-// Mapping for each loaded scene file used by this actor
-	struct FS_LocalToGlobal_t
-	{
-		explicit FS_LocalToGlobal_t() :
-			m_Key( 0 ),
-			m_nCount( 0 ),
-			m_Mapping( 0 )
-		{
-		}
-
-		explicit FS_LocalToGlobal_t( const flexsettinghdr_t *key ) :
-			m_Key( key ),
-			m_nCount( 0 ),
-			m_Mapping( 0 )
-		{
-		}		
-
-		void SetCount( int count )
-		{
-			Assert( !m_Mapping );
-			Assert( count > 0 );
-			m_nCount = count;
-			m_Mapping = new int[ m_nCount ];
-			Q_memset( m_Mapping, 0, m_nCount * sizeof( int ) );
-		}
-
-		FS_LocalToGlobal_t( const FS_LocalToGlobal_t& src )
-		{
-			m_Key = src.m_Key;
-			delete m_Mapping;
-			m_Mapping = new int[ src.m_nCount ];
-			Q_memcpy( m_Mapping, src.m_Mapping, src.m_nCount * sizeof( int ) );
-
-			m_nCount = src.m_nCount;
-		}
-
-		~FS_LocalToGlobal_t()
-		{
-			delete m_Mapping;
-			m_nCount = 0;
-			m_Mapping = 0;
-		}
-
-		const flexsettinghdr_t	*m_Key;
-		int						m_nCount;
-		int						*m_Mapping;	
-	};
-
-	static bool FlexSettingLessFunc( const FS_LocalToGlobal_t& lhs, const FS_LocalToGlobal_t& rhs );
-	
-	CUtlRBTree< FS_LocalToGlobal_t, unsigned short > m_LocalToGlobal;
+	// Mapping for each loaded scene file used by this actor: local flex controller index -> global
+	std::map< const flexsettinghdr_t *, std::vector< int > > m_LocalToGlobal;
 
 	float			m_blinktime;
 	int				m_prevblinktoggle;
@@ -229,8 +180,8 @@ private:
 
 	int					m_iMostRecentFlexCounter;
 	Vector				m_CachedViewTarget;
-	CUtlVector< float > m_CachedFlexWeights;
-	CUtlVector< float > m_CachedDelayedFlexWeights;
+	std::vector< float > m_CachedFlexWeights;
+	std::vector< float > m_CachedDelayedFlexWeights;
 
 	// shared flex controllers
 	static int		g_numflexcontrollers;
@@ -288,7 +239,7 @@ private:
 //-----------------------------------------------------------------------------
 inline bool C_BaseFlex::HasSceneEvents() const
 {
-	return m_SceneEvents.Count() != 0;
+	return !m_SceneEvents.empty();
 }
 
 

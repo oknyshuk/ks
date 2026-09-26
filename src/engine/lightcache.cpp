@@ -12,7 +12,7 @@
 #include "studio_internal.h"
 #include "bspfile.h"
 #include "cdll_engine_int.h"
-#include "tier1/mempool.h"
+#include "tier1/fixed_pool.h"
 #include "gl_model_private.h"
 #include "r_local.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
@@ -37,9 +37,6 @@
 #include "gl_matsysiface.h"
 #include "materialsystem/materialsystem_config.h"
 #include "tier2/tier2.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 // EMIT_SURFACE LIGHTS:
 //
@@ -235,7 +232,7 @@ public:
 	int				m_DLightActive; // bit field for which dlights currently affect us.
 									// recomputed by AddDlightsForStaticProps
 	int				m_DLightMarkFrame;	// last frame in which a dlight was marked on this prop (helps detect lights that are marked but have moved away from this prop)
-	CUtlVector<short> m_LightStyleWorldLights;	// This is a list of lights that affect this static prop cache entry.
+	std::vector< short > m_LightStyleWorldLights;	// This is a list of lights that affect this static prop cache entry.
 	int				m_SwitchableLightFrame;		// This is the last frame that switchable lights were calculated.
 	Vector			mins; // fixme: make these smaller
 	Vector			maxs; // fixme: make these smaller
@@ -275,7 +272,7 @@ CON_COMMAND_F( r_lightcache_invalidate, "", FCVAR_CHEAT )
 static lightcache_t lightcache[MAX_CACHE_ENTRY + 2]; // the extra 2 are the head and tail
 static unsigned short lightbuckets[MAX_CACHE_BUCKETS];
 
-static CClassMemoryPool<PropLightcache_t>	s_PropCache( 256, CClassMemoryPool<lightcache_t>::GROW_SLOW );
+static ks::object_pool<PropLightcache_t>	s_PropCache( 256, ks::fixed_pool::grow::slow );
  
 // A memory pool of lightcache entries that is 
 static int cached_r_worldlights = -1;
@@ -854,8 +851,8 @@ static float LightIntensityAndDirectionAtPointOld( dworldlight_t* pLight,
 
 	// Early out for really low-intensity lights
 	// That way we don't need to ray-cast or normalize
-	float intensity = MAX( pLight->intensity[0], pLight->intensity[1] );
-	intensity = MAX(intensity, pLight->intensity[2] );
+	float intensity = std::max( pLight->intensity[0], pLight->intensity[1] );
+	intensity = std::max(intensity, pLight->intensity[2] );
 
 	// This is about 1/256
 	// See the comment titled "EMIT_SURFACE LIGHTS" at the top for info about why we don't 
@@ -1010,7 +1007,7 @@ static float LightIntensityAndDirectionAtPointNew( dworldlight_t* pLight, lightz
 		}
 
 		// cache miss
-		flTraceDistance = MAX( 100.0, 2.0 * dist );		// trace a little further for better caching
+		flTraceDistance = std::max( 100.0, 2.0 * dist );		// trace a little further for better caching
 		epnt += ( dist - flTraceDistance ) * ( *pDirection );
 	}
 	
@@ -1126,7 +1123,7 @@ static float LightIntensityAndDirectionInBox( dworldlight_t* pLight,
 
 				// if any corner intensity is greater, use that value
 				for (int i=0; i<8; i++)
-					flMaxIntensity = MAX( flMaxIntensity, LightIntensityAndDirectionAtPoint( pLight, pZBuf, vecCorners[i], fFlags | LIGHT_NO_RADIUS_CHECK, nullptr, pDirection ) );
+					flMaxIntensity = std::max( flMaxIntensity, LightIntensityAndDirectionAtPoint( pLight, pZBuf, vecCorners[i], fFlags | LIGHT_NO_RADIUS_CHECK, nullptr, pDirection ) );
 
 				return flMaxIntensity;
 
@@ -1395,7 +1392,7 @@ static const byte *AddWorldLightToLightingState( dworldlight_t* pWorldLight,
 	// See the comment titled "EMIT_SURFACE LIGHTS" at the top for info.
 	if (pWorldLight->type == emit_surface || illum >= r_worldlightmin.GetFloat()) // FIXME: tune this value
 	{
-		int nWorldLights = MIN( g_pMaterialSystemHardwareConfig->MaxNumLights(), r_worldlights.GetInt() );
+		int nWorldLights = std::min( g_pMaterialSystemHardwareConfig->MaxNumLights(), r_worldlights.GetInt() );
 
 		// if remaining slots, add to list
 		if ( lightingState.numlights < nWorldLights )
@@ -1541,7 +1538,7 @@ static void AddLightStylesForStaticProp( PropLightcache_t *pcache, LightingState
 {
 	// Next, add each world light with a lightstyle into the lighting state,
 	// ejecting less relevant local lights + folding them into the ambient cube
-	for( int i = 0; i < pcache->m_LightStyleWorldLights.Count(); ++i )
+	for( int i = 0; i < std::ssize( pcache->m_LightStyleWorldLights ); ++i )
 	{
 		Assert( pcache->m_LightStyleWorldLights[i] >= 0 );
 		Assert( pcache->m_LightStyleWorldLights[i] < host_state.worldbrush->numworldlights );
@@ -1752,7 +1749,7 @@ static void	AddWorldLightToLightingStateForStaticProps( dworldlight_t* pWorldLig
 	// See the comment titled "EMIT_SURFACE LIGHTS" at the top for info.
 	if (pWorldLight->type == emit_surface || illum >= r_worldlightmin.GetFloat()) // FIXME: tune this value
 	{
-		int nWorldLights = MIN( g_pMaterialSystemHardwareConfig->MaxNumLights(), r_worldlights.GetInt() );
+		int nWorldLights = std::min( g_pMaterialSystemHardwareConfig->MaxNumLights(), r_worldlights.GetInt() );
 
 		// if remaining slots, add to list
 		if ( lightingState.numlights < nWorldLights )
@@ -1896,7 +1893,7 @@ static void AddStaticLighting(
 			if( !bStaticProp )
 			{
 				int byte = wl->style >> 3;
-				int bit = GetBitForBitnum(wl->style & 0x7);
+				int bit = ( 1 << ( wl->style & 0x7 ) );
 				if( !( pCache->m_pLightstyles[byte] & bit ) )
 				{
 					Vector mins, maxs;
@@ -1939,7 +1936,7 @@ static bool IsCachedLightStylesValid( CBaseLightCache* pCache )
 		int offset = b << 3;
 		for (int i = 0; i < 8; ++i)
 		{
-			int bit = GetBitForBitnum(i & 0x7);
+			int bit = ( 1 << ( i & 0x7 ) );
 			if (test & bit)
 			{
 				if (d_lightstyleframe[offset+i] > pCache->m_LastFrameUpdated_LightStyles)
@@ -2101,7 +2098,7 @@ static const byte* ComputeStaticLightingForCacheEntry( CBaseLightCache *pcache, 
 static void BuildStaticLightingCacheLightStyleInfo( PropLightcache_t* pcache, const Vector& mins, const Vector& maxs )
 {
 	const byte *pVis = nullptr;
-	Assert( pcache->m_LightStyleWorldLights.Count() == 0 );
+	Assert( std::ssize( pcache->m_LightStyleWorldLights ) == 0 );
 	pcache->m_LightingFlags &= ~( HACKLIGHTCACHEFLAGS_HASSWITCHABLELIGHTSTYLE | HACKLIGHTCACHEFLAGS_HASSWITCHABLELIGHTSTYLE );
 	// clear lightstyles
 	memset( pcache->m_pLightstyles, 0, MAX_LIGHTSTYLE_BYTES );
@@ -2135,7 +2132,7 @@ static void BuildStaticLightingCacheLightStyleInfo( PropLightcache_t* pcache, co
 
 			{
 			MEM_ALLOC_CREDIT();
-			pcache->m_LightStyleWorldLights.AddToTail( i );
+			pcache->m_LightStyleWorldLights.push_back( i );
 			}
 
 			int byte = wl->style >> 3;
@@ -2186,7 +2183,7 @@ static ITexture *FindEnvCubemapForPoint( const Vector& origin )
 //-----------------------------------------------------------------------------
 LightCacheHandle_t CreateStaticLightingCache( const Vector& origin, const Vector& mins, const Vector& maxs )
 {
-	PropLightcache_t* pcache = s_PropCache.Alloc();
+	PropLightcache_t* pcache = s_PropCache.alloc();
 
 	pcache->m_LightingOrigin = origin;
 	pcache->m_Flags = 0;
@@ -2222,7 +2219,7 @@ bool StaticLightCacheAffectedByAnimatedLightStyle( LightCacheHandle_t handle )
 	}
 	else
 	{
-		for( int i = 0; i < pcache->m_LightStyleWorldLights.Count(); ++i )
+		for( int i = 0; i < std::ssize( pcache->m_LightStyleWorldLights ); ++i )
 		{
 			Assert( pcache->m_LightStyleWorldLights[i] >= 0 );
 			Assert( pcache->m_LightStyleWorldLights[i] < host_state.worldbrush->numworldlights );
@@ -2246,7 +2243,7 @@ bool StaticLightCacheNeedsSwitchableLightUpdate( LightCacheHandle_t handle )
 	}
 	else
 	{
-		for( int i = 0; i < pcache->m_LightStyleWorldLights.Count(); ++i )
+		for( int i = 0; i < std::ssize( pcache->m_LightStyleWorldLights ); ++i )
 		{
 			Assert( pcache->m_LightStyleWorldLights[i] >= 0 );
 			Assert( pcache->m_LightStyleWorldLights[i] < host_state.worldbrush->numworldlights );
@@ -2273,7 +2270,7 @@ bool StaticLightCacheNeedsSwitchableLightUpdate( LightCacheHandle_t handle )
 //-----------------------------------------------------------------------------
 void ClearStaticLightingCache()
 {
-	s_PropCache.Clear();
+	s_PropCache.clear();
 	s_pAllStaticProps = nullptr;
 }
 
@@ -2626,9 +2623,9 @@ lightcache_t *FindNearestCache( int x, int y, int z, int leafIndex )
 		{
 			dist += 2;
 		}
-		dist = MAX(dist, dx);
-		dist = MAX(dist, dy);
-		dist = MAX(dist, dz);
+		dist = std::max(dist, dx);
+		dist = std::max(dist, dy);
+		dist = std::max(dist, dz);
 		if ( dist < bestDist )
 		{
 			pBest = pCache;

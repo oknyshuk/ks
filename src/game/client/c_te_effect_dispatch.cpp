@@ -14,12 +14,10 @@
 #include "effect_dispatch_data.h"
 #include "c_te_effect_dispatch.h"
 #include "tier1/keyvalues.h"
+#include "tier1/map_ops.h"
 #include "toolframework_client.h"
 #include "tier0/vprof.h"
 #include "particles_new.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // CClientEffectRegistration registration
@@ -43,8 +41,7 @@ CClientEffectRegistration::CClientEffectRegistration( const char *pEffectName, C
 // Purpose: EffectDispatch TE
 //-----------------------------------------------------------------------------
 class [[= ks::reflect::NetTable{ .name = "DT_TEEffectDispatch" } ]]
-      [[= ks::reflect::From<"m_EffectData", ks::reflect::Net{}, nullptr,
-                            &REFERENCE_RECV_TABLE( DT_EffectData )>{} ]]
+      [[= ks::reflect::FromTable<"m_EffectData", &REFERENCE_RECV_TABLE( DT_EffectData )>{} ]]
       C_TEEffectDispatch : public C_BaseTempEntity
 {
 public:
@@ -80,27 +77,25 @@ C_TEEffectDispatch::~C_TEEffectDispatch( void )
 void DispatchEffectToCallback( const char *pEffectName, const CEffectData &m_EffectData )
 {
 	// Built a faster lookup
-	static CUtlStringMap< CClientEffectRegistration* > map;
+	static ks::idict< CClientEffectRegistration* > map;
 	static bool bInitializedMap = false;
 	if ( !bInitializedMap )
 	{
 		for ( CClientEffectRegistration *pReg = CClientEffectRegistration::s_pHead; pReg; pReg = pReg->m_pNext )
 		{
 			// If the name matches, call it
-			if ( map.Defined( pReg->m_pEffectName ) )
+			if ( !map.try_emplace( pReg->m_pEffectName, pReg ).second )
 			{
 				Warning( "Encountered multiple different effects with the same name \"%s\"!\n", pReg->m_pEffectName );
 				continue;
 			}
-
-			map[ pReg->m_pEffectName ] = pReg;
 		}
 		bInitializedMap = true;
 	}
 
 	// Look through all the registered callbacks
-	UtlSymId_t nSym = map.Find( pEffectName );
-	if ( nSym == UTL_INVAL_SYMBOL )
+	CClientEffectRegistration **ppReg = ks::find_ptr( map, pEffectName );
+	if ( !ppReg )
 	{
 		Warning("DispatchEffect: effect \"%s\" not found on client\n", pEffectName );
 		return;
@@ -109,7 +104,7 @@ void DispatchEffectToCallback( const char *pEffectName, const CEffectData &m_Eff
 	// NOTE: Here, we want to scope resource access to only be able to use
 	// those resources specified as being dependencies of this effect
 	g_pPrecacheSystem->LimitResourceAccess( DISPATCH_EFFECT, pEffectName );
-	map[nSym]->m_pFunction( m_EffectData );
+	( *ppReg )->m_pFunction( m_EffectData );
 
 	// NOTE: Here, we no longer need to restrict resource access
 	g_pPrecacheSystem->EndLimitedResourceAccess( );
@@ -258,7 +253,7 @@ void DispatchEffect( IRecipientFilter& filter, float delay, KeyValues *pKeyValue
 //-----------------------------------------------------------------------------
 void ErrorEffectCallback( const CEffectData &data )
 {
-	CSmartPtr<CNewParticleEffect> pEffect = CNewParticleEffect::Create( nullptr, "error" );
+	ks::intrusive_ptr<CNewParticleEffect> pEffect = CNewParticleEffect::Create( nullptr, "error" );
 	if ( pEffect->IsValid() )
 	{
 		pEffect->SetSortOrigin( data.m_vOrigin );

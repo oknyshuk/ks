@@ -20,9 +20,6 @@
 #include "ai_speechqueue.h"
 #include "cs_gamerules.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include <tier0/memdbgon.h>
-
 #define DEBUG_AISPEECH 1
 #ifdef DEBUG_AISPEECH
 ConVar ai_debug_speech( "ai_debug_speech", "0" );
@@ -211,7 +208,7 @@ CAI_Expresser::CAI_Expresser( CBaseFlex *pOuter )
 
 CAI_Expresser::~CAI_Expresser()
 {
-	m_ConceptHistories.Purge();
+	m_ConceptHistories.clear();
 
 	CBaseFlex *RESTRICT outer = GetOuter();
 	if ( outer )
@@ -239,9 +236,9 @@ void CAI_Expresser::TestAllResponses()
 	IResponseSystem *pResponseSystem = GetOuter()->GetResponseSystem();
 	if ( pResponseSystem )
 	{
-		CUtlVector<AI_Response> responses;
+		std::vector< AI_Response > responses;
 		pResponseSystem->GetAllResponses( &responses );
-		for ( int i = 0; i < responses.Count(); i++ )
+		for ( int i = 0; i < std::ssize( responses ); i++ )
 		{
 			char response[ 256 ];
 			responses[i].GetResponse( response, sizeof( response ) );
@@ -810,7 +807,7 @@ bool CAI_Expresser::CanSpeak()
 	if ( m_flLastTimeAcceptedSpeak == gpGlobals->curtime ) // only one speak accepted per think
 		return false;
 
-	float timeOk = MAX( m_flStopTalkTime, m_flBlockedTalkTime );
+	float timeOk = std::max( m_flStopTalkTime, m_flBlockedTalkTime );
 	return ( timeOk <= gpGlobals->curtime );
 }
 
@@ -825,7 +822,7 @@ bool CAI_Expresser::CanSpeakAfterMyself()
 	if ( m_flLastTimeAcceptedSpeak == gpGlobals->curtime ) // only one speak accepted per think
 		return false;
 
-	float timeOk = MAX( m_flStopTalkTimeWithoutDelay, m_flBlockedTalkTime );
+	float timeOk = std::max( m_flStopTalkTimeWithoutDelay, m_flBlockedTalkTime );
 	return ( timeOk <= gpGlobals->curtime );
 }
 
@@ -833,13 +830,12 @@ bool CAI_Expresser::CanSpeakAfterMyself()
 bool CAI_Expresser::CanSpeakConcept( AIConcept_t conc )
 {
 	// Not in history?
-	int iter = m_ConceptHistories.Find( conc );
-	if ( iter == m_ConceptHistories.InvalidIndex() )
+	ConceptHistory_t *history = ks::find_ptr( m_ConceptHistories, (const char *)conc );
+	if ( !history )
 	{
 		return true;
 	}
 
-	ConceptHistory_t *history = &m_ConceptHistories[iter];
 	Assert( history );
 
 	const AI_Response &response = history->m_response;
@@ -871,11 +867,10 @@ bool CAI_Expresser::SpokeConcept( AIConcept_t conc )
 
 float CAI_Expresser::GetTimeSpokeConcept( AIConcept_t conc )
 {
-	int iter = m_ConceptHistories.Find( conc );
-	if ( iter == m_ConceptHistories.InvalidIndex() )
+	ConceptHistory_t *h = ks::find_ptr( m_ConceptHistories, (const char *)conc );
+	if ( !h )
 		return -1;
 
-	ConceptHistory_t *h = &m_ConceptHistories[iter];
 	return h->timeSpoken;
 }
 
@@ -883,15 +878,15 @@ float CAI_Expresser::GetTimeSpokeConcept( AIConcept_t conc )
 
 void CAI_Expresser::SetSpokeConcept( AIConcept_t conc, AI_Response *response, bool bCallback )
 {
-	int idx = m_ConceptHistories.Find( conc );
-	if ( idx == m_ConceptHistories.InvalidIndex() )
+	auto it = m_ConceptHistories.find( (const char *)conc );
+	if ( it == m_ConceptHistories.end() )
 	{
 		ConceptHistory_t h;
 		h.timeSpoken = gpGlobals->curtime;
-		idx = m_ConceptHistories.Insert( conc, h );
+		it = m_ConceptHistories.emplace( (const char *)conc, h ).first;
 	}
 
-	ConceptHistory_t *slot = &m_ConceptHistories[ idx ];
+	ConceptHistory_t *slot = &it->second;
 
 	slot->timeSpoken = gpGlobals->curtime;
 	// Update response info
@@ -908,7 +903,7 @@ void CAI_Expresser::SetSpokeConcept( AIConcept_t conc, AI_Response *response, bo
 
 void CAI_Expresser::ClearSpokeConcept( AIConcept_t conc )
 {
-	m_ConceptHistories.Remove( conc );
+	m_ConceptHistories.erase( (const char *)conc );
 }
 
 //-------------------------------------
@@ -916,11 +911,11 @@ void CAI_Expresser::ClearSpokeConcept( AIConcept_t conc )
 void CAI_Expresser::DumpHistories()
 {
 	int c = 1;
-	for ( int i = m_ConceptHistories.First(); i != m_ConceptHistories.InvalidIndex(); i = m_ConceptHistories.Next(i ) )
+	for ( auto &[name, history] : m_ConceptHistories )
 	{
-		ConceptHistory_t *h = &m_ConceptHistories[ i ];
+		ConceptHistory_t *h = &history;
 
-		DevMsg( "%i: %s at %f\n", c++, m_ConceptHistories.GetElementName( i ), h->timeSpoken );
+		DevMsg( "%i: %s at %f\n", c++, name.c_str(), h->timeSpoken );
 	}
 }
 

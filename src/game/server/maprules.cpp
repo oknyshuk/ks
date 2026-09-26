@@ -20,9 +20,6 @@
 #include "cs_gamerules.h"
 #include "cs_player.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 IMPLEMENT_REFLECT_DATAMAP( CRuleEntity )
 
 
@@ -848,7 +845,7 @@ bool CGamePlayerEquip::KeyValue( const char *szKeyName, const char *szValue )
 
 				m_weaponNames[i] = AllocPooledString(tmp);
 				m_weaponCount[i] = atoi(szValue);
-				m_weaponCount[i] = MAX(0,m_weaponCount[i]);
+				m_weaponCount[i] = std::max(0,m_weaponCount[i]);
 				return true;
 			}
 		}

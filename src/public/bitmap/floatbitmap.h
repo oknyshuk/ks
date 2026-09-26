@@ -48,10 +48,10 @@ inline PixRGBAF PixRGBA8_to_F( PixRGBA8 const &x )
 inline PixRGBA8 PixRGBAF_to_8( PixRGBAF const &f )
 {
 	PixRGBA8 x;
-	x.Red = ( unsigned char )MAX( 0, MIN( 255.0,255.0*f.Red ) );
-	x.Green = ( unsigned char )MAX( 0, MIN( 255.0,255.0*f.Green ) );
-	x.Blue = ( unsigned char )MAX( 0, MIN( 255.0,255.0*f.Blue ) );
-	x.Alpha = ( unsigned char )MAX( 0, MIN( 255.0,255.0*f.Alpha ) );
+	x.Red = ( unsigned char )std::max<std::common_type_t<int, double>>( 0, std::min( 255.0,255.0*f.Red ) );
+	x.Green = ( unsigned char )std::max<std::common_type_t<int, double>>( 0, std::min( 255.0,255.0*f.Green ) );
+	x.Blue = ( unsigned char )std::max<std::common_type_t<int, double>>( 0, std::min( 255.0,255.0*f.Blue ) );
+	x.Alpha = ( unsigned char )std::max<std::common_type_t<int, double>>( 0, std::min( 255.0,255.0*f.Alpha ) );
 	return x;
 }
 
@@ -760,7 +760,7 @@ public:
 		for( int f = 0;f < 6;f ++ )
 			if ( face_maps[f].NumElements() )
 			{
-				ret = MAX( ret, face_maps[f].BrightestColor() );
+				ret = std::max( ret, face_maps[f].BrightestColor() );
 			}
 		return ret;
 	}

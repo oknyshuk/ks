@@ -147,9 +147,6 @@ function __FinishSpawn()
 */
 //lwss end
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define SF_POINTTEMPLATE_DONTREMOVETEMPLATEENTITIES		0x0001
 
 // Level designers can suppress the uniquification of the spawned entity
@@ -177,22 +174,22 @@ public:
 
 	void AddToPrecache( CPointTemplate *ent )
 	{
-		m_Ents.AddToTail( ent );
+		m_Ents.push_back( ent );
 	}
 
 	virtual void LevelInitPreEntity()
 	{
-		m_Ents.RemoveAll();
+		m_Ents.clear();
 	}
 
 	virtual void Shutdown()
 	{
-		m_Ents.RemoveAll();
+		m_Ents.clear();
 	}
 
 	void Precache()
 	{
-		int c = m_Ents.Count();
+		int c = std::ssize( m_Ents );
 		for ( int i = 0 ; i < c; ++i )
 		{
 			CPointTemplate *ent = m_Ents[ i ].Get();
@@ -202,11 +199,11 @@ public:
 			}
 		}
 
-		m_Ents.RemoveAll();
+		m_Ents.clear();
 	}
 private:
 
-	CUtlVector< CHandle< CPointTemplate > >	m_Ents;
+	std::vector< CHandle< CPointTemplate > >	m_Ents;
 };
 
 CPointTemplatePrecacher g_PointTemplatePrecacher( "CPointTemplatePrecacher" );
@@ -258,15 +255,15 @@ void CPointTemplate::StartBuildingTemplates( void )
 		if ( m_iszTemplateEntityNames[i] != NULL_STRING )
 		{
 			CBaseEntity	*pEntity = nullptr;
-			int iOldNum = m_hTemplateEntities.Count();
+			int iOldNum = std::ssize( m_hTemplateEntities );
 			// Add all the entities with the matching targetname
 			while ( (pEntity = gEntList.FindEntityByName( pEntity, STRING(m_iszTemplateEntityNames[i]) )) != nullptr )
 			{
-				m_hTemplateEntities.AddToTail( pEntity );
+				m_hTemplateEntities.push_back( pEntity );
 			}
 
 			// Useful mapmaker warning
-			if ( iOldNum == m_hTemplateEntities.Count() )
+			if ( iOldNum == std::ssize( m_hTemplateEntities ) )
 			{
 				Warning( "Couldn't find any entities named %s, which point_template %s is specifying.\n", STRING(m_iszTemplateEntityNames[i]), STRING(GetEntityName()) );
 			}
@@ -281,7 +278,7 @@ void CPointTemplate::StartBuildingTemplates( void )
 void CPointTemplate::FinishBuildingTemplates( void )
 {
 	// Our template entities are now gone, deleted by the server post turning them into templates.
-	m_hTemplateEntities.Purge();
+	m_hTemplateEntities.clear(); m_hTemplateEntities.shrink_to_fit();
 
 	// Now tell the template system to hook up all the Entity I/O connections within our set of templates.
 	Templates_ReconnectIOForGroup( this );
@@ -311,7 +308,7 @@ void CPointTemplate::AddTemplate( CBaseEntity *pEntity, const char *pszMapData, 
 	MatrixMultiply( matWorldToTemplate, matEntityToWorld, matEntityToTemplate );
 
 	newTemplate.matEntityToTemplate = matEntityToTemplate;
-	m_hTemplates.AddToTail( newTemplate );
+	m_hTemplates.push_back( newTemplate );
 }
 
 //-----------------------------------------------------------------------------
@@ -327,7 +324,7 @@ bool CPointTemplate::ShouldRemoveTemplateEntities( void )
 //-----------------------------------------------------------------------------
 int	CPointTemplate::GetNumTemplates( void )
 {
-	return m_hTemplates.Count();
+	return std::ssize( m_hTemplates );
 }
 
 //-----------------------------------------------------------------------------
@@ -335,7 +332,7 @@ int	CPointTemplate::GetNumTemplates( void )
 //-----------------------------------------------------------------------------
 int	CPointTemplate::GetTemplateIndexForTemplate( int iTemplate )
 {
-	Assert( iTemplate < m_hTemplates.Count() );
+	Assert( iTemplate < std::ssize( m_hTemplates ) );
 	return m_hTemplates[iTemplate].iTemplateIndex;
 }
 
@@ -344,7 +341,7 @@ int	CPointTemplate::GetTemplateIndexForTemplate( int iTemplate )
 //-----------------------------------------------------------------------------
 int CPointTemplate::GetNumTemplateEntities( void )
 {
-	return m_hTemplateEntities.Count();
+	return std::ssize( m_hTemplateEntities );
 }
 
 //-----------------------------------------------------------------------------
@@ -352,7 +349,7 @@ int CPointTemplate::GetNumTemplateEntities( void )
 //-----------------------------------------------------------------------------
 CBaseEntity	*CPointTemplate::GetTemplateEntity( int iTemplateNumber )
 {
-	Assert( iTemplateNumber < m_hTemplateEntities.Count() );
+	Assert( iTemplateNumber < std::ssize( m_hTemplateEntities ) );
 
 	return m_hTemplateEntities[iTemplateNumber];
 }
@@ -364,7 +361,7 @@ CBaseEntity	*CPointTemplate::GetTemplateEntity( int iTemplateNumber )
 void CPointTemplate::PerformPrecache()
 {
 	// Go through all our templated map data and precache all the entities in it
-	int iTemplates = m_hTemplates.Count();
+	int iTemplates = std::ssize( m_hTemplates );
 	if ( !iTemplates )
 	{
 		Msg("Precache called on a point_template that has no templates: %s\n", STRING(GetEntityName()) );
@@ -415,10 +412,10 @@ void CPointTemplate::PerformPrecache()
 //			pEntityMaker - The Entity Maker entity that invoked this call.
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
-bool CPointTemplate::CreateInstance( const Vector &vecOrigin, const QAngle &vecAngles, CUtlVector<CBaseEntity*> *pEntities, CBaseEntity *pEntityMaker, bool bCreateTime )
+bool CPointTemplate::CreateInstance( const Vector &vecOrigin, const QAngle &vecAngles, std::vector< CBaseEntity* > *pEntities, CBaseEntity *pEntityMaker, bool bCreateTime )
 {
 	// Go through all our templated map data and spawn all the entities in it
-	int iTemplates = m_hTemplates.Count();
+	int iTemplates = std::ssize( m_hTemplates );
 	if ( !iTemplates )
 	{
 		Msg("CreateInstance called on a point_template that has no templates: %s\n", STRING(GetEntityName()) );
@@ -514,7 +511,7 @@ bool CPointTemplate::CreateInstance( const Vector &vecOrigin, const QAngle &vecA
 	{
 		if ( pSpawnList[i].m_pEntity )
 		{
-			pEntities->AddToTail( pSpawnList[i].m_pEntity );
+			pEntities->push_back( pSpawnList[i].m_pEntity );
 		}
 	}
 
@@ -525,12 +522,12 @@ bool CPointTemplate::CreateInstance( const Vector &vecOrigin, const QAngle &vecA
 //-----------------------------------------------------------------------------
 // 
 //-----------------------------------------------------------------------------
-void CPointTemplate::CreationComplete( const CUtlVector<CBaseEntity*> &entities )
+void CPointTemplate::CreationComplete( const std::vector< CBaseEntity* > &entities )
 {
-	if ( !entities.Count() )
+	if ( entities.empty() )
 		return;
 
-	ScriptPostSpawn( &m_ScriptScope, (CBaseEntity **)entities.Base(), entities.Count() );
+	ScriptPostSpawn( &m_ScriptScope, (CBaseEntity **)entities.data(), std::ssize( entities ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -540,7 +537,7 @@ void CPointTemplate::CreationComplete( const CUtlVector<CBaseEntity*> &entities 
 void CPointTemplate::InputForceSpawn( inputdata_t &inputdata )
 {
 	// Spawn our template
-	CUtlVector<CBaseEntity*> hNewEntities;
+	std::vector< CBaseEntity* > hNewEntities;
 	if ( !CreateInstance( GetAbsOrigin(), GetAbsAngles(), &hNewEntities ) )
 		return;
 	

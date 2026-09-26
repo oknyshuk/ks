@@ -7,7 +7,7 @@
 #include "rocketui/rocketui.h"
 #include "shaderapi/IShaderDevice.h"
 #include "shaderapi/ishaderapi.h"
-#include "tier1/utlpair.h"
+#include <utility>
 #include "tier3/tier3.h"
 
 #include "rocketrender.h"
@@ -62,8 +62,8 @@ protected:
   Rml::Context *m_debuggerHost;
 
   // List of Document Reload functions for hot-reloading.
-  CUtlVector<CUtlPair<RocketDesinationContext_t,
-                      CUtlPair<LoadDocumentFn, UnloadDocumentFn>>>
+  std::vector< std::pair<RocketDesinationContext_t,
+                      std::pair<LoadDocumentFn, UnloadDocumentFn>> >
       m_documentReloadFuncs;
 
   // Client-owned first refusal on input events (console keys, ESC policy, ...).

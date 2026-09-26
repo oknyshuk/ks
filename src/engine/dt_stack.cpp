@@ -7,9 +7,7 @@
 //=============================================================================//
 
 #include "dt_stack.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include <algorithm>
 
 CDatatableStack::CDatatableStack( CSendTablePrecalc *pPrecalc, unsigned char *pStructBase, int objectID )
 {
@@ -37,7 +35,7 @@ void CDatatableStack::Init( bool bExplicitRoutes, bool bLocalNetworkBackDoor )
 
 	if ( bExplicitRoutes )
 	{
-		memset( m_pProxies, 0xFF, sizeof( m_pProxies[0] ) * m_pPrecalc->m_ProxyPaths.Count() );
+		std::fill_n( m_pProxies, std::ssize( m_pPrecalc->m_ProxyPaths ), UnroutedProxy() );
 	}
 	else
 	{

@@ -10,10 +10,7 @@
 
 #include "info_camera_link.h"
 #include "point_camera.h"
-#include "utllinkedlist.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include <list>
 
 
 //-----------------------------------------------------------------------------
@@ -47,7 +44,7 @@ private:
 //-----------------------------------------------------------------------------
 // List of all info camera links
 //-----------------------------------------------------------------------------
-CUtlFixedLinkedList<CInfoCameraLink *> g_InfoCameraLinkList;
+std::list<CInfoCameraLink *> g_InfoCameraLinkList;	// list: UTIL_Remove may unlink during iteration
 
 
 //-----------------------------------------------------------------------------
@@ -64,12 +61,12 @@ LINK_ENTITY_TO_CLASS( info_camera_link, CInfoCameraLink );
 //-----------------------------------------------------------------------------
 CInfoCameraLink::CInfoCameraLink()
 {		
-	g_InfoCameraLinkList.AddToTail( this );
+	g_InfoCameraLinkList.push_back( this );
 }
 
 CInfoCameraLink::~CInfoCameraLink()
 {
-	g_InfoCameraLinkList.FindAndRemove( this );
+	g_InfoCameraLinkList.remove( this );
 }
 
 
@@ -142,15 +139,15 @@ void PointCameraSetupVisibility( CBaseEntity *pPlayer, int area, unsigned char *
 		pCameraEnt->SetActive( false );
 	}
 	
-	intp nNext;
-	for ( intp i = g_InfoCameraLinkList.Head(); i != g_InfoCameraLinkList.InvalidIndex(); i = nNext )
+	for ( auto it = g_InfoCameraLinkList.begin(), itNext = it; it != g_InfoCameraLinkList.end(); it = itNext )
 	{
-		nNext = g_InfoCameraLinkList.Next( i );
+		itNext = std::next( it );
+		CInfoCameraLink *pLink = *it;
 
-		CBaseEntity *pTargetEnt = g_InfoCameraLinkList[i]->m_hTargetEntity;
+		CBaseEntity *pTargetEnt = pLink->m_hTargetEntity;
 		if ( !pTargetEnt )
 		{
-			UTIL_Remove( g_InfoCameraLinkList[i] );
+			UTIL_Remove( pLink );
 			continue;
 		}
 
@@ -163,7 +160,7 @@ void PointCameraSetupVisibility( CBaseEntity *pPlayer, int area, unsigned char *
 
 		if ( engine->CheckAreasConnected( area, pTargetEnt->NetworkProp()->AreaNum() ) )
 		{
-			CPointCamera *pCameraEnt = g_InfoCameraLinkList[i]->m_hCamera;
+			CPointCamera *pCameraEnt = pLink->m_hCamera;
 			if ( pCameraEnt )
 			{
 				engine->AddOriginToPVS( pCameraEnt->GetAbsOrigin() );

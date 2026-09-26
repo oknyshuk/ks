@@ -9,9 +9,6 @@
 #include "tier0/dbg.h"
 #include "mathlib/mathlib.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 struct InterpolatorNameMap_t
 {
 	int						type;

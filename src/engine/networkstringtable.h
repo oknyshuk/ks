@@ -11,8 +11,6 @@
 #include "networkstringtableitem.h"
 #include "checksum_crc.h"
 #include "netmessages.h"
-#include "tier1/utldict.h"
-#include "tier1/utlbuffer.h"
 #include "tier1/bitbuf.h"
 
 class SVC_CreateStringTable;
@@ -227,7 +225,7 @@ private:
 	bool		m_bLocked;			// currently locked?
 	bool		m_bEnableRollback;	// enables rollback feature
 
-	CUtlVector < CNetworkStringTable* > m_Tables;	// the string tables
+	std::vector< CNetworkStringTable* > m_Tables;	// the string tables
 };
 
 #endif // NETWORKSTRINGTABLE_H

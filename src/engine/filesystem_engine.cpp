@@ -15,9 +15,6 @@
 #include "keyvalues.h"
 #include "host.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define ADDONLIST_FILENAME			"addonlist.txt"
 #define ADDONS_DIRNAME				"addons"
 
@@ -198,13 +195,13 @@ void ReconcileAddonListFile( IFileSystem *pFileSystem, const char *pModPath )
 	//
 	// Loop through the .vpk files
 	//
-	CUtlVector< CUtlString > vecAddonVPKs;
+	std::vector< std::string > vecAddonVPKs;
 	V_snprintf( addonsWildcard, sizeof( addonsWildcard ), "%s%s%c%s", pModPath, ADDONS_DIRNAME, CORRECT_PATH_SEPARATOR, "*.vpk" );
 	const char *pFileName = pFileSystem->FindFirst( addonsWildcard, &findHandleDir );
 
 	while ( pFileName )
 	{	
-		vecAddonVPKs.AddToTail( CUtlString( pFileName ) );
+		vecAddonVPKs.push_back( std::string( ks::nz( pFileName ) ) );
 		pFileName = pFileSystem->FindNext( findHandleDir );
 	}
 
@@ -213,7 +210,7 @@ void ReconcileAddonListFile( IFileSystem *pFileSystem, const char *pModPath )
 	//
 	// Loop through the loose directories
 	//
-	CUtlVector< CUtlString > vecAddonDirs;
+	std::vector< std::string > vecAddonDirs;
 	V_snprintf( addonsWildcard, sizeof( addonsWildcard ), "%s%s%c%s", pModPath, ADDONS_DIRNAME, CORRECT_PATH_SEPARATOR, "*.*" );
 	pFileName = pFileSystem->FindFirst( addonsWildcard, &findHandleDir );
 
@@ -226,7 +223,7 @@ void ReconcileAddonListFile( IFileSystem *pFileSystem, const char *pModPath )
 
 			V_snprintf( szVPKized, sizeof( szVPKized ), "%s.vpk", pFileName );
 
-			if ( !vecAddonVPKs.IsValidIndex( vecAddonVPKs.Find( CUtlString( szVPKized ) ) ) )
+			if ( !ks::is_valid_index( vecAddonVPKs, ks::find_index( vecAddonVPKs, std::string( szVPKized ) ) ) )
 			{
 				char addonsInfoFile[MAX_PATH];
 				FileFindHandle_t findHandleConfig;
@@ -235,7 +232,7 @@ void ReconcileAddonListFile( IFileSystem *pFileSystem, const char *pModPath )
 
 				if ( pFileSystem->FindFirst( addonsInfoFile, &findHandleConfig ) )
 				{
-					vecAddonDirs.AddToTail( CUtlString( pFileName ) ); 
+					vecAddonDirs.push_back( std::string( ks::nz( pFileName ) ) ); 
 				}
 
 				pFileSystem->FindClose( findHandleConfig );
@@ -247,45 +244,45 @@ void ReconcileAddonListFile( IFileSystem *pFileSystem, const char *pModPath )
 	pFileSystem->FindClose( findHandleDir );
 
 	// Add missing, existing directories to the KeyValues
-	FOR_EACH_VEC( vecAddonDirs, i )
+	for ( const auto &addonDir : vecAddonDirs )
 	{
 		// We found a directory that wasn't included in the file - add it
-		if ( !pAddonList->FindKey( vecAddonDirs[i] ) )
+		if ( !pAddonList->FindKey( addonDir.c_str() ) )
 		{
-			pAddonList->SetInt( vecAddonDirs[i], 1 );
+			pAddonList->SetInt( addonDir.c_str(), 1 );
 		}
 	}
 
 	// Add missing, existing VPKs to the KeyValues
-	FOR_EACH_VEC( vecAddonVPKs, i )
+	for ( const auto &addonVPK : vecAddonVPKs )
 	{
 		// We found a VPK that wasn't included in the file - add it
-		if ( !pAddonList->FindKey( vecAddonVPKs[i] ) )
+		if ( !pAddonList->FindKey( addonVPK.c_str() ) )
 		{
-			pAddonList->SetInt( vecAddonVPKs[i], 1 );
+			pAddonList->SetInt( addonVPK.c_str(), 1 );
 		}
 	}
 
 	// Remove any non-existent directories from the KeyValues
 	KeyValues* pIter = pAddonList->GetFirstSubKey();
-	CUtlVector<KeyValues*> vecDoomedSubkeys;
+	std::vector< KeyValues* > vecDoomedSubkeys;
 
 	while( pIter )
 	{
-		if ( !vecAddonDirs.IsValidIndex( vecAddonDirs.Find( CUtlString( pIter->GetName() ) ) ) && 
-			!vecAddonVPKs.IsValidIndex( vecAddonVPKs.Find( CUtlString( pIter->GetName() ) ) ) )
+		if ( !ks::is_valid_index( vecAddonDirs, ks::find_index( vecAddonDirs, std::string( pIter->GetName() ) ) ) && 
+			!ks::is_valid_index( vecAddonVPKs, ks::find_index( vecAddonVPKs, std::string( pIter->GetName() ) ) ) )
 		{
-			vecDoomedSubkeys.AddToTail( pIter );
+			vecDoomedSubkeys.push_back( pIter );
 		}
 
 		pIter = pIter->GetNextKey();
 	} 
 
 	// Now actually delete the missing directories
-	FOR_EACH_VEC( vecDoomedSubkeys, j )
+	for ( KeyValues *pDoomedSubkey : vecDoomedSubkeys )
 	{
-		pAddonList->RemoveSubKey( vecDoomedSubkeys[j] );
-		vecDoomedSubkeys[j]->deleteThis();
+		pAddonList->RemoveSubKey( pDoomedSubkey );
+		pDoomedSubkey->deleteThis();
 	}
 
 	// Persist and dispose
@@ -322,7 +319,7 @@ void FileSystem_UpdateAddonSearchPaths( IFileSystem *pFileSystem )
 	//
 	char gameSearchPath[10*MAX_PATH];
 	char addonSearchString[MAX_PATH];
-	CUtlStringList gameSearchPathList;
+	std::vector< std::string > gameSearchPathList;
 
 	// Construct the search string for determining whether the search path component is an add-on
 	V_snprintf( addonSearchString, sizeof( addonSearchString ), "%s%s", modPath, ADDONS_DIRNAME );
@@ -330,24 +327,24 @@ void FileSystem_UpdateAddonSearchPaths( IFileSystem *pFileSystem )
 	pFileSystem->GetSearchPath( "GAME", false, gameSearchPath, sizeof( gameSearchPath ) );
 	V_SplitString(gameSearchPath, ";", gameSearchPathList );
 
-	FOR_EACH_VEC( gameSearchPathList, i )
+	for ( const auto &searchPath : gameSearchPathList )
 	{
-		if ( V_stristr( gameSearchPathList[i], addonSearchString ) )
+		if ( V_stristr( searchPath.c_str(), addonSearchString ) )
 		{
-			pFileSystem->RemoveSearchPath( gameSearchPathList[i], "GAME" );
+			pFileSystem->RemoveSearchPath( searchPath.c_str(), "GAME" );
 		}
 	}
 
 	// Unmount any VPK addons
-	CUtlVector<CUtlString> loadedVPKs;
+	std::vector< std::string > loadedVPKs;
 
 	pFileSystem->GetVPKFileNames( loadedVPKs );
 
-	FOR_EACH_VEC( loadedVPKs, i )
+	for ( const auto &vpkName : loadedVPKs )
 	{
-		if ( V_stristr( loadedVPKs[i], addonSearchString ) )
+		if ( V_stristr( vpkName.c_str(), addonSearchString ) )
 		{
-			pFileSystem->RemoveVPKFile( loadedVPKs[i] );
+			pFileSystem->RemoveVPKFile( vpkName.c_str() );
 		}
 	}
 
@@ -412,7 +409,7 @@ CON_COMMAND( unload_all_addons, "Reloads the search paths for game addons." )
 	{
 		char addonSearchString[MAX_PATH];
 		char modPath[MAX_PATH];
-		CUtlVector<CUtlString> loadedVPKs;
+		std::vector< std::string > loadedVPKs;
 
 		// Get the path to the mod dir
 		g_pFileSystem->GetSearchPath( "MOD", false, modPath, sizeof( modPath ) );
@@ -422,11 +419,11 @@ CON_COMMAND( unload_all_addons, "Reloads the search paths for game addons." )
 
 		g_pFileSystem->GetVPKFileNames( loadedVPKs );
 
-		FOR_EACH_VEC( loadedVPKs, i )
+		for ( const auto &vpkName : loadedVPKs )
 		{
-			if ( V_stristr( loadedVPKs[i], addonSearchString ) )
+			if ( V_stristr( vpkName.c_str(), addonSearchString ) )
 			{
-				g_pFileSystem->RemoveVPKFile( loadedVPKs[i] );
+				g_pFileSystem->RemoveVPKFile( vpkName.c_str() );
 			}
 		}
 	}

@@ -9,7 +9,8 @@
 #include <mathlib/lightdesc.h>
 #include <assert.h>
 #include <tier1/utlvector.h>
-#include <tier1/utlbuffer.h>
+#include <tier1/byte_reader.h>
+#include <tier1/byte_writer.h>
 #include <mathlib/mathlib.h>
 
 // fast SSE-ONLY ray tracing module. Based upon various "real time ray tracing" research.
@@ -273,12 +274,12 @@ public:
 	Vector m_MaxBound;
 
 	FourVectors BackgroundColor;							//< color where no intersection
-	CUtlVector<CacheOptimizedKDNode> OptimizedKDTree;		//< the packed kdtree. root is 0
-	CUtlBlockVector<CacheOptimizedTriangle> OptimizedTriangleList; //< the packed triangles
-	CUtlVector<int32> TriangleIndexList;					//< the list of triangle indices.
-	CUtlVector<LightDesc_t> LightList;						//< the list of lights
-	CUtlVector<Vector> TriangleColors;						//< color of tries
-	CUtlVector<int32> TriangleMaterials;					//< material index of tries
+	std::vector< CacheOptimizedKDNode > OptimizedKDTree;		//< the packed kdtree. root is 0
+	std::deque< CacheOptimizedTriangle > OptimizedTriangleList; //< the packed triangles
+	std::vector< int32 > TriangleIndexList;					//< the list of triangle indices.
+	std::vector< LightDesc_t > LightList;						//< the list of lights
+	std::vector< Vector > TriangleColors;						//< color of tries
+	std::vector< int32 > TriangleMaterials;					//< material index of tries
 
 public:
 	RayTracingEnvironment() : OptimizedTriangleList( 1024 )
@@ -403,8 +404,8 @@ public:
 
 	// (un)serialization
 	size_t GetSerializationNumBytes( uint32 nSerializationFlags = 0 ) const;
-	void Serialize( CUtlBuffer &outbuf, uint32 nSerializationFlags = 0 ) const;
-	void UnSerialize( CUtlBuffer &inbuf );
+	void Serialize( ks::byte_writer &outbuf, uint32 nSerializationFlags = 0 ) const;
+	void UnSerialize( ks::byte_reader &inbuf );
 
 };
 

@@ -137,13 +137,26 @@ PLATFORM_INTERFACE struct SDL_Window * GetAssertDialogParent();
 	PLATFORM_INTERFACE void AssertImpl( const tchar *pMsg, bool bFatal,
 	                                    const std::source_location &loc = std::source_location::current() );
 
-	#define  _AssertMsg( _exp, _msg, _bFatal )	\
-		do { if ( !(_exp) ) AssertImpl( _msg, _bFatal ); } while (0)
+	// _AssertMsg/_AssertMsgOnce are defined in both states, and the reporting call is what's
+	// gated rather than the macro. Defining them only under DBGFLAG_ASSERT used to leave the
+	// few users that reach them unconditionally (Verify, DbgAssert) referencing AssertImpl in
+	// builds where asserts are compiled out -- and using AssertImpl without including this
+	// header is exactly how a translation unit ends up with a bare "Assert was not declared".
+	#if defined( DBGFLAG_ASSERT )
+		#define  _AssertMsg( _exp, _msg, _bFatal )	\
+			do { if ( !(_exp) ) AssertImpl( _msg, _bFatal ); } while (0)
+	#else
+		#define  _AssertMsg( _exp, _msg, _bFatal )		((void)0)
+	#endif
 
 	// The flag is set before reporting rather than mid-report as the old _executeExp did, so a
 	// recursive assert cannot re-enter the reporter.
-	#define  _AssertMsgOnce( _exp, _msg, _bFatal )	\
-		do { static bool fAsserted; if ( !fAsserted && !(_exp) ) { fAsserted = true; AssertImpl( _msg, _bFatal ); } } while (0)
+	#if defined( DBGFLAG_ASSERT )
+		#define  _AssertMsgOnce( _exp, _msg, _bFatal )	\
+			do { static bool fAsserted; if ( !fAsserted && !(_exp) ) { fAsserted = true; AssertImpl( _msg, _bFatal ); } } while (0)
+	#else
+		#define  _AssertMsgOnce( _exp, _msg, _bFatal )	((void)0)
+	#endif
 
 /* Spew macros... */
 
@@ -170,7 +183,6 @@ PLATFORM_INTERFACE struct SDL_Window * GetAssertDialogParent();
 #define  AssertFatalMsg4( _exp, _msg, a1, a2, a3, a4 )						AssertFatalMsg( _exp, (const tchar *)(CDbgFmtMsg( _msg, a1, a2, a3, a4 )))
 #define  AssertFatalMsg5( _exp, _msg, a1, a2, a3, a4, a5 )					AssertFatalMsg( _exp, (const tchar *)(CDbgFmtMsg( _msg, a1, a2, a3, a4, a5 )))
 #define  AssertFatalMsg6( _exp, _msg, a1, a2, a3, a4, a5, a6 )				AssertFatalMsg( _exp, (const tchar *)(CDbgFmtMsg( _msg, a1, a2, a3, a4, a5, a6 )))
-#define  AssertFatalMsg6( _exp, _msg, a1, a2, a3, a4, a5, a6 )				AssertFatalMsg( _exp, (const tchar *)(CDbgFmtMsg( _msg, a1, a2, a3, a4, a5, a6 )))
 #define  AssertFatalMsg7( _exp, _msg, a1, a2, a3, a4, a5, a6, a7 )			AssertFatalMsg( _exp, (const tchar *)(CDbgFmtMsg( _msg, a1, a2, a3, a4, a5, a6, a7 )))
 #define  AssertFatalMsg8( _exp, _msg, a1, a2, a3, a4, a5, a6, a7, a8 )		AssertFatalMsg( _exp, (const tchar *)(CDbgFmtMsg( _msg, a1, a2, a3, a4, a5, a6, a7, a8 )))
 #define  AssertFatalMsg9( _exp, _msg, a1, a2, a3, a4, a5, a6, a7, a8, a9 )	AssertFatalMsg( _exp, (const tchar *)(CDbgFmtMsg( _msg, a1, a2, a3, a4, a5, a6, a7, a8, a9 )))
@@ -192,7 +204,6 @@ PLATFORM_INTERFACE struct SDL_Window * GetAssertDialogParent();
 #define  AssertFatalMsg3( _exp, _msg, a1, a2, a3 )							((void)0)
 #define  AssertFatalMsg4( _exp, _msg, a1, a2, a3, a4 )						((void)0)
 #define  AssertFatalMsg5( _exp, _msg, a1, a2, a3, a4, a5 )					((void)0)
-#define  AssertFatalMsg6( _exp, _msg, a1, a2, a3, a4, a5, a6 )				((void)0)
 #define  AssertFatalMsg6( _exp, _msg, a1, a2, a3, a4, a5, a6 )				((void)0)
 #define  AssertFatalMsg7( _exp, _msg, a1, a2, a3, a4, a5, a6, a7 )			((void)0)
 #define  AssertFatalMsg8( _exp, _msg, a1, a2, a3, a4, a5, a6, a7, a8 )		((void)0)
@@ -238,13 +249,10 @@ PLATFORM_INTERFACE struct SDL_Window * GetAssertDialogParent();
 #define  DbgVerify( _exp )           						Assert( _exp )
 #endif
 
-#ifdef _DEBUG
-#define DbgAssert( _exp )	Assert( _exp )
-#else
-#define DbgAssert( _exp )	((void)0)
-#endif
-
-#ifdef _DEBUG
+// Assert in debug builds, a no-op otherwise. This used to be defined twice in a row, and
+// keyed off _DEBUG rather than DBGFLAG_ASSERT, so it disagreed with Assert about what
+// "debug" means.
+#ifdef DBGFLAG_ASSERT
 #define DbgAssert( _exp )	Assert( _exp )
 #else
 #define DbgAssert( _exp )	((void)0)
@@ -300,11 +308,6 @@ PLATFORM_INTERFACE struct SDL_Window * GetAssertDialogParent();
 #define AssertAnalyze( _exp )								Assert( _exp )
 #define STRINGIFY_INTERNAL(x) #x
 #define STRINGIFY(x) STRINGIFY_INTERNAL(x)
-
-// The Always version of the assert macros are defined even when DBGFLAG_ASSERT is not, 
-// so they will be available even in release.
-#define  AssertAlways( _exp )           							_AssertMsg( _exp, _T("Assertion Failed: ") _T(#_exp), false )
-#define  AssertMsgAlways( _exp, _msg )  							_AssertMsg( _exp, _msg, false )
 
 
 

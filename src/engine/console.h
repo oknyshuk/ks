@@ -24,11 +24,11 @@ bool Con_IsVisible();
 
 /*
 Read the console log from disk and return it in 'buf'. Buf should come
-in as an empty TEXT_BUFFER CUtlBuffer.
+in as an empty text_writer.
 Returns true if the log file is successfully read.
 */
-class CUtlBuffer;
-bool GetConsoleLogFileData( CUtlBuffer& buf );
+namespace ks { class text_writer; }
+bool GetConsoleLogFileData( ks::text_writer& buf );
 
 
 #endif			// CONSOLE_H

@@ -12,9 +12,6 @@
 #include "iviewrender.h"
 #include "clientalphaproperty.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 class [[= ks::reflect::NetTable{ .name = "DT_Func_LOD" } ]]
       C_Func_LOD : public C_BaseEntity
 {

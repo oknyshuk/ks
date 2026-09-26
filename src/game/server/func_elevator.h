@@ -5,7 +5,6 @@
 #define FUNC_ELEVATOR_H
 
 #include "basetoggle.h"
-#include "utlmap.h"
 
 //--------------------------------------------------------------------------------------------------------
 class CInfoElevatorFloor : public CPointEntity
@@ -66,7 +65,7 @@ public:
 	bool				IsEnabled( void ) const;				// Returns true if the elevator can be moved by buttons etc
 	bool				IsMoving( void ) const;					// Returns true if the elevator is in motion
 
-	void				FindPlayersOnElevator( CUtlVector< CBasePlayer * > *players, int teamNumber = TEAM_UNASSIGNED );	// Fills in a vector of players on the elevator
+	void				FindPlayersOnElevator( std::vector< CBasePlayer * > *players, int teamNumber = TEAM_UNASSIGNED );	// Fills in a vector of players on the elevator
 	bool				IsPlayerOnElevator( CBasePlayer *player );	// Returns true if a player is on the elevator
 
 	float				GetCurrentHeight( void );
@@ -106,7 +105,7 @@ private:
 	COutputEvent m_OnReachedTop;
 	COutputEvent m_OnReachedBottom;
 
-	CUtlVector< FloorInfo > m_floors;
+	std::vector< FloorInfo > m_floors;
 };
 
 
@@ -120,14 +119,14 @@ inline bool CFuncElevator::IsMoving( void ) const
 //--------------------------------------------------------------------------------------------------------
 inline int CFuncElevator::GetNumFloors( void ) const
 {
-	return m_floors.Count();
+	return std::ssize( m_floors );
 }
 
 
 //--------------------------------------------------------------------------------------------------------
 inline const FloorInfo *CFuncElevator::GetFloor( int floorNumber ) const
 {
-	if ( floorNumber < 0 || floorNumber >= m_floors.Count() )
+	if ( floorNumber < 0 || floorNumber >= std::ssize( m_floors ) )
 		return nullptr;
 
 	return &m_floors[ floorNumber ];

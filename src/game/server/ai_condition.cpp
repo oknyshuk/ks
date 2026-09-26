@@ -9,9 +9,6 @@
 #include "ai_basenpc.h"
 #include "ai_condition.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: Given and condition name, return the condition ID
 //-----------------------------------------------------------------------------

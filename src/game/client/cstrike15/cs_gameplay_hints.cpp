@@ -107,7 +107,7 @@ void CCSGameplayHints::PostInit()
 					if ( wszText )
 					{
 						uint32 nContextFlags = BuildContextFlags( entry->FindKey( "context", false ) );
-						m_HintList.AddToTail( new CSGameplayHint_t( szLocToken, nContextFlags ) );
+						m_HintList.push_back( std::make_unique< CSGameplayHint_t >( szLocToken, nContextFlags ) );
 					}
 					else
 					{
@@ -118,12 +118,12 @@ void CCSGameplayHints::PostInit()
 		}
 	}
 	
-	Assert( m_HintList.Count() > 0 );
+	Assert( std::ssize( m_HintList ) > 0 );
  }
 
 void CCSGameplayHints::Cleanup( void )
 {
-	m_HintList.PurgeAndDeleteElements();
+	m_HintList.clear();
 	if ( m_pHintKV )
 	{
 		m_pHintKV->deleteThis();
@@ -135,31 +135,22 @@ void CCSGameplayHints::Shutdown()
 	Cleanup();
 }
 
-int CompareHintsByDisplayCount( CSGameplayHint_t* const* lhs, CSGameplayHint_t* const* rhs )
-{
-	if ( (*lhs)->m_nDisplayCount > (*rhs)->m_nDisplayCount )
-		return 1;
-	else if ( (*lhs)->m_nDisplayCount < (*rhs)->m_nDisplayCount )
-		return -1;
-	return 0;
-}
-
 const char* CCSGameplayHints::GetRandomLeastPlayedHint( void )
 {
-	if ( m_HintList.Count() == 0 )
+	if ( m_HintList.empty() )
 		return nullptr;
 
 	// Sort by times 'used' and pick among the lowest counts. Counts aren't stored and will 
 	// re-zero every time this the CCSGameplayHints class is created (so, every app launch).
-	m_HintList.InPlaceQuickSort( CompareHintsByDisplayCount );
+	std::sort( m_HintList.begin(), m_HintList.end(), []( const auto &a, const auto &b ) { return a->m_nDisplayCount < b->m_nDisplayCount; } );
 
 	uint32 contextFlags = GetCurrentContextFlags();
 
-	CUtlVector<CSGameplayHint_t*> validHints;
+	std::vector< CSGameplayHint_t* > validHints;
 	// Filter out based on current context flags
-	FOR_EACH_VEC( m_HintList, i )
+	for ( const auto &pHint : m_HintList )
 	{
-		CSGameplayHint_t* hint = m_HintList[i];
+		CSGameplayHint_t* hint = pHint.get();
 
 		// If bits are set for required context, make sure all of them are currently met. 
 		if ( hint->m_nRequiredContextFlags == HINT_CONTEXT_ALWAYS_SHOW ||
@@ -168,14 +159,14 @@ const char* CCSGameplayHints::GetRandomLeastPlayedHint( void )
 			// Early out if we found at least one valid hint and we've moved 
 			// on to checking hints that have been displayed more often.
 			// After the sort, the first found valid hint should have the lowest display count.
-			if ( validHints.Count() > 0 && validHints[0]->m_nDisplayCount < hint->m_nDisplayCount )
+			if ( !validHints.empty() && validHints[0]->m_nDisplayCount < hint->m_nDisplayCount )
 				break;
 
-			validHints.AddToTail( hint );
+			validHints.push_back( hint );
 		}
 	}
 
-	int pick = RandomInt( 0, validHints.Count()-1 );
+	int pick = RandomInt( 0, std::ssize( validHints )-1 );
 	CSGameplayHint_t *hint = validHints[pick];
 	hint->m_nDisplayCount++;
 	return hint->m_pszLocToken;

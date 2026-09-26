@@ -241,7 +241,7 @@ private:
 	virtual void 			OnNewParticleEffect( const char *pszParticleName, CNewParticleEffect *pNewParticleEffect );
 	virtual void 			OnParticleEffectDeleted( CNewParticleEffect *pParticleEffect );
 
-	CUtlReference<CNewParticleEffect> m_viewmodelParticleEffect;
+	ks::tracked_ref<CNewParticleEffect> m_viewmodelParticleEffect;
 
 #endif
 
@@ -288,7 +288,7 @@ private:
 	CHandle< C_ViewmodelAttachmentModel > m_viewmodelScopeStencilMask;
 #endif
 
-	CUtlVector< CHandle< C_ViewmodelAttachmentModel > > m_vecViewmodelArmModels; // gloves, sleeves, etc
+	std::vector< CHandle< C_ViewmodelAttachmentModel > > m_vecViewmodelArmModels; // gloves, sleeves, etc
 	CHandle< C_ViewmodelAttachmentModel > m_viewmodelStatTrakAddon;
 	CHandle< C_ViewmodelAttachmentModel > m_viewmodelUidAddon;
 	int						m_iAddOnPlayerClass;
@@ -298,7 +298,7 @@ private:
 
 	//stickers
 	typedef CHandle<C_ViewmodelAttachmentModel>	StickerHandle_t;
-	CUtlVector<StickerHandle_t>	m_hStickerModelAddons;
+	std::vector< StickerHandle_t >	m_hStickerModelAddons;
 	CBaseAnimating* m_pMaterialPreviewShape;
 
 	char					m_szLastSound[64];

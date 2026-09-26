@@ -14,9 +14,6 @@
 #include "entitylist.h"
 #include "globals.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // Landmark class
 void CPointEntity::Spawn( void )
 {

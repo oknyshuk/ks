@@ -10,6 +10,7 @@
 #define INPUT_H
 
 #include "iinput.h"
+#include <mutex>
 #include "mathlib/vector.h"
 #include "kbutton.h"
 #include "ehandle.h"
@@ -379,7 +380,7 @@ protected:
 	PerUserInput_t	m_PerUser[ MAX_SPLITSCREEN_PLAYERS ];
 
 	InputContextHandle_t m_hInputContext;
-	CThreadFastMutex m_IKContactPointMutex;
+	std::recursive_mutex m_IKContactPointMutex;
 };
 
 extern kbutton_t in_strafe;

@@ -7,9 +7,6 @@
 #include "worldimposter_ps20.inc"
 #include "worldimposter_ps20b.inc"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 BEGIN_VS_SHADER( worldimposter, "Help for worldimposter" )
 	BEGIN_SHADER_PARAMS
 		SHADER_PARAM( BASETEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "" )

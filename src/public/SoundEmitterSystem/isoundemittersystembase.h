@@ -9,7 +9,6 @@
 #define ISOUNDEMITTERSYSTEMBASE_H
 
 
-#include "tier1/utldict.h"
 #include "soundflags.h"
 #include "mathlib/compressed_vector.h"
 #include "appframework/iappsystem.h"
@@ -93,18 +92,22 @@ enum gender_t
 };
 
 
+// Index of a wave name in ISoundEmitterSystemBase (AddWaveName / GetWaveName); 16 bits keeps SoundFile at 4 bytes.
+typedef unsigned short WaveNameId_t;
+inline constexpr WaveNameId_t WAVENAME_INVALID = 0xffff;
+
 #pragma pack(1)
 struct SoundFile
 {
 	SoundFile()
 	{
-		symbol = UTL_INVAL_SYMBOL;
+		symbol = WAVENAME_INVALID;
 		gender = GENDER_NONE;
 		available = true;
 		COMPILE_TIME_ASSERT( sizeof(SoundFile) == 4 );
 	}
 
-	CUtlSymbol	symbol;
+	WaveNameId_t	symbol;
 	byte		gender;
 	byte		available;
 };
@@ -248,8 +251,8 @@ public:
 	virtual const char		*GetSoundName( int index ) = 0;
 	virtual bool			GetParametersForSound( const char *soundname, CSoundParameters& params, gender_t gender, bool isbeingemitted = false ) = 0;
 
-	virtual const char		*GetWaveName( CUtlSymbol& sym ) = 0;
-	virtual CUtlSymbol		AddWaveName( const char *name ) = 0;
+	virtual const char		*GetWaveName( WaveNameId_t sym ) = 0;
+	virtual WaveNameId_t	AddWaveName( const char *name ) = 0;
 
 	virtual soundlevel_t	LookupSoundLevel( const char *soundname ) = 0;
 	virtual const char		*GetWavFileForSound( const char *soundname, char const *actormodel ) = 0;

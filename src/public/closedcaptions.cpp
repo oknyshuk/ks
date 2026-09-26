@@ -5,10 +5,7 @@
 //=============================================================================
 #include "closedcaptions.h"
 #include "filesystem.h"
-#include "tier1/utlbuffer.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include <vector>
 
 // Assumed to be set up by calling code
 bool AsyncCaption_t::LoadFromFile( char const *pchFullPath )
@@ -18,8 +15,6 @@ bool AsyncCaption_t::LoadFromFile( char const *pchFullPath )
 		return false;
 
 	MEM_ALLOC_CREDIT();
-
-	CUtlBuffer dirbuffer;
 
 	// Read the header
 	g_pFullFileSystem->Read( &m_Header, sizeof( m_Header ), fh );
@@ -39,14 +34,12 @@ bool AsyncCaption_t::LoadFromFile( char const *pchFullPath )
 	//	Error( "Invalid block size %d, expecting %d for %s\n", m_Header.blocksize, MAX_BLOCK_SIZE, pchFullPath );
 
 	int directoryBytes = m_Header.directorysize * sizeof( CaptionLookup_t );
-	m_CaptionDirectory.EnsureCapacity( m_Header.directorysize );
-	dirbuffer.EnsureCapacity( directoryBytes );
+	std::vector< CaptionLookup_t > directory( m_Header.directorysize );
 
-	g_pFullFileSystem->Read( dirbuffer.Base(), directoryBytes, fh );
+	g_pFullFileSystem->Read( directory.data(), directoryBytes, fh );
 	g_pFullFileSystem->Close( fh );
 
-	m_CaptionDirectory.CopyArray( (const CaptionLookup_t *)dirbuffer.PeekGet(), m_Header.directorysize );
-	m_CaptionDirectory.RedoSort( true );
+	m_CaptionDirectory = CaptionDictionary_t( directory.begin(), directory.end() );
 
 	m_DataBaseFile = pchFullPath;
 	return true;

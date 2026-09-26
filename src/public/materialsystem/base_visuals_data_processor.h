@@ -9,8 +9,12 @@
 #define BASE_VISUALS_DATA_PROCESSOR_H
 
 #include "ivisualsdataprocessor.h"
-#include "utlbuffer.h"
-#include "utlbufferutil.h"
+#include "serialization.h"
+#include "tier1/byte_writer.h"
+
+#include <algorithm>
+#include <span>
+#include <vector>
 
 
 // derive from and extend this class if you have additional items to compare in your Visuals Data Processor
@@ -20,37 +24,39 @@ public:
 	CBaseVisualsDataCompare() = default;
 
 	CBaseVisualsDataCompare( CBaseVisualsDataCompare&& moveFrom ) // = default;
-		: m_nIndex( Move( moveFrom.m_nIndex ) )
-		, m_nSeed( Move( moveFrom.m_nSeed ) )
-		, m_flWear( Move( moveFrom.m_flWear ) )
-		, m_nLOD( Move( moveFrom.m_nLOD ) )
-		, m_nModelID( Move( moveFrom.m_nModelID ) )
-		, m_compareBlob( Move( moveFrom.m_compareBlob ) )
+		: m_nIndex( std::move( moveFrom.m_nIndex ) )
+		, m_nSeed( std::move( moveFrom.m_nSeed ) )
+		, m_flWear( std::move( moveFrom.m_flWear ) )
+		, m_nLOD( std::move( moveFrom.m_nLOD ) )
+		, m_nModelID( std::move( moveFrom.m_nModelID ) )
+		, m_compareBlob( std::move( moveFrom.m_compareBlob ) )
 	{}
 
 	CBaseVisualsDataCompare& operator=( CBaseVisualsDataCompare&& moveFrom ) // = default;
 	{
-		m_nIndex = Move( moveFrom.m_nIndex );
-		m_nSeed = Move( moveFrom.m_nSeed );
-		m_flWear = Move( moveFrom.m_flWear );
-		m_nLOD = Move( moveFrom.m_nLOD );
-		m_nModelID = Move( moveFrom.m_nModelID );
-		m_compareBlob = Move( moveFrom.m_compareBlob );
+		m_nIndex = std::move( moveFrom.m_nIndex );
+		m_nSeed = std::move( moveFrom.m_nSeed );
+		m_flWear = std::move( moveFrom.m_flWear );
+		m_nLOD = std::move( moveFrom.m_nLOD );
+		m_nModelID = std::move( moveFrom.m_nModelID );
+		m_compareBlob = std::move( moveFrom.m_compareBlob );
 		return *this;
 	}
 
 	virtual void FillCompareBlob()
 	{
-		SerializeToBuffer( m_compareBlob );
+		ks::byte_writer w;
+		SerializeToBuffer( w );
+		m_compareBlob = w.release();
 	}
-	virtual const CUtlBuffer &GetCompareBlob() const
+	virtual const std::vector< std::byte > &GetCompareBlob() const
 	{
 		return m_compareBlob;
 	}
 
-	virtual bool Compare( const CUtlBuffer &otherBuf )
+	virtual bool Compare( std::span< const std::byte > other )
 	{
-		return ( m_compareBlob.TellPut() == otherBuf.TellPut() && V_memcmp( otherBuf.Base(), m_compareBlob.Base(), m_compareBlob.TellPut() ) == 0 );
+		return std::ranges::equal( m_compareBlob, other );
 	}
 
 	int m_nIndex;
@@ -60,9 +66,9 @@ public:
 	int m_nModelID;  // for weapons this is CSWeaponID, for clothing this is ClothingDefinitionSlotId_t
 
 protected:
-	virtual void SerializeToBuffer( CUtlBuffer &buf )
+	virtual void SerializeToBuffer( ks::byte_writer &buf )
 	{
-		buf.Clear();
+		buf.clear();
 		Serialize( buf, m_nIndex );
 		Serialize( buf, m_nSeed );
 		Serialize( buf, m_flWear );
@@ -71,7 +77,7 @@ protected:
 	}
 
 private:
-	CUtlBuffer m_compareBlob;
+	std::vector< std::byte > m_compareBlob;
 };
 
 template< class T >
@@ -80,7 +86,7 @@ class CBaseVisualsDataProcessor : public IVisualsDataProcessor
 public:
 	CBaseVisualsDataProcessor()	{}
 
-	virtual bool Compare( const CUtlBuffer &otherBuf ) { return GetCompareObject()->Compare( otherBuf ); }
+	virtual bool Compare( std::span< const std::byte > other ) { return GetCompareObject()->Compare( other ); }
 	virtual IVisualsDataCompare *GetCompareObject() { return &m_compareObject; }
 	virtual const char *GetPatternVTFName() const { return nullptr; }
 

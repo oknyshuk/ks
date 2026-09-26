@@ -9,15 +9,11 @@
 #include "filesystem.h"
 #include "tier2/tier2.h"
 #include "tier2/fileutils.h"
-#include "tier1/UtlStringMap.h"
 #include "tier1/strtools.h"
 #include "mathlib/halton.h"
 #include "bspflags.h"
 #include "const.h"
 #include "particles_internal.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 class C_OP_ConstrainDistance : public CParticleOperatorInstance
@@ -748,7 +744,7 @@ static void WorldIntersectTNew( FourVectors const *pStartPnt, FourVectors const 
 						
 						float ln = delta.Length();
 
-						float traceScale = MAX( 5.0, 300.0 / ( ln + .01 ) );
+						float traceScale = std::max( 5.0, 300.0 / ( ln + .01 ) );
 
 						Vector end = start + delta * traceScale;
 

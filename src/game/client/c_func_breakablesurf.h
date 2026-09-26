@@ -81,7 +81,7 @@ public:
 	ITexture*	m_pCurrentDetailTexture;
 
 	// Stores linked list of edges to render
-	CUtlLinkedList< Panel_t, unsigned short >		m_RenderList;
+	std::vector< Panel_t >		m_RenderList;
 
 
 	C_BreakableSurface();

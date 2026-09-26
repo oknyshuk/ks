@@ -30,7 +30,6 @@
 #include "shaderlib/ShaderDLL.h"
 
 // make "local variable is initialized but not referenced" warnings errors for combo checking macros
-#pragma warning ( error : 4189 )
 
 //-----------------------------------------------------------------------------
 // Global interfaces
@@ -123,7 +122,7 @@ inline bool CShader_IsFlag2Set( IMaterialVar **params, MaterialVarFlags2_t _flag
 		static const char *s_Name = #name; \
 		static int s_nFlags = flags; \
 		class CShaderParam;\
-		static CUtlVector<CShaderParam *> s_ShaderParams;\
+		static std::vector< CShaderParam * > s_ShaderParams;\
 		static CShaderParam *s_pShaderParamOverrides[NUM_SHADER_MATERIAL_VARS];\
 		class CShaderParam\
 		{\
@@ -146,8 +145,8 @@ inline bool CShader_IsFlag2Set( IMaterialVar **params, MaterialVarFlags2_t _flag
 				m_Info.m_pDefaultValue = pDefaultParam;\
 				m_Info.m_pHelp = pHelp;\
 				m_Info.m_nFlags = nFlags;\
-				m_Index = NUM_SHADER_MATERIAL_VARS + s_ShaderParams.Count();\
-				s_ShaderParams.AddToTail( this );\
+				m_Index = NUM_SHADER_MATERIAL_VARS + std::ssize( s_ShaderParams );\
+				s_ShaderParams.push_back( this );\
 			}\
 			operator int()	\
 			{\
@@ -207,7 +206,7 @@ inline bool CShader_IsFlag2Set( IMaterialVar **params, MaterialVarFlags2_t _flag
 	}									\
 	int GetParamCount() const			\
 	{\
-		return CBaseClass::GetParamCount() + s_ShaderParams.Count();\
+		return CBaseClass::GetParamCount() + std::ssize( s_ShaderParams );\
 	}\
 	const ShaderParamInfo_t& GetParamInfo( int param ) const \
 	{\

@@ -11,9 +11,6 @@
 #include "event_tempentity_tester.h"
 #include "tier1/strtools.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define TEMPENT_TEST_GAP		1.0f
 
 //-----------------------------------------------------------------------------
@@ -30,8 +27,8 @@ CBaseEntity *CTempEntTester::Create( const Vector &vecOrigin, const QAngle &vecA
 	if ( lifetime && lifetime[0] )
 	{
 		life = atoi( lifetime );
-		life = MAX( 1.0, life );
-		life = MIN( 1000.0, life );
+		life = std::max<std::common_type_t<double, float>>( 1.0, life );
+		life = std::min<std::common_type_t<double, float>>( 1000.0, life );
 
 		life += gpGlobals->curtime;
 	}

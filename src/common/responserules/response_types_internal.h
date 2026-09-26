@@ -9,7 +9,8 @@
 #define RESPONSE_TYPES_INTERNAL_H
 
 #include "responserules/response_types.h"
-#include "utldict.h"
+#include "tier1/map_ops.h"
+#include <vector>
 
 
 namespace ResponseRules
@@ -31,6 +32,13 @@ namespace ResponseRules
 
 	// Note: HashString causes collisions!!!
 #define RR_HASH HashStringConventional
+
+	struct Criteria;
+	struct ResponseGroup;
+
+	// Entries of CResponseSystem's criteria and response dicts; map nodes are stable, so they serve as handles.
+	typedef std::pair< const std::string, Criteria > CriteriaEntry_t;
+	typedef std::pair< const std::string, ResponseGroup > ResponseGroupEntry_t;
 
 #pragma pack(push,1)
 
@@ -61,8 +69,8 @@ namespace ResponseRules
 		char const *GetRaw();
 
 	private:
-		CUtlSymbol	token;
-		CUtlSymbol	rawtoken;
+		const char	*token;		// in g_RS; null when unset
+		const char	*rawtoken;
 	};
 #pragma pack(pop)
 
@@ -77,19 +85,19 @@ namespace ResponseRules
 		// Does this criterion recursively contain more criteria?
 		inline bool IsSubCriteriaType() const
 		{
-			return ( subcriteria.Count() > 0 ) ? true : false;
+			return !subcriteria.empty();
 		}
 
 	    // const char					*name;
-	    CUtlSymbol					nameSym;
+	    CriteriaSet::CritSymbol_t	nameSym;
 		const char					*value;
 		float16						weight;
 		bool						required;
 
 		Matcher						matcher;
 
-		// Indices into sub criteria
-		CUtlVectorConservative< unsigned short >	subcriteria;
+		// Sub criteria, in the owning system's dict
+		std::vector< CriteriaEntry_t * >	subcriteria;
 	};
 
 #pragma pack(push,1)
@@ -141,10 +149,10 @@ namespace ResponseRules
 
 		ResponseGroup( const ResponseGroup& src )
 		{
-			int c = src.group.Count();
+			int c = std::ssize( src.group );
 			for ( int i = 0; i < c; i++ )
 			{
-				group.AddToTail( src.group[ i ] );
+				group.push_back( src.group[ i ] );
 			}
 
 			m_bDepleteBeforeRepeat = src.m_bDepleteBeforeRepeat;
@@ -161,10 +169,10 @@ namespace ResponseRules
 		{
 			if ( this == &src )
 				return *this;
-			int c = src.group.Count();
+			int c = std::ssize( src.group );
 			for ( int i = 0; i < c; i++ )
 			{
-				group.AddToTail( src.group[ i ] );
+				group.push_back( src.group[ i ] );
 			}
 
 			m_bDepleteBeforeRepeat = src.m_bDepleteBeforeRepeat;
@@ -183,7 +191,7 @@ namespace ResponseRules
 			if ( !m_bDepleteBeforeRepeat )
 				return true;
 
-			int c = group.Count();
+			int c = std::ssize( group );
 			for ( int i = 0; i < c; i++ )
 			{
 				if ( group[ i ].depletioncount != m_nDepletionCount )
@@ -198,7 +206,7 @@ namespace ResponseRules
 			if ( !m_bDepleteBeforeRepeat )
 				return;
 
-			if ( idx < 0 || idx >= group.Count() )
+			if ( idx < 0 || idx >= std::ssize( group ) )
 			{
 				Assert( 0 );
 				return;
@@ -221,7 +229,7 @@ namespace ResponseRules
 			SetCurrentIndex( 0 );
 			m_nDepletionCount = 1;
 
-			for ( int i = 0; i < group.Count(); ++i )
+			for ( int i = 0; i < std::ssize( group ); ++i )
 			{
 				group[ i ].depletioncount = 0;
 			}
@@ -234,7 +242,7 @@ namespace ResponseRules
 			if ( !m_bDepleteBeforeRepeat )
 				return false;
 
-			int c = group.Count();
+			int c = std::ssize( group );
 			for ( int i = 0; i < c; i++ )
 			{
 				ParserResponse *r = &group[ i ];
@@ -256,7 +264,7 @@ namespace ResponseRules
 			if ( !m_bDepleteBeforeRepeat )
 				return false;
 
-			int c = group.Count();
+			int c = std::ssize( group );
 			for ( int i = 0; i < c; i++ )
 			{
 				ParserResponse *r = &group[ i ];
@@ -286,7 +294,7 @@ namespace ResponseRules
 		int		GetCurrentIndex() const { return m_nCurrentIndex; }
 		void	SetCurrentIndex( byte idx ) { m_nCurrentIndex = idx; }
 
-		CUtlVector< ParserResponse >	group;
+		std::vector< ParserResponse >	group;
 
 		bool					m_bEnabled;
 
@@ -320,12 +328,12 @@ namespace ResponseRules
 		inline bool	IsMatchOnce() const { return m_bMatchOnce; }
 		inline bool	IsApplyContextToWorld() const { return m_bApplyContextToWorld; }
 
-	    const char *GetValueForRuleCriterionByName( CResponseSystem *pSystem, const CUtlSymbol &pCritNameSym );
-	    const Criteria *GetPointerForRuleCriterionByName( CResponseSystem *pSystem, const CUtlSymbol &pCritNameSym );
+	    const char *GetValueForRuleCriterionByName( CResponseSystem *pSystem, CriteriaSet::CritSymbol_t pCritNameSym );
+	    const Criteria *GetPointerForRuleCriterionByName( CResponseSystem *pSystem, CriteriaSet::CritSymbol_t pCritNameSym );
 
-		// Indices into underlying criteria and response dictionaries
-		CUtlVectorConservative< unsigned short >	m_Criteria;
-		CUtlVectorConservative< unsigned short>		m_Responses;
+		// Entries in the owning system's criteria and response dictionaries
+		std::vector< CriteriaEntry_t * >	m_Criteria;
+		std::vector< ResponseGroupEntry_t * >	m_Responses;
 
 		const char			*m_szContext;
 		uint8				m_nForceWeight;
@@ -337,62 +345,57 @@ namespace ResponseRules
 
 	private:
 		// what is this, lisp?
-	    const char *RecursiveGetValueForRuleCriterionByName( CResponseSystem *pSystem, const Criteria *pCrit, const CUtlSymbol &pCritNameSym );
-	    const Criteria *RecursiveGetPointerForRuleCriterionByName( CResponseSystem *pSystem, const Criteria *pCrit, const CUtlSymbol &pCritNameSym );
+	    const char *RecursiveGetValueForRuleCriterionByName( CResponseSystem *pSystem, const Criteria *pCrit, CriteriaSet::CritSymbol_t pCritNameSym );
+	    const Criteria *RecursiveGetPointerForRuleCriterionByName( CResponseSystem *pSystem, const Criteria *pCrit, CriteriaSet::CritSymbol_t pCritNameSym );
 	};
 #pragma pack(pop)
 
+	// Insertion-ordered: element indices are packed into ResponseRulePartition::tIndex and walked 0..Count-1.
 	template <typename T, typename I = unsigned short>
-	class CResponseDict : public CUtlMap<unsigned int, T, I>
+	class CResponseDict
 	{
 	public:
-		CResponseDict() : CUtlMap<unsigned int, T, I>( DefLessFunc( unsigned int ) ), m_ReverseMap( DefLessFunc( unsigned int ) )
-		{
-		}
+		typedef I IndexType_t;
 
-		I Insert( const char *pName, const T &element )
+		I Insert( const char *pName, T element )
 		{
 			char const *pString = ResponseCopyString( pName );
 			unsigned int hash = RR_HASH( pString );
-			m_ReverseMap.Insert( hash, pString );
-			return CUtlMap<unsigned int, T, I>::Insert( hash, element );
+			m_ReverseMap.emplace( hash, pString );
+			I i = (I)m_Elements.size();
+			m_Elements.emplace_back( hash, std::move( element ) );
+			m_ByHash.emplace( hash, i );
+			return i;
 		}
-
-		I Insert( const char *pName )
-		{
-			char const *pString = ResponseCopyString( pName );
-			unsigned int hash = RR_HASH( pString );
-			m_ReverseMap.Insert( hash, pString );
-			return CUtlMap<unsigned int, T, I>::Insert( hash );
-		}
+		I Insert( const char *pName )		{ return Insert( pName, T() ); }
 
 		I Find( char const *pName ) const
 		{
-			unsigned int hash = RR_HASH( pName );
-			return CUtlMap<unsigned int, T, I>::Find( hash );
+			auto it = m_ByHash.find( RR_HASH( pName ) );
+			return it == m_ByHash.end() ? InvalidIndex() : it->second;
 		}
 
-		const char *GetElementName( I i )
-		{
-			int k = this->Key( i );
-			int slot = m_ReverseMap.Find( k );
-			if ( slot == m_ReverseMap.InvalidIndex() )
-				return "";
-			return m_ReverseMap[ slot ];
-		}
+		T &operator[]( I i )				{ return m_Elements[i].second; }
+		const T &operator[]( I i ) const	{ return m_Elements[i].second; }
+		T &Element( I i )					{ return m_Elements[i].second; }
+		const T &Element( I i ) const		{ return m_Elements[i].second; }
+		unsigned int Key( I i ) const		{ return m_Elements[i].first; }
+		int Count() const					{ return (int)m_Elements.size(); }
+		bool IsValidIndex( I i ) const		{ return i < m_Elements.size(); }
+		static I InvalidIndex()				{ return (I)-1; }
+		void RemoveAll()					{ m_Elements.clear(); m_ByHash.clear(); }
 
 		const char *GetElementName( I i ) const
 		{
-			int k = this->Key( i );
-			int slot = m_ReverseMap.Find( k );
-			if ( slot == m_ReverseMap.InvalidIndex() )
-				return "";
-			return m_ReverseMap[ slot ];
+			auto it = m_ReverseMap.find( Key( i ) );
+			return it == m_ReverseMap.end() ? "" : it->second;
 		}
 
 	private:
-		CUtlMap< unsigned int, const char * > m_ReverseMap;
-
+		std::vector< std::pair< unsigned int, T > > m_Elements;
+		std::multimap< unsigned int, I > m_ByHash;		// a repeated name keeps every rule; Find returns the first
+		// A repeated name keeps its first copy.
+		std::map< unsigned int, const char * > m_ReverseMap;
 	};
 
     // define this to 1 to enable printing some occupancy
@@ -406,7 +409,7 @@ namespace ResponseRules
 		ResponseRulePartition( void );
 		~ResponseRulePartition();
 
-		typedef CResponseDict< Rule * > tRuleDict;
+		typedef CResponseDict< std::unique_ptr< Rule > > tRuleDict;
 		typedef uint32 tIndex; // an integer that can be used to find any rule in the dict
 
 		/// get the appropriate m_rules dict for the provided rule
@@ -415,7 +418,7 @@ namespace ResponseRules
 	    /// get all bucket full of rules that might possibly match the given criteria.
 		/// (right now they are bucketed such that all rules that can possibly match a 
 	    ///  criteria are in one of two dictionaries)
-	    void GetDictsForCriteria( CUtlVectorFixed< ResponseRulePartition::tRuleDict *, 2 > *pResult, const CriteriaSet &criteria );
+	    void GetDictsForCriteria( std::inplace_vector< ResponseRulePartition::tRuleDict *, 2 > *pResult, const CriteriaSet &criteria );
 
 		// dump everything.
 		void RemoveAll();
@@ -515,7 +518,7 @@ namespace ResponseRules
 	inline bool ResponseRulePartition::IsValid( const tIndex & idx ) const
 	{
 		// make sure that the idx type for the dicts is still short
-		COMPILE_TIME_ASSERT( sizeof(m_RuleParts[0].FirstInorder()) == 2 );
+		COMPILE_TIME_ASSERT( sizeof( tRuleDict::IndexType_t ) == 2 );
 
 		if ( idx == -1 ) 
 			return false;

@@ -26,6 +26,8 @@
 #include "usermessages.h"
 #if defined( GAME_DLL )
 #include "maprules.h"
+#include <map>
+#include <memory>
 #endif
 
 //#define DEBUG_QUESTS_IN_CLIENT
@@ -783,8 +785,8 @@ public:
 	CNetworkArray( int, m_nEndMatchMapGroupVoteOptions, MAX_ENDMATCH_VOTE_PANELS, [[= ks::reflect::Net{ .bits = -1 } ]] );				// For mapgroups >10 maps these will be vote options
 
 	// these functions cover recording and sending item drops for display in game modes where you don't allow drops during the match/round
-	CUtlVector< ks::net::CEconItemPreviewDataBlock * > m_ItemsPtrDroppedDuringMatch;
-	const CUtlVector< ks::net::CEconItemPreviewDataBlock * >& GetItemsDroppedDuringMatch( void ) const
+	std::vector< std::unique_ptr< ks::net::CEconItemPreviewDataBlock > > m_ItemsPtrDroppedDuringMatch;
+	const std::vector< std::unique_ptr< ks::net::CEconItemPreviewDataBlock > >& GetItemsDroppedDuringMatch( void ) const
 	{
 		return m_ItemsPtrDroppedDuringMatch;
 	}
@@ -1172,7 +1174,7 @@ public:
 	int m_iNumCT;				// The number of CTs on the team (this is generated at the end of a round)
 	int m_iNumSpawnableTerrorist;
 	int m_iNumSpawnableCT;
-	CUtlVector< int > m_arrSelectedHostageSpawnIndices; // The indices of hostage spawn locations selected for the match
+	std::vector< int > m_arrSelectedHostageSpawnIndices; // The indices of hostage spawn locations selected for the match
 
 	bool m_bFirstConnected;
 	bool m_bCompleteReset;		// Set to TRUE to have the scores reset next time round restarts
@@ -1194,7 +1196,7 @@ public:
 #ifndef CLIENT_DLL
 	EEndMatchMapVoteState_t m_eEndMatchMapVoteState;
 	int m_nEndMatchMapVoteWinner;
-	CUtlVector<int>	m_nEndMatchTiedVotes;
+	std::vector< int >	m_nEndMatchTiedVotes;
 	void CreateEndMatchMapGroupVoteOptions( void );
 
 	enum EQueuedMatchmakingRematchState_t
@@ -1291,24 +1293,24 @@ public:
 
 		// END RESETTABLE SECTION
 
-		CUtlMap< uint32, uint32, int, CDefLess< uint32 > > m_mapQuestEventPoints;
+		std::map< uint32, uint32 > m_mapQuestEventPoints;
 
 		// TODO: If we have more attributes we want to be processed with the timed rewards job, try to generify this
-		typedef CUtlMap< itemid_t, attrib_value_t, int, CDefLess< itemid_t > > StattrakMusicKitValues_t;
+		typedef std::map< itemid_t, attrib_value_t > StattrakMusicKitValues_t;
 		StattrakMusicKitValues_t m_mapMusicKitUpdates;
 
 		// once the player purchases an econ item, cache it and rebuy it from the cache.
-		typedef CUtlMap< uint16, item_definition_index_t, int16, CDefLess< uint16 > > LoadoutSlotToDefIndexMap_t;
+		typedef std::map< uint16, item_definition_index_t > LoadoutSlotToDefIndexMap_t;
 		LoadoutSlotToDefIndexMap_t m_mapLoadoutSlotToItem[ 2 ];
 
 	};
-	typedef CUtlMap< uint32, CQMMPlayerData_t *, int32, CDefLess< uint32 > > QueuedMatchmakingPlayersDataMap_t;
+	typedef std::map< uint32, std::unique_ptr< CQMMPlayerData_t > > QueuedMatchmakingPlayersDataMap_t;
 	QueuedMatchmakingPlayersDataMap_t m_mapQueuedMatchmakingPlayersData;
 	CQMMPlayerData_t * QueuedMatchmakingPlayersDataFind( uint32 uiAccountID ) const
 	{
 		if ( !uiAccountID ) return nullptr;
-		QueuedMatchmakingPlayersDataMap_t::IndexType_t idx = m_mapQueuedMatchmakingPlayersData.Find( uiAccountID );
-		return ( idx == m_mapQueuedMatchmakingPlayersData.InvalidIndex() ) ? nullptr : m_mapQueuedMatchmakingPlayersData.Element( idx );
+		auto it = m_mapQueuedMatchmakingPlayersData.find( uiAccountID );
+		return ( it == m_mapQueuedMatchmakingPlayersData.end() ) ? nullptr : it->second.get();
 	}
 	CQMMPlayerData_t * QueuedMatchmakingPlayersDataFindOrCreate( CCSPlayer *pPlayer );
 
@@ -1317,7 +1319,7 @@ public:
 		uint32 m_uiReason;
 		double m_dblExpiration;
 	};
-	typedef CUtlMap< uint32, CGcBanInformation_t > GcBanInformationMap_t;
+	typedef std::map< uint32, CGcBanInformation_t > GcBanInformationMap_t;
 	static GcBanInformationMap_t sm_mapGcBanInformation;
 
 	bool m_bForceTeamChangeSilent;
@@ -1330,7 +1332,7 @@ public:
 	};
 	ICalculateEndOfRoundMVPHook_t *m_pfnCalculateEndOfRoundMVPHook;
 
-	typedef CUtlMap< int32, uint32, int32, CDefLess< int32 > > MapMatchInfoShownCounts;
+	typedef std::map< int32, uint32 > MapMatchInfoShownCounts;
 	MapMatchInfoShownCounts m_mapMatchInfoShownCounts; // tracks how many times each match info piece was shown
 	enum MapMatchInfoShownCountsSpecial_t
 	{
@@ -1364,7 +1366,7 @@ public:
 		void CopyToMsg( ks::net::CCSUsrMsg_PlayerDecalDigitalSignature &msg ) const;
 		void InitFromMsg( ks::net::CCSUsrMsg_PlayerDecalDigitalSignature const &msg );
 	};
-	CUtlVector< ServerPlayerDecalData_t > m_arrServerPlayerDecalData;
+	std::vector< ServerPlayerDecalData_t > m_arrServerPlayerDecalData;
 #endif
 
 	int m_iAccountTerrorist;
@@ -1415,7 +1417,7 @@ public:
 	float m_firstBloodTime;
 
 	// [dwenger] Rescue-related achievement values
-	CUtlVector< CHandle<CCSPlayer> > m_arrRescuers;
+	std::vector< CHandle<CCSPlayer> > m_arrRescuers;
 
 	bool m_hostageWasInjured;
 	bool m_hostageWasKilled;
@@ -1481,16 +1483,16 @@ public:
 	void ShuffleMasterSpawnPointLists( void );
 	void SortSpawnPointLists( void );
 	void SortMasterSpawnPointLists( void );
-	void ShufflePlayerList( CUtlVector< CCSPlayer* > &playersList );
+	void ShufflePlayerList( std::vector< CCSPlayer* > &playersList );
 	
 protected:
-	CUtlVector< SpawnPoint* >	m_CTSpawnPointsMasterList;			// The master list of CT spawn points (contains all points whether enabled or disabled)
-	CUtlVector< SpawnPoint* >	m_TerroristSpawnPointsMasterList;	// The master list of Terrorist spawn points (contains all points whether enabled or disabled)
+	std::vector< SpawnPoint* >	m_CTSpawnPointsMasterList;			// The master list of CT spawn points (contains all points whether enabled or disabled)
+	std::vector< SpawnPoint* >	m_TerroristSpawnPointsMasterList;	// The master list of Terrorist spawn points (contains all points whether enabled or disabled)
 
 	int m_iNextCTSpawnPoint;						// Used when picking the next CT spawn point to assign
 	int m_iNextTerroristSpawnPoint;					// Used when picking the next Terrorist spawn point to assign
-	CUtlVector< SpawnPoint* >	m_CTSpawnPoints;		// List of CT spawn points sorted by their priorities
-	CUtlVector< SpawnPoint* >	m_TerroristSpawnPoints;	// List of Terrorist spawn points sorted by their priorities
+	std::vector< SpawnPoint* >	m_CTSpawnPoints;		// List of CT spawn points sorted by their priorities
+	std::vector< SpawnPoint* >	m_TerroristSpawnPoints;	// List of Terrorist spawn points sorted by their priorities
 
 private:
 	
@@ -1542,7 +1544,7 @@ public:
 
 	void AddDroppedWeaponToList( CWeaponCSBase *pWeapon );
 	void RemoveDroppedWeaponFromList( CWeaponCSBase *pWeapon );
-	int GetTotalDroppedWeaponsInWorld( void ) { return m_weaponsDroppedInWorld.Count(); }
+	int GetTotalDroppedWeaponsInWorld( void ) { return std::ssize( m_weaponsDroppedInWorld ); }
 
 protected:
 	void ProcessAutoBalance( void );
@@ -1553,7 +1555,7 @@ private:
 	bool m_bSwitchingTeamsAtRoundReset;
 	int m_iMaxGunGameProgressiveWeaponIndex;
 
-	CUtlVector< CHandle<CWeaponCSBase> > m_weaponsDroppedInWorld;
+	std::vector< CHandle<CWeaponCSBase> > m_weaponsDroppedInWorld;
 };
 
 bool EconEntity_OnOwnerKillEaterEvent( CEconItemView *pEconItemView, CCSPlayer *pOwner, CCSPlayer *pVictim, kill_eater_event_t eEventType, int iAmount = 1, uint32 *pNewValue = nullptr );

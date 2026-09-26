@@ -8,9 +8,6 @@
 
 #include "fmtstr.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 ConVar mm_session_sys_delay_create( "mm_session_sys_delay_create", "0", FCVAR_DEVELOPMENTONLY );
 ConVar mm_session_sys_delay_create_host( "mm_session_sys_delay_create_host", "1.2", FCVAR_DEVELOPMENTONLY );
@@ -77,13 +74,13 @@ bool CSysSessionBase::Update()
 	{
 		// Process P2P network
 		uint32 uiSteamMsgSize = 0;
-		CUtlMemory< byte > utlMemory;
+		std::vector< byte > utlMemory;
 		CSteamID idRemote;
 		while( steamapicontext->SteamNetworking()->IsP2PPacketAvailable( &uiSteamMsgSize, INetSupport::SP2PC_LOBBY ) )
 		{
-			utlMemory.EnsureCapacity( uiSteamMsgSize );
-			if ( steamapicontext->SteamNetworking()->ReadP2PPacket( utlMemory.Base(), uiSteamMsgSize, &uiSteamMsgSize, &idRemote, INetSupport::SP2PC_LOBBY ) )
-				UnpackAndReceiveMessage( utlMemory.Base(), uiSteamMsgSize, true, idRemote.ConvertToUint64() );
+			ks::grow_to( utlMemory, uiSteamMsgSize );
+			if ( steamapicontext->SteamNetworking()->ReadP2PPacket( utlMemory.data(), uiSteamMsgSize, &uiSteamMsgSize, &idRemote, INetSupport::SP2PC_LOBBY ) )
+				UnpackAndReceiveMessage( utlMemory.data(), uiSteamMsgSize, true, idRemote.ConvertToUint64() );
 		}
 	}
 
@@ -215,11 +212,11 @@ void CSysSessionBase::ReplyLanSearch( KeyValues *msg )
 	}
 
 	// Compose the binary encoding of game details
-	CUtlBuffer bufGameDetails;
+	ks::byte_writer bufGameDetails;
 	g_pMatchFramework->GetMatchNetworkMsgController()->PackageGameDetailsForQOS( m_pSettings, bufGameDetails );
 
-	reply->SetPtr( "binary/ptr", bufGameDetails.Base() );
-	reply->SetInt( "binary/size", bufGameDetails.TellMaxPut() );
+	reply->SetPtr( "binary/ptr", bufGameDetails.data() );
+	reply->SetInt( "binary/size", bufGameDetails.size() );
 
 	// Reply to sender
 	g_pConnectionlessLanMgr->SendPacket( reply,
@@ -229,8 +226,8 @@ void CSysSessionBase::ReplyLanSearch( KeyValues *msg )
 void CSysSessionBase::SendMessage( KeyValues *msg )
 {
 
-	CUtlBuffer buf;
-	buf.PutInt( g_pMatchExtensions->GetINetSupport()->GetEngineBuildNumber() );
+	ks::byte_writer buf;
+	buf.write<int>( g_pMatchExtensions->GetINetSupport()->GetEngineBuildNumber() );
 
 	msg->WriteAsBinary( buf );
 
@@ -244,7 +241,7 @@ void CSysSessionBase::SendMessage( KeyValues *msg )
 
 		if ( pvData && nSize )
 		{
-			buf.Put( pvData, nSize );
+			buf.write_bytes( pvData, nSize );
 		}
 	}
 
@@ -269,7 +266,7 @@ void CSysSessionBase::SendMessage( KeyValues *msg )
 				XUID xuidPlayer = m_pSettings->GetUint64( CFmtStr( "members/machine%d/player%d/xuid", k, ic ) );
 				if ( xuidPlayer && xuidPlayer != m_xuidMachineId )
 				{
-					steamapicontext->SteamNetworking()->SendP2PPacket( xuidPlayer, buf.Base(), buf.TellMaxPut(), eSendType, INetSupport::SP2PC_LOBBY );
+					steamapicontext->SteamNetworking()->SendP2PPacket( xuidPlayer, buf.data(), buf.size(), eSendType, INetSupport::SP2PC_LOBBY );
 					m_bVoiceUsingSessionP2P = true;
 				}
 			}
@@ -280,7 +277,7 @@ void CSysSessionBase::SendMessage( KeyValues *msg )
 	}
 	else if ( m_lobby.m_uiLobbyID )
 	{
-		steamapicontext->SteamMatchmaking()->SendLobbyChatMsg( m_lobby.m_uiLobbyID, buf.Base(), buf.TellMaxPut() );
+		steamapicontext->SteamMatchmaking()->SendLobbyChatMsg( m_lobby.m_uiLobbyID, buf.data(), buf.size() );
 	}
 	else
 	{
@@ -348,8 +345,8 @@ void CSysSessionBase::UnpackAndReceiveMessage( const void *pvBuffer, int numByte
 	if ( numBytes <= 0 )
 		return;
 
-	CUtlBuffer buf( pvBuffer, numBytes, CUtlBuffer::READ_ONLY );
-	if ( buf.GetInt() != g_pMatchExtensions->GetINetSupport()->GetEngineBuildNumber() )
+	ks::byte_reader buf( pvBuffer, numBytes );
+	if ( buf.read<int>() != g_pMatchExtensions->GetINetSupport()->GetEngineBuildNumber() )
 		return;
 
 	KeyValues *msg = new KeyValues( "" );
@@ -371,7 +368,7 @@ void CSysSessionBase::UnpackAndReceiveMessage( const void *pvBuffer, int numByte
 
 		if ( pvData && nSize )
 		{
-			if ( !buf.Get( chBuffer2, nSize ) )
+			if ( !buf.read_bytes( chBuffer2, nSize ) )
 				return;
 
 			kvPtr->SetPtr( nullptr, chBuffer2 );
@@ -588,10 +585,10 @@ void CSysSessionBase::LobbySetDataFromKeyValues( char const *szPath, KeyValues *
 	// Expose lobby members too because Steam doesn't do it for us (lobby owner is first)
 	if ( !V_stricmp( szPath, "members" ) )
 	{
-		CUtlVector< AccountID_t > arrAccounts;
+		std::vector< AccountID_t > arrAccounts;
 		int numMachines = key->GetInt( "numMachines", 0 );
-		arrAccounts.EnsureCapacity( numMachines + 1 );
-		arrAccounts.AddToTail( CSteamID( GetHostXuid() ).GetAccountID() );
+		arrAccounts.reserve( numMachines + 1 );
+		arrAccounts.push_back( CSteamID( GetHostXuid() ).GetAccountID() );
 		for ( int k = 0; k < numMachines; ++k )
 		{
 			KeyValues *kvMachine = m_pSettings->FindKey( CFmtStr( "members/machine%d", k ) );
@@ -600,8 +597,8 @@ void CSysSessionBase::LobbySetDataFromKeyValues( char const *szPath, KeyValues *
 				uint64 ullMachineID = kvMachine->GetUint64( "id" );
 				if ( AccountID_t unAccountID = CSteamID( ullMachineID ).GetAccountID() )
 				{
-					if ( unAccountID != arrAccounts.Head() )
-						arrAccounts.AddToTail( unAccountID );
+					if ( unAccountID != arrAccounts.front() )
+						arrAccounts.push_back( unAccountID );
 				}
 			}
 		}
@@ -609,12 +606,12 @@ void CSysSessionBase::LobbySetDataFromKeyValues( char const *szPath, KeyValues *
 		// We are going to write out these bytes as "varints" encoding,
 		// which also ensures that they can fit in lobby metadata as no
 		// single byte will be 0x00
-		const int numBytesStackAlloc = ( 1 + arrAccounts.Count() ) * 5; // 5 bytes max per varint
+		const int numBytesStackAlloc = ( 1 + std::ssize( arrAccounts ) ) * 5; // 5 bytes max per varint
 		uint8 * const packedData = ( uint8 * ) stackalloc( numBytesStackAlloc );
 		uint8 *pWrite = packedData;
-		FOR_EACH_VEC( arrAccounts, k )
+		for ( AccountID_t accountID : arrAccounts )
 		{
-			uint32 data = arrAccounts[k];
+			uint32 data = accountID;
 			while ( data > 0x7F )
 			{
 				*( pWrite ++ ) = uint8( ( data & 0x7F ) | 0x80 );
@@ -725,7 +722,7 @@ void CSysSessionBase::Voice_CaptureAndTransmitLocalVoiceData()
 				unsigned int numBytesRemaining = numBytes, numBytesOffset = 0;
 				while ( numBytesRemaining > 0 )
 				{
-					numBytes = MIN( 1024, numBytesRemaining );
+					numBytes = std::min<std::common_type_t<int, unsigned int>>( 1024, numBytesRemaining );
 					msg->SetPtr( "binary/ptr", numBytesOffset + const_cast< byte * >( pbVoiceData ) );
 					msg->SetInt( "binary/size", numBytes );
 
@@ -912,10 +909,10 @@ bool CSysSessionBase::FindAndRemovePlayerFromMembers( XUID xuid )
 				}
 
 				// Update counts
-				numMachines = MAX( 0, numMachines - 1 );
+				numMachines = std::max( 0, numMachines - 1 );
 				pMembers->SetInt( "numMachines", numMachines );
 
-				numPlayers = MAX( 0, numPlayers - numOtherPlayers );
+				numPlayers = std::max( 0, numPlayers - numOtherPlayers );
 				pMembers->SetInt( "numPlayers", numPlayers );
 
 				// Now fire the events for the removed players
@@ -1225,7 +1222,7 @@ void CSysSessionHost::KickPlayer( KeyValues *pCommand )
 	FindAndRemovePlayerFromMembers( xuid );
 
 	// Remember the player in our kicked players map
-	m_mapKickedPlayers.InsertOrReplace( xuid, Plat_FloatTime() );
+	m_mapKickedPlayers.insert_or_assign( xuid, Plat_FloatTime() );
 }
 
 void CSysSessionHost::OnUpdateSessionSettings( KeyValues *kv )
@@ -1624,13 +1621,12 @@ bool CSysSessionHost::Process_RequestJoinData( XUID xuidClient, KeyValues *pSett
 	}
 
 	// If the user has previously been kicked then do not let them re-join
-	int idxKicked = m_mapKickedPlayers.Find( xuidClient );
-	if ( idxKicked != m_mapKickedPlayers.InvalidIndex() )
+	if ( double *pKickedTime = ks::find_ptr( m_mapKickedPlayers, xuidClient ) )
 	{
-		if ( Plat_FloatTime() - m_mapKickedPlayers.Element( idxKicked ) < mm_session_sys_kick_ban_duration.GetFloat() )
+		if ( Plat_FloatTime() - *pKickedTime < mm_session_sys_kick_ban_duration.GetFloat() )
 		{
 			DevMsg( "LOBBY: blocking join request from %llu, still %.1f sec kick ban duration remaining, mm_session_sys_kick_ban_duration = %.1f.\n", xuidClient,
-				m_mapKickedPlayers.Element( idxKicked ) + 1 + mm_session_sys_kick_ban_duration.GetFloat() - Plat_FloatTime(), mm_session_sys_kick_ban_duration.GetFloat() );
+				*pKickedTime + 1 + mm_session_sys_kick_ban_duration.GetFloat() - Plat_FloatTime(), mm_session_sys_kick_ban_duration.GetFloat() );
 			reply->SetString( "error", "kicked" );
 			SendMessage( reply );
 			return false;
@@ -1638,7 +1634,7 @@ bool CSysSessionHost::Process_RequestJoinData( XUID xuidClient, KeyValues *pSett
 	}
 
 	// If the session is full, early out
-	if ( MAX( numUsersCurrent, nsci.m_numHumanPlayers )
+	if ( std::max( numUsersCurrent, nsci.m_numHumanPlayers )
 		+ numUsersConnecting > numSlotsTotal )
 	{
 		reply->SetString( "error", "full" );
@@ -2681,11 +2677,11 @@ void CSysSessionConTeamHost::SendReservationRequest()
 
 	DevMsg( "Sending res request with teamResKey == %llx\n ", teamResKey );
 
-	CUtlBuffer buf;
-	buf.PutInt( g_pMatchExtensions->GetINetSupport()->GetEngineBuildNumber() );
+	ks::byte_writer buf;
+	buf.write<int>( g_pMatchExtensions->GetINetSupport()->GetEngineBuildNumber() );
 	reservation->WriteAsBinary( buf );
 
-	steamapicontext->SteamMatchmaking()->SendLobbyChatMsg( m_lobby.m_uiLobbyID, buf.Base(), buf.TellMaxPut() );
+	steamapicontext->SteamMatchmaking()->SendLobbyChatMsg( m_lobby.m_uiLobbyID, buf.data(), buf.size() );
 
 	m_lastRequestSendTime = Plat_FloatTime();
 }

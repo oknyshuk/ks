@@ -5,14 +5,14 @@
 //=============================================================================
 
 #include "net_ws_headers.h"
+#include <atomic>
+#include <mutex>
 #include "net_ws_queued_packet_sender.h"
 
 #include "tier0/vprof.h"
 #include "tier1/utlvector.h"
-#include "tier1/utlpriorityqueue.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier1/vector_ops.h"
+#include <memory>
 
 ConVar net_queued_packet_thread( "net_queued_packet_thread", "1", 0, "Use a high priority thread to send queued packets out instead of sending them each frame." );
 ConVar net_queue_trace( "net_queue_trace", "0", FCVAR_ACCESSIBLE_FROM_THREADS );
@@ -47,27 +47,26 @@ private:
 		const void 			*m_pChannel;  // We don't actually use the channel
 		SOCKET				m_Socket;
 		ns_address			to;
-		CUtlVector<char>	buf;
+		std::vector< char >	buf;
 
 		// We want the list sorted in ascending order, so note that we return > rather than <
-		static bool LessFunc( CQueuedPacket * const &lhs, CQueuedPacket * const &rhs )
+		static bool LessFunc( const std::unique_ptr< CQueuedPacket > &lhs, const std::unique_ptr< CQueuedPacket > &rhs )
 		{
 			return lhs->m_unSendTime > rhs->m_unSendTime;
 		}
 	};
 
-	CUtlPriorityQueue< CQueuedPacket * > m_QueuedPackets;
-	CThreadMutex m_QueuedPacketsCS;
+	std::vector< std::unique_ptr< CQueuedPacket > > m_QueuedPackets;	// heap by LessFunc (ks::heap_*)
+	mutable std::recursive_mutex m_QueuedPacketsCS;
 	CThreadEvent m_hThreadEvent;
-	volatile bool m_bThreadShouldExit;
+	std::atomic<bool> m_bThreadShouldExit;
 };
 
 static CQueuedPacketSender g_QueuedPacketSender;
 IQueuedPacketSender *g_pQueuedPackedSender = &g_QueuedPacketSender;
 
 
-CQueuedPacketSender::CQueuedPacketSender() :
-	m_QueuedPackets( 0, 0, CQueuedPacket::LessFunc )
+CQueuedPacketSender::CQueuedPacketSender()
 {
 	SetName( "QueuedPacketSender" );
 	m_bThreadShouldExit = false;
@@ -113,36 +112,29 @@ void CQueuedPacketSender::Shutdown()
 	
 	Join(); // Wait for the thread to exit.
 
-	while ( m_QueuedPackets.Count() > 0 )
-	{
-		delete m_QueuedPackets.ElementAtHead();
-		m_QueuedPackets.RemoveAtHead();
-	}
-	m_QueuedPackets.Purge();
+	m_QueuedPackets.clear();
+	m_QueuedPackets.shrink_to_fit();
 }
 
 void CQueuedPacketSender::ClearQueuedPacketsForChannel( INetChannel *pChan )
 {
-	AUTO_LOCK( m_QueuedPacketsCS );
+	std::scoped_lock lock( m_QueuedPacketsCS );
 
-	for ( int i = m_QueuedPackets.Count()-1; i >= 0; i-- )
+	for ( int i = std::ssize( m_QueuedPackets )-1; i >= 0; i-- )
 	{
-		CQueuedPacket *p = m_QueuedPackets.Element( i );
-		if ( p->m_pChannel == pChan )
+		if ( m_QueuedPackets[ i ]->m_pChannel == pChan )
 		{
-			m_QueuedPackets.RemoveAt( i );
-			delete p;
+			ks::heap_erase( m_QueuedPackets, i, CQueuedPacket::LessFunc );
 		}
 	}
 }
 
 bool CQueuedPacketSender::HasQueuedPackets( const INetChannel *pChan ) const
 {
-	AUTO_LOCK( m_QueuedPacketsCS );
+	std::scoped_lock lock( m_QueuedPacketsCS );
 
-	for ( int i = 0; i < m_QueuedPackets.Count(); ++i )
+	for ( const auto &p : m_QueuedPackets )
 	{
-		const CQueuedPacket *p = m_QueuedPackets.Element( i );
 		if ( p->m_pChannel == pChan )
 		{
 			return true;
@@ -154,22 +146,22 @@ bool CQueuedPacketSender::HasQueuedPackets( const INetChannel *pChan ) const
 
 void CQueuedPacketSender::QueuePacket( INetChannel *pChan, SOCKET s, const char FAR *buf, int len, const ns_address &to, uint32 msecDelay )
 {
-	AUTO_LOCK( m_QueuedPacketsCS );
+	std::scoped_lock lock( m_QueuedPacketsCS );
 
 	// We'll pull all packets we should have sent by now and send them out right away
 	uint32 msNow = Plat_MSTime();
 
 	int nMaxQueuedPackets = 1024;
-	if ( m_QueuedPackets.Count() < nMaxQueuedPackets )
+	if ( std::ssize( m_QueuedPackets ) < nMaxQueuedPackets )
 	{
 		// Add this packet to the queue.
-		CQueuedPacket *pPacket = new CQueuedPacket;
+		auto pPacket = std::make_unique< CQueuedPacket >();
 		pPacket->m_unSendTime = msNow + msecDelay;
 		pPacket->m_Socket = s;
 		pPacket->m_pChannel = pChan;
-		pPacket->buf.CopyArray( (char*)buf, len );
+		pPacket->buf.assign( ( (char*)buf ), ( (char*)buf ) + len );
 		pPacket->to = to;
-		m_QueuedPackets.Insert( pPacket );
+		ks::heap_push( m_QueuedPackets, std::move( pPacket ), CQueuedPacket::LessFunc );
 	}
 	else
 	{
@@ -207,16 +199,16 @@ int CQueuedPacketSender::Run()
 		// OK, now send a packet.
 		{
             SNPROF("NET_SendToImpl");
-			AUTO_LOCK( m_QueuedPacketsCS );
+			std::scoped_lock lock( m_QueuedPacketsCS );
 		
 			// We'll pull all packets we should have sent by now and send them out right away
 			uint32 msNow = Plat_MSTime();
 
 			bool bTrace = net_queue_trace.GetInt() == NET_QUEUED_PACKET_THREAD_DEBUG_VALUE;
 
-			while ( m_QueuedPackets.Count() > 0 )
+			while ( !m_QueuedPackets.empty() )
 			{
-				CQueuedPacket *pPacket = m_QueuedPackets.ElementAtHead();
+				CQueuedPacket *pPacket = m_QueuedPackets.front().get();
 				if ( pPacket->m_unSendTime > msNow )
 				{
 					// Sleep until next we need this packet
@@ -235,21 +227,20 @@ int CQueuedPacketSender::Run()
 				{		
 					if ( bTrace )
 					{
-						Warning( "SQ:  sending %d bytes at %f\n", pPacket->buf.Count(), Plat_FloatTime() );
+						Warning( "SQ:  sending %d bytes at %f\n", (int)std::ssize( pPacket->buf ), Plat_FloatTime() );
 					}
 
 					NET_SendToImpl
 					( 
 						pPacket->m_Socket, 
-						pPacket->buf.Base(), 
-						pPacket->buf.Count(), 
+						pPacket->buf.data(), 
+						std::ssize( pPacket->buf ), 
 						pPacket->to,
 						-1 
 					);
 				}	
 				
-				delete pPacket;
-				m_QueuedPackets.RemoveAtHead();
+				ks::heap_pop( m_QueuedPackets, CQueuedPacket::LessFunc );
 			}
 		}
 	}

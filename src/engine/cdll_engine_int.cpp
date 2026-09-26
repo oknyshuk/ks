@@ -91,9 +91,6 @@
 #include "dbginput.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // forward declarations
 //-----------------------------------------------------------------------------
@@ -633,7 +630,7 @@ public:
 	virtual bool SpherePaintSurface( const model_t *pModel, const Vector& vPosition, BYTE color, float flSphereRadius, float flPaintCoatPercent );
 	virtual bool HasPaintmap();
 	virtual void EnablePaintmapRender();
-	virtual void SphereTracePaintSurface( const model_t *pModel, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, CUtlVector<BYTE>& surfColors );
+	virtual void SphereTracePaintSurface( const model_t *pModel, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, std::vector< BYTE >& surfColors );
 	virtual void RemoveAllPaint();
 	virtual void PaintAllSurfaces( BYTE color );
 	virtual void RemovePaint( const model_t *pModel );
@@ -902,12 +899,12 @@ bool CEngineClient::GetPlayerInfo( int ent_num, player_info_t *pinfo )
 	}
 
 	// Check the version of player info coming in
-	uint64 iVersion = BigQWord( pi->version );
+	uint64 iVersion = pi->version;
 	if ( iVersion != CDLL_PLAYER_INFO_S_VERSION_CURRENT )
 	{
 		// This is "old version 1"
 		player_info_t_version_1 * pi_old_version_1 = reinterpret_cast< player_info_t_version_1 * >( pi );
-		pinfo->version = BigQWord( CDLL_PLAYER_INFO_S_VERSION_CURRENT );
+		pinfo->version = CDLL_PLAYER_INFO_S_VERSION_CURRENT;
 		Q_memcpy( &pinfo->xuid, &pi_old_version_1->xuid, sizeof( pi_old_version_1->xuid ) );
 		Q_memcpy( pinfo->name, pi_old_version_1->name, sizeof( pi_old_version_1->name ) );
 		Q_memcpy( &pinfo->userID, &pi_old_version_1->userID, sizeof( pi_old_version_1->userID ) );
@@ -1430,7 +1427,7 @@ void CEngineClient::FireEvents()
 void CEngineClient::ClearEvents()
 {
 	// clear any queued up events
-	GetBaseLocalClient().events.RemoveAll();
+	GetBaseLocalClient().events.clear();
 }
 
 void CEngineClient::CheckPoint( const char *pName )
@@ -1878,8 +1875,8 @@ void CEngineClient::RegisterDemoCustomDataCallback( string_t szCallbackSaveID, p
 	}
 
 	//binary search for the callback address. Couldn't directly use UtlSortVector because of the need to pair data and sort by only the callback
-	int start = 0, end = g_RegisteredDemoCustomDataCallbacks.Count() - 1;
-	RegisteredDemoCustomDataCallbackPair_t *pEntries = g_RegisteredDemoCustomDataCallbacks.Base();
+	int start = 0, end = std::ssize( g_RegisteredDemoCustomDataCallbacks ) - 1;
+	RegisteredDemoCustomDataCallbackPair_t *pEntries = g_RegisteredDemoCustomDataCallbacks.data();
 	while (start <= end)
 	{
 		int mid = (start + end) >> 1;
@@ -1903,7 +1900,7 @@ void CEngineClient::RegisterDemoCustomDataCallback( string_t szCallbackSaveID, p
 	RegisteredDemoCustomDataCallbackPair_t addPair;
 	addPair.pCallback = pCallback;
 	addPair.szSaveID = szCallbackSaveID;
-	g_RegisteredDemoCustomDataCallbacks.InsertBefore( start, addPair );
+	g_RegisteredDemoCustomDataCallbacks.insert( g_RegisteredDemoCustomDataCallbacks.begin() + start, addPair );
 }
 
 
@@ -1917,8 +1914,8 @@ void CEngineClient::RecordDemoCustomData( pfnDemoCustomDataCallback pCallback, c
 	}
 
 	//binary search for the callback address. Couldn't directly use UtlSortVector because of the need to pair data and sort by only the callback
-	int start = 0, end = g_RegisteredDemoCustomDataCallbacks.Count() - 1;
-	RegisteredDemoCustomDataCallbackPair_t *pEntries = g_RegisteredDemoCustomDataCallbacks.Base();
+	int start = 0, end = std::ssize( g_RegisteredDemoCustomDataCallbacks ) - 1;
+	RegisteredDemoCustomDataCallbackPair_t *pEntries = g_RegisteredDemoCustomDataCallbacks.data();
 	while (start <= end)
 	{
 		int mid = (start + end) >> 1;
@@ -2196,7 +2193,7 @@ void CEngineClient::EnablePaintmapRender()
 	}
 }
 
-void CEngineClient::SphereTracePaintSurface( const model_t *pModel, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, CUtlVector<BYTE>& surfColors )
+void CEngineClient::SphereTracePaintSurface( const model_t *pModel, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, std::vector< BYTE >& surfColors )
 {
 	TracePaintSphere( pModel, vPosition, vContactNormal, flSphereRadius, surfColors );
 }

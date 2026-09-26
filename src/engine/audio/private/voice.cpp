@@ -19,18 +19,16 @@
 #include "ivoicecodec.h"
 #include "filesystem.h"
 #include "../../filesystem_engine.h"
-#include "tier1/utlbuffer.h"
+#include <vector>
 #include "../../cl_splitscreen.h"
 #include "engineui.h"
 #include "demo.h"
+#include <map>
 
 extern IVEngineClient *engineClient;
 
 
 #include "steam/steam_api.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 static CSteamAPIContext g_SteamAPIContext;
 static CSteamAPIContext *steamapicontext = nullptr;
@@ -485,47 +483,28 @@ class CVoiceWriterData
 {
 public:
 	CVoiceWriterData() :
-		m_pChannel( nullptr ),
 		m_nCount( 0 ),
 		m_Buffer()
 	{
 	}
 
-	CVoiceWriterData( const CVoiceWriterData &src )
-	{
-		m_pChannel = src.m_pChannel;
-		m_nCount = src.m_nCount;
-		m_Buffer.Clear();
-		m_Buffer.Put( src.m_Buffer.Base(), src.m_Buffer.TellPut() );
-	}
-
-	static bool Less( const CVoiceWriterData &lhs, const CVoiceWriterData &rhs )
-	{
-		return lhs.m_pChannel < rhs.m_pChannel;
-	}
-
-	CVoiceChannel	*m_pChannel;
 	int				m_nCount;
-	CUtlBuffer		m_Buffer;
+	std::vector< std::byte >	m_Buffer;
 };
 
 class CVoiceWriter
 {
 public:
-	CVoiceWriter() :
-		m_VoiceWriter( 0, 0, CVoiceWriterData::Less )
-	{
-	}
-
 	void Flush()
 	{
-		for ( int i = m_VoiceWriter.FirstInorder(); i != m_VoiceWriter.InvalidIndex(); i = m_VoiceWriter.NextInorder( i ) )
+		for ( auto &[pChannel, writer] : m_VoiceWriter )
 		{
-			CVoiceWriterData *data = &m_VoiceWriter[ i ];
+			CVoiceWriterData *data = &writer;
 
-			if ( data->m_Buffer.TellPut() <= 0 )
+			if ( data->m_Buffer.empty() )
 				continue;
-			data->m_Buffer.Purge();
+			data->m_Buffer.clear();
+			data->m_Buffer.shrink_to_fit();
 		}
 	}
 
@@ -537,14 +516,14 @@ public:
 			return;
 		}
 
-		for ( int i = m_VoiceWriter.FirstInorder(); i != m_VoiceWriter.InvalidIndex(); i = m_VoiceWriter.NextInorder( i ) )
+		for ( auto &[pChannel, writer] : m_VoiceWriter )
 		{
-			CVoiceWriterData *data = &m_VoiceWriter[ i ];
+			CVoiceWriterData *data = &writer;
 			
-			if ( data->m_Buffer.TellPut() <= 0 )
+			if ( data->m_Buffer.empty() )
 				continue;
 
-			int index = data->m_pChannel - g_VoiceChannels;
+			int index = pChannel - g_VoiceChannels;
 			Assert( index >= 0 && index < ARRAYSIZE( g_VoiceChannels ) );
 
 			char path[ MAX_PATH ];
@@ -554,12 +533,13 @@ public:
 			char fn[ MAX_PATH ];
 			Q_snprintf( fn, sizeof( fn ), "%s/pl%02d_slot%d-time%d.wav", path, index, data->m_nCount, (int)g_pSoundServices->GetClientTime() );
 
-			WriteWaveFile( fn, (const char *)data->m_Buffer.Base(), data->m_Buffer.TellPut(), g_VoiceSampleFormat.wBitsPerSample, g_VoiceSampleFormat.nChannels, Voice_SamplesPerSec() );
+			WriteWaveFile( fn, (const char *)data->m_Buffer.data(), (int)data->m_Buffer.size(), g_VoiceSampleFormat.wBitsPerSample, g_VoiceSampleFormat.nChannels, Voice_SamplesPerSec() );
 
 			Msg( "Writing file %s\n", fn );
 
 			++data->m_nCount;
-			data->m_Buffer.Purge();
+			data->m_Buffer.clear();
+			data->m_Buffer.shrink_to_fit();
 		}
 	}
 
@@ -569,20 +549,12 @@ public:
 		if ( !voice_writevoices.GetBool() )
 			return;
 
-		CVoiceWriterData search;
-		search.m_pChannel = ch;
-		int idx = m_VoiceWriter.Find( search ); 
-		if ( idx == m_VoiceWriter.InvalidIndex() )
-		{
-			idx = m_VoiceWriter.Insert( search );
-		}
-
-		CVoiceWriterData *slot = &m_VoiceWriter[ idx ];
-		slot->m_Buffer.Put( data, datalen );
+		auto &buffer = m_VoiceWriter[ ch ].m_Buffer;
+		buffer.insert( buffer.end(), reinterpret_cast< const std::byte * >( data ), reinterpret_cast< const std::byte * >( data ) + datalen );
 	}
 private:
 
-	CUtlRBTree< CVoiceWriterData > m_VoiceWriter;
+	std::map< CVoiceChannel *, CVoiceWriterData > m_VoiceWriter;
 };
 
 static CVoiceWriter g_VoiceWriter;
@@ -636,7 +608,7 @@ int Voice_GetOutputData(
 	// Find out how much we want and get it from the received data channel.	
 	CCircularBuffer *pBuffer = &pChannel->m_Buffer;
 	int nReadAvail = pBuffer->GetReadAvailable();
-	int nBytesToRead = MIN(MIN(nReadAvail, (int)maxOutSamples), sampleCount * BYTES_PER_SAMPLE);
+	int nBytesToRead = std::min(std::min(nReadAvail, (int)maxOutSamples), sampleCount * BYTES_PER_SAMPLE);
 	int nSamplesGotten = pBuffer->Read(pCopyBuf, nBytesToRead) / BYTES_PER_SAMPLE;
 
 	if ( voice_buffer_debug.GetBool() )
@@ -653,8 +625,8 @@ int Voice_GetOutputData(
 			Msg( "%.2f: Voice_GetOutputData channel %d applying fade\n", Plat_FloatTime(), iChannel );
 		}
 
-		int bufferFadeOffset = MAX((readSamplesAvail + nSamplesGotten) - g_nVoiceFadeSamples, 0);
-		int globalFadeOffset = MAX(g_nVoiceFadeSamples - (readSamplesAvail + nSamplesGotten), 0);
+		int bufferFadeOffset = std::max((readSamplesAvail + nSamplesGotten) - g_nVoiceFadeSamples, 0);
+		int globalFadeOffset = std::max(g_nVoiceFadeSamples - (readSamplesAvail + nSamplesGotten), 0);
 		
 		ApplyFadeToSamples(
 			&pCopyBuf[bufferFadeOffset], 
@@ -673,12 +645,12 @@ int Voice_GetOutputData(
 			Msg( "%.2f: Voice_GetOutputData channel %d padding!\n", Plat_FloatTime(), iChannel );
 		}
 
-		int wantedSampleCount = MIN( sampleCount, maxOutSamples );
+		int wantedSampleCount = std::min( sampleCount, maxOutSamples );
 		int nAdditionalNeeded = (wantedSampleCount - nSamplesGotten);
 		if ( nSamplesGotten > 0 )
 		{
 			short *dest = (short *)&pCopyBuf[ nSamplesGotten ];
-			int nSamplesToDuplicate = MIN( nSamplesGotten, nAdditionalNeeded );
+			int nSamplesToDuplicate = std::min( nSamplesGotten, nAdditionalNeeded );
 			const short *src = (short *)&pCopyBuf[ nSamplesGotten - nSamplesToDuplicate ];
 
 			Q_memcpy( dest, src, nSamplesToDuplicate * BYTES_PER_SAMPLE );
@@ -1003,7 +975,7 @@ bool Voice_Idle(float frametime)
 	}
 
 	// Set how much time has passed since the last update
-	frametime = MIN( fTimeDiff, frametime * 2.0f );	// Cap how much time can pass at 2 tick sizes
+	frametime = std::min( fTimeDiff, frametime * 2.0f );	// Cap how much time can pass at 2 tick sizes
 
 	// Remember when we last updated
 	g_fLocalPlayerTalkingLastUpdateRealTime = Plat_FloatTime();
@@ -1024,7 +996,7 @@ bool Voice_Idle(float frametime)
 	}
 
 	// Precalculate these to speedup the voice fadeout.
-	g_nVoiceFadeSamples = MAX((int)(voice_fadeouttime.GetFloat() * ( g_bIsSpeex ? VOICE_OUTPUT_SAMPLE_RATE_SPEEX : VOICE_OUTPUT_SAMPLE_RATE ) ), 2);
+	g_nVoiceFadeSamples = std::max((int)(voice_fadeouttime.GetFloat() * ( g_bIsSpeex ? VOICE_OUTPUT_SAMPLE_RATE_SPEEX : VOICE_OUTPUT_SAMPLE_RATE ) ), 2);
 	g_VoiceFadeMul = 1.0f / (g_nVoiceFadeSamples - 1);
 
 	if(g_pVoiceRecord)
@@ -1298,14 +1270,14 @@ int Voice_GetCompressedData(char *pchDest, int nCount, bool bFinal, VoiceFormat_
 
 		// Get uncompressed data from the recording device
 		short tempData[8192];
-		int samplesWanted = MIN(nCount/BYTES_PER_SAMPLE, (int)sizeof(tempData)/BYTES_PER_SAMPLE);
+		int samplesWanted = std::min(nCount/BYTES_PER_SAMPLE, (int)sizeof(tempData)/BYTES_PER_SAMPLE);
 		int gotten = g_pVoiceRecord->GetRecordedData(tempData, samplesWanted);
 
 		// If they want to get the data from a file instead of the mic, use that.
 		if(g_pMicInputFileData)
 		{
 			int nShouldGet = (flNow - g_MicStartTime) * Voice_SamplesPerSec();
-			gotten = MIN(sizeof(tempData)/BYTES_PER_SAMPLE, MIN(nShouldGet, (g_nMicInputFileBytes - g_CurMicInputFileByte) / BYTES_PER_SAMPLE));
+			gotten = std::min(sizeof(tempData)/BYTES_PER_SAMPLE, std::min<std::common_type_t<long unsigned int, int>>(nShouldGet, (g_nMicInputFileBytes - g_CurMicInputFileByte) / BYTES_PER_SAMPLE));
 			memcpy(tempData, &g_pMicInputFileData[g_CurMicInputFileByte], gotten*BYTES_PER_SAMPLE);
 			g_CurMicInputFileByte += gotten * BYTES_PER_SAMPLE;
 			g_MicStartTime = flNow;
@@ -1323,8 +1295,8 @@ int Voice_GetCompressedData(char *pchDest, int nCount, bool bFinal, VoiceFormat_
 			{
 				short val = *pData;
 				averageData += val;
-				minData = MIN( val, minData );
-				maxData = MAX( val, maxData );
+				minData = std::min<std::common_type_t<short int, int>>( val, minData );
+				maxData = std::max<std::common_type_t<short int, int>>( val, maxData );
 				++pData;
 			}
 			averageData /= gotten;
@@ -1357,7 +1329,7 @@ int Voice_GetCompressedData(char *pchDest, int nCount, bool bFinal, VoiceFormat_
 		}
 
 #ifdef VOICE_SEND_RAW_TEST
-		int nCompressedBytes = MIN( gotten, nCount );
+		int nCompressedBytes = std::min( gotten, nCount );
 		for ( int i=0; i < nCompressedBytes; i++ )
 		{
 			pchDest[i] = (char)(tempData[i] >> 8);
@@ -1369,7 +1341,7 @@ int Voice_GetCompressedData(char *pchDest, int nCount, bool bFinal, VoiceFormat_
 		// Write to our file buffers..
 		if(g_pUncompressedFileData)
 		{
-			int nToWrite = MIN(gotten*BYTES_PER_SAMPLE, MAX_WAVEFILEDATA_LEN - g_nUncompressedDataBytes);
+			int nToWrite = std::min(gotten*BYTES_PER_SAMPLE, MAX_WAVEFILEDATA_LEN - g_nUncompressedDataBytes);
 			memcpy(&g_pUncompressedFileData[g_nUncompressedDataBytes], tempData, nToWrite);
 			g_nUncompressedDataBytes += nToWrite;
 		}
@@ -1856,7 +1828,7 @@ void Voice_AddIncomingData(
 		// Write to our file buffer..
 		if(g_pDecompressedFileData)
 		{											  
-			int nToWrite = MIN(nDecompressedSamplesTotal*BYTES_PER_SAMPLE, MAX_WAVEFILEDATA_LEN - g_nDecompressedDataBytes);
+			int nToWrite = std::min(nDecompressedSamplesTotal*BYTES_PER_SAMPLE, MAX_WAVEFILEDATA_LEN - g_nDecompressedDataBytes);
 			memcpy(&g_pDecompressedFileData[g_nDecompressedDataBytes], decompressedBuffer, nToWrite);
 			g_nDecompressedDataBytes += nToWrite;
 		}

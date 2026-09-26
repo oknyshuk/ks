@@ -139,9 +139,9 @@ private:
 		CacheDict_t() : m_Tag(0), m_FlexTag(0) {}
 	};
 
-	typedef CUtlVector< CacheDict_t >		CacheMeshDict_t;
-	typedef CUtlVector< CacheMeshDict_t >	CacheModelDict_t;
-	typedef CUtlVector<	CacheModelDict_t >	CacheBodyPartDict_t;
+	typedef std::vector< CacheDict_t >		CacheMeshDict_t;
+	typedef std::vector< CacheMeshDict_t >	CacheModelDict_t;
+	typedef std::vector< CacheModelDict_t >	CacheBodyPartDict_t;
 
 	// Flex data, allocated for the lifespan of rendering
 	// Can't use UtlVector due to alignment issues

@@ -19,9 +19,6 @@ static ConVar mat_depthfeather_enable( "mat_depthfeather_enable", "1", FCVAR_MAT
 
 int GetDefaultDepthFeatheringValue( void ); //defined in spritecard.cpp
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 DEFINE_FALLBACK_SHADER( ParticleSphere, ParticleSphere_DX9 )
 
 BEGIN_VS_SHADER_FLAGS( ParticleSphere_DX9, "Help for BumpmappedEnvMap", SHADER_NOT_EDITABLE  )
@@ -130,7 +127,7 @@ BEGIN_VS_SHADER_FLAGS( ParticleSphere_DX9, "Help for BumpmappedEnvMap", SHADER_N
 			// it is equal to 1).
 			const float *f = params[LIGHT_COLOR]->GetVecValue();
 			Vector vLightColor( f[0], f[1], f[2] );
-			float flScale = MAX( vLightColor.x, MAX( vLightColor.y, vLightColor.z ) );
+			float flScale = std::max( vLightColor.x, std::max( vLightColor.y, vLightColor.z ) );
 			if ( flScale < 0.01f )
 				flScale = 0.01f;
 			float vScaleVec[3] = { flScale, flScale, flScale };

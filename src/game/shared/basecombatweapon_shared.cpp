@@ -18,6 +18,7 @@
 #include "in_buttons.h"
 #include "engine/IEngineSound.h"
 #include "ammodef.h"
+#include "tier1/vector_ops.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include "datacache/imdlcache.h"
 #include "tier0/vprof.h"
@@ -38,9 +39,6 @@
 #include "model_types.h"
 
 #endif
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 // The minimum time a hud hint for a weapon should be on screen. If we switch away before
 // this, then teh hud hint counter will be deremented so the hint will be shown again, as
@@ -2428,7 +2426,7 @@ bool CBaseCombatWeapon::DefaultReload( int iClipSize1, int iClipSize2, int iActi
 	if ( UsesClipsForAmmo1() )
 	{
 		// need to reload primary clip?
-		int primary	= MIN(iClipSize1 - m_iClip1, GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
+		int primary	= std::min(iClipSize1 - m_iClip1, GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
 		if ( primary != 0 )
 		{
 			bReload = true;
@@ -2438,7 +2436,7 @@ bool CBaseCombatWeapon::DefaultReload( int iClipSize1, int iClipSize2, int iActi
 	if ( UsesClipsForAmmo2() )
 	{
 		// need to reload secondary clip?
-		int secondary = MIN(iClipSize2 - m_iClip2, GetReserveAmmoCount( AMMO_POSITION_SECONDARY ) );
+		int secondary = std::min(iClipSize2 - m_iClip2, GetReserveAmmoCount( AMMO_POSITION_SECONDARY ) );
 		if ( secondary != 0 )
 		{
 			bReload = true;
@@ -2590,7 +2588,7 @@ void CBaseCombatWeapon::FinishReload( void )
 		// If I use primary clips, reload primary
 		if ( UsesClipsForAmmo1() )
 		{
-			int primary	= MIN( GetMaxClip1() - m_iClip1, GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );	
+			int primary	= std::min( GetMaxClip1() - m_iClip1, GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );	
 			m_iClip1 += primary;
 			GiveReserveAmmo( AMMO_POSITION_PRIMARY, -primary );
 		}
@@ -2598,7 +2596,7 @@ void CBaseCombatWeapon::FinishReload( void )
 		// If I use secondary clips, reload secondary
 		if ( UsesClipsForAmmo2() )
 		{
-			int secondary = MIN( GetMaxClip2() - m_iClip2, GetReserveAmmoCount( AMMO_POSITION_SECONDARY ) );
+			int secondary = std::min( GetMaxClip2() - m_iClip2, GetReserveAmmoCount( AMMO_POSITION_SECONDARY ) );
 			m_iClip2 += secondary;
 			GiveReserveAmmo( AMMO_POSITION_SECONDARY, -secondary );
 		}
@@ -2681,12 +2679,12 @@ void CBaseCombatWeapon::PrimaryAttack( void )
 	// Make sure we don't fire more than the amount in the clip
 	if ( UsesClipsForAmmo1() )
 	{
-		info.m_iShots = MIN( info.m_iShots, m_iClip1.Get() );
+		info.m_iShots = std::min( info.m_iShots, m_iClip1.Get() );
 		m_iClip1 -= info.m_iShots;
 	}
 	else
 	{
-		info.m_iShots = MIN( info.m_iShots, GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
+		info.m_iShots = std::min( info.m_iShots, GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
 		GiveReserveAmmo( AMMO_POSITION_PRIMARY, -info.m_iShots );
 	}
 
@@ -2921,19 +2919,19 @@ public:
 
 	virtual void LevelShutdownPostEntity()  
 	{ 
-		m_list.Purge();
+		m_list.clear();
 	}
 
 	void AddWeapon( CBaseCombatWeapon *pWeapon )
 	{
-		m_list.AddToTail( pWeapon );
+		m_list.push_back( pWeapon );
 	}
 
 	void RemoveWeapon( CBaseCombatWeapon *pWeapon )
 	{
-		m_list.FindAndRemove( pWeapon );
+		ks::erase_first( m_list, pWeapon );
 	}
-	CUtlLinkedList< CBaseCombatWeapon * > m_list;
+	std::vector< CBaseCombatWeapon * > m_list;
 };
 
 CWeaponList g_WeaponList( "CWeaponList" );
@@ -2951,7 +2949,7 @@ void OnBaseCombatWeaponDestroyed( CBaseCombatWeapon *pWeapon )
 #endif
 
 #ifdef CLIENT_DLL
-CUtlLinkedList< CBaseCombatWeapon * >& CBaseCombatWeapon::GetWeaponList( void )
+std::vector< CBaseCombatWeapon * >& CBaseCombatWeapon::GetWeaponList( void )
 {
 	return g_WeaponList.m_list;
 }
@@ -2960,10 +2958,8 @@ int CBaseCombatWeapon::GetAvailableWeaponsInBox( CBaseCombatWeapon **pList, int 
 {
 	// linear search all weapons
 	int count = 0;
-	int index = g_WeaponList.m_list.Head();
-	while ( index != g_WeaponList.m_list.InvalidIndex() )
+	for ( CBaseCombatWeapon *pWeapon : g_WeaponList.m_list )
 	{
-		CBaseCombatWeapon *pWeapon = g_WeaponList.m_list[index];
 		// skip any held weapon
 		if ( !pWeapon->GetOwner() )
 		{
@@ -2977,7 +2973,6 @@ int CBaseCombatWeapon::GetAvailableWeaponsInBox( CBaseCombatWeapon **pList, int 
 				}
 			}
 		}
-		index = g_WeaponList.m_list.Next( index );
 	}
 
 	return count;
@@ -3185,8 +3180,8 @@ int CBaseCombatWeapon::SetReserveAmmoCount( AmmoPosition_t nAmmoPosition, int nC
 			if ( pPlayer->GetAmmoCount( nAmmoType ) || bForceSetAmmoOnPlayer )
 			{
 				int iMax = GetAmmoDef()->MaxCarry( nAmmoType, pPlayer );
-				iAdd = MIN( nCount, iMax - pPlayer->GetAmmoCount( nAmmoType ) );
-				int iTotal = MIN( nCount, iMax );
+				iAdd = std::min( nCount, iMax - pPlayer->GetAmmoCount( nAmmoType ) );
+				int iTotal = std::min( nCount, iMax );
 
 				pPlayer->SetAmmoCount( iTotal, nAmmoType );
 				return iAdd;
@@ -3195,12 +3190,12 @@ int CBaseCombatWeapon::SetReserveAmmoCount( AmmoPosition_t nAmmoPosition, int nC
 	}
 	// /LEGACY
 
-	iAdd = MIN( nCount, GetReserveAmmoMax( nAmmoPosition ) - GetReserveAmmoCount( nAmmoPosition ) );
+	iAdd = std::min( nCount, GetReserveAmmoMax( nAmmoPosition ) - GetReserveAmmoCount( nAmmoPosition ) );
 
 	 switch( nAmmoPosition ) 
 	 { 
-		case AMMO_POSITION_PRIMARY: m_iPrimaryReserveAmmoCount = MIN( nCount, GetReserveAmmoMax( AMMO_POSITION_PRIMARY ) ); break;
-		case AMMO_POSITION_SECONDARY: m_iSecondaryReserveAmmoCount = MIN( nCount, GetReserveAmmoMax( AMMO_POSITION_SECONDARY ) ); break;
+		case AMMO_POSITION_PRIMARY: m_iPrimaryReserveAmmoCount = std::min( nCount, GetReserveAmmoMax( AMMO_POSITION_PRIMARY ) ); break;
+		case AMMO_POSITION_SECONDARY: m_iSecondaryReserveAmmoCount = std::min( nCount, GetReserveAmmoMax( AMMO_POSITION_SECONDARY ) ); break;
 		default: return 0; 
 	 }
 

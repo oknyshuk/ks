@@ -15,9 +15,6 @@
 #include "engine/IEngineSound.h"
 #include <bitbuf.h>
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 /// USER-DEFINED SERVER MESSAGE HANDLERS
 
 bool CHud::MsgFunc_ResetHUD( const ks::net::CCSUsrMsg_ResetHud& msg )
@@ -31,7 +28,7 @@ void CHud::ResetHUD()
 	// clear all hud data
 	GetClientMode()->GetViewportAnimationController()->CancelAllAnimations();
 
-	for ( int i = 0; i < GetHudList().Count(); i++ )
+	for ( int i = 0; i < std::ssize( GetHudList() ); i++ )
 	{
 		GetHudList()[i]->Reset();
 	}

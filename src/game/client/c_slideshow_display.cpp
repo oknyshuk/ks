@@ -18,9 +18,6 @@
 #include "filesystem.h"
 #include "keyvalues.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 #define SLIDESHOW_LIST_BUFFER_MAX 8192
 
@@ -35,7 +32,7 @@ enum SlideshowCycleTypes
 };
 
 
-CUtlVector< C_SlideshowDisplay* > g_SlideshowDisplays;
+std::vector< C_SlideshowDisplay* > g_SlideshowDisplays;
 
 
 IMPLEMENT_REFLECT_CLIENTCLASS( C_SlideshowDisplay, DT_SlideshowDisplay, CSlideshowDisplay )
@@ -43,12 +40,12 @@ IMPLEMENT_REFLECT_CLIENTCLASS( C_SlideshowDisplay, DT_SlideshowDisplay, CSlidesh
 
 C_SlideshowDisplay::C_SlideshowDisplay()
 {
-	g_SlideshowDisplays.AddToTail( this );
+	g_SlideshowDisplays.push_back( this );
 }
 
 C_SlideshowDisplay::~C_SlideshowDisplay()
 {
-	g_SlideshowDisplays.FindAndRemove( this );
+	ks::erase_first( g_SlideshowDisplays, this );
 }
 
 void C_SlideshowDisplay::Spawn( void )
@@ -88,7 +85,7 @@ int C_SlideshowDisplay::NumMaterials( void )
 	if ( !m_SlideMaterialLists[ 0 ] )
 		return 0;
 
-	return m_SlideMaterialLists[ 0 ]->iSlideMaterials.Count();
+	return std::ssize( m_SlideMaterialLists[ 0 ]->iSlideMaterials );
 }
 
 void C_SlideshowDisplay::ClientThink( void )
@@ -154,12 +151,12 @@ void C_SlideshowDisplay::ClientThink( void )
 	switch ( m_iCycleType )
 	{
 		case SLIDESHOW_CYCLE_RANDOM:
-			m_iCurrentSlide = RandomInt( 0, pSlideMaterialList->iSlideMaterials.Count() - 1 );
+			m_iCurrentSlide = RandomInt( 0, std::ssize( pSlideMaterialList->iSlideMaterials ) - 1 );
 			break;
 
 		case SLIDESHOW_CYCLE_FORWARD:
 			++m_iCurrentSlide;
-			if ( m_iCurrentSlide >= pSlideMaterialList->iSlideMaterials.Count() )
+			if ( m_iCurrentSlide >= std::ssize( pSlideMaterialList->iSlideMaterials ) )
 			{
 				++m_iCurrentSlideList;
 				if ( m_iCurrentSlideList >= iNumCurrentSlideLists )
@@ -177,7 +174,7 @@ void C_SlideshowDisplay::ClientThink( void )
 				if ( m_iCurrentSlideList < 0 )
 					m_iCurrentSlideList = iNumCurrentSlideLists - 1;
 				pSlideMaterialList = m_SlideMaterialLists[ m_chCurrentSlideLists[ m_iCurrentSlideList ] ];
-				m_iCurrentSlide = pSlideMaterialList->iSlideMaterials.Count() - 1;
+				m_iCurrentSlide = std::ssize( pSlideMaterialList->iSlideMaterials ) - 1;
 			}
 			break;
 	}
@@ -245,22 +242,22 @@ void C_SlideshowDisplay::BuildSlideShowImagesList( void )
 
 				// Find the list with the current keyword
 				int iList;
-				for ( iList = 0; iList < m_SlideMaterialLists.Count(); ++iList )
+				for ( iList = 0; iList < std::ssize( m_SlideMaterialLists ); ++iList )
 				{
 					if ( Q_strcmp( m_SlideMaterialLists[ iList ]->szSlideKeyword, pchKeyword ) == 0 )
 						break;
 				}
 
-				if ( iList >= m_SlideMaterialLists.Count() )
+				if ( iList >= std::ssize( m_SlideMaterialLists ) )
 				{
 					// Couldn't find the list, so create it
-					iList = m_SlideMaterialLists.AddToTail( new SlideMaterialList_t );
+					iList = std::ssize( m_SlideMaterialLists ); m_SlideMaterialLists.push_back( new SlideMaterialList_t );
 					V_strcpy_safe( m_SlideMaterialLists[ iList ]->szSlideKeyword, pchKeyword );
 				}
 
 				// Add material index to this list
-				m_SlideMaterialLists[ iList ]->iSlideMaterials.AddToTail( iMatIndex );
-				m_SlideMaterialLists[ iList ]->iSlideIndex.AddToTail( iSlideIndex );
+				m_SlideMaterialLists[ iList ]->iSlideMaterials.push_back( iMatIndex );
+				m_SlideMaterialLists[ iList ]->iSlideIndex.push_back( iSlideIndex );
 
 				pchKeyword = pNextKeyword;
 			}
@@ -270,22 +267,22 @@ void C_SlideshowDisplay::BuildSlideShowImagesList( void )
 
 		// Find the generic list
 		int iList;
-		for ( iList = 0; iList < m_SlideMaterialLists.Count(); ++iList )
+		for ( iList = 0; iList < std::ssize( m_SlideMaterialLists ); ++iList )
 		{
 			if ( Q_strcmp( m_SlideMaterialLists[ iList ]->szSlideKeyword, "" ) == 0 )
 				break;
 		}
 
-		if ( iList >= m_SlideMaterialLists.Count() )
+		if ( iList >= std::ssize( m_SlideMaterialLists ) )
 		{
 			// Couldn't find the generic list, so create it
-			iList = m_SlideMaterialLists.AddToHead( new SlideMaterialList_t );
+			m_SlideMaterialLists.insert( m_SlideMaterialLists.begin(), new SlideMaterialList_t ); iList = 0;
 			V_strcpy_safe( m_SlideMaterialLists[ iList ]->szSlideKeyword, "" );
 		}
 
 		// Add material index to this list
-		m_SlideMaterialLists[ iList ]->iSlideMaterials.AddToTail( iMatIndex );
-		m_SlideMaterialLists[ iList ]->iSlideIndex.AddToTail( iSlideIndex );
+		m_SlideMaterialLists[ iList ]->iSlideMaterials.push_back( iMatIndex );
+		m_SlideMaterialLists[ iList ]->iSlideIndex.push_back( iSlideIndex );
 		
 		{
 			const char *pMatFileName = g_pFullFileSystem->FindNext( matHandle );

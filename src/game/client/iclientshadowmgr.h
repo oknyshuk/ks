@@ -10,6 +10,7 @@
 #define ICLIENTSHADOWMGR_H
 
 
+#include <bitset>
 #include "igamesystem.h"
 #include "icliententityinternal.h"
 #include "engine/ishadowmgr.h"
@@ -40,7 +41,7 @@ abstract_class IClientShadowMgr : public IGameSystemPerFrame
 {
 public:
 	// Create, destroy shadows
-	virtual ClientShadowHandle_t CreateShadow( ClientEntityHandle_t entity, int nEntIndex, int flags, CBitVec< MAX_SPLITSCREEN_PLAYERS > *pSplitScreenBits = nullptr ) = 0;
+	virtual ClientShadowHandle_t CreateShadow( ClientEntityHandle_t entity, int nEntIndex, int flags, std::bitset< MAX_SPLITSCREEN_PLAYERS > *pSplitScreenBits = nullptr ) = 0;
 	virtual void DestroyShadow( ClientShadowHandle_t handle ) = 0;
 
 	// Create flashlight.

@@ -9,8 +9,6 @@
 
 
 
-#include "tier1/UtlStringMap.h"
-#include "tier1/utlbuffer.h"
 #include "tier2/fileutils.h"
 
 #define MAX_WORLD_PLANAR_CONSTRAINTS ( 26 + 5 + 10 )

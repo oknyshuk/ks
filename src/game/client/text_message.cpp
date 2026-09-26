@@ -17,9 +17,6 @@
 #include "client_textmessage.h"
 #include "localize/ilocalize.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: Implements IHudTextMessage
 //-----------------------------------------------------------------------------

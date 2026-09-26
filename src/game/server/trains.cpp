@@ -18,8 +18,6 @@
 #include "vphysics/friction.h"
 #include "hierarchy.h"
 #include "vscript_shared.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 static void PlatSpawnInsideTrigger(edict_t *pevPlatform);
 
@@ -1505,11 +1503,11 @@ void CFuncTrackTrain::Stop( void )
 
 static CBaseEntity *FindPhysicsBlockerForHierarchy( CBaseEntity *pParentEntity )
 {
-	CUtlVector<CBaseEntity *> list;
+	std::vector< CBaseEntity * > list;
 	GetAllInHierarchy( pParentEntity, list );
 	CBaseEntity *pPhysicsBlocker = nullptr;
 	float maxForce = 0;
-	for ( int i = 0; i < list.Count(); i++ )
+	for ( int i = 0; i < std::ssize( list ); i++ )
 	{
 		IPhysicsObject *pPhysics = list[i]->VPhysicsGetObject();
 		if ( pPhysics )

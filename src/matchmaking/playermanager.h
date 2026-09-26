@@ -13,7 +13,6 @@ class PlayerManager;
 
 #include <list>
 #include "utlvector.h"
-#include "utlmap.h"
 
 
 #include "player.h"
@@ -86,7 +85,7 @@ private:
 
 	// Players instances
 	PlayerLocal * mLocalPlayer[ XUSER_MAX_COUNT ]; // local Players are cached off here for convienience.
-	CUtlVector< PlayerFriend * > mFriendsList;
+	std::vector< PlayerFriend * > mFriendsList;
 
 	bool m_bUpdateEnabled;		// whether data should be auto-updated
 	float m_flNextUpdateTime;	// when next update cycle should occur

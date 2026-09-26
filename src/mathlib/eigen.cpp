@@ -90,8 +90,8 @@ void ComputeCovarianceMatrix( matrix3x4_t &covarianceMatrix, const Vector *pPoin
 
 	const Vector vMean = ComputeMeanPoint( pPointList, nPointCount );
 
-	CUtlVector< Vector > skewedPointList;
-	skewedPointList.CopyArray( pPointList, nPointCount );
+	std::vector< Vector > skewedPointList;
+	skewedPointList.assign( pPointList, pPointList + nPointCount );
 
 	for ( int ii = 0; ii < nPointCount; ++ii )
 	{

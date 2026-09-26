@@ -6,13 +6,14 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include "tier0/memalloc.h"
 #undef max
 #undef min
 #include <algorithm>
 #include "detailobjectsystem.h"
 #include "gamebspfile.h"
-#include "utlbuffer.h"
-#include "tier1/utlmap.h"
+#include "tier1/byte_reader.h"
+#include "tier1/map_ops.h"
 #include "view.h"
 #include "clientmode.h"
 #include "iviewrender.h"
@@ -36,9 +37,7 @@
 #endif
 
 #include "materialsystem/imaterialsystemhardwareconfig.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include <memory>
 
 #define DETAIL_SPRITE_MATERIAL		"detail/detailsprites"
 
@@ -136,6 +135,12 @@ class CDetailModel : public IClientUnknown, public IClientRenderable
 public:
 	CDetailModel();
 	~CDetailModel();
+
+	// gm_LightStylesMap is keyed by address, so a move re-keys this model's entry.
+	CDetailModel( CDetailModel &&src ) noexcept;
+	CDetailModel &operator=( CDetailModel &&src ) noexcept;
+	CDetailModel( const CDetailModel & ) = delete;
+	CDetailModel &operator=( const CDetailModel & ) = delete;
 
 
 	// Initialization
@@ -256,6 +261,9 @@ public:
 	};
 
 protected:
+	void MoveFrom( CDetailModel &src );
+	void ReleaseLightStyle();
+
 	Vector	m_Origin;
 	QAngle	m_Angles;
 
@@ -267,19 +275,17 @@ protected:
 	unsigned char	m_bFlipped:1;
 	unsigned char	m_bIsTranslucent:1;
 
-	static CUtlMap<CDetailModel *, LightStyleInfo_t> gm_LightStylesMap;
+	static std::map<CDetailModel *, LightStyleInfo_t> gm_LightStylesMap;
 
-#pragma warning( disable : 4201 ) //warning C4201: nonstandard extension used : nameless struct/union
 	union
 	{
 		model_t* m_pModel;
 		SpriteInfo_t m_SpriteInfo;
 	};
-#pragma warning( default : 4201 )
 
 #ifdef USE_DETAIL_SHAPES
 	// pointer to advanced properties
-	DetailModelAdvInfo_t *m_pAdvInfo;
+	std::unique_ptr< DetailModelAdvInfo_t > m_pAdvInfo;
 #endif
 };
 
@@ -478,14 +484,14 @@ private:
 	void UnserializeFastSprite( FastSpriteX4_t *pSpritex4, int nSubField, DetailObjectLump_t const &lump, bool bFlipped, Vector const &posOffset );
 
 	// Unserialization
-	void ScanForCounts( CUtlBuffer& buf, int *pNumOldStyleObjects, 
+	void ScanForCounts( ks::byte_reader& buf, int *pNumOldStyleObjects, 
 						int *pNumFastSpritesToAllocate, int *nMaxOldInLeaf,
 						int *nMaxFastInLeaf ) const;
 
-	void UnserializeModelDict( CUtlBuffer& buf );
-	void UnserializeDetailSprites( CUtlBuffer& buf );
-	void UnserializeModels( CUtlBuffer& buf );
-	void UnserializeModelLighting( CUtlBuffer& buf );
+	void UnserializeModelDict( ks::byte_reader& buf );
+	void UnserializeDetailSprites( ks::byte_reader& buf );
+	void UnserializeModels( ks::byte_reader& buf );
+	void UnserializeModelLighting( ks::byte_reader& buf );
 
 	Vector GetSpriteMiddleBottomPosition( DetailObjectLump_t const &lump ) const;
 	// Count the number of detail sprites in the leaf list
@@ -505,11 +511,11 @@ private:
 	// For fast detail object insertion
 	IterationRetval_t EnumElement( int userId, int context );
 
-	CUtlVector<DetailModelDict_t>			m_DetailObjectDict;
-	CUtlVector<CDetailModel>				m_DetailObjects;
-	CUtlVector<DetailPropSpriteDict_t>		m_DetailSpriteDict;
-	CUtlVector<DetailPropSpriteDict_t>		m_DetailSpriteDictFlipped;
-	CUtlVector<DetailPropLightstylesLump_t>	m_DetailLighting;
+	std::vector< DetailModelDict_t >			m_DetailObjectDict;
+	std::vector< CDetailModel >				m_DetailObjects;
+	std::vector< DetailPropSpriteDict_t >		m_DetailSpriteDict;
+	std::vector< DetailPropSpriteDict_t >		m_DetailSpriteDictFlipped;
+	std::vector< DetailPropLightstylesLump_t >	m_DetailLighting;
 	FastSpriteX4_t *m_pFastSpriteData;
 
 	// Necessary to get sprites to batch correctly
@@ -530,7 +536,7 @@ private:
 	float m_flDetailFadeEnd;
 
 	IMesh *m_pCachedSpriteMesh[MAX_MAP_LEAFS][CACHED_SPRITE_SUB_SPLIT_COUNT];
-	CUtlVector<IMesh**> m_nCachedSpriteMeshPtrs;
+	std::vector< IMesh** > m_nCachedSpriteMeshPtrs;
 
 	CUniformRandomStream m_randomStream;
 
@@ -559,7 +565,7 @@ static void DetailFadeCallback( IConVar *var, const char *pOldValue, float flOld
 // Initialization
 //-----------------------------------------------------------------------------
 
-CUtlMap<CDetailModel *, CDetailModel::LightStyleInfo_t> CDetailModel::gm_LightStylesMap( DefLessFunc( CDetailModel * ) );
+std::map<CDetailModel *, CDetailModel::LightStyleInfo_t> CDetailModel::gm_LightStylesMap;
 
 bool CDetailModel::InitCommon( int index, const Vector& org, const QAngle& angles )
 {
@@ -667,8 +673,8 @@ void CDetailModel::GetRenderBounds( Vector& mins, Vector& maxs )
 	float flScale = m_SpriteInfo.m_flScale.GetFloat();
 	Vector2DMultiply( dict.m_UL, flScale, ul );
 	Vector2DMultiply( dict.m_LR, flScale, lr );
-	float flSizeX = MAX( fabs(lr.x), fabs(ul.x) );
-	float flSizeY = MAX( fabs(lr.y), fabs(ul.y) );
+	float flSizeX = std::max( fabs(lr.x), fabs(ul.x) );
+	float flSizeY = std::max( fabs(lr.y), fabs(ul.y) );
 	float flRadius = sqrt( flSizeX * flSizeX + flSizeY * flSizeY );
 	mins.Init( -flRadius, -flRadius, -flRadius );
 	maxs.Init( flRadius, flRadius, flRadius );
@@ -788,28 +794,59 @@ CDetailModel::CDetailModel()
 	m_bFlipped = 0;
 	m_bHasLightStyle = 0;
 	m_bIsTranslucent = false;
-
-#ifdef USE_DETAIL_SHAPES
-	m_pAdvInfo = nullptr;
-#endif
 }
 
-//-----------------------------------------------------------------------------
-// Destructor
-//-----------------------------------------------------------------------------
+CDetailModel::CDetailModel( CDetailModel &&src ) noexcept : CDetailModel()
+{
+	MoveFrom( src );
+}
+
+CDetailModel &CDetailModel::operator=( CDetailModel &&src ) noexcept
+{
+	if ( this != &src )
+	{
+		ReleaseLightStyle();
+		MoveFrom( src );
+	}
+	return *this;
+}
+
 CDetailModel::~CDetailModel()
 {
+	ReleaseLightStyle();
+}
+
+void CDetailModel::ReleaseLightStyle()
+{
+	if ( m_bHasLightStyle )
+		gm_LightStylesMap.erase( this );
+	m_bHasLightStyle = 0;
+}
+
+void CDetailModel::MoveFrom( CDetailModel &src )
+{
+	m_Origin = src.m_Origin;
+	m_Angles = src.m_Angles;
+	m_Color = src.m_Color;
+	m_Orientation = src.m_Orientation;
+	m_Type = src.m_Type;
+	m_bFlipped = src.m_bFlipped;
+	m_bIsTranslucent = src.m_bIsTranslucent;
+	static_assert( sizeof( m_pModel ) >= sizeof( m_SpriteInfo ) );
+	memcpy( (void *)&m_pModel, &src.m_pModel, sizeof( m_pModel ) );	// whichever union member is live
 #ifdef USE_DETAIL_SHAPES
-	// delete advanced
-	if ( m_pAdvInfo )
-	{
-		delete m_pAdvInfo;
-		m_pAdvInfo = nullptr;
-	}
+	m_pAdvInfo = std::move( src.m_pAdvInfo );
 #endif
 
-	if ( m_bHasLightStyle )
-		gm_LightStylesMap.Remove( this );
+	if ( src.m_bHasLightStyle )
+	{
+		auto node = gm_LightStylesMap.extract( &src );
+		Assert( node );
+		node.key() = this;
+		gm_LightStylesMap.insert( std::move( node ) );
+		m_bHasLightStyle = 1;
+		src.m_bHasLightStyle = 0;
+	}
 }
 
 
@@ -824,11 +861,11 @@ bool CDetailModel::Init( int index, const Vector& org, const QAngle& angles,
 	if ( lightstylecount > 0)
 	{
 		m_bHasLightStyle = 1;
-		int iInfo = gm_LightStylesMap.Insert( this );
+		LightStyleInfo_t &info = gm_LightStylesMap[this];
 		if ( lightstyle >= 0x1000000 || lightstylecount >= 100  )
 			Error( "Light style overflow\n" );
-		gm_LightStylesMap[iInfo].m_LightStyle = lightstyle;
-		gm_LightStylesMap[iInfo].m_LightStyleCount = lightstylecount;
+		info.m_LightStyle = lightstyle;
+		info.m_LightStyleCount = lightstylecount;
 	}
 	m_Orientation = orientation;
 	m_Type = DETAIL_PROP_TYPE_MODEL;
@@ -845,11 +882,11 @@ bool CDetailModel::InitSprite( int index, bool bFlipped, const Vector& org, cons
 	if ( lightstylecount > 0)
 	{
 		m_bHasLightStyle = 1;
-		int iInfo = gm_LightStylesMap.Insert( this );
+		LightStyleInfo_t &info = gm_LightStylesMap[this];
 		if ( lightstyle >= 0x1000000 || lightstylecount >= 100  )
 			Error( "Light style overflow\n" );
-		gm_LightStylesMap[iInfo].m_LightStyle = lightstyle;
-		gm_LightStylesMap[iInfo].m_LightStyleCount = lightstylecount;
+		info.m_LightStyle = lightstyle;
+		info.m_LightStyleCount = lightstylecount;
 	}
 	m_Orientation = orientation;
 	m_SpriteInfo.m_nSpriteIndex = nSpriteIndex;
@@ -878,7 +915,7 @@ void CDetailModel::InitShapedSprite( unsigned char shapeAngle, unsigned char sha
 {
 	// Set up pointer to advanced shape properties object ( per instance )
 	Assert( m_pAdvInfo == nullptr );
-	m_pAdvInfo = new DetailModelAdvInfo_t;
+	m_pAdvInfo = std::make_unique< DetailModelAdvInfo_t >();
 	Assert( m_pAdvInfo );
 
 	if ( m_pAdvInfo )
@@ -962,12 +999,12 @@ void CDetailModel::GetColorModulation( float *color )
 	// Add in the lightstyles
 	if ( m_bHasLightStyle )
 	{
-		int iInfo = gm_LightStylesMap.Find( this );
-		Assert( iInfo != gm_LightStylesMap.InvalidIndex() );
-		if ( iInfo != gm_LightStylesMap.InvalidIndex() )
+		const LightStyleInfo_t *pInfo = ks::find_ptr( gm_LightStylesMap, this );
+		Assert( pInfo );
+		if ( pInfo )
 		{
-			int nLightStyles = gm_LightStylesMap[iInfo].m_LightStyleCount;
-			int iLightStyle = gm_LightStylesMap[iInfo].m_LightStyle;
+			int nLightStyles = pInfo->m_LightStyleCount;
+			int iLightStyle = pInfo->m_LightStyle;
 			for (int i = 0; i < nLightStyles; ++i)
 			{
 				DetailPropLightstylesLump_t& lighting = s_DetailObjectSystem.DetailLighting( iLightStyle + i );
@@ -1457,29 +1494,35 @@ void CDetailModel::DrawSwayingQuad( CMeshBuilder &meshBuilder, Vector vecOrigin,
 //-----------------------------------------------------------------------------
 // constructor, destructor
 //-----------------------------------------------------------------------------
-CDetailObjectSystem::CDetailObjectSystem() : m_DetailSpriteDict( 0, 32 ), m_DetailObjectDict( 0, 32 ), m_DetailSpriteDictFlipped( 0, 32 )
+CDetailObjectSystem::CDetailObjectSystem()
 {
 	m_pFastSpriteData = nullptr;
 	m_pSortInfo = nullptr;
 	m_pFastSortInfo = nullptr;
 	m_pBuildoutBuffer = nullptr;
 
-	m_pCachedSpriteMesh[MAX_MAP_LEAFS][CACHED_SPRITE_SUB_SPLIT_COUNT] = {nullptr};
-	m_nCachedSpriteMeshPtrs.RemoveAll();
+	for ( int nLeaf = 0; nLeaf < MAX_MAP_LEAFS; nLeaf++ )
+	{
+		for ( int nSubSplit = 0; nSubSplit < CACHED_SPRITE_SUB_SPLIT_COUNT; nSubSplit++ )
+		{
+			m_pCachedSpriteMesh[nLeaf][nSubSplit] = nullptr;
+		}
+	}
+	m_nCachedSpriteMeshPtrs.clear();
 }
 
 void CDetailObjectSystem::DestroyCachedSpriteMeshes( void )
 {
-	if ( m_nCachedSpriteMeshPtrs.Count() )
+	if ( !m_nCachedSpriteMeshPtrs.empty() )
 	{
 		CMatRenderContextPtr pRenderContext( materials );
-		FOR_EACH_VEC( m_nCachedSpriteMeshPtrs, n )
+		for ( IMesh **ppCachedSpriteMesh : m_nCachedSpriteMeshPtrs )
 		{
-			Assert( m_nCachedSpriteMeshPtrs[n] );
-			pRenderContext->DestroyStaticMesh( *m_nCachedSpriteMeshPtrs[n] );
-			*m_nCachedSpriteMeshPtrs[n] = nullptr;
+			Assert( ppCachedSpriteMesh );
+			pRenderContext->DestroyStaticMesh( *ppCachedSpriteMesh );
+			*ppCachedSpriteMesh = nullptr;
 		}
-		m_nCachedSpriteMeshPtrs.Purge();
+		m_nCachedSpriteMeshPtrs.clear(); m_nCachedSpriteMeshPtrs.shrink_to_fit();
 	}
 }
 
@@ -1549,11 +1592,10 @@ void CDetailObjectSystem::LevelInitPreEntity()
 
 	// Unserialize
 	int size = engine->GameLumpSize( GAMELUMP_DETAIL_PROPS );
-	CUtlMemory<unsigned char> fileMemory;
-	fileMemory.EnsureCapacity( size );
-	if (engine->LoadGameLump( GAMELUMP_DETAIL_PROPS, fileMemory.Base(), size ))
+	std::vector<unsigned char> fileMemory( size );
+	if (engine->LoadGameLump( GAMELUMP_DETAIL_PROPS, fileMemory.data(), size ))
 	{
-		CUtlBuffer buf( fileMemory.Base(), size, CUtlBuffer::READ_ONLY );
+		ks::byte_reader buf( fileMemory.data(), size );
 		UnserializeModelDict( buf );
 
 		switch (engine->GameLumpVersion( GAMELUMP_DETAIL_PROPS ) )
@@ -1565,7 +1607,7 @@ void CDetailObjectSystem::LevelInitPreEntity()
 		}
 	}
 
-	if ( m_DetailObjects.Count() || m_DetailSpriteDict.Count() )
+	if ( std::ssize( m_DetailObjects ) || std::ssize( m_DetailSpriteDict ) )
 	{
 		// There are detail objects in the level, so precache the material
 		PrecacheMaterial( DETAIL_SPRITE_MATERIAL );
@@ -1574,7 +1616,7 @@ void CDetailObjectSystem::LevelInitPreEntity()
 		float flRatio = pMat->GetMappingWidth() / pMat->GetMappingHeight();
 		if ( flRatio > 1.0 )
 		{
-			for( int i = 0; i<m_DetailSpriteDict.Count(); i++ )
+			for( int i = 0; i<std::ssize( m_DetailSpriteDict ); i++ )
 			{
 				m_DetailSpriteDict[i].m_TexUL.y *= flRatio;
 				m_DetailSpriteDict[i].m_TexLR.y *= flRatio;
@@ -1595,10 +1637,10 @@ void CDetailObjectSystem::LevelInitPreEntity()
 	}
 	size = engine->GameLumpSize( detailPropLightingLump );
 
-	fileMemory.EnsureCapacity( size );
-	if (engine->LoadGameLump( detailPropLightingLump, fileMemory.Base(), size ))
+	ks::grow_to( fileMemory, size );
+	if (engine->LoadGameLump( detailPropLightingLump, fileMemory.data(), size ))
 	{
-		CUtlBuffer buf( fileMemory.Base(), size, CUtlBuffer::READ_ONLY );
+		ks::byte_reader buf( fileMemory.data(), size );
 		UnserializeModelLighting( buf );
 	}
 }
@@ -1635,11 +1677,11 @@ void CDetailObjectSystem::LevelInitPostEntity()
 
 void CDetailObjectSystem::LevelShutdownPreEntity()
 {
-	m_DetailObjects.Purge();
-	m_DetailObjectDict.Purge();
-	m_DetailSpriteDict.Purge();
-	m_DetailSpriteDictFlipped.Purge();
-	m_DetailLighting.Purge();
+	m_DetailObjects.clear(); m_DetailObjects.shrink_to_fit();
+	m_DetailObjectDict.clear(); m_DetailObjectDict.shrink_to_fit();
+	m_DetailSpriteDict.clear(); m_DetailSpriteDict.shrink_to_fit();
+	m_DetailSpriteDictFlipped.clear(); m_DetailSpriteDictFlipped.shrink_to_fit();
+	m_DetailLighting.clear(); m_DetailLighting.shrink_to_fit();
 }
 
 void CDetailObjectSystem::LevelShutdownPostEntity()
@@ -1698,21 +1740,21 @@ IClientRenderable* CDetailObjectSystem::GetDetailModel( int idx )
 // How many detail models (as opposed to sprites) are there in the level?
 int CDetailObjectSystem::GetDetailModelCount() const
 {
-	return m_DetailObjects.Count();
+	return std::ssize( m_DetailObjects );
 }
 
 
 //-----------------------------------------------------------------------------
 // Unserialization
 //-----------------------------------------------------------------------------
-void CDetailObjectSystem::UnserializeModelDict( CUtlBuffer& buf )
+void CDetailObjectSystem::UnserializeModelDict( ks::byte_reader& buf )
 {
-	int count = buf.GetInt();
-	m_DetailObjectDict.EnsureCapacity( count );
+	int count = buf.read<int>();
+	m_DetailObjectDict.reserve( count );
 	while ( --count >= 0 )
 	{
 		DetailObjectDictLump_t lump;
-		buf.Get( &lump, sizeof(DetailObjectDictLump_t) );
+		buf.read_bytes( &lump, sizeof(DetailObjectDictLump_t) );
 		
 		DetailModelDict_t dict;
 		dict.m_pModel = (model_t *)engine->LoadModel( lump.m_Name, true );
@@ -1724,34 +1766,34 @@ void CDetailObjectSystem::UnserializeModelDict( CUtlBuffer& buf )
 			dict.m_pModel = (model_t *)engine->LoadModel( "models/error.mdl" );
 		}
 
-		m_DetailObjectDict.AddToTail( dict );
+		m_DetailObjectDict.push_back( dict );
 	}
 }
 
-void CDetailObjectSystem::UnserializeDetailSprites( CUtlBuffer& buf )
+void CDetailObjectSystem::UnserializeDetailSprites( ks::byte_reader& buf )
 {
-	int count = buf.GetInt();
-	m_DetailSpriteDict.EnsureCapacity( count );
-	m_DetailSpriteDictFlipped.EnsureCapacity( count );
+	int count = buf.read<int>();
+	m_DetailSpriteDict.reserve( count );
+	m_DetailSpriteDictFlipped.reserve( count );
 	while ( --count >= 0 )
 	{
-		int i = m_DetailSpriteDict.AddToTail();
-		buf.Get( &m_DetailSpriteDict[i], sizeof(DetailSpriteDictLump_t) );
-		int flipi = m_DetailSpriteDictFlipped.AddToTail();
+		int i = std::ssize( m_DetailSpriteDict ); m_DetailSpriteDict.emplace_back();
+		buf.read_bytes( &m_DetailSpriteDict[i], sizeof(DetailSpriteDictLump_t) );
+		int flipi = std::ssize( m_DetailSpriteDictFlipped ); m_DetailSpriteDictFlipped.emplace_back();
 		m_DetailSpriteDictFlipped[flipi] = m_DetailSpriteDict[i];
 		V_swap( m_DetailSpriteDictFlipped[flipi].m_TexUL.x, m_DetailSpriteDictFlipped[flipi].m_TexLR.x );
 	}
 }
 
 
-void CDetailObjectSystem::UnserializeModelLighting( CUtlBuffer& buf )
+void CDetailObjectSystem::UnserializeModelLighting( ks::byte_reader& buf )
 {
-	int count = buf.GetInt();
-	m_DetailLighting.EnsureCapacity( count );
+	int count = buf.read<int>();
+	m_DetailLighting.reserve( count );
 	while ( --count >= 0 )
 	{
-		int i = m_DetailLighting.AddToTail();
-		buf.Get( &m_DetailLighting[i], sizeof(DetailPropLightstylesLump_t) );
+		int i = std::ssize( m_DetailLighting ); m_DetailLighting.emplace_back();
+		buf.read_bytes( &m_DetailLighting[i], sizeof(DetailPropLightstylesLump_t) );
 	}
 }
 
@@ -1778,15 +1820,15 @@ static bool DetailObjectIsFastSprite( DetailObjectLump_t const & lump )
 }
 
 
-void CDetailObjectSystem::ScanForCounts( CUtlBuffer& buf,
+void CDetailObjectSystem::ScanForCounts( ks::byte_reader& buf,
 										 int *pNumOldStyleObjects,
 										 int *pNumFastSpritesToAllocate,
 										 int *nMaxNumOldSpritesInLeaf,
 										 int *nMaxNumFastSpritesInLeaf
 										 ) const
 {
-	int oldpos = buf.TellGet();								// we need to seek back
-	int count = buf.GetInt();
+	int oldpos = buf.tell();								// we need to seek back
+	int count = buf.read<int>();
 
 	int nOld = 0;
 	int nFast = 0;
@@ -1799,7 +1841,7 @@ void CDetailObjectSystem::ScanForCounts( CUtlBuffer& buf,
 	while ( --count >= 0 )
 	{
 		DetailObjectLump_t lump;
-		buf.Get( &lump, sizeof(DetailObjectLump_t) );
+		buf.read_bytes( &lump, sizeof(DetailObjectLump_t) );
 		
 		// We rely on the fact that details objects are sorted by leaf in the
 		// bsp file for this
@@ -1807,8 +1849,8 @@ void CDetailObjectSystem::ScanForCounts( CUtlBuffer& buf,
 		{
 			// need to pad nfast to next sse boundary
 			nFast += ( 0 - nFast ) & 3;
-			nMaxFast = MAX( nMaxFast, nNumFastInLeaf );
-			nMaxOld = MAX( nMaxOld, nNumOldInLeaf );
+			nMaxFast = std::max( nMaxFast, nNumFastInLeaf );
+			nMaxOld = std::max( nMaxOld, nNumOldInLeaf );
 			nNumOldInLeaf = 0;
 			nNumFastInLeaf = 0;
 			detailObjectLeaf = lump.m_Leaf;
@@ -1829,10 +1871,10 @@ void CDetailObjectSystem::ScanForCounts( CUtlBuffer& buf,
 
 	// need to pad nfast to next sse boundary
 	nFast += ( 0 - nFast ) & 3;
-	nMaxFast = MAX( nMaxFast, nNumFastInLeaf );
-	nMaxOld = MAX( nMaxOld, nNumOldInLeaf );
+	nMaxFast = std::max( nMaxFast, nNumFastInLeaf );
+	nMaxOld = std::max( nMaxOld, nNumOldInLeaf );
 
-	buf.SeekGet( CUtlBuffer::SEEK_HEAD, oldpos );
+	buf.seek( oldpos );
 	*pNumFastSpritesToAllocate = nFast;
 	*pNumOldStyleObjects = nOld;
 	nMaxFast = ( 3 + nMaxFast ) & ~3;
@@ -1844,7 +1886,7 @@ void CDetailObjectSystem::ScanForCounts( CUtlBuffer& buf,
 //-----------------------------------------------------------------------------
 // Unserialize all models
 //-----------------------------------------------------------------------------
-void CDetailObjectSystem::UnserializeModels( CUtlBuffer& buf )
+void CDetailObjectSystem::UnserializeModels( ks::byte_reader& buf )
 {
 	int firstDetailObject = 0;
 	int detailObjectCount = 0;
@@ -1894,9 +1936,9 @@ void CDetailObjectSystem::UnserializeModels( CUtlBuffer& buf )
 		Warning( "*** CDetailObjectSystem::UnserializeModels: Error! Too many detail objects!\n" );
 	}
 
-	m_DetailObjects.EnsureCapacity( nNumOldStyleObjects );
+	m_DetailObjects.reserve( nNumOldStyleObjects );
 
-	int count = buf.GetInt();
+	int count = buf.read<int>();
 	
 	int nCurFastObject = 0;
 	int nNumFastObjectsInCurLeaf = 0;
@@ -1907,7 +1949,7 @@ void CDetailObjectSystem::UnserializeModels( CUtlBuffer& buf )
 	{
 		bFlipped = !bFlipped;
 		DetailObjectLump_t lump;
-		buf.Get( &lump, sizeof(DetailObjectLump_t) );
+		buf.read_bytes( &lump, sizeof(DetailObjectLump_t) );
 		
 		// We rely on the fact that details objects are sorted by leaf in the
 		// bsp file for this
@@ -1934,7 +1976,7 @@ void CDetailObjectSystem::UnserializeModels( CUtlBuffer& buf )
 			}
 
 			detailObjectLeaf = lump.m_Leaf;
-			firstDetailObject = m_DetailObjects.Count();
+			firstDetailObject = std::ssize( m_DetailObjects );
 			detailObjectCount = 0;
 		}
 
@@ -1969,7 +2011,7 @@ void CDetailObjectSystem::UnserializeModels( CUtlBuffer& buf )
 			{
 				case DETAIL_PROP_TYPE_MODEL:
 				{
-					int newObj = m_DetailObjects.AddToTail();
+					int newObj = std::ssize( m_DetailObjects ); m_DetailObjects.emplace_back();
 					m_DetailObjects[newObj].Init(
 						newObj, lump.m_Origin, lump.m_Angles, 
 						m_DetailObjectDict[lump.m_DetailModel].m_pModel, lump.m_Lighting,
@@ -1990,7 +2032,7 @@ void CDetailObjectSystem::UnserializeModels( CUtlBuffer& buf )
 							pos += RandomVector( -50, 50 );
 							pos. z = lump.m_Origin.z;
 						}
-						int newObj = m_DetailObjects.AddToTail();
+						int newObj = std::ssize( m_DetailObjects ); m_DetailObjects.emplace_back();
 						m_DetailObjects[newObj].InitSprite( 
 							newObj, bFlipped, pos, lump.m_Angles, 
 							lump.m_DetailModel, lump.m_Lighting,
@@ -2125,7 +2167,7 @@ int CDetailObjectSystem::CountFastSpritesInLeafList( int nLeafCount, LeafIndex_t
 		if ( pData )
 		{
 			nCount += pData->m_nNumSprites;
-			nMax = MAX( nMax, pData->m_nNumSprites );
+			nMax = std::max( nMax, pData->m_nNumSprites );
 		}
 	}
 	*nMaxFoundInLeaf = ( nMax + 3 ) & ~3;					// round up
@@ -2338,7 +2380,7 @@ int CDetailObjectSystem::BuildOutSortedSprites( CFastDetailLeafSpriteList *pData
 }
 
 
-static void s_RenderFastSpriteGuts( CDetailObjectSystem *pThis, DistanceFadeInfo_t info, Vector viewOrigin, Vector viewForward, Vector viewRight, Vector viewUp, int nNumLeafs, CUtlEnvelope<LeafIndex_t> const &leaflist )
+static void s_RenderFastSpriteGuts( CDetailObjectSystem *pThis, DistanceFadeInfo_t info, Vector viewOrigin, Vector viewForward, Vector viewRight, Vector viewUp, int nNumLeafs, ks::envelope<LeafIndex_t> const &leaflist )
 {
 	pThis->RenderFastSprites( info, viewOrigin, viewForward, viewRight, viewUp, nNumLeafs, leaflist );
 
@@ -2425,7 +2467,7 @@ void CDetailObjectSystem::RenderFastSprites( const DistanceFadeInfo_t &info, con
 		else
 		{
 			m_pCachedSpriteMesh[nLeaf][0] = pRenderContext->CreateStaticMesh( pMaterial->GetVertexFormat() & ~VERTEX_FORMAT_COMPRESSED, TEXTURE_GROUP_STATIC_VERTEX_BUFFER_OTHER, pMaterial );
-			m_nCachedSpriteMeshPtrs.AddToTail( &m_pCachedSpriteMesh[nLeaf][0] );
+			m_nCachedSpriteMeshPtrs.push_back( &m_pCachedSpriteMesh[nLeaf][0] );
 			pMesh = m_pCachedSpriteMesh[nLeaf][0];
 		}
 
@@ -2437,7 +2479,7 @@ void CDetailObjectSystem::RenderFastSprites( const DistanceFadeInfo_t &info, con
 			int nCount = pData->m_nNumSIMDSprites;
 			
 			CMeshBuilder meshBuilder;
-			meshBuilder.Begin( pMesh, MATERIAL_QUADS, MIN( pData->m_nNumSprites, CACHED_SPRITE_MESH_QUADS_PER_BATCH ) );
+			meshBuilder.Begin( pMesh, MATERIAL_QUADS, std::min( pData->m_nNumSprites, CACHED_SPRITE_MESH_QUADS_PER_BATCH ) );
 
 			int nQuadsBuiltInThisBatch = 0;
 			int nQuadsLeft = pData->m_nNumSprites;
@@ -2484,10 +2526,10 @@ void CDetailObjectSystem::RenderFastSprites( const DistanceFadeInfo_t &info, con
 					}
 					
 					m_pCachedSpriteMesh[nLeaf][nSubSplit] = pRenderContext->CreateStaticMesh( pMaterial->GetVertexFormat() & ~VERTEX_FORMAT_COMPRESSED, TEXTURE_GROUP_STATIC_VERTEX_BUFFER_OTHER, pMaterial );
-					m_nCachedSpriteMeshPtrs.AddToTail( &m_pCachedSpriteMesh[nLeaf][nSubSplit] );
+					m_nCachedSpriteMeshPtrs.push_back( &m_pCachedSpriteMesh[nLeaf][nSubSplit] );
 					pMesh = m_pCachedSpriteMesh[nLeaf][nSubSplit];
 					
-					meshBuilder.Begin( pMesh, MATERIAL_QUADS, MIN( nQuadsLeft, CACHED_SPRITE_MESH_QUADS_PER_BATCH ) );
+					meshBuilder.Begin( pMesh, MATERIAL_QUADS, std::min( nQuadsLeft, CACHED_SPRITE_MESH_QUADS_PER_BATCH ) );
 
 					nQuadsBuiltInThisBatch = 0;
 				}
@@ -2541,7 +2583,7 @@ void CDetailObjectSystem::RenderTranslucentDetailObjects( const DistanceFadeInfo
 	ICallQueue *pQueue = pRenderContext->GetCallQueue();
 	if ( pQueue && r_ThreadedDetailProps.GetInt() )
 	{
-		pQueue->QueueCall( s_RenderFastSpriteGuts, this, info, viewOrigin, viewForward, viewRight, viewUp, nLeafCount, CUtlEnvelope<LeafIndex_t>( pLeafList, nLeafCount ) );
+		pQueue->QueueCall( s_RenderFastSpriteGuts, this, info, viewOrigin, viewForward, viewRight, viewUp, nLeafCount, ks::envelope<LeafIndex_t>( pLeafList, nLeafCount ) );
 	}
 	else
 		RenderFastSprites( info, viewOrigin, viewForward, viewRight, viewUp, nLeafCount, pLeafList );
@@ -2694,7 +2736,7 @@ void CDetailObjectSystem::RenderFastTranslucentDetailObjectsInLeaf( CFastDetailL
 	if ( nMaxQuadsToDraw == 0 )
 		return;
 		
-	int nQuadsToDraw = MIN( nCount, nMaxQuadsToDraw );
+	int nQuadsToDraw = std::min( nCount, nMaxQuadsToDraw );
 	int nQuadsRemaining = nQuadsToDraw;
 		
 	meshBuilder.Begin( pMesh, MATERIAL_QUADS, nQuadsToDraw );
@@ -2715,7 +2757,7 @@ void CDetailObjectSystem::RenderFastTranslucentDetailObjectsInLeaf( CFastDetailL
 			nQuadsRemaining = nQuadsToDraw;
 			meshBuilder.Begin( pMesh, MATERIAL_QUADS, nQuadsToDraw );
 		}
-		int nToDraw = MIN( nCount, nQuadsRemaining );
+		int nToDraw = std::min( nCount, nQuadsRemaining );
 		nCount -= nToDraw;
 		nQuadsRemaining -= nToDraw;
 		while( nToDraw-- )
@@ -2945,7 +2987,7 @@ float CDetailObjectSystem::ComputeDetailFadeInfo( DistanceFadeInfo_t *pInfo )
 	pInfo->m_flMaxDistSqr = flDetailDist * flDetailDist;
 	pInfo->m_flMinDistSqr = m_flDetailFadeStart / flFactor;
 	pInfo->m_flMinDistSqr *= pInfo->m_flMinDistSqr;
-	pInfo->m_flMinDistSqr = MIN( pInfo->m_flMinDistSqr, pInfo->m_flMaxDistSqr - 1  );
+	pInfo->m_flMinDistSqr = std::min( pInfo->m_flMinDistSqr, pInfo->m_flMaxDistSqr - 1  );
 	pInfo->m_flFalloffFactor = 1.0f / ( pInfo->m_flMaxDistSqr - pInfo->m_flMinDistSqr );
 
 	return flDetailDist;
@@ -2991,7 +3033,7 @@ void CDetailObjectSystem::BuildRenderingData( DetailRenderableList_t &list, cons
 	}
 
 	// No detail objects? No work remaining.
-	if ( m_DetailObjects.Count() == 0 )
+	if ( m_DetailObjects.empty() )
 		return;
 
 	// Then, for each leaf within range, compute alpha factor
@@ -3020,7 +3062,7 @@ void CDetailObjectSystem::BuildRenderingData( DetailRenderableList_t &list, cons
 
 			// FIXME: Should we return a center + radius so culling can happen?
 			// right now, detail objects are not even frustum culled
-			int d = list.AddToTail();
+			int d = std::ssize( list ); list.emplace_back();
 			DetailRenderableInfo_t &info = list[d];
 			info.m_pRenderable = &model;
 			info.m_InstanceData.m_nAlpha = nAlpha;

@@ -14,7 +14,7 @@
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-class CUtlBuffer;
+namespace ks { class byte_reader; }
 struct Bitmap_t;
 
 class PSDImageResources
@@ -76,26 +76,26 @@ protected:
 // Is a file a PSD file?
 //-----------------------------------------------------------------------------
 bool IsPSDFile( const char *pFileName, const char *pPathID );
-bool IsPSDFile( CUtlBuffer &buf );
+bool IsPSDFile( ks::byte_reader &buf );
 
 
 //-----------------------------------------------------------------------------
 // Returns information about the PSD file
 //-----------------------------------------------------------------------------
 bool PSDGetInfo( const char *pFileName, const char *pPathID, int *pWidth, int *pHeight, ImageFormat *pImageFormat, float *pSourceGamma );
-bool PSDGetInfo( CUtlBuffer &buf, int *pWidth, int *pHeight, ImageFormat *pImageFormat, float *pSourceGamma );
+bool PSDGetInfo( ks::byte_reader &buf, int *pWidth, int *pHeight, ImageFormat *pImageFormat, float *pSourceGamma );
 
 
 //-----------------------------------------------------------------------------
-// Get PSD file image resources, pointers refer into the utlbuffer
+// Get PSD file image resources, pointers refer into the reader's data
 //-----------------------------------------------------------------------------
-PSDImageResources PSDGetImageResources( CUtlBuffer &buf );
+PSDImageResources PSDGetImageResources( ks::byte_reader &buf );
 
 
 //-----------------------------------------------------------------------------
 // Reads the PSD file into the specified buffer
 //-----------------------------------------------------------------------------
-bool PSDReadFileRGBA8888( CUtlBuffer &buf, Bitmap_t &bitmap );
+bool PSDReadFileRGBA8888( ks::byte_reader &buf, Bitmap_t &bitmap );
 bool PSDReadFileRGBA8888( const char *pFileName, const char *pPathID, Bitmap_t &bitmap );
 
 

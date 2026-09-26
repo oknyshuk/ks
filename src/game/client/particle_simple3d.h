@@ -48,7 +48,7 @@ class CSimple3DEmitter : public CSimpleEmitter
 public:
 	explicit CSimple3DEmitter( const char *pDebugName ) : CSimpleEmitter( pDebugName ) {}
 	
-	static CSmartPtr<CSimple3DEmitter>	Create( const char *pDebugName );
+	static ks::intrusive_ptr<CSimple3DEmitter>	Create( const char *pDebugName );
 
 	virtual void RenderParticles( CParticleRenderIterator *pIterator );
 	virtual void SimulateParticles( CParticleSimulateIterator *pIterator );

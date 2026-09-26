@@ -12,9 +12,6 @@
 
 #include "ScreenSpaceEffects.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //------------------------------------------------------------------------------
 // CScreenSpaceEffectRegistration code
 // Used to register and effect with the IScreenSpaceEffectManager

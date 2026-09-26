@@ -15,8 +15,6 @@
 #include "mathlib/vmatrix.h"
 
 #include "imaterialproxydict.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 class [[= ks::reflect::NetTable{ .name = "DT_FuncConveyor" } ]]
       C_FuncConveyor : public C_BaseEntity

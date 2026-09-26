@@ -92,7 +92,7 @@ public:
 	template < typename Functor >
 	bool ForEachCombatCharacter( Functor &func )
 	{
-		for( int i=0; i < m_botList.Count(); ++i )
+		for( int i=0; i < std::ssize( m_botList ); ++i )
 		{
 			C_NextBotCombatCharacter *character = m_botList[i];
 			if ( character->IsPlayer() )
@@ -114,7 +114,7 @@ public:
 		return true;
 	}
 
-	int	 GetActiveCount()						    { return m_botList.Count(); }
+	int	 GetActiveCount()						    { return std::ssize( m_botList ); }
 
 	bool SetupInFrustumData( void );
 	bool IsInFrustumDataValid( void )				{ return ( m_nInFrustumFrame == gpGlobals->framecount ); }
@@ -125,7 +125,7 @@ private:
 	void Register( C_NextBotCombatCharacter *bot );
 	void UnRegister( C_NextBotCombatCharacter *bot );
 
-	CUtlVector< C_NextBotCombatCharacter * > m_botList;				///< list of all active NextBots
+	std::vector< C_NextBotCombatCharacter * > m_botList;				///< list of all active NextBots
 
 	int	m_nInFrustumFrame;
 };

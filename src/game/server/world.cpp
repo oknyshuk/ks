@@ -26,7 +26,6 @@
 #include "ai_utils.h"
 #include "basetempentity.h"
 #include "world.h"
-#include "mempool.h"
 #include "igamesystem.h"
 #include "engine/IEngineSound.h"
 #include "globals.h"
@@ -41,14 +40,10 @@
 #include "gametypes.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern CBaseEntity				*g_pLastSpawn;
 void InitBodyQue(void);
 extern void W_Precache(void);
 extern void ActivityList_Free( void );
-extern CUtlMemoryPool g_EntityListPool;
 
 #define SF_DECAL_NOTINDEATHMATCH		2048
 

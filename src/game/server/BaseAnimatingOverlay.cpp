@@ -24,9 +24,6 @@
 
 #include "cs_player.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern ConVar ai_sequence_debug;
 
 
@@ -279,7 +276,7 @@ void CBaseAnimatingOverlay::VerifyOrder( void )
 	{
 		layer[i] = MAX_OVERLAYS;
 	}
-	for (i = 0; i < m_AnimOverlay.Count(); i++)
+	for (i = 0; i < std::ssize( m_AnimOverlay ); i++)
 	{
 		if (m_AnimOverlay[ i ].m_nOrder < MAX_OVERLAYS)
 		{
@@ -327,7 +324,7 @@ void CBaseAnimatingOverlay::VerifyOrder( void )
 //-----------------------------------------------------------------------------
 void CBaseAnimatingOverlay::SetModel( const char *szModelName )
 {
-	for ( int j=0; j<m_AnimOverlay.Count(); ++j )
+	for ( int j=0; j<std::ssize( m_AnimOverlay ); ++j )
 	{
 		m_AnimOverlay[j].Init( this );
 	}
@@ -351,7 +348,7 @@ void CBaseAnimatingOverlay::StudioFrameAdvance ()
 
 	BaseClass::StudioFrameAdvance();
 
-	for ( int i = 0; i < m_AnimOverlay.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_AnimOverlay ); i++ )
 	{
 		CAnimationLayer *pLayer = &m_AnimOverlay[i];
 		
@@ -407,7 +404,7 @@ void CBaseAnimatingOverlay::StudioFrameAdvance ()
 
 	if (ai_sequence_debug.GetBool() == true && m_debugOverlays & OVERLAY_NPC_SELECTED_BIT)
 	{
-		for ( int i = 0; i < m_AnimOverlay.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_AnimOverlay ); i++ )
 		{
 			if (m_AnimOverlay[ i ].IsActive())
 			{
@@ -434,7 +431,7 @@ void CBaseAnimatingOverlay::DispatchAnimEvents ( CBaseAnimating *eventHandler )
 {
 	BaseClass::DispatchAnimEvents( eventHandler );
 
-	for ( int i = 0; i < m_AnimOverlay.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_AnimOverlay ); i++ )
 	{
 		if (m_AnimOverlay[ i ].IsActive() && !m_AnimOverlay[ i ].NoEvents() )
 		{
@@ -547,14 +544,14 @@ void CBaseAnimatingOverlay::GetSkeleton( CStudioHdr *pStudioHdr, BoneVector pos[
 
 	// sort the layers
 	int layer[MAX_OVERLAYS] = {};
-	for (int i = 0; i < m_AnimOverlay.Count(); i++)
+	for (int i = 0; i < std::ssize( m_AnimOverlay ); i++)
 	{
 		layer[i] = MAX_OVERLAYS;
 	}
-	for (int i = 0; i < m_AnimOverlay.Count(); i++)
+	for (int i = 0; i < std::ssize( m_AnimOverlay ); i++)
 	{
 		CAnimationLayer &pLayer = m_AnimOverlay[i];
-		if( (pLayer.m_flWeight > 0) && pLayer.IsActive() && pLayer.m_nOrder >= 0 && pLayer.m_nOrder < m_AnimOverlay.Count())
+		if( (pLayer.m_flWeight > 0) && pLayer.IsActive() && pLayer.m_nOrder >= 0 && pLayer.m_nOrder < std::ssize( m_AnimOverlay ))
 		{
 			layer[pLayer.m_nOrder] = i;
 		}
@@ -644,9 +641,9 @@ void CBaseAnimatingOverlay::GetSkeleton( CStudioHdr *pStudioHdr, BoneVector pos[
 	}
 	else
 	{
-		for (int i = 0; i < m_AnimOverlay.Count(); i++)
+		for (int i = 0; i < std::ssize( m_AnimOverlay ); i++)
 		{
-			if (layer[i] >= 0 && layer[i] < m_AnimOverlay.Count())
+			if (layer[i] >= 0 && layer[i] < std::ssize( m_AnimOverlay ))
 			{
 				CAnimationLayer &pLayer = m_AnimOverlay[layer[i]];
 				// UNDONE: Is it correct to use overlay weight for IK too?
@@ -683,7 +680,7 @@ void CBaseAnimatingOverlay::OnRestore( )
 
 	// force order of unused layers to current MAX_OVERLAYS
 	// and Tracker 48843 (Alyx skating after restore) restore the owner entity ptr (otherwise the network layer won't get NetworkStateChanged signals until the layer is re-Init()'ed
-	for (i = 0; i < m_AnimOverlay.Count(); i++)
+	for (i = 0; i < std::ssize( m_AnimOverlay ); i++)
 	{
 		m_AnimOverlay[i].m_pOwnerEntity = this;
 
@@ -694,7 +691,7 @@ void CBaseAnimatingOverlay::OnRestore( )
 	}
 
 	// get rid of all layers that shouldn't be restored
-	for (i = 0; i < m_AnimOverlay.Count(); i++)
+	for (i = 0; i < std::ssize( m_AnimOverlay ); i++)
 	{
 		if ( ( m_AnimOverlay[i].IsActive() && (m_AnimOverlay[i].m_fFlags & ANIM_LAYER_DONTRESTORE) ) ||
 			 ( GetModelPtr() && !IsValidSequence(m_AnimOverlay[i].m_nSequence) ) )
@@ -851,7 +848,7 @@ int	CBaseAnimatingOverlay::AddLayeredSequence( int sequence, int iPriority )
 //-----------------------------------------------------------------------------
 bool CBaseAnimatingOverlay::IsValidLayer( int iLayer )
 {
-	return (iLayer >= 0 && iLayer < m_AnimOverlay.Count() && m_AnimOverlay[iLayer].IsActive());
+	return (iLayer >= 0 && iLayer < std::ssize( m_AnimOverlay ) && m_AnimOverlay[iLayer].IsActive());
 }
 
 
@@ -867,13 +864,13 @@ int CBaseAnimatingOverlay::AllocateLayer( int iPriority )
 	int iNewOrder = 0;
 	int iOpenLayer = -1;
 	int iNumOpen = 0;
-	for (i = 0; i < m_AnimOverlay.Count(); i++)
+	for (i = 0; i < std::ssize( m_AnimOverlay ); i++)
 	{
 		if ( m_AnimOverlay[i].IsActive() )
 		{
 			if (m_AnimOverlay[i].m_nPriority <= iPriority)
 			{
-				iNewOrder = MAX( iNewOrder, m_AnimOverlay[i].m_nOrder + 1 );
+				iNewOrder = std::max( iNewOrder, m_AnimOverlay[i].m_nOrder + 1 );
 			}
 		}
 		else if (m_AnimOverlay[ i ].IsDying())
@@ -892,12 +889,14 @@ int CBaseAnimatingOverlay::AllocateLayer( int iPriority )
 
 	if (iOpenLayer == -1)
 	{
-		if (m_AnimOverlay.Count() >= MAX_OVERLAYS)
+		if (std::ssize( m_AnimOverlay ) >= MAX_OVERLAYS)
 		{
 			return -1;
 		}
 
-		iOpenLayer = m_AnimOverlay.AddToTail();
+		m_AnimOverlay.reserve( MAX_OVERLAYS );	// layer storage never moves
+		iOpenLayer = std::ssize( m_AnimOverlay );
+		m_AnimOverlay.emplace_back();
 		m_AnimOverlay[iOpenLayer].Init( this );
 		m_AnimOverlay[iOpenLayer].NetworkStateChanged();
 	}
@@ -905,15 +904,17 @@ int CBaseAnimatingOverlay::AllocateLayer( int iPriority )
 	// make sure there's always an empty unused layer so that history slots will be available on the client when it is used
 	if (iNumOpen == 0)
 	{
-		if (m_AnimOverlay.Count() < MAX_OVERLAYS)
+		if (std::ssize( m_AnimOverlay ) < MAX_OVERLAYS)
 		{
-			i = m_AnimOverlay.AddToTail();
+			m_AnimOverlay.reserve( MAX_OVERLAYS );
+			i = std::ssize( m_AnimOverlay );
+			m_AnimOverlay.emplace_back();
 			m_AnimOverlay[i].Init( this );
 			m_AnimOverlay[i].NetworkStateChanged();
 		}
 	}
 
-	for (i = 0; i < m_AnimOverlay.Count(); i++)
+	for (i = 0; i < std::ssize( m_AnimOverlay ); i++)
 	{
 		if ( m_AnimOverlay[i].m_nOrder >= iNewOrder && m_AnimOverlay[i].m_nOrder < MAX_OVERLAYS)
 		{
@@ -951,7 +952,7 @@ void CBaseAnimatingOverlay::SetLayerPriority( int iLayer, int iPriority )
 
 	// look for an open slot and for existing layers that are lower priority
 	int i;
-	for (i = 0; i < m_AnimOverlay.Count(); i++)
+	for (i = 0; i < std::ssize( m_AnimOverlay ); i++)
 	{
 		if ( m_AnimOverlay[i].IsActive() )
 		{
@@ -963,18 +964,18 @@ void CBaseAnimatingOverlay::SetLayerPriority( int iLayer, int iPriority )
 	}
 
 	int iNewOrder = 0;
-	for (i = 0; i < m_AnimOverlay.Count(); i++)
+	for (i = 0; i < std::ssize( m_AnimOverlay ); i++)
 	{
 		if ( i != iLayer && m_AnimOverlay[i].IsActive() )
 		{
 			if (m_AnimOverlay[i].m_nPriority <= iPriority)
 			{
-				iNewOrder = MAX( iNewOrder, m_AnimOverlay[i].m_nOrder + 1 );
+				iNewOrder = std::max( iNewOrder, m_AnimOverlay[i].m_nOrder + 1 );
 			}
 		}
 	}
 
-	for (i = 0; i < m_AnimOverlay.Count(); i++)
+	for (i = 0; i < std::ssize( m_AnimOverlay ); i++)
 	{
 		if ( i != iLayer && m_AnimOverlay[i].IsActive() )
 		{
@@ -1000,7 +1001,7 @@ void CBaseAnimatingOverlay::SetLayerPriority( int iLayer, int iPriority )
 //-----------------------------------------------------------------------------
 int	CBaseAnimatingOverlay::FindGestureLayer( Activity activity )
 {
-	for (int i = 0; i < m_AnimOverlay.Count(); i++)
+	for (int i = 0; i < std::ssize( m_AnimOverlay ); i++)
 	{
 		if ( !(m_AnimOverlay[i].IsActive()) )
 			continue;
@@ -1067,7 +1068,7 @@ void CBaseAnimatingOverlay::RemoveGesture( Activity activity )
 //-----------------------------------------------------------------------------
 void CBaseAnimatingOverlay::RemoveAllGestures( void )
 {
-	for (int i = 0; i < m_AnimOverlay.Count(); i++)
+	for (int i = 0; i < std::ssize( m_AnimOverlay ); i++)
 	{
 		RemoveLayer( i );
 	}
@@ -1302,7 +1303,7 @@ void CBaseAnimatingOverlay::FastRemoveLayer( int iLayer )
 		return;
 
 	// shift the other layers down in order
-	for (int j = 0; j < m_AnimOverlay.Count(); j++ )
+	for (int j = 0; j < std::ssize( m_AnimOverlay ); j++ )
 	{
 		if ((m_AnimOverlay[ j ].IsActive()) && m_AnimOverlay[ j ].m_nOrder > m_AnimOverlay[ iLayer ].m_nOrder)
 		{
@@ -1316,17 +1317,17 @@ void CBaseAnimatingOverlay::FastRemoveLayer( int iLayer )
 
 CAnimationLayer *CBaseAnimatingOverlay::GetAnimOverlay( int iIndex, bool bUseOrder )
 {
-	iIndex = clamp( iIndex, 0, m_AnimOverlay.Count()-1 );
+	iIndex = clamp( iIndex, 0, GetNumAnimOverlays()-1 );
 
-	if ( !m_AnimOverlay.Count() )
+	if ( m_AnimOverlay.empty() )
 		return nullptr;
 
 	if ( bUseOrder )
 	{
-		FOR_EACH_VEC( m_AnimOverlay, j )
+		for ( CAnimationLayer &layer : m_AnimOverlay )
 		{
-			if ( m_AnimOverlay[j].m_nOrder == iIndex )
-				return &m_AnimOverlay[j];
+			if ( layer.m_nOrder == iIndex )
+				return &layer;
 		}
 	}
 
@@ -1336,21 +1337,17 @@ CAnimationLayer *CBaseAnimatingOverlay::GetAnimOverlay( int iIndex, bool bUseOrd
 
 void CBaseAnimatingOverlay::SetNumAnimOverlays( int num )
 {
-	if ( m_AnimOverlay.Count() < num )
+	if ( GetNumAnimOverlays() != num )
 	{
-		m_AnimOverlay.AddMultipleToTail( num - m_AnimOverlay.Count() );
-		NetworkStateChanged();
-	}
-	else if ( m_AnimOverlay.Count() > num )
-	{
-		m_AnimOverlay.RemoveMultiple( num, m_AnimOverlay.Count() - num );
+		m_AnimOverlay.reserve( MAX_OVERLAYS );
+		m_AnimOverlay.resize( num );
 		NetworkStateChanged();
 	}
 }
 
 bool CBaseAnimatingOverlay::HasActiveLayer( void )
 {
-	for (int j = 0; j < m_AnimOverlay.Count(); j++ )
+	for (int j = 0; j < std::ssize( m_AnimOverlay ); j++ )
 	{
 		if ( m_AnimOverlay[ j ].IsActive() )
 			return true;

@@ -5,8 +5,6 @@
 
 #include "mm_framework.h"
 
-#include "memdbgon.h"
-
 
 // Context for the Game Coordinator
 #ifndef NO_STEAM_GAMECOORDINATOR

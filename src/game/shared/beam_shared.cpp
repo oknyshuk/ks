@@ -32,9 +32,6 @@
 #include "toolframework_client.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define BEAM_DEFAULT_HALO_SCALE		10
 
 #if !defined( CLIENT_DLL )
@@ -708,7 +705,7 @@ int CBeam::UpdateTransmitState( void )
 void CBeam::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
 {
 	// Are we already marked for transmission?
-	if ( pInfo->m_pTransmitEdict->Get( entindex() ) )
+	if ( (*pInfo->m_pTransmitEdict)[ entindex() ] )
 		return;
 
 	BaseClass::SetTransmit( pInfo, bAlways );
@@ -982,7 +979,7 @@ void CBeam::ComputeBounds( Vector& mins, Vector& maxs )
 	}
 
 	// bloat the bounding box by the width of the beam
-	float rad = 0.5f * MAX( m_fWidth.Get(), m_fEndWidth.Get() );
+	float rad = 0.5f * std::max( m_fWidth.Get(), m_fEndWidth.Get() );
 	Vector vecRad( rad, rad, rad );
 	mins -= vecRad;
 	maxs += vecRad;
@@ -1067,8 +1064,8 @@ void CBeam::RestoreToToolRecordedState( KeyValues *pKV )
 	SetFadeLength( pKV->GetFloat( "FadeLength" ) );
 	SetNoise( pKV->GetFloat( "Noise" ) );
 	int iBrightness = pKV->GetInt( "Brightness", 255 );
-	iBrightness = MIN( iBrightness, 255 );
-	iBrightness = MAX( iBrightness, 0 );
+	iBrightness = std::min( iBrightness, 255 );
+	iBrightness = std::max( iBrightness, 0 );
 	SetRenderAlpha( (byte)iBrightness );
 	//pKV->GetFloat( "Brightness", 255 ); //<-----------------------------revisit
 	SetScrollRate( pKV->GetFloat( "ScrollRate" ) );
@@ -1091,7 +1088,7 @@ void CBeam::RestoreToToolRecordedState( KeyValues *pKV )
 	}
 
 	SetSize( -Vector( 16384.0f, 16384.0f, 16384.0f ), Vector( 16384.0f, 16384.0f, 16384.0f ) );
-	m_VisibilityBits.SetAll();
+	m_VisibilityBits.set();
 }
 
 class C_Beam_NonConformantDataHandler : public CIFM_EntityKeyValuesHandler_RecreateEntities

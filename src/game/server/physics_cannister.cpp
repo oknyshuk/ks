@@ -24,9 +24,6 @@
 #include "globals.h"
 #include "shareddefs.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define SF_CANNISTER_ASLEEP		0x0001
 #define SF_CANNISTER_EXPLODE	0x0002
 

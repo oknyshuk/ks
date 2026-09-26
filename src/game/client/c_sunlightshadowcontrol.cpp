@@ -10,9 +10,6 @@
 
 #include "c_baseplayer.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 ConVar cl_sunlight_ortho_size("cl_sunlight_ortho_size", "0.0", FCVAR_CHEAT, "Set to values greater than 0 for ortho view render projections.");
 ConVar cl_sunlight_depthbias( "cl_sunlight_depthbias", "0.02" );

@@ -12,7 +12,7 @@
 
 #include "c_baseentity.h"
 #include "fx.h"
-#include "utllinkedlist.h"
+#include <vector>
 
 
 class [[= ks::reflect::NetTable{ .name = "DT_Tesla" } ]]
@@ -31,7 +31,7 @@ public:
 
 public:
 
-	CUtlLinkedList<CTeslaInfo,int> m_QueuedCommands;
+	std::vector<CTeslaInfo> m_QueuedCommands;
 	[[= ks::reflect::Net{} ]] char m_SoundName[64];
 	[[= ks::reflect::Net{} ]] char m_iszSpriteName[256];
 };

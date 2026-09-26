@@ -12,11 +12,11 @@
 #include "tier1/interface.h"
 #include "bitmap/imageformat.h" //ImageFormat enum definition
 
-class CUtlBuffer;
+namespace ks { class byte_writer; }
 
 namespace TGAWriter
 {
-	bool WriteToBuffer( unsigned char *pImageData, CUtlBuffer &buffer, int width, int height, ImageFormat srcFormat, ImageFormat dstFormat );
+	bool WriteToBuffer( unsigned char *pImageData, ks::byte_writer &buffer, int width, int height, ImageFormat srcFormat, ImageFormat dstFormat );
 
 	// Write out a simple tga file from a memory buffer.
 	bool WriteTGAFile( const char *fileName, int width, int height, enum ImageFormat srcFormat, uint8 const *srcData, int nStride );

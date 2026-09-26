@@ -10,14 +10,13 @@
 // Author: Michael S. Booth (mike@turtlerockstudios.com), January 2003
 
 #include "cbase.h"
+
+#include <unordered_map>
+
 #include "nav_node.h"
 #include "nav_colors.h"
 #include "nav_mesh.h"
-#include "tier1/utlhash.h"
 #include "tier1/generichash.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 
 NavDirType Opposite[ NUM_DIRECTIONS ] = { SOUTH, WEST, NORTH, EAST };
@@ -32,23 +31,16 @@ extern Vector NavTraceMaxs;
 //--------------------------------------------------------------------------------------------------------------
 // Node hash
 
-class CNodeHashFuncs
+struct CNodeHashFuncs
 {
-public:
-	CNodeHashFuncs( int ) {}
-
-	bool operator()( const CNavNode *pLhs, const CNavNode *pRhs ) const
+	size_t operator()( const Vector2D &pos ) const
 	{
-		return pRhs->GetPosition()->AsVector2D() == pLhs->GetPosition()->AsVector2D();
-	}
-
-	unsigned int operator()( const CNavNode *pItem ) const
-	{
-		return Hash8( &pItem->GetPosition()->AsVector2D() );	
+		return Hash8( &pos );
 	}
 };
 
-CUtlHash<CNavNode *, CNodeHashFuncs, CNodeHashFuncs> *g_pNavNodeHash;
+// Nodes keyed by XY; nodes sharing an XY are chained through m_nextAtXY
+static std::unordered_map< Vector2D, CNavNode *, CNodeHashFuncs > g_NavNodeHash;
 
 
 //--------------------------------------------------------------------------------------------------------------
@@ -91,18 +83,16 @@ CNavNode::CNavNode( const Vector &pos, const Vector &normal, CNavNode *parent, b
 
 	m_isOnDisplacement = isOnDisplacement;
 
-	if ( !g_pNavNodeHash )
+	if ( g_NavNodeHash.empty() )
 	{
-		g_pNavNodeHash = new CUtlHash<CNavNode *, CNodeHashFuncs, CNodeHashFuncs>( 16*1024 );
+		g_NavNodeHash.reserve( 16*1024 );
 	}
 
-	bool bDidInsert;
-	UtlHashHandle_t hHash = g_pNavNodeHash->Insert( this, &bDidInsert );
+	auto [it, bDidInsert] = g_NavNodeHash.try_emplace( m_pos.AsVector2D(), this );
 	if ( !bDidInsert )
 	{
-		CNavNode *pExistingNode = g_pNavNodeHash->Element( hHash );
-		m_nextAtXY = pExistingNode;
-		g_pNavNodeHash->Element( hHash ) = this;
+		m_nextAtXY = it->second;
+		it->second = this;
 	}
 	else
 	{
@@ -118,8 +108,7 @@ CNavNode::~CNavNode()
 //--------------------------------------------------------------------------------------------------------------
 void CNavNode::CleanupGeneration()
 {
-	delete g_pNavNodeHash;
-	g_pNavNodeHash = nullptr;
+	g_NavNodeHash = {};
 
 	CNavNode *node, *next;
 	for( node = CNavNode::m_list; node; node = next )
@@ -264,7 +253,7 @@ float CNavNode::GetGroundHeightAboveNode( NavCornerType cornerType ) const
 	float blockedHeight = 0.0f;
 	for ( int i=0; i<NUM_CORNERS; ++i )
 	{
-		blockedHeight = MAX( blockedHeight, m_groundHeightAboveNode[i] );
+		blockedHeight = std::max( blockedHeight, m_groundHeightAboveNode[i] );
 	}
 
 	return blockedHeight;
@@ -412,22 +401,16 @@ CNavNode *CNavNode::GetNode( const Vector &pos )
 {
 	const float tolerance = 0.45f * GenerationStepSize;			// 1.0f
 	CNavNode *pNode = nullptr;
-	if ( g_pNavNodeHash )
+	auto it = g_NavNodeHash.find( pos.AsVector2D() );
+	if ( it != g_NavNodeHash.end() )
 	{
-		static CNavNode lookup;
-		lookup.m_pos = pos;
-		UtlHashHandle_t hNode = g_pNavNodeHash->Find( &lookup );
-
-		if ( hNode != g_pNavNodeHash->InvalidHandle() )
+		for( pNode = it->second; pNode; pNode = pNode->m_nextAtXY )
 		{
-			for( pNode = g_pNavNodeHash->Element( hNode ); pNode; pNode = pNode->m_nextAtXY )
-			{
-				float dz = fabs( pNode->m_pos.z - pos.z );
+			float dz = fabs( pNode->m_pos.z - pos.z );
 
-				if (dz < tolerance)
-				{
-					break;
-				}
+			if (dz < tolerance)
+			{
+				break;
 			}
 		}
 	}

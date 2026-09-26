@@ -8,6 +8,7 @@
 #define SND_CHANNELS_H
 
 #include "mathlib/vector.h"
+#include "tier1/text_writer.h"
 
 
 class CSfxTable;
@@ -217,10 +218,10 @@ public:
 	void Remove( channel_t *pChannel );
 
 	void GetActiveChannels( CChannelList &list ) const;
-	void CopyActiveSounds( CUtlVector<activethreadsound_t> &list ) const;
+	void CopyActiveSounds( std::vector< activethreadsound_t > &list ) const;
 	channel_t * FindActiveChannelByGuid( int guid ) const;
 
-	void DumpChannelInfo( CUtlBuffer &buf );
+	void DumpChannelInfo( ks::text_writer &buf );
 
 	void Init();
 	int	 GetActiveCount() { return m_count; }

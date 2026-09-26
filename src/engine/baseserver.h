@@ -7,6 +7,7 @@
 #ifndef BASESERVER_H
 #define BASESERVER_H
 
+#include <mutex>
 #include <iserver.h>
 #include <netadr.h>
 #include <bitbuf.h>
@@ -15,7 +16,8 @@
 #include "netmessages.h"
 #include "net.h"
 #include "event_system.h"
-#include <utlmap.h>
+#include <map>
+#include <memory>
 
 class CNetworkStringTableContainer;
 class PackedEntity;
@@ -52,6 +54,9 @@ typedef struct
 } challenge_t;
 
 
+// Owned split-screen connect messages, as read from the connectionless packet.
+using SplitPlayerConnects_t = std::vector< std::unique_ptr< CCLCMsg_SplitPlayerConnect_t > >;
+
 class CBaseServer  : public IServer
 {
 friend class CMaster;
@@ -70,7 +75,7 @@ public: // IServer implementation
 	virtual int		GetMaxClients( void ) const; // returns current client limit
 	virtual int		GetUDPPort( void ) const { return NET_GetUDPPort( m_Socket );	}
 	virtual IClient	*GetClient( int index ) { return m_Clients[index]; } // returns interface to client 
-	virtual int		GetClientCount() const { return m_Clients.Count(); } // for iteration;
+	virtual int		GetClientCount() const { return std::ssize( m_Clients ); } // for iteration;
 	virtual float	GetTime( void ) const;
 	virtual int		GetTick( void ) const { return m_nTickCount; }
 	virtual float	GetTickInterval( void ) const { return m_flTickInterval; }
@@ -181,10 +186,10 @@ protected:
 
 	virtual IClient *ConnectClient ( const ns_address &adr, int protocol, int challenge, int authProtocol, 
 					    const char *name, const char *password, const char *hashedCDkey, int cdKeyLen,
-						CUtlVector< CCLCMsg_SplitPlayerConnect_t* > & splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform,
+						const SplitPlayerConnects_t &splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform,
 						const byte *pbEncryptionKey, int nEncryptionKeyIndex );
 	
-	virtual bool GetRedirectAddressForConnectClient( const ns_address &adr, CUtlVector< CCLCMsg_SplitPlayerConnect_t* > & splitScreenClients, ns_address *pNetAdrRedirect ) { return false; }
+	virtual bool GetRedirectAddressForConnectClient( const ns_address &adr, const SplitPlayerConnects_t &splitScreenClients, ns_address *pNetAdrRedirect ) { return false; }
 	
 	CBaseClient *GetFreeClient( const ns_address &adr );
 
@@ -248,11 +253,11 @@ public:
 	INetworkStringTable *m_pServerStartupTable;
 	INetworkStringTable *m_pDownloadableFileTable;
 
-	CUtlMap< int, SerializedEntityHandle_t > m_BaselineHandles;
+	std::map< int, SerializedEntityHandle_t > m_BaselineHandles;
 
 	// This will get set to NET_MAX_PAYLOAD if the server is MP.
 	bf_write			m_Signon;
-	CUtlMemory<byte>	m_SignonBuffer;
+	std::vector< byte >	m_SignonBuffer;
 
 	int			serverclasses;		// number of unique server classes
 	int			serverclassbits;	// log2 of serverclasses
@@ -288,7 +293,7 @@ private:
 
 
 	void		ClearTagStrings();
-	void		AddTagString( CUtlString &dest, char const *pchString );
+	void		AddTagString( std::string &dest, char const *pchString );
 
 protected:
 	CBaseClient *GetFreeClientInternal( const ns_address &adr );
@@ -301,11 +306,11 @@ protected:
 	float		m_flTimescale;			// the game time scale (multiplied in conjunction with host_timescale)
 
 
-	CUtlVector<CBaseClient*>	m_Clients;		// array of up to [maxclients] client slots.
+	std::vector< CBaseClient* >	m_Clients;		// array of up to [maxclients] client slots.
 	
 	bool		m_bIsDedicated;
 
-	CUtlVector<challenge_t> m_ServerQueryChallenges; // prevent spoofed IP's from server queries/connecting
+	std::vector< challenge_t > m_ServerQueryChallenges; // prevent spoofed IP's from server queries/connecting
 
 	float		m_fCPUPercent;
 	float		m_fStartTime;
@@ -323,7 +328,7 @@ protected:
 		CBaseClient *m_pSplit;
 	};
 
-	CUtlVector< SplitDisconnect_t >	m_QueuedForDisconnect;
+	std::vector< SplitDisconnect_t >	m_QueuedForDisconnect;
 
 	struct QueueMatchPlayer_t
 	{
@@ -332,14 +337,14 @@ protected:
 		uint32 m_uiToken;
 		uint32 m_uiReservationStage;
 	};
-	CUtlVector< QueueMatchPlayer_t > m_arrReservationPlayers;	// Reservation players in queue mode
+	std::vector< QueueMatchPlayer_t > m_arrReservationPlayers;	// Reservation players in queue mode
 	uint64		m_nReservationCookie;			// if this server has been reserved, cookie that connecting clients must present
 	uint64		*m_pnReservationCookieSession;	// cookie that represents a server session
 	float		m_flReservationExpiryTime;		// time at which reservation expires
 	float		m_flTimeLastClientLeft;			// time when last client left server
 	int			m_numGameSlots;					// number of game slots allocated
-	CUtlString	m_GameType;
-	CUtlVector<char> m_GameData;
+	std::string	m_GameType;
+	std::vector< char > m_GameData;
 	int			m_GameDataVersion;
 
 	float		m_flTimeReservationGraceStarted;	// time when client attempted to connect and was granted a reservation grace period
@@ -361,7 +366,7 @@ protected:
 	uint64 m_nMatchId;
 };
 
-extern CThreadFastMutex g_svInstanceBaselineMutex;
+extern std::recursive_mutex g_svInstanceBaselineMutex;
 
 const ConVar &GetIndexedConVar( const ConVar &cv, int nIndex );
 

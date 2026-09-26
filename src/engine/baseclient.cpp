@@ -27,9 +27,8 @@
 #include "matchmaking/imatchframework.h"
 #include "tier2/tier2.h"
 #include "tier0/etwprof.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier1/bit_ops.h"
+#include <bitset>
 
 extern IServerGameDLL	*serverGameDLL;
 
@@ -254,7 +253,7 @@ void CBaseClient::FreeBaselines()
 
 	m_nBaselineUpdateTick = -1;
 	m_nBaselineUsed = 0;
-	m_BaselinesSent.ClearAll();
+	m_BaselinesSent.reset();
 }
 
 void CBaseClient::SetSignonState( int nState )
@@ -387,21 +386,17 @@ bool CBaseClient::ProcessSignonStateMsg(int state, int spawncount)
 												//
 												// Try to load the avatar data for this player
 												//
-												CUtlBuffer bufAvatarData;
-												CUtlBuffer bufAvatarDataDefault;
-												CUtlBuffer *pbufUseRgb = nullptr;
-												if ( !pbufUseRgb &&
-													g_pFullFileSystem->ReadFile( CFmtStr( "avatars/%llu.rgb", m_SteamID.ConvertToUint64() ), "MOD", bufAvatarData ) &&
-													( bufAvatarData.TellPut() == 64*64*3 ) )
-													pbufUseRgb = &bufAvatarData;
-												if ( !pbufUseRgb &&
-													g_pFullFileSystem->ReadFile( "avatars/default.rgb", "MOD", bufAvatarDataDefault ) &&
-													( bufAvatarDataDefault.TellPut() == 64 * 64 * 3 ) )
-													pbufUseRgb = &bufAvatarDataDefault;
-
-												if ( pbufUseRgb )
+												auto avatarData = g_pFullFileSystem->ReadFile( CFmtStr( "avatars/%llu.rgb", m_SteamID.ConvertToUint64() ), "MOD" );
+												if ( !avatarData || avatarData->size() != 64*64*3 )
 												{
-													m_msgAvatarData.rgb = std::string( ( const char * ) pbufUseRgb->Base(), pbufUseRgb->TellPut() );
+													avatarData = g_pFullFileSystem->ReadFile( "avatars/default.rgb", "MOD" );
+													if ( avatarData && avatarData->size() != 64 * 64 * 3 )
+														avatarData.reset();
+												}
+
+												if ( avatarData )
+												{
+													m_msgAvatarData.rgb = std::string( ks::text_view( *avatarData ) );
 													m_msgAvatarData.accountid = m_SteamID.GetAccountID();
 
 													OnPlayerAvatarDataChanged();
@@ -971,25 +966,25 @@ void CBaseClient::WriteGameSounds(bf_write &buf, int nMaxSounds )
 
 void CBaseClient::ConnectionStart(INetChannel *chan)
 {
-	m_NetMessages[ NETMSG_Tick ].Bind< CNETMsg_Tick_t >( chan, UtlMakeDelegate( this, &CBaseClient::NETMsg_Tick ) );
-	m_NetMessages[ NETMSG_StringCmd ].Bind< CNETMsg_StringCmd_t >( chan, UtlMakeDelegate( this, &CBaseClient::NETMsg_StringCmd ) );
-	m_NetMessages[ NETMSG_SignonState ].Bind< CNETMsg_SignonState_t >( chan, UtlMakeDelegate( this, &CBaseClient::NETMsg_SignonState ) );
-	m_NetMessages[ NETMSG_SetConVar ].Bind< CNETMsg_SetConVar_t >( chan, UtlMakeDelegate( this, &CBaseClient::NETMsg_SetConVar ) );
-	m_NetMessages[ NETMSG_PlayerAvatarData ].Bind< CNETMsg_PlayerAvatarData_t >( chan, UtlMakeDelegate( this, &CBaseClient::NETMsg_PlayerAvatarData ) );
+	m_NetMessages[ NETMSG_Tick ].Bind< CNETMsg_Tick_t >( chan, std::bind_front( &CBaseClient::NETMsg_Tick, this ) );
+	m_NetMessages[ NETMSG_StringCmd ].Bind< CNETMsg_StringCmd_t >( chan, std::bind_front( &CBaseClient::NETMsg_StringCmd, this ) );
+	m_NetMessages[ NETMSG_SignonState ].Bind< CNETMsg_SignonState_t >( chan, std::bind_front( &CBaseClient::NETMsg_SignonState, this ) );
+	m_NetMessages[ NETMSG_SetConVar ].Bind< CNETMsg_SetConVar_t >( chan, std::bind_front( &CBaseClient::NETMsg_SetConVar, this ) );
+	m_NetMessages[ NETMSG_PlayerAvatarData ].Bind< CNETMsg_PlayerAvatarData_t >( chan, std::bind_front( &CBaseClient::NETMsg_PlayerAvatarData, this ) );
 	
-	m_NetMessages[ NETMSG_ClientInfo ].Bind< CCLCMsg_ClientInfo_t >( chan, UtlMakeDelegate( this, &CBaseClient::CLCMsg_ClientInfo ) );
-	m_NetMessages[ NETMSG_Move ].Bind< CCLCMsg_Move_t >( chan, UtlMakeDelegate( this, &CBaseClient::CLCMsg_Move ) );
-	m_NetMessages[ NETMSG_VoiceData ].Bind< CCLCMsg_VoiceData_t >( chan, UtlMakeDelegate( this, &CBaseClient::CLCMsg_VoiceData ) );
-	m_NetMessages[ NETMSG_BaselineAck ].Bind< CCLCMsg_BaselineAck_t >( chan, UtlMakeDelegate( this, &CBaseClient::CLCMsg_BaselineAck ) );
-	m_NetMessages[ NETMSG_ListenEvents ].Bind< CCLCMsg_ListenEvents_t >( chan, UtlMakeDelegate( this, &CBaseClient::CLCMsg_ListenEvents ) );
-	m_NetMessages[ NETMSG_RespondCvarValue ].Bind< CCLCMsg_RespondCvarValue_t >( chan, UtlMakeDelegate( this, &CBaseClient::CLCMsg_RespondCvarValue ) );
-	m_NetMessages[ NETMSG_FileCRCCheck ].Bind< CCLCMsg_FileCRCCheck_t >( chan, UtlMakeDelegate( this, &CBaseClient::CLCMsg_FileCRCCheck ) );
-	m_NetMessages[ NETMSG_SplitPlayerConnect ].Bind< CCLCMsg_SplitPlayerConnect_t >( chan, UtlMakeDelegate( this, &CBaseClient::CLCMsg_SplitPlayerConnect ) );
-	m_NetMessages[ NETMSG_LoadingProgress ].Bind< CCLCMsg_LoadingProgress_t >( chan, UtlMakeDelegate( this, &CBaseClient::CLCMsg_LoadingProgress ) );	
-	m_NetMessages[ NETMSG_CmdKeyValues ].Bind< CCLCMsg_CmdKeyValues_t >( chan, UtlMakeDelegate( this, &CBaseClient::CLCMsg_CmdKeyValues ) );	
-	m_NetMessages[ NETMSG_HltvReplay ].Bind< CCLCMsg_HltvReplay_t >( chan, UtlMakeDelegate( this, &CBaseClient::CLCMsg_HltvReplay ) );
+	m_NetMessages[ NETMSG_ClientInfo ].Bind< CCLCMsg_ClientInfo_t >( chan, std::bind_front( &CBaseClient::CLCMsg_ClientInfo, this ) );
+	m_NetMessages[ NETMSG_Move ].Bind< CCLCMsg_Move_t >( chan, std::bind_front( &CBaseClient::CLCMsg_Move, this ) );
+	m_NetMessages[ NETMSG_VoiceData ].Bind< CCLCMsg_VoiceData_t >( chan, std::bind_front( &CBaseClient::CLCMsg_VoiceData, this ) );
+	m_NetMessages[ NETMSG_BaselineAck ].Bind< CCLCMsg_BaselineAck_t >( chan, std::bind_front( &CBaseClient::CLCMsg_BaselineAck, this ) );
+	m_NetMessages[ NETMSG_ListenEvents ].Bind< CCLCMsg_ListenEvents_t >( chan, std::bind_front( &CBaseClient::CLCMsg_ListenEvents, this ) );
+	m_NetMessages[ NETMSG_RespondCvarValue ].Bind< CCLCMsg_RespondCvarValue_t >( chan, std::bind_front( &CBaseClient::CLCMsg_RespondCvarValue, this ) );
+	m_NetMessages[ NETMSG_FileCRCCheck ].Bind< CCLCMsg_FileCRCCheck_t >( chan, std::bind_front( &CBaseClient::CLCMsg_FileCRCCheck, this ) );
+	m_NetMessages[ NETMSG_SplitPlayerConnect ].Bind< CCLCMsg_SplitPlayerConnect_t >( chan, std::bind_front( &CBaseClient::CLCMsg_SplitPlayerConnect, this ) );
+	m_NetMessages[ NETMSG_LoadingProgress ].Bind< CCLCMsg_LoadingProgress_t >( chan, std::bind_front( &CBaseClient::CLCMsg_LoadingProgress, this ) );	
+	m_NetMessages[ NETMSG_CmdKeyValues ].Bind< CCLCMsg_CmdKeyValues_t >( chan, std::bind_front( &CBaseClient::CLCMsg_CmdKeyValues, this ) );	
+	m_NetMessages[ NETMSG_HltvReplay ].Bind< CCLCMsg_HltvReplay_t >( chan, std::bind_front( &CBaseClient::CLCMsg_HltvReplay, this ) );
 	
-	m_NetMessages[ NETMSG_UserMessage ].Bind< CSVCMsg_UserMessage_t >( chan, UtlMakeDelegate( this, &CBaseClient::SVCMsg_UserMessage ) );
+	m_NetMessages[ NETMSG_UserMessage ].Bind< CSVCMsg_UserMessage_t >( chan, std::bind_front( &CBaseClient::SVCMsg_UserMessage, this ) );
 }
 
 void CBaseClient::ConnectionStop( )
@@ -1197,7 +1192,7 @@ bool CBaseClient::CLCMsg_BaselineAck( const ks::net::CCLCMsg_BaselineAck& msg )
 
 	if ( msg.baseline_nr != m_nBaselineUsed )
 	{
-		DevMsg("CBaseClient::ProcessBaselineAck: wrong baseline nr received (%i)\n", msg.baseline_tick );
+		DevMsg("CBaseClient::ProcessBaselineAck: wrong baseline nr received (%i)\n", (int)msg.baseline_tick );
 		return true;
 	}
 
@@ -1224,7 +1219,7 @@ bool CBaseClient::CLCMsg_BaselineAck( const ks::net::CCLCMsg_BaselineAck& msg )
 		return false;
 	}
 
-	int index = m_BaselinesSent.FindNextSetBit( 0 );
+	int index = ks::next_set_bit( m_BaselinesSent, 0 );
 
 	while ( index >= 0 )
 	{
@@ -1251,7 +1246,7 @@ bool CBaseClient::CLCMsg_BaselineAck( const ks::net::CCLCMsg_BaselineAck& msg )
 		m_pBaseline->m_pEntities[index] = pSnapshot->m_pEntities[index];
 
 		// go to next entity
-		index = m_BaselinesSent.FindNextSetBit( index + 1 );
+		index = ks::next_set_bit( m_BaselinesSent, index + 1 );
 	}
 
 	m_pBaseline->m_nTickCount = m_nBaselineUpdateTick;
@@ -1269,7 +1264,7 @@ bool CBaseClient::CLCMsg_ListenEvents( const ks::net::CCLCMsg_ListenEvents& msg 
 	// first remove the client as listener
 	g_GameEventManager.RemoveListener( this );
 
-	CBitVec<MAX_EVENT_NUMBER> EventArray;
+	std::bitset<MAX_EVENT_NUMBER> EventArray;
 
 	//lwss add - Prevent stack overflow (yes this is in retail too)
 	if( msg.event_mask.size() > 15 )
@@ -1281,10 +1276,10 @@ bool CBaseClient::CLCMsg_ListenEvents( const ks::net::CCLCMsg_ListenEvents& msg 
 
 	for( int i = 0; i < msg.event_mask.size(); i++ )
 	{
-		EventArray.SetDWord( i, msg.event_mask[ i ] );
+		ks::set_word( EventArray, i, msg.event_mask[ i ] );
 	}
 
-	int index = EventArray.FindNextSetBit( 0 );
+	int index = ks::next_set_bit( EventArray, 0 );
 	while( index >= 0 )
 	{
 		CGameEventDescriptor *descriptor = g_GameEventManager.GetEventDescriptor( index );
@@ -1299,7 +1294,7 @@ bool CBaseClient::CLCMsg_ListenEvents( const ks::net::CCLCMsg_ListenEvents& msg 
 			return false;
 		}
 
-		index = EventArray.FindNextSetBit( index + 1 );
+		index = ks::next_set_bit( EventArray, index + 1 );
 	}
 
 	return true;
@@ -1330,7 +1325,7 @@ void CBaseClient::EndTrace( bf_write &msg )
 	int bits = m_Trace.m_nCurBit - m_Trace.m_nStartBit;
 	if ( bits < ( m_Trace.m_nMinWarningBytes << 3 ) )
 	{
-		m_Trace.m_Records.RemoveAll();
+		m_Trace.m_Records.clear();
 		return;
 	}
 
@@ -1346,9 +1341,9 @@ void CBaseClient::EndTrace( bf_write &msg )
 		 TraceNetworkMsg( bufVoice, "[Voice payload]" );
 	}
 
-	CUtlBuffer logData( 0, 0, CUtlBuffer::TEXT_BUFFER );
+	ks::text_writer logData;
 
-	logData.Printf( "%f/%d Player [%s][%d][adr:%s] was sent a datagram %d bits (%8.3f bytes)\n",
+	logData.printf( "%f/%d Player [%s][%d][adr:%s] was sent a datagram %d bits (%8.3f bytes)\n",
 		realtime, 
 		host_tickcount,
 		GetClientName(), 
@@ -1357,19 +1352,19 @@ void CBaseClient::EndTrace( bf_write &msg )
 		bits, (float)bits / 8.0f );
 
 	const int WriteSize = 10*1024;
-	for ( int i = 0 ; i < m_Trace.m_Records.Count() ; ++i )
+	for ( int i = 0 ; i < std::ssize( m_Trace.m_Records ) ; ++i )
 	{
 		Spike_t &sp = m_Trace.m_Records[ i ];
-		logData.Printf( "%64.64s : %8d bits (%8.3f bytes)\n", sp.m_szDesc, sp.m_nBits, (float)sp.m_nBits / 8.0f );
-		if ( logData.TellPut() > WriteSize && i != m_Trace.m_Records.Count()-1 )
+		logData.printf( "%64.64s : %8d bits (%8.3f bytes)\n", sp.m_szDesc, sp.m_nBits, (float)sp.m_nBits / 8.0f );
+		if ( logData.size() > WriteSize && i != std::ssize( m_Trace.m_Records )-1 )
 		{
-			COM_LogString( SERVER_PACKETS_LOG, (char *)logData.Base() );
-			logData.Clear();
+			COM_LogString( SERVER_PACKETS_LOG, logData.c_str() );
+			logData.clear();
 		}
 	}
 
-	COM_LogString( SERVER_PACKETS_LOG, (char *)logData.Base() );
-	m_Trace.m_Records.RemoveAll();
+	COM_LogString( SERVER_PACKETS_LOG, logData.c_str() );
+	m_Trace.m_Records.clear();
 }
 
 void CBaseClient::TraceNetworkData( bf_write &msg, char const *fmt, ... )
@@ -1385,7 +1380,7 @@ void CBaseClient::TraceNetworkData( bf_write &msg, char const *fmt, ... )
 	Spike_t t;
 	Q_strncpy( t.m_szDesc, buf, sizeof( t.m_szDesc ) );
 	t.m_nBits = msg.GetNumBitsWritten() - m_Trace.m_nCurBit;
-	m_Trace.m_Records.AddToTail( t );
+	m_Trace.m_Records.push_back( t );
 	m_Trace.m_nCurBit = msg.GetNumBitsWritten();
 }
 
@@ -1402,7 +1397,7 @@ void CBaseClient::TraceNetworkMsg( int nBits, char const *fmt, ... )
 	Spike_t t;
 	Q_strncpy( t.m_szDesc, buf, sizeof( t.m_szDesc ) );
 	t.m_nBits = nBits;
-	m_Trace.m_Records.AddToTail( t );
+	m_Trace.m_Records.push_back( t );
 }
 
 void CBaseClient::SetTraceThreshold( int nThreshold )
@@ -1505,7 +1500,7 @@ bool CBaseClient::SendSnapshot( CClientFrame *pFrame )
 	// send all unreliable temp entities between last and current frame
 	// send max 64 events in multi player, 255 in SP
 	int nMaxTempEnts = m_Server->IsMultiplayer() ? sv_multiplayer_maxtempentities.GetInt() : 255;
-	m_Server->WriteTempEntities( this, pFrame->GetSnapshot(), m_pLastSnapshot.GetObject(), m_tempentsmsg, nMaxTempEnts );
+	m_Server->WriteTempEntities( this, pFrame->GetSnapshot(), m_pLastSnapshot.get(), m_tempentsmsg, nMaxTempEnts );
 	if ( m_tempentsmsg.num_entries )
 	{
 		m_tempentsmsg.WriteToBuffer( msg );
@@ -1659,7 +1654,7 @@ void CBaseClient::UpdateSendState( void )
 	else if ( IsActive() )	// multiplayer mode
 	{
 		// snapshot mode: send snapshots frequently
-		float maxDelta = MIN( m_Server->GetTickInterval(), m_fSnapshotInterval );
+		float maxDelta = std::min( m_Server->GetTickInterval(), m_fSnapshotInterval );
 		float delta = clamp( net_time - m_fNextMessageTime, 0.0f, maxDelta );
 		m_fNextMessageTime = net_time + m_fSnapshotInterval - delta;
 	}
@@ -1986,7 +1981,7 @@ struct SessionClient_t
 {
 	uint64 xSession;
 	int numPlayers;
-	CCopyableUtlVector< IClient * > arrClients;
+	std::vector< IClient * > arrClients;
 
 	bool operator == ( const SessionClient_t & x ) const
 	{
@@ -2010,8 +2005,8 @@ struct SessionClient_t
 			return ( a->numPlayers > b->numPlayers ) ? -1 : 1;
 
 		// Keep more clients if possible
-		if ( a->arrClients.Count() != b->arrClients.Count() )
-			return ( a->arrClients.Count() > b->arrClients.Count() ) ? -1 : 1;
+		if ( std::ssize( a->arrClients ) != std::ssize( b->arrClients ) )
+			return ( std::ssize( a->arrClients ) > std::ssize( b->arrClients ) ) ? -1 : 1;
 
 		// Prefer to preserve the clients that have the original
 		// reservation session (that's the lobby leader)
@@ -2034,7 +2029,7 @@ void HostValidateSessionImpl()
 
 	Msg( "[SESSION] Validating Session Information...\n" );
 
-	CUtlVector< SessionClient_t > arrSessions;
+	std::vector< SessionClient_t > arrSessions;
 
 	//
 	//	Collect all connected clients by their sessions
@@ -2063,25 +2058,25 @@ void HostValidateSessionImpl()
 		sc.xSession = uid;
 		sc.numPlayers = 0;
 
-		int idx = arrSessions.Find( sc );
-		if ( idx == arrSessions.InvalidIndex() )
+		int idx = ks::find_index( arrSessions, sc );
+		if ( idx == -1 )
 		{
-			idx = arrSessions.AddToTail( sc );
+			idx = std::ssize( arrSessions ); arrSessions.push_back( sc );
 		}
-		arrSessions[idx].arrClients.AddToTail( client );
+		arrSessions[idx].arrClients.push_back( client );
 		arrSessions[idx].numPlayers += client->GetNumPlayers();
 	}
 
 	//
 	//	Sort the sessions
 	//
-	if ( !arrSessions.Count() )
+	if ( arrSessions.empty() )
 	{
 		Msg( "[SESSION] No clients.\n" );
 		return;
 	}
 
-	arrSessions.Sort( &SessionClient_t::Less );
+	ks::qsort( arrSessions, &SessionClient_t::Less );
 
 	//
 	//	Set the new reservation cookie and drop the rest
@@ -2095,9 +2090,9 @@ void HostValidateSessionImpl()
 		iDropIndex = 1;
 	}
 
-	for ( int k = iDropIndex; k < arrSessions.Count(); ++ k )
+	for ( int k = iDropIndex; k < std::ssize( arrSessions ); ++ k )
 	{
-		for ( int clIdx = 0; clIdx < arrSessions[k].arrClients.Count(); ++ clIdx )
+		for ( int clIdx = 0; clIdx < std::ssize( arrSessions[k].arrClients ); ++ clIdx )
 		{
 			arrSessions[k].arrClients[clIdx]->Disconnect( "Session migrated" );
 		}

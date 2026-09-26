@@ -13,7 +13,6 @@
 #include <stdarg.h>
 #include <ctype.h>
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#include "memdbgon.h"
 #endif
 
 bool str2num(const SQChar *s,SQObjectPtr &res)

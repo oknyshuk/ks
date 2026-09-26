@@ -12,7 +12,8 @@
 
 
 #if   defined(OSX) || defined(CYGWIN)
-#include <time.h>                  
+#include <time.h>
+#include <mutex>                  
 #include <sys/time.h>                  
 #include <sys/resource.h>                  
 #include <netinet/in.h>
@@ -61,10 +62,7 @@
 #include "fmtstr.h"
 #include "sv_plugin.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
-CThreadFastMutex g_svInstanceBaselineMutex;
+std::recursive_mutex g_svInstanceBaselineMutex;
 
 // BUGBUG: JAY: Leaving this here for some of the matchmaking code.  I don't want to delete the code or enable it
 // in other games yet. (came over in the merge and will be rationalized later)
@@ -81,9 +79,19 @@ CThreadFastMutex g_svInstanceBaselineMutex;
 
 bool g_bSteamMasterHeartbeatsEnabled = false;
 
-int SortServerTags( char* const *p1, char* const *p2 )
+static std::vector< std::string > SplitServerTags( const char *pTags )
 {
-	return ( Q_strcmp( *p1, *p2 ) > 0 );
+	std::vector< std::string > split;
+	V_SplitString( pTags, ",", split );
+	return split;
+}
+
+static bool LaunchOptionsHasUnavailableFlag()
+{
+	KeyValues *pFirst = g_pLaunchOptions ? g_pLaunchOptions->GetFirstSubKey() : nullptr;
+	KeyValues *pSecond = pFirst ? pFirst->GetNextKey() : nullptr;
+	KeyValues *pThird = pSecond ? pSecond->GetNextKey() : nullptr;
+	return pThird && pThird->GetString() && !V_strcmp( pThird->GetString(), "server_is_unavailable" );
 }
 
 struct NoReentry_t
@@ -100,7 +108,6 @@ static void ServerTagsCleanUp( void )
 		return;
 	NoReentry_t noReentry( &s_nNoReentry );
 
-	CUtlVector<char*> TagList;
 	ConVarRef sv_tags( "sv_tags" );
 	if ( sv_tags.IsValid() )
 	{
@@ -108,17 +115,17 @@ static void ServerTagsCleanUp( void )
 		char tmptags[MAX_TAG_STRING_LENGTH];
 		tmptags[0] = '\0';
 
-		V_SplitString( sv_tags.GetString(), ",", TagList );
+		std::vector< std::string > TagList = SplitServerTags( sv_tags.GetString() );
 
 		// make a pass on the tags to eliminate preceding whitespace and empty tags
-		for ( i = 0; i < TagList.Count(); i++ )
+		for ( i = 0; i < std::ssize( TagList ); i++ )
 		{
 			if ( i > 0 )
 			{
 				Q_strncat( tmptags, ",", MAX_TAG_STRING_LENGTH );
 			}
 
-			char *pChar = TagList[i];
+			const char *pChar = TagList[i].c_str();
 			while ( *pChar && *pChar == ' ' )
 			{
 				pChar++;
@@ -132,28 +139,26 @@ static void ServerTagsCleanUp( void )
 		}
 
 		// reset our lists and sort the tags
-		TagList.PurgeAndDeleteElements();
-		V_SplitString( tmptags, ",", TagList );
-		TagList.Sort( SortServerTags );
+		TagList = SplitServerTags( tmptags );
+		std::ranges::sort( TagList );
 		tmptags[0] = '\0';
 
 		// create our new, sorted list of tags
-		for ( i = 0; i < TagList.Count(); i++ )
+		for ( i = 0; i < std::ssize( TagList ); i++ )
 		{
 			if ( i > 0 )
 			{
 				Q_strncat( tmptags, ",", MAX_TAG_STRING_LENGTH );
 			}
 
-			Q_strncat( tmptags, TagList[i], MAX_TAG_STRING_LENGTH );
+			Q_strncat( tmptags, TagList[i].c_str(), MAX_TAG_STRING_LENGTH );
 		}
 
-		// set our convar and purge our list
+		// set our convar
 		if ( Q_strcmp( tmptags, sv_tags.GetString() ) )
 		{
 			sv_tags.SetValue( tmptags );
 		}
-		TagList.PurgeAndDeleteElements();
 	}
 }
 
@@ -288,8 +293,6 @@ static void ServerNotifyVarChangeCallback( IConVar *pConVar, const char *pOldVal
 //////////////////////////////////////////////////////////////////////
 
 CBaseServer::CBaseServer() : 
-	m_ServerQueryChallenges( 0, 1024 ),  // start with 1K of entries, and alloc in 1K chunks
-	m_BaselineHandles( DefLessFunc( int ) ),
 	m_flFlagForSteamIDReuseAfterShutdownTime( 0 )
 {
 	// Just get a unique ID to talk to the steam master server updater.
@@ -362,7 +365,7 @@ bool CBaseServer::CheckChallengeNr( const ns_address &adr, int nChallengeValue )
 
 	// X360TBD: network
 
-	for (int i=0 ; i<m_ServerQueryChallenges.Count() ; i++)
+	for (int i=0 ; i<std::ssize( m_ServerQueryChallenges ) ; i++)
 	{
 		if ( adr.CompareAdr(m_ServerQueryChallenges[i].adr, true) ) // base adr only
 		{
@@ -373,7 +376,7 @@ bool CBaseServer::CheckChallengeNr( const ns_address &adr, int nChallengeValue )
 
 			if ( net_time > ( m_ServerQueryChallenges[i].time+ CHALLENGE_LIFETIME) ) // allow challenge values to last for 1 hour
 			{
-				m_ServerQueryChallenges.FastRemove(i);
+				ks::swap_remove( m_ServerQueryChallenges, i );
 				ConMsg( "Old challenge from %s.\n", ns_address_render( adr ).String() );
 				return false;
 			}
@@ -384,7 +387,7 @@ bool CBaseServer::CheckChallengeNr( const ns_address &adr, int nChallengeValue )
 		// clean up any old entries
 		if ( net_time > ( m_ServerQueryChallenges[i].time+ CHALLENGE_LIFETIME) ) 
 		{
-			m_ServerQueryChallenges.FastRemove(i);
+			ks::swap_remove( m_ServerQueryChallenges, i );
 			i--; // backup one as we just shifted the whole vector back by the deleted element
 		}
 	}
@@ -439,20 +442,20 @@ void CBaseServer::SetPassword(const char *password)
 int CBaseServer::GetNextUserID()
 {
 	// Note: we'll usually exit on the first pass of this loop..
-	for ( int i=0; i < m_Clients.Count()+1; i++ )
+	for ( int i=0; i < std::ssize( m_Clients )+1; i++ )
 	{
 		int nTestID = (m_nUserid + i + 1) % SHRT_MAX;
 
 		// Make sure no client has this user ID.		
 		int iClient;
-		for ( iClient=0; iClient < m_Clients.Count(); iClient++ )
+		for ( iClient=0; iClient < std::ssize( m_Clients ); iClient++ )
 		{
 			if ( m_Clients[iClient]->GetUserID() == nTestID )
 				break;
 		}
 
 		// Ok, no client has this ID, so return it.		
-		if ( iClient == m_Clients.Count() )
+		if ( iClient == std::ssize( m_Clients ) )
 			return nTestID;
 	}
 	
@@ -486,7 +489,7 @@ once for a player each game, not once for each level change.
 */
 IClient *CBaseServer::ConnectClient ( const ns_address &adr, int protocol, int challenge, int authProtocol, 
 							    const char *name, const char *password, const char *hashedCDkey, int cdKeyLen,
-								CUtlVector< CCLCMsg_SplitPlayerConnect_t * > & splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform,
+								const SplitPlayerConnects_t &splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform,
 								const byte *pbEncryptionKey, int nEncryptionKeyIndex )
 {
 
@@ -576,12 +579,12 @@ IClient *CBaseServer::ConnectClient ( const ns_address &adr, int protocol, int c
 
 	if ( m_numGameSlots )
 	{
-		int numSlotsRequested = splitScreenClients.Count();
+		int numSlotsRequested = std::ssize( splitScreenClients );
 
 		if ( GetNumClients() - GetNumFakeClients() + numSlotsRequested > m_numGameSlots )
 		{
 			bool bClientReconnecting = false;
-			for ( int slot = 0 ; slot < m_Clients.Count() ; slot++ )
+			for ( int slot = 0 ; slot < std::ssize( m_Clients ) ; slot++ )
 			{
 				CBaseClient *client = m_Clients[slot];
 				if ( client->IsFakeClient() )
@@ -646,7 +649,7 @@ IClient *CBaseServer::ConnectClient ( const ns_address &adr, int protocol, int c
 	bool bValidatedUserInfo = false;
 	if ( GetReservationCookie() != 0u )
 	{
-		if ( splitScreenClients.Count() )
+		if ( !splitScreenClients.empty() )
 		{
 			const ks::net::CMsg_CVars& convars = splitScreenClients[0]->convars;
 			for ( int i = 0; i< convars.cvars.size(); ++i )
@@ -696,7 +699,7 @@ IClient *CBaseServer::ConnectClient ( const ns_address &adr, int protocol, int c
 	// Fix the empty name from FCVAR_USERINFO data
 	// for ( int k = 0; !name[ 0 ] && ( k < splitScreenPlayers.Count() ); ++k )
 	char const *pchClientConnectionName = name;
-	if ( !pchClientConnectionName[ 0 ] && splitScreenClients.Count() )
+	if ( !pchClientConnectionName[ 0 ] && std::ssize( splitScreenClients ) )
 	{
 		for ( int iCvar = 0; iCvar < splitScreenClients[ 0 ]->convars->cvars.size(); ++iCvar )
 		{
@@ -731,7 +734,7 @@ IClient *CBaseServer::ConnectClient ( const ns_address &adr, int protocol, int c
 	client->Connect( pchClientConnectionName, nNextUserID, netchan,
 		false,	// real client
 		clientPlatform,
-		(splitScreenClients.Count() > 0) ? &splitScreenClients[0]->convars.get() : nullptr ); // userinfo if supplied
+		(!splitScreenClients.empty()) ? &splitScreenClients[0]->convars.get() : nullptr ); // userinfo if supplied
 
 	client->m_bLowViolence = isClientLowViolence;
 
@@ -762,7 +765,7 @@ IClient *CBaseServer::ConnectClient ( const ns_address &adr, int protocol, int c
 	}
 
 	//now process the split screen clients who came in with this client
-	for( int playerIndex = 1; playerIndex < splitScreenClients.Count(); ++ playerIndex )
+	for( int playerIndex = 1; playerIndex < std::ssize( splitScreenClients ); ++ playerIndex )
 	{
 		ConMsg( "Processing Split Screen connection packet.\n" );
 
@@ -930,16 +933,13 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 									break;
 								}
 
-								struct AutoCleanupVectorPlayers_t : public CUtlVector< CCLCMsg_SplitPlayerConnect_t * >
-									{ ~AutoCleanupVectorPlayers_t() { PurgeAndDeleteElements(); } }
-								splitScreenPlayers;
+								SplitPlayerConnects_t splitScreenPlayers;
 								if( numPlayers > 0 )
 								{
 									for( int playerCount = 0; playerCount < numPlayers; ++ playerCount ) // get CLC_SplitPlayerConnect msg for all players even if only one is connecting
 									{
 										msg.ReadVarInt32(); //the packet type.
-										CCLCMsg_SplitPlayerConnect_t *pSplitPlayerConnect = new CCLCMsg_SplitPlayerConnect_t;
-										splitScreenPlayers.AddToTail( pSplitPlayerConnect );
+										CCLCMsg_SplitPlayerConnect_t *pSplitPlayerConnect = splitScreenPlayers.emplace_back( std::make_unique< CCLCMsg_SplitPlayerConnect_t >() ).get();
 										if ( !pSplitPlayerConnect->ReadFromBuffer( msg ) )
 										{
 											numPlayers = -1; // Trigger an error
@@ -999,7 +999,7 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 									}
 
 									// Check if we are running with a special flag and not advertise to Steam
-									if ( !V_strcmp( g_pLaunchOptions->GetFirstSubKey()->GetNextKey()->GetNextKey()->GetString(), "server_is_unavailable" ) )
+									if ( LaunchOptionsHasUnavailableFlag() )
 									{
 										DevMsg( "Rejecting connection request from %s (reservation cookie 0x%llx), server is reserved with reservation cookie 0x%llx "
 											"for %.1f more seconds, running with tag server_is_unavailable\n", ns_address_render( packet->from ).String(), nReservationCookie, m_nReservationCookie, 
@@ -1023,7 +1023,7 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 								// Peek into client-supplied speculative accountid
 								static bool s_bExternalCryptKeys = ( CommandLine()->CheckParm( "-externalnetworkcryptkey" ) != nullptr );
 								AccountID_t unAccountIDfor3rdParties = 0;
-								if ( s_bExternalCryptKeys && splitScreenPlayers.Count() )
+								if ( s_bExternalCryptKeys && std::ssize( splitScreenPlayers ) )
 								{
 									const ks::net::CMsg_CVars& convars = splitScreenPlayers[ 0 ]->convars;
 									for ( int i = 0; i < convars.cvars.size(); ++i )
@@ -1184,17 +1184,17 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 						  // Respond
 						  extern AppId_t g_unSteamAppID;
 						  AppId_t appIdResponse = g_unSteamAppID ? g_unSteamAppID : 730;
-						  CUtlBuffer buf;
-						  buf.EnsureCapacity( MAX_ROUTABLE_PAYLOAD );
+						  ks::byte_writer buf;
+						  buf.reserve( MAX_ROUTABLE_PAYLOAD );
 
-						  buf.PutUnsignedInt( LittleDWord( CONNECTIONLESS_HEADER ) );
-						  buf.PutUnsignedChar( S2A_INFO_SRC );
-						  buf.PutUnsignedChar( 17 ); // Hardcoded protocol version number
+						  buf.write<unsigned>( LittleDWord( CONNECTIONLESS_HEADER ) );
+						  buf.write<unsigned char>( S2A_INFO_SRC );
+						  buf.write<unsigned char>( 17 ); // Hardcoded protocol version number
 						  extern ConVar host_name_store;
-						  buf.PutString( host_name_store.GetBool() ? GetName() : "Counter-Strike: Global Offensive" );
-						  buf.PutString( GetMapName() );
-						  buf.PutString( "csgo" );
-						  buf.PutString( "Counter-Strike: Global Offensive" );
+						  buf.write_cstring( host_name_store.GetBool() ? GetName() : "Counter-Strike: Global Offensive" );
+						  buf.write_cstring( GetMapName() );
+						  buf.write_cstring( "csgo" );
+						  buf.write_cstring( "Counter-Strike: Global Offensive" );
 
 						  // The next field is a 16-bit version of the AppID.  If our AppID < 65536,
 						  // then let's go ahead and put in in there, to maximize compatibility
@@ -1202,26 +1202,26 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 						  // However, if our AppID won't fit, there's no way we can be compatible,
 						  // anyway, so just put in a zero, which is better than a bogus AppID.
 						  uint16 usAppIdShort = ( uint16 ) appIdResponse;
-						  buf.PutShort( LittleWord( usAppIdShort ) );
+						  buf.write<short>( LittleWord( usAppIdShort ) );
 
 						  // player info
-						  buf.PutUnsignedChar( GetNumPlayers() );
-						  buf.PutUnsignedChar( GetMaxHumanPlayers() );
-						  buf.PutUnsignedChar( MAX( 0, GetNumFakeClients() - GetNumProxies() ) );
+						  buf.write<unsigned char>( GetNumPlayers() );
+						  buf.write<unsigned char>( GetMaxHumanPlayers() );
+						  buf.write<unsigned char>( std::max( 0, GetNumFakeClients() - GetNumProxies() ) );
 
 						  // NOTE: This key's meaning is changed in the new version. Since we send gameport and specport,
 						  // it knows whether we're running SourceTV or not. Then it only needs to know if we're a dedicated or listen server.
 						  if ( IsDedicated() )
-							  buf.PutUnsignedChar( 'd' );	// d = dedicated server
+							  buf.write<unsigned char>( 'd' );	// d = dedicated server
 						  else
-							  buf.PutUnsignedChar( 'l' );	// l = listen server
+							  buf.write<unsigned char>( 'l' );	// l = listen server
 
-						  buf.PutUnsignedChar( 'l' );
+						  buf.write<unsigned char>( 'l' );
 
 						  // Password?
-						  buf.PutUnsignedChar( GetPassword() ? 1 : 0 );
-						  buf.PutUnsignedChar( Steam3Server().BSecure() ? 1 : 0 );
-						  buf.PutString( GetHostVersionString() );
+						  buf.write<unsigned char>( GetPassword() ? 1 : 0 );
+						  buf.write<unsigned char>( Steam3Server().BSecure() ? 1 : 0 );
+						  buf.write_cstring( GetHostVersionString() );
 
 						  //
 						  // NEW DATA.
@@ -1247,28 +1247,28 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 							  break;
 						  }
 
-						  if ( m_GameType.String()[ 0 ] != '\0' )
+						  if ( m_GameType.c_str()[ 0 ] != '\0' )
 							  nNewFlags |= S2A_EXTRA_DATA_HAS_GAMETAG_DATA;
 
 						  nNewFlags |= S2A_EXTRA_DATA_GAMEID;
 
-						  buf.PutUnsignedChar( nNewFlags );
+						  buf.write<unsigned char>( nNewFlags );
 
 						  // Write the rest of the data.
 						  if ( nNewFlags & S2A_EXTRA_DATA_HAS_GAME_PORT )
 						  {
-							  buf.PutShort( LittleWord( GetUDPPort() ) );
+							  buf.write<short>( LittleWord( GetUDPPort() ) );
 						  }
 
 						  if ( nNewFlags & S2A_EXTRA_DATA_HAS_SPECTATOR_DATA )
 						  {
-							  buf.PutShort( LittleWord( hltv->GetUDPPort() ) );
-							  buf.PutString( host_name_store.GetBool() ? GetName() : "Counter-Strike: Global Offensive" );
+							  buf.write<short>( LittleWord( hltv->GetUDPPort() ) );
+							  buf.write_cstring( host_name_store.GetBool() ? GetName() : "Counter-Strike: Global Offensive" );
 						  }
 
 						  if ( nNewFlags & S2A_EXTRA_DATA_HAS_GAMETAG_DATA )
 						  {
-							  buf.PutString( m_GameType.String() );
+							  buf.write_cstring( m_GameType.c_str() );
 						  }
 
 						  if ( nNewFlags & S2A_EXTRA_DATA_GAMEID )
@@ -1276,10 +1276,10 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 							  // !FIXME! Is there a reason we aren't using the other half
 							  // of this field?  Shouldn't we put the game mod ID in there, too?
 							  // We have the game dir.
-							  buf.PutInt64( LittleQWord( CGameID( appIdResponse ).ToUint64() ) );
+							  buf.write<int64>( LittleQWord( CGameID( appIdResponse ).ToUint64() ) );
 						  }
 
-						  NET_SendPacket( nullptr, m_Socket, packet->from, ( unsigned char * ) buf.Base(), buf.TellPut() );
+						  NET_SendPacket( nullptr, m_Socket, packet->from, ( unsigned char * ) buf.data(), buf.size() );
 					}
 					break;
 				}
@@ -1297,15 +1297,15 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 					goto steam3server_oob_packet_handler;
 				case 1:
 					{
-						CUtlBuffer buf;
-						buf.EnsureCapacity( MAX_ROUTABLE_PAYLOAD );
+						ks::byte_writer buf;
+						buf.reserve( MAX_ROUTABLE_PAYLOAD );
 
-						buf.PutUnsignedInt( LittleDWord( CONNECTIONLESS_HEADER ) );
-						buf.PutUnsignedChar( S2A_PLAYER );
-						buf.PutUnsignedChar( 1 );
-						buf.PutUnsignedChar( 0 );
-						buf.PutString( "Max Players" );
-						buf.PutInt( GetMaxHumanPlayers() );
+						buf.write<unsigned>( LittleDWord( CONNECTIONLESS_HEADER ) );
+						buf.write<unsigned char>( S2A_PLAYER );
+						buf.write<unsigned char>( 1 );
+						buf.write<unsigned char>( 0 );
+						buf.write_cstring( "Max Players" );
+						buf.write<int>( GetMaxHumanPlayers() );
 
 						if ( m_fStartTime == 0 ) // record when we started
 						{
@@ -1314,9 +1314,9 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 						float flTime = Sys_FloatTime() - m_fStartTime;
 						float flLittleTime;
 						LittleFloat( &flLittleTime, &flTime );
-						buf.PutFloat( flLittleTime );
+						buf.write<float>( flLittleTime );
 
-						NET_SendPacket( nullptr, m_Socket, packet->from, ( unsigned char * ) buf.Base(), buf.TellPut() );
+						NET_SendPacket( nullptr, m_Socket, packet->from, ( unsigned char * ) buf.data(), buf.size() );
 					}
 					break;
 				}
@@ -1365,7 +1365,7 @@ bool CBaseServer::ProcessConnectionlessPacket(netpacket_t * packet)
 int CBaseServer::GetNumFakeClients() const
 {
 	int count = 0; 
-	for ( int i = 0; i < m_Clients.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Clients ); i++ )
 	{
 		if ( m_Clients[i]->IsConnected() &&
 			 m_Clients[i]->IsFakeClient() )
@@ -1387,7 +1387,7 @@ int CBaseServer::GetNumClients( void ) const
 {
 	int count	= 0;
 
-	for (int i=0 ; i < m_Clients.Count() ; i++ )
+	for (int i=0 ; i < std::ssize( m_Clients ) ; i++ )
 	{
 		if ( m_Clients[ i ]->IsConnected() )
 		{
@@ -1409,7 +1409,7 @@ int CBaseServer::GetNumProxies( void ) const
 {
 	int count	= 0;
 
-	for (int i=0 ; i < m_Clients.Count() ; i++ )
+	for (int i=0 ; i < std::ssize( m_Clients ) ; i++ )
 	{
 		if ( m_Clients[ i ]->IsConnected() && (m_Clients[ i ]->IsHLTV()
 #if defined( REPLAY_ENABLED )
@@ -1562,7 +1562,7 @@ void CBaseServer::ReplyChallenge( const ns_address &adr, bf_read &inmsg )
 		return;
 
 	// Check if we are running with a special flag and not advertise to Steam
-	if ( !V_strcmp( g_pLaunchOptions->GetFirstSubKey()->GetNextKey()->GetNextKey()->GetString(), "server_is_unavailable" ) )
+	if ( LaunchOptionsHasUnavailableFlag() )
 	{
 		DevMsg( "Server running with server_is_unavailable, ignoring challenge from %s\n", ns_address_render( adr ).String() );
 		return;
@@ -1874,7 +1874,7 @@ void CBaseServer::ReplyReservationRequest( const ns_address &adr, bf_read &msgIn
 		DevMsg( "Reservation request from %s rejected: server not empty\n", 
 			ns_address_render( adr ).String() );
 	}
-	else if ( !V_strcmp( g_pLaunchOptions->GetFirstSubKey()->GetNextKey()->GetNextKey()->GetString(), "server_is_unavailable" ) )
+	else if ( LaunchOptionsHasUnavailableFlag() )
 	{
 		DevMsg( "Reservation request from %s rejected: server is running with flag server_is_unavailable\n", 
 			ns_address_render( adr ).String() );
@@ -1972,9 +1972,8 @@ void CBaseServer::ReplyReservationRequest( const ns_address &adr, bf_read &msgIn
 				if ( nSettingsSize <= sizeof( tmp ) )
 				{
 					// convert from binary to keyvalues
-					CUtlBuffer buf;
 					msgIn.ReadBytes( tmp, nSettingsSize );
-					buf.Put( tmp, nSettingsSize );
+					ks::byte_reader buf( tmp, nSettingsSize );
 					pKV->ReadAsBinary( buf );
 
 					if ( sv_reservation_tickrate_adjustment.GetInt() > 0 )
@@ -2034,7 +2033,7 @@ void CBaseServer::ReplyReservationCheckRequest( const ns_address &adr, bf_read &
 		// For queue reservation client ID must match
 		bool bThisClientShouldJoin = false, bThisClientJustConfirmed = false;
 		uint8 uiActualAwaitingClients = 0;
-		for ( int k = 0; k < m_arrReservationPlayers.Count(); ++ k )
+		for ( int k = 0; k < std::ssize( m_arrReservationPlayers ); ++ k )
 		{
 			QueueMatchPlayer_t &qmp = m_arrReservationPlayers[k];
 			if ( qmp.m_uiAccountID == CSteamID( uiClientSteamID ).GetAccountID() )
@@ -2059,22 +2058,22 @@ void CBaseServer::ReplyReservationCheckRequest( const ns_address &adr, bf_read &
 			if ( bThisClientJustConfirmed && serverGameDLL )
 			{
 				// Report to the GC the new level of confirmations
-				CUtlVector< uint32 > arrConfirmedAccounts;
-				arrConfirmedAccounts.EnsureCapacity( m_arrReservationPlayers.Count() );
+				std::vector< uint32 > arrConfirmedAccounts;
+				arrConfirmedAccounts.reserve( std::ssize( m_arrReservationPlayers ) );
 				uint32 uiMinReservationLevel = 0xFFFFu;
-				for ( int jj = 0; jj < m_arrReservationPlayers.Count(); ++ jj )
+				for ( int jj = 0; jj < std::ssize( m_arrReservationPlayers ); ++ jj )
 				{
 					if ( m_arrReservationPlayers[jj].m_uiReservationStage < uiMinReservationLevel )
 						uiMinReservationLevel = m_arrReservationPlayers[jj].m_uiReservationStage;
 				}
-				for ( int jj = 0; jj < m_arrReservationPlayers.Count(); ++ jj )
+				for ( int jj = 0; jj < std::ssize( m_arrReservationPlayers ); ++ jj )
 				{
 					if ( ( m_arrReservationPlayers[jj].m_uiReservationStage >= 2 ) ||
 						( m_arrReservationPlayers[jj].m_uiReservationStage > uiMinReservationLevel ) )
-						arrConfirmedAccounts.AddToTail( m_arrReservationPlayers[jj].m_uiAccountID );
+						arrConfirmedAccounts.push_back( m_arrReservationPlayers[jj].m_uiAccountID );
 				}
-				DevMsg( "Match start status: %u/%u\n", uiMinReservationLevel, arrConfirmedAccounts.Count() );
-				serverGameDLL->ReportGCQueuedMatchStart( uiMinReservationLevel, arrConfirmedAccounts.Base(), arrConfirmedAccounts.Count() );
+				DevMsg( "Match start status: %u/%u\n", uiMinReservationLevel, (int)std::ssize( arrConfirmedAccounts ) );
+				serverGameDLL->ReportGCQueuedMatchStart( uiMinReservationLevel, arrConfirmedAccounts.data(), std::ssize( arrConfirmedAccounts ) );
 
 				if ( !uiActualAwaitingClients )
 				{
@@ -2120,7 +2119,7 @@ void CBaseServer::ReplyReservationCheckRequest( const ns_address &adr, bf_read &
 	{
 		// Make sure we send this notification to all clients to force them to connect
 		// to our server as soon as everybody confirmed
-		for ( int jj = 0; jj < m_arrReservationPlayers.Count(); ++ jj )
+		for ( int jj = 0; jj < std::ssize( m_arrReservationPlayers ); ++ jj )
 		{
 			char	buffer[64];
 			bf_write msg(buffer,sizeof(buffer));
@@ -2216,7 +2215,7 @@ int CBaseServer::GetChallengeNr ( const ns_address &adr)
 	float	oldestTime = FLT_MAX;
 		
 	// see if we already have a challenge for this ip
-	for (int i = 0 ; i < m_ServerQueryChallenges.Count() ; i++)
+	for (int i = 0 ; i < std::ssize( m_ServerQueryChallenges ) ; i++)
 	{
 		if ( adr.CompareAdr (m_ServerQueryChallenges[i].adr, true) )
 		{
@@ -2233,12 +2232,12 @@ int CBaseServer::GetChallengeNr ( const ns_address &adr)
 		}
 	}
 
-	if ( m_ServerQueryChallenges.Count() > MAX_CHALLENGES )
+	if ( std::ssize( m_ServerQueryChallenges ) > MAX_CHALLENGES )
 	{
-		m_ServerQueryChallenges.FastRemove( oldest );	
+		ks::swap_remove( m_ServerQueryChallenges, oldest );	
 	}
 
-	int newEntry = m_ServerQueryChallenges.AddToTail();
+	int newEntry = std::ssize( m_ServerQueryChallenges ); m_ServerQueryChallenges.emplace_back();
 	// note the 0x0FFF of the top 16 bits, so that -1 will never be sent as a challenge
 	m_ServerQueryChallenges[newEntry].challenge = (RandomInt(0,0x0FFF) << 16) | RandomInt(0,0xFFFF);
 	m_ServerQueryChallenges[newEntry].adr = adr;
@@ -2250,7 +2249,7 @@ void CBaseServer::GetNetStats( float &avgIn, float &avgOut )
 {
 	avgIn = avgOut = 0.0f;
 
-	for (int i = 0; i < m_Clients.Count(); i++ )
+	for (int i = 0; i < std::ssize( m_Clients ); i++ )
 	{
 		CBaseClient	*cl = m_Clients[ i ];
 
@@ -2296,7 +2295,7 @@ void CBaseServer::CalculateCPUUsage( void )
 //-----------------------------------------------------------------------------
 void CBaseServer::InactivateClients( void )
 {
-	for (int i = 0; i < m_Clients.Count(); i++ )
+	for (int i = 0; i < std::ssize( m_Clients ); i++ )
 	{
 		CBaseClient	*cl = m_Clients[ i ];
 
@@ -2323,7 +2322,7 @@ void CBaseServer::InactivateClients( void )
 
 void CBaseServer::ReconnectClients( void )
 {
-	for (int i=0 ; i< m_Clients.Count() ; i++ )
+	for (int i=0 ; i< std::ssize( m_Clients ) ; i++ )
 	{
 		CBaseClient *cl = m_Clients[i];
 		
@@ -2353,7 +2352,7 @@ void CBaseServer::CheckTimeouts (void)
 {
 	int i;
 	
-	for ( i = 0 ; i < m_Clients.Count() ; ++i )
+	for ( i = 0 ; i < std::ssize( m_Clients ) ; ++i )
 	{
 		IClient	*cl = m_Clients[ i ];
 		
@@ -2396,7 +2395,7 @@ void CBaseServer::CheckTimeouts (void)
 // ==================
 void CBaseServer::UpdateUserSettings(void)
 {
-	for (int i=0 ; i< m_Clients.Count() ; i++ )
+	for (int i=0 ; i< std::ssize( m_Clients ) ; i++ )
 	{
 		CBaseClient	*cl = m_Clients[ i ];
 
@@ -2412,7 +2411,7 @@ void CBaseServer::UpdateUserSettings(void)
 // ==================
 void CBaseServer::SendPendingServerInfo()
 {
-	for (int i=0 ; i< m_Clients.Count() ; i++ )
+	for (int i=0 ; i< std::ssize( m_Clients ) ; i++ )
 	{
 		CBaseClient	*cl = m_Clients[ i ];
 
@@ -2425,7 +2424,7 @@ void CBaseServer::SendPendingServerInfo()
 
 void CBaseServer::OnSteamServerLogonSuccess( uint32 externalIP )
 {
-	for (int i=0 ; i< m_Clients.Count() ; i++ )
+	for (int i=0 ; i< std::ssize( m_Clients ) ; i++ )
 	{
 		CBaseClient	*cl = m_Clients[ i ];
 		cl->OnSteamServerLogonSuccess( externalIP );
@@ -2618,11 +2617,11 @@ void CBaseServer::DisconnectClient(IClient *client, const char *reason )
 
 void CBaseServer::ClearBaselineHandles( void )
 {
-	FOR_EACH_MAP_FAST( m_BaselineHandles, i )
+	for ( auto &[index, handle] : m_BaselineHandles )
 	{
-		g_pSerializedEntities->ReleaseSerializedEntity( m_BaselineHandles[ i ] );
+		g_pSerializedEntities->ReleaseSerializedEntity( handle );
 	}
-	m_BaselineHandles.Purge();
+	m_BaselineHandles.clear();
 }
 
 
@@ -2659,14 +2658,14 @@ void CBaseServer::Clear( void )
 	// Use a different limit on the signon buffer, so we can save some memory in SP (for xbox).
 	if ( IsMultiplayer() || IsDedicated() )
 	{
-		m_SignonBuffer.EnsureCapacity( NET_MAX_PAYLOAD );
+		ks::grow_to( m_SignonBuffer, NET_MAX_PAYLOAD );
 	}
 	else
 	{
-		m_SignonBuffer.EnsureCapacity( 16384 );
+		ks::grow_to( m_SignonBuffer, 16384 );
 	}
 	
-	m_Signon.StartWriting( m_SignonBuffer.Base(), m_SignonBuffer.Count() );
+	m_Signon.StartWriting( m_SignonBuffer.data(), std::ssize( m_SignonBuffer ) );
 	m_Signon.SetDebugName( "m_Signon" );
 
 	serverclasses = 0;
@@ -2799,11 +2798,11 @@ bool CBaseServer::GetClassBaseline( ServerClass *pClass, SerializedEntityHandle_
 			("SV_GetInstanceBaseline: missing instance baseline for class '%s'", pClass->m_pNetworkName)
 			);
 
-		AUTO_LOCK_FM( g_svInstanceBaselineMutex );
-		int nSlot = m_BaselineHandles.Find( pClass->m_InstanceBaselineIndex ); 
-		ErrorIfNot( nSlot != m_BaselineHandles.InvalidIndex(), ( "CBaseServer::GetClassBaseline: for %s failed\n", pClass->GetName() ) );
+		std::scoped_lock lock( g_svInstanceBaselineMutex );
+		auto nSlot = m_BaselineHandles.find( pClass->m_InstanceBaselineIndex ); 
+		ErrorIfNot( nSlot != m_BaselineHandles.end(), ( "CBaseServer::GetClassBaseline: for %s failed\n", pClass->GetName() ) );
 
-		*pHandle = m_BaselineHandles[ nSlot ];
+		*pHandle = nSlot->second;
 		Assert( *pHandle != SERIALIZED_ENTITY_HANDLE_INVALID );
 		return *pHandle != SERIALIZED_ENTITY_HANDLE_INVALID;
 	}
@@ -3062,7 +3061,7 @@ CBaseClient * CBaseServer::GetFreeClientInternal( const ns_address &adr )
 {
 	CBaseClient *freeclient = nullptr;
 	
-	for ( int slot = 0 ; slot < m_Clients.Count() ; slot++ )
+	for ( int slot = 0 ; slot < std::ssize( m_Clients ) ; slot++ )
 	{
 		CBaseClient *client = m_Clients[slot];
 
@@ -3117,7 +3116,7 @@ CBaseClient * CBaseServer::GetFreeClientInternal( const ns_address &adr )
 
 	if ( !freeclient )
 	{
-		int count = m_Clients.Count();
+		int count = std::ssize( m_Clients );
 
 		if ( count >= m_nMaxclients )
 		{
@@ -3127,7 +3126,7 @@ CBaseClient * CBaseServer::GetFreeClientInternal( const ns_address &adr )
 		// we have to create a new client slot
 		freeclient = CreateNewClient( count );
 		
-		m_Clients.AddToTail( freeclient );
+		m_Clients.push_back( freeclient );
 	}
 	
 	// Success
@@ -3139,7 +3138,7 @@ void CBaseServer::SendClientMessages ( bool bSendSnapshots )
 	VPROF_BUDGET( "SendClientMessages", VPROF_BUDGETGROUP_OTHER_NETWORKING );
     SNPROF("SendClientMessages");
 	
-	for (int i=0; i< m_Clients.Count(); i++ )
+	for (int i=0; i< std::ssize( m_Clients ); i++ )
 	{
 		CBaseClient* client = m_Clients[i];
 		
@@ -3220,12 +3219,12 @@ void CBaseServer::Shutdown( void )
 
 	m_State = ss_dead;
 
-	CUtlVector< CBaseClient * > vecDelete;
+	std::vector< CBaseClient * > vecDelete;
 
 	// Let reliable messages go out
 	for ( int retry = 0; retry < 3; ++ retry )
 	{
-		for ( int i = 0; i < m_Clients.Count(); ++ i )
+		for ( int i = 0; i < std::ssize( m_Clients ); ++ i )
 		{
 			CBaseClient *cl = m_Clients[i];
 			if ( INetChannel *pChannel = cl->GetNetChannel() )
@@ -3237,7 +3236,7 @@ void CBaseServer::Shutdown( void )
 	}
 
 	// Only drop clients if we have not cleared out entity data prior to this.
-	for(  int i=m_Clients.Count()-1; i>=0; i-- )
+	for(  int i=std::ssize( m_Clients )-1; i>=0; i-- )
 	{
 		CBaseClient * cl = m_Clients[ i ];
 		if ( cl->IsConnected() )
@@ -3258,9 +3257,9 @@ void CBaseServer::Shutdown( void )
 			cl->Clear();	
 		}
 
-		vecDelete.AddToTail( cl );
+		vecDelete.push_back( cl );
 
-		m_Clients.Remove( i );
+		m_Clients.erase( m_Clients.begin() + i );
 	}
 
 	// Let drop messages go out
@@ -3270,7 +3269,7 @@ void CBaseServer::Shutdown( void )
 	// Let drop messages go out
 	Sys_Sleep( 100 );
 
-	for ( int i = 0; i < vecDelete.Count(); ++i )
+	for ( int i = 0; i < std::ssize( vecDelete ); ++i )
 	{
 		delete vecDelete[ i ];
 	}
@@ -3300,7 +3299,7 @@ void CBaseServer::BroadcastPrintf (const char *fmt, ...)
 
 void CBaseServer::BroadcastMessage( INetMessage &msg, bool onlyActive, bool reliable )
 {
-	for ( int i = 0; i < m_Clients.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Clients ); i++ )
 	{
 		CBaseClient *cl = m_Clients[ i ];
 
@@ -3345,7 +3344,7 @@ void CBaseServer::BroadcastMessage( INetMessage &msg, IRecipientFilter &filter )
 		{
 			int index = filter.GetRecipientIndex( i );
 
-			if ( index < 1 || index > m_Clients.Count() )
+			if ( index < 1 || index > std::ssize( m_Clients ) )
 			{
 				Msg( "SV_BroadcastMessage:  Recipient Filter for message type %i (reliable: %s, init: %s) with bogus client index (%i) in list of %i clients\n", 
 						msg.GetType(), 
@@ -3410,7 +3409,7 @@ void CBaseServer::WriteTempEntities( CBaseClient *client, CFrameSnapshot *pCurre
 
 	// Build list of events sorted by send table classID (makes the delta work better in cases with a lot of the same message type )
 	for ( int nSnapShotIndex = 0; 
-		 nSnapShotIndex < snapshotlist.m_vecSnapshots.Count(); 
+		 nSnapShotIndex < std::ssize( snapshotlist.m_vecSnapshots ); 
 		 ++nSnapShotIndex )
 	{
 		CFrameSnapshot *pSnapshot = snapshotlist.m_vecSnapshots[ nSnapShotIndex ];
@@ -3602,16 +3601,17 @@ void CBaseServer::RecalculateTags( void )
 //-----------------------------------------------------------------------------
 void CBaseServer::AddTag( const char *pszTag, const char *pszSubTagValue )
 {
-	CSplitString TagList( sv_tags.GetString(), "," );
-	for ( int i = 0; i < TagList.Count(); i++ )
+	std::vector< std::string > TagList;
+	V_SplitString( sv_tags.GetString(), ",", TagList );
+	for ( int i = 0; i < std::ssize( TagList ); i++ )
 	{
 		if ( pszSubTagValue )
 		{
 			// See if the subtag matches
-			if ( StringHasPrefix( TagList[i], pszTag ) )
+			if ( StringHasPrefix( TagList[i].c_str(), pszTag ) )
 			{
 				// Ok, see if the tag value matches
-				if ( Q_stricmp(TagList[i]+strlen(pszTag),pszSubTagValue) == 0 )
+				if ( Q_stricmp(TagList[i].c_str()+strlen(pszTag),pszSubTagValue) == 0 )
 					return;
 
 				// They have a subtag specified, but it's wrong. Remove it.
@@ -3621,7 +3621,7 @@ void CBaseServer::AddTag( const char *pszTag, const char *pszSubTagValue )
 		else
 		{
 			// Already in the tag list?
-			if ( !Q_stricmp(TagList[i],pszTag) )
+			if ( !Q_stricmp(TagList[i].c_str(),pszTag) )
 				return;
 		}
 	}
@@ -3651,24 +3651,25 @@ void CBaseServer::RemoveTag( const char *pszTag, bool bSubTag )
 	char tmptags[MAX_TAG_STRING_LENGTH];
 	tmptags[0] = '\0';
 
-	CSplitString TagList ( sv_tags.GetString(), "," );
+	std::vector< std::string > TagList;
+	V_SplitString( sv_tags.GetString(), ",", TagList );
 	bool bFoundIt = false;
-	for ( int i = 0; i < TagList.Count(); i++ )
+	for ( int i = 0; i < std::ssize( TagList ); i++ )
 	{
 		bool bMatched = false;
 		if ( bSubTag )
 		{
-			bMatched = StringHasPrefix( TagList[i], pszTag );
+			bMatched = StringHasPrefix( TagList[i].c_str(), pszTag );
 		}
 		else
 		{
-			bMatched = Q_stricmp(TagList[i],pszTag) == 0;
+			bMatched = Q_stricmp(TagList[i].c_str(),pszTag) == 0;
 		}
 
 		// Keep any tags other than the specified one
 		if ( !bMatched )
 		{
-			Q_strncat( tmptags, TagList[i], MAX_TAG_STRING_LENGTH );
+			Q_strncat( tmptags, TagList[i].c_str(), MAX_TAG_STRING_LENGTH );
 			Q_strncat( tmptags, ",", MAX_TAG_STRING_LENGTH );
 		}
 		else
@@ -3738,13 +3739,13 @@ void CBaseServer::QueueSplitScreenDisconnect( CBaseClient *pSplitHost, CBaseClie
 	disc.m_pUser = pSplitHost;
 	disc.m_pSplit = pSplitUser;
 
-	m_QueuedForDisconnect.AddToTail( disc );
+	m_QueuedForDisconnect.push_back( disc );
 }
 
 void CBaseServer::ProcessSplitScreenDisconnects()
 {
 	// Destroy it
-	for ( int i = 0; i < m_QueuedForDisconnect.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_QueuedForDisconnect ); ++i )
 	{
 		SplitDisconnect_t &disc = m_QueuedForDisconnect[ i ];
 		CBaseClient *pClient = disc.m_pUser;
@@ -3759,7 +3760,7 @@ void CBaseServer::ProcessSplitScreenDisconnects()
 			disc.m_pSplit->m_bSplitScreenUser = false;
 		}
 	}
-	m_QueuedForDisconnect.Purge();
+	m_QueuedForDisconnect.clear(); m_QueuedForDisconnect.shrink_to_fit();
 }
 
 // Exposing state of the server to the client code
@@ -3857,12 +3858,12 @@ void CBaseServer::SetReservationCookie( uint64 uiCookie, char const *pchReasonFo
 		if ( !uiCookie )
 		{
 			sv_mmqueue_reservation.SetValue( "" );
-			m_arrReservationPlayers.RemoveAll();
+			m_arrReservationPlayers.clear();
 		}
 		else if ( StringHasPrefix( sv_mmqueue_reservation.GetString(), CFmtStr( "Q%llx,", uiCookie ) ) )
 		{
 			// Set reservation players
-			m_arrReservationPlayers.RemoveAll();
+			m_arrReservationPlayers.clear();
 			for ( char const *pszPrev = sv_mmqueue_reservation.GetString(), *pszNext = pszPrev;
 				( pszNext = strchr( pszPrev, '[' ) ) != nullptr; pszPrev = pszNext + 1 )
 			{
@@ -3874,12 +3875,12 @@ void CBaseServer::SetReservationCookie( uint64 uiCookie, char const *pchReasonFo
 					qmp.m_uiAccountID = uiAccountId;
 					qmp.m_uiToken = 0;
 					qmp.m_uiReservationStage = 0;
-					m_arrReservationPlayers.AddToTail( qmp );
+					m_arrReservationPlayers.push_back( qmp );
 				}
 			}
 
 			// Set the number of expected humans
-			m_numGameSlots = m_arrReservationPlayers.Count();
+			m_numGameSlots = std::ssize( m_arrReservationPlayers );
 
 			// Tournament servers need additional slots for casters
 			static char const * s_pchTournamentServer = CommandLine()->ParmValue( "-tournament", ( char const * ) nullptr );
@@ -3897,14 +3898,14 @@ void CBaseServer::SetReservationCookie( uint64 uiCookie, char const *pchReasonFo
 
 				// Allow launch parameter to limit number of caster slots
 				static int s_nTournamentExtraCastersSlots = CommandLine()->ParmValue( "-tournament_extra_casters_slots", 2 );
-				numCasters = MAX( 0, MIN( s_nTournamentExtraCastersSlots, numCasters ) );
+				numCasters = std::max( 0, std::min( s_nTournamentExtraCastersSlots, numCasters ) );
 				m_numGameSlots += numCasters;
 			}
 		}
 		else if ( StringHasPrefix( sv_mmqueue_reservation.GetString(), CFmtStr( "G%llx,", uiCookie ) ) )
 		{
 			// Set reservation players
-			m_arrReservationPlayers.RemoveAll();
+			m_arrReservationPlayers.clear();
 
 			// Set the number of expected humans
 			m_numGameSlots = 0;
@@ -3942,12 +3943,12 @@ void CBaseServer::Unreserve()
 
 char const *CBaseServer::GetGameType() const
 {
-	return m_GameType.String();
+	return m_GameType.c_str();
 }
 
 char const *CBaseServer::GetGameData() const
 {
-	return m_GameData.Base();
+	return m_GameData.data();
 }
 
 int CBaseServer::GetGameDataVersion() const
@@ -3960,7 +3961,7 @@ void CBaseServer::ClearTagStrings()
 	m_GameType = "";
 }
 
-static void BuildTokenList( char const *pchString, char chDelim, CUtlVector< CUtlString > &list )
+static void BuildTokenList( char const *pchString, char chDelim, std::vector< std::string > &list )
 {
 	// Have to split up the string
 	int len = Q_strlen( pchString );
@@ -3976,7 +3977,7 @@ static void BuildTokenList( char const *pchString, char chDelim, CUtlVector< CUt
 		*pszTok = 0;
 		if ( *pszPrevTok )
 		{
-			list.AddToTail( CUtlString( pszPrevTok ) );
+			list.push_back( std::string( ks::nz( pszPrevTok ) ) );
 		}
 		// Restore and advance to next token after delim
 		*pszTok = szTemp;
@@ -3987,11 +3988,11 @@ static void BuildTokenList( char const *pchString, char chDelim, CUtlVector< CUt
 	// Close off any trailing token w/o a delim at the end
 	if ( pszPrevTok && *pszPrevTok )
 	{
-		list.AddToTail( CUtlString( pszPrevTok ) );
+		list.push_back( std::string( ks::nz( pszPrevTok ) ) );
 	}
 }
 
-void CBaseServer::AddTagString( CUtlString &dest, char const *pchString )
+void CBaseServer::AddTagString( std::string &dest, char const *pchString )
 {
 	if ( !pchString || !*pchString )
 		return;
@@ -4000,16 +4001,16 @@ void CBaseServer::AddTagString( CUtlString &dest, char const *pchString )
 
 	if ( Q_strstr( pchString, chDelim ) )
 	{
-		CUtlVector< CUtlString > list;
+		std::vector< std::string > list;
 		BuildTokenList( pchString, *chDelim, list );
-		for ( int i = 0; i < list.Count(); ++i )
+		for ( int i = 0; i < std::ssize( list ); ++i )
 		{
-			AddTagString( dest, list[ i ].String() );
+			AddTagString( dest, list[ i ].c_str() );
 		}
 		return;
 	}
 
-	if ( !dest.IsEmpty() )
+	if ( !dest.empty() )
 	{
 		dest += chDelim;
 	}
@@ -4020,7 +4021,7 @@ void CBaseServer::UpdateGameType()
 {
 	ClearTagStrings();
 
-	CUtlString tags;
+	std::string tags;
 
 	if ( serverGameDLL )
 	{
@@ -4056,7 +4057,7 @@ void CBaseServer::UpdateGameType()
 
 	if ( Steam3Server().SteamGameServer() )
 	{
-		Steam3Server().SteamGameServer()->SetGameTags( m_GameType.String() );
+		Steam3Server().SteamGameServer()->SetGameTags( m_GameType.c_str() );
 	}
 }
 
@@ -4067,19 +4068,19 @@ void CBaseServer::UpdateGameData()
 	const int nPacketSize = MAX_ROUTABLE_PAYLOAD - 128;	// The packet has to fit into NET_SendPacket and there's some data sent before the tags too
 
 	// Remember old data
-	CUtlVector< char > oldGameData;
-	oldGameData.EnsureCapacity( m_GameData.Count() );
-	oldGameData.AddMultipleToTail( m_GameData.Count(), m_GameData.Base() );
+	std::vector< char > oldGameData;
+	oldGameData.reserve( std::ssize( m_GameData ) );
+	oldGameData.insert( oldGameData.end(), ( m_GameData.data() ), ( m_GameData.data() ) + ( std::ssize( m_GameData ) ) );
 
 	//
 	// Generate new data
-	m_GameData.RemoveAll();
-	m_GameData.EnsureCapacity( nPacketSize );
-	m_GameData.AddMultipleToTail( nPacketSize );
-	memset( m_GameData.Base(), 0, m_GameData.Count() );
+	m_GameData.clear();
+	m_GameData.reserve( nPacketSize );
+	m_GameData.resize( m_GameData.size() + nPacketSize );
+	memset( m_GameData.data(), 0, std::ssize( m_GameData ) );
 
 	// Add search key
-	CUtlString utlKey;
+	std::string utlKey;
 	if ( serverGameDLL && IsDedicated() &&
 	 		( GetNumHumanPlayers() <= 0 ) &&
 	 		!IsReserved() && !( GetNumClients() - GetNumFakeClients() ) &&
@@ -4090,55 +4091,55 @@ void CBaseServer::UpdateGameData()
 			sv_search_key.GetString(), GetHostVersion() ) );
 	}
 
-	if ( utlKey.Length() > m_GameData.Count() - 3 )
+	if ( std::ssize( utlKey ) > std::ssize( m_GameData ) - 3 )
 	{
 		Warning( "GameData: sv_search_key too long, cannot advertise server!\n" );
 		return;
 	}
 
 	// Group name
-	CUtlString utlGroups;
+	std::string utlGroups;
 	const char *pszGroupName = sv_steamgroup.GetString();
 	{
-		CUtlVector< CUtlString > list;
+		std::vector< std::string > list;
 		const char *chDelim = ",";
 		BuildTokenList( pszGroupName, *chDelim, list );
 
-		for ( int i = 0; i < list.Count(); ++i )
+		for ( int i = 0; i < std::ssize( list ); ++i )
 		{
-			AddTagString( utlGroups, CFmtStr( "grp:%si", list[ i ].String() ) );
+			AddTagString( utlGroups, CFmtStr( "grp:%si", list[ i ].c_str() ) );
 		}
 	}
 
-	if ( utlKey.Length() + utlGroups.Length() > m_GameData.Count() - 3 )
+	if ( std::ssize( utlKey ) + std::ssize( utlGroups ) > std::ssize( m_GameData ) - 3 )
 	{
 		Warning( "GameData: Too many Steam groups set for sv_steamgroup, not advertising Steam groups affiliation.\n" );
-		utlGroups.Purge();
+		utlGroups.clear();
 	}
 
 	if ( serverGameDLL )
 	{
-		serverGameDLL->GetMatchmakingGameData( m_GameData.Base(), m_GameData.Count() - 1 - utlKey.Length() - utlGroups.Length() - 2 );
+		serverGameDLL->GetMatchmakingGameData( m_GameData.data(), std::ssize( m_GameData ) - 1 - std::ssize( utlKey ) - std::ssize( utlGroups ) - 2 );
 	}
 
-	int nLen = Q_strlen( m_GameData.Base() );
-	char *pszWrite = m_GameData.Base() + nLen;
-	int numBytes = m_GameData.Count() - nLen;
+	int nLen = Q_strlen( m_GameData.data() );
+	char *pszWrite = m_GameData.data() + nLen;
+	int numBytes = std::ssize( m_GameData ) - nLen;
 
 	Q_snprintf( pszWrite, numBytes - 1, "%s%s%s%s",
 		nLen ? "," : "",
-		utlGroups.Get(), utlGroups.Length() ? "," : "",
-		utlKey.Get() );
+		utlGroups.data(), std::ssize( utlGroups ) ? "," : "",
+		utlKey.data() );
 
 	// Always update Steam
 	if ( Steam3Server().SteamGameServer() )
 	{
-		Steam3Server().SteamGameServer()->SetGameData( m_GameData.Base() );
+		Steam3Server().SteamGameServer()->SetGameData( m_GameData.data() );
 	}
 
 	// Increment data version if changed
-	if ( oldGameData.Count() != m_GameData.Count() ||
-		memcmp( oldGameData.Base(), m_GameData.Base(), m_GameData.Count() ) )
+	if ( std::ssize( oldGameData ) != std::ssize( m_GameData ) ||
+		memcmp( oldGameData.data(), m_GameData.data(), std::ssize( m_GameData ) ) )
 	{
 		++ m_GameDataVersion;
 	}
@@ -4223,7 +4224,7 @@ int CBaseServer::GetNumHumanPlayers( void ) const
 {
 	int count	= 0;
 
-	for (int i=0 ; i < m_Clients.Count() ; i++ )
+	for (int i=0 ; i < std::ssize( m_Clients ) ; i++ )
 	{
 		if ( m_Clients[ i ]->IsHumanPlayer() )
 		{

@@ -111,7 +111,7 @@ struct AI_MoveSuggestion_t
 
 //-----------------
 
-typedef CUtlVector<AI_MoveSuggestion_t> CAI_MoveSuggestions;
+typedef std::vector< AI_MoveSuggestion_t > CAI_MoveSuggestions;
 
 //-------------------------------------
 // AI_MoveSolution_t
@@ -263,14 +263,14 @@ inline void AI_MoveSuggestion_t::Set( AI_MoveSuggType_t newType, float newWeight
 
 inline CAI_MoveSolver::CAI_MoveSolver()
 {
-	m_Regulations.EnsureCapacity( REGS_RESERVE );
+	m_Regulations.reserve( REGS_RESERVE );
 }
 
 //-------------------------------------
 
 inline void CAI_MoveSolver::AddRegulation( const AI_MoveSuggestion_t &suggestion )
 {
-	m_Regulations.AddToTail( suggestion );
+	m_Regulations.push_back( suggestion );
 }
 
 //-------------------------------------
@@ -279,7 +279,7 @@ inline void CAI_MoveSolver::AddRegulations( const AI_MoveSuggestion_t *pSuggesti
 {
 	for (int i = 0; i < nSuggestions; ++i)
 	{
-		m_Regulations.AddToTail( pSuggestions[i] );
+		m_Regulations.push_back( pSuggestions[i] );
 	}
 }
 
@@ -287,14 +287,14 @@ inline void CAI_MoveSolver::AddRegulations( const AI_MoveSuggestion_t *pSuggesti
 
 inline bool CAI_MoveSolver::HaveRegulations() const
 {
-	return (m_Regulations.Count() > 0);
+	return (!m_Regulations.empty());
 }
 
 //-------------------------------------
 
 inline void CAI_MoveSolver::ClearRegulations()
 {
-	m_Regulations.RemoveAll();
+	m_Regulations.clear();
 }
 
 //-------------------------------------

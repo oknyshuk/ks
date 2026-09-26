@@ -17,11 +17,8 @@
 #include "pr_edict.h"
 #include "world.h"
 #include "ispatialpartition.h"
-#include "utllinkedlist.h"
 #include "framesnapshot.h"
 #include "tier0/cache_hints.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 // Edicts won't get reallocated for this many seconds after being freed.
 #define EDICT_FREETIME	1.0

@@ -5,14 +5,11 @@
 //===========================================================================//
 
 #include "tier2/fileutils.h"
+#include <algorithm>
 #include "tier2/tier2.h"
 #include "tier1/strtools.h"
 #include "filesystem.h"
 #include "tier0/icommandline.h"
-#include "tier1/utlbuffer.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Builds a directory which is a subdirectory of the current mod
@@ -137,7 +134,7 @@ char *RestoreFilename( const char *pSourceName, char *pTargetName, int targetLen
 	{
 		// cull the .360, leave the trailing extension
 		end -= 4;
-		int length = MIN( end + 1, targetLen );
+		int length = std::min( end + 1, targetLen );
 		V_strncpy( pTargetName, pSourceName, length );
 		V_strncat( pTargetName, pSourceName + end + 4, targetLen );
 
@@ -175,7 +172,7 @@ int UpdateOrCreate( const char *pSourceName, char *pTargetName, int targetLen, c
 //-----------------------------------------------------------------------------
 // Returns the search path as a list of paths
 //-----------------------------------------------------------------------------
-void GetSearchPath( CUtlVector< CUtlString > &path, const char *pPathID )
+void GetSearchPath( std::vector< std::string > &path, const char *pPathID )
 {
 	int nMaxLen = g_pFullFileSystem->GetSearchPath( pPathID, false, nullptr, 0 );
 	char *pBuf = (char*)stackalloc( nMaxLen );
@@ -185,10 +182,10 @@ void GetSearchPath( CUtlVector< CUtlString > &path, const char *pPathID )
 	while ( nullptr != ( pSemi = strchr( pBuf, ';' ) ) )
 	{
 		*pSemi = 0;
-		path.AddToTail( pBuf );
+		path.push_back( ks::nz( pBuf ) );
 		pBuf = pSemi + 1;
 	}
-	path.AddToTail( pBuf );
+	path.push_back( ks::nz( pBuf ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -218,7 +215,7 @@ bool GenerateFullPath( const char *pFileName, char const *pPathID, char *pBuf, i
 //-----------------------------------------------------------------------------
 // Search start directory, recurse into sub directories collecting all files matching the target name.
 //-----------------------------------------------------------------------------
-void RecursiveFindFilesMatchingName( CUtlVector< CUtlString > *outFileList, const char* szStartDirectory, const char* szTargetFileName, const char *pathID )
+void RecursiveFindFilesMatchingName( std::vector< std::string > *outFileList, const char* szStartDirectory, const char* szTargetFileName, const char *pathID )
 {
 	char searchString[MAX_PATH];
 	Q_snprintf( searchString, sizeof( searchString ), "%s/*.*", szStartDirectory );
@@ -236,10 +233,10 @@ void RecursiveFindFilesMatchingName( CUtlVector< CUtlString > *outFileList, cons
 		}
 		else if ( V_StringMatchesPattern( curFile, szTargetFileName ) )
 		{
-			CUtlString outFile;
-			outFile.Format( "%s/%s", szStartDirectory, curFile );
-			Q_FixSlashes( outFile.Get() );
-			outFileList->AddToTail( outFile );
+			std::string outFile;
+			outFile = ks::format_printf( "%s/%s", szStartDirectory, curFile );
+			Q_FixSlashes( outFile.data() );
+			outFileList->push_back( outFile );
 		}
 
 		curFile = g_pFullFileSystem->FindNext( handle );
@@ -251,7 +248,7 @@ void RecursiveFindFilesMatchingName( CUtlVector< CUtlString > *outFileList, cons
 //-----------------------------------------------------------------------------
 // Builds a list of all files under a directory with a particular extension
 //-----------------------------------------------------------------------------
-void AddFilesToList( CUtlVector< CUtlString > &list, const char *pDirectory, const char *pPathID, const char *pExtension )
+void AddFilesToList( std::vector< std::string > &list, const char *pDirectory, const char *pPathID, const char *pExtension )
 {
 	char pSearchString[MAX_PATH];
 	Q_snprintf( pSearchString, MAX_PATH, "%s\\*", pDirectory );
@@ -263,7 +260,7 @@ void AddFilesToList( CUtlVector< CUtlString > &list, const char *pDirectory, con
 	const char *pFoundFile = g_pFullFileSystem->FindFirstEx( pSearchString, pPathID, &hFind );
 
 	// add all the items
-	CUtlVector< CUtlString > subDirs;
+	std::vector< std::string > subDirs;
 	for ( ; pFoundFile; pFoundFile = g_pFullFileSystem->FindNext( hFind ) )
 	{
 		char pChildPath[MAX_PATH];
@@ -273,7 +270,7 @@ void AddFilesToList( CUtlVector< CUtlString > &list, const char *pDirectory, con
 		{
 			if ( Q_strnicmp( pFoundFile, ".", 2 ) && Q_strnicmp( pFoundFile, "..", 3 ) )
 			{
-				subDirs.AddToTail( pChildPath );
+				subDirs.push_back( pChildPath );
 			}
 			continue;
 		}
@@ -295,19 +292,19 @@ void AddFilesToList( CUtlVector< CUtlString > &list, const char *pDirectory, con
 
 		V_strlower( pFullPath );
 		Q_FixSlashes( pFullPath );
-		list.AddToTail( pFullPath );
+		list.push_back( ks::nz( pFullPath ) );
 	}
 
 	g_pFullFileSystem->FindClose( hFind );
 
-	int nCount = subDirs.Count();
+	int nCount = std::ssize( subDirs );
 	for ( int i = 0; i < nCount; ++i )
 	{
-		AddFilesToList( list, subDirs[i], pPathID, pExtension );
+		AddFilesToList( list, subDirs[i].c_str(), pPathID, pExtension );
 	}
 }
 
-void CBaseFile::ReadLines( CUtlStringList &lineList, int nMaxLineLength )
+void CBaseFile::ReadLines( std::vector< std::string > &lineList, int nMaxLineLength )
 {
 	char *pLine = ( char * ) stackalloc( nMaxLineLength );
 	while( ReadLine( pLine, nMaxLineLength ) )
@@ -315,16 +312,16 @@ void CBaseFile::ReadLines( CUtlStringList &lineList, int nMaxLineLength )
 		char *pEOL = strchr( pLine, '\n' );					// kill the \n
 		if ( pEOL )
 			*pEOL = 0;
-		lineList.CopyAndAddToTail( pLine );
+		lineList.emplace_back( pLine );
 	}
 }
 
-void CBaseFile::ReadFile( CUtlBuffer &fileData )
+std::vector< std::byte > CBaseFile::ReadFile()
 {
-	int nFileSize = Size();
-	fileData.EnsureCapacity( Size() );
-	int nSize = Read( fileData.Base(), nFileSize );
-	fileData.SeekPut( CUtlBuffer::SEEK_HEAD, nSize );
+	std::vector< std::byte > fileData( Size() );
+	int nSize = Read( fileData.data(), (int)fileData.size() );
+	fileData.resize( std::max( nSize, 0 ) );
+	return fileData;
 }
 
 

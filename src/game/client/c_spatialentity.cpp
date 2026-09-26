@@ -10,9 +10,6 @@
 
 #include "c_spatialentity.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 IMPLEMENT_REFLECT_CLIENTCLASS( C_SpatialEntity, DT_SpatialEntity, CSpatialEntity )
 

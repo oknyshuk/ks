@@ -7,7 +7,6 @@
 #ifndef SERIALIZEDENTITY_H
 #define SERIALIZEDENTITY_H
 
-#include "tier1/utlmap.h"
 #include "tier1/utlvector.h"
 #include "dt.h"
 #include "iclientnetworkable.h"
@@ -88,7 +87,7 @@ public:
 	}
 
 	//called to read the path and offset information form the field path, adding them to the list
-	bool ReadFieldPaths( bf_read *pBuf, CUtlVector< int > *pvecFieldPathBits = nullptr ); // pvecFieldPathBits needed for DTI modes
+	bool ReadFieldPaths( bf_read *pBuf, std::vector< int > *pvecFieldPathBits = nullptr ); // pvecFieldPathBits needed for DTI modes
 	//called to seal a dynamic list, packing it into a compact memory block along with its actual value data
 	void PackWithFieldData( void *pData, int nDataBits );
 	void PackWithFieldData( bf_read &buf, int nDataBits );

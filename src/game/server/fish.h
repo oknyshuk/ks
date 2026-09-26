@@ -90,7 +90,7 @@ private:
 	CountdownTimer m_panicTimer;						///< if active, fish is panicked
 	CountdownTimer m_disperseTimer;						///< initial non-flocking time
 
-	CUtlVector< CFish * > m_visible;					///< vector of fish that we can see
+	std::vector< CFish * > m_visible;					///< vector of fish that we can see
 };
 
 
@@ -125,7 +125,7 @@ private:
 
 	bool m_isDormant;
 
-	CUtlVector< CHandle<CFish> > m_fishes;	///< vector of all fish in this pool
+	std::vector< CHandle<CFish> > m_fishes;	///< vector of all fish in this pool
 
 	CountdownTimer m_visTimer;				///< for throttling line of sight checks between all fish
 };

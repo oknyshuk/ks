@@ -18,7 +18,8 @@
 #include "mathlib/bumpvects.h"
 #include "mathlib/vector4d.h"
 #include "disp_common.h"
-#include "bitvec.h"
+#include <bitset>
+#include "tier1/bit_ops.h"
 
 #define DISP_ALPHA_PROP_DELTA		382.5f
 
@@ -898,12 +899,12 @@ public:
 	void SetListIndex( int nIndex )		{ m_nListIndex = nIndex; } 
 	int GetListIndex( void )			{ return m_nListIndex; }
 
-	CBitVec<MAX_DISPVERTS>&			GetAllowedVerts()		{ return m_AllowedVerts; }
-	const CBitVec<MAX_DISPVERTS>&	GetAllowedVerts() const	{ return m_AllowedVerts; }
-	void AllowedVerts_Clear( void )							{ m_AllowedVerts.SetAll(); }
-	int	 AllowedVerts_GetNumDWords() const					{ return m_AllowedVerts.GetNumDWords(); }
-	unsigned long AllowedVerts_GetDWord(int i) const        { return m_AllowedVerts.GetDWord( i ); }
-	void AllowedVerts_SetDWord(int i, unsigned long val)    { m_AllowedVerts.SetDWord( i, val ); }
+	std::bitset<MAX_DISPVERTS>&			GetAllowedVerts()		{ return m_AllowedVerts; }
+	const std::bitset<MAX_DISPVERTS>&	GetAllowedVerts() const	{ return m_AllowedVerts; }
+	void AllowedVerts_Clear( void )							{ m_AllowedVerts.set(); }
+	int	 AllowedVerts_GetNumDWords() const					{ return ks::word_count<MAX_DISPVERTS>; }
+	unsigned long AllowedVerts_GetDWord(int i) const        { return ks::get_word( m_AllowedVerts, i ); }
+	void AllowedVerts_SetDWord(int i, unsigned long val)    { ks::set_word( m_AllowedVerts, i, val ); }
 
 
 	void Position_Update( int iVert, Vector vecPos );
@@ -948,7 +949,7 @@ private:
 	CCoreDispInfo		**m_ppListBase;
 	int					m_ListSize;
 
-	CBitVec<MAX_DISPVERTS>	m_AllowedVerts;		// Built in VBSP. Defines which verts are allowed to exist based on what the neighbors are.
+	std::bitset<MAX_DISPVERTS>	m_AllowedVerts;		// Built in VBSP. Defines which verts are allowed to exist based on what the neighbors are.
 
 	int					m_nListIndex;
 

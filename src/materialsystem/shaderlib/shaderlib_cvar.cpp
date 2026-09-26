@@ -7,9 +7,6 @@
 #include "icvar.h"
 #include "tier1/tier1.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 void InitShaderLibCVars( CreateInterfaceFn cvarFactory )
 {
 	if ( g_pCVar )

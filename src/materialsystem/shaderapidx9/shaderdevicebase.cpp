@@ -10,7 +10,7 @@
 #include "shaderdevicebase.h"
 #include "tier1/keyvalues.h"
 #include "tier1/convar.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/text_writer.h"
 #include "tier0/icommandline.h"
 #include "tier2/tier2.h"
 #include "filesystem.h"
@@ -21,9 +21,6 @@
 #include "shaderapi_global.h"
 #include "videocfg/videocfg.h"
 #include "winutils.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 
 //-----------------------------------------------------------------------------
@@ -516,9 +513,9 @@ void CShaderDeviceMgrBase::LoadConfig( KeyValues *pKeyValues, KeyValues *pConfig
 
 	if( CommandLine()->FindParm( "-debugdxsupport" ) )
 	{
-		CUtlBuffer tmpBuf;
+		ks::text_writer tmpBuf;
 		pKeyValues->RecursiveSaveToFile( tmpBuf, 0 );
-		Warning( "%s\n", ( const char * )tmpBuf.Base() );
+		Warning( "%s\n", tmpBuf.c_str() );
 	}
 	for( KeyValues *pGroup = pKeyValues->GetFirstSubKey(); pGroup; pGroup = pGroup->GetNextKey() )
 	{
@@ -563,7 +560,7 @@ bool CShaderDeviceMgrBase::GetRecommendedVideoConfig( int nAdapter, int nVendorI
 	GetDesktopResolution( &configData.nPhysicalScreenWidth, &configData.nPhysicalScreenHeight, nAdapter );
 
 	int nModeCount = GetModeCount( nAdapter );
-	configData.displayModes.SetCount( nModeCount );
+	configData.displayModes.assign( nModeCount, {} );
 	for ( int i = 0; i < nModeCount; ++i )
 	{
 		GetModeInfo( &configData.displayModes[i], nAdapter, i );
@@ -603,7 +600,7 @@ bool CShaderDeviceMgrBase::GetRecommendedConfigurationInfo( int nAdapter, int nD
 	GetDesktopResolution( &configData.nPhysicalScreenWidth, &configData.nPhysicalScreenHeight, nAdapter );
 
 	int nModeCount = GetModeCount( nAdapter );
-	configData.displayModes.SetCount( nModeCount );
+	configData.displayModes.assign( nModeCount, {} );
 	for ( int i = 0; i < nModeCount; ++i )
 	{
 		GetModeInfo( &configData.displayModes[i], nAdapter, i );
@@ -659,25 +656,25 @@ int CShaderDeviceMgrBase::GetClosestActualDXLevel( int nDxLevel ) const
 void CShaderDeviceMgrBase::AddModeChangeCallback( ShaderModeChangeCallbackFunc_t func )
 {
 	LOCK_SHADERAPI();
-	Assert( func && m_ModeChangeCallbacks.Find( func ) < 0 );
-	m_ModeChangeCallbacks.AddToTail( func );
+	Assert( func && ks::find_index( m_ModeChangeCallbacks, func ) < 0 );
+	m_ModeChangeCallbacks.push_back( func );
 }
 
 void CShaderDeviceMgrBase::RemoveModeChangeCallback( ShaderModeChangeCallbackFunc_t func )
 {
 	LOCK_SHADERAPI();
-	m_ModeChangeCallbacks.FindAndRemove( func );
+	ks::erase_first( m_ModeChangeCallbacks, func );
 }
 
 void CShaderDeviceMgrBase::InvokeModeChangeCallbacks( int screenWidth, int screenHeight )
 {
-	int nCount = m_ModeChangeCallbacks.Count();
+	int nCount = std::ssize( m_ModeChangeCallbacks );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		m_ModeChangeCallbacks[i]();
 	}
 
-	nCount = m_DeviceDependentObjects.Count();
+	nCount = std::ssize( m_DeviceDependentObjects );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		m_DeviceDependentObjects[i]->ScreenSizeChanged( screenWidth, screenHeight );
@@ -689,8 +686,8 @@ void CShaderDeviceMgrBase::AddDeviceDependentObject( IShaderDeviceDependentObjec
 	if ( pObject )
 	{
 		LOCK_SHADERAPI();
-		Assert( pObject && m_DeviceDependentObjects.Find( pObject ) < 0 );
-		m_DeviceDependentObjects.AddToTail( pObject );
+		Assert( pObject && ks::find_index( m_DeviceDependentObjects, pObject ) < 0 );
+		m_DeviceDependentObjects.push_back( pObject );
 	}
 }
 
@@ -699,13 +696,13 @@ void CShaderDeviceMgrBase::RemoveDeviceDependentObject( IShaderDeviceDependentOb
 	if ( pObject )
 	{
 		LOCK_SHADERAPI();
-		m_DeviceDependentObjects.FindAndRemove( pObject );
+		ks::erase_first( m_DeviceDependentObjects, pObject );
 	}
 }
 
 void CShaderDeviceMgrBase::InvokeDeviceLostNotifications( void )
 {
-	int nCount = m_DeviceDependentObjects.Count();
+	int nCount = std::ssize( m_DeviceDependentObjects );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		m_DeviceDependentObjects[i]->DeviceLost();
@@ -714,7 +711,7 @@ void CShaderDeviceMgrBase::InvokeDeviceLostNotifications( void )
 
 void CShaderDeviceMgrBase::InvokeDeviceResetNotifications( IDirect3DDevice9 *pDevice, D3DPRESENT_PARAMETERS *pPresentParameters, void *pHWnd )
 {
-	int nCount = m_DeviceDependentObjects.Count();
+	int nCount = std::ssize( m_DeviceDependentObjects );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		m_DeviceDependentObjects[i]->DeviceReset( ( void * )pDevice, ( void * )pPresentParameters, pHWnd );

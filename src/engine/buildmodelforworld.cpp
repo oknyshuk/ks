@@ -494,7 +494,7 @@ public:
 //
 // calculate the packing for all of the world geometry in order to know what size render target to allocate for buliding textures.
 //
-static void PackSurfacesAndBuildSurfaceList( CUtlVector<CPackedSurfaceInfo> &packedSurfaces, int &nWidth, int &nHeight )
+static void PackSurfacesAndBuildSurfaceList( std::vector< CPackedSurfaceInfo > &packedSurfaces, int &nWidth, int &nHeight )
 {
 	worldbrushdata_t *pBrushData = host_state.worldbrush;
 	int numSurfaces = pBrushData->nWorldFaceCount;
@@ -515,7 +515,7 @@ static void PackSurfacesAndBuildSurfaceList( CUtlVector<CPackedSurfaceInfo> &pac
 		{
 			continue;
 		}
-		CPackedSurfaceInfo &surfaceInfo = packedSurfaces[ packedSurfaces.AddToTail() ];
+		CPackedSurfaceInfo &surfaceInfo = packedSurfaces.emplace_back();
 		surfaceInfo.m_SurfID = surfID;
 		
 		if ( !imagePacker.AddBlock( lightmapSize[0], lightmapSize[1], &surfaceInfo.m_nMins[0], &surfaceInfo.m_nMins[1] ) )
@@ -598,7 +598,7 @@ public:
 
 	CDisplacementData( HDISPINFOARRAY hDispInfo, int nDispInfo )
 	{
-		m_nDispStartVert.SetCount( nDispInfo );
+		m_nDispStartVert.assign( nDispInfo, {} );
 		int nStartVert = 0;
 		for ( int i = 0; i < nDispInfo; i++ )
 		{
@@ -608,13 +608,13 @@ public:
 		}
 
 		// total number of verts, size memory
-		m_dispVerts.SetCount( nStartVert );
+		m_dispVerts.assign( nStartVert, {} );
 		// now load from disk
 		CMapLoadHelper lh( LUMP_DISP_VERTS );
-		lh.LoadLumpData( 0, nStartVert * sizeof(CDispVert), m_dispVerts.Base() );
+		lh.LoadLumpData( 0, nStartVert * sizeof(CDispVert), m_dispVerts.data() );
 	}
-	CUtlVector<int> m_nDispStartVert;
-	CUtlVector<CDispVert> m_dispVerts;
+	std::vector< int > m_nDispStartVert;
+	std::vector< CDispVert > m_dispVerts;
 };
 
 struct surfacerect_t
@@ -796,7 +796,7 @@ void DrawSurfaceRectToAtlasedTexture( float left, float top, float right, float 
 		int nDispIndex = DispInfo_ComputeIndex( host_state.worldbrush->hDispInfos, surfID->pDispInfo );
 		int nStartVert = dispData.m_nDispStartVert[ nDispIndex ];
 		Vector4D vColor(1,1,1,0);
-		for ( int i = 0; i < pDispInfo->m_Verts.Count(); i++ )
+		for ( int i = 0; i < std::ssize( pDispInfo->m_Verts ); i++ )
 		{
 			// Need to figure out what the world position is of vecPageCoord.
 			CDispRenderVert *pVert = &pDispInfo->m_Verts[i];
@@ -852,7 +852,7 @@ void DrawSurfaceRectToAtlasedTexture( float left, float top, float right, float 
 	}
 }
 
-static void RenderToAtlasedTexture( const CUtlVector<CPackedSurfaceInfo> &packedSurfaces, IMatRenderContext *pRenderContext, ITexture *pRenderTarget, int nAtlasedTextureWidth, int nAtlasedTextureHeight, const char *pMaterialSrcDir, const char *pTextureBaseName, RenderToAtlasedTextureRenderMode_t renderMode, const CDisplacementData &dispData, float flToneMapScale )
+static void RenderToAtlasedTexture( const std::vector< CPackedSurfaceInfo > &packedSurfaces, IMatRenderContext *pRenderContext, ITexture *pRenderTarget, int nAtlasedTextureWidth, int nAtlasedTextureHeight, const char *pMaterialSrcDir, const char *pTextureBaseName, RenderToAtlasedTextureRenderMode_t renderMode, const CDisplacementData &dispData, float flToneMapScale )
 {
 	// Disable specular for atlased texture generation.
 	bool bSaveMatSpecular = mat_fastspecular.GetBool();
@@ -875,9 +875,8 @@ static void RenderToAtlasedTexture( const CUtlVector<CPackedSurfaceInfo> &packed
 	Push2DRenderingSetup( pRenderContext, pRenderTarget, nAtlasedTextureWidth, nAtlasedTextureHeight );
 
 	// run through all of the faces and render them into the render target.
-	FOR_EACH_VEC( packedSurfaces, packedSurfaceIndex )
+	for ( const CPackedSurfaceInfo &packedSurface : packedSurfaces )
 	{
-		const CPackedSurfaceInfo &packedSurface = packedSurfaces[packedSurfaceIndex];
 
 		// Get the size of the lightmap subpage for this surface.
 		int lightmapSize[2];
@@ -935,7 +934,7 @@ static void RenderToAtlasedTexture( const CUtlVector<CPackedSurfaceInfo> &packed
 	materials->BeginFrame( host_frametime );
 }
 
-static int WriteSMD( const CUtlVector<CPackedSurfaceInfo> &packedSurfaces, int nAtlasedTextureWidth, int nAtlasedTextureHeight, const char *pModelSrcDir, bool bWater )
+static int WriteSMD( const std::vector< CPackedSurfaceInfo > &packedSurfaces, int nAtlasedTextureWidth, int nAtlasedTextureHeight, const char *pModelSrcDir, bool bWater )
 {
 	char smdPath[MAX_PATH];
 	V_snprintf( smdPath, MAX_PATH, "%s/simpleworldmodel%s.smd", pModelSrcDir, bWater ? "_water" : "" );
@@ -947,9 +946,8 @@ static int WriteSMD( const CUtlVector<CPackedSurfaceInfo> &packedSurfaces, int n
 
 	// run through all of the faces and render them into the render target.
 	worldbrushdata_t *pBrushData = host_state.worldbrush;
-	FOR_EACH_VEC( packedSurfaces, packedSurfaceIndex )
+	for ( const CPackedSurfaceInfo &packedSurface : packedSurfaces )
 	{
-		const CPackedSurfaceInfo &packedSurface = packedSurfaces[packedSurfaceIndex];
 
 		IMaterial *pMaterial = materialSortInfoArray[MSurf_MaterialSortID( packedSurface.m_SurfID )].material;
 		bool bIsWater = ( V_stristr( pMaterial->GetShaderName(), "water" ) != 0 );
@@ -1034,7 +1032,7 @@ CON_COMMAND( buildmodelforworld, "buildmodelforworld" )
 
 	CMatRenderContextPtr pRenderContext( materials );
 
-	CUtlVector<CPackedSurfaceInfo> packedSurfaces;
+	std::vector< CPackedSurfaceInfo > packedSurfaces;
 	int nAtlasedTextureWidth, nAtlasedTextureHeight;
 	PackSurfacesAndBuildSurfaceList( packedSurfaces, nAtlasedTextureWidth, nAtlasedTextureHeight );
 

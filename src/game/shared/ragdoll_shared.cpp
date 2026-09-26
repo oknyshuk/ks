@@ -29,9 +29,6 @@
 #include "EntityDissolve.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 CRagdollLowViolenceManager g_RagdollLVManager;
 
 void CRagdollLowViolenceManager::SetLowViolence( const char *pMapName )
@@ -446,7 +443,7 @@ bool RagdollCreate( ragdoll_t &ragdoll, const ragdollparams_t &params, IPhysicsE
 	{
 		totalMass += ragdoll.list[i].pObject->GetMass();
 	}
-	totalMass = MAX(totalMass,1);
+	totalMass = std::max<std::common_type_t<float, int>>(totalMass,1);
 
 	// apply force to the model
 	Vector nudgeForce = params.forceVector;
@@ -753,8 +750,8 @@ CRagdollLRURetirement s_RagdollLRU( "CRagdollLRURetirement" );
 void CRagdollLRURetirement::LevelInitPreEntity( void )
 {
 	m_iMaxRagdolls = -1;
-	m_LRUImportantRagdolls.RemoveAll();
-	m_LRU.RemoveAll();
+	m_LRUImportantRagdolls.clear();
+	m_LRU.clear();
 }
 
 bool ShouldRemoveThisRagdoll( CBaseAnimating *pRagdoll )
@@ -836,9 +833,6 @@ bool ShouldRemoveThisRagdoll( CBaseAnimating *pRagdoll )
 void CRagdollLRURetirement::Update( float frametime ) // Non-episodic version
 {
 	VPROF( "CRagdollLRURetirement::Update" );
-	// Compress out dead items
-	int i, next;
-
 	int iMaxRagdollCount = m_iMaxRagdolls;
 
 	if ( iMaxRagdollCount == -1 )
@@ -855,34 +849,37 @@ void CRagdollLRURetirement::Update( float frametime ) // Non-episodic version
 	m_iSimulatedRagdollCount = 0;
 
 	// remove ragdolls with a forced retire time
-	for ( i = m_LRU.Head(); i < m_LRU.InvalidIndex(); i = next )
+	for ( auto it = m_LRU.begin(); it != m_LRU.end(); )
 	{
-		next = m_LRU.Next(i);
-
-		CBaseAnimating *pRagdoll = m_LRU[i].Get();
+		CBaseAnimating *pRagdoll = it->Get();
 
 		//Just ignore it until we're done burning/dissolving.
 		if ( pRagdoll && pRagdoll->GetEffectEntity() )
+		{
+			++it;
 			continue;
+		}
 
 		// ignore if it's not time to force retire this ragdoll
-		if ( m_LRU[i].GetForcedRetireTime() == 0.0f || gpGlobals->curtime < m_LRU[i].GetForcedRetireTime() )
+		if ( it->GetForcedRetireTime() == 0.0f || gpGlobals->curtime < it->GetForcedRetireTime() )
+		{
+			++it;
 			continue;
+		}
 
-		//Msg(" Removing ragdoll %s due to forced retire time of %f (now = %f)\n", pRagdoll->GetModelName(), m_LRU[i].GetForcedRetireTime(), gpGlobals->curtime );
+		//Msg(" Removing ragdoll %s due to forced retire time of %f (now = %f)\n", pRagdoll->GetModelName(), it->GetForcedRetireTime(), gpGlobals->curtime );
 
 #ifdef CLIENT_DLL
 		pRagdoll->SUB_Remove();
 #else
 		pRagdoll->SUB_StartFadeOut( 0 );
 #endif
-		m_LRU.Remove(i);
+		it = m_LRU.erase( it );
 	}
 
-	for ( i = m_LRU.Head(); i < m_LRU.InvalidIndex(); i = next )
+	for ( auto it = m_LRU.begin(); it != m_LRU.end(); )
 	{
-		next = m_LRU.Next(i);
-		CBaseAnimating *pRagdoll = m_LRU[i].Get();
+		CBaseAnimating *pRagdoll = it->Get();
 		if ( pRagdoll )
 		{
 			m_iRagdollCount++;
@@ -891,7 +888,7 @@ void CRagdollLRURetirement::Update( float frametime ) // Non-episodic version
 			{
 				m_iSimulatedRagdollCount++;
 			}
-			if ( m_LRU.Count() > iMaxRagdollCount )
+			if ( (int)m_LRU.size() > iMaxRagdollCount )
 			{
 				//Found one, we're done.
 				if ( ShouldRemoveThisRagdoll( pRagdoll ) == true )
@@ -902,14 +899,15 @@ void CRagdollLRURetirement::Update( float frametime ) // Non-episodic version
 					pRagdoll->SUB_StartFadeOut( 0 );
 #endif
 
-					m_LRU.Remove(i);
+					m_LRU.erase( it );
 					return;
 				}
 			}
+			++it;
 		}
 		else 
 		{
-			m_LRU.Remove(i);
+			it = m_LRU.erase( it );
 		}
 	}
 
@@ -919,25 +917,26 @@ void CRagdollLRURetirement::Update( float frametime ) // Non-episodic version
 	//////////////////////////////
 	// not episodic -- this is the original mechanism
 
-	for ( i = m_LRU.Head(); i < m_LRU.InvalidIndex(); i = next )
+	for ( auto it = m_LRU.begin(); it != m_LRU.end(); )
 	{
-		if ( m_LRU.Count() <=  iMaxRagdollCount )
+		if ( (int)m_LRU.size() <=  iMaxRagdollCount )
 			break;
 
-		next = m_LRU.Next(i);
-
-		CBaseAnimating *pRagdoll = m_LRU[i].Get();
+		CBaseAnimating *pRagdoll = it->Get();
 
 		//Just ignore it until we're done burning/dissolving.
 		if ( pRagdoll && pRagdoll->GetEffectEntity() )
+		{
+			++it;
 			continue;
+		}
 
 #ifdef CLIENT_DLL
 		pRagdoll->SUB_Remove();
 #else
 		pRagdoll->SUB_StartFadeOut( 0 );
 #endif
-		m_LRU.Remove(i);
+		it = m_LRU.erase( it );
 	}
 }
 
@@ -957,13 +956,11 @@ void CRagdollLRURetirement::MoveToTopOfLRU( CBaseAnimating *pRagdoll, bool bImpo
 {
 	if ( bImportant )
 	{
-		m_LRUImportantRagdolls.AddToTail( CRagdollEntry( pRagdoll, flForcedRetireTime ) );
+		m_LRUImportantRagdolls.emplace_back( pRagdoll, flForcedRetireTime );
 
-		if ( m_LRUImportantRagdolls.Count() > g_ragdoll_important_maxcount.GetInt() )
+		if ( (int)m_LRUImportantRagdolls.size() > g_ragdoll_important_maxcount.GetInt() )
 		{
-			int iIndex = m_LRUImportantRagdolls.Head();
-
-			CBaseAnimating *pRagdoll = m_LRUImportantRagdolls[iIndex].Get();
+			CBaseAnimating *pRagdoll = m_LRUImportantRagdolls.front().Get();
 
 			if ( pRagdoll )
 			{
@@ -972,22 +969,22 @@ void CRagdollLRURetirement::MoveToTopOfLRU( CBaseAnimating *pRagdoll, bool bImpo
 #else
 				pRagdoll->SUB_StartFadeOut( 0 );
 #endif
-				m_LRUImportantRagdolls.Remove(iIndex);
+				m_LRUImportantRagdolls.erase( m_LRUImportantRagdolls.begin() );
 			}
 
 		}
 		return;
 	}
-	for ( int i = m_LRU.Head(); i < m_LRU.InvalidIndex(); i = m_LRU.Next(i) )
+	for ( auto it = m_LRU.begin(); it != m_LRU.end(); ++it )
 	{
-		if ( m_LRU[i].Get() == pRagdoll )
+		if ( it->Get() == pRagdoll )
 		{
-			m_LRU.Remove(i);
+			m_LRU.erase( it );
 			break;
 		}
 	}
 
-	m_LRU.AddToTail( CRagdollEntry( pRagdoll, flForcedRetireTime ) );
+	m_LRU.emplace_back( pRagdoll, flForcedRetireTime );
 }
 
 

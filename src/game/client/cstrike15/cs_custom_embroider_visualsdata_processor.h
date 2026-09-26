@@ -30,15 +30,15 @@ public:
 
 	// Unfortunately, VS2013 doesn't support default declaration of move functions.
 	CCSEmbroiderVisualsDataCompare( CCSEmbroiderVisualsDataCompare&& moveFrom ) // = default;
-	: CBaseVisualsDataCompare( Move( moveFrom ) )
+	: CBaseVisualsDataCompare( std::move( moveFrom ) )
 	{}
 	CCSEmbroiderVisualsDataCompare& operator=( CCSEmbroiderVisualsDataCompare&& moveFrom ) // = default;
 	{
-		*(CBaseVisualsDataCompare*)this = Move( moveFrom );
+		*(CBaseVisualsDataCompare*)this = std::move( moveFrom );
 		return *this;
 	}
 
-	virtual void SerializeToBuffer( CUtlBuffer &buf );
+	virtual void SerializeToBuffer( ks::byte_writer &buf );
 };
 
 class CCSEmbroiderVisualsDataProcessor : public CBaseVisualsDataProcessor< CCSEmbroiderVisualsDataCompare >

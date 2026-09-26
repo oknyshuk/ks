@@ -14,9 +14,6 @@
 #include "tier0/vprof.h"
 #include "tier1/fmtstr.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: An entity that spawns and controls a particle system
 //-----------------------------------------------------------------------------
@@ -55,7 +52,7 @@ protected:
 	[[= ks::reflect::Net{} ]] Vector		m_vServerControlPoints[4];
 	[[= ks::reflect::Net{} ]] uint8		m_iServerControlPointAssignments[4];
 
-	CUtlReference< CNewParticleEffect > m_pEffect;
+	ks::tracked_ref< CNewParticleEffect > m_pEffect;
 	CParticleSnapshot *m_pSnapshot;
 
 	enum { kMAXCONTROLPOINTS = 63 }; ///< actually one less than the total number of cpoints since 0 is assumed to be me
@@ -293,7 +290,7 @@ void StartParticleEffect( const CEffectData &data, int nSplitScreenPlayerSlot /*
 					pEnt->ParticleProp()->StopEmission();
 				}
 
-				CUtlReference<CNewParticleEffect> pEffect = pEnt->ParticleProp()->CreatePrecached( data.m_nHitBox, (ParticleAttachment_t)data.m_nDamageType, data.m_nAttachmentIndex );
+				ks::tracked_ref<CNewParticleEffect> pEffect = pEnt->ParticleProp()->CreatePrecached( data.m_nHitBox, (ParticleAttachment_t)data.m_nDamageType, data.m_nAttachmentIndex );
 
 				if ( pEffect.IsValid() && pEffect->IsValid() )
 				{
@@ -325,7 +322,7 @@ void StartParticleEffect( const CEffectData &data, int nSplitScreenPlayerSlot /*
 		CParticleSystemDefinition *pDef = g_pParticleSystemMgr->FindPrecachedParticleSystem( data.m_nHitBox );
 		if ( pDef )
 		{
-			CUtlReference<CNewParticleEffect> pEffect = CNewParticleEffect::CreateOrAggregate( nullptr, pDef, data.m_vOrigin, nullptr, nSplitScreenPlayerSlot );
+			ks::tracked_ref<CNewParticleEffect> pEffect = CNewParticleEffect::CreateOrAggregate( nullptr, pDef, data.m_vOrigin, nullptr, nSplitScreenPlayerSlot );
 			if ( pEffect.IsValid() && pEffect->IsValid() )
 			{
 				pEffect->SetSortOrigin( data.m_vOrigin );

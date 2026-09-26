@@ -169,7 +169,7 @@ public:
 class ICommandCompletionCallback
 {
 public:
-	virtual int  CommandCompletionCallback( const char *pPartial, CUtlVector< CUtlString > &commands ) = 0;
+	virtual int  CommandCompletionCallback( const char *pPartial, std::vector< std::string > &commands ) = 0;
 };
 
 //-----------------------------------------------------------------------------
@@ -366,7 +366,7 @@ public:
 
 	virtual	bool IsCommand( void ) const;
 
-	virtual int AutoCompleteSuggest( const char *partial, CUtlVector< CUtlString > &commands );
+	virtual int AutoCompleteSuggest( const char *partial, std::vector< std::string > &commands );
 
 	virtual bool CanAutoComplete( void );
 
@@ -444,7 +444,7 @@ public:
 	void InstallChangeCallback( FnChangeCallback_t callback, bool bInvoke = true );
 	void RemoveChangeCallback( FnChangeCallback_t callbackToRemove );
 
-	int GetChangeCallbackCount() const { return m_pParent->m_fnChangeCallbacks.Count(); }
+	int GetChangeCallbackCount() const { return std::ssize( m_pParent->m_fnChangeCallbacks ); }
 	FnChangeCallback_t GetChangeCallback( int slot ) const { return m_pParent->m_fnChangeCallbacks[ slot ]; }
 
 	// Retrieve value
@@ -541,7 +541,7 @@ protected:
 	float						m_fMaxVal;
 	
 	// Call this function when ConVar changes
-	CUtlVector< FnChangeCallback_t > m_fnChangeCallbacks;
+	std::vector< FnChangeCallback_t > m_fnChangeCallbacks;
 };
 
 
@@ -1056,14 +1056,13 @@ void ConVar_PrintDescription( const ConCommandBase *pVar );
 //-----------------------------------------------------------------------------
 // Purpose: Utility class to quickly allow ConCommands to call member methods
 //-----------------------------------------------------------------------------
-#pragma warning (disable : 4355 )
 
 template< class T >
 class CConCommandMemberAccessor : public ConCommand, public ICommandCallback, public ICommandCompletionCallback
 {
 	typedef ConCommand BaseClass;
 	typedef void ( T::*FnMemberCommandCallback_t )( const CCommand &command );
-	typedef int  ( T::*FnMemberCommandCompletionCallback_t )( const char *pPartial, CUtlVector< CUtlString > &commands );
+	typedef int  ( T::*FnMemberCommandCompletionCallback_t )( const char *pPartial, std::vector< std::string > &commands );
 
 public:
 	CConCommandMemberAccessor( T* pOwner, const char *pName, FnMemberCommandCallback_t callback, const char *pHelpString = 0,
@@ -1091,7 +1090,7 @@ public:
 		(m_pOwner->*m_Func)( command );
 	}
 
-	virtual int  CommandCompletionCallback( const char *pPartial, CUtlVector< CUtlString > &commands )
+	virtual int  CommandCompletionCallback( const char *pPartial, std::vector< std::string > &commands )
 	{
 		Assert( m_pOwner && m_CompletionFunc );
 		return (m_pOwner->*m_CompletionFunc)( pPartial, commands );
@@ -1103,7 +1102,6 @@ private:
 	FnMemberCommandCompletionCallback_t m_CompletionFunc;
 };
 
-#pragma warning ( default : 4355 )
 
 
 //-----------------------------------------------------------------------------

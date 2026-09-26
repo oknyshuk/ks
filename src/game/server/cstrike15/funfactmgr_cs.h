@@ -3,7 +3,8 @@
 
 #include "GameEventListener.h"
 #include "funfact_cs.h"
-#include "utlmap.h"
+#include <map>
+#include <memory>
 #include "cs_shareddefs.h"
 
 class FunFactEvaluator;
@@ -32,11 +33,11 @@ private:
 
 	struct FunFactDatabaseEntry
 	{
-		const FunFactEvaluator* pEvaluator;
+		std::unique_ptr< const FunFactEvaluator > pEvaluator;
 		int iOccurrences;
 		float fCooldown;
 	};
-	CUtlMap<int, FunFactDatabaseEntry> m_funFactDatabase;
+	std::map<int, FunFactDatabaseEntry> m_funFactDatabase;
 	int m_numRounds;
 };
 

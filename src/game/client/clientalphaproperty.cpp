@@ -12,9 +12,6 @@
 #include "iclientunknown.h"
 #include "iclientrenderable.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Client alpha property starts here

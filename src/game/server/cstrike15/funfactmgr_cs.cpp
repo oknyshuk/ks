@@ -21,8 +21,7 @@ const float kWeightRarity			= 1.0f;
 // Purpose: constructor
 //-----------------------------------------------------------------------------
 CCSFunFactMgr::CCSFunFactMgr() : 
-	CAutoGameSystemPerFrame( "CCSFunFactMgr" ),
-	m_funFactDatabase(0, 100, DefLessFunc(int) )
+	CAutoGameSystemPerFrame( "CCSFunFactMgr" )
 {
 	for ( int i = 0; i < ARRAYSIZE(m_playerCooldown); ++i )
 	{
@@ -50,8 +49,9 @@ bool CCSFunFactMgr::Init()
 		FunFactDatabaseEntry entry;
 		entry.fCooldown = 0.0f;
 		entry.iOccurrences = 0;
-		entry.pEvaluator = pFunFactHelper->m_pfnCreate();
-		m_funFactDatabase.Insert(entry.pEvaluator->GetId(), entry);
+		entry.pEvaluator.reset( pFunFactHelper->m_pfnCreate() );
+		int id = entry.pEvaluator->GetId();
+		m_funFactDatabase.emplace( id, std::move( entry ) );
 
 		pFunFactHelper = pFunFactHelper->m_pNext;
 	}
@@ -71,11 +71,7 @@ bool CCSFunFactMgr::Init()
 //-----------------------------------------------------------------------------
 void CCSFunFactMgr::Shutdown()
 {
-	FOR_EACH_MAP( m_funFactDatabase, iter )
-	{
-		delete m_funFactDatabase[iter].pEvaluator;
-	}
-	m_funFactDatabase.RemoveAll();
+	m_funFactDatabase.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -119,18 +115,18 @@ bool CCSFunFactMgr::GetRoundEndFunFact( int iWinningTeam, e_RoundEndReason iRoun
 	FunFactVector validFunFacts;
 
 	// Generate a vector of all valid fun facts for this round
-	FOR_EACH_MAP( m_funFactDatabase, i )
+	for ( auto &[id, entry] : m_funFactDatabase )
 	{
 		FunFact funFact;
-		if ( m_funFactDatabase[i].pEvaluator->Evaluate(iRoundResult, validFunFacts) )
+		if ( entry.pEvaluator->Evaluate(iRoundResult, validFunFacts) )
 		{
-			m_funFactDatabase[i].iOccurrences++;
+			entry.iOccurrences++;
 		}
 	}
 
 	m_numRounds++;
 
-	if (validFunFacts.Count() == 0)
+	if (validFunFacts.empty())
 		return false;
 
 	// pick the fun fact with the highest score
@@ -141,7 +137,7 @@ bool CCSFunFactMgr::GetRoundEndFunFact( int iWinningTeam, e_RoundEndReason iRoun
 	Msg("Scoring fun facts:\n");
 #endif
 
-	FOR_EACH_VEC(validFunFacts, i)
+	for ( int i = 0; i < std::ssize( validFunFacts ); i++ )
 	{
 		float fScore = ScoreFunFact(validFunFacts[i]);
 
@@ -175,16 +171,16 @@ bool CCSFunFactMgr::GetRoundEndFunFact( int iWinningTeam, e_RoundEndReason iRoun
 	}
 
 	// decay funfact cooldowns
-	FOR_EACH_MAP(m_funFactDatabase, i)
+	for ( auto &[id, entry] : m_funFactDatabase )
 	{
-		m_funFactDatabase[i].fCooldown *= (1.0f - kCooldownRateFunFact);
+		entry.fCooldown *= (1.0f - kCooldownRateFunFact);
 	}
 
 	// set player cooldown for player in funfact
 	m_playerCooldown[funfact.iPlayer] = 1.0f;
 
 	// set funfact cooldown for current funfact
-	m_funFactDatabase[m_funFactDatabase.Find(funfact.id)].fCooldown = 1.0f;
+	m_funFactDatabase.find(funfact.id)->second.fCooldown = 1.0f;
 
 	return true;
 }
@@ -192,7 +188,7 @@ bool CCSFunFactMgr::GetRoundEndFunFact( int iWinningTeam, e_RoundEndReason iRoun
 float CCSFunFactMgr::ScoreFunFact( const FunFact& funfact )
 {
 	float fScore = 0.0f;
-	const FunFactDatabaseEntry& dbEntry = m_funFactDatabase[m_funFactDatabase.Find(funfact.id)];
+	const FunFactDatabaseEntry& dbEntry = m_funFactDatabase.find(funfact.id)->second;
 
 	// add the coolness score for the funfact
 	fScore += kWeightCoolness * dbEntry.pEvaluator->GetCoolness() * (1.0f + funfact.fMagnitude);

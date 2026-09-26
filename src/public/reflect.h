@@ -431,18 +431,36 @@ consteval bool base_owner_matches()
 }
 
 
-// The types of every From<...> annotation on a class, in order, so a caller can read their
-// template arguments.
+// The From<>/FromTable<> annotations on a class, in order.
 consteval std::vector<std::meta::info> from_annotations( std::meta::info cls )
 {
 	std::vector<std::meta::info> out;
 	for ( auto a : std::meta::annotations_of( cls ) )
 	{
 		const std::meta::info t = std::meta::remove_cv( std::meta::type_of( a ) );
-		if ( std::meta::has_template_arguments( t ) && std::meta::template_of( t ) == ^^From )
-			out.push_back( t );
+		if ( !std::meta::has_template_arguments( t ) ) continue;
+		const std::meta::info tmpl = std::meta::template_of( t );
+		if ( tmpl == ^^From || tmpl == ^^FromTable ) out.push_back( t );
 	}
 	return out;
+}
+
+// One From<>/FromTable<> annotation by role, hiding their differing argument layouts. table is
+// std::meta::info{} when there is none.
+struct FromEntry
+{
+	name_t          name;
+	Net             net;
+	std::meta::info proxy;   // the Fn argument, or a nullptr reflection when defaulted
+	std::meta::info table;   // FromTable<> only
+};
+
+consteval FromEntry from_entry( std::meta::info t )
+{
+	const auto a = std::define_static_array( std::meta::template_arguments_of( t ) );
+	if ( std::meta::template_of( t ) == ^^FromTable )
+		return { std::meta::extract<name_t>( a[0] ), std::meta::extract<Net>( a[2] ), a[3], a[1] };
+	return { std::meta::extract<name_t>( a[0] ), std::meta::extract<Net>( a[1] ), a[2], std::meta::info{} };
 }
 
 // PredFrom<> entries, the prediction counterpart of from_annotations.
@@ -534,9 +552,8 @@ consteval std::vector<std::meta::info> from_annotations_in( std::meta::info cls,
 	std::vector<std::meta::info> out;
 	for ( auto t : from_annotations( cls ) )
 	{
-		const auto args = std::meta::template_arguments_of( t );
-		const Net n = std::meta::extract<Net>( args[1] );
-		if ( same_name( n.table, table ) && on_side( n, want ) )
+		const FromEntry e = from_entry( t );
+		if ( same_name( e.net.table, table ) && on_side( e.net, want ) )
 			out.push_back( t );
 	}
 	return out;
@@ -587,9 +604,9 @@ consteval NetTable primary_net_table()
 			    std::meta::template_arguments_of( t )[0] ) );
 	for ( auto t : from_annotations( ^^C ) )
 	{
-		const Net n = std::meta::extract<Net>( std::meta::template_arguments_of( t )[1] );
-		if ( !n.table.empty() )
-			claimed.push_back( n.table );
+		const FromEntry e = from_entry( t );
+		if ( !e.net.table.empty() )
+			claimed.push_back( e.net.table );
 	}
 	for ( auto t : all<NetTable>( ^^C ) )
 	{

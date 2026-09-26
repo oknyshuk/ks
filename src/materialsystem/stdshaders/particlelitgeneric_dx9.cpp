@@ -9,9 +9,6 @@
 #include "BaseVSShader.h"
 #include "particlelitgeneric_dx9_helper.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 BEGIN_VS_SHADER( ParticleLitGeneric_DX9, 
 				"Help for ParticleLitGeneric_DX9" )

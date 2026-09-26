@@ -3,9 +3,6 @@
 #include "raytrace.h"
 #include <mathlib/halton.h>
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 static uint32 MapDistanceToPixel(float t)
 {
@@ -140,7 +137,7 @@ void RayTracingEnvironment::RenderScene(
 					case DIRECT_LIGHTING:
 					{
 						// light all points
-						for(int l=0;l<LightList.Count();l++)
+						for(int l=0;l<std::ssize( LightList );l++)
 						{
 							LightList[l].ComputeLightAtPoints(surface_pos,rslt.surface_normal,
 															  intens);
@@ -151,7 +148,7 @@ void RayTracingEnvironment::RenderScene(
 					case DIRECT_LIGHTING_WITH_SHADOWS:
 					{
 						// light all points
-						for(int l=0;l<LightList.Count();l++)
+						for(int l=0;l<std::ssize( LightList );l++)
 						{
 							FourVectors ldir;
 							ldir.DuplicateVector(LightList[l].m_Position);
@@ -211,7 +208,7 @@ void RayTracingEnvironment::ComputeVirtualLightSources(void)
 	int start_pos=0;
 	for(int b=0;b<3;b++)
 	{
-		int nl=LightList.Count();
+		int nl=std::ssize( LightList );
 		int where_to_start=start_pos;
 		start_pos=nl;
 		for(int l=where_to_start;l<nl;l++)
@@ -283,7 +280,7 @@ void RayTracingEnvironment::ComputeVirtualLightSources(void)
 							l1.m_Theta=0;
 							l1.m_Phi=M_PI;
 							l1.RecalculateDerivedValues();
-							LightList.AddToTail(l1);
+							LightList.push_back( l1 );
 						}
 					}
 				}

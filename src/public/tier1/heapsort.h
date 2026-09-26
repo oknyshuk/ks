@@ -75,7 +75,7 @@ inline void HeapSort( T *pArr, int nCount, const LessThan &lessThan )
 template <typename Array, typename LessThan>
 inline void HeapSort( Array& arr, const LessThan &lessThan )
 {
-	HeapSort( arr.Base( ), arr.Count( ), lessThan );
+	HeapSort( arr.data(), std::ssize( arr ), lessThan );
 }
 
 
@@ -107,7 +107,7 @@ inline void HeapSortUnitTest( )
 	RandomSeed( 1 );
 	for ( uint i = 0; i < 100000; ++i )
 	{
-		CUtlVector< int >arr;
+		std::vector< int >arr;
 		arr.SetCount( RandomInt( 0, 10000 ) );
 		for ( int j = 0; j < arr.Count( ); ++j )
 			arr[ j ] = RandomInt( 0, INT_MAX );

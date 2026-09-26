@@ -10,8 +10,9 @@
 
 
 #include "filesystem.h"
-#include "tier1/utllinkedlist.h"
-#include "tier1/utldict.h"
+#include "tier1/map_ops.h"
+#include <memory>
+#include <vector>
 
 class CCommand;
 
@@ -24,7 +25,6 @@ public:
 	double			m_flStartTime;		// What time the loop started at.
 	char			m_Name[64];
 	unsigned long	m_iNextCommandPos;	// Position in the file of the next command.
-	int				m_ListIndex;		// Index into CTestScriptMgr::m_Loops.
 };
 
 
@@ -78,8 +78,8 @@ private:
 	double			m_WaitUntil;			// It waits to execute scripts until the time reaches here.
 
 
-	CUtlLinkedList<CLoopInfo*,int>	m_Loops;
-	CUtlDict<int, int> m_CheckPointsHit;	// Which checkpoints we've hit.
+	std::vector< std::unique_ptr< CLoopInfo > >	m_Loops;
+	std::set< std::string, ks::iless > m_CheckPointsHit;	// Which checkpoints we've hit.
 
 	// Console command handlers.
 	friend void Test_Wait( const CCommand &args );

@@ -9,9 +9,6 @@
 #include "client_class.h"
 #include "serializedentity.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static ConVar cl_showevents	( "cl_showevents", "0", FCVAR_CHEAT, "Print event firing info in the console" );
 
 //-----------------------------------------------------------------------------
@@ -75,26 +72,27 @@ void CL_FireEvents( void )
 
 	if ( !cl.IsActive() )
 	{
-		cl.events.RemoveAll();
+		cl.events.clear();
 		return;
 	}
 	MDLCACHE_CRITICAL_SECTION_(g_pMDLCache);
 
-	intp i, next;
-	for ( i = cl.events.Head(); i != cl.events.InvalidIndex(); i = next )
+	int nSlot = 0;
+	for ( auto it = cl.events.begin(); it != cl.events.end(); ++nSlot )
 	{
-		next = cl.events.Next( i );
-
-		CEventInfo *ei = &cl.events[ i ];
+		CEventInfo *ei = &*it;
 		if ( ei->classID == 0 )
 		{
-			cl.events.Remove( i );
+			it = cl.events.erase( it );
 			continue;
 		}
 
 		// Delayed event!
 		if ( ei->fire_delay && ( ei->fire_delay > cl.GetTime() ) )
+		{
+			++it;
 			continue;
+		}
 
 		bool success = false;
 
@@ -117,7 +115,7 @@ void CL_FireEvents( void )
 				pCE->PostDataUpdate( DATA_UPDATE_CREATED );
 
 				// Spew to debug area if needed
-				CL_DescribeEvent( i, ei, ei->pClientClass->m_pNetworkName );
+				CL_DescribeEvent( nSlot, ei, ei->pClientClass->m_pNetworkName );
 
 				success = true;
 			}
@@ -128,7 +126,7 @@ void CL_FireEvents( void )
 			ConDMsg( "Failed to execute event for classId %i\n", ei->classID - 1 );
 		}
 
-		cl.events.Remove( i );
+		it = cl.events.erase( it );
 	}
 }
 

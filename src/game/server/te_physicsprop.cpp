@@ -11,9 +11,6 @@
 #include "reflect_annotations.h"
 #include "basetempentity.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: create clientside physics prop, as breaks model if needed
 //-----------------------------------------------------------------------------

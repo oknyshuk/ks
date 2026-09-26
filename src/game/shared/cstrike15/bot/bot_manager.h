@@ -10,7 +10,9 @@
 #ifndef BASE_CONTROL_H
 #define BASE_CONTROL_H
 
-#pragma warning( disable : 4530 )					// STL uses exceptions, but we are not compiling with them - ignore warning
+
+#include <memory>
+#include <vector>
 
 extern float g_BotUpkeepInterval;					///< duration between bot upkeeps
 extern float g_BotUpdateInterval;					///< duration between bot updates
@@ -61,7 +63,7 @@ private:
 	float m_radius;
 };
 
-typedef CUtlLinkedList<ActiveGrenade *> ActiveGrenadeList;
+typedef std::vector<std::unique_ptr<ActiveGrenade>> ActiveGrenadeList;
 
 
 //--------------------------------------------------------------------------------------------------------------
@@ -105,20 +107,14 @@ public:
 	template < typename T >
 	bool ForEachGrenade( T &func )
 	{
-		int it = m_activeGrenadeList.Head();
-
-		while( it != m_activeGrenadeList.InvalidIndex() )
+		for ( auto it = m_activeGrenadeList.begin(); it != m_activeGrenadeList.end(); )
 		{
-			ActiveGrenade *ag = m_activeGrenadeList[ it ];
-
-			int current = it;
-			it = m_activeGrenadeList.Next( it );
+			ActiveGrenade *ag = it->get();
 
 			// lazy validation
 			if (!ag->IsValid())
 			{
-				m_activeGrenadeList.Remove( current );
-				delete ag;
+				it = m_activeGrenadeList.erase( it );
 				continue;
 			}
 			else
@@ -128,6 +124,7 @@ public:
 					return false;
 				}
 			}
+			++it;
 		}
 
 		return true;

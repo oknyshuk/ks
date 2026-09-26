@@ -28,9 +28,6 @@
 #include "datacache/imdlcache.h"
 */
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 
 CFlexExpresser::CFlexExpresser()
@@ -187,7 +184,7 @@ void CFlexExpresser::InputSpeakResponseConcept( inputdata_t &inputdata )
 				valString = value;
 			}
 			toWrite = strlen(valString);
-			toWrite = MIN( 511-outWritten, toWrite );
+			toWrite = std::min( 511-outWritten, toWrite );
 			V_strncpy( outputmodifiers + outWritten, valString, toWrite+1 );
 			outWritten += toWrite;
 

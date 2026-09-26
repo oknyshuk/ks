@@ -18,9 +18,6 @@
 #include "fogcontroller.h"
 #include "tier0/vprof.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //=============================================================================
 
 IMPLEMENT_REFLECT_TABLE( CPlayerLocalData, DT_Local );
@@ -112,11 +109,11 @@ void CPlayerLocalData::UpdateAreaBits( CBasePlayer *pl, unsigned char chAreaPort
 	int area = engine->GetArea( origin );
 	engine->GetAreaBits( area, tempBits, sizeof( tempBits ) );
 
-	CUtlVector< int > vecAreasSeen;
-	vecAreasSeen.AddToTail( area );
+	std::vector< int > vecAreasSeen;
+	vecAreasSeen.push_back( area );
 
-	CUtlVector< CHandle< CBasePlayer > > &list = pl->GetSplitScreenAndPictureInPicturePlayers();
-	for ( i = 0; i < list.Count(); ++i )
+	std::vector< CHandle< CBasePlayer > > &list = pl->GetSplitScreenAndPictureInPicturePlayers();
+	for ( i = 0; i < std::ssize( list ); ++i )
 	{
 		CBasePlayer *pSplit = list[ i ];
 		if ( !pSplit )
@@ -127,10 +124,10 @@ void CPlayerLocalData::UpdateAreaBits( CBasePlayer *pl, unsigned char chAreaPort
 		int area2 = engine->GetArea( org2 );
 
 		// Already merged this area in?
-		if ( vecAreasSeen.Find( area2 ) != vecAreasSeen.InvalidIndex() )
+		if ( ks::find_index( vecAreasSeen, area2 ) != -1 )
 			continue;
 
-		vecAreasSeen.AddToTail( area2 );
+		vecAreasSeen.push_back( area2 );
 		engine->GetAreaBits( area2, tempBits2, sizeof( tempBits2 ) );
 
 		unsigned int *pBase = (unsigned int *)tempBits;

@@ -16,9 +16,6 @@
 #include "ai_basenpc.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // Use this to disable caching and other optimizations in senses
 #define DEBUG_SENSES 1
 
@@ -235,7 +232,7 @@ CBaseEntity *CAI_Senses::GetFirstSeenEntity( AISightIter_t *pIter, seentype_t iS
 
 	for ( int i = iFirstArray; i < ARRAYSIZE( m_SeenArrays ); i++ )
 	{
-		if ( m_SeenArrays[i]->Count() != 0 )
+		if ( !m_SeenArrays[i]->empty() )
 		{
 			pIterVal->array = i;
 			pIterVal->iNext = 1;
@@ -257,7 +254,7 @@ CBaseEntity *CAI_Senses::GetNextSeenEntity( AISightIter_t *pIter ) const
 		
 		for ( int i = pIterVal->array;  i < ARRAYSIZE( m_SeenArrays ); i++ )
 		{
-			for ( int j = pIterVal->iNext; j < m_SeenArrays[i]->Count(); j++ )
+			for ( int j = pIterVal->iNext; j < std::ssize( *m_SeenArrays[i] ); j++ )
 			{
 				if ( (*m_SeenArrays[i])[j].Get() != nullptr )
 				{
@@ -287,9 +284,9 @@ void CAI_Senses::BeginGather()
 
 //-----------------------------------------------------------------------------
 
-void CAI_Senses::EndGather( int nSeen, CUtlVector<EHANDLE> *pResult )
+void CAI_Senses::EndGather( int nSeen, std::vector< EHANDLE > *pResult )
 {
-	pResult->SetCount( nSeen );
+	pResult->assign( nSeen, {} );
 	if ( nSeen )
 	{
 		CBaseEntity *pCurrent = GetOuter()->m_pLink;
@@ -381,12 +378,12 @@ int CAI_Senses::LookForHighPriorityEntities( int iDistance )
     }
     else
     {
-    	for ( int i = m_SeenHighPriority.Count() - 1; i >= 0; --i )
+    	for ( int i = std::ssize( m_SeenHighPriority ) - 1; i >= 0; --i )
     	{
     		if ( m_SeenHighPriority[i].Get() == nullptr )
-    			m_SeenHighPriority.FastRemove( i );    			
+    			ks::swap_remove( m_SeenHighPriority, i );    			
     	}
-    	nSeen = m_SeenHighPriority.Count();
+    	nSeen = std::ssize( m_SeenHighPriority );
     }
 	
 	return nSeen;
@@ -434,11 +431,11 @@ int CAI_Senses::LookForNPCs( int iDistance )
 		// Fall through
 	}
 
-    for ( int i = m_SeenNPCs.Count() - 1; i >= 0; --i )
+    for ( int i = std::ssize( m_SeenNPCs ) - 1; i >= 0; --i )
     {
     	if ( m_SeenNPCs[i].Get() == nullptr )
 		{
-    		m_SeenNPCs.FastRemove( i );
+    		ks::swap_remove( m_SeenNPCs, i );
 		}
 		else if ( bRemoveStaleFromCache )
 		{
@@ -446,12 +443,12 @@ int CAI_Senses::LookForNPCs( int iDistance )
 				   !IsWithinSenseDistance( origin, m_SeenNPCs[i]->GetAbsOrigin(), iDistance ) ) ||
 				 !Look( m_SeenNPCs[i] ) )
 			{
-	    		m_SeenNPCs.FastRemove( i );
+	    		ks::swap_remove( m_SeenNPCs, i );
 			}
 		}
     }
 
-    return m_SeenNPCs.Count();
+    return std::ssize( m_SeenNPCs );
 }
 
 //-----------------------------------------------------------------------------
@@ -487,12 +484,12 @@ int CAI_Senses::LookForObjects( int iDistance )
 	}
     else
     {
-    	for ( int i = m_SeenMisc.Count() - 1; i >= 0; --i )
+    	for ( int i = std::ssize( m_SeenMisc ) - 1; i >= 0; --i )
     	{
     		if ( m_SeenMisc[i].Get() == nullptr )
-    			m_SeenMisc.FastRemove( i );    			
+    			ks::swap_remove( m_SeenMisc, i );    			
     	}
-    	nSeen = m_SeenMisc.Count();
+    	nSeen = std::ssize( m_SeenMisc );
     }
 
 	return nSeen;
@@ -627,14 +624,14 @@ void CAI_SensedObjectsManager::Init()
 void CAI_SensedObjectsManager::Term()
 {
 	gEntList.RemoveListenerEntity( this );
-	m_SensedObjects.RemoveAll();
+	m_SensedObjects.clear();
 }
 
 //-----------------------------------------------------------------------------
 
 CBaseEntity *CAI_SensedObjectsManager::GetFirst( int *pIter )
 {
-	if ( m_SensedObjects.Count() )
+	if ( !m_SensedObjects.empty() )
 	{
 		*pIter = 1;
 		return m_SensedObjects[0];
@@ -649,7 +646,7 @@ CBaseEntity *CAI_SensedObjectsManager::GetFirst( int *pIter )
 CBaseEntity *CAI_SensedObjectsManager::GetNext( int *pIter )
 {
 	int i = *pIter;
-	if ( i && i < m_SensedObjects.Count() )
+	if ( i && i < std::ssize( m_SensedObjects ) )
 	{
 		(*pIter)++;
 		return m_SensedObjects[i];
@@ -665,7 +662,7 @@ void CAI_SensedObjectsManager::OnEntitySpawned( CBaseEntity *pEntity )
 {
 	if ( ( pEntity->GetFlags() & FL_OBJECT ) && !pEntity->IsPlayer() && !pEntity->IsNPC() )
 	{
-		m_SensedObjects.AddToTail( pEntity );
+		m_SensedObjects.push_back( pEntity );
 	}
 }
 
@@ -675,15 +672,15 @@ void CAI_SensedObjectsManager::OnEntityDeleted( CBaseEntity *pEntity )
 {
 	if ( ( pEntity->GetFlags() & FL_OBJECT ) && !pEntity->IsPlayer() && !pEntity->IsNPC() )
 	{
-		int i = m_SensedObjects.Find( pEntity );
-		if ( i != m_SensedObjects.InvalidIndex() )
-			m_SensedObjects.FastRemove( i );
+		int i = ks::find_index( m_SensedObjects, pEntity );
+		if ( i != -1 )
+			ks::swap_remove( m_SensedObjects, i );
 	}
 }
 
 void CAI_SensedObjectsManager::AddEntity( CBaseEntity *pEntity )
 {
-	if ( m_SensedObjects.Find( pEntity ) != m_SensedObjects.InvalidIndex() )
+	if ( ks::find_index( m_SensedObjects, pEntity ) != -1 )
 		return;
 
 	// We shouldn't be adding players or NPCs to this list
@@ -691,7 +688,7 @@ void CAI_SensedObjectsManager::AddEntity( CBaseEntity *pEntity )
 
 	// Add the object flag so it gets removed when it dies
 	pEntity->AddFlag( FL_OBJECT );
-	m_SensedObjects.AddToTail( pEntity );
+	m_SensedObjects.push_back( pEntity );
 }
 
 //=============================================================================

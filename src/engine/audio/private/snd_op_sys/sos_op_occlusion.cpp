@@ -15,9 +15,6 @@
 #include "render.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 
 
@@ -122,7 +119,7 @@ void CSosOperatorOcclusion::Execute( void *pVoidMem, channel_t *pChannel, CScrat
 
 			flGain = SND_FadeToNewGain( &(pChannel->gain[ hh ]), pChannel, flGain );
 
-			flResult = MAX( flResult, flGain );
+			flResult = std::max( flResult, flGain );
 
 		}
 		pStructMem->m_flLastTraceTime = flCurHostTime;
@@ -132,7 +129,7 @@ void CSosOperatorOcclusion::Execute( void *pVoidMem, channel_t *pChannel, CScrat
 		FOR_EACH_VALID_SPLITSCREEN_PLAYER( hh )
 		{
 			float flGain = SND_FadeToNewGain(  &(pChannel->gain[ hh ] ), pChannel, -1.0 );
-			flResult = MAX( flResult, flGain );
+			flResult = std::max( flResult, flGain );
 		}
 	}
 

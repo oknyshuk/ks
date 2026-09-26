@@ -12,7 +12,6 @@
 
 
 #include "baseentity.h"
-#include "utllinkedlist.h"
 #include "func_areaportalbase.h"
 
 
@@ -40,12 +39,12 @@ public:
 // CFuncAreaPortalBase stuff.
 public:
 
-	virtual bool	UpdateVisibility( const CUtlVector< Vector > &vecOrigins, float fovDistanceAdjustFactor, bool &bIsOpenOnClient );
+	virtual bool	UpdateVisibility( const std::vector< Vector > &vecOrigins, float fovDistanceAdjustFactor, bool &bIsOpenOnClient );
 
 
 public:
 	// Returns false if the viewer is past the fadeout distance.
-	bool IsWindowOpen( const CUtlVector< Vector > &vecOrigins, float fovDistanceAdjustFactor );
+	bool IsWindowOpen( const std::vector< Vector > &vecOrigins, float fovDistanceAdjustFactor );
 
 public:
 	

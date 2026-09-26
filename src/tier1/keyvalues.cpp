@@ -6,6 +6,7 @@
 //
 //=============================================================================//
 
+#include <mutex>
 #include <wchar.h> // wcslen()
 #define _alloca alloca
 #define _wtoi(arg) wcstol(arg, nullptr, 10)
@@ -16,18 +17,23 @@
 #include <vstdlib/ikeyvaluessystem.h>
 
 #include <color.h>
+#include "mathlib/vector.h"
 #include <stdlib.h>
 #include <ctype.h>
 #include "tier1/convar.h"
 #include "tier0/dbg.h"
 #include "tier0/mem.h"
 #include "utlvector.h"
-#include "utlbuffer.h"
-#include "utlhash.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
+#include "tier1/text_reader.h"
+#include "tier1/text_writer.h"
+#include "tier1/string_escapes.h"
+#include "generichash.h"
 #include "tier0/vprof.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include <tier0/memdbgon.h>
+#include <algorithm>
+#include <string>
+#include <unordered_set>
 
 //////// VPROF? //////////////////
 // For an example of how to mark up this file with VPROF nodes, see 
@@ -76,7 +82,7 @@ public:
 			m_errorStack[m_errorIndex] = symName;
 		}
 		m_errorIndex++;
-		m_maxErrorIndex = MAX( m_maxErrorIndex, (m_errorIndex-1) );
+		m_maxErrorIndex = std::max( m_maxErrorIndex, (m_errorIndex-1) );
 		return m_errorIndex-1;
 	}
 
@@ -138,20 +144,20 @@ private:
 
 
 
-// This class gets the tokens out of a CUtlBuffer for KeyValues.
-// Since KeyValues likes to seek backwards and seeking won't work with a text-mode CUtlStreamBuffer 
-// (which is what dmserializers uses), this class allows you to seek back one token.
+// This class gets the tokens out of a ks::text_reader for KeyValues.
+// Since KeyValues likes to seek backwards and not every text source can be rewound,
+// this class allows you to seek back one token.
 class CKeyValuesTokenReader
 {
 public:
-	CKeyValuesTokenReader( KeyValues *pKeyValues, CUtlBuffer &buf );
+	CKeyValuesTokenReader( KeyValues *pKeyValues, ks::text_reader &text );
 	
 	const char* ReadToken( bool &wasQuoted, bool &wasConditional );
 	void SeekBackOneToken();
 
 private:
 	KeyValues *m_pKeyValues;
-	CUtlBuffer &m_Buffer;
+	ks::text_reader &m_Text;
 
 	int m_nTokensRead;
 	bool m_bUsePriorToken;
@@ -162,8 +168,8 @@ private:
 
 char CKeyValuesTokenReader::s_pTokenBuf[KEYVALUES_TOKEN_SIZE];
 
-CKeyValuesTokenReader::CKeyValuesTokenReader( KeyValues *pKeyValues, CUtlBuffer &buf ) : 
-	m_Buffer( buf )
+CKeyValuesTokenReader::CKeyValuesTokenReader( KeyValues *pKeyValues, ks::text_reader &text ) : 
+	m_Text( text )
 {
 	m_pKeyValues = pKeyValues;
 	m_nTokensRead = 0;
@@ -183,46 +189,45 @@ const char* CKeyValuesTokenReader::ReadToken( bool &wasQuoted, bool &wasConditio
 	m_bPriorTokenWasQuoted = wasQuoted = false;
 	m_bPriorTokenWasConditional = wasConditional = false;
 
-	if ( !m_Buffer.IsValid() )
+	if ( !m_Text.ok() )
 		return nullptr; 
 
 	// eating white spaces and remarks loop
 	while ( true )
 	{
-		m_Buffer.EatWhiteSpace();
-		if ( !m_Buffer.IsValid() )
+		m_Text.skip_whitespace();
+		if ( m_Text.at_end() )
 		{
+			m_Text.fail();
 			return nullptr;	// file ends after reading whitespaces
 		}
 
 		// stop if it's not a comment; a new token starts here
-		if ( !m_Buffer.EatCPPComment() )
+		if ( !m_Text.skip_cpp_comment() )
 			break;
 	}
 
-	const char *c = (const char*)m_Buffer.PeekGet( sizeof(char), 0 );
-	if ( !c )
-	{
-		return nullptr;
-	}
+	char c = m_Text.peek_char();
 
 	// read quoted strings specially
-	if ( *c == '\"' )
+	if ( c == '\"' )
 	{
 		m_bPriorTokenWasQuoted = wasQuoted = true;
-		m_Buffer.GetDelimitedString( m_pKeyValues->m_bHasEscapeSequences ? GetCStringCharConversion() : GetNoEscCharConversion(), 
-			s_pTokenBuf, KEYVALUES_TOKEN_SIZE );
+		const std::string quoted = m_Text.read_quoted( m_pKeyValues->m_bHasEscapeSequences ? ks::c_string_escapes : ks::no_escapes );
+		const size_t nLen = std::min< size_t >( quoted.size(), KEYVALUES_TOKEN_SIZE - 1 );
+		V_memcpy( s_pTokenBuf, quoted.data(), nLen );
+		s_pTokenBuf[nLen] = 0;
 
 		++m_nTokensRead;
 		return s_pTokenBuf;
 	}
 
-	if ( *c == '{' || *c == '}' || *c == '=' )
+	if ( c == '{' || c == '}' || c == '=' )
 	{
 		// it's a control char, just add this one char and stop reading
-		s_pTokenBuf[0] = *c;
+		s_pTokenBuf[0] = c;
 		s_pTokenBuf[1] = 0;
-		m_Buffer.GetChar();
+		m_Text.get_char();
 		++m_nTokensRead;
 		return s_pTokenBuf;
 	}
@@ -233,32 +238,32 @@ const char* CKeyValuesTokenReader::ReadToken( bool &wasQuoted, bool &wasConditio
 	int nCount = 0;
 	while ( 1 )
 	{
-		c = (const char*)m_Buffer.PeekGet( sizeof(char), 0 );
+		c = m_Text.peek_char();
 
 		// end of file
-		if ( !c || *c == 0 )
+		if ( c == 0 )
 			break;
 
 		// break if any control character appears in non quoted tokens
-		if ( *c == '"' || *c == '{' || *c == '}' || *c == '=' )
+		if ( c == '"' || c == '{' || c == '}' || c == '=' )
 			break;
 
-		if ( *c == '[' )
+		if ( c == '[' )
 			bConditionalStart = true;
 
-		if ( *c == ']' && bConditionalStart )
+		if ( c == ']' && bConditionalStart )
 		{
 			m_bPriorTokenWasConditional = wasConditional = true;
 			bConditionalStart = false;
 		}
 
 		// break on whitespace
-		if ( V_isspace(*c) && !bConditionalStart )
+		if ( V_isspace(c) && !bConditionalStart )
 			break;
 
 		if (nCount < (KEYVALUES_TOKEN_SIZE-1) )
 		{
-			s_pTokenBuf[nCount++] = *c;	// add char to buffer
+			s_pTokenBuf[nCount++] = c;	// add char to buffer
 		}
 		else if ( !bReportedError )
 		{
@@ -266,7 +271,7 @@ const char* CKeyValuesTokenReader::ReadToken( bool &wasQuoted, bool &wasConditio
 			g_KeyValuesErrorStack.ReportError(" ReadToken overflow" );
 		}
 
-		m_Buffer.GetChar();
+		m_Text.get_char();
 	}
 	s_pTokenBuf[ nCount ] = 0;
 	++m_nTokensRead;
@@ -363,7 +368,7 @@ public:
 		}
 	}
 
-	CUtlVector< kve > keys;
+	std::vector< kve > keys;
 };
 
 static CLeakTrack track;
@@ -388,86 +393,57 @@ class CKeyValuesGrowableStringTable
 public: 
 	// Constructor
 	CKeyValuesGrowableStringTable() :
-	  m_vecStrings( 0, 512 * 1024 ),
-	  m_hashLookup( 2048, 0, 0, m_Functor, m_Functor )
+	  
+	  m_hashLookup( 2048, CLookupHash{ &m_vecStrings }, CLookupEq{ &m_vecStrings } )
 	{
-		m_vecStrings.AddToTail( '\0' );
+		m_vecStrings.push_back( '\0' );
 	}
 
 	  // Translates a string to an index
 	  int GetSymbolForString( const char *name, bool bCreate = true )
 	  {
-		  AUTO_LOCK( m_mutex );
+		  std::scoped_lock lock( m_mutex );
 
-		  // Put the current details into our hash functor
-		  m_Functor.SetCurString( name );
-		  m_Functor.SetCurStringBase( (const char *)m_vecStrings.Base() );
+		  auto it = m_hashLookup.find( name );
+		  if ( it != m_hashLookup.end() )
+			  return *it;
+		  if ( !bCreate )
+			  return -1;
 
-		  if ( bCreate )
-		  {
-			  bool bInserted = false;
-			  UtlHashHandle_t hElement = m_hashLookup.Insert( -1, &bInserted );
-			  if ( bInserted )
-			  {
-				  int iIndex = m_vecStrings.AddMultipleToTail( V_strlen( name ) + 1, name );
-				  m_hashLookup[ hElement ] = iIndex;
-			  }
-
-			  return m_hashLookup[ hElement ];
-		  }
-		  else
-		  {
-			  UtlHashHandle_t hElement = m_hashLookup.Find( -1 );
-			  if ( m_hashLookup.IsValidHandle( hElement ) )
-				  return m_hashLookup[ hElement ];
-			  else
-				  return -1;
-		  }
+		  int iIndex = std::ssize( m_vecStrings ); m_vecStrings.insert( m_vecStrings.end(), name, name + ( V_strlen( name ) + 1 ) );
+		  m_hashLookup.insert( iIndex );
+		  return iIndex;
 	  }
 
 	  // Translates an index back to a string
 	  const char *GetStringForSymbol( int symbol )
 	  {
-		  return (const char *)m_vecStrings.Base() + symbol;
+		  return (const char *)m_vecStrings.data() + symbol;
 	  }
 
 private:
 
-	// A class plugged into CUtlHash that allows us to change the behavior of the table
-	// and store only the index in the table.
-	class CLookupFunctor
+	// The table stores only offsets into m_vecStrings; they hash and compare as the
+	// (case-insensitive) strings they point at, and lookups can use the string itself.
+	struct CLookupHash
 	{
-	public:
-		CLookupFunctor() : m_pchCurString( nullptr ), m_pchCurBase( nullptr ) {}
-
-		// Sets what we are currently inserting or looking for.
-		void SetCurString( const char *pchCurString ) { m_pchCurString = pchCurString; }
-		void SetCurStringBase( const char *pchCurBase ) { m_pchCurBase = pchCurBase; }
-
-		// The compare function.
-		bool operator()( int nLhs, int nRhs ) const
-		{
-			const char *pchLhs = nLhs > 0 ? m_pchCurBase + nLhs : m_pchCurString;
-			const char *pchRhs = nRhs > 0 ? m_pchCurBase + nRhs : m_pchCurString;
-
-			return ( 0 == V_stricmp( pchLhs, pchRhs ) );
-		}
-
-		// The hash function.
-		unsigned int operator()( int nItem ) const
-		{
-			return HashStringCaseless( m_pchCurString );
-		}
-
-	private:
-		const char *m_pchCurString;
-		const char *m_pchCurBase;
+		using is_transparent = void;
+		const std::vector< char > *m_pStrings;
+		size_t operator()( const char *pchString ) const { return HashStringCaseless( pchString ); }
+		size_t operator()( int nIndex ) const { return HashStringCaseless( m_pStrings->data() + nIndex ); }
+	};
+	struct CLookupEq
+	{
+		using is_transparent = void;
+		const std::vector< char > *m_pStrings;
+		const char *Str( int nIndex ) const { return m_pStrings->data() + nIndex; }
+		const char *Str( const char *pchString ) const { return pchString; }
+		template < class A, class B > bool operator()( const A &lhs, const B &rhs ) const { return 0 == V_stricmp( Str( lhs ), Str( rhs ) ); }
 	};
 
-	CThreadFastMutex m_mutex;
-	CLookupFunctor	m_Functor;
-	CUtlHash<int, CLookupFunctor &, CLookupFunctor &> m_hashLookup;
-	CUtlVector<char> m_vecStrings;
+	std::recursive_mutex m_mutex;
+	std::vector< char > m_vecStrings;
+	std::unordered_set< int, CLookupHash, CLookupEq > m_hashLookup;
 };
 
 
@@ -665,7 +641,7 @@ void KeyValues::RemoveEverything()
 // Input  : *f - 
 //-----------------------------------------------------------------------------
 
-void KeyValues::RecursiveSaveToFile( CUtlBuffer& buf, int indentLevel )
+void KeyValues::RecursiveSaveToFile( ks::text_writer &buf, int indentLevel )
 {
 	RecursiveSaveToFile( nullptr, FILESYSTEM_INVALID_HANDLE, &buf, indentLevel );
 }
@@ -776,7 +752,7 @@ bool KeyValues::SaveToFile( IBaseFileSystem *filesystem, const char *resourceNam
 //-----------------------------------------------------------------------------
 // Purpose: Write out a set of indenting
 //-----------------------------------------------------------------------------
-void KeyValues::WriteIndents( IBaseFileSystem *filesystem, FileHandle_t f, CUtlBuffer *pBuf, int indentLevel )
+void KeyValues::WriteIndents( IBaseFileSystem *filesystem, FileHandle_t f, ks::text_writer *pBuf, int indentLevel )
 {
 	for ( int i = 0; i < indentLevel; i++ )
 	{
@@ -787,7 +763,7 @@ void KeyValues::WriteIndents( IBaseFileSystem *filesystem, FileHandle_t f, CUtlB
 //-----------------------------------------------------------------------------
 // Purpose: Write out a string where we convert the double quotes to backslash double quote
 //-----------------------------------------------------------------------------
-void KeyValues::WriteConvertedString( IBaseFileSystem *filesystem, FileHandle_t f, CUtlBuffer *pBuf, const char *pszString )
+void KeyValues::WriteConvertedString( IBaseFileSystem *filesystem, FileHandle_t f, ks::text_writer *pBuf, const char *pszString )
 {
 	// handle double quote chars within the string
 	// the worst possible case is that the whole string is quotes
@@ -814,7 +790,7 @@ void KeyValues::WriteConvertedString( IBaseFileSystem *filesystem, FileHandle_t 
 }
 
 
-void KeyValues::InternalWrite( IBaseFileSystem *filesystem, FileHandle_t f, CUtlBuffer *pBuf, const void *pData, int len )
+void KeyValues::InternalWrite( IBaseFileSystem *filesystem, FileHandle_t f, ks::text_writer *pBuf, const void *pData, int len )
 {
 	if ( filesystem )
 	{
@@ -823,7 +799,7 @@ void KeyValues::InternalWrite( IBaseFileSystem *filesystem, FileHandle_t f, CUtl
 
 	if ( pBuf )
 	{
-		pBuf->Put( pData, len );
+		pBuf->put_raw( std::string_view( static_cast< const char * >( pData ), len ) );
 	}
 } 
 
@@ -832,7 +808,7 @@ void KeyValues::InternalWrite( IBaseFileSystem *filesystem, FileHandle_t f, CUtl
 // Purpose: Save keyvalues from disk, if subkey values are detected, calls
 //			itself to save those
 //-----------------------------------------------------------------------------
-void KeyValues::RecursiveSaveToFile( IBaseFileSystem *filesystem, FileHandle_t f, CUtlBuffer *pBuf, int indentLevel, bool bWriteEmptySubkeys )
+void KeyValues::RecursiveSaveToFile( IBaseFileSystem *filesystem, FileHandle_t f, ks::text_writer *pBuf, int indentLevel, bool bWriteEmptySubkeys )
 {
 	// write header
 	WriteIndents( filesystem, f, pBuf, indentLevel );
@@ -995,7 +971,7 @@ KeyValues *KeyValues::FindKey(const char *keyName, bool bCreate)
 		return this;
 
 	// look for '/' characters deliminating sub fields
-	CUtlVector< char > szBuf;
+	std::vector< char > szBuf;
 	const char *subStr = strchr(keyName, '/');
 	const char *searchStr = keyName;
 
@@ -1005,13 +981,13 @@ KeyValues *KeyValues::FindKey(const char *keyName, bool bCreate)
 		int size = subStr - keyName;
 		Assert( size >= 0 );
 		Assert( size < 1024 * 1024 );
-		szBuf.EnsureCount( size + 1 );
-		V_memcpy( szBuf.Base(), keyName, size );
+		ks::ensure_size( szBuf, size + 1 );
+		V_memcpy( szBuf.data(), keyName, size );
 		szBuf[size] = 0;
 		if ( V_strlen( keyName ) > 1 )
 		{
 			// If the key name is just '/', we don't treat is as a key with subfields, but use the '/' as a key name directly
-			searchStr = szBuf.Base();
+			searchStr = szBuf.data();
 		}
 	}
 
@@ -2109,10 +2085,10 @@ KeyValues::types_t KeyValues::GetDataType( void ) const
 // Purpose: 
 // Input  : includedKeys - 
 //-----------------------------------------------------------------------------
-void KeyValues::AppendIncludedKeys( CUtlVector< KeyValues * >& includedKeys )
+void KeyValues::AppendIncludedKeys( std::vector< KeyValues * >& includedKeys )
 {
 	// Append any included keys, too...
-	int includeCount = includedKeys.Count();
+	int includeCount = std::ssize( includedKeys );
 	int i;
 	for ( i = 0; i < includeCount; i++ )
 	{
@@ -2130,7 +2106,7 @@ void KeyValues::AppendIncludedKeys( CUtlVector< KeyValues * >& includedKeys )
 }
 
 void KeyValues::ParseIncludedKeys( char const *resourceName, const char *filetoinclude, 
-	IBaseFileSystem* pFileSystem, const char *pPathID, CUtlVector< KeyValues * >& includedKeys, GetSymbolProc_t pfnEvaluateSymbolProc )
+	IBaseFileSystem* pFileSystem, const char *pPathID, std::vector< KeyValues * >& includedKeys, GetSymbolProc_t pfnEvaluateSymbolProc )
 {
 	Assert( resourceName );
 	Assert( filetoinclude );
@@ -2172,13 +2148,11 @@ void KeyValues::ParseIncludedKeys( char const *resourceName, const char *filetoi
 
 	KeyValues *newKV = new KeyValues( fullpath );
 
-	// CUtlSymbol save = s_CurrentFileSymbol;	// did that had any use ???
-
 	newKV->UsesEscapeSequences( m_bHasEscapeSequences != 0 );	// use same format as parent
 
 	if ( newKV->LoadFromFile( pFileSystem, fullpath, pPathID, pfnEvaluateSymbolProc ) )
 	{
-		includedKeys.AddToTail( newKV );
+		includedKeys.push_back( newKV );
 	}
 	else
 	{
@@ -2193,9 +2167,9 @@ void KeyValues::ParseIncludedKeys( char const *resourceName, const char *filetoi
 // Purpose: 
 // Input  : baseKeys - 
 //-----------------------------------------------------------------------------
-void KeyValues::MergeBaseKeys( CUtlVector< KeyValues * >& baseKeys )
+void KeyValues::MergeBaseKeys( std::vector< KeyValues * >& baseKeys )
 {
-	int includeCount = baseKeys.Count();
+	int includeCount = std::ssize( baseKeys );
 	int i;
 	for ( i = 0; i < includeCount; i++ )
 	{
@@ -2260,19 +2234,19 @@ bool KeyValues::EvaluateConditional( const char *pExpressionString, GetSymbolPro
 }
 
 // prevent two threads from entering this at the same time and trying to share the global error reporting and parse buffers
-static CThreadFastMutex g_KVMutex;
+static std::recursive_mutex g_KVMutex;
 //-----------------------------------------------------------------------------
 // Read from a buffer...
 //-----------------------------------------------------------------------------
-bool KeyValues::LoadFromBuffer( char const *resourceName, CUtlBuffer &buf, IBaseFileSystem* pFileSystem, const char *pPathID, GetSymbolProc_t pfnEvaluateSymbolProc )
+bool KeyValues::LoadFromBuffer( char const *resourceName, ks::text_reader &buf, IBaseFileSystem* pFileSystem, const char *pPathID, GetSymbolProc_t pfnEvaluateSymbolProc )
 {
-	AUTO_LOCK_FM( g_KVMutex );
+	std::scoped_lock lock( g_KVMutex );
 
 
 	KeyValues *pPreviousKey = nullptr;
 	KeyValues *pCurrentKey = this;
-	CUtlVector< KeyValues * > includedKeys;
-	CUtlVector< KeyValues * > baseKeys;
+	std::vector< KeyValues * > includedKeys;
+	std::vector< KeyValues * > baseKeys;
 	bool wasQuoted;
 	bool wasConditional;
 	CKeyValuesTokenReader tokenReader( this, buf );
@@ -2284,7 +2258,7 @@ bool KeyValues::LoadFromBuffer( char const *resourceName, CUtlBuffer &buf, IBase
 
 		// the first thing must be a key
 		const char *s = tokenReader.ReadToken( wasQuoted, wasConditional );
-		if ( !buf.IsValid() || !s )
+		if ( !buf.ok() || !s )
 			break;
 
 		if ( !wasQuoted && *s == '\0' )
@@ -2378,13 +2352,13 @@ bool KeyValues::LoadFromBuffer( char const *resourceName, CUtlBuffer &buf, IBase
 			pPreviousKey = pCurrentKey;
 			pCurrentKey = nullptr;
 		}
-	} while ( buf.IsValid() );
+	} while ( buf.ok() );
 
 	AppendIncludedKeys( includedKeys );
 	{
 		// delete included keys!
 		int i;
-		for ( i = includedKeys.Count() - 1; i > 0; i-- )
+		for ( i = std::ssize( includedKeys ) - 1; i > 0; i-- )
 		{
 			KeyValues *kv = includedKeys[ i ];
 			delete kv;
@@ -2395,7 +2369,7 @@ bool KeyValues::LoadFromBuffer( char const *resourceName, CUtlBuffer &buf, IBase
 	{
 		// delete base keys!
 		int i;
-		for ( i = baseKeys.Count() - 1; i >= 0; i-- )
+		for ( i = std::ssize( baseKeys ) - 1; i >= 0; i-- )
 		{
 			KeyValues *kv = baseKeys[ i ];
 			delete kv;
@@ -2412,23 +2386,41 @@ bool KeyValues::LoadFromBuffer( char const *resourceName, CUtlBuffer &buf, IBase
 //-----------------------------------------------------------------------------
 // Read from a buffer...
 //-----------------------------------------------------------------------------
+static bool IsUTF16Buffer( std::string_view text )
+{
+	return text.size() > 2 && (uint8)text[0] == 0xFF && (uint8)text[1] == 0xFE;
+}
+
 bool KeyValues::LoadFromBuffer( char const *resourceName, const char *pBuffer, IBaseFileSystem* pFileSystem, const char *pPathID, GetSymbolProc_t pfnEvaluateSymbolProc )
 {
 	if ( !pBuffer )
 		return true;
 
-
-	int nLen = V_strlen( pBuffer );
-	CUtlBuffer buf( pBuffer, nLen, CUtlBuffer::READ_ONLY | CUtlBuffer::TEXT_BUFFER );
+	const std::string_view text( pBuffer );
 	// Translate Unicode files into UTF-8 before proceeding
-	if ( nLen > 2 && (uint8)pBuffer[0] == 0xFF && (uint8)pBuffer[1] == 0xFE )
+	if ( IsUTF16Buffer( text ) )
 	{
 		int nUTF8Len = V_UnicodeToUTF8( (wchar_t*)(pBuffer+2), nullptr, 0 );
-		char *pUTF8Buf = new char[nUTF8Len];
-		V_UnicodeToUTF8( (wchar_t*)(pBuffer+2), pUTF8Buf, nUTF8Len );
-		buf.AssumeMemory( pUTF8Buf, nUTF8Len, nUTF8Len, CUtlBuffer::READ_ONLY | CUtlBuffer::TEXT_BUFFER );
+		std::string utf8( nUTF8Len, '\0' );
+		V_UnicodeToUTF8( (wchar_t*)(pBuffer+2), utf8.data(), nUTF8Len );
+		ks::text_reader reader( utf8 );
+		return LoadFromBuffer( resourceName, reader, pFileSystem, pPathID, pfnEvaluateSymbolProc );
 	}
-	return LoadFromBuffer( resourceName, buf, pFileSystem, pPathID, pfnEvaluateSymbolProc );
+
+	ks::text_reader reader( text );
+	return LoadFromBuffer( resourceName, reader, pFileSystem, pPathID, pfnEvaluateSymbolProc );
+}
+
+bool KeyValues::LoadFromBuffer( char const *resourceName, std::string_view text, IBaseFileSystem* pFileSystem, const char *pPathID, GetSymbolProc_t pfnEvaluateSymbolProc )
+{
+	if ( IsUTF16Buffer( text ) )
+	{
+		const std::string terminated( text );
+		return LoadFromBuffer( resourceName, terminated.c_str(), pFileSystem, pPathID, pfnEvaluateSymbolProc );
+	}
+
+	ks::text_reader reader( text );
+	return LoadFromBuffer( resourceName, reader, pFileSystem, pPathID, pfnEvaluateSymbolProc );
 }
 
 //-----------------------------------------------------------------------------
@@ -2660,12 +2652,9 @@ void KeyValues::RecursiveLoadFromBuffer( char const *resourceName, CKeyValuesTok
 }
 
 // writes KeyValue as binary data to buffer
-bool KeyValues::WriteAsBinary( CUtlBuffer &buffer ) const
+bool KeyValues::WriteAsBinary( ks::byte_writer &buffer ) const
 {
-	if ( buffer.IsText() ) // must be a binary buffer
-		return false;
-
-	if ( !buffer.IsValid() ) // must be valid, no overflows etc
+	if ( !buffer.ok() ) // must be valid, no overflows etc
 		return false;
 
 	// Write subkeys:
@@ -2674,10 +2663,10 @@ bool KeyValues::WriteAsBinary( CUtlBuffer &buffer ) const
 	for ( const KeyValues *dat = this; dat != nullptr; dat = dat->m_pPeer )
 	{
 		// write type
-		buffer.PutUnsignedChar( dat->m_iDataType );
+		buffer.write< unsigned char >( dat->m_iDataType );
 
 		// write name
-		buffer.PutString( dat->GetName() );
+		buffer.write_cstring( dat->GetName() );
 
 		// write type
 		switch (dat->m_iDataType)
@@ -2691,48 +2680,48 @@ bool KeyValues::WriteAsBinary( CUtlBuffer &buffer ) const
 			{
 				if (dat->m_sValue && *(dat->m_sValue))
 				{
-					buffer.PutString( dat->m_sValue );
+					buffer.write_cstring( dat->m_sValue );
 				}
 				else
 				{
-					buffer.PutString( "" );
+					buffer.write_cstring( "" );
 				}
 				break;
 			}
 		case TYPE_WSTRING:
 			{
 				int nLength = dat->m_wsValue ? V_wcslen( dat->m_wsValue ) : 0;
-				buffer.PutShort( nLength );
+				buffer.write< short >( nLength );
 				for( int k = 0; k < nLength; ++ k )
 				{
-					buffer.PutShort( ( unsigned short ) dat->m_wsValue[k] );
+					buffer.write< short >( ( unsigned short ) dat->m_wsValue[k] );
 				}
 				break;
 			}
 
 		case TYPE_INT:
 			{
-				buffer.PutInt( dat->m_iValue );				
+				buffer.write< int >( dat->m_iValue );				
 				break;
 			}
 
 		case TYPE_UINT64:
 			{
-				buffer.PutInt64( *((int64 *)dat->m_sValue) );
+				buffer.write< int64 >( *((int64 *)dat->m_sValue) );
 				break;
 			}
 
 		case TYPE_FLOAT:
 			{
-				buffer.PutFloat( dat->m_flValue );
+				buffer.write< float >( dat->m_flValue );
 				break;
 			}
 		case TYPE_COLOR:
 			{
-				buffer.PutUnsignedChar( dat->m_Color[0] );
-				buffer.PutUnsignedChar( dat->m_Color[1] );
-				buffer.PutUnsignedChar( dat->m_Color[2] );
-				buffer.PutUnsignedChar( dat->m_Color[3] );
+				buffer.write< unsigned char >( dat->m_Color[0] );
+				buffer.write< unsigned char >( dat->m_Color[1] );
+				buffer.write< unsigned char >( dat->m_Color[2] );
+				buffer.write< unsigned char >( dat->m_Color[3] );
 				break;
 			}
 		case TYPE_PTR:
@@ -2741,9 +2730,9 @@ bool KeyValues::WriteAsBinary( CUtlBuffer &buffer ) const
 				// amount of data and then crash. Longer term, we may bump this up in size on all platforms, but short term 
 				// we don't really have much of a choice other than sticking in something that appears to not be NULL.
 				if ( dat->m_pValue != 0 && ( ( (int)(intp)dat->m_pValue ) == 0 ) )
-					buffer.PutInt( 31337 ); // Put not 0, but not a valid number. Yuck.
+					buffer.write< int >( 31337 ); // Put not 0, but not a valid number. Yuck.
 				else
-					buffer.PutInt( ( (int)(intp)dat->m_pValue ) );
+					buffer.write< int >( ( (int)(intp)dat->m_pValue ) );
 				break;
 			}
 
@@ -2753,18 +2742,15 @@ bool KeyValues::WriteAsBinary( CUtlBuffer &buffer ) const
 	}
 
 	// write tail, marks end of peers
-	buffer.PutUnsignedChar( TYPE_NUMTYPES ); 
+	buffer.write< unsigned char >( TYPE_NUMTYPES ); 
 
-	return buffer.IsValid();
+	return buffer.ok();
 }
 
 // read KeyValues from binary buffer, returns true if parsing was successful
-bool KeyValues::ReadAsBinary( CUtlBuffer &buffer, int nStackDepth )
+bool KeyValues::ReadAsBinary( ks::byte_reader &buffer, int nStackDepth )
 {
-	if ( buffer.IsText() ) // must be a binary buffer
-		return false;
-
-	if ( !buffer.IsValid() ) // must be valid, no overflows etc
+	if ( !buffer.ok() ) // must be valid, no overflows etc
 		return false;
 
 	RemoveEverything(); // remove current content
@@ -2777,7 +2763,7 @@ bool KeyValues::ReadAsBinary( CUtlBuffer &buffer, int nStackDepth )
 	}
 
 	KeyValues	*dat = this;
-	types_t		type = (types_t)buffer.GetUnsignedChar();
+	types_t		type = (types_t)buffer.read< unsigned char >();
 
 	// loop through all our peers
 	while ( true )
@@ -2789,7 +2775,7 @@ bool KeyValues::ReadAsBinary( CUtlBuffer &buffer, int nStackDepth )
 
 		{
 			char token[ KEYVALUES_TOKEN_SIZE ];
-			buffer.GetString( token, KEYVALUES_TOKEN_SIZE - 1 );
+			buffer.read_cstring( token, KEYVALUES_TOKEN_SIZE - 1 );
 			token[ KEYVALUES_TOKEN_SIZE - 1 ] = 0;
 			dat->SetName( token );
 		}
@@ -2805,7 +2791,7 @@ bool KeyValues::ReadAsBinary( CUtlBuffer &buffer, int nStackDepth )
 		case TYPE_STRING:
 			{
 				char token[ KEYVALUES_TOKEN_SIZE ];
-				buffer.GetString( token, KEYVALUES_TOKEN_SIZE-1 );
+				buffer.read_cstring( token, KEYVALUES_TOKEN_SIZE-1 );
 				token[KEYVALUES_TOKEN_SIZE-1] = 0;
 
 				int len = V_strlen( token );
@@ -2816,13 +2802,13 @@ bool KeyValues::ReadAsBinary( CUtlBuffer &buffer, int nStackDepth )
 			}
 		case TYPE_WSTRING:
 			{
-				int nLength = buffer.GetShort();
+				int nLength = buffer.read< short >();
 
 				dat->m_wsValue = new wchar_t[nLength + 1];
 
 				for( int k = 0; k < nLength; ++ k )
 				{
-					dat->m_wsValue[k] = buffer.GetShort();
+					dat->m_wsValue[k] = buffer.read< short >();
 				}
 				dat->m_wsValue[ nLength ] = 0;
 				break;
@@ -2830,28 +2816,28 @@ bool KeyValues::ReadAsBinary( CUtlBuffer &buffer, int nStackDepth )
 
 		case TYPE_INT:
 			{
-				dat->m_iValue = buffer.GetInt();
+				dat->m_iValue = buffer.read< int >();
 				break;
 			}
 
 		case TYPE_UINT64:
 			{
 				dat->m_sValue = new char[sizeof(uint64)];
-				*((uint64 *)dat->m_sValue) = buffer.GetInt64();
+				*((uint64 *)dat->m_sValue) = buffer.read< int64 >();
 				break;
 			}
 
 		case TYPE_FLOAT:
 			{
-				dat->m_flValue = buffer.GetFloat();
+				dat->m_flValue = buffer.read< float >();
 				break;
 			}
 		case TYPE_COLOR:
 			{
-				dat->m_Color[0] = buffer.GetUnsignedChar();
-				dat->m_Color[1] = buffer.GetUnsignedChar();
-				dat->m_Color[2] = buffer.GetUnsignedChar();
-				dat->m_Color[3] = buffer.GetUnsignedChar();
+				dat->m_Color[0] = buffer.read< unsigned char >();
+				dat->m_Color[1] = buffer.read< unsigned char >();
+				dat->m_Color[2] = buffer.read< unsigned char >();
+				dat->m_Color[3] = buffer.read< unsigned char >();
 				break;
 			}
 		case TYPE_PTR:
@@ -2859,7 +2845,7 @@ bool KeyValues::ReadAsBinary( CUtlBuffer &buffer, int nStackDepth )
 				// We need to ensure we only read 32 bits out of the stream because 32 bit clients only wrote 
 				// 32 bits of data there. The actual pointer is irrelevant, all that we really care about here
 				// contractually is whether the pointer is zero or not zero.
-				dat->m_pValue = ( void* )( intp )buffer.GetInt();
+				dat->m_pValue = ( void* )( intp )buffer.read< int >();
 				break;
 			}
 
@@ -2867,10 +2853,10 @@ bool KeyValues::ReadAsBinary( CUtlBuffer &buffer, int nStackDepth )
 			break;
 		}
 
-		if ( !buffer.IsValid() ) // error occured
+		if ( !buffer.ok() ) // error occured
 			return false;
 
-		type = (types_t)buffer.GetUnsignedChar();
+		type = (types_t)buffer.read< unsigned char >();
 
 		if ( type == TYPE_NUMTYPES )
 			break;
@@ -2880,28 +2866,25 @@ bool KeyValues::ReadAsBinary( CUtlBuffer &buffer, int nStackDepth )
 		dat = dat->m_pPeer;
 	}
 
-	return buffer.IsValid();
+	return buffer.ok();
 }
 
 // writes KeyValue as binary data to buffer
 // removes empty keys
-bool KeyValues::WriteAsBinaryFiltered( CUtlBuffer &buffer )
+bool KeyValues::WriteAsBinaryFiltered( ks::byte_writer &buffer )
 {
-	if ( buffer.IsText() ) // must be a binary buffer
-		return false;
-
-	if ( !buffer.IsValid() ) // must be valid, no overflows etc
+	if ( !buffer.ok() ) // must be valid, no overflows etc
 		return false;
 
 	// Write header
-	buffer.PutString( GetName() );
+	buffer.write_cstring( GetName() );
 
 	// loop through all our keys writing them to buffer
 	for ( KeyValues *dat = m_pSub; dat != nullptr; dat = dat->m_pPeer )
 	{
 		if ( dat->m_pSub )
 		{
-			buffer.PutUnsignedChar( TYPE_NONE );
+			buffer.write< unsigned char >( TYPE_NONE );
 			dat->WriteAsBinaryFiltered( buffer );
 		}
 		else
@@ -2912,8 +2895,8 @@ bool KeyValues::WriteAsBinaryFiltered( CUtlBuffer &buffer )
 			}
 
 			// write type and name
-			buffer.PutUnsignedChar( dat->m_iDataType );
-			buffer.PutString( dat->GetName() );
+			buffer.write< unsigned char >( dat->m_iDataType );
+			buffer.write_cstring( dat->GetName() );
 
 			// write type
 			switch (dat->m_iDataType)
@@ -2921,47 +2904,47 @@ bool KeyValues::WriteAsBinaryFiltered( CUtlBuffer &buffer )
 			case TYPE_STRING:
 				if (dat->m_sValue && *(dat->m_sValue))
 				{
-					buffer.PutString( dat->m_sValue );
+					buffer.write_cstring( dat->m_sValue );
 				}
 				else
 				{
-					buffer.PutString( "" );
+					buffer.write_cstring( "" );
 				}
 				break;
 			case TYPE_WSTRING:
 				{
 					int nLength = dat->m_wsValue ? Q_wcslen( dat->m_wsValue ) : 0;
-					buffer.PutShort( nLength );
+					buffer.write< short >( nLength );
 					for( int k = 0; k < nLength; ++ k )
 					{
-						buffer.PutShort( ( unsigned short ) dat->m_wsValue[k] );
+						buffer.write< short >( ( unsigned short ) dat->m_wsValue[k] );
 					}
 					break;
 				}
 
 			case TYPE_INT:
 				{
-					buffer.PutInt( dat->m_iValue );				
+					buffer.write< int >( dat->m_iValue );				
 					break;
 				}
 
 			case TYPE_UINT64:
 				{
-					buffer.PutInt64( *((int64 *)dat->m_sValue) );
+					buffer.write< int64 >( *((int64 *)dat->m_sValue) );
 					break;
 				}
 
 			case TYPE_FLOAT:
 				{
-					buffer.PutFloat( dat->m_flValue );
+					buffer.write< float >( dat->m_flValue );
 					break;
 				}
 			case TYPE_COLOR:
 				{
-					buffer.PutUnsignedChar( dat->m_Color[0] );
-					buffer.PutUnsignedChar( dat->m_Color[1] );
-					buffer.PutUnsignedChar( dat->m_Color[2] );
-					buffer.PutUnsignedChar( dat->m_Color[3] );
+					buffer.write< unsigned char >( dat->m_Color[0] );
+					buffer.write< unsigned char >( dat->m_Color[1] );
+					buffer.write< unsigned char >( dat->m_Color[2] );
+					buffer.write< unsigned char >( dat->m_Color[3] );
 					break;
 				}
 			case TYPE_PTR:
@@ -2970,9 +2953,9 @@ bool KeyValues::WriteAsBinaryFiltered( CUtlBuffer &buffer )
 					// amount of data and then crash. Longer term, we may bump this up in size on all platforms, but short term 
 					// we don't really have much of a choice other than sticking in something that appears to not be NULL.
 					if ( dat->m_pValue != 0 && ( ( (int)(intp)dat->m_pValue ) == 0 ) )
-						buffer.PutInt( 31337 ); // Put not 0, but not a valid number. Yuck.
+						buffer.write< int >( 31337 ); // Put not 0, but not a valid number. Yuck.
 					else
-						buffer.PutInt( ( (int)(intp)dat->m_pValue ) );
+						buffer.write< int >( ( (int)(intp)dat->m_pValue ) );
 					break;
 				}
 
@@ -2983,18 +2966,15 @@ bool KeyValues::WriteAsBinaryFiltered( CUtlBuffer &buffer )
 	}
 
 	// write tail, marks end of peers
-	buffer.PutUnsignedChar( TYPE_NUMTYPES ); 
+	buffer.write< unsigned char >( TYPE_NUMTYPES ); 
 
-	return buffer.IsValid();
+	return buffer.ok();
 }
 
 // read KeyValues from binary buffer, returns true if parsing was successful
-bool KeyValues::ReadAsBinaryFiltered( CUtlBuffer &buffer, int nStackDepth )
+bool KeyValues::ReadAsBinaryFiltered( ks::byte_reader &buffer, int nStackDepth )
 {
-	if ( buffer.IsText() ) // must be a binary buffer
-		return false;
-
-	if ( !buffer.IsValid() ) // must be valid, no overflows etc
+	if ( !buffer.ok() ) // must be valid, no overflows etc
 		return false;
 
 	RemoveEverything(); // remove current content
@@ -3009,14 +2989,14 @@ bool KeyValues::ReadAsBinaryFiltered( CUtlBuffer &buffer, int nStackDepth )
 	char name[KEYVALUES_TOKEN_SIZE];
 
 	// Read header
-	buffer.GetString( name, KEYVALUES_TOKEN_SIZE-1 );
+	buffer.read_cstring( name, KEYVALUES_TOKEN_SIZE-1 );
 	name[KEYVALUES_TOKEN_SIZE-1] = 0;
 	SetName( name );
 
 	// loop through all our peers
 	while ( true )
 	{
-		types_t type = (types_t)buffer.GetUnsignedChar();
+		types_t type = (types_t)buffer.read< unsigned char >();
 		if ( type == TYPE_NUMTYPES )
 			break;
 
@@ -3027,7 +3007,7 @@ bool KeyValues::ReadAsBinaryFiltered( CUtlBuffer &buffer, int nStackDepth )
 		}
 		else
 		{
-			buffer.GetString( name, KEYVALUES_TOKEN_SIZE-1 );
+			buffer.read_cstring( name, KEYVALUES_TOKEN_SIZE-1 );
 			name[KEYVALUES_TOKEN_SIZE-1] = 0;
 
 			switch ( type )
@@ -3035,7 +3015,7 @@ bool KeyValues::ReadAsBinaryFiltered( CUtlBuffer &buffer, int nStackDepth )
 			case TYPE_STRING:
 				{
 					char token[KEYVALUES_TOKEN_SIZE];
-					buffer.GetString( token, KEYVALUES_TOKEN_SIZE-1 );
+					buffer.read_cstring( token, KEYVALUES_TOKEN_SIZE-1 );
 					token[KEYVALUES_TOKEN_SIZE-1] = 0;
 					SetString( name, token );
 				}
@@ -3043,13 +3023,13 @@ bool KeyValues::ReadAsBinaryFiltered( CUtlBuffer &buffer, int nStackDepth )
 
 			case TYPE_WSTRING:
 				{
-					int nLength = buffer.GetShort();
+					int nLength = buffer.read< short >();
 					
 					wchar_t *wsValue = new wchar_t[nLength + 1];
 					
 					for( int k = 0; k < nLength; ++ k )
 					{
-						wsValue[k] = buffer.GetShort();
+						wsValue[k] = buffer.read< short >();
 					}
 					wsValue[ nLength ] = 0;
 					SetWString( name, wsValue );
@@ -3059,31 +3039,31 @@ bool KeyValues::ReadAsBinaryFiltered( CUtlBuffer &buffer, int nStackDepth )
 
 			case TYPE_INT:
 				{
-					int value = buffer.GetInt();
+					int value = buffer.read< int >();
 					SetInt( name, value );
 				}
 				break;
 
 			case TYPE_UINT64:
 				{
-					uint64 value = buffer.GetInt64();
+					uint64 value = buffer.read< int64 >();
 					SetUint64( name, value );
 				}
 				break;
 
 			case TYPE_FLOAT:
 				{
-					float value = buffer.GetFloat();
+					float value = buffer.read< float >();
 					SetFloat( name, value );
 				}
 				break;
 
 			case TYPE_COLOR:
 				{
-					unsigned char c0 = buffer.GetUnsignedChar();
-					unsigned char c1 = buffer.GetUnsignedChar();
-					unsigned char c2 = buffer.GetUnsignedChar();
-					unsigned char c3 = buffer.GetUnsignedChar();
+					unsigned char c0 = buffer.read< unsigned char >();
+					unsigned char c1 = buffer.read< unsigned char >();
+					unsigned char c2 = buffer.read< unsigned char >();
+					unsigned char c3 = buffer.read< unsigned char >();
 					SetColor( name, Color( c0, c1, c2, c3 ) );
 				}
 				break;
@@ -3093,7 +3073,7 @@ bool KeyValues::ReadAsBinaryFiltered( CUtlBuffer &buffer, int nStackDepth )
 					// We need to ensure we only read 32 bits out of the stream because 32 bit clients only wrote 
 					// 32 bits of data there. The actual pointer is irrelevant, all that we really care about here
 					// contractually is whether the pointer is zero or not zero.
-					void* value = ( void* )( intp )buffer.GetInt();
+					void* value = ( void* )( intp )buffer.read< int >();
 					SetPtr( name, value );
 				}
 				break;
@@ -3103,31 +3083,28 @@ bool KeyValues::ReadAsBinaryFiltered( CUtlBuffer &buffer, int nStackDepth )
 			}
 		}
 
-		if ( !buffer.IsValid() ) // error occured
+		if ( !buffer.ok() ) // error occured
 			return false;
 	}
 
-	return buffer.IsValid();
+	return buffer.ok();
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: memory allocator
 //-----------------------------------------------------------------------------
-bool KeyValues::ReadAsBinaryPooledFormat( CUtlBuffer &buffer, IBaseFileSystem *pFileSystem, unsigned int poolKey, GetSymbolProc_t pfnEvaluateSymbolProc )
+bool KeyValues::ReadAsBinaryPooledFormat( ks::byte_reader &buffer, IBaseFileSystem *pFileSystem, unsigned int poolKey, GetSymbolProc_t pfnEvaluateSymbolProc )
 {
 	// xbox only support
 	Assert( 0 );
 	return false;
 
-	if ( buffer.IsText() ) // must be a binary buffer
-		return false;
-
-	if ( !buffer.IsValid() ) // must be valid, no overflows etc
+	if ( !buffer.ok() ) // must be valid, no overflows etc
 		return false;
 
 	char token[KEYVALUES_TOKEN_SIZE];
 	KeyValues *dat = this;
-	types_t type = (types_t)buffer.GetUnsignedChar();
+	types_t type = (types_t)buffer.read< unsigned char >();
 
 	// loop through all our peers
 	while ( true )
@@ -3137,7 +3114,7 @@ bool KeyValues::ReadAsBinaryPooledFormat( CUtlBuffer &buffer, IBaseFileSystem *p
 
 		dat->m_iDataType = type;
 
-		unsigned int stringKey = buffer.GetUnsignedInt();
+		unsigned int stringKey = buffer.read< unsigned int >();
 		if ( !((IFileSystem*)pFileSystem)->GetStringFromKVPool( poolKey, stringKey, token, sizeof( token ) ) )
 			return false;
 		dat->SetName( token );
@@ -3154,7 +3131,7 @@ bool KeyValues::ReadAsBinaryPooledFormat( CUtlBuffer &buffer, IBaseFileSystem *p
 
 		case TYPE_STRING:
 			{
-				stringKey = buffer.GetUnsignedInt();
+				stringKey = buffer.read< unsigned int >();
 				if ( !((IFileSystem*)pFileSystem)->GetStringFromKVPool( poolKey, stringKey, token, sizeof( token ) ) )
 					return false;
 				int len = Q_strlen( token );
@@ -3165,11 +3142,11 @@ bool KeyValues::ReadAsBinaryPooledFormat( CUtlBuffer &buffer, IBaseFileSystem *p
 
 		case TYPE_WSTRING:
 			{
-				int nLength = buffer.GetShort();
+				int nLength = buffer.read< short >();
 				dat->m_wsValue = new wchar_t[nLength + 1];
 				for ( int k = 0; k < nLength; ++k )
 				{
-					dat->m_wsValue[k] = buffer.GetShort();
+					dat->m_wsValue[k] = buffer.read< short >();
 				}
 				dat->m_wsValue[nLength] = 0;
 				break;
@@ -3177,29 +3154,29 @@ bool KeyValues::ReadAsBinaryPooledFormat( CUtlBuffer &buffer, IBaseFileSystem *p
 
 		case TYPE_INT:
 			{
-				dat->m_iValue = buffer.GetInt();
+				dat->m_iValue = buffer.read< int >();
 				break;
 			}
 
 		case TYPE_UINT64:
 			{
 				dat->m_sValue = new char[sizeof(uint64)];
-				*((uint64 *)dat->m_sValue) = buffer.GetInt64();
+				*((uint64 *)dat->m_sValue) = buffer.read< int64 >();
 				break;
 			}
 
 		case TYPE_FLOAT:
 			{
-				dat->m_flValue = buffer.GetFloat();
+				dat->m_flValue = buffer.read< float >();
 				break;
 			}
 
 		case TYPE_COLOR:
 			{
-				dat->m_Color[0] = buffer.GetUnsignedChar();
-				dat->m_Color[1] = buffer.GetUnsignedChar();
-				dat->m_Color[2] = buffer.GetUnsignedChar();
-				dat->m_Color[3] = buffer.GetUnsignedChar();
+				dat->m_Color[0] = buffer.read< unsigned char >();
+				dat->m_Color[1] = buffer.read< unsigned char >();
+				dat->m_Color[2] = buffer.read< unsigned char >();
+				dat->m_Color[3] = buffer.read< unsigned char >();
 				break;
 			}
 
@@ -3208,7 +3185,7 @@ bool KeyValues::ReadAsBinaryPooledFormat( CUtlBuffer &buffer, IBaseFileSystem *p
 				// We need to ensure we only read 32 bits out of the stream because 32 bit clients only wrote 
 				// 32 bits of data there. The actual pointer is irrelevant, all that we really care about here
 				// contractually is whether the pointer is zero or not zero.
-				dat->m_pValue = ( void* )( intp )buffer.GetInt();
+				dat->m_pValue = ( void* )( intp )buffer.read< int >();
 				break;
 			}
 
@@ -3232,7 +3209,7 @@ bool KeyValues::ReadAsBinaryPooledFormat( CUtlBuffer &buffer, IBaseFileSystem *p
 			{
 				// only for dense storage purposes, flip back to preferred internal format
 				dat->m_iDataType = TYPE_INT;
-				dat->m_iValue = buffer.GetChar();
+				dat->m_iValue = buffer.read< char >();
 				break;
 			}
 
@@ -3240,13 +3217,13 @@ bool KeyValues::ReadAsBinaryPooledFormat( CUtlBuffer &buffer, IBaseFileSystem *p
 			break;
 		}
 
-		if ( !buffer.IsValid() ) // error occured
+		if ( !buffer.ok() ) // error occured
 			return false;
 
-		if ( !buffer.GetBytesRemaining() )
+		if ( !buffer.remaining() )
 			break;
 
-		type = (types_t)buffer.GetUnsignedChar();
+		type = (types_t)buffer.read< unsigned char >();
 		if ( type == TYPE_NUMTYPES )
 			break;
 
@@ -3255,10 +3232,8 @@ bool KeyValues::ReadAsBinaryPooledFormat( CUtlBuffer &buffer, IBaseFileSystem *p
 		dat = dat->m_pPeer;
 	}
 
-	return buffer.IsValid();
+	return buffer.ok();
 }
-
-#include "tier0/memdbgoff.h"
 
 void *KeyValues::operator new( size_t iAllocSize )
 {
@@ -3283,8 +3258,6 @@ void KeyValues::operator delete( void *pMem, int nBlockUse, const char *pFileNam
 {
 	KeyValuesSystem()->FreeKeyValuesMemory( (KeyValues *)pMem );
 }
-
-#include "tier0/memdbgon.h"
 
 
 //-----------------------------------------------------------------------------
@@ -3599,7 +3572,7 @@ KeyValues * KeyValues::FromString( char const *szName, char const *szStringVal, 
 			szStringVal = szVarName + 1;
 			break;
 		}
-		V_strncpy( chName, szVarName, ( int )MIN( sizeof( chName ), szEnd - szVarName + 1 ) );
+		V_strncpy( chName, szVarName, ( int )std::min<std::common_type_t<long unsigned int, long int>>( sizeof( chName ), szEnd - szVarName + 1 ) );
 		szVarName = chName;
 		szStringVal = szEnd;
 
@@ -3616,7 +3589,7 @@ KeyValues * KeyValues::FromString( char const *szName, char const *szStringVal, 
 			kv->SetString( szVarName, "" );
 			break;
 		}
-		V_strncpy( chValue, szVarValue, ( int )MIN( sizeof( chValue ), szEnd - szVarValue + 1 ) );
+		V_strncpy( chValue, szVarValue, ( int )std::min<std::common_type_t<long unsigned int, long int>>( sizeof( chValue ), szEnd - szVarValue + 1 ) );
 		szVarValue = chValue;
 		szStringVal = szEnd;
 

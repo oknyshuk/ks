@@ -4,16 +4,15 @@
 //
 //===========================================================================//
 
+#include <mutex>
 #include "materialsystem/imaterial.h"
 #include "imeshdx8.h"
 #include "convar.h"
-#include "tier1/utlhash.h"
-#include "tier1/utlstack.h"
+#include "tier1/generichash.h"
+#include <unordered_map>
+#include <vector>
 
 #include "materialsystem/ivballoctracker.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 
 //-----------------------------------------------------------------------------
@@ -79,9 +78,9 @@ public:
 	short			m_allocatorHash;
 };
 
-typedef CUtlHashFixed	< CounterData, 64	>	CCounterTable;
-typedef CUtlHashFixed	< AllocData, 4096	>	CAllocTable;
-typedef CUtlStack		< short				>	CAllocNameHashes;
+typedef std::unordered_map< short, CounterData >	CCounterTable;	// allocator name hash -> counters
+typedef std::unordered_map< void *, AllocData >		CAllocTable;	// buffer -> its allocation
+typedef std::vector< short				>	CAllocNameHashes;
 
 #endif // ENABLE_VB_ALLOC_TRACKER
 
@@ -102,10 +101,10 @@ public:
 
 private:
 
-	UtlHashFixedHandle_t	TrackAlloc( void * buffer, int   bufferSize, VertexFormat_t   fmt, int   numVerts, short   allocatorHash );
+	void					TrackAlloc( void * buffer, int   bufferSize, VertexFormat_t   fmt, int   numVerts, short   allocatorHash );
 	bool					KillAlloc(  void * buffer, int & bufferSize, VertexFormat_t & fmt, int & numVerts, short & allocatorHash );
 
-	UtlHashFixedHandle_t	GetCounterHandle( const char * allocatorName, short allocatorHash );
+	CounterData *			GetCounterHandle( const char * allocatorName, short allocatorHash );
 
 	void					SpewElements( const char * allocatorName, short nameHash );
 	int						ComputeVertexSize( VertexElementMap_t map, VertexFormat_t fmt, bool compressed );
@@ -134,8 +133,8 @@ private:
 	CAllocNameHashes		m_VBTableNameHashes;
 
 	// We use a mutex since allocation tracking is accessed from multiple loading threads.
-	// CThreadFastMutex is used as contention is expected to be low during loading.
-	CThreadFastMutex		m_VBAllocMutex;
+	// std::recursive_mutex is used as contention is expected to be low during loading.
+	std::recursive_mutex		m_VBAllocMutex;
 #endif // ENABLE_VB_ALLOC_TRACKER
 };
 
@@ -247,52 +246,42 @@ CVBAllocTracker::CVBAllocTracker()
 	COMPILE_TIME_ASSERT( VERTEX_ELEMENT_NUMELEMENTS == ARRAYSIZE( elementTable ) );
 	m_bSuperSpew = false;
 	m_MeshAllocatorName[0] = 0;
+	m_VBCountTable.reserve( 64 );
+	m_VBAllocTable.reserve( 4096 );
 }
 
-UtlHashFixedHandle_t CVBAllocTracker::TrackAlloc( void * buffer, int bufferSize, VertexFormat_t fmt, int numVerts, short allocatorHash )
+void CVBAllocTracker::TrackAlloc( void * buffer, int bufferSize, VertexFormat_t fmt, int numVerts, short allocatorHash )
 {
-	AllocData newData( buffer, bufferSize, fmt, numVerts, allocatorHash );
-	UtlHashFixedHandle_t handle = m_VBAllocTable.Insert( (intp)buffer, newData );
-	if ( handle == m_VBAllocTable.InvalidHandle() )
-	{
-		Warning( "[VBMEM] VBMemAllocTable hash collision (grow table).\n" );
-	}
-	return handle;
+	m_VBAllocTable.try_emplace( buffer, buffer, bufferSize, fmt, numVerts, allocatorHash );
 }
 
 bool CVBAllocTracker::KillAlloc( void * buffer, int & bufferSize, VertexFormat_t & fmt, int & numVerts, short & allocatorHash )
 {
-	UtlHashFixedHandle_t handle = m_VBAllocTable.Find( (intp)buffer );
-	if ( handle != m_VBAllocTable.InvalidHandle() )
+	auto it = m_VBAllocTable.find( buffer );
+	if ( it != m_VBAllocTable.end() )
 	{
-		AllocData & data = m_VBAllocTable.Element( handle );
+		AllocData & data = it->second;
 		bufferSize		= data.m_bufferSize;
 		fmt				= data.m_fmt;
 		numVerts		= data.m_numVerts;
 		allocatorHash	= data.m_allocatorHash;
-		m_VBAllocTable.Remove( handle );
+		m_VBAllocTable.erase( it );
 		return true;
 	}
 	Warning( "[VBMEM] VBMemAllocTable failed to find alloc entry...\n" );
 	return false;
 }
 
-UtlHashFixedHandle_t CVBAllocTracker::GetCounterHandle( const char * allocatorName, short allocatorHash )
+CounterData *CVBAllocTracker::GetCounterHandle( const char * allocatorName, short allocatorHash )
 {
-	UtlHashFixedHandle_t handle = m_VBCountTable.Find( allocatorHash );
-	if ( handle == m_VBCountTable.InvalidHandle() )
+	auto [it, bInserted] = m_VBCountTable.try_emplace( allocatorHash );
+	if ( bInserted )
 	{
-		CounterData newData;
 		Assert( ( allocatorName != nullptr ) && ( allocatorName[0] != 0 ) );
-		V_strncpy( newData.m_AllocatorName, allocatorName, CounterData::MAX_NAME_SIZE );
-		handle = m_VBCountTable.Insert( allocatorHash, newData );
-		m_VBTableNameHashes.Push( allocatorHash );
+		V_strncpy( it->second.m_AllocatorName, allocatorName, CounterData::MAX_NAME_SIZE );
+		m_VBTableNameHashes.push_back( allocatorHash );
 	}
-	if ( handle == m_VBCountTable.InvalidHandle() )
-	{
-		Warning( "[VBMEM] CounterData hash collision (grow table).\n" );
-	}
-	return handle;
+	return &it->second;
 }
 
 void CheckForElementTableUpdates( const ElementData & element )
@@ -314,10 +303,10 @@ void CheckForElementTableUpdates( const ElementData & element )
 void CVBAllocTracker::SpewElements( const char * allocatorName, short nameHash )
 {
 	short allocatorHash = allocatorName ? HashString( allocatorName ) : nameHash;
-	UtlHashFixedHandle_t handle = GetCounterHandle( allocatorName, allocatorHash );
-	if ( handle != m_VBCountTable.InvalidHandle() )
+	CounterData *pCounter = GetCounterHandle( allocatorName, allocatorHash );
+	if ( pCounter )
 	{
-		CounterData & data = m_VBCountTable.Element( handle );
+		CounterData & data = *pCounter;
 		int originalSum = 0, currentSum = 0, idealSum = 0;
 		for (int i = 0;i < VERTEX_ELEMENT_NUMELEMENTS;i++)
 		{
@@ -474,11 +463,11 @@ int CVBAllocTracker::ComputeAlignmentWastage( int bufferSize )
 
 void CVBAllocTracker::AddSaving( int & alreadySaved, int & yetToSave, const char *allocatorName, VertexElement_t element, Saving_t savingType )
 {
-	UtlHashFixedHandle_t handle = GetCounterHandle( allocatorName, HashString( allocatorName ) );
-	if ( handle != m_VBCountTable.InvalidHandle() )
+	CounterData *pCounter = GetCounterHandle( allocatorName, HashString( allocatorName ) );
+	if ( pCounter )
 	{
 		CheckForElementTableUpdates( elementTable[ element ] );
-		CounterData & counterData = m_VBCountTable.Element( handle );
+		CounterData & counterData = *pCounter;
 		const ElementData & elementData = elementTable[ element ];
 		int numVerts        = counterData.m_vertCount;
 		int numCompressed   = counterData.m_elementsCompressed[ element ];
@@ -548,10 +537,10 @@ void CVBAllocTracker::SpewExpectedSavings( void )
 void CVBAllocTracker::UpdateData( const char * allocatorName, short allocatorKey, int bufferSize, VertexFormat_t fmt,
 								 int numVerts, int vertexSize, bool isDynamic, bool isCompressed )
 {
-	UtlHashFixedHandle_t handle = GetCounterHandle( allocatorName, allocatorKey );
-	if ( handle != m_VBCountTable.InvalidHandle() )
+	CounterData *pCounter = GetCounterHandle( allocatorName, allocatorKey );
+	if ( pCounter )
 	{
-		CounterData & data = m_VBCountTable.Element( handle );
+		CounterData & data = *pCounter;
 		data.m_memCount += bufferSize;
 		Assert( data.m_memCount  >= 0 );
 		data.m_vertCount += numVerts;
@@ -563,10 +552,10 @@ void CVBAllocTracker::UpdateData( const char * allocatorName, short allocatorKey
 
 const char * CVBAllocTracker::GetNameString( int allocatorKey )
 {
-	UtlHashFixedHandle_t handle = GetCounterHandle( nullptr, allocatorKey );
-	if ( handle != m_VBCountTable.InvalidHandle() )
+	CounterData *pCounter = GetCounterHandle( nullptr, allocatorKey );
+	if ( pCounter )
 	{
-		CounterData & data = m_VBCountTable.Element( handle );
+		CounterData & data = *pCounter;
 		return data.m_AllocatorName;
 	}
 	return "null";
@@ -575,10 +564,10 @@ const char * CVBAllocTracker::GetNameString( int allocatorKey )
 void CVBAllocTracker::SpewData( const char * allocatorName, short nameHash )
 {
 	short allocatorHash = allocatorName ? HashString( allocatorName ) : nameHash;
-	UtlHashFixedHandle_t handle = GetCounterHandle( allocatorName, allocatorHash );
-	if ( handle != m_VBCountTable.InvalidHandle() )
+	CounterData *pCounter = GetCounterHandle( allocatorName, allocatorHash );
+	if ( pCounter )
 	{
-		CounterData & data = m_VBCountTable.Element( handle );
+		CounterData & data = *pCounter;
 		if ( data.m_memCount > 0 )
 		{
 			Msg("[VBMEM]    running mem usage: (%5.2f M-verts) %6.2f MB | '%s'\n",
@@ -620,12 +609,12 @@ void CVBAllocTracker::SpewDataSometimes( int inc )
 
 void CVBAllocTracker::DumpVBAllocs()
 {
-	m_VBAllocMutex.Lock();
+	m_VBAllocMutex.lock();
 
 	Msg("[VBMEM] ----running totals----\n" );
-	for ( int i = ( m_VBTableNameHashes.Count() - 1 ); i >= 0; i-- )
+	for ( int i = ( std::ssize( m_VBTableNameHashes ) - 1 ); i >= 0; i-- )
 	{
-		short nameHash = m_VBTableNameHashes.Element( i );
+		short nameHash = m_VBTableNameHashes[ i ];
 		SpewElements( nullptr, nameHash );
 	}
 
@@ -636,15 +625,15 @@ void CVBAllocTracker::DumpVBAllocs()
 	Msg("[VBMEM]   'D' - difference between C and I (-> how much more compression could save)\n" );
 	Msg("[VBMEM]   'W' - memory wasted due to 4-KB vertex buffer alignment\n" );
 	Msg("[VBMEM]\n");
-	for ( int i = ( m_VBTableNameHashes.Count() - 1 ); i >= 0; i-- )
+	for ( int i = ( std::ssize( m_VBTableNameHashes ) - 1 ); i >= 0; i-- )
 	{
-		short nameHash = m_VBTableNameHashes.Element( i );
+		short nameHash = m_VBTableNameHashes[ i ];
 		SpewData( nullptr, nameHash );
 	}
 	SpewExpectedSavings();
 	Msg("[VBMEM] ----running totals----\n" );
 
-	m_VBAllocMutex.Unlock();
+	m_VBAllocMutex.unlock();
 }
 
 #endif // ENABLE_VB_ALLOC_TRACKER
@@ -652,7 +641,7 @@ void CVBAllocTracker::DumpVBAllocs()
 void CVBAllocTracker::CountVB( void * buffer, bool isDynamic, int bufferSize, int vertexSize, VertexFormat_t fmt )
 {
 #if ENABLE_VB_ALLOC_TRACKER
-	m_VBAllocMutex.Lock();
+	m_VBAllocMutex.lock();
 
 	// Update VB memory counts for the relevant allocation type
 	// (NOTE: we have 'unknown', 'dynamic' and 'total' counts)
@@ -685,14 +674,14 @@ void CVBAllocTracker::CountVB( void * buffer, bool isDynamic, int bufferSize, in
 	}
 	SpewDataSometimes( +1 );
 
-	m_VBAllocMutex.Unlock();
+	m_VBAllocMutex.unlock();
 #endif // ENABLE_VB_ALLOC_TRACKER
 }
 
 void CVBAllocTracker::UnCountVB( void * buffer )
 {
 #if ENABLE_VB_ALLOC_TRACKER
-	m_VBAllocMutex.Lock();
+	m_VBAllocMutex.lock();
 
 	short totalKey   = HashString( "total_static" );
 	short dynamicKey = HashString( "total_dynamic" );
@@ -724,7 +713,7 @@ void CVBAllocTracker::UnCountVB( void * buffer )
 		SpewDataSometimes( -1 );
 	}
 
-	m_VBAllocMutex.Unlock();
+	m_VBAllocMutex.unlock();
 #endif // ENABLE_VB_ALLOC_TRACKER
 }
 
@@ -738,7 +727,7 @@ bool CVBAllocTracker::TrackMeshAllocations( const char * allocatorName )
 		return true;
 	}
 
-	m_VBAllocMutex.Lock();
+	m_VBAllocMutex.lock();
 
 	if ( allocatorName )
 	{
@@ -749,7 +738,7 @@ bool CVBAllocTracker::TrackMeshAllocations( const char * allocatorName )
 		m_MeshAllocatorName[0] = 0;
 	}
 
-	m_VBAllocMutex.Unlock();
+	m_VBAllocMutex.unlock();
 #endif // ENABLE_VB_ALLOC_TRACKER
 
 	return false;

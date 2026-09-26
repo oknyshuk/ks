@@ -18,13 +18,14 @@
 #include <quantize.h>
 #endif
 
+#include "tier0/basetypes.h"
+
+#include <algorithm>
+
 #include <stdlib.h>
 
 
 #include <math.h>
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 
 static int current_ndims;
@@ -416,8 +417,8 @@ static void Label(struct QuantizedValue *q, int updatecolor)
 		else
 			for(int i=0;i<current_ndims;i++)
 			{
-				q->Mins[i]=MIN(q->Children[0]->Mins[i],q->Children[1]->Mins[i]);
-				q->Maxs[i]=MAX(q->Children[0]->Maxs[i],q->Children[1]->Maxs[i]);
+				q->Mins[i]=std::min(q->Children[0]->Mins[i],q->Children[1]->Mins[i]);
+				q->Maxs[i]=std::max(q->Children[0]->Maxs[i],q->Children[1]->Maxs[i]);
 			}
 	}
 }    

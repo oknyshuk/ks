@@ -402,7 +402,7 @@ void RkHudChat::AddChatString( const char *username, const char *message, Messag
 
     // FIFO scrollback. The old version tore down *every* line once the cap was
     // reached; this drops just the oldest.
-    const int cap = MAX( 1, rocket_hud_chat_max_entries.GetInt() );
+    const int cap = std::max( 1, rocket_hud_chat_max_entries.GetInt() );
     while ( (int)chatData.lines.size() > cap )
         chatData.lines.erase( chatData.lines.begin() );
 

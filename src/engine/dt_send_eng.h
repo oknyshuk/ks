@@ -9,9 +9,9 @@
 #define DATATABLE_SEND_ENG_H
 
 
+#include <span>
 #include "dt_send.h"
 #include "bitbuf.h"
-#include "utlmemory.h"
 #include "tier1/utlvector.h"
 #include "tier0/platform.h"
 
@@ -48,7 +48,7 @@ int SendTable_WriteAllDeltaProps(
 	bf_write *pBufOut );
 
 //the buffer used to hold a list of delta changes between objects
-typedef CUtlVectorFixedGrowable< int, 128 > CalcDeltaResultsList_t;
+typedef ks::small_vector< int, 128 > CalcDeltaResultsList_t;
 
 // Write the properties listed in pCheckProps and nCheckProps.
 void SendTable_WritePropList(
@@ -62,7 +62,7 @@ void SendTable_WritePropList(
 //given an entity that has had a partial change, this will take the previous data block, and splice in the new values, setting new change fields to the specified tick for ones that have actually changed. This will
 //return false if a delta table is not applicable and instead a full pack needs to be done
 SerializedEntityHandle_t SendTable_BuildDeltaProperties(	edict_t *pEdict, int nObjectID, const SendTable* pTable, SerializedEntityHandle_t OldProps, 
-															CalcDeltaResultsList_t &deltaProps, CUtlMemory<CSendProxyRecipients> *pRecipients, bool& bCanReuseOldData );
+															CalcDeltaResultsList_t &deltaProps, std::span<CSendProxyRecipients> pRecipients, bool& bCanReuseOldData );
 
 
 //
@@ -108,7 +108,7 @@ bool SendTable_Encode(
 	SerializedEntityHandle_t handle,
 	const void *pStruct, 
 	int objectID = -1,
-	CUtlMemory<CSendProxyRecipients> *pRecipients = nullptr	// If non-null, this is an array of CSendProxyRecipients.
+	std::span<CSendProxyRecipients> pRecipients = {}		// If non-empty, this is an array of CSendProxyRecipients.
 															// The array must have room for pTable->GetNumDataTableProxies().
 	);
 

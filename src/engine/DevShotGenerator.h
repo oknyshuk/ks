@@ -9,7 +9,6 @@
 
 #include "filesystem.h"
 #include "utlvector.h"
-#include "utlsymbol.h"
 #include "MapReslistGenerator.h"
 
 // initialization
@@ -45,7 +44,7 @@ private:
 	bool	m_bUsingMapList;
 
 	// list of all maps to scan
-	CUtlVector<maplist_map_t> m_Maps;
+	std::vector< maplist_map_t > m_Maps;
 };
 
 // singleton accessor

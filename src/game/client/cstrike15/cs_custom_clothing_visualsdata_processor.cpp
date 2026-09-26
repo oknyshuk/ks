@@ -6,10 +6,10 @@
 //=============================================================================//
 
 #include "cbase.h"
-#include "utlbufferutil.h"
+#include "serialization.h"
 #include "cs_custom_clothing_visualsdata_processor.h"
 
-void CCSClothingVisualsDataCompare::SerializeToBuffer( CUtlBuffer &buf )
+void CCSClothingVisualsDataCompare::SerializeToBuffer( ks::byte_writer &buf )
 {
 	CBaseVisualsDataCompare::SerializeToBuffer( buf );
 	Serialize( buf, m_nTeamId );
@@ -20,7 +20,7 @@ void CCSClothingVisualsDataCompare::SerializeToBuffer( CUtlBuffer &buf )
 CCSClothingVisualsDataProcessor::CCSClothingVisualsDataProcessor( CCSClothingVisualsDataCompare &&compareObject, const char *szCompositingShaderName )
 	: m_szCompositingShaderName( nullptr )
 {
-	m_compareObject = Move( compareObject );
+	m_compareObject = std::move( compareObject );
 	m_compareObject.FillCompareBlob();
 	memset( &m_visualsData, 0, sizeof( m_visualsData ) );
 }

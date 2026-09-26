@@ -29,9 +29,6 @@
 	#include "Effects/inferno.h"
 #endif
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 IMPLEMENT_NETWORKCLASS_ALIASED( MolotovGrenade, DT_MolotovGrenade )
 
 IMPLEMENT_REFLECT_TABLE( CMolotovGrenade, DT_MolotovGrenade );

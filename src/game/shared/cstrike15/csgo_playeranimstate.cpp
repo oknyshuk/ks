@@ -11,6 +11,7 @@
 #include "weapon_csbase.h"
 #include "gamemovement.h"
 #include "in_buttons.h"
+#include "tier1/text_writer.h"
 
 #ifdef CLIENT_DLL
 	#include "c_cs_player.h"
@@ -18,8 +19,6 @@
 	#include "cs_player.h"
 	#include "ilagcompensationmanager.h"
 #endif
-
-extern CUtlSymbolTable g_ActivityModifiersTable;
 
 float ClampCycle( float flCycleIn )
 {
@@ -218,7 +217,7 @@ void CCSGOPlayerAnimState::Reset( void )
 	//m_flMoveCrouchWalkWeight			= 0;
 	//m_flMoveRunWeight					= 0;
 
-	m_ActivityModifiers.Purge();
+	m_ActivityModifiers.clear(); m_ActivityModifiers.shrink_to_fit();
 
 	m_bFirstRunSinceInit				= true;
 
@@ -456,7 +455,7 @@ void CCSGOPlayerAnimState::ModifyEyePosition( Vector& vecInputEyePos )
 
 				if ( vecInputEyePos.z < flHardCamHeight )
 				{
-					m_flCameraSmoothHeight = clamp( MIN( m_flCameraSmoothHeight, vecInputEyePos.z ), vecInputEyePos.z - clamp( flHardCamHeight - vecInputEyePos.z, 0.0f, 3.0f ), vecInputEyePos.z );
+					m_flCameraSmoothHeight = clamp( std::min( m_flCameraSmoothHeight, vecInputEyePos.z ), vecInputEyePos.z - clamp( flHardCamHeight - vecInputEyePos.z, 0.0f, 3.0f ), vecInputEyePos.z );
 					vecInputEyePos.z = m_flCameraSmoothHeight;
 				}
 				else
@@ -582,7 +581,7 @@ void CCSGOPlayerAnimState::NotifyOnLayerChangeCycle( const CAnimationLayer* pLay
 
 inline float CCSGOPlayerAnimState::FootBarrierEq( float flIn, float flMinWidth )
 {
-	return (( Sqr(flIn) * 0.02f ) + MIN( flMinWidth, 3 )) * MIN( m_flSpeedAsPortionOfCrouchTopSpeed, 1 );
+	return (( Sqr(flIn) * 0.02f ) + std::min<std::common_type_t<float, int>>( flMinWidth, 3 )) * std::min<std::common_type_t<float, int>>( m_flSpeedAsPortionOfCrouchTopSpeed, 1 );
 }
 
 void CCSGOPlayerAnimState::DoProceduralFootPlant( matrix3x4a_t boneToWorld[], mstudioikchain_t *pLeftFootChain, mstudioikchain_t *pRightFootChain, BoneVector pos[] )
@@ -683,9 +682,9 @@ void CCSGOPlayerAnimState::DoProceduralFootPlant( matrix3x4a_t boneToWorld[], ms
 
 			// the feet are not allowed to exceed 3x the instantaneous velocity of the player (prevents pose-popping when mashing keys)
 
-			float flFrametime = MAX( gpGlobals->frametime, 0.0001f );
-			float flLeftDeltaVel = MAX( ( m_footLeft.m_vecPosAnimLast - vecLeftTarget ).Length() / flFrametime, 0.0001f );
-			float flRightDeltaVel = MAX( ( m_footRight.m_vecPosAnimLast - vecRightTarget ).Length() / flFrametime, 0.0001f );
+			float flFrametime = std::max( gpGlobals->frametime, 0.0001f );
+			float flLeftDeltaVel = std::max( ( m_footLeft.m_vecPosAnimLast - vecLeftTarget ).Length() / flFrametime, 0.0001f );
+			float flRightDeltaVel = std::max( ( m_footRight.m_vecPosAnimLast - vecRightTarget ).Length() / flFrametime, 0.0001f );
 
 			float flVelLimitLeft = m_flVelocityLengthXY * 3.0f;
 			float flVelLimitRight = m_flVelocityLengthXY * 3.0f;
@@ -830,7 +829,7 @@ void CCSGOPlayerAnimState::SetUpLean( void )
 	float flInterval = gpGlobals->curtime - m_flLastVelocityTestTime;
 	if ( flInterval > 0.025f )
 	{
-		flInterval = MIN( flInterval, 0.1f );
+		flInterval = std::min( flInterval, 0.1f );
 		m_flLastVelocityTestTime = gpGlobals->curtime;
 
 		m_vecTargetAcceleration = ( m_pPlayer->GetLocalVelocity() - m_vecVelocityLast ) / flInterval;
@@ -1370,13 +1369,13 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 	{
 		//crossed the walk to run threshold
 		m_bWalkToRunTransitionState = ANIM_TRANSITION_WALK_TO_RUN;
-		m_flWalkToRunTransition = MAX( 0.01f, m_flWalkToRunTransition );
+		m_flWalkToRunTransition = std::max( 0.01f, m_flWalkToRunTransition );
 	}
 	else if ( m_flVelocityLengthXY < (CS_PLAYER_SPEED_RUN*CS_PLAYER_SPEED_WALK_MODIFIER) && m_bWalkToRunTransitionState == ANIM_TRANSITION_WALK_TO_RUN )
 	{
 		//crossed the run to walk threshold
 		m_bWalkToRunTransitionState = ANIM_TRANSITION_RUN_TO_WALK;
-		m_flWalkToRunTransition = MIN( 0.99f, m_flWalkToRunTransition );
+		m_flWalkToRunTransition = std::min( 0.99f, m_flWalkToRunTransition );
 	}
 
 	if ( m_nAnimstateModelVersion < 2 )
@@ -1430,13 +1429,13 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 	float flMoveWeightWithAirSmooth = m_flMoveWeight * m_flInAirSmoothValue;
 
 	// dampen move weight for landings
-	flMoveWeightWithAirSmooth *= MAX( (1.0f - GetLayerWeight( ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ) ), 0.55f );
+	flMoveWeightWithAirSmooth *= std::max( (1.0f - GetLayerWeight( ANIMATION_LAYER_MOVEMENT_LAND_OR_CLIMB ) ), 0.55f );
 
 	float flMoveCycleRate = 0;
 	if ( m_flVelocityLengthXY > 0 )
 	{
 		flMoveCycleRate = m_pPlayer->GetSequenceCycleRate( m_pPlayer->GetModelPtr(), nWeaponMoveSeq );
-		float flSequenceGroundSpeed = MAX( m_pPlayer->GetSequenceMoveDist( m_pPlayer->GetModelPtr(), nWeaponMoveSeq ) / ( 1.0f / flMoveCycleRate ), 0.001f );
+		float flSequenceGroundSpeed = std::max( m_pPlayer->GetSequenceMoveDist( m_pPlayer->GetModelPtr(), nWeaponMoveSeq ) / ( 1.0f / flMoveCycleRate ), 0.001f );
 		flMoveCycleRate *= m_flVelocityLengthXY / flSequenceGroundSpeed;
 
 		flMoveCycleRate *= Lerp( m_flWalkToRunTransition, 1.0f, CSGO_ANIM_RUN_ANIM_PLAYBACK_MULTIPLIER );
@@ -1557,7 +1556,7 @@ void CCSGOPlayerAnimState::SetUpMovement( void )
 		//Msg( "Fell for %f secs, multiplier is %f\n", m_flDurationInAir, m_flLandAnimMultiplier );
 
 		m_flLandAnimMultiplier = clamp( Bias( m_flDurationInAir, 0.3f ), 0.1f, 1.0f );
-		m_flDuckAdditional = MAX( m_flLandAnimMultiplier, flDistanceFallNormalizedBiasRange );
+		m_flDuckAdditional = std::max( m_flLandAnimMultiplier, flDistanceFallNormalizedBiasRange );
 
 		//Msg( "m_flDuckAdditional is %f\n", m_flDuckAdditional );
 	}
@@ -2044,8 +2043,8 @@ bool CCSGOPlayerAnimState::LayerSequenceHasActMod( animstate_layer_t nLayerIndex
 	CAnimationLayer *pLayer = m_pPlayer->GetAnimOverlay( nLayerIndex, USE_ANIMLAYER_RAW_INDEX );
 	if ( !pLayer )
 		return false;
-	//CUtlSymbol sym = g_ActivityModifiersTable.Find( szActMod );
-	//if ( sym.IsValid() )
+	//ActivityModifierSym_t sym = g_ActivityModifiersTable.find( szActMod ).data();
+	//if ( sym )
 	//{
 		mstudioseqdesc_t &seqdesc = m_pPlayer->GetModelPtr()->pSeqdesc( pLayer->GetSequence() );
 		for ( int i=0; i<seqdesc.numactivitymodifiers; i++ )
@@ -2256,7 +2255,7 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 	m_vecVelocityNormalized = m_vecVelocity.Normalized();
 
 	// save horizontal velocity length
-	m_flVelocityLengthXY = MIN( m_vecVelocity.Length(), CS_PLAYER_SPEED_RUN );
+	m_flVelocityLengthXY = std::min( m_vecVelocity.Length(), CS_PLAYER_SPEED_RUN );
 	
 	if ( m_flVelocityLengthXY > 0 )
 	{
@@ -2264,7 +2263,7 @@ void CCSGOPlayerAnimState::SetUpVelocity( void )
 	}
 
 	//compute speed in various normalized forms
-	float flMaxSpeedRun = m_pWeapon ? MAX( m_pWeapon->GetMaxSpeed(), 0.001f ) : CS_PLAYER_SPEED_RUN;
+	float flMaxSpeedRun = m_pWeapon ? std::max( m_pWeapon->GetMaxSpeed(), 0.001f ) : CS_PLAYER_SPEED_RUN;
 	Assert( flMaxSpeedRun > 0 );
 
 	m_flSpeedAsPortionOfRunTopSpeed = clamp( m_flVelocityLengthXY / flMaxSpeedRun, 0, 1 );
@@ -2519,7 +2518,7 @@ int CCSGOPlayerAnimState::SelectSequenceFromActMods( Activity iAct )
 {
 	MDLCACHE_CRITICAL_SECTION();
 	Assert( m_pPlayer );
-	int nSelectedActivity = m_pPlayer->SelectWeightedSequenceFromModifiers( iAct, m_ActivityModifiers.Base(), m_ActivityModifiers.Count() );
+	int nSelectedActivity = m_pPlayer->SelectWeightedSequenceFromModifiers( iAct, m_ActivityModifiers.data(), std::ssize( m_ActivityModifiers ) );
 
 	Assert( nSelectedActivity != ACT_INVALID );
 	return nSelectedActivity;
@@ -2688,17 +2687,12 @@ void CCSGOPlayerAnimState::AddActivityModifier( const char *szName )
 	char szLookup[32];
 	V_strcpy_safe( szLookup, szName );
 
-	CUtlSymbol sym = g_ActivityModifiersTable.Find( szLookup );
-	if ( !sym.IsValid() )
-	{
-		sym = g_ActivityModifiersTable.AddString( szLookup );
-	}
-	m_ActivityModifiers.AddToTail( sym );
+	m_ActivityModifiers.push_back( g_ActivityModifiersTable.intern( szLookup ).data() );
 }
 
 void CCSGOPlayerAnimState::UpdateActivityModifiers( void )
 {
-	m_ActivityModifiers.Purge();
+	m_ActivityModifiers.clear(); m_ActivityModifiers.shrink_to_fit();
 
 	AddActivityModifier( GetWeaponPrefix() );
 	
@@ -2735,7 +2729,7 @@ void CCSGOPlayerAnimState::SelectDeathPose( const CTakeDamageInfo &info, int hit
 	Vector vecDamageDir = info.GetDamageForce();
 	VectorNormalize( vecDamageDir );
 
-	Vector vecDamagePlusPlayerVel = vecDamageDir + ( m_vecVelocity.Normalized() * MIN(m_vecVelocity.Length() / CS_PLAYER_SPEED_RUN, 1) );
+	Vector vecDamagePlusPlayerVel = vecDamageDir + ( m_vecVelocity.Normalized() * std::min<std::common_type_t<vec_t, int>>(m_vecVelocity.Length() / CS_PLAYER_SPEED_RUN, 1) );
 	VectorNormalize( vecDamagePlusPlayerVel );
 
 
@@ -2798,14 +2792,14 @@ bool CCSGOPlayerAnimState::CacheSequences( void )
 		// read animset version from keyvalues
 		m_nAnimstateModelVersion = 0;
 
-		CUtlBuffer buf( 1024, 0, CUtlBuffer::TEXT_BUFFER );
-		buf.PutString( "keyvalues {\n" ); // trick the kv loader into thinking this is one big block
+		ks::text_writer buf;
+		buf.put( "keyvalues {\n" ); // trick the kv loader into thinking this is one big block
 		if ( modelinfo->GetModelKeyValue( m_pPlayer->GetModel(), buf ) )
 		{
-			buf.PutString( "\n}\0" ); // end trickery
+			buf.put( "\n}" ); // end trickery
 			KeyValues *modelKeyValues = new KeyValues("");
 			KeyValues::AutoDelete autodelete_key( modelKeyValues );
-			if ( modelKeyValues->LoadFromBuffer( modelinfo->GetModelName( m_pPlayer->GetModel() ), buf ) )
+			if ( modelKeyValues->LoadFromBuffer( modelinfo->GetModelName( m_pPlayer->GetModel() ), buf.view() ) )
 			{
 				FOR_EACH_SUBKEY( modelKeyValues, pSubKey )
 				{

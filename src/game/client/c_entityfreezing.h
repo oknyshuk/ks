@@ -14,7 +14,7 @@
 
 struct EntityFreezingHitboxBlobData_t
 {
-	CUtlVector<Vector> m_vPoints;
+	std::vector< Vector > m_vPoints;
 };
 
 
@@ -41,7 +41,7 @@ private:
 	[[= ks::reflect::Net{} ]] float	m_flFrozen;
 	[[= ks::reflect::Net{} ]] bool	m_bFinishFreezing;
 
-	CUtlVector<EntityFreezingHitboxBlobData_t> m_HitboxBlobData;
+	std::vector< EntityFreezingHitboxBlobData_t > m_HitboxBlobData;
 };
 
 #endif // C_ENTITY_FREEZING_H

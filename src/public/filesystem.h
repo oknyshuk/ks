@@ -9,18 +9,23 @@
 #define FILESYSTEM_H
 
 
+#include <atomic>
 #include <limits.h>
+#include <optional>
+#include <span>
+#include <vector>
+#include "tier1/byte_reader.h"
 
 #include "tier0/threadtools.h"
 #include "tier0/memalloc.h"
 #include "tier0/tslist.h"
 #include "tier1/interface.h"
-#include "tier1/utlsymbol.h"
+#include "tier1/filename_table.h"
 #include "tier1/utlstring.h"
 #include "tier1/functors.h" 
 #include "tier1/checksum_crc.h"
 #include "tier1/checksum_md5.h"
-#include "tier1/utlqueue.h"
+#include "tier1/utlvector.h"
 #include "appframework/iappsystem.h"
 #include "tier2/tier2.h"
 
@@ -28,7 +33,6 @@
 // Forward declarations
 //-----------------------------------------------------------------------------
 
-class CUtlBuffer;
 class KeyValues;
 class IFileList;
 
@@ -235,11 +239,11 @@ enum FilesystemOpenExFlags_t
 
 struct FileSystemStatistics
 {
-	CInterlockedUInt	nReads,		
-						nWrites,		
-						nBytesRead,
-						nBytesWritten,
-						nSeeks;
+	std::atomic<unsigned>	nReads,
+							nWrites,
+							nBytesRead,
+							nBytesWritten,
+							nSeeks;
 };
 
 //-----------------------------------------------------------------------------
@@ -466,8 +470,8 @@ public:
 	//--------------------------------------------------------
 	// Reads/writes files to utlbuffers. Use this for optimal read performance when doing open/read/close
 	//--------------------------------------------------------
-	virtual bool			ReadFile( const char *pFileName, const char *pPath, CUtlBuffer &buf, int nMaxBytes = 0, int nStartingByte = 0, FSAllocFunc_t pfnAlloc = nullptr ) = 0;
-	virtual bool			WriteFile( const char *pFileName, const char *pPath, CUtlBuffer &buf ) = 0;
+	virtual std::optional< std::vector< std::byte > >	ReadFile( const char *pFileName, const char *pPath, int nMaxBytes = 0, int nStartingByte = 0 ) = 0;
+	virtual bool			WriteFile( const char *pFileName, const char *pPath, std::span< const std::byte > data ) = 0;
 	virtual bool			UnzipFile( const char *pFileName, const char *pPath, const char *pDestination ) = 0;
 };
 
@@ -615,7 +619,7 @@ public:
 
 	// Searches for a file in all paths and results absolute path names for the file, works in pack files (zip and vpk) too
 	// Lets you search for something like sound/sound.cache and get a list of every sound cache
-	virtual void			FindFileAbsoluteList( CUtlVector< CUtlString > &outAbsolutePathNames, const char *pWildCard, const char *pPathID ) = 0;
+	virtual void			FindFileAbsoluteList( std::vector< std::string > &outAbsolutePathNames, const char *pWildCard, const char *pPathID ) = 0;
 
 	//--------------------------------------------------------
 	// File name and directory operations
@@ -753,7 +757,6 @@ public:
 	virtual bool		LoadKeyValues( KeyValues& head, KeyValuesPreloadType_t type, char const *filename, char const *pPathID = 0 ) = 0;
 
 	virtual FSAsyncStatus_t	AsyncWrite(const char *pFileName, const void *pSrc, int nSrcBytes, bool bFreeMemory, bool bAppend = false, FSAsyncControl_t *pControl = nullptr ) = 0;
-	virtual FSAsyncStatus_t	AsyncWriteFile(const char *pFileName, const CUtlBuffer *pSrc, int nSrcBytes, bool bFreeMemory, bool bAppend = false, FSAsyncControl_t *pControl = nullptr ) = 0;
 	// Async read functions with memory blame
 	FSAsyncStatus_t			AsyncReadCreditAlloc( const FileAsyncRequest_t &request, const char *pszFile, int line, FSAsyncControl_t *phControl = nullptr )	{ return AsyncReadMultipleCreditAlloc( &request, 1, pszFile, line, phControl ); 	}
 	virtual FSAsyncStatus_t	AsyncReadMultipleCreditAlloc( const FileAsyncRequest_t *pRequests, int nRequests, const char *pszFile, int line, FSAsyncControl_t *phControls = nullptr ) = 0;
@@ -764,7 +767,7 @@ public:
 
 	//--------------------------------------------------------
 	//--------------------------------------------------------
-	virtual bool		ReadToBuffer( FileHandle_t hFile, CUtlBuffer &buf, int nMaxBytes = 0, FSAllocFunc_t pfnAlloc = nullptr ) = 0;
+	virtual std::optional< std::vector< std::byte > >	ReadToVector( FileHandle_t hFile, int nMaxBytes = 0 ) = 0;
 
 	//--------------------------------------------------------
 	// Optimal IO operations
@@ -854,7 +857,7 @@ public:
 
 	virtual void AddVPKFile( char const *pszName, SearchPathAdd_t addType = PATH_ADD_TO_TAIL ) = 0;
 	virtual void RemoveVPKFile( char const *pszName ) = 0;
-	virtual void GetVPKFileNames( CUtlVector<CUtlString> &destVector ) = 0;
+	virtual void GetVPKFileNames( std::vector< std::string > &destVector ) = 0;
 	virtual void			RemoveAllMapSearchPaths() = 0;
 	virtual void			SyncDvdDevCache() = 0;
 
@@ -911,7 +914,7 @@ inline unsigned IFileSystem::GetOptimalReadSize( FileHandle_t hFile, unsigned nL
 // Async memory tracking
 //-----------------------------------------------------------------------------
 
-#if (defined(_DEBUG) || defined(USE_MEM_DEBUG))
+#if defined(_DEBUG)
 #define AsyncRead( a, b ) AsyncReadCreditAlloc( a, __FILE__, __LINE__, b )
 #define AsyncReadMutiple( a, b, c ) AsyncReadMultipleCreditAlloc( a, b, __FILE__, __LINE__, c )
 #endif

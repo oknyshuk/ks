@@ -68,9 +68,6 @@
 
 #include "playerdecals_signature.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar sv_penetration_type( "sv_penetration_type", "1", FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY, "What type of penertration to use. 0 = old CS, 1 = new penetration" );
 ConVar sv_showimpacts_penetration( "sv_showimpacts_penetration", "0", FCVAR_REPLICATED | FCVAR_RELEASE, "Shows extra data when bullets penetrate. (use sv_showimpacts_time to increase time shown)" );
 
@@ -350,7 +347,7 @@ float CCSPlayer::GetPlayerMaxSpeed()
 
 	float speed = BaseClass::GetPlayerMaxSpeed();
 
-	speed = MIN( CS_PLAYER_SPEED_RUN, speed );
+	speed = std::min( CS_PLAYER_SPEED_RUN, speed );
 	
 	if ( IsVIP() == true )  // VIP is slow due to the armour he's wearing
 	{
@@ -368,11 +365,11 @@ float CCSPlayer::GetPlayerMaxSpeed()
 		{
 			if ( HasShield() && IsShieldDrawn() )
 			{
-				speed = MIN( CS_PLAYER_SPEED_SHIELD, speed );	
+				speed = std::min( CS_PLAYER_SPEED_SHIELD, speed );	
 			}
 			else
 			{
-				speed = MIN( pWeapon->GetMaxSpeed(), speed );
+				speed = std::min( pWeapon->GetMaxSpeed(), speed );
 			}
 		}
 	}
@@ -1159,7 +1156,7 @@ struct DelayedDamageInfoData_t
 	CTakeDamageInfo m_info;
 	trace_t m_tr;
 
-	typedef CUtlVectorFixedGrowable< DelayedDamageInfoData_t, kMaxNumPenetrationsSupported > Array;
+	typedef ks::small_vector< DelayedDamageInfoData_t, kMaxNumPenetrationsSupported > Array;
 };
 #endif
 
@@ -1601,7 +1598,7 @@ void CCSPlayer::FireBullet(
 		//
 		if ( this == C_CSPlayer::GetLocalCSPlayer())
 		{
-			m_vecBulletVerifyListClient.AddToTail( clientHitVerify_t( tr.endpos, gpGlobals->realtime, gpGlobals->curtime + 10.0f ) );
+			m_vecBulletVerifyListClient.push_back( clientHitVerify_t( tr.endpos, gpGlobals->realtime, gpGlobals->curtime + 10.0f ) );
 		}
 		
 
@@ -1796,7 +1793,7 @@ void CCSPlayer::FireBullet(
 		// [pfreese] Check if enemy players were killed by this bullet, and if so,
 		// add them to the iPenetrationKills count
 
-		DelayedDamageInfoData_t &delayedDamage = arrPendingDamage.Element( arrPendingDamage.AddToTail() );
+		DelayedDamageInfoData_t &delayedDamage = arrPendingDamage.emplace_back();
 		delayedDamage.m_tr = tr;
 
 		int nObjectsPenetrated = kMaxNumPenetrationsSupported - ( numPenetrationsInitiallyAllowedForThisBullet + nPenetrationAtMaxDistance );
@@ -1868,12 +1865,12 @@ void CCSPlayer::FireBullet(
 #endif
 
 #ifndef CLIENT_DLL
-	FOR_EACH_VEC( arrPendingDamage, idxDamage )
+	for ( auto &pendingDamage : arrPendingDamage )
 	{
 		ClearMultiDamage();
 
-		CTakeDamageInfo &info = arrPendingDamage[idxDamage].m_info;
-		trace_t &tr = arrPendingDamage[idxDamage].m_tr;
+		CTakeDamageInfo &info = pendingDamage.m_info;
+		trace_t &tr = pendingDamage.m_tr;
 
 		CBaseEntity *pEntity = tr.Ent<CBaseEntity>();
 		bool bWasAlive = pEntity->IsAlive();
@@ -1990,9 +1987,9 @@ bool CCSPlayer::HandleBulletPenetration( float &flPenetration,
 		float flTraceDistance = VectorLength( penetrationEnd - tr.endpos );
 
 		// this is copy pasted from below, it should probably be its own function
-		float flPenMod = MAX( 0, ( 1 / flPenetrationModifier ) );
+		float flPenMod = std::max<std::common_type_t<int, float>>( 0, ( 1 / flPenetrationModifier ) );
 		float flPercentDamageChunk = fCurrentDamage * 0.15;
-		float flDamageLostImpact = flPercentDamageChunk + MAX( 0, ( 3/ flPenetrationPower ) * 1.18 ) * (flPenMod * 2.8);
+		float flDamageLostImpact = flPercentDamageChunk + std::max<std::common_type_t<int, double>>( 0, ( 3/ flPenetrationPower ) * 1.18 ) * (flPenMod * 2.8);
 
 		float flLostDamageObject = ( ( flPenMod * ( flTraceDistance*flTraceDistance ) ) / 24 );
 		float flTotalLostDamage = flDamageLostImpact + flLostDamageObject;
@@ -2065,10 +2062,10 @@ bool CCSPlayer::HandleBulletPenetration( float &flPenetration,
 
 		float flTraceDistance = VectorLength( exitTr.endpos - tr.endpos );
 
-		float flPenMod = MAX( 0, ( 1 / flPenetrationModifier ));
+		float flPenMod = std::max<std::common_type_t<int, float>>( 0, ( 1 / flPenetrationModifier ));
 
 		float flPercentDamageChunk = fCurrentDamage * flDamLostPercent;
-		float flPenWepMod = flPercentDamageChunk + MAX( 0, ( 3/ flPenetrationPower ) * 1.25 ) * (flPenMod * 3.0);
+		float flPenWepMod = flPercentDamageChunk + std::max<std::common_type_t<int, double>>( 0, ( 3/ flPenetrationPower ) * 1.25 ) * (flPenMod * 3.0);
 
 		float flLostDamageObject = ((flPenMod * (flTraceDistance*flTraceDistance)) / 24);
 		float flTotalLostDamage = flPenWepMod + flLostDamageObject;
@@ -2083,7 +2080,7 @@ bool CCSPlayer::HandleBulletPenetration( float &flPenetration,
 		}
 		
 		// reduce damage power each time we hit something other than a grate
-		fCurrentDamage -= MAX( 0, flTotalLostDamage );
+		fCurrentDamage -= std::max<std::common_type_t<int, float>>( 0, flTotalLostDamage );
 
 		if ( fCurrentDamage < 1 )
 			return true;
@@ -2212,7 +2209,7 @@ void CCSPlayer::DisplayPenetrationDebug( Vector vecEnter, Vector vecExit, float 
 
 			float flLostDamageObject = (flTotalLostDamage - flDamageLostImpact) ;
 			//float flLostLinear = sqrt(flDistance * (flLostDamageObject)) * 24;
-			float flFrac = MAX( 0, ( flInitialDamage - flDamageLostImpact ) / flLostDamageObject );
+			float flFrac = std::max<std::common_type_t<int, float>>( 0, ( flInitialDamage - flDamageLostImpact ) / flLostDamageObject );
 			vecEnd = ( vecEnd - vecStart );
 			VectorNormalize( vecEnd );
 			vecEnd = vecStart + ( vecEnd*flTotalTraceDistance*flFrac );
@@ -3168,21 +3165,21 @@ public:
 
 IMPLEMENT_REFLECT_CLIENTCLASS( C_FootstepControl, DT_FootstepControl, CFootstepControl )
 
-CUtlVector< C_FootstepControl * > s_footstepControllers;
+std::vector< C_FootstepControl * > s_footstepControllers;
 
 C_FootstepControl::C_FootstepControl( void )
 {
-	s_footstepControllers.AddToTail( this );
+	s_footstepControllers.push_back( this );
 }
 
 C_FootstepControl::~C_FootstepControl()
 {
-	s_footstepControllers.FindAndRemove( this );
+	ks::erase_first( s_footstepControllers, this );
 }
 
 surfacedata_t * CCSPlayer::GetFootstepSurface( const Vector &origin, const char *surfaceName )
 {
-	for ( int i=0; i<s_footstepControllers.Count(); ++i )
+	for ( int i=0; i<std::ssize( s_footstepControllers ); ++i )
 	{
 		C_FootstepControl *control = s_footstepControllers[i];
 

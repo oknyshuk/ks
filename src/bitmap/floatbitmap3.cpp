@@ -14,9 +14,6 @@
 #include "vstdlib/random.h"
 #include "tier1/strtools.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 void FloatBitMap_t::InitializeWithRandomPixelsFromAnotherFloatBM( FloatBitMap_t const & other )
 {
@@ -55,10 +52,10 @@ void FloatBitMap_t::QuarterSizeWithGaussian( FloatBitMap_t *pBitmap )
 															// offscreen case
 				for( int xofs =- 2;xofs <= 2;xofs++ )
 				{
-					int orig_x = MAX( 0, MIN( NumCols() - 1, x * 2 + xofs ));
+					int orig_x = std::max( 0, std::min( NumCols() - 1, x * 2 + xofs ));
 					for( int yofs =- 2;yofs <= 2;yofs++ )
 					{
-						int orig_y = MAX( 0, MIN( NumRows() - 1, y * 2 + yofs ));
+						int orig_y = std::max( 0, std::min( NumRows() - 1, y * 2 + yofs ));
 						float coeff = kernel[xofs + 2]* kernel[yofs + 2];
 						sum += Pixel( orig_x, orig_y, 0, c ) * coeff;
 						sumweights += coeff;

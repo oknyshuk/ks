@@ -11,9 +11,6 @@
 
 // #include "../../debugoverlay.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 
 extern Color OpColor;
@@ -57,7 +54,7 @@ void CSosOperatorIterateAndMergeSpeakers::Execute( void *pVoidMem, channel_t *pC
 	}
 
 	int nCurIndex = ( int )pStructMem->m_flOutputIndex[0];
-	int nLastIndex = MIN( ( int ) pStructMem->m_flInputMaxIterations[0], pStructMem->m_nMaxIterations );
+	int nLastIndex = std::min( ( int ) pStructMem->m_flInputMaxIterations[0], pStructMem->m_nMaxIterations );
 
 	if( nCurIndex == 0 )
 	{
@@ -81,7 +78,7 @@ void CSosOperatorIterateAndMergeSpeakers::Execute( void *pVoidMem, channel_t *pC
 		// 			break;
 		// 		case SND_MERGE_MAX:
 		// 			{
-		pStructMem->m_flOutputSpeakers[v] = MAX( pStructMem->m_flInputSpeakers[v], pStructMem->m_flOutputSpeakers[v] );
+		pStructMem->m_flOutputSpeakers[v] = std::max( pStructMem->m_flInputSpeakers[v], pStructMem->m_flOutputSpeakers[v] );
 		// 			}
 		// 			break;
 

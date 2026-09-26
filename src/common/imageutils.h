@@ -7,7 +7,7 @@
 
 #include "tier0/basetypes.h"
 
-class CUtlBuffer;
+namespace ks { class byte_reader; class byte_writer; }
 struct Bitmap_t;
 
 enum ConversionErrorType
@@ -47,26 +47,24 @@ struct TGAHeader {
 	byte  descriptor;         // image descriptor bits (vh flip bits)
 };
 
-class CUtlBuffer;
-
 ConversionErrorType ImgUtl_ConvertJPEGToTGA( const char *jpgPath, const char *tgaPath, bool bRequirePowerOfTwoSize = true );
 ConversionErrorType ImgUtl_ConvertBMPToTGA( const char *bmpPath, const char *tgaPath );
 ConversionErrorType ImgUtl_ConvertTGA( const char *tgaPath, int nMaxWidth = -1, int nMaxHeight = -1 );
 unsigned char		*ImgUtl_ReadVTFAsRGBA( const char *vtfPath, int &width, int &height, ConversionErrorType &errcode );
 unsigned char		*ImgUtl_ReadTGAAsRGBA( const char *tgaPath, int &width, int &height, ConversionErrorType &errcode, TGAHeader &tgaHeader );
 unsigned char		*ImgUtl_ReadJPEGAsRGBA( const char *jpegPath, int &width, int &height, ConversionErrorType &errcode );
-ConversionErrorType ImgUtl_ReadJPEGAsRGBA( CUtlBuffer &srcBuf, CUtlBuffer &dstBuf, int &width, int &height );
+ConversionErrorType ImgUtl_ReadJPEGAsRGBA( ks::byte_reader &srcBuf, ks::byte_writer &dstBuf, int &width, int &height );
 unsigned char		*ImgUtl_ReadBMPAsRGBA( const char *bmpPath, int &width, int &height, ConversionErrorType &errcode );
 unsigned char		*ImgUtl_ReadPNGAsRGBA( const char *bmpPath, int &width, int &height, ConversionErrorType &errcode );
-unsigned char		*ImgUtl_ReadPNGAsRGBAFromBuffer( CUtlBuffer &buffer, int &width, int &height, ConversionErrorType &errcode );
+unsigned char		*ImgUtl_ReadPNGAsRGBAFromBuffer( ks::byte_reader &buffer, int &width, int &height, ConversionErrorType &errcode );
 unsigned char		*ImgUtl_ReadImageAsRGBA( const char *path, int &width, int &height, ConversionErrorType &errcode );
 ConversionErrorType ImgUtl_StretchRGBAImage( const unsigned char *srcBuf, const int srcWidth, const int srcHeight, unsigned char *destBuf, const int destWidth, const int destHeight );
 ConversionErrorType ImgUtl_PadRGBAImage( const unsigned char *srcBuf, const int srcWidth, const int srcHeight, unsigned char *destBuf, const int destWidth, const int destHeight );
 ConversionErrorType ImgUtl_ConvertTGAToVTF( const char *tgaPath, int nMaxWidth = -1, int nMaxHeight = -1 );
 ConversionErrorType ImgUtl_WriteGenericVMT( const char *vtfPath, const char *pMaterialsSubDir );
-ConversionErrorType ImgUtl_WriteRGBAAsPNGToBuffer( const unsigned char *pRGBAData, int nWidth, int nHeight, CUtlBuffer &bufOutData, int nStride = 0 );
-ConversionErrorType ImgUtl_WriteRGBAAsJPEGToBuffer( const unsigned char *pRGBAData, int nWidth, int nHeight, CUtlBuffer &bufOutData, int nStride = 0 );
-ConversionErrorType ImgUtl_ReadJPEGToRGB( CUtlBuffer &srcBuf,CUtlBuffer &dstBuf, int &width, int &height );
+ConversionErrorType ImgUtl_WriteRGBAAsPNGToBuffer( const unsigned char *pRGBAData, int nWidth, int nHeight, ks::byte_writer &bufOutData, int nStride = 0 );
+ConversionErrorType ImgUtl_WriteRGBAAsJPEGToBuffer( const unsigned char *pRGBAData, int nWidth, int nHeight, ks::byte_writer &bufOutData, int nStride = 0 );
+ConversionErrorType ImgUtl_ReadJPEGToRGB( ks::byte_reader &srcBuf, ks::byte_writer &dstBuf, int &width, int &height );
 bool				ImgUtl_WriteRGBAToJPEG( unsigned char *pSrcBuf, unsigned int nSrcWidth, unsigned int nSrcHeight, const char *lpszFilename );
 
 //
@@ -84,16 +82,16 @@ ConversionErrorType	ImgUtl_ConvertToVTFAndDumpVMT( const char *pInPath, const ch
 ConversionErrorType ImgUtl_LoadBitmap( const char *pszFilename, Bitmap_t &bitmap );
 
 /// Load an image direct from memory buffer
-ConversionErrorType ImgUtl_LoadBitmapFromBuffer( CUtlBuffer &fileData, Bitmap_t &bitmap, ImageFileFormat eImageFileFormat );
+ConversionErrorType ImgUtl_LoadBitmapFromBuffer( ks::byte_reader &fileData, Bitmap_t &bitmap, ImageFileFormat eImageFileFormat );
 
 /// Save a bitmap to memory buffer
-ConversionErrorType ImgUtl_SaveBitmapToBuffer( CUtlBuffer &fileData, const Bitmap_t &bitmap, ImageFileFormat eImageFileFormat );
+ConversionErrorType ImgUtl_SaveBitmapToBuffer( ks::byte_writer &fileData, const Bitmap_t &bitmap, ImageFileFormat eImageFileFormat );
 
 /// Load a PNG direct from memory buffer
-ConversionErrorType ImgUtl_LoadPNGBitmapFromBuffer( CUtlBuffer &fileData, Bitmap_t &bitmap );
+ConversionErrorType ImgUtl_LoadPNGBitmapFromBuffer( ks::byte_reader &fileData, Bitmap_t &bitmap );
 
 /// Save a bitmap in PNG format to memory buffer
-ConversionErrorType ImgUtl_SavePNGBitmapToBuffer( CUtlBuffer &fileData, const Bitmap_t &bitmap );
+ConversionErrorType ImgUtl_SavePNGBitmapToBuffer( ks::byte_writer &fileData, const Bitmap_t &bitmap );
 
 /// Resize a bitmap.  This currently only works for RGBA images!
 ConversionErrorType ImgUtl_ResizeBitmap( Bitmap_t &destBitmap, int nWidth, int nHeight, const Bitmap_t *pImgSource = nullptr );

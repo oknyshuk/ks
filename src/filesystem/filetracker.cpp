@@ -5,10 +5,8 @@
 //=============================================================================
 
 #include "basefilesystem.h"
+#include <mutex>
 #include "tier0/vprof.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 
 
@@ -28,7 +26,7 @@ CFileTracker::~CFileTracker()
 
 void CFileTracker::NoteFileLoadedFromDisk( const char *pFilename, const char *pPathID, FileHandle_t fp )
 {
-	AUTO_LOCK( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 
 	if ( !pPathID )
 		pPathID = "";
@@ -71,7 +69,7 @@ void CFileTracker::NoteFileLoadedFromDisk( const char *pFilename, const char *pP
 	pInfo->m_CRC = CalculateCRCForFile( fp );
 	pInfo->m_Flags |= k_eFileFlagsHasCRC | k_eFileFlagsGotCRCOnce;
 	if ( pInfo->m_iNeedsVerificationListIndex == -1 )
-		pInfo->m_iNeedsVerificationListIndex = m_NeedsVerificationList.AddToTail( pInfo );
+		AddToNeedsVerificationList( pInfo );
 
 	if ( m_pFileSystem->m_WhitelistSpewFlags & WHITELIST_SPEW_WHILE_LOADING )
 	{
@@ -108,7 +106,7 @@ CRC32_t CFileTracker::CalculateCRCForFile( FileHandle_t fp )
 	unsigned int curStartByte = 0;
 	for ( int iChunk=0; iChunk < nChunks; iChunk++ )
 	{
-		int curEndByte = MIN( curStartByte + CRC_CHUNK_SIZE, fileLength );
+		int curEndByte = std::min( curStartByte + CRC_CHUNK_SIZE, fileLength );
 		int chunkLen = curEndByte - curStartByte;
 		if ( chunkLen == 0 )
 			break;
@@ -127,7 +125,7 @@ CRC32_t CFileTracker::CalculateCRCForFile( FileHandle_t fp )
 
 CFileInfo* CFileTracker::GetFileInfo( const char *pFilename, const char *pPathID )
 {
-	AUTO_LOCK( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 	
 	CPathIDFileList *pPath = GetPathIDFileList( pPathID, false );
 	if ( !pPath )
@@ -138,12 +136,12 @@ CFileInfo* CFileTracker::GetFileInfo( const char *pFilename, const char *pPathID
 
 int CFileTracker::GetFileInfos( CFileInfo **ppFileInfos, int nMaxFileInfos, const char *pFilename )
 {
-	AUTO_LOCK( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 
 	int nOut = 0;
-	for ( int i=m_PathIDs.First(); i != m_PathIDs.InvalidIndex(); i=m_PathIDs.Next( i ) )
+	for ( auto &[pathID, pPath] : m_PathIDs )
 	{
-		CFileInfo *pCur = m_PathIDs[i]->FindFileInfo( pFilename );
+		CFileInfo *pCur = pPath->FindFileInfo( pFilename );
 		if ( pCur )
 		{
 			if ( nOut < nMaxFileInfos )
@@ -162,7 +160,7 @@ int CFileTracker::GetFileInfos( CFileInfo **ppFileInfos, int nMaxFileInfos, cons
 
 void CFileTracker::NoteFileLoadedFromSteam( const char *pFilename, const char *pPathID, bool bForcedLoadFromSteam )
 {
-	AUTO_LOCK( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 
 	if ( !pPathID )
 		pPathID = "";
@@ -186,17 +184,14 @@ void CFileTracker::NoteFileLoadedFromSteam( const char *pFilename, const char *p
 void CFileTracker::CalculateMissingCRCs( IFileList *pWantCRCList )
 {
 	// First build a list of files that need a CRC and don't have one.
-	m_Mutex.Lock();
-	CUtlLinkedList<CFileInfo*,int> needCRCList;
+	m_Mutex.lock();
+	std::vector< CFileInfo * > needCRCList;
 
-	for ( int i=m_PathIDs.First(); i != m_PathIDs.InvalidIndex(); i=m_PathIDs.Next( i ) )
+	for ( auto &[pathID, pPath] : m_PathIDs )
 	{
-		CPathIDFileList *pPath = m_PathIDs[i];
-		
-		int j;
-		for ( j=pPath->m_Files.First(); j != pPath->m_Files.InvalidIndex(); j=pPath->m_Files.Next( j ) )
+		for ( auto &[filename, pOwnedInfo] : pPath->m_Files )
 		{
-			CFileInfo *pInfo = pPath->m_Files[j];
+			CFileInfo *pInfo = pOwnedInfo.get();
 			
 			if ( !( pInfo->m_Flags & k_eFileFlagsLoadedFromSteam ) && !( pInfo->m_Flags & k_eFileFlagsHasCRC ) )
 			{
@@ -204,17 +199,16 @@ void CFileTracker::CalculateMissingCRCs( IFileList *pWantCRCList )
 				if ( !pWantCRCList->IsFileInList( pInfo->GetFilename() ) )
 					continue;
 				
-				needCRCList.AddToTail( pInfo );
+				needCRCList.push_back( pInfo );
 			}
 		}
 	}
 
-	m_Mutex.Unlock();
+	m_Mutex.unlock();
 	
 	// Then, when the mutex is not locked, go generate the CRCs for them.
-	FOR_EACH_LL( needCRCList, i )
+	for ( CFileInfo *pInfo : needCRCList )
 	{
-		CFileInfo *pInfo = needCRCList[i];
 		CalculateMissingCRC( pInfo->GetFilename(), pInfo->GetPathIDString() );
 	}
 }
@@ -328,7 +322,7 @@ void CFileTracker::CalculateMissingCRC( const char *pFilename, const char *pPath
 			pInfo->m_Flags = nOldFlags;
 
 		// Now we're about to modify the file itself.. lock the mutex.
-		AUTO_LOCK( m_Mutex );
+		std::scoped_lock lock( m_Mutex );
 
 		// The FindFileInSearchPaths call might have done the CRC for us.
 		if ( !( pInfo->m_Flags & k_eFileFlagsHasCRC ) )
@@ -337,7 +331,7 @@ void CFileTracker::CalculateMissingCRC( const char *pFilename, const char *pPath
 			pInfo->m_Flags |= k_eFileFlagsHasCRC | k_eFileFlagsGotCRCOnce;
 			if ( pInfo->m_iNeedsVerificationListIndex == -1 )
 			{
-				pInfo->m_iNeedsVerificationListIndex = m_NeedsVerificationList.AddToTail( pInfo );
+				AddToNeedsVerificationList( pInfo );
 			}
 		}
 	}
@@ -352,24 +346,21 @@ void CFileTracker::CalculateMissingCRC( const char *pFilename, const char *pPath
 
 void CFileTracker::MarkAllCRCsUnverified()
 {
-	AUTO_LOCK( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 
 	// First clear the 'needs verification' list.
 	MarkAllCRCsVerified();
 
-	Assert( m_NeedsVerificationList.Count() == 0 );
-	for ( int i=m_PathIDs.First(); i != m_PathIDs.InvalidIndex(); i=m_PathIDs.Next( i ) )
+	Assert( m_NeedsVerificationList.empty() );
+	for ( auto &[pathID, pPath] : m_PathIDs )
 	{
-		CPathIDFileList *pPath = m_PathIDs[i];
-		
-		int j;
-		for ( j=pPath->m_Files.First(); j != pPath->m_Files.InvalidIndex(); j=pPath->m_Files.Next( j ) )
+		for ( auto &[filename, pOwnedInfo] : pPath->m_Files )
 		{
-			CFileInfo *pInfo = pPath->m_Files[j];
+			CFileInfo *pInfo = pOwnedInfo.get();
 			
 			if ( !(pInfo->m_Flags & k_eFileFlagsLoadedFromSteam) && ( pInfo->m_Flags & k_eFileFlagsHasCRC ) )
 			{
-				pInfo->m_iNeedsVerificationListIndex = m_NeedsVerificationList.AddToTail( pInfo );
+				AddToNeedsVerificationList( pInfo );
 			}
 		}
 	}
@@ -379,43 +370,43 @@ void CFileTracker::MarkAllCRCsUnverified()
 void CFileTracker::MarkAllCRCsVerified( bool bLockMutex )
 {
 	if ( bLockMutex )
-		m_Mutex.Lock();
+		m_Mutex.lock();
 
-	FOR_EACH_LL( m_NeedsVerificationList, i )
+	for ( CFileInfo *pInfo : m_NeedsVerificationList )
 	{
-		m_NeedsVerificationList[i]->m_iNeedsVerificationListIndex = -1;
+		pInfo->m_iNeedsVerificationListIndex = -1;
 	}
 	
-	m_NeedsVerificationList.Purge();
+	m_NeedsVerificationList.clear();
+	m_NeedsVerificationList.shrink_to_fit();
 
 	if ( bLockMutex )
-		m_Mutex.Unlock();
+		m_Mutex.unlock();
 }
 
 
 void CFileTracker::Clear()
 {
-	AUTO_LOCK( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 
-	m_PathIDs.PurgeAndDeleteElements();
+	m_PathIDs.clear();
 }
 
 CPathIDFileList* CFileTracker::GetPathIDFileList( const char *pPathID, bool bAutoAdd )
 {
-	AUTO_LOCK( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 
 	if ( !pPathID )
 		pPathID = "";
 		
-	int i = m_PathIDs.Find( pPathID );
-	if ( i == m_PathIDs.InvalidIndex() )
+	auto i = m_PathIDs.find( pPathID );
+	if ( i == m_PathIDs.end() )
 	{
 		if ( bAutoAdd )
 		{
-			CPathIDFileList *pPath = new CPathIDFileList;
+			auto pPath = std::make_unique< CPathIDFileList >();
 			pPath->m_PathID = pPathID;
-			m_PathIDs.Insert( pPathID, pPath );
-			return pPath;
+			return m_PathIDs.emplace( pPathID, std::move( pPath ) ).first->second.get();
 		}
 		else
 		{
@@ -424,7 +415,7 @@ CPathIDFileList* CFileTracker::GetPathIDFileList( const char *pPathID, bool bAut
 	}
 	else
 	{
-		return m_PathIDs[i];
+		return i->second.get();
 	}
 }
 
@@ -446,34 +437,34 @@ CFileInfo::~CFileInfo()
 // CPathIDFileList implementation..
 //-----------------------------------------------------------------------------
 
-CPathIDFileList::CPathIDFileList() : m_Files( k_eDictCompareTypeFilenames )
+CPathIDFileList::CPathIDFileList()
 {
 }
 
 CPathIDFileList::~CPathIDFileList()
 {
-	m_Files.PurgeAndDeleteElements();
 }
 
 CFileInfo* CPathIDFileList::FindFileInfo( const char *pFilename )
 {
 	Assert( !V_IsAbsolutePath( pFilename ) );
 
-	int i = m_Files.Find( pFilename );
-	if ( i == m_Files.InvalidIndex() )
+	auto i = m_Files.find( pFilename );
+	if ( i == m_Files.end() )
 		return nullptr;
 	else
-		return m_Files[i];
+		return i->second.get();
 }
 
 CFileInfo* CPathIDFileList::AddFileInfo( const char *pFilename )
 {
 	Assert( !V_IsAbsolutePath( pFilename ) );
-	Assert( m_Files.Find( pFilename ) == m_Files.InvalidIndex() );
+	Assert( !m_Files.contains( pFilename ) );
 	
-	CFileInfo *pFileInfo = new CFileInfo;
+	auto it = m_Files.emplace( pFilename, std::make_unique< CFileInfo >() ).first;
+	CFileInfo *pFileInfo = it->second.get();
 	pFileInfo->m_pPathIDFileList = this;
-	pFileInfo->m_PathIDFileListDictIndex = m_Files.Insert( pFilename, pFileInfo );
+	pFileInfo->m_pFilename = it->first.c_str();
 	return pFileInfo;
 }
 
@@ -510,13 +501,11 @@ unsigned CFileTracker2::ThreadedProcessMD5Requests()
 
 			{
 				// update the FileTracker MD5 database
-				AUTO_LOCK( m_Mutex );
-				int idxTrackedVPKFile = m_treeTrackedVPKFiles.Find( trackedVPKFileFind );
-				if ( idxTrackedVPKFile != m_treeTrackedVPKFiles.InvalidIndex() )
+				std::scoped_lock lock( m_Mutex );
+				auto itTrackedVPKFile = m_treeTrackedVPKFiles.find( trackedVPKFileFind );
+				if ( itTrackedVPKFile != m_treeTrackedVPKFiles.end() )
 				{
-					TrackedVPKFile_t &trackedVPKFile = m_treeTrackedVPKFiles[idxTrackedVPKFile];
-							
-					TrackedFile_t &trackedfile = m_treeAllOpenedFiles[trackedVPKFile.m_idxAllOpenedFiles];
+					TrackedFile_t &trackedfile = m_AllOpenedFiles[itTrackedVPKFile->m_idxAllOpenedFiles];
 
 					memcpy( trackedfile.m_filehashFinal.m_md5contents.bits, stuff.m_md5Value.bits, sizeof( trackedfile.m_filehashFinal.m_md5contents.bits ) );
 					trackedfile.m_filehashFinal.m_crcIOSequence = stuff.m_cubBuffer;
@@ -547,7 +536,7 @@ int CFileTracker2::SubmitThreadedMD5Request( uint8 *pubBuffer, int cubBuffer, in
 	StuffToMD5_t stuff;
 	int idxList;
 	{
-		AUTO_LOCK( m_Mutex );
+		std::scoped_lock lock( m_Mutex );
 		if ( !m_bComputeFileHashes )
 			return 0;
 		int idxAllFiles = -1;
@@ -555,12 +544,10 @@ int CFileTracker2::SubmitThreadedMD5Request( uint8 *pubBuffer, int cubBuffer, in
 		trackedVPKFileFind.m_nPackFileNumber = nPackFileNumber;
 		trackedVPKFileFind.m_PackFileID = PackFileID;
 		trackedVPKFileFind.m_nFileFraction = nPackFileFraction;
-		int idxTrackedVPKFile = m_treeTrackedVPKFiles.Find( trackedVPKFileFind );
-		if ( idxTrackedVPKFile != m_treeTrackedVPKFiles.InvalidIndex() )
+		auto itTrackedVPKFile = m_treeTrackedVPKFiles.find( trackedVPKFileFind );
+		if ( itTrackedVPKFile != m_treeTrackedVPKFiles.end() )
 		{
-			TrackedVPKFile_t &trackedVPKFile = m_treeTrackedVPKFiles[idxTrackedVPKFile];
-
-			idxAllFiles = trackedVPKFile.m_idxAllOpenedFiles;
+			idxAllFiles = itTrackedVPKFile->m_idxAllOpenedFiles;
 			// dont early out if we have already done the MD5, if the caller wants us
 			// to do it again - then do it again
 		}
@@ -572,7 +559,7 @@ int CFileTracker2::SubmitThreadedMD5Request( uint8 *pubBuffer, int cubBuffer, in
 
 		SubmittedMd5Job_t submittedjob;
 		submittedjob.m_bFinished = false;
-		idxList = m_SubmittedJobs.AddToTail( submittedjob );
+		idxList = m_SubmittedJobs.emplace( submittedjob );
 
 		stuff.m_pubBuffer = pubBuffer;
 		stuff.m_cubBuffer = cubBuffer;
@@ -598,7 +585,7 @@ int CFileTracker2::SubmitThreadedMD5Request( uint8 *pubBuffer, int cubBuffer, in
 //-----------------------------------------------------------------------------
 bool CFileTracker2::IsMD5RequestComplete( int iRequest, MD5Value_t *pMd5ValueOut )
 {
-	AUTO_LOCK( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 	int idxListWaiting = iRequest - 1;
 
 	// deal with all completed jobs
@@ -615,7 +602,7 @@ bool CFileTracker2::IsMD5RequestComplete( int iRequest, MD5Value_t *pMd5ValueOut
 	{
 		Q_memcpy( pMd5ValueOut, &m_SubmittedJobs[idxListWaiting].m_md5Value, sizeof( MD5Value_t ) );
 		// you can not ask again, we have removed it from the list
-		m_SubmittedJobs.Remove(idxListWaiting);
+		m_SubmittedJobs.erase(idxListWaiting);
 		return true;
 	}
 	// not done yet
@@ -643,11 +630,7 @@ bool CFileTracker2::BlockUntilMD5RequestComplete( int iRequest, MD5Value_t *pMd5
 
 
 // CFileTracker2 will replace most of CFileTracker soon
-CFileTracker2::CFileTracker2( CBaseFileSystem *pFileSystem ):
-m_mapAllOpenFiles( DefLessFunc(FILE *) ),
-m_treeAllOpenedFiles( TrackedFile_t::Less ),
-m_treeFileInVPK( FileInVPK_t::Less ),
-m_treeTrackedVPKFiles( TrackedVPKFile_t::Less )
+CFileTracker2::CFileTracker2( CBaseFileSystem *pFileSystem )
 {
 	m_pFileSystem = pFileSystem;
 	m_cMissedReads = 0;
@@ -698,45 +681,45 @@ void CFileTracker2::ShutdownAsync()
 
 void CFileTracker2::MarkAllCRCsUnverified()
 {
-	AUTO_LOCK( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 
-	m_RecentFileList.Purge();
+	m_RecentFileList.clear();
 
-	Assert( m_RecentFileList.Count() == 0 );
-	// every m_idxRecentFileList in m_treeAllOpenedFiles is bad now
+	// every m_bInRecentFileList in m_AllOpenedFiles is bad now
 
 	// this is going to hit every file we have *ever* loaded. how do we prune this list?
 	// lets send VPK files first, then everything else
-	for ( int i = m_treeAllOpenedFiles.FirstInorder(); i != m_treeAllOpenedFiles.InvalidIndex(); i = m_treeAllOpenedFiles.NextInorder( i ) )
+	for ( int i : m_OpenedFilesByName )
 	{
-		TrackedFile_t &trackedfile = m_treeAllOpenedFiles[i];
+		TrackedFile_t &trackedfile = m_AllOpenedFiles[i];
 
+		trackedfile.m_bInRecentFileList = false;
 		// skip these for now
 		if ( trackedfile.m_filehashInProgress.m_cbFileLen == 0 && trackedfile.m_filehashFinal.m_cbFileLen == 0 )
-			trackedfile.m_idxRecentFileList = m_RecentFileList.InvalidIndex();
-		else if ( trackedfile.m_bPackOrVPKFile )
-			trackedfile.m_idxRecentFileList = m_RecentFileList.AddToHead( i );
-		else if ( !trackedfile.m_bFileInVPK && !trackedfile.m_path.IsEmpty() )
-			trackedfile.m_idxRecentFileList = m_RecentFileList.AddToTail( i );
-		else
-		{
-			trackedfile.m_idxRecentFileList  = m_RecentFileList.InvalidIndex();
-		}
-	}	
-	// do it again for any we skipped because we had not yet read the data
-	for ( int i = m_treeAllOpenedFiles.FirstInorder(); i != m_treeAllOpenedFiles.InvalidIndex(); i = m_treeAllOpenedFiles.NextInorder( i ) )
-	{
-		TrackedFile_t &trackedfile = m_treeAllOpenedFiles[i];
-		if ( trackedfile.m_idxRecentFileList != m_RecentFileList.InvalidIndex() )
 			continue;
 
 		if ( trackedfile.m_bPackOrVPKFile )
-			trackedfile.m_idxRecentFileList = m_RecentFileList.AddToTail( i );
-		else if ( !trackedfile.m_bFileInVPK && !trackedfile.m_path.IsEmpty() )
-			trackedfile.m_idxRecentFileList = m_RecentFileList.AddToTail( i );
-		else
 		{
-			trackedfile.m_idxRecentFileList  = m_RecentFileList.InvalidIndex();
+			m_RecentFileList.push_front( i );
+			trackedfile.m_bInRecentFileList = true;
+		}
+		else if ( !trackedfile.m_bFileInVPK && !trackedfile.m_path.empty() )
+		{
+			m_RecentFileList.push_back( i );
+			trackedfile.m_bInRecentFileList = true;
+		}
+	}	
+	// do it again for any we skipped because we had not yet read the data
+	for ( int i : m_OpenedFilesByName )
+	{
+		TrackedFile_t &trackedfile = m_AllOpenedFiles[i];
+		if ( trackedfile.m_bInRecentFileList )
+			continue;
+
+		if ( trackedfile.m_bPackOrVPKFile || ( !trackedfile.m_bFileInVPK && !trackedfile.m_path.empty() ) )
+		{
+			m_RecentFileList.push_back( i );
+			trackedfile.m_bInRecentFileList = true;
 		}
 	}	
 }
@@ -746,41 +729,40 @@ int CFileTracker2::GetUnverifiedFileHashes( CUnverifiedFileHash *pFiles, int nMa
 {
 	Assert( nMaxFiles > 0 );
 
-	AUTO_LOCK( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 
 	// We send all files regardless of the whitelist, let the server figure it out
 
 	int iOutFile = 0;
-	while ( m_RecentFileList.Head() != m_RecentFileList.InvalidIndex() )
+	while ( !m_RecentFileList.empty() )
 	{
 		// pop off the head
-		int i = m_RecentFileList.Head();
-		int idx = m_RecentFileList[i];
+		int idx = m_RecentFileList.front();
 
-		TrackedFile_t &file = m_treeAllOpenedFiles[idx];
+		TrackedFile_t &file = m_AllOpenedFiles[idx];
 
 		// we could be in the degenerate case of a file that has been opened but we have not yet read any bytes
 		if ( file.m_filehashInProgress.m_cbFileLen == 0 && file.m_filehashFinal.m_cbFileLen == 0 )
 		{
 			// put it back to the end of the line
-			m_RecentFileList.Remove( i );
-			file.m_idxRecentFileList = m_RecentFileList.AddToTail( idx );
+			m_RecentFileList.pop_front();
+			m_RecentFileList.push_back( idx );
 			break;
 		}
 
 		// ok we have a good file - proceed
-		m_RecentFileList.Remove( i );
+		m_RecentFileList.pop_front();
 
 		// if the file has no "path" associated, then it was some raw file open that we do not care about
-		if ( file.m_path.IsEmpty() )
+		if ( file.m_path.empty() )
 			continue;
 
-		file.m_idxRecentFileList = m_RecentFileList.InvalidIndex();
+		file.m_bInRecentFileList = false;
 
 		// Add this file to their list.
 		CUnverifiedFileHash *pOutFile = &pFiles[iOutFile];
-		V_strncpy( pOutFile->m_Filename, file.m_filename.String(), sizeof( pOutFile->m_Filename ) );
-		V_strncpy( pOutFile->m_PathID, file.m_path.String(), sizeof( pOutFile->m_PathID ) );
+		V_strncpy( pOutFile->m_Filename, file.m_filename.c_str(), sizeof( pOutFile->m_Filename ) );
+		V_strncpy( pOutFile->m_PathID, file.m_path.c_str(), sizeof( pOutFile->m_PathID ) );
 		pOutFile->m_nFileFraction = file.m_nFileFraction;
 
 		file.GetCRCValues( &pOutFile->m_FileHash );
@@ -796,7 +778,7 @@ int CFileTracker2::GetUnverifiedFileHashes( CUnverifiedFileHash *pFiles, int nMa
 EFileCRCStatus CFileTracker2::CheckCachedFileHash( const char *pPathID, const char *pRelativeFilename, int nFileFraction, FileHash_t *pFileHash )
 {
 	Assert( ThreadInMainThread() );
-	AUTO_LOCK( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 
 	CRC32_t crcFilename;
 	CRC32_Init( &crcFilename );
@@ -805,15 +787,15 @@ EFileCRCStatus CFileTracker2::CheckCachedFileHash( const char *pPathID, const ch
 	CRC32_Final( &crcFilename );
 
 	TrackedFile_t trackedfileFind;
-	trackedfileFind.m_filename = pRelativeFilename;
-	trackedfileFind.m_path = pPathID;
+	trackedfileFind.m_filename = ks::nz( pRelativeFilename );
+	trackedfileFind.m_path = ks::nz( pPathID );
 	trackedfileFind.m_crcIdentifier = crcFilename;
 	trackedfileFind.m_nFileFraction = nFileFraction;
 
-	int idx = m_treeAllOpenedFiles.Find( trackedfileFind );
-	if ( idx != m_treeAllOpenedFiles.InvalidIndex() )
+	int idx = FindOpenedFile( trackedfileFind );
+	if ( idx != -1 )
 	{
-		TrackedFile_t &trackedfile = m_treeAllOpenedFiles[idx];
+		TrackedFile_t &trackedfile = m_AllOpenedFiles[idx];
 		if ( trackedfile.m_bFileInVPK )
 		{
 			// the FileHash is not meaningful, because the file is in a VPK, we have hashed the entire VPK
@@ -897,15 +879,15 @@ void TrackedFile_t::ProcessFileRead( void *dest, size_t nBytesRead )
 #ifdef SUPPORT_VPK
 void CFileTracker2::NotePackFileAccess( const char *pFilename, const char *pPathID, CPackedStoreFileHandle &VPKHandle )
 {
-	AUTO_LOCK( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 	int idxFileVPK = VPKHandle.m_pOwner->m_PackFileID - 1;
 
 	// we must have seen the VPK file first
-	if ( !m_treeAllOpenedFiles.IsValidIndex( idxFileVPK ) )
+	if ( !( idxFileVPK >= 0 && idxFileVPK < (int)m_AllOpenedFiles.size() ) )
 		return;
 
 	int idxFile = IdxFileFromName( pFilename, pPathID, 0, VPKHandle.m_nFileSize, false, false );
-	TrackedFile_t &trackedfile = m_treeAllOpenedFiles[idxFile];
+	TrackedFile_t &trackedfile = m_AllOpenedFiles[idxFile];
 	// we could use the CRC data from the VPK header - and verify it
 	// VPKHandle.GetFileCRCFromHeaderData();
 	// for now all we are going to do is track that this file came from a VPK
@@ -920,11 +902,7 @@ void CFileTracker2::NotePackFileAccess( const char *pFilename, const char *pPath
 	fiv.m_nFileOffset = VPKHandle.m_nFileOffset;
 	fiv.m_idxAllOpenedFiles = idxFile;
 
-	int idxFileInVPK = m_treeFileInVPK.Find( fiv );
-	if ( idxFileInVPK == m_treeFileInVPK.InvalidIndex() )
-	{
-		idxFileInVPK = m_treeFileInVPK.Insert( fiv );
-	}
+	m_treeFileInVPK.insert( fiv );
 
 	TrackedVPKFile_t trackedVPKFileFind;
 	trackedVPKFileFind.m_nPackFileNumber = VPKHandle.m_nFileNumber;
@@ -934,15 +912,13 @@ void CFileTracker2::NotePackFileAccess( const char *pFilename, const char *pPath
 	// if it straddles the 1MB boundary, record all
 	while ( trackedVPKFileFind.m_nFileFraction <= nFileEnd )
 	{
-		int idxAllFiles = m_treeAllOpenedFiles.InvalidIndex();
-		int idxTrackedVPKFile = m_treeTrackedVPKFiles.Find( trackedVPKFileFind );
-		if ( idxTrackedVPKFile == m_treeTrackedVPKFiles.InvalidIndex() )
+		if ( !m_treeTrackedVPKFiles.contains( trackedVPKFileFind ) )
 		{
 			char szDataFileName[MAX_PATH];
 			VPKHandle.GetPackFileName( szDataFileName, sizeof(szDataFileName) );
 			const char *pszFileName = V_GetFileName( szDataFileName );
-			idxAllFiles = trackedVPKFileFind.m_idxAllOpenedFiles = IdxFileFromName( pszFileName, "GAME", trackedVPKFileFind.m_nFileFraction, 0, true, true );
-			idxTrackedVPKFile = m_treeTrackedVPKFiles.Insert( trackedVPKFileFind );
+			trackedVPKFileFind.m_idxAllOpenedFiles = IdxFileFromName( pszFileName, "GAME", trackedVPKFileFind.m_nFileFraction, 0, true, true );
+			m_treeTrackedVPKFiles.insert( trackedVPKFileFind );
 		}
 		trackedVPKFileFind.m_nFileFraction += k_nFileFractionSize;
 	}
@@ -962,7 +938,7 @@ void CFileTracker2::NotePackFileRead( CPackedStoreFileHandle &VPKHandle, void *p
 // This is used by the dedicated server
 void CFileTracker2::AddFileHashForVPKFile( int nPackFileNumber, int nFileFraction, int cbFileLen, MD5Value_t &md5, CPackedStoreFileHandle &VPKHandle )
 {
-	AUTO_LOCK( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 	m_bComputeFileHashes = false; // since we trust the hashes given here, do not recompute them later
 	char szDataFileName[MAX_PATH];
 	VPKHandle.m_nFileNumber = nPackFileNumber;
@@ -974,12 +950,13 @@ void CFileTracker2::AddFileHashForVPKFile( int nPackFileNumber, int nFileFractio
 	trackedVPKFile.m_PackFileID = VPKHandle.m_pOwner->m_PackFileID;
 	trackedVPKFile.m_nFileFraction = nFileFraction;
 	int idxAllFiles = trackedVPKFile.m_idxAllOpenedFiles = IdxFileFromName( pszFileName, "GAME", nFileFraction, 0, true, true );
-	if ( idxAllFiles != m_treeAllOpenedFiles.InvalidIndex() )
+	if ( idxAllFiles != -1 )
 	{
-		m_treeTrackedVPKFiles.Insert( trackedVPKFile );
+		// an existing record already maps this key to the same file
+		m_treeTrackedVPKFiles.insert( trackedVPKFile );
 	}
 
-	TrackedFile_t &trackedfile = m_treeAllOpenedFiles[idxAllFiles];
+	TrackedFile_t &trackedfile = m_AllOpenedFiles[idxAllFiles];
 	trackedfile.m_bFileInVPK = false;
 	trackedfile.m_bPackOrVPKFile = true;
 	trackedfile.m_nLength = k_nFileFractionSize;
@@ -1002,21 +979,27 @@ int CFileTracker2::IdxFileFromName( const char *pFilename, const char *pPathID, 
 	MD5Init( &trackedfile.m_md5ctx );
 	CRC32_Init( &trackedfile.m_filehashInProgress.m_crcIOSequence );
 
-	trackedfile.m_idxRecentFileList = m_RecentFileList.InvalidIndex();
+	trackedfile.m_bInRecentFileList = false;
 
-	int idxFile = m_treeAllOpenedFiles.Find( trackedfile );
-	if ( idxFile == m_treeAllOpenedFiles.InvalidIndex() )
+	int idxFile = FindOpenedFile( trackedfile );
+	if ( idxFile == -1 )
 	{
-		idxFile = m_treeAllOpenedFiles.Insert( trackedfile );
+		idxFile = InsertOpenedFile( trackedfile );
 		if ( bRecordInRecentList )
-			m_treeAllOpenedFiles[idxFile].m_idxRecentFileList = m_RecentFileList.AddToTail( idxFile );
+		{
+			m_RecentFileList.push_back( idxFile );
+			m_AllOpenedFiles[idxFile].m_bInRecentFileList = true;
+		}
 	}
 	else
 	{
 		if ( bRecordInRecentList )
 		{
-			if ( m_treeAllOpenedFiles[idxFile].m_idxRecentFileList == m_RecentFileList.InvalidIndex() )
-				m_treeAllOpenedFiles[idxFile].m_idxRecentFileList = m_RecentFileList.AddToTail( idxFile );
+			if ( !m_AllOpenedFiles[idxFile].m_bInRecentFileList )
+			{
+				m_RecentFileList.push_back( idxFile );
+				m_AllOpenedFiles[idxFile].m_bInRecentFileList = true;
+			}
 		}
 	}
 	return idxFile;
@@ -1025,14 +1008,15 @@ int CFileTracker2::IdxFileFromName( const char *pFilename, const char *pPathID, 
 #ifdef SUPPORT_VPK
 int CFileTracker2::NotePackFileOpened( const char *pRawFileName, const char *pFilename, const char *pPathID, int64 nLength )
 {
-	AUTO_LOCK( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 	TrackedFile_t trackedfileToFind;
 	trackedfileToFind.RebuildFileName( pRawFileName, nullptr );
-	int idxFile = m_treeAllOpenedFiles.Find( trackedfileToFind );
-	if ( idxFile != m_treeAllOpenedFiles.InvalidIndex() )
+	int idxFile = FindOpenedFile( trackedfileToFind );
+	if ( idxFile != -1 )
 	{
-		TrackedFile_t &trackedfile = m_treeAllOpenedFiles[idxFile];
+		TrackedFile_t &trackedfile = m_AllOpenedFiles[idxFile];
 		// we have the real name we want to use. correct the name
+		m_OpenedFilesByName.erase( idxFile );		// re-keyed below
 		trackedfile.RebuildFileName( pFilename, pPathID );
 		trackedfile.m_bPackOrVPKFile = true;
 		trackedfile.m_PackFileID = idxFile + 1;
@@ -1040,7 +1024,7 @@ int CFileTracker2::NotePackFileOpened( const char *pRawFileName, const char *pFi
 		trackedfile.m_filehashFinal.m_nPackFileNumber = -1;
 		trackedfile.m_filehashInProgress.m_PackFileID = trackedfile.m_PackFileID;
 		trackedfile.m_filehashInProgress.m_nPackFileNumber = -1;
-		m_treeAllOpenedFiles.Reinsert( idxFile );
+		m_OpenedFilesByName.insert( idxFile );
 	}
 	return idxFile + 1;
 }
@@ -1048,42 +1032,42 @@ int CFileTracker2::NotePackFileOpened( const char *pRawFileName, const char *pFi
 
 void CFileTracker2::NoteFileLoadedFromDisk( const char *pFilename, const char *pPathID, FILE *fp, int64 nLength )
 {
-	AUTO_LOCK( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 
 	int idxFile = IdxFileFromName( pFilename, pPathID, 0, nLength, false, true );
-	m_mapAllOpenFiles.Insert( fp, idxFile );
+	m_mapAllOpenFiles.insert_or_assign( fp, idxFile );	// a reused FILE * now refers to this file
 }
 
 void CFileTracker2::RecordFileClose( FILE *fp )
 {
 	//VPROF_BUDGET("CFileTracker2::RecordFileClose", "PureFileTracker2");
-	AUTO_LOCK( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 
-	int idx = m_mapAllOpenFiles.Find( fp );
-	if ( idx != m_mapAllOpenFiles.InvalidIndex() )
+	auto idx = m_mapAllOpenFiles.find( fp );
+	if ( idx != m_mapAllOpenFiles.end() )
 	{
-		int idx2 = m_mapAllOpenFiles[idx];
-		TrackedFile_t &trackedfile = m_treeAllOpenedFiles[idx2];
+		int idx2 = idx->second;
+		TrackedFile_t &trackedfile = m_AllOpenedFiles[idx2];
 
 		// don't touch the CRCs, we will just keep CRCing every byte we load, even if we open/close the file multiple times
 		// note that if we successfully read the entire file - it is in m_crcFinal
 		trackedfile.m_nFilePos = 0;
 		trackedfile.m_cubSequentialRead = 0;
 
-		m_mapAllOpenFiles.RemoveAt( idx );
+		m_mapAllOpenFiles.erase( idx );
 	}
 }
 
 void CFileTracker2::RecordFileSeek( FILE *fp, int64 pos, int seekType )
 {
-	AUTO_LOCK( m_Mutex );
-	int idx = m_mapAllOpenFiles.Find( fp );
-	if ( idx != m_mapAllOpenFiles.InvalidIndex() )
+	std::scoped_lock lock( m_Mutex );
+	auto idx = m_mapAllOpenFiles.find( fp );
+	if ( idx != m_mapAllOpenFiles.end() )
 	{
-		int idx2 = m_mapAllOpenFiles[idx];
-		if ( idx2 != m_treeAllOpenedFiles.InvalidIndex() )
+		int idx2 = idx->second;
+		if ( idx2 != -1 )
 		{
-			TrackedFile_t &trackedfile = m_treeAllOpenedFiles[idx2];
+			TrackedFile_t &trackedfile = m_AllOpenedFiles[idx2];
 			// if we have hashed the entire file already - we don't need to do it again
 			if ( trackedfile.m_filehashFinal.m_eFileHashType != FileHash_t::k_EFileHashTypeEntireFile )
 			{
@@ -1106,15 +1090,15 @@ void CFileTracker2::RecordFileRead( void *dest, size_t nBytesRead, size_t nBytes
 {
 
 	//VPROF_BUDGET("CFileTracker2::RecordFileRead", "PureFileTracker2");
-	AUTO_LOCK( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 
-	int idx = m_mapAllOpenFiles.Find( fp );
-	if ( idx != m_mapAllOpenFiles.InvalidIndex() )
+	auto idx = m_mapAllOpenFiles.find( fp );
+	if ( idx != m_mapAllOpenFiles.end() )
 	{
-		int idx2 = m_mapAllOpenFiles[idx];
-		if ( idx2 != m_treeAllOpenedFiles.InvalidIndex() )
+		int idx2 = idx->second;
+		if ( idx2 != -1 )
 		{
-			TrackedFile_t &trackedfile = m_treeAllOpenedFiles[idx2];
+			TrackedFile_t &trackedfile = m_AllOpenedFiles[idx2];
 			trackedfile.ProcessFileRead( dest, nBytesRead );
 		}
 	}
@@ -1126,46 +1110,45 @@ void CFileTracker2::RecordFileRead( void *dest, size_t nBytesRead, size_t nBytes
 
 int CFileTracker2::ListOpenedFiles( bool bListAll, const char *pchFilenameFind, bool bRecentFileList )
 {
-	AUTO_LOCK( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 
 	int cPackFiles = 0;
 	if ( !bRecentFileList )
 	{
-		for ( int i = m_treeAllOpenedFiles.FirstInorder(); i != m_treeAllOpenedFiles.InvalidIndex(); i = m_treeAllOpenedFiles.NextInorder( i ) )
+		for ( int i : m_OpenedFilesByName )
 		{
-			TrackedFile_t &file = m_treeAllOpenedFiles[i];
+			TrackedFile_t &file = m_AllOpenedFiles[i];
 
 			if ( file.m_PackFileID )
 				cPackFiles++;
-			if ( bListAll || ( pchFilenameFind && Q_stristr( file.m_filename, pchFilenameFind ) ) )
+			if ( bListAll || ( pchFilenameFind && Q_stristr( file.m_filename.c_str(), pchFilenameFind ) ) )
 			{
 				Msg( "FileTracker %s ( %d, %d, %d ) %d: %d %d\n", 
-					file.m_filename.String(), file.m_PackFileID, file.m_nPackFileNumber, 0, 
+					file.m_filename.c_str(), file.m_PackFileID, file.m_nPackFileNumber, 0, 
 					file.m_filehashInProgress.m_eFileHashType, file.m_filehashFinal.m_cbFileLen, file.m_cubTotalRead );
 			}
 		}
 	}
 	else
 	{
-		for ( int i = m_RecentFileList.Head(); i != m_RecentFileList.InvalidIndex(); i = m_RecentFileList.Next( i ) )
+		for ( int idx : m_RecentFileList )
 		{
-			int idx = m_RecentFileList[i];
 
-			TrackedFile_t &file = m_treeAllOpenedFiles[idx];
+			TrackedFile_t &file = m_AllOpenedFiles[idx];
 
 			if ( file.m_PackFileID )
 				cPackFiles++;
-			if ( bListAll || ( pchFilenameFind && Q_stristr( file.m_filename, pchFilenameFind ) ) )
+			if ( bListAll || ( pchFilenameFind && Q_stristr( file.m_filename.c_str(), pchFilenameFind ) ) )
 			{
 				Msg( "FileTracker %s ( %d, %d, %d ) %d: %d %d\n", 
-					file.m_filename.String(), file.m_PackFileID, file.m_nPackFileNumber, 0, 
+					file.m_filename.c_str(), file.m_PackFileID, file.m_nPackFileNumber, 0, 
 					file.m_filehashInProgress.m_eFileHashType, file.m_filehashFinal.m_cbFileLen, file.m_cubTotalRead );
 			}
 		}
 	}
 
-	Msg( "FileTracker: %d files %d VPK files\n", m_treeAllOpenedFiles.Count(), cPackFiles );
-	return m_treeAllOpenedFiles.Count();
+	Msg( "FileTracker: %d files %d VPK files\n", (int)m_AllOpenedFiles.size(), cPackFiles );
+	return (int)m_AllOpenedFiles.size();
 }
 
 #ifdef DEBUG_FILETRACKER

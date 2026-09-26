@@ -10,9 +10,6 @@
 #include "ai_basenpc.h"
 #include "ai_task.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 const char * g_ppszTaskFailureText[] =
 {
 	"No failure",                                    // NO_TASK_FAILURE

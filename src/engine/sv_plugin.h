@@ -12,6 +12,7 @@
 
 #include "eiface.h"
 #include "engine/iserverplugin.h"
+#include <memory>
 
 //---------------------------------------------------------------------------------
 // Purpose: a single plugin
@@ -91,7 +92,7 @@ public:
 	virtual QueryCvarCookie_t StartQueryCvarValue( edict_t *pEntity, const char *pName );
 
 private:
-	CUtlVector<CPlugin *>	m_Plugins;
+	std::vector< std::unique_ptr< CPlugin > >	m_Plugins;
 	IPluginHelpersCheck		*m_PluginHelperCheck;
 
 public:

@@ -7,9 +7,6 @@
 #include "quakedef.h"
 #include "filetransfermgr.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 CFileTransferMgr::CFileTransferMgr()
 {
 }

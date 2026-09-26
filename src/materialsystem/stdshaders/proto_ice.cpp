@@ -3,9 +3,6 @@
 #include "BaseVSShader.h"
 #include "proto_ice_helper.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 DEFINE_FALLBACK_SHADER( ProtoIce, ProtoIce_dx9 )
 BEGIN_VS_SHADER( ProtoIce_dx9, "ProtoIce" )
 	BEGIN_SHADER_PARAMS

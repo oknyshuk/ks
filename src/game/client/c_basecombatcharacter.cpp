@@ -16,8 +16,6 @@
 #include "reflect_predmap.h"
 #include "c_basecombatcharacter.h"
 #include "c_cs_player.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 #if defined( CBaseCombatCharacter )
 #undef CBaseCombatCharacter	

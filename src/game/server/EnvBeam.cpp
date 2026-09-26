@@ -12,9 +12,6 @@
 #include "ndebugoverlay.h"
 #include "filters.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // Keeps us from doing strcmps in the tracefilter.
 string_t g_iszPhysicsPropClassname;
 
@@ -127,7 +124,7 @@ void CEnvBeam::Spawn( void )
 
 	BaseClass::Spawn();
 
-	m_noiseAmplitude = MIN(MAX_BEAM_NOISEAMPLITUDE, m_noiseAmplitude);
+	m_noiseAmplitude = std::min<std::common_type_t<int, float>>(MAX_BEAM_NOISEAMPLITUDE, m_noiseAmplitude);
 
 	// Check for tapering
 	if ( HasSpawnFlags( SF_BEAM_TAPEROUT ) )
@@ -769,8 +766,8 @@ void CEnvBeam::BeamUpdateVars( void )
 
 	RelinkBeam();
 
-	SetWidth( MIN(MAX_BEAM_WIDTH, m_boltWidth) );
-	SetNoise( MIN(MAX_BEAM_NOISEAMPLITUDE, m_noiseAmplitude) );
+	SetWidth( std::min(MAX_BEAM_WIDTH, m_boltWidth) );
+	SetNoise( std::min<std::common_type_t<int, float>>(MAX_BEAM_NOISEAMPLITUDE, m_noiseAmplitude) );
 	SetFrame( m_frameStart );
 	SetScrollRate( m_speed );
 	if ( m_spawnflags & SF_BEAM_SHADEIN )

@@ -8,6 +8,8 @@
 #ifndef ASW_GENERIC_CLASSMAP_H
 #define ASW_GENERIC_CLASSMAP_H
 
+#include "tier1/map_ops.h"
+
 template <class T>
 class CGenericClassmap
 {
@@ -49,7 +51,7 @@ private:
 		char				mapname[ 40 ];
 	};
 
-	CUtlDict< classentry_t, unsigned short > m_ClassDict;
+	ks::idict< classentry_t > m_ClassDict;
 };
 
 template <class T>
@@ -59,45 +61,32 @@ void CGenericClassmap< T >::Add( const char *mapname, const char *classname, int
 	if ( map && !Q_strcasecmp( mapname, map ) )
 		return;
 
-	if ( map )
-	{
-		int index = m_ClassDict.Find( classname );
-		Assert( index != m_ClassDict.InvalidIndex() );
-		m_ClassDict.RemoveAt( index );
-	}
-
 	classentry_t element;
 	element.SetMapName( mapname );
 	element.factory = factory;
 	element.size = size;
-	m_ClassDict.Insert( classname, element );
+	m_ClassDict.insert_or_assign( classname, element );
 }
 
 template <class T>
 const char *CGenericClassmap< T >::Lookup( const char *classname )
 {
-	unsigned short index;
 	static classentry_t lookup; 
 
-	index = m_ClassDict.Find( classname );
-	if ( index == m_ClassDict.InvalidIndex() )
+	auto it = m_ClassDict.find( classname );
+	if ( it == m_ClassDict.end() )
 		return nullptr;
 
-	lookup = m_ClassDict.Element( index );
+	lookup = it->second;
 	return lookup.GetMapName();
 }
 
 template <class T>
 T *CGenericClassmap< T >::CreateInstance( const char *mapname )
 {
-	int c = m_ClassDict.Count();
-	int i;
-
-	for ( i = 0; i < c; i++ )
+	for ( auto &[name, entry] : m_ClassDict )
 	{
-		classentry_t *lookup = &m_ClassDict[ i ];
-		if ( !lookup )
-			continue;
+		classentry_t *lookup = &entry;
 
 		if ( Q_stricmp( lookup->GetMapName(), mapname ) )
 			continue;
@@ -105,7 +94,7 @@ T *CGenericClassmap< T >::CreateInstance( const char *mapname )
 		if ( !lookup->factory )
 		{
 #if defined( _DEBUG )
-			Msg( "No factory for %s/%s\n", lookup->GetMapName(), m_ClassDict.GetElementName( i ) );
+			Msg( "No factory for %s/%s\n", lookup->GetMapName(), name.c_str() );
 #endif
 			continue;
 		}
@@ -119,14 +108,9 @@ T *CGenericClassmap< T >::CreateInstance( const char *mapname )
 template <class T>
 int CGenericClassmap< T >::GetClassSize( const char *classname )
 {
-	int c = m_ClassDict.Count();
-	int i;
-
-	for ( i = 0; i < c; i++ )
+	for ( auto &[name, entry] : m_ClassDict )
 	{
-		classentry_t *lookup = &m_ClassDict[ i ];
-		if ( !lookup )
-			continue;
+		classentry_t *lookup = &entry;
 
 		if ( Q_strcmp( lookup->GetMapName(), classname ) )
 			continue;

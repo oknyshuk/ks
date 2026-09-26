@@ -29,9 +29,10 @@
 
 #include <limits.h>
 #include <atomic>
+#include <mutex>
 #include "tier0/threadtools.h"
 #include "tier1/refcount.h"
-#include "tier1/utllinkedlist.h"
+#include "tier1/intrusive_ptr.h"
 #include "tier1/utlvector.h"
 #include "tier1/functors.h"
 
@@ -114,7 +115,7 @@ struct ThreadPoolStartParams_t
 		if ( bUseAffinityTable )
 		{
 			// user supplied an optional 1:1 affinity mapping to override normal distribute behavior
-			nThreads = MIN( TP_MAX_POOL_THREADS, nThreads );
+			nThreads = std::min<std::common_type_t<int, unsigned int>>( TP_MAX_POOL_THREADS, nThreads );
 			for ( unsigned int i = 0; i < nThreads; i++ )
 			{
 				iAffinityTable[i] = pAffinities[i];
@@ -492,9 +493,9 @@ public:
 	//-----------------------------------------------------
 	// Try to acquire ownership (to satisfy). If you take the lock, you must either execute or abort.
 	//-----------------------------------------------------
-	bool TryLock()										{ return m_mutex.TryLock(); }
-	void Lock()											{ m_mutex.Lock(); }
-	void Unlock()										{ m_mutex.Unlock(); }
+	bool TryLock()										{ return m_mutex.try_lock(); }
+	void Lock()											{ m_mutex.lock(); }
+	void Unlock()										{ m_mutex.unlock(); }
 
 	//-----------------------------------------------------
 	// Thread event support (safe for NULL this to simplify code )
@@ -525,7 +526,7 @@ private:
 	// Written by the servicing thread under m_mutex, read from others without it.
 	std::atomic<JobStatus_t>		m_status;
 	JobPriority_t		m_priority;
-	CThreadMutex		m_mutex;
+	std::recursive_mutex	m_mutex;
 	unsigned char		m_flags;
 	char				m_iServicingThread;
 	short				m_reserved;
@@ -553,7 +554,7 @@ class CFunctorJob : public CJob
 {
 public:
 	CFunctorJob( CFunctor *pFunctor, const char *pszDescription = nullptr )
-		: m_pFunctor( pFunctor )
+		: m_pFunctor( pFunctor, ks::adopt_ref )
 	{
 		if ( pszDescription )
 		{
@@ -577,7 +578,7 @@ public:
 	}
 
 private:
-	CRefPtr<CFunctor> m_pFunctor;
+	ks::intrusive_ptr<CFunctor> m_pFunctor;
 	char m_szDescription[16];
 };
 
@@ -592,7 +593,7 @@ public:
 	{
 		if ( pJob )
 		{
-			m_jobs.AddToTail( pJob );
+			m_jobs.push_back( pJob );
 		}
 	}
 
@@ -600,13 +601,13 @@ public:
 	{
 		if ( ppJobs )
 		{
-			m_jobs.AddMultipleToTail( nJobs, ppJobs );
+			m_jobs.insert( m_jobs.end(), ppJobs, ppJobs + nJobs );
 		}
 	}
 
 	~CJobSet()
 	{
-		for ( int i = 0; i < m_jobs.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_jobs ); i++ )
 		{
 			m_jobs[i]->Release();
 		}
@@ -614,17 +615,17 @@ public:
 
 	void operator+=( CJob *pJob )
 	{
-		m_jobs.AddToTail( pJob );
+		m_jobs.push_back( pJob );
 	}
 
 	void operator-=( CJob *pJob )
 	{
-		m_jobs.FindAndRemove( pJob );
+		ks::erase_first( m_jobs, pJob );
 	}
 
 	void Execute( bool bRelease = true )
 	{
-		for ( int i = 0; i < m_jobs.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_jobs ); i++ )
 		{
 			m_jobs[i]->Execute();
 			if ( bRelease )
@@ -635,13 +636,13 @@ public:
 
 		if ( bRelease )
 		{
-			m_jobs.RemoveAll();
+			m_jobs.clear();
 		}
 	}
 
 	void Abort( bool bRelease = true )
 	{
-		for ( int i = 0; i < m_jobs.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_jobs ); i++ )
 		{
 			m_jobs[i]->Abort();
 			if ( bRelease )
@@ -652,13 +653,13 @@ public:
 
 		if ( bRelease )
 		{
-			m_jobs.RemoveAll();
+			m_jobs.clear();
 		}
 	}
 
 	void WaitForFinish( bool bRelease = true )
 	{
-		for ( int i = 0; i < m_jobs.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_jobs ); i++ )
 		{
 			m_jobs[i]->WaitForFinish();
 			if ( bRelease )
@@ -669,27 +670,27 @@ public:
 
 		if ( bRelease )
 		{
-			m_jobs.RemoveAll();
+			m_jobs.clear();
 		}
 	}
 
 	void WaitForFinish( IThreadPool *pPool, bool bRelease = true )
 	{
-		pPool->YieldWait( m_jobs.Base(), m_jobs.Count() );
+		pPool->YieldWait( m_jobs.data(), std::ssize( m_jobs ) );
 
 		if ( bRelease )
 		{
-			for ( int i = 0; i < m_jobs.Count(); i++ )
+			for ( int i = 0; i < std::ssize( m_jobs ); i++ )
 			{
 				m_jobs[i]->Release();
 			}
 
-			m_jobs.RemoveAll();
+			m_jobs.clear();
 		}
 	}
 
 private:
-	CUtlVectorFixed<CJob *, 16> m_jobs;
+	std::inplace_vector< CJob *, 16 > m_jobs;
 };
 
 //-----------------------------------------------------------------------------
@@ -710,10 +711,6 @@ private:
 // Work splitting: array split, best when cost per item is roughly equal
 //-----------------------------------------------------------------------------
 
-#pragma warning(push)
-#pragma warning(disable:4389)
-#pragma warning(disable:4018)
-#pragma warning(disable:4701)
 
 #define DEFINE_NON_MEMBER_ITER_RANGE_PARALLEL(N) \
 	template <typename FUNCTION_CLASS, typename FUNCTION_RETTYPE FUNC_TEMPLATE_FUNC_PARAMS_##N FUNC_TEMPLATE_ARG_PARAMS_##N, typename ITERTYPE1, typename ITERTYPE2> \
@@ -892,8 +889,6 @@ protected:
 };
 
 
-#pragma warning(push)
-#pragma warning(disable:4189)
 
 template <typename ITEM_TYPE, class ITEM_PROCESSOR_TYPE, int ID_TO_PREVENT_COMDATS_IN_PROFILES = 1>
 class CParallelProcessor
@@ -976,8 +971,8 @@ private:
 			int nChunkSize = m_nChunkSize;
 			for (;;)
 			{
-				ITEM_TYPE *pCurrent = m_pItems.AtomicAdd( nChunkSize );
-				ITEM_TYPE *pLast = MIN( pLimit, pCurrent + nChunkSize );
+				ITEM_TYPE *pCurrent = m_pItems.fetch_add( nChunkSize );
+				ITEM_TYPE *pLast = std::min( pLimit, pCurrent + nChunkSize );
 				while( pCurrent < pLast )
 				{
 					m_ItemProcessor.Process( *pCurrent );
@@ -991,13 +986,12 @@ private:
 			m_ItemProcessor.End();
 		}
 	}
-	CInterlockedPtr<ITEM_TYPE>	m_pItems;
+	std::atomic<ITEM_TYPE *>	m_pItems;
 	ITEM_TYPE *					m_pLimit;
 	int m_nChunkSize;
 
 };
 
-#pragma warning(pop)
 
 template <typename ITEM_TYPE> 
 inline void ParallelProcess( ITEM_TYPE *pItems, unsigned nItems, void (*pfnProcess)( ITEM_TYPE & ), void (*pfnBegin)() = nullptr, void (*pfnEnd)() = nullptr, int nMaxParallel = INT_MAX )
@@ -1084,7 +1078,7 @@ public:
 		m_pContext = pContext;
 		m_nIndex = nBegin;
 		m_nLimit = nBegin + nItems;
-		nChunkCount = MAX( MIN( nItems, nChunkCount ), 1 );
+		nChunkCount = std::max( std::min( nItems, nChunkCount ), 1 );
 		m_nChunkCount = ( nItems + nChunkCount - 1 ) / nChunkCount;
 		int nJobs = ( nItems + m_nChunkCount - 1 ) / m_nChunkCount;
 		if ( nJobs > nMaxParallel )
@@ -1136,10 +1130,10 @@ private:
 		m_ItemProcessor.Begin();
 		for (;;)
 		{
-			int nIndex = m_nIndex.AtomicAdd( m_nChunkCount );
+			int nIndex = m_nIndex.fetch_add( m_nChunkCount );
 			if ( nIndex < m_nLimit )
 			{
-				int nCount = MIN( m_nChunkCount, m_nLimit - nIndex );
+				int nCount = std::min( m_nChunkCount, m_nLimit - nIndex );
 				m_ItemProcessor.Process( m_pContext, nIndex, nCount );
 			}
 			else
@@ -1152,10 +1146,10 @@ private:
 	}
 
 	CONTEXT_TYPE				*m_pContext;
-	CInterlockedInt				m_nIndex;
+	std::atomic<int>			m_nIndex;
 	int							m_nLimit;
 	int							m_nChunkCount;
-	CInterlockedInt				m_nActive;
+	std::atomic<int>			m_nActive;
 };
 
 template < typename CONTEXT_TYPE > 
@@ -1252,7 +1246,7 @@ private:
 		-- m_nActive;
 	}
 
-	CInterlockedInt				m_nActive;
+	std::atomic<int>			m_nActive;
 };
 
 
@@ -1350,7 +1344,7 @@ inline JobStatus_t CJob::Execute()
 		return m_status;
 	}
 
-	AUTO_LOCK( m_mutex );
+	std::scoped_lock lock( m_mutex );
 	AddRef();
 
 	JobStatus_t result;
@@ -1422,7 +1416,7 @@ inline JobStatus_t CJob::Abort( bool bDiscard )
 		return m_status;
 	}
 
-	AUTO_LOCK( m_mutex );
+	std::scoped_lock lock( m_mutex );
 	AddRef();
 
 	JobStatus_t result;

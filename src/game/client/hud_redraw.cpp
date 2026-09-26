@@ -12,9 +12,6 @@
 #include "hudelement.h"
 #include "iclientmode.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 //For progress bar orientations
 const int CHud::HUDPB_HORIZONTAL = 0;
@@ -63,9 +60,9 @@ void CHud::DoElementThink( CHudElement* pElement )
 void CHud::Think( void )
 {
 	// Determine the visibility of all hud elements
-	CUtlVector< CHudElement * > & list = GetHudList();
+	std::vector< CHudElement * > & list = GetHudList();
 
-	int c = list.Count();
+	int c = std::ssize( list );
 
 	m_bEngineIsInGame = engine->IsInGame() && ( engine->IsLevelMainMenuBackground() == false );
 
@@ -99,8 +96,8 @@ void CHud::Think( void )
 
 void CHud::OnTimeJump(void)
 {
-	CUtlVector< CHudElement * > & list = GetHudList();
-	int c = list.Count();
+	std::vector< CHudElement * > & list = GetHudList();
+	int c = std::ssize( list );
 
 	for ( int i = 0; i < c; ++i )
 	{
@@ -115,9 +112,9 @@ void CHud::LateThink( void )
 {
 	SNPROF("LateThink");
 
-	CUtlVector< CHudElement * > & list = GetHudList();
+	std::vector< CHudElement * > & list = GetHudList();
 
-	int c = list.Count();
+	int c = std::ssize( list );
 
 	m_bEngineIsInGame = engine->IsInGame() && ( engine->IsLevelMainMenuBackground() == false );
 
@@ -161,8 +158,8 @@ void CHud::DrawIconProgressBar( int x, int y, CHudTexture *icon, CHudTexture *ic
 		return;
 
 	//Clamp our percentage
-	percentage = MIN( 1.0f, percentage );
-	percentage = MAX( 0.0f, percentage );
+	percentage = std::min( 1.0f, percentage );
+	percentage = std::max( 0.0f, percentage );
 
 	int	height = icon->Height();
 	int	width  = icon->Width();

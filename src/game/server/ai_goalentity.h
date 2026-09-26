@@ -80,7 +80,7 @@ protected:
 
 	void UpdateActors();
 
-	const CUtlVector<AIHANDLE> &AccessActors()
+	const std::vector< AIHANDLE > &AccessActors()
 	{
 		return m_actors;
 	}
@@ -109,7 +109,7 @@ protected:
 	[[= ks::reflect::Key{ .name = "SearchType" } ]] SearchType_t			m_SearchType;
 	[[= ks::reflect::Key{ .name = "BaseConceptModifiers" } ]] string_t				m_iszConceptModifiers;
 	
-	CUtlVector<AIHANDLE>	m_actors;
+	std::vector< AIHANDLE >	m_actors;
 	EHANDLE					m_hGoalEntity;
 	unsigned 				m_flags;
 
@@ -137,7 +137,7 @@ inline bool CAI_GoalEntity::IsActive()
 	if ( m_flags & ACTIVE )
 	{
 		UpdateActors();
-		return ( m_actors.Count() != 0 );
+		return ( !m_actors.empty() );
 	}
 	return false;
 }
@@ -147,7 +147,7 @@ inline bool CAI_GoalEntity::IsActive()
 inline int CAI_GoalEntity::NumActors()
 {
 	UpdateActors();
-	return m_actors.Count();
+	return std::ssize( m_actors );
 }
 	
 //-------------------------------------
@@ -155,7 +155,7 @@ inline int CAI_GoalEntity::NumActors()
 inline CAI_BaseNPC *CAI_GoalEntity::GetActor( int iActor )
 {
 	UpdateActors();
-	if (  m_actors.Count() > iActor )
+	if (  std::ssize( m_actors ) > iActor )
 		return m_actors[iActor];
 	return nullptr;
 }

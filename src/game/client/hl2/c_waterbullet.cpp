@@ -9,9 +9,6 @@
 #include "reflect_annotations.h"
 #include "particles_simple.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 class [[= ks::reflect::NetTable{ .name = "DT_WaterBullet" } ]]
       C_WaterBullet : public C_BaseAnimating
 {
@@ -119,7 +116,7 @@ public:
 private:
 	C_WaterBullet( const C_WaterBullet & );
 
-	CSmartPtr<CSimpleEmitter> m_pEmitter;
+	ks::intrusive_ptr<CSimpleEmitter> m_pEmitter;
 
 	Vector		m_vecLastOrigin;
 };

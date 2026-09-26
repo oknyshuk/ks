@@ -12,9 +12,8 @@
 #include "particlemgr.h"
 #include "particles/particles.h"
 #include "particlesphererenderer.h"
-#include "smartptr.h"
 #include "particles_simple.h"
-#include "tier1/utlobjectreference.h"
+#include "tier1/tracked_ref.h"
 
 
 //-----------------------------------------------------------------------------
@@ -24,10 +23,10 @@ class CNewParticleEffect : public IParticleEffect, public CParticleCollection, p
 {
 public:
 	DECLARE_CLASS_NOBASE( CNewParticleEffect );
-	DECLARE_REFERENCED_CLASS( CNewParticleEffect );
+	KS_TRACKED_CLASS( CNewParticleEffect );
 
 public:
-	friend class CRefCountAccessor;
+	template < class > friend class ks::intrusive_ptr;
 	friend class CParticleSystemQuery;
 
 	// list management
@@ -362,7 +361,7 @@ inline CNewParticleEffect *CNewParticleEffect::CreatePrecached( CBaseEntity *pOw
 // If you use an HPARTICLEFFECT instead of a cnewparticleeffect *, you get a pointer
 // which will go to null when the effect is deleted
 //--------------------------------------------------------------------------------
-typedef CUtlReference<CNewParticleEffect> HPARTICLEFFECT;
+typedef ks::tracked_ref<CNewParticleEffect> HPARTICLEFFECT;
 
 
 #endif // PARTICLES_NEW_H

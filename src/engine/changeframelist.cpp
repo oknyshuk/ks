@@ -10,11 +10,8 @@
 #include "dt.h"
 #include "utlvector.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
-DEFINE_FIXEDSIZE_ALLOCATOR_MT( CChangeFrameList, 2048, CUtlMemoryPool::GROW_FAST );
+DEFINE_FIXEDSIZE_ALLOCATOR_MT( CChangeFrameList, 2048, ks::fixed_pool::grow::fast );
 
 //-----------------------------------------------------------------------------
 
@@ -24,8 +21,8 @@ CChangeFrameList::CChangeFrameList( int nProperties, int iCurTick )
 	int nNumBuckets = ( nProperties + knBucketSize - 1 ) / knBucketSize;
 	m_nNumProps = nProperties;
 
-	m_ChangeTicks.SetCount( nProperties + nNumBuckets );
-	m_ChangeTicks.FillWithValue( iCurTick );
+	m_ChangeTicks.assign( nProperties + nNumBuckets, {} );
+	std::ranges::fill( m_ChangeTicks, iCurTick );
 }
 
 CChangeFrameList::~CChangeFrameList()
@@ -52,7 +49,7 @@ CChangeFrameList *CChangeFrameList::Copy()
 void CChangeFrameList::SetChangeTick( const int* RESTRICT pProps, int nNumProps, const int iTick )
 {
 	//avoid loads inside the array by the compiler thinking they could overlap
-	int* pBuckets		= m_ChangeTicks.Base() + m_nNumProps;
+	int* pBuckets		= m_ChangeTicks.data() + m_nNumProps;
 	for ( int i=0; i < nNumProps; i++ )
 	{
 		//update our tick, and the parent bucket for the tick

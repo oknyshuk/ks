@@ -15,9 +15,6 @@
 #include "soundflags.h"
 #include "cl_demoaction_types.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : demoframe - 
@@ -57,7 +54,7 @@ bool CDemoActionSkipAhead::Init( KeyValues *pInitData )
 // Purpose: 
 // Input  : buf - 
 //-----------------------------------------------------------------------------
-void CDemoActionSkipAhead::SaveKeysToBuffer( int depth, CUtlBuffer& buf )
+void CDemoActionSkipAhead::SaveKeysToBuffer( int depth, ks::text_writer& buf )
 {
 	BaseClass::SaveKeysToBuffer( depth, buf );
 
@@ -115,9 +112,7 @@ void CDemoActionSkipAhead::FireAction( void )
 	SetFinishedAction( true );
 }
 
-#include "tier0/memdbgoff.h"
 DECLARE_DEMOACTION( DEMO_ACTION_SKIPAHEAD, CDemoActionSkipAhead );
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -147,9 +142,7 @@ void CDemoActionStopPlayback::FireAction( void )
 	SetActionFired( true );
 }
 
-#include "tier0/memdbgoff.h"
 DECLARE_DEMOACTION( DEMO_ACTION_STOPPLAYBACK, CDemoActionStopPlayback );
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -201,7 +194,7 @@ void CDemoActionPlayCommands::FireAction( void )
 // Purpose: 
 // Input  : buf - 
 //-----------------------------------------------------------------------------
-void CDemoActionPlayCommands::SaveKeysToBuffer( int depth, CUtlBuffer& buf )
+void CDemoActionPlayCommands::SaveKeysToBuffer( int depth, ks::text_writer& buf )
 {
 	BaseClass::SaveKeysToBuffer( depth, buf );
 
@@ -209,9 +202,7 @@ void CDemoActionPlayCommands::SaveKeysToBuffer( int depth, CUtlBuffer& buf )
 		GetCommandStream() );
 }
 
-#include "tier0/memdbgoff.h"
 DECLARE_DEMOACTION( DEMO_ACTION_PLAYCOMMANDS, CDemoActionPlayCommands );
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -291,7 +282,7 @@ void CDemoActionScreenFadeStart::FireAction( void )
 // Purpose: 
 // Input  : buf - 
 //-----------------------------------------------------------------------------
-void CDemoActionScreenFadeStart::SaveKeysToBuffer( int depth, CUtlBuffer& buf )
+void CDemoActionScreenFadeStart::SaveKeysToBuffer( int depth, ks::text_writer& buf )
 {
 	BaseClass::SaveKeysToBuffer( depth, buf );
 
@@ -320,9 +311,7 @@ void CDemoActionScreenFadeStart::SaveKeysToBuffer( int depth, CUtlBuffer& buf )
 	BufPrintf( depth, buf, "a \"%i\"\n", f->a );
 }
 
-#include "tier0/memdbgoff.h"
 DECLARE_DEMOACTION( DEMO_ACTION_SCREENFADE_START, CDemoActionScreenFadeStart );
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -442,7 +431,7 @@ void CDemoActionTextMessageStart::FireAction( void )
 // Purpose: 
 // Input  : buf - 
 //-----------------------------------------------------------------------------
-void CDemoActionTextMessageStart::SaveKeysToBuffer( int depth, CUtlBuffer& buf )
+void CDemoActionTextMessageStart::SaveKeysToBuffer( int depth, ks::text_writer& buf )
 {
 	BaseClass::SaveKeysToBuffer( depth, buf );
 
@@ -478,9 +467,7 @@ void CDemoActionTextMessageStart::SaveKeysToBuffer( int depth, CUtlBuffer& buf )
 	BufPrintf( depth, buf, "a2 \"%i\"\n", tm->a2 );
 
 }
-#include "tier0/memdbgoff.h"
 DECLARE_DEMOACTION( DEMO_ACTION_TEXTMESSAGE_START, CDemoActionTextMessageStart );
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -531,7 +518,7 @@ void CDemoActionCDTrackStart::FireAction( void )
 // Purpose: 
 // Input  : buf - 
 //-----------------------------------------------------------------------------
-void CDemoActionCDTrackStart::SaveKeysToBuffer( int depth, CUtlBuffer& buf )
+void CDemoActionCDTrackStart::SaveKeysToBuffer( int depth, ks::text_writer& buf )
 {
 	BaseClass::SaveKeysToBuffer( depth, buf );
 
@@ -539,9 +526,7 @@ void CDemoActionCDTrackStart::SaveKeysToBuffer( int depth, CUtlBuffer& buf )
 		GetTrack() );
 }
 
-#include "tier0/memdbgoff.h"
 DECLARE_DEMOACTION( DEMO_ACTION_PLAYCDTRACK_START, CDemoActionCDTrackStart );
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -551,9 +536,7 @@ void CDemoActionCDTrackStop::FireAction( void )
 	SetFinishedAction( true );
 }
 
-#include "tier0/memdbgoff.h"
 DECLARE_DEMOACTION( DEMO_ACTION_PLAYCDTRACK_STOP, CDemoActionCDTrackStop );
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -623,16 +606,14 @@ void CDemoActionPlaySoundStart::FireAction( void )
 // Purpose: 
 // Input  : buf - 
 //-----------------------------------------------------------------------------
-void CDemoActionPlaySoundStart::SaveKeysToBuffer( int depth, CUtlBuffer& buf )
+void CDemoActionPlaySoundStart::SaveKeysToBuffer( int depth, ks::text_writer& buf )
 {
 	BaseClass::SaveKeysToBuffer( depth, buf );
 
 	BufPrintf( depth, buf, "sound \"%s\"\n", GetSoundName() );
 }
 
-#include "tier0/memdbgoff.h"
 DECLARE_DEMOACTION( DEMO_ACTION_PLAYSOUND_START, CDemoActionPlaySoundStart );
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -687,7 +668,7 @@ bool CBaseDemoActionWithStopTime::Init( KeyValues *pInitData )
 // Purpose: 
 // Input  : buf - 
 //-----------------------------------------------------------------------------
-void CBaseDemoActionWithStopTime::SaveKeysToBuffer( int depth, CUtlBuffer& buf )
+void CBaseDemoActionWithStopTime::SaveKeysToBuffer( int depth, ks::text_writer& buf )
 {
 	BaseClass::SaveKeysToBuffer( depth, buf );
 
@@ -754,7 +735,7 @@ bool CDemoActionChangePlaybackRate::Init( KeyValues *pInitData )
 // Purpose: 
 // Input  : buf - 
 //-----------------------------------------------------------------------------
-void CDemoActionChangePlaybackRate::SaveKeysToBuffer( int depth, CUtlBuffer& buf )
+void CDemoActionChangePlaybackRate::SaveKeysToBuffer( int depth, ks::text_writer& buf )
 {
 	BaseClass::SaveKeysToBuffer( depth, buf );
 
@@ -797,9 +778,7 @@ void CDemoActionChangePlaybackRate::OnActionFinished( void )
 	// demo->SetPlaybackRateModifier( m_flSavePlaybackRate );
 }
 
-#include "tier0/memdbgoff.h"
 DECLARE_DEMOACTION( DEMO_ACTION_CHANGEPLAYBACKRATE, CDemoActionChangePlaybackRate );
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -828,7 +807,7 @@ bool CDemoActionPausePlayback::Init( KeyValues *pInitData )
 // Purpose: 
 // Input  : buf - 
 //-----------------------------------------------------------------------------
-void CDemoActionPausePlayback::SaveKeysToBuffer( int depth, CUtlBuffer& buf )
+void CDemoActionPausePlayback::SaveKeysToBuffer( int depth, ks::text_writer& buf )
 {
 	BaseClass::SaveKeysToBuffer( depth, buf );
 
@@ -862,9 +841,7 @@ void CDemoActionPausePlayback::FireAction( void )
 	SetActionFired( true );
 }
 
-#include "tier0/memdbgoff.h"
 DECLARE_DEMOACTION( DEMO_ACTION_PAUSE, CDemoActionPausePlayback );
-#include "tier0/memdbgon.h"
 
 extern float	scr_demo_override_fov;
 extern float	host_time;
@@ -985,7 +962,7 @@ void CDemoActionZoom::FireAction( void )
 	m_flFOVStartTime = host_time;
 }
 
-void CDemoActionZoom::SaveKeysToBuffer( int depth, CUtlBuffer& buf )
+void CDemoActionZoom::SaveKeysToBuffer( int depth, ks::text_writer& buf )
 {
 	BaseClass::SaveKeysToBuffer( depth, buf );
 
@@ -1004,6 +981,4 @@ void CDemoActionZoom::SaveKeysToBuffer( int depth, CUtlBuffer& buf )
 		m_flHoldTime );
 }
 
-#include "tier0/memdbgoff.h"
 DECLARE_DEMOACTION( DEMO_ACTION_ZOOM, CDemoActionZoom );
-#include "tier0/memdbgon.h"

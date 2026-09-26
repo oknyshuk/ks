@@ -31,9 +31,6 @@
 
 #endif
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 IMPLEMENT_NETWORKCLASS_ALIASED( SmokeGrenade, DT_SmokeGrenade )
 
 IMPLEMENT_REFLECT_TABLE( CSmokeGrenade, DT_SmokeGrenade );

@@ -12,9 +12,6 @@
 #include "sys.h"
 #include "common.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -50,7 +47,7 @@ public:
 
 private:
 	int							m_nNumFuncs[ NUM_LISTS ];
-	CUtlVector < InitFunc * >	m_Funcs[ NUM_LISTS ];
+	std::vector< InitFunc * >	m_Funcs[ NUM_LISTS ];
 };
 
 static CInitTracker g_InitTracker;
@@ -83,7 +80,7 @@ CInitTracker::~CInitTracker( void )
 			}
 			delete f;
 		}
-		m_Funcs[ l ].RemoveAll();
+		m_Funcs[ l ].clear();
 		m_nNumFuncs[ l ] = 0;
 	}
 }
@@ -105,7 +102,7 @@ void CInitTracker::Init( const char *init, const char *shutdown, int listnum )
 	f->inittime			= 0.0; //Sys_FloatTime();
 	f->shutdowntime		= 0.0;
 
-	m_Funcs[ listnum ].AddToHead( f );
+	m_Funcs[ listnum ].insert( m_Funcs[ listnum ].begin(), f );
 	m_nNumFuncs[ listnum ]++;
 }
 

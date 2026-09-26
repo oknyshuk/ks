@@ -21,9 +21,6 @@
 #include "steam/steamclientpublic.h"
 #endif
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
 // Input  : pchSteamID -		text representation of a Steam ID

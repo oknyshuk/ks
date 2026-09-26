@@ -12,9 +12,6 @@
 #include "reflect_annotations.h"
 #include "spotlightend.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 LINK_ENTITY_TO_CLASS(spotlight_end, CSpotlightEnd);
 
 IMPLEMENT_REFLECT_SERVERCLASS( CSpotlightEnd, DT_SpotlightEnd )

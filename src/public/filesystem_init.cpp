@@ -17,12 +17,9 @@
 #include "tier0/stacktools.h"
 #include "keyvalues.h"
 #include "appframework/IAppSystemGroup.h"
-#include "tier1/smartptr.h"
+#include <memory>
 
 #include "tier2/tier2.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include <tier0/memdbgon.h>
 
 #define GAMEINFO_FILENAME			"gameinfo.txt"
 #define GAMEINFO_FILENAME_ALTERNATE	"gameinfo.txt"
@@ -55,8 +52,8 @@ public:
 		if ( pValue )
 		{
 			m_bExisted = true;
-			m_OriginalValue.SetSize( strlen( pValue ) + 1 );
-			memcpy( m_OriginalValue.Base(), pValue, m_OriginalValue.Count() );
+			m_OriginalValue.assign( strlen( pValue ) + 1, {} );
+			memcpy( m_OriginalValue.data(), pValue, std::ssize( m_OriginalValue ) );
 		}
 		else
 		{
@@ -71,7 +68,7 @@ public:
 			// Restore the original value.
 			if ( m_bExisted )
 			{
-				SetValue( "%s", m_OriginalValue.Base() );
+				SetValue( "%s", m_OriginalValue.data() );
 			}
 			else
 			{
@@ -122,7 +119,7 @@ private:
 	bool m_bRestoreOriginalValue;
 	const char *m_pVarName;
 	bool m_bExisted;
-	CUtlVector<char> m_OriginalValue;
+	std::vector< char > m_OriginalValue;
 };
 
 
@@ -248,16 +245,16 @@ KeyValues* ReadKeyValuesFile( const char *pFilename )
 	FILE *fp = fopen( pFilename, "rb" );
 	if ( !fp )
 		return nullptr;
-	CUtlVector<char> buf;
+	std::vector< char > buf;
 	fseek( fp, 0, SEEK_END );
-	buf.SetSize( ftell( fp ) + 1 );
+	buf.assign( ftell( fp ) + 1, {} );
 	fseek( fp, 0, SEEK_SET );
-	fread( buf.Base(), 1, buf.Count()-1, fp );
+	fread( buf.data(), 1, std::ssize( buf )-1, fp );
 	fclose( fp );
-	buf[buf.Count()-1] = 0;
+	buf[std::ssize( buf )-1] = 0;
 
 	KeyValues *kv = new KeyValues( "" );
-	if ( !kv->LoadFromBuffer( pFilename, buf.Base() ) )
+	if ( !kv->LoadFromBuffer( pFilename, buf.data() ) )
 	{
 		kv->deleteThis();
 		return nullptr;
@@ -723,12 +720,12 @@ SuggestGameInfoDirFn_t SetSuggestGameInfoDirFn( SuggestGameInfoDirFn_t pfnNewFn 
 static FSReturnCode_t TryLocateGameInfoFile( char *pOutDir, int outDirLen, bool bBubbleDir )
 {
 	// Retain a copy of suggested path for further attempts
-	CArrayAutoPtr < char > spchCopyNameBuffer( new char [ outDirLen ] );
-	Q_strncpy( spchCopyNameBuffer.Get(), pOutDir, outDirLen );
+	std::unique_ptr< char[] > spchCopyNameBuffer( new char [ outDirLen ] );
+	Q_strncpy( spchCopyNameBuffer.get(), pOutDir, outDirLen );
 	spchCopyNameBuffer[ outDirLen - 1 ] = 0;
 
 	// Make appropriate slashes ('/' - Linux style)
-	for ( char *pchFix = spchCopyNameBuffer.Get(),
+	for ( char *pchFix = spchCopyNameBuffer.get(),
 		*pchEnd = pchFix + outDirLen;
 		pchFix < pchEnd; ++ pchFix )
 	{
@@ -749,7 +746,7 @@ static FSReturnCode_t TryLocateGameInfoFile( char *pOutDir, int outDirLen, bool 
 	while ( bBubbleDir && Q_StripLastDir( pOutDir, outDirLen ) );
 
 	// Make an attempt to resolve from "content -> game" directory
-	Q_strncpy( pOutDir, spchCopyNameBuffer.Get(), outDirLen );
+	Q_strncpy( pOutDir, spchCopyNameBuffer.get(), outDirLen );
 	pOutDir[ outDirLen - 1 ] = 0;
 	if ( char *pchContentFix = Q_stristr( pOutDir, "/content/" ) )
 	{

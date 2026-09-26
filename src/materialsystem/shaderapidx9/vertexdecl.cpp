@@ -12,16 +12,13 @@
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "shaderapidx8_global.h"
 #include "tier0/dbg.h"
-#include "utlrbtree.h"
+#include <set>
 #include "recording.h"
 #include "tier1/strtools.h"
 #include "tier0/vprof.h"
 #include "materialsystem/imesh.h"
 #include "shaderdevicedx8.h"
 #include "convar.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Computes the DX8 vertex specification
@@ -747,15 +744,18 @@ struct VertexDeclLookup_t
 // FIXME: stick this in the class?
 // FIXME: Does anything cause this to get flushed?
 //-----------------------------------------------------------------------------
-static bool VertexDeclLessFunc( const VertexDeclLookup_t &src1, const VertexDeclLookup_t &src2 )
+struct VertexDeclLess
 {
-	if ( src1.m_nFlags == src2.m_nFlags )
-		return src1.m_VertexFormat < src2.m_VertexFormat;
+	bool operator()( const VertexDeclLookup_t &src1, const VertexDeclLookup_t &src2 ) const
+	{
+		if ( src1.m_nFlags == src2.m_nFlags )
+			return src1.m_VertexFormat < src2.m_VertexFormat;
 
-	return ( src1.m_nFlags < src2.m_nFlags );
-}
+		return ( src1.m_nFlags < src2.m_nFlags );
+	}
+};
 
-static CUtlRBTree<VertexDeclLookup_t, int> s_VertexDeclDict( 0, 256, VertexDeclLessFunc );
+static std::set<VertexDeclLookup_t, VertexDeclLess> s_VertexDeclDict;
 
 //-----------------------------------------------------------------------------
 // Gets the declspec associated with a vertex format
@@ -794,11 +794,11 @@ IDirect3DVertexDeclaration9 *FindOrCreateVertexDecl( VertexFormat_t fmt, bool bS
 		lookup.m_nFlags |= VertexDeclLookup_t::USING_PRE_TESS_PATCHES;
 	}
 
-	int i = s_VertexDeclDict.Find( lookup );
-	if ( i != s_VertexDeclDict.InvalidIndex() )
+	auto it = s_VertexDeclDict.find( lookup );
+	if ( it != s_VertexDeclDict.end() )
 	{
 		// found
-		return s_VertexDeclDict[i].m_pDecl;
+		return it->m_pDecl;
 	}
 
 	D3DVERTEXELEMENT9 decl[32];
@@ -819,7 +819,7 @@ IDirect3DVertexDeclaration9 *FindOrCreateVertexDecl( VertexFormat_t fmt, bool bS
 		Warning( " ERROR: failed to create vertex decl for vertex format %x! You'll probably see messed-up mesh rendering - to diagnose, build shaderapidx9.dll in debug.\n", (int)fmt );
 	}
 
-	s_VertexDeclDict.Insert( lookup );
+	s_VertexDeclDict.insert( lookup );
 	return lookup.m_pDecl;
 }
 
@@ -829,10 +829,8 @@ IDirect3DVertexDeclaration9 *FindOrCreateVertexDecl( VertexFormat_t fmt, bool bS
 //-----------------------------------------------------------------------------
 void ReleaseAllVertexDecl()
 {
-	int i = s_VertexDeclDict.FirstInorder();
-	while ( i != s_VertexDeclDict.InvalidIndex() )
+	for ( const VertexDeclLookup_t &lookup : s_VertexDeclDict )
 	{
-		s_VertexDeclDict[i].m_pDecl->Release();
-		i = s_VertexDeclDict.NextInorder( i );
+		lookup.m_pDecl->Release();
 	}
 }

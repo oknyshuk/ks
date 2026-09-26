@@ -8,9 +8,6 @@
 #include <tier2/tier2.h>
 #include <filesystem_init.h>
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 static CSysModule *g_pFullFileSystemModule = nullptr;
 

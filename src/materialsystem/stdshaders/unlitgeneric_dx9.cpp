@@ -11,9 +11,6 @@
 
 #include "shaderapifast.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 BEGIN_VS_SHADER( UnlitGeneric, "Help for UnlitGeneric" )
 	BEGIN_SHADER_PARAMS

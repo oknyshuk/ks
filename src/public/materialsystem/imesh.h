@@ -10,6 +10,7 @@
 
 #include "tier1/interface.h"
 #include "materialsystem/imaterial.h"
+#include <atomic>
 #include <float.h>
 #include <string.h>
 #include "tier0/dbg.h"
@@ -2715,8 +2716,8 @@ inline unsigned short *CIndexBuilder::BaseIndexData() const
 inline unsigned short * CIndexBuilder::IndexBuffer_InterlockedAdd(int numberOfIndices)
 {
 	Assert( m_nCurrentIndex + numberOfIndices < m_nMaxIndexCount );
-	int oldValue = ThreadInterlockedExchangeAdd(&m_nCurrentIndex, numberOfIndices);
-	// ThreadInterlockedExchangeAdd() returns the result *before* the addition
+	int oldValue = std::atomic_ref<int>( m_nCurrentIndex ).fetch_add( numberOfIndices );
+	// fetch_add() returns the result *before* the addition
 	return &m_pIndices[oldValue];
 }
 
@@ -2905,7 +2906,7 @@ inline void CIndexBuilder::GenerateIndices( MaterialPrimitiveType_t primitiveTyp
 		return;
 
 	int nMaxIndices = m_nMaxIndexCount - m_nCurrentIndex;
-	nIndexCount = MIN( nMaxIndices, nIndexCount );
+	nIndexCount = std::min( nMaxIndices, nIndexCount );
 	if ( nIndexCount == 0 )
 		return;
 

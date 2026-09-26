@@ -8,9 +8,7 @@
 #include "tier0/platform.h"
 #include "dt_instrumentation.h"
 #include "utlvector.h"
-#include "utllinkedlist.h"
 #include "tier0/fasttimer.h"
-#include "utllinkedlist.h"
 #include "tier0/dbg.h"
 #include "tier1/utlstring.h"
 #include "dt_recv_decoder.h"
@@ -21,9 +19,8 @@
 #include "client.h"
 #include "common.h"
 #include <time.h>
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include <memory>
+#include <vector>
 
 bool g_bDTIEnabled = false;
 const char *g_pDTIFilename;
@@ -37,7 +34,7 @@ public:
 		m_nDecodes = m_nDataBits = m_nIndexBits = 0;
 	}
 
-	CUtlString m_Name;
+	std::string m_Name;
 	int m_nDecodes;
 	int m_nDataBits;
 	int m_nIndexBits;
@@ -53,13 +50,13 @@ public:
 		m_bSawAction = false;
 	}
 
-	CUtlString m_Name;
-	CUtlVector<CDTIProp> m_Props;
+	std::string m_Name;
+	std::vector< CDTIProp > m_Props;
 	bool m_bSawAction;
 };
 
 
-CUtlLinkedList<CDTIRecvTable*, int> g_DTIRecvTables;
+std::vector< std::unique_ptr< CDTIRecvTable > > g_DTIRecvTables;
 
 
 void DTI_Init()
@@ -73,7 +70,7 @@ void DTI_Term()
 	if ( g_bDTIEnabled )
 	{
 		DTI_Flush();
-		g_DTIRecvTables.PurgeAndDeleteElements();
+		g_DTIRecvTables.clear();
 		delete g_pDTIFilename;
 		g_pDTIFilename = nullptr;
 		g_bDTIEnabled = false;
@@ -104,14 +101,13 @@ void DTI_Flush()
 	
 		int row = 2;
 
-		FOR_EACH_LL( g_DTIRecvTables, iTable )
+		for ( auto &pTable : g_DTIRecvTables )
 		{
-			CDTIRecvTable *pTable = g_DTIRecvTables[iTable];
 			
 			if ( !pTable->m_bSawAction )
 				continue;
 			
-			for ( int iProp=0; iProp < pTable->m_Props.Count(); iProp++ )
+			for ( int iProp=0; iProp < std::ssize( pTable->m_Props ); iProp++ )
 			{
 				CDTIProp *pProp = &pTable->m_Props[iProp];
 
@@ -139,8 +135,8 @@ void DTI_Flush()
 					"\n",
 					
 					// Class/Prop names
-					pTable->m_Name.String(),
-					pProp->m_Name.String(),
+					pTable->m_Name.c_str(),
+					pProp->m_Name.c_str(),
 
 					// Decode count
 					pProp->m_nDecodes,
@@ -175,15 +171,15 @@ void DTI_HookRecvDecoder( CRecvDecoder *pDecoder )
 	bool dtiEnabled = CommandLine()->FindParm("-dti" ) > 0;
 
 	CDTIRecvTable *pTable = new CDTIRecvTable;
-	pTable->m_Name.Set( pDecoder->GetName() );
+	pTable->m_Name.assign( ks::nz( pDecoder->GetName() ) );
 	
-	pTable->m_Props.SetSize( pDecoder->GetNumProps() );
-	for ( int i=0; i < pTable->m_Props.Count(); i++ )
+	pTable->m_Props.assign( pDecoder->GetNumProps(), {} );
+	for ( int i=0; i < std::ssize( pTable->m_Props ); i++ )
 	{
 		const SendProp *pSendProp = pDecoder->GetSendProp( i );
 		if ( !dtiEnabled )
 		{
-			pTable->m_Props[i].m_Name.Set( pSendProp->GetName() );
+			pTable->m_Props[i].m_Name.assign( ks::nz( pSendProp->GetName() ) );
 		}
 		else
 		{
@@ -192,16 +188,16 @@ void DTI_HookRecvDecoder( CRecvDecoder *pDecoder )
 			{
 				char temp[256];
 				V_snprintf( temp, sizeof( temp ), "%s:%s", parentArrayPropName, pSendProp->GetName() );
-				pTable->m_Props[i].m_Name.Set( temp );
+				pTable->m_Props[i].m_Name.assign( ks::nz( temp ) );
 			}
 			else
 			{
-				pTable->m_Props[i].m_Name.Set( pSendProp->GetName() );
+				pTable->m_Props[i].m_Name.assign( ks::nz( pSendProp->GetName() ) );
 			}
 		}
 	}
 	
-	g_DTIRecvTables.AddToTail( pTable );
+	g_DTIRecvTables.emplace_back( pTable );
 
 	pDecoder->m_pDTITable = pTable;
 }

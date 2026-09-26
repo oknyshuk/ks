@@ -27,7 +27,7 @@ void CParticleProperty::SetControlPointParent( CNewParticleEffect *pEffect, int 
 /// Given an index, return a pointer to the relevant particle effect structure. For convenience.
 CNewParticleEffect *CParticleProperty::GetParticleEffectFromIdx( int idx )
 {
-	return m_ParticleEffects[idx].pParticleEffect.GetObject();
+	return m_ParticleEffects[idx].pParticleEffect.get();
 }
 
 

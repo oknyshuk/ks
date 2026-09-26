@@ -11,9 +11,6 @@
 #include "reflect_annotations.h"
 #include "basetempentity.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern int	g_sModelIndexBubbles;// holds the index for the bubbles model
 
 enum
@@ -128,7 +125,7 @@ void TE_BubbleTrail( IRecipientFilter& filter, float delay,
 	g_TEBubbleTrail.m_vecMaxs = *maxs;
 	g_TEBubbleTrail.m_flWaterZ = flWaterZ;
 	g_TEBubbleTrail.m_nModelIndex = modelindex;
-	g_TEBubbleTrail.m_nCount = MIN( count, ( int ) BUBBLE_TRAIL_MAX_COUNT );
+	g_TEBubbleTrail.m_nCount = std::min( count, ( int ) BUBBLE_TRAIL_MAX_COUNT );
 	g_TEBubbleTrail.m_fSpeed = speed;
 
 	// Send it over the wire

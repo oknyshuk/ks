@@ -9,9 +9,6 @@
 #include "te.h"
 #include "effect_dispatch_data.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // External definitions
 void TE_ArmorRicochet( IRecipientFilter& filter, float delay,
 	const Vector* pos, const Vector* dir );

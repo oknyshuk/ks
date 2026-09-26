@@ -20,7 +20,7 @@
 #include "sv_filter.h"
 #include "sys.h"
 #include "tier0/tslist.h"
-#include "tier1/mempool.h"
+#include "tier1/fixed_pool.h"
 #include "../utils/bzip2/bzlib.h"
 
 

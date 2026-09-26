@@ -42,10 +42,6 @@ extern ConVar cl_hideserverip;
 
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
-#pragma warning( disable: 4355 ) // disables ' 'this' : used in base member initializer list'
 
 ConVar sv_master_share_game_socket( "sv_master_share_game_socket", "1", 0, 
 	"Use the game's socket to communicate to the master server. "
@@ -341,8 +337,8 @@ bool CSteam3Server::NotifyClientConnect( CBaseClient *client, uint32 unUserID, c
 		return false;
 
 	// steamID is prepended to the ticket
-	CUtlBuffer buffer( pvCookie, ucbCookie, CUtlBuffer::READ_ONLY );
-	uint64 ulSteamID = LittleQWord( buffer.GetInt64() );
+	ks::byte_reader buffer( pvCookie, ucbCookie );
+	uint64 ulSteamID = LittleQWord( buffer.read<int64>() );
 
 	CSteamID steamID( ulSteamID );
 	// skip the steamID

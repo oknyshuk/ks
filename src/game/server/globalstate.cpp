@@ -11,16 +11,15 @@
 #include "basetypes.h"
 #include "globalstate.h"
 #include "igamesystem.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier1/intern_pool.h"
 
 struct globalentity_t
 {
 	DECLARE_SIMPLE_DATADESC();
 
-	CUtlSymbol	name;
-	CUtlSymbol	levelName;
+	// Views into CGlobalState::m_nameList.
+	std::string_view	name;
+	std::string_view	levelName;
 	GLOBALESTATE	state;
 	int				counter;
 };
@@ -54,69 +53,70 @@ public:
 
 	void SetState( int globalIndex, GLOBALESTATE state )
 	{
-		if ( m_disableStateUpdates || !m_list.IsValidIndex(globalIndex) )
+		if ( m_disableStateUpdates || !ks::is_valid_index( m_list, globalIndex ) )
 			return;
 		m_list[globalIndex].state = state;
 	}
 
 	GLOBALESTATE GetState( int globalIndex )
 	{
-		if ( !m_list.IsValidIndex(globalIndex) )
+		if ( !ks::is_valid_index( m_list, globalIndex ) )
 			return GLOBAL_OFF;
 		return m_list[globalIndex].state;
 	}
 
 	void SetCounter( int globalIndex, int counter )
 	{
-		if ( m_disableStateUpdates || !m_list.IsValidIndex(globalIndex) )
+		if ( m_disableStateUpdates || !ks::is_valid_index( m_list, globalIndex ) )
 			return;
 		m_list[globalIndex].counter = counter;
 	}
 
 	int AddToCounter( int globalIndex, int delta )
 	{
-		if ( m_disableStateUpdates || !m_list.IsValidIndex(globalIndex) )
+		if ( m_disableStateUpdates || !ks::is_valid_index( m_list, globalIndex ) )
 			return 0;
 		return ( m_list[globalIndex].counter += delta );
 	}
 
 	int GetCounter( int globalIndex )
 	{
-		if ( !m_list.IsValidIndex(globalIndex) )
+		if ( !ks::is_valid_index( m_list, globalIndex ) )
 			return 0;
 		return m_list[globalIndex].counter;
 	}
 
 	void SetMap( int globalIndex, string_t mapname )
 	{
-		if ( !m_list.IsValidIndex(globalIndex) )
+		if ( !ks::is_valid_index( m_list, globalIndex ) )
 			return;
-		m_list[globalIndex].levelName = m_nameList.AddString( STRING(mapname) );
+		m_list[globalIndex].levelName = m_nameList.intern( STRING(mapname) );
 	}
 
 	const char *GetMap( int globalIndex )
 	{
-		if ( !m_list.IsValidIndex(globalIndex) )
+		if ( !ks::is_valid_index( m_list, globalIndex ) )
 			return nullptr;
-		return m_nameList.String( m_list[globalIndex].levelName );
+		return m_list[globalIndex].levelName.data();
 	}
 
 	const char *GetName( int globalIndex )
 	{
-		if ( !m_list.IsValidIndex(globalIndex) )
+		if ( !ks::is_valid_index( m_list, globalIndex ) )
 			return nullptr;
-		return m_nameList.String( m_list[globalIndex].name );
+		return m_list[globalIndex].name.data();
 	}
 
 	int GetIndex( const char *pGlobalname )
 	{
-		CUtlSymbol symName = m_nameList.Find( pGlobalname );
+		std::string_view symName = m_nameList.find( pGlobalname );
 
-		if ( symName.IsValid() )
+		if ( symName.data() )
 		{
-			for ( int i = m_list.Count() - 1; i >= 0; --i )
+			for ( int i = std::ssize( m_list ) - 1; i >= 0; --i )
 			{
-				if ( m_list[i].name == symName )
+				// Same pool, so identity is equality.
+				if ( m_list[i].name.data() == symName.data() )
 					return i;
 			}
 		}
@@ -127,19 +127,19 @@ public:
 	int AddEntity( const char *pGlobalname, const char *pMapName, GLOBALESTATE state )
 	{
 		globalentity_t entity;
-		entity.name = m_nameList.AddString( pGlobalname );
-		entity.levelName = m_nameList.AddString( pMapName );
+		entity.name = m_nameList.intern( pGlobalname );
+		entity.levelName = m_nameList.intern( pMapName );
 		entity.state = state;
 
-		int index = GetIndex( m_nameList.String( entity.name ) );
+		int index = GetIndex( entity.name.data() );
 		if ( index >= 0 )
 			return index;
-		return m_list.AddToTail( entity );
+		m_list.push_back( entity ); return (int)std::ssize( m_list ) - 1;
 	}
 
 	int GetNumGlobals( void )
 	{
-		return m_list.Count();
+		return std::ssize( m_list );
 	}
 
 	void			Reset( void );
@@ -150,10 +150,10 @@ public:
 //#endif
 
 public:
-	CUtlSymbolTable	m_nameList;
+	ks::intern_pool	m_nameList;
 private:
 	bool			m_disableStateUpdates;
-	CUtlVector<globalentity_t> m_list;
+	std::vector< globalentity_t > m_list;
 };
 
 static CGlobalState gGlobalState( "CGlobalState" );
@@ -260,9 +260,9 @@ void CGlobalState::DumpGlobals( void )
 	static const char *estates[] = { "Off", "On", "Dead" };
 
 	Msg( "-- Globals --\n" );
-	for ( int i = 0; i < m_list.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_list ); i++ )
 	{
-		Msg( "%s: %s (%s) = %d\n", m_nameList.String( m_list[i].name ), m_nameList.String( m_list[i].levelName ), estates[m_list[i].state], m_list[i].counter );
+		Msg( "%s: %s (%s) = %d\n", m_list[i].name.data(), m_list[i].levelName.data(), estates[m_list[i].state], m_list[i].counter );
 	}
 }
 //#endif
@@ -275,8 +275,8 @@ IMPLEMENT_REFLECT_DATAMAP_SIMPLE( globalentity_t )
 
 void CGlobalState::Reset( void )
 {
-	m_list.Purge();
-	m_nameList.RemoveAll();
+	m_list.clear(); m_list.shrink_to_fit();
+	m_nameList.clear();
 }
 
 

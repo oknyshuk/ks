@@ -9,9 +9,6 @@
 #include "reflect_datamap.h"
 #include "cs_nav_mesh.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 const char* g_pszPostActivateSetupThink = "PostActivateSetupThink";
 
 class CPointHidingSpot : public CServerOnlyPointEntity
@@ -61,10 +58,9 @@ void CPointHidingSpot::UpdateOnRemove()
 	if ( m_pNavArea && m_pSpot )
 	{
 		m_pNavArea->RemoveHidingSpot( m_pSpot );
-		bool bSuccess = TheHidingSpots.FindAndRemove( m_pSpot );
+		bool bSuccess = DestroyHidingSpot( m_pSpot );
 		Assert( bSuccess );
 		NOTE_UNUSED( bSuccess );
-		delete m_pSpot;
 	}
 	BaseClass::UpdateOnRemove();
 }

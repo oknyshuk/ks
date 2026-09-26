@@ -14,6 +14,7 @@
 
 #include "nav_ladder.h"
 #include "tier1/memstack.h"
+#include <vector>
 
 // BOTPORT: Clean up relationship between team index and danger storage in nav areas
 enum { MAX_NAV_TEAMS = 2 };
@@ -38,7 +39,6 @@ private:
 	static int m_nBytesCurrent;
 };
 
-typedef CUtlVectorUltraConservativeAllocator CNavVectorAllocator;
 
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -79,7 +79,7 @@ struct NavConnect
 	}
 };
 
-typedef CUtlVectorUltraConservative<NavConnect, CNavVectorAllocator> NavConnectVector;
+typedef std::vector< NavConnect > NavConnectVector;
 
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -96,7 +96,7 @@ union NavLadderConnect
 		return (ladder == other.ladder) ? true : false;
 	}
 };
-typedef CUtlVectorUltraConservative<NavLadderConnect, CNavVectorAllocator> NavLadderConnectVector;
+typedef std::vector< NavLadderConnect > NavLadderConnectVector;
 
 
 //--------------------------------------------------------------------------------------------------------------
@@ -122,8 +122,8 @@ public:
 
 	int GetFlags( void ) const		{ return m_flags; }
 
-	void Save( CUtlBuffer &fileBuffer, unsigned int version ) const;
-	void Load( CUtlBuffer &fileBuffer, unsigned int version );
+	void Save( ks::byte_writer &fileBuffer, unsigned int version ) const;
+	void Load( ks::byte_reader &fileBuffer, unsigned int version );
 	NavErrorType PostLoad( void );
 
 	const Vector &GetPosition( void ) const		{ return m_pos; }	// get the position of the hiding spot
@@ -159,8 +159,9 @@ private:
 	static unsigned int m_nextID;							// used when allocating spot ID's
 	static unsigned int m_masterMarker;						// used to mark spots
 };
-typedef CUtlVectorUltraConservative< HidingSpot * > HidingSpotVector;
-extern HidingSpotVector TheHidingSpots;
+typedef std::vector< HidingSpot * > HidingSpotVector;
+extern std::vector< std::unique_ptr< HidingSpot > > TheHidingSpots;	// owns every spot; areas only observe
+bool DestroyHidingSpot( HidingSpot *spot );	// the one way to delete a spot
 
 extern HidingSpot *GetHidingSpotByID( unsigned int id );
 
@@ -178,7 +179,7 @@ struct SpotOrder
 		unsigned int id;			// spot ID for save/load
 	};
 };
-typedef CUtlVector< SpotOrder > SpotOrderVector;
+typedef std::vector< SpotOrder > SpotOrderVector;
 
 /**
  * This struct stores possible path segments thru a CNavArea, and the dangerous spots
@@ -193,7 +194,7 @@ struct SpotEncounter
 	Ray path;									// the path segment
 	SpotOrderVector spots;						// list of spots to look at, in order of occurrence
 };
-typedef CUtlVectorUltraConservative< SpotEncounter * > SpotEncounterVector;
+typedef std::vector< std::unique_ptr< SpotEncounter > > SpotEncounterVector;
 
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -269,8 +270,8 @@ public:
 	virtual void OnEditDestroyNotify( CNavArea *deadArea ) { }		// invoked when given area has just been deleted from the mesh in edit mode
 	virtual void OnEditDestroyNotify( CNavLadder *deadLadder ) { }	// invoked when given ladder has just been deleted from the mesh in edit mode
 
-	virtual void Save( CUtlBuffer &fileBuffer, unsigned int version ) const;	// (EXTEND)
-	virtual NavErrorType Load( CUtlBuffer &fileBuffer, unsigned int version, unsigned int subVersion );		// (EXTEND)
+	virtual void Save( ks::byte_writer &fileBuffer, unsigned int version ) const;	// (EXTEND)
+	virtual NavErrorType Load( ks::byte_reader &fileBuffer, unsigned int version, unsigned int subVersion );		// (EXTEND)
 	virtual NavErrorType PostLoad( void );								// (EXTEND) invoked after all areas have been loaded - for pointer binding, etc
 
 	virtual void SaveToSelectedSet( KeyValues *areaKey ) const;		// (EXTEND) saves attributes for the area to a KeyValues
@@ -332,7 +333,7 @@ public:
 	bool IsRoughlySquare( void ) const;							// return true if this area is approximately square
 	bool IsFlat( void ) const;									// return true if this area is approximately flat
 	bool HasNodes( void ) const;
-	void GetNodes( NavDirType dir, CUtlVector< CNavNode * > *nodes ) const;	// build a vector of nodes along the given direction
+	void GetNodes( NavDirType dir, std::vector< CNavNode * > *nodes ) const;	// build a vector of nodes along the given direction
 	CNavNode *FindClosestNode( const Vector &pos, NavDirType dir ) const;	// returns the closest node along the given edge to the given point
 
 	bool IsContiguous( const CNavArea *other ) const;			// return true if the given area and 'other' share a colinear edge (ie: no drop-down or step/jump/climb)
@@ -345,7 +346,7 @@ public:
 
 	bool IsVisible( const Vector &eye, Vector *visSpot = nullptr ) const;	// return true if area is visible from the given eyepoint, return visible spot
 
-	int GetAdjacentCount( NavDirType dir ) const	{ return m_connect[ dir ].Count(); }	// return number of connected areas in given direction
+	int GetAdjacentCount( NavDirType dir ) const	{ return std::ssize( m_connect[ dir ] ); }	// return number of connected areas in given direction
 	CNavArea *GetAdjacentArea( NavDirType dir, int i ) const;	// return the i'th adjacent area in the given direction
 	CNavArea *GetRandomAdjacentArea( NavDirType dir ) const;
 
@@ -375,7 +376,7 @@ public:
 	unsigned char GetSavedHidingSpotCount( void ) const;
 
 	SpotEncounter *GetSpotEncounter( const CNavArea *from, const CNavArea *to );	// given the areas we are moving between, return the spots we will encounter
-	int GetSpotEncounterCount( void ) const				{ return m_spotEncounters.Count(); }
+	int GetSpotEncounterCount( void ) const				{ return std::ssize( m_spotEncounters ); }
 
 	//- "danger" ----------------------------------------------------------------------------------------
 	void IncreaseDanger( int teamID, float amount );			// increase the danger of this area for the given team
@@ -531,7 +532,7 @@ public:
 
 		++s_nCurrVisTestCounter;
 
-		for ( i=0; i<m_potentiallyVisibleAreas.Count(); ++i )
+		for ( i=0; i<std::ssize( m_potentiallyVisibleAreas ); ++i )
 		{
 			CNavArea *area = m_potentiallyVisibleAreas[i].area;
 			if ( !area )
@@ -554,7 +555,7 @@ public:
 
 		CAreaBindInfoArray &inherited = m_inheritVisibilityFrom.area->m_potentiallyVisibleAreas;
 
-		for ( i=0; i<inherited.Count(); ++i )
+		for ( i=0; i<std::ssize( inherited ); ++i )
 		{
 			if ( !inherited[i].area )
 				continue;
@@ -588,7 +589,7 @@ public:
 
 		++s_nCurrVisTestCounter;
 
-		for ( i=0; i<m_potentiallyVisibleAreas.Count(); ++i )
+		for ( i=0; i<std::ssize( m_potentiallyVisibleAreas ); ++i )
 		{
 			CNavArea *area = m_potentiallyVisibleAreas[i].area;
 			if ( !area )
@@ -611,7 +612,7 @@ public:
 		// for each inherited area
 		CAreaBindInfoArray &inherited = m_inheritVisibilityFrom.area->m_potentiallyVisibleAreas;
 
-		for ( i=0; i<inherited.Count(); ++i )
+		for ( i=0; i<std::ssize( inherited ); ++i )
 		{
 			if ( !inherited[i].area )
 				continue;
@@ -686,7 +687,7 @@ private:
 	float m_earliestOccupyTime[ MAX_NAV_TEAMS ];				// min time to reach this spot from spawn
 
 #ifdef DEBUG_AREA_PLAYERCOUNTS
-	CUtlVector< int > m_playerEntIndices[ MAX_NAV_TEAMS ];
+	std::vector< int > m_playerEntIndices[ MAX_NAV_TEAMS ];
 #endif
 
 	//- lighting ----------------------------------------------------------------------------------------
@@ -724,7 +725,7 @@ private:
 	void ResetPotentiallyVisibleAreas();
 	static void ComputeVisToArea( CNavArea *&pOtherArea );
 
-	typedef CUtlVectorConservative<AreaBindInfo> CAreaBindInfoArray; // shaves 8 bytes off structure caused by need to support editing
+	using CAreaBindInfoArray = std::vector<AreaBindInfo>;
 
 	AreaBindInfo m_inheritVisibilityFrom;						// if non-NULL, m_potentiallyVisibleAreas becomes a list of additions and deletions (NOT_VISIBLE) to the list of this area
 
@@ -737,7 +738,7 @@ private:
 	static uint32 s_nCurrVisTestCounter;
 };
 
-typedef CUtlVector< CNavArea * > NavAreaVector;
+typedef std::vector< CNavArea * > NavAreaVector;
 extern NavAreaVector TheNavAreas;
 
 
@@ -763,7 +764,7 @@ inline bool CNavArea::IsDegenerate( void ) const
 //--------------------------------------------------------------------------------------------------------------
 inline CNavArea *CNavArea::GetAdjacentArea( NavDirType dir, int i ) const
 {
-	for( int iter = 0; iter < m_connect[dir].Count(); ++iter )
+	for( int iter = 0; iter < std::ssize( m_connect[dir] ); ++iter )
 	{
 		if (i == 0)
 			return m_connect[dir][iter].area;

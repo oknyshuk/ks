@@ -26,6 +26,7 @@
 #include "platforminputdevice.h"
 #include "inputsystem/iinputsystem.h"
 #include "tier1/fmtstr.h"
+#include "tier1/bit_ops.h"
 
 
 // CS-PRO TEST CHANGE: instant movement inaccuracy, curve exponent x^0.25
@@ -65,9 +66,6 @@
 	extern IVModelInfo* modelinfo;
 
 #endif
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 
 extern ConVar crosshair;
@@ -615,7 +613,7 @@ void CWeaponCSBase::AddToPriorOwnerList( CCSPlayer* pPlayer )
 	if ( !IsAPriorOwner( pPlayer ) )
 	{
 		// Add player to prior owner list
-		m_PriorOwners.AddToTail( pPlayer );
+		m_PriorOwners.push_back( pPlayer );
 	}
 }
 
@@ -656,7 +654,7 @@ bool CWeaponCSBase::WasOwnedByTeam( int teamNumber )
 
 bool CWeaponCSBase::IsAPriorOwner( CCSPlayer* pPlayer ) const
 {
-	return ( m_PriorOwners.Find( pPlayer ) != -1 );
+	return ( ks::find_index( m_PriorOwners, pPlayer ) != -1 );
 }
 
 void CWeaponCSBase::SecondaryAttack( void )
@@ -846,7 +844,7 @@ void CWeaponCSBase::ItemPostFrame()
 	if ( ( m_bInReload ) && ( pPlayer->m_flNextAttack <= gpGlobals->curtime ))
 	{
 		// the AE_WPN_COMPLETE_RELOAD event should handle the stocking the clip, but in case it's missing, we can do it here as well
-		int j = MIN( GetMaxClip1() - m_iClip1, GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
+		int j = std::min( GetMaxClip1() - m_iClip1, GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
 		// Add them to the clip
 		m_iClip1 += j;
 		GiveReserveAmmo( AMMO_POSITION_PRIMARY, -j, true );
@@ -1537,7 +1535,7 @@ void CWeaponCSBase::RemoveUnownedWeaponThink()
 
 		// check if it's out of ammo, if so clean it up super quick
 		if ( m_iClip1 == 0  )
-			flTime = MIN( 5, flTime ) ;
+			flTime = std::min<std::common_type_t<int, float>>( 5, flTime ) ;
 
 		if ( flSpawnTime > 0 && (gpGlobals->curtime - flSpawnTime) < flTime )
 			return;
@@ -1859,7 +1857,7 @@ void CWeaponCSBase::DrawCrosshair()
  	if (fSpreadDistance > flMaxCrossDistance)
  	{
 // 		bHitMax = true;
-// 		//flLineAlpha = alpha * MAX(0, 1 - ((fSpreadDistance - flMaxCrossDistance) / 20));
+// 		//flLineAlpha = alpha * std::max(0, 1 - ((fSpreadDistance - flMaxCrossDistance) / 20));
  		flCappedSpreadDistance = flMaxCrossDistance;
  	}
 
@@ -1930,7 +1928,7 @@ void CWeaponCSBase::DrawCrosshair()
 
 	iCrosshairDistance = RoundFloatToInt((m_flCrosshairDistance * ScreenHeight() / 1200.0f) + cl_crosshairgap.GetFloat());
 	iBarSize = RoundFloatToInt( YRES( cl_crosshairsize.GetFloat() ));
-	iBarThickness = MAX( 1, RoundFloatToInt( YRES( cl_crosshairthickness.GetFloat() )) );
+	iBarThickness = std::max( 1, RoundFloatToInt( YRES( cl_crosshairthickness.GetFloat() )) );
 
 	//0 = default
 	//1 = default static
@@ -2085,7 +2083,7 @@ void CWeaponCSBase::DrawCrosshair()
 		g = 250;
 		b = 50;
 
-		int iBarThickness = MAX( 1, RoundFloatToInt( YRES( cl_crosshairthickness.GetFloat() )) );
+		int iBarThickness = std::max( 1, RoundFloatToInt( YRES( cl_crosshairthickness.GetFloat() )) );
 
 		// draw vertical spread lines
 		int iInnerLeft	= iCenterX - iSpreadDistance;
@@ -2212,7 +2210,7 @@ void CWeaponCSBase::ProcessMuzzleFlashEvent()
 
 int CWeaponCSBase::GetViewModelSplitScreenSlot( C_BaseViewModel *pViewModel )
 {
-	uint32 visBits = pViewModel->m_VisibilityBits.Get(0, 0xff);
+	uint32 visBits = ks::get_word( pViewModel->m_VisibilityBits, 0 ) & 0xff;
 	int nSlot = -1;
 
 	if ( visBits < 3 )
@@ -2328,7 +2326,7 @@ bool CWeaponCSBase::OnFireEvent( C_BaseViewModel *pViewModel, const Vector& orig
 			CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex );
 			if ( vm )
 			{
-				int iNextClip = MIN( GetMaxClip1(), m_iClip1 + GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
+				int iNextClip = std::min( GetMaxClip1(), m_iClip1 + GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
 				vm->SetPoseParameter( options, 1.0f - (((float)iNextClip) / ((float)GetMaxClip1())) );
 			}
 		}
@@ -2595,7 +2593,7 @@ void CWeaponCSBase::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCh
 
 			if ( pPlayer )
 			{
-				int j = MIN( GetMaxClip1() - m_iClip1, GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
+				int j = std::min( GetMaxClip1() - m_iClip1, GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
 
 				// Add them to the clip
 				m_iClip1 += j;
@@ -2661,7 +2659,7 @@ void CWeaponCSBase::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCh
 				CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex );
 				if ( vm )
 				{
-					int iNextClip = MIN( GetMaxClip1(), m_iClip1 + GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
+					int iNextClip = std::min( GetMaxClip1(), m_iClip1 + GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
 					int iNumBodygroupIndices = vm->GetNumBodyGroups();
 					for ( int iGroup=1; iGroup<iNumBodygroupIndices; iGroup++ )
 					{
@@ -2679,7 +2677,7 @@ void CWeaponCSBase::Operator_HandleAnimEvent( animevent_t *pEvent, CBaseCombatCh
 				CBaseViewModel *vm = pOwner->GetViewModel( m_nViewModelIndex );
 				if ( vm )
 				{
-					int iNextClip = MIN( GetMaxClip1(), m_iClip1 + GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
+					int iNextClip = std::min( GetMaxClip1(), m_iClip1 + GetReserveAmmoCount( AMMO_POSITION_PRIMARY ) );
 					vm->SetPoseParameter( pEvent->options, 1.0f - (((float)iNextClip) / ((float)GetMaxClip1())) );
 				}
 			}
@@ -3122,7 +3120,7 @@ float CalcViewModelBobHelper( CBasePlayer *player, BobState_t *pBobState, int nV
 
 	float flRunAddAmt = 0.0f;
 
-	float flmaxSpeedDelta = MAX( 0, (gpGlobals->curtime - pBobState->m_flLastBobTime ) * 640.0f );//320
+	float flmaxSpeedDelta = std::max<std::common_type_t<int, float>>( 0, (gpGlobals->curtime - pBobState->m_flLastBobTime ) * 640.0f );//320
 
 //	Msg( "speed raw = %f\n", speed );
 
@@ -3204,12 +3202,12 @@ float CalcViewModelBobHelper( CBasePlayer *player, BobState_t *pBobState, int nV
 			}
 			else
 			{
-				flAccuracy = MIN( flAccuracy, 0.082f );
+				flAccuracy = std::min( flAccuracy, 0.082f );
 				flMultiplier *= cl_viewmodel_shift_right_amt.GetFloat();
 			}
 
 			// clamp the crouch accuracy
-			flAccuracyDiff = MAX( (flAccuracy - flBaseAccuracy) * flMultiplier, -0.1);
+			flAccuracyDiff = std::max<std::common_type_t<float, double>>( (flAccuracy - flBaseAccuracy) * flMultiplier, -0.1);
 		}
 
 /*
@@ -3354,7 +3352,7 @@ float CWeaponCSBase::CalcViewmodelBob( void )
 
 	//Find the speed of the player
 	float speed = player->GetLocalVelocity().Length2D();
-	float flmaxSpeedDelta = MAX( 0, ( gpGlobals->curtime - lastbobtime ) * 320.0f );
+	float flmaxSpeedDelta = std::max<std::common_type_t<int, float>>( 0, ( gpGlobals->curtime - lastbobtime ) * 320.0f );
 
 	// don't allow too big speed changes
 	speed = clamp( speed, lastspeed-flmaxSpeedDelta, lastspeed+flmaxSpeedDelta );
@@ -3821,8 +3819,8 @@ float CWeaponCSBase::GetZoomTime( int nZoomLevel ) const
 
 CCSPlayer * CWeaponCSBase::GetOriginalOwner()
 {
-	if ( m_PriorOwners.Count() )
-		return m_PriorOwners.Element( 0 );
+	if ( !m_PriorOwners.empty() )
+		return m_PriorOwners[ 0 ];
 
 	return nullptr;
 }

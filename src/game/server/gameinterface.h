@@ -250,7 +250,7 @@ public:
   int m_iSerialNumber; // The edict serial number. TODO used anywhere ?
 };
 
-extern CUtlLinkedList<CMapEntityRef, unsigned short> g_MapEntityRefs;
+extern std::vector<CMapEntityRef> g_MapEntityRefs;
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -275,7 +275,7 @@ public:
         ref.m_iSerialNumber = pRet->edict()->m_NetworkSerialNumber;
     }
 
-    g_MapEntityRefs.AddToTail(ref);
+    g_MapEntityRefs.push_back(ref);
     return pRet;
   }
 };

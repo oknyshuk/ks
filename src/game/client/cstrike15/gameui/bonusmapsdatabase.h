@@ -43,7 +43,7 @@ struct BonusMapDescription_t
 	bool bLocked;
 	bool bComplete;
 
-	CUtlVector<ChallengeDescription_t>	*m_pChallenges;
+	std::vector< ChallengeDescription_t >	*m_pChallenges;
 
 	BonusMapDescription_t( void )
 	{
@@ -103,8 +103,8 @@ public:
 
 	int BonusCount( void );
 	BonusMapDescription_t * GetBonusData( int iIndex ) { return &(m_BonusMaps[ iIndex ]); }
-	int InvalidIndex( void ) { return m_BonusMaps.InvalidIndex(); }
-	bool IsValidIndex( int iIndex ) { return m_BonusMaps.IsValidIndex( iIndex ); }
+	int InvalidIndex( void ) { return -1; }
+	bool IsValidIndex( int iIndex ) { return ks::is_valid_index( m_BonusMaps, iIndex ); }
 
 	bool GetBlink( void );
 	void SetBlink( bool bState );
@@ -137,7 +137,7 @@ private:
 
 	KeyValues	*m_pBonusMapsManifest;
 
-	CUtlVector<BonusMapDescription_t>	m_BonusMaps;
+	std::vector< BonusMapDescription_t >	m_BonusMaps;
 
 	KeyValues	*m_pBonusMapSavedData;
 	bool		m_bSavedDataChanged;

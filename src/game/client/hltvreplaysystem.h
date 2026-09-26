@@ -2,7 +2,8 @@
 #ifndef HLTV_REPLAY_SYSTEM
 #define HLTV_REPLAY_SYSTEM
 
-#include "tier1/utlhashtable.h"
+#include <memory>
+#include <unordered_map>
 
 // this struct is followed by matrix3x4a_t bones
 struct ALIGN16 CachedRagdollBones_t
@@ -185,7 +186,8 @@ protected:
 	uint32 m_nExperimentalEvents;
 
 	float m_flFreeCachedRagdollBonesTime; // time (when not replaying) to destroy cached-off ragdoll bones
-	CUtlHashtable< int, CachedRagdollBones_t* > m_mapCachedRagdollBones;
+	struct CachedRagdollBonesDeleter { void operator()( CachedRagdollBones_t *pBones ) const; };
+	std::unordered_map< int, std::unique_ptr< CachedRagdollBones_t, CachedRagdollBonesDeleter > > m_mapCachedRagdollBones;
 };
 
 extern CHltvReplaySystem g_HltvReplaySystem;

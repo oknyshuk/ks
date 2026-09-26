@@ -58,7 +58,7 @@ private:
 
 private:
 	int							m_iNumBones;
-	CUtlVector<physfollower_t>	m_physBones;
+	std::vector< physfollower_t >	m_physBones;
 };
 
 

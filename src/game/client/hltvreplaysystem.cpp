@@ -373,14 +373,10 @@ void CHltvReplaySystem::Update()
 
 void CHltvReplaySystem::PurgeRagdollBoneCache()
 {
-	if ( int nCount = m_mapCachedRagdollBones.Count() )
+	if ( int nCount = ( int )m_mapCachedRagdollBones.size() )
 	{
 		// destroy all unclaimed bones
-		FOR_EACH_HASHTABLE( m_mapCachedRagdollBones, it )
-		{
-			FreeCachedRagdollBones( m_mapCachedRagdollBones[ it ] );
-		}
-		m_mapCachedRagdollBones.Purge();
+		m_mapCachedRagdollBones.clear();
 		DevMsg( "%d ragdoll states purged\n", nCount );
 	}
 }
@@ -897,8 +893,8 @@ void CHltvReplaySystem::CacheRagdollBones()
 					}
 
 					Assert( pBones[ nBones ].GetColumn( X_AXIS ) == Vector( 11, 22, 33 ) );
-					Assert( m_mapCachedRagdollBones.Find( nEntIndex ) == m_mapCachedRagdollBones.InvalidHandle() );
-					m_mapCachedRagdollBones.Insert( nEntIndex, pCachedRagdoll );
+					[[maybe_unused]] bool bInserted = m_mapCachedRagdollBones.try_emplace( nEntIndex, pCachedRagdoll ).second;
+					Assert( bInserted );
 				}
 			}
 			else
@@ -917,14 +913,18 @@ CachedRagdollBones_t *CHltvReplaySystem::GetCachedRagdollBones( int nEntIndex, b
 	if ( gpGlobals->tickcount > m_nHltvReplayBeginTick + 5 )
 		return nullptr; // this cache isn't useful anymore, we need to create ragdoll dynamically - otherwise it'll just teleport to the final position instantaneously
 
-	UtlHashHandle_t hFind = m_mapCachedRagdollBones.Find( nEntIndex );
+	auto it = m_mapCachedRagdollBones.find( nEntIndex );
 	CachedRagdollBones_t *pTakenBones = nullptr;
 
-	if ( hFind != m_mapCachedRagdollBones.InvalidHandle() )
+	if ( it != m_mapCachedRagdollBones.end() )
 	{
-		pTakenBones = m_mapCachedRagdollBones[ hFind ];
+		pTakenBones = it->second.get();
 		if ( bTake )
-			m_mapCachedRagdollBones.RemoveByHandle( hFind );
+		{
+			// caller now owns the bones and frees them with FreeCachedRagdollBones
+			it->second.release();
+			m_mapCachedRagdollBones.erase( it );
+		}
 	}
 	
 	return pTakenBones;
@@ -932,6 +932,11 @@ CachedRagdollBones_t *CHltvReplaySystem::GetCachedRagdollBones( int nEntIndex, b
 
 
 void CHltvReplaySystem::FreeCachedRagdollBones( CachedRagdollBones_t*pBones )
+{
+	CachedRagdollBonesDeleter()( pBones );
+}
+
+void CHltvReplaySystem::CachedRagdollBonesDeleter::operator()( CachedRagdollBones_t *pBones ) const
 {
 	MemAlloc_FreeAligned( pBones );
 }

@@ -15,7 +15,7 @@
 #include "usercmd.h"
 #include "shareddefs.h"
 #include "timedevent.h"
-#include "smartptr.h"
+#include "tier1/intrusive_ptr.h"
 #include "fx_water.h"
 #include "hintsystem.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
@@ -298,11 +298,11 @@ public:
 
 	void						AddSplitScreenPlayer( C_BasePlayer *pOther );
 	void						RemoveSplitScreenPlayer( C_BasePlayer *pOther );
-	CUtlVector< CHandle< C_BasePlayer > >& GetSplitScreenPlayers( void );
+	std::vector< CHandle< C_BasePlayer > >& GetSplitScreenPlayers( void );
 	void						AddPictureInPicturePlayer( C_BasePlayer *pOther );
 	void						RemovePictureInPicturePlayer( C_BasePlayer *pOther );
-	CUtlVector< CHandle< C_BasePlayer > >& GetSplitScreenAndPictureInPicturePlayers( void );
-	CUtlVector< CHandle< C_BasePlayer > >& GetPictureInPicturePlayers( void );
+	std::vector< CHandle< C_BasePlayer > >& GetSplitScreenAndPictureInPicturePlayers( void );
+	std::vector< CHandle< C_BasePlayer > >& GetPictureInPicturePlayers( void );
 
 	bool						IsSplitScreenPartner( C_BasePlayer *pPlayer );
 
@@ -661,7 +661,7 @@ protected:
 	// players own view models, left & right hand
 	[[= ks::reflect::Net{ .varlen = true } ]] [[= ks::reflect::Pred{ .flags = FTYPEDESC_INSENDTABLE } ]] CHandle< C_BaseViewModel >	m_hViewModel[ MAX_VIEWMODELS ];	
 
-	CUtlReference< CNewParticleEffect > m_speechVOIPParticleEffect;
+	ks::tracked_ref< CNewParticleEffect > m_speechVOIPParticleEffect;
 
 	bool m_bCanShowFreezeFrameNow;
 public:
@@ -793,7 +793,7 @@ private:
 	bool			m_bFlashlightEnabled[ MAX_SPLITSCREEN_PLAYERS ];
 
 #if !defined( NO_ENTITY_PREDICTION )
-	CUtlVector< CHandle< C_BaseEntity > > m_SimulatedByThisPlayer;
+	std::vector< CHandle< C_BaseEntity > > m_SimulatedByThisPlayer;
 #endif
 	
 	float					m_flOldPlayerZ;
@@ -813,7 +813,7 @@ private:
 	float							m_flWaterSurfaceZ;
 	bool							m_bResampleWaterSurface;
 	TimedEvent						m_tWaterParticleTimer;
-	CSmartPtr<WaterDebrisEffect>	m_pWaterEmitter;
+	ks::intrusive_ptr<WaterDebrisEffect>	m_pWaterEmitter;
 
 	bool							m_bPlayerUnderwater;
 
@@ -872,9 +872,9 @@ protected:
 	float			m_flNextAchievementAnnounceTime;
 
 	// If we have any attached split users, this is the list of them
-	CUtlVector< CHandle< CBasePlayer > > m_hSplitScreenPlayers;
-	CUtlVector< CHandle< CBasePlayer > > m_hSplitScreenAndPipPlayers;
-	CUtlVector< CHandle< CBasePlayer > > m_hPipPlayers;
+	std::vector< CHandle< CBasePlayer > > m_hSplitScreenPlayers;
+	std::vector< CHandle< CBasePlayer > > m_hSplitScreenAndPipPlayers;
+	std::vector< CHandle< CBasePlayer > > m_hPipPlayers;
 	int						m_nSplitScreenSlot; //-1 == not a split player
 	CHandle< CBasePlayer > m_hSplitOwner;
 	bool					m_bIsLocalPlayer;

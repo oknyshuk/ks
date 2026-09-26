@@ -11,7 +11,6 @@
 #include "timeutils.h"
 #include "qlimits.h"
 #include "convar.h"
-#include "tier1/utllinkedlist.h"
 #include <time.h>
 
 //----------------------------------------------------------------------------------------

@@ -18,10 +18,8 @@
 #include "ndebugoverlay.h"
 #include "animation.h"
 #include "tier1/strtools.h"
+#include "tier1/map_ops.h"
 #include "mapentities_shared.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 #define REPORTFAILURE(text) if ( hintCriteria.HasFlag( bits_HINT_NODE_REPORT_FAILURES ) ) \
 								NDebugOverlay::Text( GetAbsOrigin(), text, false, 60 )
@@ -37,7 +35,7 @@ CHintCriteria::CHintCriteria( void )
 	m_strGroup		= NULL_STRING;
 	m_strGenericType = NULL_STRING;
 	m_iFlags		= 0;
-	m_HintTypes.Purge();
+	m_HintTypes.clear(); m_HintTypes.shrink_to_fit();
 	m_pfnFilter = nullptr;
 	m_pFilterContext = nullptr;
 }
@@ -47,9 +45,9 @@ CHintCriteria::CHintCriteria( void )
 //-----------------------------------------------------------------------------
 CHintCriteria::~CHintCriteria( void )
 {
-	m_zoneInclude.Purge();
-	m_zoneExclude.Purge();
-	m_HintTypes.Purge();
+	m_zoneInclude.clear(); m_zoneInclude.shrink_to_fit();
+	m_zoneExclude.clear(); m_zoneExclude.shrink_to_fit();
+	m_HintTypes.clear(); m_HintTypes.shrink_to_fit();
 }
 
 //-----------------------------------------------------------------------------
@@ -60,7 +58,7 @@ void CHintCriteria::SetHintType( int nHintType )
 {
 	m_iFirstHintType = nHintType;
 	m_iLastHintType = HINT_NONE;
-	m_HintTypes.Purge();
+	m_HintTypes.clear(); m_HintTypes.shrink_to_fit();
 }
 
 //-----------------------------------------------------------------------------
@@ -68,12 +66,12 @@ void CHintCriteria::SetHintType( int nHintType )
 //-----------------------------------------------------------------------------
 void CHintCriteria::AddHintType( int hintType )
 {
-	m_HintTypes.AddToTail( hintType );
+	m_HintTypes.push_back( hintType );
 }
 
 int CHintCriteria::NumHintTypes() const
 {
-	return m_HintTypes.Count();
+	return std::ssize( m_HintTypes );
 }
 
 int	CHintCriteria::GetHintType( int idx ) const
@@ -83,7 +81,7 @@ int	CHintCriteria::GetHintType( int idx ) const
 
 bool CHintCriteria::MatchesSingleHintType() const
 { 
-	if ( m_HintTypes.Count() != 0 )
+	if ( !m_HintTypes.empty() )
 	{
 		return false;
 	}
@@ -103,7 +101,7 @@ bool CHintCriteria::MatchesSingleHintType() const
 //-----------------------------------------------------------------------------
 bool CHintCriteria::MatchesHintType( int hintType, string_t iszGenericType ) const
 {
-	int c = m_HintTypes.Count();
+	int c = std::ssize( m_HintTypes );
  	for ( int i = 0; i < c; ++i )
 	{
 		if ( m_HintTypes[i] == hintType )
@@ -155,7 +153,7 @@ void CHintCriteria::SetHintTypeRange( int firstType, int lastType )
 
 	m_iFirstHintType = firstType;
 	m_iLastHintType = lastType;
-	m_HintTypes.Purge();
+	m_HintTypes.clear(); m_HintTypes.shrink_to_fit();
 }
 
 //-----------------------------------------------------------------------------
@@ -193,7 +191,7 @@ void CHintCriteria::SetGroup( string_t group )
 //-----------------------------------------------------------------------------
 void CHintCriteria::AddZone( zoneList_t &list, const Vector &position, float radius )
 {
-	int id = list.AddToTail();
+	int id = std::ssize( list ); list.emplace_back();
 	list[id].position	= position;
 	list[id].radiussqr	= radius*radius;
 }
@@ -226,7 +224,7 @@ void CHintCriteria::AddExcludePosition( const Vector &position, float radius )
 //-----------------------------------------------------------------------------
 inline bool CHintCriteria::InZone( const zoneList_t &zone, const Vector &testPosition ) const
 {
-	int	numZones = zone.Count();
+	int	numZones = std::ssize( zone );
 
 	//Iterate through all zones in the list
 	for ( int i = 0; i < numZones; i++ )
@@ -262,7 +260,7 @@ bool CHintCriteria::InExcludedZone( const Vector &testPosition ) const
 // Init static variables
 //-----------------------------------------------------------------------------
 CAIHintVector CAI_HintManager::gm_AllHints;
-CUtlMap< int,  CAIHintVector >	CAI_HintManager::gm_TypedHints( 0, 0, DefLessFunc( int ) );
+std::map< int,  CAIHintVector >	CAI_HintManager::gm_TypedHints;
 CAI_Hint*	CAI_HintManager::gm_pLastFoundHints[ CAI_HintManager::HINT_HISTORY ];
 int			CAI_HintManager::gm_nFoundHintIndex = 0;
 
@@ -316,10 +314,10 @@ bool CAI_HintManager::IsInFoundHintList( CAI_Hint *hint )
 }
 
 //-----------------------------------------------------------------------------
-int CAI_HintManager::FindAllHints( CAI_BaseNPC *pNPC, const Vector &position, const CHintCriteria &hintCriteria, CUtlVector<CAI_Hint *> *pResult )
+int CAI_HintManager::FindAllHints( CAI_BaseNPC *pNPC, const Vector &position, const CHintCriteria &hintCriteria, std::vector< CAI_Hint * > *pResult )
 {
 	//  If we have no hints, bail
-	int c = CAI_HintManager::gm_AllHints.Count();
+	int c = std::ssize( CAI_HintManager::gm_AllHints );
 	if ( !c )
 		return 0;
 
@@ -334,13 +332,13 @@ int CAI_HintManager::FindAllHints( CAI_BaseNPC *pNPC, const Vector &position, co
 		pTestHint = CAI_HintManager::gm_AllHints[ i ];
 		Assert( pTestHint );
 		if ( pTestHint->HintMatchesCriteria( pNPC, hintCriteria, position, nullptr ) )
-			pResult->AddToTail( pTestHint );
+			pResult->push_back( pTestHint );
 	}
 
 	if ( hadNearest )
 		(const_cast<CHintCriteria &>(hintCriteria)).SetFlag( bits_HINT_NODE_NEAREST );
 
-	return pResult->Count();
+	return std::ssize( *pResult );
 }
 
 //-----------------------------------------------------------------------------
@@ -354,12 +352,12 @@ int CAI_HintManager::FindAllHints( CAI_BaseNPC *pNPC, const Vector &position, co
 //-----------------------------------------------------------------------------
 CAI_Hint *CAI_HintManager::FindHintRandom( CAI_BaseNPC *pNPC, const Vector &position, const CHintCriteria &hintCriteria )
 {
-	CUtlVector<CAI_Hint *> hintList;
+	std::vector< CAI_Hint * > hintList;
 
 	if ( FindAllHints( pNPC, position, hintCriteria, &hintList ) > 0 )
 	{
 		// Pick one randomly
-		return ( CAI_HintManager::AddFoundHint( hintList[ random->RandomInt( 0, hintList.Count() - 1 ) ]  ) );
+		return ( CAI_HintManager::AddFoundHint( hintList[ random->RandomInt( 0, std::ssize( hintList ) - 1 ) ]  ) );
 	}
 
 	// start at the top of the list for the next search
@@ -393,13 +391,12 @@ CAI_Hint *CAI_HintManager::FindHint( CAI_BaseNPC *pNPC, const Vector &position, 
 	bool lookingForNearest = hintCriteria.HasFlag( bits_HINT_NODE_NEAREST );
 	bool bIgnoreHintType = true;
 
-	CUtlVector< CAIHintVector * > lists;
+	std::vector< CAIHintVector * > lists;
 	if ( singleType )
 	{
-		int slot = CAI_HintManager::gm_TypedHints.Find( hintCriteria.GetFirstHintType() );
-		if ( slot != CAI_HintManager::gm_TypedHints.InvalidIndex() )
+		if ( CAIHintVector *pList = ks::find_ptr( CAI_HintManager::gm_TypedHints, hintCriteria.GetFirstHintType() ) )
 		{
-			lists.AddToTail( &CAI_HintManager::gm_TypedHints[ slot ] );
+			lists.push_back( pList );
 		}
 	}
 	else
@@ -409,17 +406,16 @@ CAI_Hint *CAI_HintManager::FindHint( CAI_BaseNPC *pNPC, const Vector &position, 
 		{
 			for ( int listType = 0; listType < typeCount; ++listType )
 			{
-				int slot = CAI_HintManager::gm_TypedHints.Find( hintCriteria.GetHintType( listType ) );
-				if ( slot != CAI_HintManager::gm_TypedHints.InvalidIndex() )
+				if ( CAIHintVector *pList = ks::find_ptr( CAI_HintManager::gm_TypedHints, hintCriteria.GetHintType( listType ) ) )
 				{
-					lists.AddToTail( &CAI_HintManager::gm_TypedHints[ slot ] );
+					lists.push_back( pList );
 				}
 			}
 		}
 		else
 		{
 			// Still need to check hint type in this case
-			lists.AddToTail( &CAI_HintManager::gm_AllHints );
+			lists.push_back( &CAI_HintManager::gm_AllHints );
 			bIgnoreHintType = false;
 		}
 	}
@@ -428,7 +424,7 @@ CAI_Hint *CAI_HintManager::FindHint( CAI_BaseNPC *pNPC, const Vector &position, 
 
 	int visited = 0;
 
-	int listCount = lists.Count();
+	int listCount = std::ssize( lists );
 
 	if ( listCount == 0 )
 		return nullptr;
@@ -468,7 +464,7 @@ CAI_Hint *CAI_HintManager::FindHint( CAI_BaseNPC *pNPC, const Vector &position, 
 	for ( int listNum = 0; listNum < listCount; ++listNum )
 	{
 		CAIHintVector *list = lists[ listNum ];
-		count = list->Count();
+		count = std::ssize( *list );
 		// -------------------------------------------
 		//  If we have no hints, bail
 		// -------------------------------------------
@@ -478,7 +474,7 @@ CAI_Hint *CAI_HintManager::FindHint( CAI_BaseNPC *pNPC, const Vector &position, 
 		//  Now loop till we find a valid hint or return to the start
 		for ( i = 0 ; i < count; ++i )
 		{
-			pTestHint = list->Element( i );
+			pTestHint = (*list)[ i ];
 			Assert( pTestHint );
 
 			++visited;
@@ -520,7 +516,7 @@ CAI_Hint *CAI_HintManager::FindHint( CAI_BaseNPC *pNPC, const Vector &position, 
 			pNPC ? pNPC->entindex() : -1,
 			position.x, position.y, position.z,
 			timer.GetDuration().GetMillisecondsF(),
-			timer.GetDuration().GetMillisecondsF()/MAX( (float)visited, 1.0f ) );
+			timer.GetDuration().GetMillisecondsF()/std::max( (float)visited, 1.0f ) );
 	}
 #endif
 	return pBestHint;
@@ -629,7 +625,7 @@ void CAI_HintManager::AddHint( CAI_Hint *pHint )
 	// ---------------------------------
 	//  Add to linked list of hints
 	// ---------------------------------
-	CAI_HintManager::gm_AllHints.AddToTail( pHint );
+	CAI_HintManager::gm_AllHints.push_back( pHint );
 	CAI_HintManager::AddHintByType( pHint );
 }
 
@@ -647,20 +643,14 @@ void CAI_HintManager::AddHintByType( CAI_Hint *pHint )
 {
 	Hint_e type = pHint->HintType();
 
-	int slot = CAI_HintManager::gm_TypedHints.Find( type );
-	if ( slot == CAI_HintManager::gm_TypedHints.InvalidIndex() )
-	{
-		slot = CAI_HintManager::gm_TypedHints.Insert( type);
-	}
-	CAI_HintManager::gm_TypedHints[ slot ].AddToTail( pHint );
+	CAI_HintManager::gm_TypedHints[ type ].push_back( pHint );
 }
 
 void CAI_HintManager::RemoveHintByType( CAI_Hint *pHintToRemove )
 {
-	int slot = CAI_HintManager::gm_TypedHints.Find( pHintToRemove->HintType() );
-	if ( slot != CAI_HintManager::gm_TypedHints.InvalidIndex() )
+	if ( CAIHintVector *pList = ks::find_ptr( CAI_HintManager::gm_TypedHints, (int)pHintToRemove->HintType() ) )
 	{
-		CAI_HintManager::gm_TypedHints[ slot ].FindAndRemove( pHintToRemove );
+		ks::erase_first( *pList, pHintToRemove );
 	}
 }
 
@@ -670,7 +660,7 @@ void CAI_HintManager::RemoveHint( CAI_Hint *pHintToRemove )
 	// --------------------------------------
 	//  Remove from linked list of hints
 	// --------------------------------------
-	gm_AllHints.FindAndRemove( pHintToRemove );
+	ks::erase_first( gm_AllHints, pHintToRemove );
 	RemoveHintByType( pHintToRemove );
 
 	if ( CAI_HintManager::IsInFoundHintList( pHintToRemove ) )
@@ -737,9 +727,9 @@ int CAI_HintManager::GetFlags( const char *token )
 //-----------------------------------------------------------------------------
 CAI_Hint *CAI_HintManager::GetFirstHint( AIHintIter_t *pIter )					
 { 
-	if ( !gm_AllHints.Count() )
+	if ( gm_AllHints.empty() )
 	{
-		*pIter = (AIHintIter_t)(intp)gm_AllHints.InvalidIndex();
+		*pIter = (AIHintIter_t)(intp)-1;
 		return nullptr;
 	}
 	*pIter = (AIHintIter_t)0; 
@@ -753,12 +743,12 @@ CAI_Hint *CAI_HintManager::GetNextHint(  AIHintIter_t *pIter )
 {
 	int iterAsInt = size_cast< int >( (intp )*pIter );
 
-	if ( iterAsInt != gm_AllHints.InvalidIndex() )
+	if ( iterAsInt != -1 )
 	{
 		intp i = iterAsInt + 1;
-		if ( gm_AllHints.Count() <= i )
+		if ( std::ssize( gm_AllHints ) <= i )
 		{
-			*pIter = (AIHintIter_t)(intp)gm_AllHints.InvalidIndex();
+			*pIter = (AIHintIter_t)(intp)-1;
 			return nullptr;
 		}
 		*pIter = (AIHintIter_t)i; 
@@ -793,21 +783,21 @@ void CAI_HintManager::ValidateHints()
 {
 #ifdef _DEBUG
 	int nTyped = 0;
-	FOR_EACH_VEC( gm_AllHints, i )
+	for ( CAI_Hint *pAllHint : gm_AllHints )
 	{
-		Assert( dynamic_cast<CAI_Hint *>(gm_AllHints[i]) != nullptr );
+		Assert( dynamic_cast<CAI_Hint *>(pAllHint) != nullptr );
 	}
 
-	for ( int i = gm_TypedHints.FirstInorder(); i != gm_TypedHints.InvalidIndex(); i = gm_TypedHints.NextInorder( i ) )
+	for ( auto &[type, hints] : gm_TypedHints )
 	{
-		FOR_EACH_VEC( gm_TypedHints[i], j )
+		for ( CAI_Hint *pHint : hints )
 		{
 			nTyped++;
-			Assert( dynamic_cast<CAI_Hint *>(gm_TypedHints[i][j]) != nullptr );
+			Assert( dynamic_cast<CAI_Hint *>(pHint) != nullptr );
 		}
 	}
 
-	Assert( gm_AllHints.Count() == nTyped );
+	Assert( std::ssize( gm_AllHints ) == nTyped );
 #endif
 }
 
@@ -818,7 +808,7 @@ void CAI_HintManager::ValidateHints()
 //------------------------------------------------------------------------------
 void CAI_HintManager::DrawHintOverlays(float flDrawDuration)
 {
-	int c = gm_AllHints.Count();
+	int c = std::ssize( gm_AllHints );
 	for ( int i = 0; i < c; ++i )
 	{
         CAI_Hint *pHint = gm_AllHints[ i ];
@@ -1442,7 +1432,7 @@ int CAI_Hint::DrawDebugTextOverlays(void)
 		Q_snprintf(tempstr,sizeof(tempstr),"%s (%i)", GetHintTypeDescription( HintType() ), HintType());
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
-		Q_snprintf(tempstr,sizeof(tempstr),"delay %f", MAX( 0.0f, m_flNextUseTime - gpGlobals->curtime ) ) ;
+		Q_snprintf(tempstr,sizeof(tempstr),"delay %f", std::max( 0.0f, m_flNextUseTime - gpGlobals->curtime ) ) ;
 		EntityText(text_offset,tempstr,0);
 		text_offset++;
 

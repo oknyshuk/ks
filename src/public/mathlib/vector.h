@@ -12,6 +12,7 @@
 
 #include <math.h>
 #include <float.h>
+#include <atomic>
 
 // For vec_t, put this somewhere else?
 #include "tier0/basetypes.h"
@@ -1278,7 +1279,7 @@ inline Vector VectorLerp(const Vector& src1, const Vector& src2, vec_t t )
 inline Vector &AllocTempVector()
 {
 	static Vector s_vecTemp[128];
-	static CInterlockedInt s_nIndex;
+	static std::atomic<int> s_nIndex;
 
 	int nIndex;
 	for (;;)
@@ -1286,7 +1287,7 @@ inline Vector &AllocTempVector()
 		int nOldIndex = s_nIndex;
 		nIndex = ( (nOldIndex + 0x10001) & 0x7F );
 
-		if ( s_nIndex.AssignIf( nOldIndex, nIndex ) )
+		if ( s_nIndex.compare_exchange_strong( nOldIndex, nIndex ) )
 		{
 			break;
 		}
@@ -1351,7 +1352,7 @@ inline float Vector::LargestComponentValue() const
 	float flAbsX = fabs( x );
 	float flAbsY = fabs( y );
 	float flAbsZ = fabs( z );
-	return MAX( MAX( flAbsX, flAbsY ), flAbsZ );
+	return std::max( std::max( flAbsX, flAbsY ), flAbsZ );
 }
 
 inline float Vector::SmallestComponentValue() const
@@ -1359,7 +1360,7 @@ inline float Vector::SmallestComponentValue() const
 	float flAbsX = fabs( x );
 	float flAbsY = fabs( y );
 	float flAbsZ = fabs( z );
-	return MIN( MIN( flAbsX, flAbsY ), flAbsZ );
+	return std::min( std::min( flAbsX, flAbsY ), flAbsZ );
 }
 
 
@@ -2707,7 +2708,7 @@ inline QAngle Quaternion::ToQAngle() const
 
 FORCEINLINE vec_t InvRSquared( const float* v )
 {
-	return 1.0 / MAX( 1.0, v[0] * v[0] + v[1] * v[1] + v[2] * v[2] );
+	return 1.0 / std::max<std::common_type_t<double, float>>( 1.0, v[0] * v[0] + v[1] * v[1] + v[2] * v[2] );
 }
 
 FORCEINLINE vec_t InvRSquared( const Vector &v )
@@ -2811,7 +2812,7 @@ inline const Vector QuaternionLog( const Quaternion &q )
 	if ( sinTheta > 0.001f )
 	{
 		// there's some substantial rotation; if w < 0, it's an over-180-degree rotation (in real space)
-		float theta = asinf( MIN( sinTheta, 1.0f ) );
+		float theta = asinf( std::min( sinTheta, 1.0f ) );
 		factor = ( q.w < 0.0f ? M_PI_F - theta : theta ) / sinTheta;
 	}
 	else

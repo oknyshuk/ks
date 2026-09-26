@@ -1,12 +1,12 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2022 Joshua Ashton and Josh Dowell (Slartibarty)
+
 
 #include "cbase.h"
 
 #include "vjolt_layers.h"
 
 #include "vjolt_controller_vehicle.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //------------------------------------------------------------------------------------------------
 

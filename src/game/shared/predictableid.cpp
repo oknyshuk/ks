@@ -8,9 +8,6 @@
 #include "checksum_crc.h"
 #include "tier1/strtools.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #if !defined( NO_ENTITY_PREDICTION ) && defined( USE_PREDICTABLEID )
 //-----------------------------------------------------------------------------
 // Purpose: Helper class for resetting instance numbers, etc.

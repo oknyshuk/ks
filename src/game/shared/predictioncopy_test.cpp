@@ -24,9 +24,6 @@
 #include "tier1/fmtstr.h"
 #include "utlvector.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #if defined( COPY_CHECK_STRESSTEST )
 
 class CPredictionCopyTester : public CBaseGameSystem

@@ -13,9 +13,6 @@
 #include "iviewrender.h"
 #include "materialsystem/imaterialvar.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 extern IViewRender *view;
 

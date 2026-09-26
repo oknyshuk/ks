@@ -8,8 +8,10 @@
 
 
 #include "igameserverdata.h"
-#include "utlbuffer.h"
-#include "utllinkedlist.h"
+#include "tier1/byte_writer.h"
+#include "tier1/text_writer.h"
+#include <list>
+#include <vector>
 
 class CRConServer;
 
@@ -48,7 +50,7 @@ private:
 	void RequestValue( ra_listener_id listener, int requestID, const char *variable );
 	void SetValue(const char *variable, const char *value);
 	void ExecCommand(const char *cmdString);
-	bool LookupValue(const char *variable, CUtlBuffer &value);
+	bool LookupValue(const char *variable, ks::text_writer &value);
 	const char *LookupStringValue(const char *variable);
 	bool IsAuthenticated( ra_listener_id listener );
 	void CheckPassword( CRConServer *pNetworkListener, ra_listener_id listener, int requestID, const char *password );
@@ -57,17 +59,17 @@ private:
 	void SendResponseToClient( ra_listener_id listenerID, ServerDataResponseType_t type, void *pData, int nDataLen );
 
 	// specific value requests
-	void GetUserBanList(CUtlBuffer &value);
-	void GetPlayerList(CUtlBuffer &value);
-	void GetMapList(CUtlBuffer &value);
+	void GetUserBanList(ks::text_writer &value);
+	void GetPlayerList(ks::text_writer &value);
+	void GetMapList(ks::text_writer &value);
 
 	// list of responses waiting to be sent
 	struct DataResponse_t
 	{
-		CUtlBuffer packet;
+		ks::byte_writer packet;
 		ra_listener_id responderID;
 	};
-	CUtlLinkedList<DataResponse_t, int> m_ResponsePackets;
+	std::list<DataResponse_t> m_ResponsePackets;
 
 	struct ListenerStore_t
 	{
@@ -77,7 +79,7 @@ private:
 		netadr_t		adr;
 	};
 	
-	CUtlLinkedList<ListenerStore_t, int>	m_ListenerIDs;
+	std::vector<ListenerStore_t>	m_ListenerIDs;
 	ra_listener_id				m_NextListenerID;
 
 	int m_nScreenshotListener;

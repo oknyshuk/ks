@@ -6,7 +6,9 @@
 //
 //===========================================================================//
 
+#include <mutex>
 #include "tier0/dbg.h"
+#include "tier0/memalloc.h"
 #include "mathlib/mathlib.h"
 #include "bone_setup.h"
 #include <string.h>
@@ -18,7 +20,6 @@
 #include "tier0/vprof.h"
 #include "bone_accessor.h"
 #include "mathlib/ssequaternion.h"
-#include "bitvec.h"
 #include "datamanager.h"
 #include "convar.h"
 #include "tier0/tslist.h"
@@ -35,9 +36,6 @@
 #include "engine/ivdebugoverlay.h"
 
 #include "bone_utils.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 // -----------------------------------------------------------------
 
@@ -206,21 +204,21 @@ short *CBoneCache::CachedToStudio()
 }
 
 // Construct a singleton
-static CDataManager<CBoneCache, bonecacheparams_t, CBoneCache *, CThreadFastMutex> g_StudioBoneCache( 128 * 1024L );
+static CDataManager<CBoneCache, bonecacheparams_t, CBoneCache *, std::recursive_mutex> g_StudioBoneCache( 128 * 1024L );
 
 void Studio_LockBoneCache()
 {
-	g_StudioBoneCache.AccessMutex().Lock();
+	g_StudioBoneCache.AccessMutex().lock();
 }
 
 void Studio_UnlockBoneCache()
 {
-	g_StudioBoneCache.AccessMutex().Unlock();
+	g_StudioBoneCache.AccessMutex().unlock();
 }
 
 CBoneCache *Studio_GetBoneCache( memhandle_t cacheHandle, bool bLock )
 {
-	AUTO_LOCK( g_StudioBoneCache.AccessMutex() );
+	std::scoped_lock lock( g_StudioBoneCache.AccessMutex() );
 	if ( !bLock )
 	{
 		return g_StudioBoneCache.GetResource_NoLock( cacheHandle );
@@ -239,19 +237,19 @@ void Studio_ReleaseBoneCache( memhandle_t cacheHandle )
 
 memhandle_t Studio_CreateBoneCache( bonecacheparams_t &params )
 {
-	AUTO_LOCK( g_StudioBoneCache.AccessMutex() );
+	std::scoped_lock lock( g_StudioBoneCache.AccessMutex() );
 	return g_StudioBoneCache.CreateResource( params );
 }
 
 void Studio_DestroyBoneCache( memhandle_t cacheHandle )
 {
-	AUTO_LOCK( g_StudioBoneCache.AccessMutex() );
+	std::scoped_lock lock( g_StudioBoneCache.AccessMutex() );
 	g_StudioBoneCache.DestroyResource( cacheHandle );
 }
 
 void Studio_InvalidateBoneCacheIfNotMatching( memhandle_t cacheHandle, float flTimeValid )
 {
-	AUTO_LOCK( g_StudioBoneCache.AccessMutex() );
+	std::scoped_lock lock( g_StudioBoneCache.AccessMutex() );
 	CBoneCache *pCache = g_StudioBoneCache.GetResource_NoLock( cacheHandle );
 	if ( pCache && pCache->m_timeValid != flTimeValid )
 	{
@@ -542,8 +540,8 @@ void SlerpBones(
 	SNPROF_ANIM("SlerpBones");
 #if PARANOID_SIMD_DOUBLECHECK
 	// copy off the input arrays so we can do them twice
-	static CThreadFastMutex m_mutex;
-	AUTO_LOCK( m_mutex );
+	static std::recursive_mutex m_mutex;
+	std::scoped_lock lock( m_mutex );
 	static BoneQuaternionAligned doublecheckQuat[MAXSTUDIOBONES];
 	static BoneQuaternionAligned doublecheckOriginalQuat[MAXSTUDIOBONES];
 	static BoneVector doublecheckPos[MAXSTUDIOBONES];
@@ -1152,14 +1150,14 @@ void SlerpBonesSpeedy(
 		// pos1[i][0] = pos1[i][0] * s1 + pos2[i][0] * weight;
 		fltx4 pos1simd[4];
 		fltx4 pos2simd[4];
-		pos1simd[0] = LoadUnaligned3SIMD(pos1[aBonesSlerpAlign[i+0]].Base()); 
-		pos1simd[1] = LoadUnaligned3SIMD(pos1[aBonesSlerpAlign[i+1]].Base()); 
-		pos1simd[2] = LoadUnaligned3SIMD(pos1[aBonesSlerpAlign[i+2]].Base()); 
-		pos1simd[3] = LoadUnaligned3SIMD(pos1[aBonesSlerpAlign[i+3]].Base()); 
-		pos2simd[0] = LoadUnaligned3SIMD(pos2[aBonesSlerpAlign[i+0]].Base()); 
-		pos2simd[1] = LoadUnaligned3SIMD(pos2[aBonesSlerpAlign[i+1]].Base()); 
-		pos2simd[2] = LoadUnaligned3SIMD(pos2[aBonesSlerpAlign[i+2]].Base()); 
-		pos2simd[3] = LoadUnaligned3SIMD(pos2[aBonesSlerpAlign[i+3]].Base()); 
+		pos1simd[0] = LoadVector3SIMD(pos1[aBonesSlerpAlign[i+0]].Base()); 
+		pos1simd[1] = LoadVector3SIMD(pos1[aBonesSlerpAlign[i+1]].Base()); 
+		pos1simd[2] = LoadVector3SIMD(pos1[aBonesSlerpAlign[i+2]].Base()); 
+		pos1simd[3] = LoadVector3SIMD(pos1[aBonesSlerpAlign[i+3]].Base()); 
+		pos2simd[0] = LoadVector3SIMD(pos2[aBonesSlerpAlign[i+0]].Base()); 
+		pos2simd[1] = LoadVector3SIMD(pos2[aBonesSlerpAlign[i+1]].Base()); 
+		pos2simd[2] = LoadVector3SIMD(pos2[aBonesSlerpAlign[i+2]].Base()); 
+		pos2simd[3] = LoadVector3SIMD(pos2[aBonesSlerpAlign[i+3]].Base()); 
 
 		pos1simd[0] = MulSIMD( SplatXSIMD(oneMinusWeight) , pos1simd[0] );
 		pos1simd[1] = MulSIMD( SplatYSIMD(oneMinusWeight) , pos1simd[1] );
@@ -1251,14 +1249,14 @@ void SlerpBonesSpeedy(
 		// pos1[i][0] = pos1[i][0] * s1 + pos2[i][0] * weight;
 		fltx4 pos1simd[4];
 		fltx4 pos2simd[4];
-		pos1simd[0] = LoadUnaligned3SIMD(pos1[aBonesSlerpNoAlign[i+0]].Base()); 
-		pos1simd[1] = LoadUnaligned3SIMD(pos1[aBonesSlerpNoAlign[i+1]].Base()); 
-		pos1simd[2] = LoadUnaligned3SIMD(pos1[aBonesSlerpNoAlign[i+2]].Base()); 
-		pos1simd[3] = LoadUnaligned3SIMD(pos1[aBonesSlerpNoAlign[i+3]].Base()); 
-		pos2simd[0] = LoadUnaligned3SIMD(pos2[aBonesSlerpNoAlign[i+0]].Base()); 
-		pos2simd[1] = LoadUnaligned3SIMD(pos2[aBonesSlerpNoAlign[i+1]].Base()); 
-		pos2simd[2] = LoadUnaligned3SIMD(pos2[aBonesSlerpNoAlign[i+2]].Base()); 
-		pos2simd[3] = LoadUnaligned3SIMD(pos2[aBonesSlerpNoAlign[i+3]].Base()); 
+		pos1simd[0] = LoadVector3SIMD(pos1[aBonesSlerpNoAlign[i+0]].Base()); 
+		pos1simd[1] = LoadVector3SIMD(pos1[aBonesSlerpNoAlign[i+1]].Base()); 
+		pos1simd[2] = LoadVector3SIMD(pos1[aBonesSlerpNoAlign[i+2]].Base()); 
+		pos1simd[3] = LoadVector3SIMD(pos1[aBonesSlerpNoAlign[i+3]].Base()); 
+		pos2simd[0] = LoadVector3SIMD(pos2[aBonesSlerpNoAlign[i+0]].Base()); 
+		pos2simd[1] = LoadVector3SIMD(pos2[aBonesSlerpNoAlign[i+1]].Base()); 
+		pos2simd[2] = LoadVector3SIMD(pos2[aBonesSlerpNoAlign[i+2]].Base()); 
+		pos2simd[3] = LoadVector3SIMD(pos2[aBonesSlerpNoAlign[i+3]].Base()); 
 
 		pos1simd[0] = MulSIMD( SplatXSIMD(oneMinusWeight) , pos1simd[0] );
 		pos1simd[1] = MulSIMD( SplatYSIMD(oneMinusWeight) , pos1simd[1] );
@@ -1646,10 +1644,10 @@ void BlendBones(
 					fltx4 f4q1B = LoadAlignedSIMD(pq1B), f4q2B = LoadAlignedSIMD(pq2B);
 					fltx4 f4q1C = LoadAlignedSIMD(pq1C), f4q2C = LoadAlignedSIMD(pq2C);
 					fltx4 f4q1D = LoadAlignedSIMD(pq1D), f4q2D = LoadAlignedSIMD(pq2D);
-					fltx4 f4Pos1A = LoadUnaligned3SIMD(pp1A), f4Pos2A = LoadUnaligned3SIMD(pp2A);
-					fltx4 f4Pos1B = LoadUnaligned3SIMD(pp1B), f4Pos2B = LoadUnaligned3SIMD(pp2B);
-					fltx4 f4Pos1C = LoadUnaligned3SIMD(pp1C), f4Pos2C = LoadUnaligned3SIMD(pp2C);
-					fltx4 f4Pos1D = LoadUnaligned3SIMD(pp1D), f4Pos2D = LoadUnaligned3SIMD(pp2D);
+					fltx4 f4Pos1A = LoadVector3SIMD(pp1A), f4Pos2A = LoadVector3SIMD(pp2A);
+					fltx4 f4Pos1B = LoadVector3SIMD(pp1B), f4Pos2B = LoadVector3SIMD(pp2B);
+					fltx4 f4Pos1C = LoadVector3SIMD(pp1C), f4Pos2C = LoadVector3SIMD(pp2C);
+					fltx4 f4Pos1D = LoadVector3SIMD(pp1D), f4Pos2D = LoadVector3SIMD(pp2D);
 					f4q1A = BoneQuaternionAlignSIMD(f4q2A, f4q1A);
 					f4q1B = BoneQuaternionAlignSIMD(f4q2B, f4q1B);
 					f4q1C = BoneQuaternionAlignSIMD(f4q2C, f4q1C);
@@ -1688,7 +1686,7 @@ void BlendBones(
 					float *RESTRICT pq1 = q1[nBone].Base(), *RESTRICT pp1 = pos1[nBone].Base();
 					const float *RESTRICT pq2 = q2[nBone].Base(), *RESTRICT pp2 = pos2[nBone].Base();
 					fltx4 f4q1 = LoadAlignedSIMD(pq1), f4q2 = LoadAlignedSIMD(pq2);
-					fltx4 f4Pos1 = LoadUnaligned3SIMD(pp1), f4Pos2 = LoadUnaligned3SIMD(pp2);
+					fltx4 f4Pos1 = LoadVector3SIMD(pp1), f4Pos2 = LoadVector3SIMD(pp2);
 					f4q1 = BoneQuaternionAlignSIMD(f4q2, f4q1);
 					fltx4 f4Blended = MulSIMD( scale2, f4q2 );
 					f4Blended = MaddSIMD( scale1, f4q1, f4Blended );
@@ -2005,7 +2003,7 @@ float Studio_GetController( const CStudioHdr *pStudioHdr, int iController, float
 void Studio_CalcDefaultPoseParameters( const CStudioHdr *pStudioHdr, float flPoseParameter[], int nCount )
 {
 	int nPoseCount = pStudioHdr->GetNumPoseParameters();
-	int nNumParams = MIN( nCount, MAXSTUDIOPOSEPARAM );
+	int nNumParams = std::min( nCount, MAXSTUDIOPOSEPARAM );
 
 	for ( int i = 0; i < nNumParams; ++i )
 	{
@@ -2081,7 +2079,6 @@ float Studio_GetPoseParameter( const CStudioHdr *pStudioHdr, int iParameter, flo
 }
 
 
-#pragma warning (disable : 4701)
 
 static int ClipRayToCapsule( const Ray_t &ray, mstudiobbox_t *pbox, matrix3x4_t& matrix, trace_t &tr )
 {
@@ -2182,21 +2179,21 @@ static int ClipRayToHitbox( const Ray_t &ray, mstudiobbox_t *pbox, matrix3x4_t& 
 	cextent = cross.x * matrix[0][0] + cross.y * matrix[1][0] + cross.z * matrix[2][0];
 	cextent = fabsf(cextent);
 	tmp = boxextents[1]*uextent[2] + boxextents[2]*uextent[1];
-	tmp = MAX(tmp, flProjEpsilon);
+	tmp = std::max(tmp, flProjEpsilon);
 	if ( cextent > tmp )
 		return -1;
 
 	cextent = cross.x * matrix[0][1] + cross.y * matrix[1][1] + cross.z * matrix[2][1];
 	cextent = fabsf(cextent);
 	tmp = boxextents[0]*uextent[2] + boxextents[2]*uextent[0];
-	tmp = MAX(tmp, flProjEpsilon);
+	tmp = std::max(tmp, flProjEpsilon);
 	if ( cextent > tmp )
 		return -1;
 
 	cextent = cross.x * matrix[0][2] + cross.y * matrix[1][2] + cross.z * matrix[2][2];
 	cextent = fabsf(cextent);
 	tmp = boxextents[0]*uextent[1] + boxextents[1]*uextent[0];
-	tmp = MAX(tmp, flProjEpsilon);
+	tmp = std::max(tmp, flProjEpsilon);
 	if ( cextent > tmp )
 		return -1;
 
@@ -2224,7 +2221,6 @@ static int ClipRayToHitbox( const Ray_t &ray, mstudiobbox_t *pbox, matrix3x4_t& 
 	return hitside;
 }
 
-#pragma warning (default : 4701)
 
 
 //-----------------------------------------------------------------------------
@@ -2632,7 +2628,7 @@ bool TraceToStudioCsgoHitgroupsPriority( IPhysicsSurfaceProps *pProps, const Ray
  * TERROR: Version of TraceToStudio that favors certain high-damage hitgroups such as the head
  */
 bool TraceToStudioGrouped( IPhysicsSurfaceProps *pProps, const Ray_t& ray, CStudioHdr *pStudioHdr, mstudiohitboxset_t *set, 
-				   matrix3x4_t **hitboxbones, int fContentsMask, trace_t &tr, const CUtlVector< int > &sortedHitgroups )
+				   matrix3x4_t **hitboxbones, int fContentsMask, trace_t &tr, const std::vector< int > &sortedHitgroups )
 {
 	BONE_PROFILE_FUNC();
 	if ( !ray.m_IsRay )
@@ -2647,7 +2643,7 @@ bool TraceToStudioGrouped( IPhysicsSurfaceProps *pProps, const Ray_t& ray, CStud
 	int hitbox = -1;
 	int hitside = -1;
 
-	for ( int n=0; n<sortedHitgroups.Count(); ++n )
+	for ( int n=0; n<std::ssize( sortedHitgroups ); ++n )
 	{
 		// OPTIMIZE: Partition these?
 		for ( int i = 0; i < set->numhitboxes; i++ )
@@ -3318,20 +3314,20 @@ int Studio_FindRandomAttachment( const CStudioHdr *pStudioHdr, const char *pAtta
 	if ( pStudioHdr )
 	{
 		// First move them all matching attachments into a list
-		CUtlVector<int> matchingAttachments;
+		std::vector< int > matchingAttachments;
 
 		// Extract the bone index from the name
 		for (int i = 0; i < pStudioHdr->GetNumAttachments(); i++)
 		{
 			if ( strstr( ((CStudioHdr *)pStudioHdr)->pAttachment(i).pszName(), pAttachmentName ) ) 
 			{
-				matchingAttachments.AddToTail(i);
+				matchingAttachments.push_back( i );
 			}
 		}
 
 		// Then randomly return one of the attachments
-		if ( matchingAttachments.Count() > 0 )
-			return matchingAttachments[ RandomInt( 0, matchingAttachments.Count()-1 ) ];
+		if ( !matchingAttachments.empty() )
+			return matchingAttachments[ RandomInt( 0, std::ssize( matchingAttachments )-1 ) ];
 	}
 
 	return -1;

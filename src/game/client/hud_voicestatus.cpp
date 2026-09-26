@@ -12,11 +12,8 @@
 #include "clientmode_shared.h"
 #include "c_playerresource.h"
 #include "voice_common.h"
-#include "bitvec.h"
 #include "engineinterface.h"
 #include "steam/steam_api.h"
-
-#include "tier0/memdbgon.h"
 
 
 extern ConVar sv_talk_enemy_dead;
@@ -110,7 +107,7 @@ private:
 		float				fAlpha;
 	};
 
-	CUtlLinkedList< ActiveSpeaker > m_SpeakingList;
+	std::vector< ActiveSpeaker > m_SpeakingList;
 };
 
 
@@ -159,15 +156,15 @@ void CHudVoiceStatus::Paint()
 
 int CHudVoiceStatus::FindActiveSpeaker( int playerId )
 {
-	FOR_EACH_LL(m_SpeakingList, i)
+	for ( int i = 0; i < (int)m_SpeakingList.size(); i++ )
 	{
 		if (m_SpeakingList[i].playerId == playerId)
 			return i;
 	}
-	return m_SpeakingList.InvalidIndex();
+	return -1;
 }
 
 void CHudVoiceStatus::ClearActiveList()
 {
-	m_SpeakingList.RemoveAll();
+	m_SpeakingList.clear();
 }

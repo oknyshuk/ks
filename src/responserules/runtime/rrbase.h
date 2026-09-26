@@ -26,7 +26,7 @@
 // tier 1
 #include "tier1/strtools.h"
 #include "utlvector.h"
-#include "utlsymbol.h"
+#include "tier1/intern_pool.h"
 
 // tier 2
 #include "string_t.h"

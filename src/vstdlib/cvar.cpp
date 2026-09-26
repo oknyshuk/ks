@@ -9,14 +9,14 @@
 #include "vstdlib/cvar.h"
 #include <ctype.h>
 #include "tier0/icommandline.h"
-#include "tier1/utlrbtree.h"
+#include <set>
 #include "tier1/strtools.h"
 #include "tier1/keyvalues.h"
 #include "tier1/convar.h"
 #include "tier0/vprof.h"
 #include "tier1/tier1.h"
-#include "tier1/utlbuffer.h"
-#include "tier1/utlmap.h"
+#include "tier1/byte_writer.h"
+#include <map>
 #include "tier1/fmtstr.h"
 
 
@@ -25,9 +25,6 @@
 
 #define VPROJ_INCREMENT_COUNTER(a, b) /* */
 #define VPROJ(a) /* */
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 //-----------------------------------------------------------------------------
@@ -122,15 +119,15 @@ private:
 
 	void DisplayQueuedMessages( );
 
-	CUtlVector< FnChangeCallback_t >	m_GlobalChangeCallbacks;
-	CUtlVector< IConsoleDisplayFunc* >	m_DisplayFuncs;
+	std::vector< FnChangeCallback_t >	m_GlobalChangeCallbacks;
+	std::vector< IConsoleDisplayFunc* >	m_DisplayFuncs;
 	int									m_nNextDLLIdentifier;
 
 	ConCommandBase						*m_pConCommandList;
 	CConCommandHash						m_CommandHash;
 
 	// temporary console area so we can store prints before console display funs are installed
-	mutable CUtlBuffer					m_TempConsoleBuffer;
+	mutable ks::byte_writer				m_TempConsoleBuffer;
 	int									m_nMaxSplitScreenSlots;
 
 protected:
@@ -140,8 +137,7 @@ protected:
 	{
 	public:
 		CCVarIteratorInternal( CCvar *outer ) 
-			: m_pOuter( outer ), m_pHash( &outer->m_CommandHash ), // remember my CCvar,
-			m_hashIter( -1, -1 ) // and invalid iterator
+			: m_pOuter( outer ), m_pHash( &outer->m_CommandHash ) // remember my CCvar, iterator starts invalid
 		{}
 		virtual void		SetFirst( void ) RESTRICT;
 		virtual void		Next( void ) RESTRICT;
@@ -169,7 +165,7 @@ protected:
 		ConVarSetType_t m_nType;
 		int m_nInt;
 		float m_flFloat;
-		CUtlString m_String;
+		std::string m_String;
 	};
 
 	struct SplitScreenConVar_t
@@ -185,7 +181,7 @@ protected:
 			m_pVar = nullptr;
 		}
 
-		CUtlString					m_VarName;
+		std::string					m_VarName;
 		CSplitScreenAddedConVar		*m_pVar;
 	};
 
@@ -203,8 +199,8 @@ protected:
 		SplitScreenConVar_t		m_Vars[ MAX_SPLITSCREEN_CLIENTS - 1 ];
 	};
 
-	CUtlMap< ConVar *, SplitScreenAddedConVars_t > m_SplitScreenAddedConVarsMap;
-	CUtlVector< QueuedConVarSet_t > m_QueuedConVarSets;
+	std::map< ConVar *, SplitScreenAddedConVars_t > m_SplitScreenAddedConVarsMap;
+	std::vector< QueuedConVarSet_t > m_QueuedConVarSets;
 	bool m_bMaterialSystemThreadSetAllowed;
 
 private:
@@ -260,7 +256,7 @@ CreateInterfaceFn VStdLib_GetICVarFactory()
 //-----------------------------------------------------------------------------
 // Constructor
 //-----------------------------------------------------------------------------
-CCvar::CCvar() : m_TempConsoleBuffer( 0, 1024 ), m_SplitScreenAddedConVarsMap( 0, 0, DefLessFunc( ConVar * ) )
+CCvar::CCvar() : m_TempConsoleBuffer( 1024 )
 {
 	m_nNextDLLIdentifier = 0;
 	m_pConCommandList = nullptr;
@@ -292,7 +288,7 @@ void CCvar::Disconnect()
 	s_pCVarQuery = nullptr;
 	DisconnectTier1Libraries();
 
-	Assert( m_SplitScreenAddedConVarsMap.Count() == 0 );
+	Assert( m_SplitScreenAddedConVarsMap.empty() );
 }
 
 InitReturnVal_t CCvar::Init()
@@ -392,14 +388,14 @@ void CCvar::RegisterConCommand( ConCommandBase *variable )
 				pParentVar->m_nFlags |= pChildVar->m_nFlags & ( FCVAR_MATERIAL_THREAD_MASK | FCVAR_ACCESSIBLE_FROM_THREADS );
 
 				// Transfer children's callbacks to parent
-				if ( pChildVar->m_fnChangeCallbacks.Count() )
+				if ( !pChildVar->m_fnChangeCallbacks.empty() )
 				{
-					for ( int i = 0; i < pChildVar->m_fnChangeCallbacks.Count(); ++i )
+					for ( int i = 0; i < std::ssize( pChildVar->m_fnChangeCallbacks ); ++i )
 					{
-						pParentVar->m_fnChangeCallbacks.AddToTail( pChildVar->m_fnChangeCallbacks[ i ] );
+						pParentVar->m_fnChangeCallbacks.push_back( pChildVar->m_fnChangeCallbacks[ i ] );
 					}
 					// Wipe child callbacks
-					pChildVar->m_fnChangeCallbacks.RemoveAll();
+					pChildVar->m_fnChangeCallbacks.clear();
 				}
 
 				// make sure we don't have conflicting help strings.
@@ -476,14 +472,8 @@ void CCvar::AddSplitScreenConVars()
 		if ( !pConVar->IsFlagSet( FCVAR_SS ) )
 			continue;
 
-		// See if it's already mapped in
-		int idx = m_SplitScreenAddedConVarsMap.Find( pConVar );
-		if ( idx == m_SplitScreenAddedConVarsMap.InvalidIndex() )
-		{
-			idx = m_SplitScreenAddedConVarsMap.Insert( pConVar );
-		}
-
-		SplitScreenAddedConVars_t &info = m_SplitScreenAddedConVarsMap[ idx ];
+		// Maps it in if it isn't already
+		SplitScreenAddedConVars_t &info = m_SplitScreenAddedConVarsMap[ pConVar ];
 		for ( int i = 1 ; i < m_nMaxSplitScreenSlots; ++i )
 		{
 			// Already registered it
@@ -493,7 +483,7 @@ void CCvar::AddSplitScreenConVars()
 			// start at name2, etc.
 			info.m_Vars[ i - 1 ].m_VarName = CFmtStr( "%s%d", pConVar->GetName(), i + 1 );
 
-			CSplitScreenAddedConVar *pVar = new CSplitScreenAddedConVar( i, info.m_Vars[ i - 1 ].m_VarName.Get(), pConVar );
+			CSplitScreenAddedConVar *pVar = new CSplitScreenAddedConVar( i, info.m_Vars[ i - 1 ].m_VarName.data(), pConVar );
 			info.m_Vars[ i - 1 ].m_pVar = pVar;
 			pVar->SetSplitScreenPlayerSlot( i );
 
@@ -509,22 +499,21 @@ void CCvar::RemoveSplitScreenConVars( CVarDLLIdentifier_t id )
 {
 	if ( m_nMaxSplitScreenSlots == 1 )
 	{
-		Assert( m_SplitScreenAddedConVarsMap.Count() == 0 );
+		Assert( m_SplitScreenAddedConVarsMap.empty() );
 		return;
 	}
 
-	CUtlVector< ConVar * > deleted;
-
-	FOR_EACH_MAP( m_SplitScreenAddedConVarsMap, i )
+	for ( auto it = m_SplitScreenAddedConVarsMap.begin(); it != m_SplitScreenAddedConVarsMap.end(); )
 	{
-		ConVar *key = m_SplitScreenAddedConVarsMap.Key( i );
+		ConVar *key = it->first;
 
 		if ( key->GetDLLIdentifier() != id )
 		{
+			++it;
 			continue;
 		}
 		
-		SplitScreenAddedConVars_t &info = m_SplitScreenAddedConVarsMap[ i ];
+		SplitScreenAddedConVars_t &info = it->second;
 
  
 
@@ -538,12 +527,7 @@ void CCvar::RemoveSplitScreenConVars( CVarDLLIdentifier_t id )
 				info.m_Vars[ i - 1 ].m_pVar = nullptr;
 			}
 		}
-		deleted.AddToTail( key );
-	}
-
-	for ( int i = 0; i < deleted.Count(); ++i )
-	{
-		m_SplitScreenAddedConVarsMap.Remove( deleted[ i ] );
+		it = m_SplitScreenAddedConVarsMap.erase( it );
 	}
 }
 
@@ -711,14 +695,14 @@ const char* CCvar::GetCommandLineValue( const char *pVariableName )
 //-----------------------------------------------------------------------------
 void CCvar::InstallGlobalChangeCallback( FnChangeCallback_t callback )
 {
-	Assert( callback && m_GlobalChangeCallbacks.Find( callback ) < 0 );
-	m_GlobalChangeCallbacks.AddToTail( callback );
+	Assert( callback && ks::find_index( m_GlobalChangeCallbacks, callback ) < 0 );
+	m_GlobalChangeCallbacks.push_back( callback );
 }
 
 void CCvar::RemoveGlobalChangeCallback( FnChangeCallback_t callback )
 {
 	Assert( callback );
-	m_GlobalChangeCallbacks.FindAndRemove( callback );
+	ks::erase_first( m_GlobalChangeCallbacks, callback );
 }
 
 
@@ -727,7 +711,7 @@ void CCvar::RemoveGlobalChangeCallback( FnChangeCallback_t callback )
 //-----------------------------------------------------------------------------
 void CCvar::CallGlobalChangeCallbacks( ConVar *var, const char *pOldString, float flOldValue )
 {
-	int nCallbackCount = m_GlobalChangeCallbacks.Count();
+	int nCallbackCount = std::ssize( m_GlobalChangeCallbacks );
 	for ( int i = 0; i < nCallbackCount; ++i )
 	{
 		(*m_GlobalChangeCallbacks[i])( var, pOldString, flOldValue );
@@ -775,16 +759,16 @@ bool CCvar::IsMaterialThreadSetAllowed( ) const
 void CCvar::QueueMaterialThreadSetValue( ConVar *pConVar, const char *pValue )
 {
 	Assert( ThreadInMainThread() );
-	int j = m_QueuedConVarSets.AddToTail();
+	int j = std::ssize( m_QueuedConVarSets ); m_QueuedConVarSets.emplace_back();
 	m_QueuedConVarSets[j].m_pConVar = pConVar;
 	m_QueuedConVarSets[j].m_nType = CONVAR_SET_STRING;
-	m_QueuedConVarSets[j].m_String = pValue;
+	m_QueuedConVarSets[j].m_String = ks::nz( pValue );
 }
 
 void CCvar::QueueMaterialThreadSetValue( ConVar *pConVar, int nValue )
 {
 	Assert( ThreadInMainThread() );
-	int j = m_QueuedConVarSets.AddToTail();
+	int j = std::ssize( m_QueuedConVarSets ); m_QueuedConVarSets.emplace_back();
 	m_QueuedConVarSets[j].m_pConVar = pConVar;
 	m_QueuedConVarSets[j].m_nType = CONVAR_SET_INT;
 	m_QueuedConVarSets[j].m_nInt = nValue;
@@ -793,7 +777,7 @@ void CCvar::QueueMaterialThreadSetValue( ConVar *pConVar, int nValue )
 void CCvar::QueueMaterialThreadSetValue( ConVar *pConVar, float flValue )
 {
 	Assert( ThreadInMainThread() );
-	int j = m_QueuedConVarSets.AddToTail();
+	int j = std::ssize( m_QueuedConVarSets ); m_QueuedConVarSets.emplace_back();
 	m_QueuedConVarSets[j].m_pConVar = pConVar;
 	m_QueuedConVarSets[j].m_nType = CONVAR_SET_FLOAT;
 	m_QueuedConVarSets[j].m_flFloat = flValue;
@@ -802,7 +786,7 @@ void CCvar::QueueMaterialThreadSetValue( ConVar *pConVar, float flValue )
 bool CCvar::HasQueuedMaterialThreadConVarSets() const
 {
 	Assert( ThreadInMainThread() );
-	return m_QueuedConVarSets.Count() > 0;
+	return !m_QueuedConVarSets.empty();
 }
 
 int CCvar::ProcessQueuedMaterialThreadConVarSets()
@@ -811,7 +795,7 @@ int CCvar::ProcessQueuedMaterialThreadConVarSets()
 	m_bMaterialSystemThreadSetAllowed = true;
 
 	int nUpdateFlags = 0;
-	int nCount = m_QueuedConVarSets.Count();
+	int nCount = std::ssize( m_QueuedConVarSets );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		const QueuedConVarSet_t& set = m_QueuedConVarSets[i];
@@ -824,14 +808,14 @@ int CCvar::ProcessQueuedMaterialThreadConVarSets()
 			set.m_pConVar->SetValue( set.m_nInt );
 			break;
 		case CONVAR_SET_STRING:
-			set.m_pConVar->SetValue( set.m_String );
+			set.m_pConVar->SetValue( set.m_String.c_str() );
 			break;
 		}
 
 		nUpdateFlags |= set.m_pConVar->GetFlags() & FCVAR_MATERIAL_THREAD_MASK;
 	}
 
-	m_QueuedConVarSets.RemoveAll(); 
+	m_QueuedConVarSets.clear(); 
 	m_bMaterialSystemThreadSetAllowed = false;
 	return nUpdateFlags;
 }
@@ -843,24 +827,21 @@ int CCvar::ProcessQueuedMaterialThreadConVarSets()
 void CCvar::DisplayQueuedMessages( )
 {
 	// Display any queued up messages
-	if ( m_TempConsoleBuffer.TellPut() == 0 )
+	if ( m_TempConsoleBuffer.size() == 0 )
 		return;
 
 	Color clr;
-	CUtlBuffer bufStringToken;
-	while( m_TempConsoleBuffer.IsValid() )
+	ks::byte_reader queued = m_TempConsoleBuffer.reader();
+	while( queued.remaining() > 0 )
 	{
-		int nType = m_TempConsoleBuffer.GetChar();
+		int nType = queued.read< char >();
 		if ( nType == CONSOLE_COLOR_PRINT )
 		{
-			clr.SetRawColor( m_TempConsoleBuffer.GetInt() );
+			clr.SetRawColor( queued.read< int >() );
 		}
-		
-		int nStringLength = m_TempConsoleBuffer.PeekStringLength();
-		bufStringToken.EnsureCapacity( nStringLength + 1 );
-		
-		char* pTemp = (char*) bufStringToken.Base();
-		m_TempConsoleBuffer.GetString( pTemp, nStringLength + 1 );
+
+		const std::string_view message = queued.read_cstring();
+		const char *pTemp = message.data();
 
 		switch( nType )
 		{
@@ -878,7 +859,7 @@ void CCvar::DisplayQueuedMessages( )
 		}
 	}
 
-	m_TempConsoleBuffer.Purge();
+	m_TempConsoleBuffer.clear();
 }
 
 
@@ -887,19 +868,19 @@ void CCvar::DisplayQueuedMessages( )
 //-----------------------------------------------------------------------------
 void CCvar::InstallConsoleDisplayFunc( IConsoleDisplayFunc* pDisplayFunc )
 {
-	Assert( m_DisplayFuncs.Find( pDisplayFunc ) < 0 );
-	m_DisplayFuncs.AddToTail( pDisplayFunc );
+	Assert( ks::find_index( m_DisplayFuncs, pDisplayFunc ) < 0 );
+	m_DisplayFuncs.push_back( pDisplayFunc );
 	DisplayQueuedMessages();
 }
 
 void CCvar::RemoveConsoleDisplayFunc( IConsoleDisplayFunc* pDisplayFunc )
 {
-	m_DisplayFuncs.FindAndRemove( pDisplayFunc );
+	ks::erase_first( m_DisplayFuncs, pDisplayFunc );
 }
 
 int CCvar::GetConsoleDisplayFuncCount() const
 {
-	return m_DisplayFuncs.Count();
+	return std::ssize( m_DisplayFuncs );
 }
 
 void CCvar::GetConsoleText( int nDisplayFuncIndex, char *pchText, size_t bufSize ) const
@@ -916,12 +897,12 @@ void CCvar::ConsoleColorPrintf( const Color& clr, const char *pFormat, ... ) con
 	va_end( argptr );
 	temp[ sizeof( temp ) - 1 ] = 0;
 
-	int c = m_DisplayFuncs.Count();
+	int c = std::ssize( m_DisplayFuncs );
 	if ( c == 0 )
 	{
-		m_TempConsoleBuffer.PutChar( CONSOLE_COLOR_PRINT );
-		m_TempConsoleBuffer.PutInt( clr.GetRawColor() );
-		m_TempConsoleBuffer.PutString( temp );
+		m_TempConsoleBuffer.write< char >( CONSOLE_COLOR_PRINT );
+		m_TempConsoleBuffer.write< int >( clr.GetRawColor() );
+		m_TempConsoleBuffer.write_cstring( temp );
 		return;
 	}
 
@@ -940,11 +921,11 @@ void CCvar::ConsolePrintf( const char *pFormat, ... ) const
 	va_end( argptr );
 	temp[ sizeof( temp ) - 1 ] = 0;
 
-	int c = m_DisplayFuncs.Count();
+	int c = std::ssize( m_DisplayFuncs );
 	if ( c == 0 )
 	{
-		m_TempConsoleBuffer.PutChar( CONSOLE_PRINT );
-		m_TempConsoleBuffer.PutString( temp );
+		m_TempConsoleBuffer.write< char >( CONSOLE_PRINT );
+		m_TempConsoleBuffer.write_cstring( temp );
 		return;
 	}
 
@@ -963,11 +944,11 @@ void CCvar::ConsoleDPrintf( const char *pFormat, ... ) const
 	va_end( argptr );
 	temp[ sizeof( temp ) - 1 ] = 0;
 
-	int c = m_DisplayFuncs.Count();
+	int c = std::ssize( m_DisplayFuncs );
 	if ( c == 0 )
 	{
-		m_TempConsoleBuffer.PutChar( CONSOLE_DPRINT );
-		m_TempConsoleBuffer.PutString( temp );
+		m_TempConsoleBuffer.write< char >( CONSOLE_DPRINT );
+		m_TempConsoleBuffer.write_cstring( temp );
 		return;
 	}
 
@@ -1012,10 +993,13 @@ void CCvar::PublishToVXConsole()
 #endif
 
 
-static bool ConVarSortFunc( ConCommandBase * const &lhs, ConCommandBase * const &rhs )
+struct ConVarSortLess
 {
-	return CaselessStringLessThan( lhs->GetName(), rhs->GetName() );
-}
+	bool operator()( const ConCommandBase *lhs, const ConCommandBase *rhs ) const
+	{
+		return V_stricmp( lhs->GetName(), rhs->GetName() ) < 0;
+	}
+};
 
 //-----------------------------------------------------------------------------
 // Console commands
@@ -1037,7 +1021,7 @@ void CCvar::Find( const CCommand &args )
 	if( args.ArgC() == 3 )
 	    subSearch = args[2];
 
-	CUtlRBTree< ConCommandBase *, int > sorted( 0, 0, ConVarSortFunc );
+	std::multiset< ConCommandBase *, ConVarSortLess > sorted;
 				 
 	// Loop through vars and print out findings
 	for ( CConCommandHash::CCommandHashIterator_t i = m_CommandHash.First() ;
@@ -1054,12 +1038,12 @@ void CCvar::Find( const CCommand &args )
         if( subSearch && ( !Q_stristr( var->GetName(), subSearch ) && !Q_stristr( var->GetHelpText(), subSearch ) ) )
             continue;
 
-		sorted.Insert( var );
+		sorted.insert( var );
 	}	
 
-	for ( int i = sorted.FirstInorder(); i != sorted.InvalidIndex(); i = sorted.NextInorder( i ) )
+	for ( ConCommandBase *var : sorted )
 	{
-		ConVar_PrintDescription( sorted[ i ] );	
+		ConVar_PrintDescription( var );	
 	}
 }
 
@@ -1100,8 +1084,7 @@ CConCommandHash::~CConCommandHash()
 
 void CConCommandHash::Purge( bool bReinitialize )
 {
-	m_aBuckets.Purge();
-	m_aDataPool.Purge();
+	m_aBuckets.clear(); m_aBuckets.shrink_to_fit();
 	if ( bReinitialize )
 	{
 		Init();
@@ -1115,15 +1098,7 @@ void CConCommandHash::Init( void )
 	COMPILE_TIME_ASSERT((kNUM_BUCKETS & ( kNUM_BUCKETS - 1 )) == 0);
 
 	// Set the bucket size.
-	m_aBuckets.SetSize( kNUM_BUCKETS );
-	for ( int iBucket = 0; iBucket < kNUM_BUCKETS; ++iBucket )
-	{
-		m_aBuckets[iBucket] = m_aDataPool.InvalidIndex();
-	}
-
-	// Calculate the grow size.
-	int nGrowSize = 4 * kNUM_BUCKETS;
-	m_aDataPool.SetGrowSize( nGrowSize );
+	m_aBuckets.assign( kNUM_BUCKETS, {} );
 }
 
 //-----------------------------------------------------------------------------
@@ -1145,24 +1120,11 @@ CConCommandHash::CCommandHashHandle_t CConCommandHash::Insert( ConCommandBase *c
 //-----------------------------------------------------------------------------
 CConCommandHash::CCommandHashHandle_t CConCommandHash::FastInsert( ConCommandBase *cmd )
 {
-	// Get a new element from the pool.
-	intp iHashData = m_aDataPool.Alloc( true );
-	HashEntry_t * RESTRICT pHashData = &m_aDataPool[iHashData];
-	if ( !pHashData )
-		return InvalidHandle();
-
 	HashKey_t key = Hash(cmd);
 
-	// Add data to new element.
-	pHashData->m_uiKey = key;
-	pHashData->m_Data = cmd;
-
-	// Link element.
+	// Link element at the head of its bucket.
 	int iBucket = key & kBUCKETMASK ; // HashFuncs::Hash( uiKey, m_uiBucketMask );
-	m_aDataPool.LinkBefore( m_aBuckets[iBucket], iHashData );
-	m_aBuckets[iBucket] = iHashData;
-
-	return iHashData;	
+	return ToHandle( m_aBuckets[iBucket].emplace_front( key, cmd ) );
 }
 
 //-----------------------------------------------------------------------------
@@ -1170,21 +1132,20 @@ CConCommandHash::CCommandHashHandle_t CConCommandHash::FastInsert( ConCommandBas
 //-----------------------------------------------------------------------------
 void CConCommandHash::Remove( CCommandHashHandle_t hHash ) RESTRICT
 {
-	HashEntry_t * RESTRICT entry = &m_aDataPool[hHash];
-	HashKey_t iBucket = entry->m_uiKey & kBUCKETMASK ;
-	if ( m_aBuckets[iBucket] == hHash )
-	{
-		// It is a bucket head.
-		m_aBuckets[iBucket] = m_aDataPool.Next( hHash );
-	}
-	else
-	{
-		// Not a bucket head.
-		m_aDataPool.Unlink( hHash );
-	}
+	if ( !IsValidHandle( hHash ) )
+		return;
 
-	// Remove the element.
-	m_aDataPool.Remove( hHash );
+	const HashEntry_t *entry = FromHandle( hHash );
+	bucket_t &bucket = m_aBuckets[entry->m_uiKey & kBUCKETMASK];
+	for ( auto it = bucket.begin(); it != bucket.end(); ++it )
+	{
+		if ( &*it == entry )
+		{
+			bucket.erase( it );
+			return;
+		}
+	}
+	Assert( 0 );
 }
 
 //-----------------------------------------------------------------------------
@@ -1192,8 +1153,7 @@ void CConCommandHash::Remove( CCommandHashHandle_t hHash ) RESTRICT
 //-----------------------------------------------------------------------------
 void CConCommandHash::RemoveAll( void )
 {
-	m_aBuckets.RemoveAll();
-	m_aDataPool.RemoveAll();
+	m_aBuckets.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -1204,13 +1164,12 @@ CConCommandHash::CCommandHashHandle_t CConCommandHash::Find( const char *name, H
 	// hash the "key" - get the correct hash table "bucket"
 	int iBucket = hashkey & kBUCKETMASK;
 
-	for ( datapool_t::IndexLocalType_t iElement = m_aBuckets[iBucket]; iElement != m_aDataPool.InvalidIndex(); iElement = m_aDataPool.Next( iElement ) )
+	for ( const HashEntry_t &element : m_aBuckets[iBucket] )
 	{
-		const HashEntry_t &element = m_aDataPool[iElement];
 		if ( element.m_uiKey == hashkey && // if hashes of strings match,
 			 Q_stricmp( name, element.m_Data->GetName() ) == 0) // then test the actual strings
 		{
-			return iElement;
+			return ToHandle( element );
 		}
 	}
 
@@ -1232,19 +1191,18 @@ CConCommandHash::CCommandHashHandle_t CConCommandHash::Find( const ConCommandBas
 	int iBucket = hashkey & kBUCKETMASK;
 
 	// hunt through all entries in that bucket
-	for ( datapool_t::IndexLocalType_t iElement = m_aBuckets[iBucket]; iElement != m_aDataPool.InvalidIndex(); iElement = m_aDataPool.Next( iElement ) )
+	for ( const HashEntry_t &element : m_aBuckets[iBucket] )
 	{
-		const HashEntry_t &element = m_aDataPool[iElement];
 		if ( element.m_uiKey == hashkey && // if the hashes match... 
 			 element.m_Data  == cmd	) // and the pointers...
 		{
 			// in debug, test to make sure we don't have commands under the same name
 			// or something goofy like that
-			AssertMsg1( iElement == Find(cmd->GetName()),
+			AssertMsg1( ToHandle( element ) == Find(cmd->GetName()),
 				"ConCommand %s had two entries in the hash!", cmd->GetName() );
 			
 			// return this element
-			return iElement;
+			return ToHandle( element );
 		}
 	}
 
@@ -1267,13 +1225,7 @@ void CConCommandHash::Report( void )
 	int total = 0;
 	for ( int iBucket = 0 ; iBucket < kNUM_BUCKETS ; ++iBucket )
 	{
-		int count = 0;
-		CCommandHashHandle_t iElement = m_aBuckets[iBucket]; // get the head of the bucket
-		while ( iElement != m_aDataPool.InvalidIndex() )
-		{
-			++count;
-			iElement = m_aDataPool.Next( iElement );
-		}
+		int count = (int)m_aBuckets[iBucket].size();
 
 		Msg( "%d: %d\n", iBucket, count );
 		total += count;

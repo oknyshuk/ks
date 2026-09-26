@@ -10,14 +10,11 @@
 #include "optimize.h"
 #include "tier0/vprof.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 void CStudioRenderContext::GetTriangles( const DrawModelInfo_t& info, matrix3x4_t *pBoneToWorld, GetTriangles_Output_t &out )
 {
 	VPROF( "CStudioRender::GetTriangles");
 
-	out.m_MaterialBatches.RemoveAll(); // clear out data.
+	out.m_MaterialBatches.clear(); // clear out data.
 
 	if( !info.m_pStudioHdr || !info.m_pHardwareData || !info.m_pHardwareData->m_NumLODs || !info.m_pHardwareData->m_pLODs )
 		return;
@@ -56,7 +53,7 @@ void CStudioRenderContext::GetTriangles( const DrawModelInfo_t& info, matrix3x4_
 		int k;
 		for ( k = 0; k < pModel->nummeshes; ++k )
 		{
-			GetTriangles_MaterialBatch_t &materialBatch = out.m_MaterialBatches[out.m_MaterialBatches.AddToTail()];
+			GetTriangles_MaterialBatch_t &materialBatch = out.m_MaterialBatches.emplace_back();
 			mstudiomesh_t *pMesh = pModel->pMesh(k);
 
 			if ( !pModel->CacheVertexData( info.m_pStudioHdr ) )
@@ -68,7 +65,7 @@ void CStudioRenderContext::GetTriangles( const DrawModelInfo_t& info, matrix3x4_
 			Assert( vertData ); // This can only return NULL on X360 for now
 
 			// add the verts from this mesh to the materialBatch
-			materialBatch.m_Verts.SetCount( pMesh->numvertices );
+			materialBatch.m_Verts.assign( pMesh->numvertices, {} );
 			for ( int vertID = 0; vertID < pMesh->numvertices; vertID++ )
 			{
 				GetTriangles_Vertex_t& vert = materialBatch.m_Verts[vertID];
@@ -105,7 +102,7 @@ void CStudioRenderContext::GetTriangles( const DrawModelInfo_t& info, matrix3x4_
 				continue;
 
 			// Clear out indices
-			materialBatch.m_TriListIndices.SetCount( 0 );
+			materialBatch.m_TriListIndices.assign( 0, {} );
 
 			// Iterate over all stripgroups
 			int stripGroupID;
@@ -132,9 +129,9 @@ void CStudioRenderContext::GetTriangles( const DrawModelInfo_t& info, matrix3x4_
 					for ( int i = 0; i < pStripData->numIndices; i += 3 )
 					{
 						int idx = pStripData->indexOffset + i;
-						materialBatch.m_TriListIndices.AddToTail( pMeshGroup->MeshIndex( idx ) );
-						materialBatch.m_TriListIndices.AddToTail( pMeshGroup->MeshIndex( idx + 1 ) );
-						materialBatch.m_TriListIndices.AddToTail( pMeshGroup->MeshIndex( idx + 2 ) );
+						materialBatch.m_TriListIndices.push_back( pMeshGroup->MeshIndex( idx ) );
+						materialBatch.m_TriListIndices.push_back( pMeshGroup->MeshIndex( idx + 1 ) );
+						materialBatch.m_TriListIndices.push_back( pMeshGroup->MeshIndex( idx + 2 ) );
 					}
 				}
 			}

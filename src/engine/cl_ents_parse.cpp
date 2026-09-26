@@ -7,6 +7,7 @@
 
 
 #include "client_pch.h"
+#include <bitset>
 #include "con_nprint.h"
 #include "iprediction.h"
 #include "cl_entityreport.h"
@@ -21,9 +22,6 @@
 #include "ents_shared.h"
 #include "cl_ents_parse.h"
 #include "serializedentity.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 static ConVar cl_flushentitypacket("cl_flushentitypacket", "0", FCVAR_CHEAT, "For debugging. Force the engine to flush an entity packet.");
 extern ConVar replay_debug;
@@ -82,7 +80,7 @@ static FileHandle_t OpenRecordingFile()
 
 void SpewToFile( char const* pFmt, ... )
 {
-	static CUtlVector<unsigned char> s_RecordingBuffer;
+	static std::vector< unsigned char > s_RecordingBuffer;
 
 	char temp[2048];
 	va_list args;
@@ -403,8 +401,8 @@ void CL_CopyNewEntity(
 	// If ent doesn't think it's in PVS, signal that it is
 	Assert( u.m_pTo->last_entity <= u.m_nNewEntity );
 	u.m_pTo->last_entity = u.m_nNewEntity;
-	Assert( !u.m_pTo->transmit_entity.Get(u.m_nNewEntity) );
-	u.m_pTo->transmit_entity.Set( u.m_nNewEntity );
+	Assert( !u.m_pTo->transmit_entity[u.m_nNewEntity] );
+	u.m_pTo->transmit_entity.set( u.m_nNewEntity );
 
 	//
 	// Net stats..
@@ -450,7 +448,7 @@ void CL_CopyExistingEntity( CEntityReadInfo &u )
 		return;
 	}
 
-	Assert( u.m_pFrom->transmit_entity.Get(u.m_nNewEntity) );
+	Assert( u.m_pFrom->transmit_entity[u.m_nNewEntity] );
 
 	// Read raw data from the network stream
 	pEnt->PreDataUpdate( DATA_UPDATE_DATATABLE_CHANGED );
@@ -475,8 +473,8 @@ void CL_CopyExistingEntity( CEntityReadInfo &u )
 	CL_AddPostDataUpdateCall( u, u.m_nNewEntity, DATA_UPDATE_DATATABLE_CHANGED );
 
 	u.m_pTo->last_entity = u.m_nNewEntity;
-	Assert( !u.m_pTo->transmit_entity.Get(u.m_nNewEntity) );
-	u.m_pTo->transmit_entity.Set( u.m_nNewEntity );
+	Assert( !u.m_pTo->transmit_entity[u.m_nNewEntity] );
+	u.m_pTo->transmit_entity.set( u.m_nNewEntity );
 
 	int bit_count = u.m_pBuf->GetNumBitsRead() - start_bit;
 
@@ -501,7 +499,7 @@ void CL_CopyExistingEntity( CEntityReadInfo &u )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CL_MarkEntitiesOutOfPVS( CBitVec<MAX_EDICTS> *pvs_flags )
+void CL_MarkEntitiesOutOfPVS( std::bitset<MAX_EDICTS> *pvs_flags )
 {
 	PREFETCH360(pvs_flags, 0);
 	EntityCacheInfo_t *pInfo = entitylist->GetClientNetworkableArray();
@@ -516,7 +514,7 @@ void CL_MarkEntitiesOutOfPVS( CBitVec<MAX_EDICTS> *pvs_flags )
 		// FIXME: We can remove IClientEntity here if we keep track of the
 		// last frame's entity_in_pvs
 		bool curstate = !pInfo[i].m_bDormant;
-		bool newstate = pvs_flags->Get( i )  ? true : false;
+		bool newstate = ( *pvs_flags )[i];
 
 		if ( !curstate && newstate )
 		{
@@ -608,7 +606,7 @@ bool CL_ProcessPacketEntities( const ks::net::CSVCMsg_PacketEntities &msg )
 		if ( replay_debug.GetBool() )
 			Msg( "Full tick %d update\n", GetBaseLocalClient().GetServerTickCount() );
 		if ( developer.GetInt() != 0 )
-			ConColorMsg( Color( 255, 100, 255 ), "Receiving uncompressed update from server, baseline %d, byte size %d \n", msg.baseline, int( ks::proto::byte_size( msg ) ) );
+			ConColorMsg( Color( 255, 100, 255 ), "Receiving uncompressed update from server, baseline %d, byte size %d \n", (int)msg.baseline, int( ks::proto::byte_size( msg ) ) );
 
 		// Clear out the client's entity states..
 		for ( int i=0; i <= entitylist->GetHighestEntityIndex(); i++ )

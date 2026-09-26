@@ -7,9 +7,6 @@
 #include <stdio.h>
 #include <memory.h>
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // Copied from sound.cpp in the DLL
 char *memfgets( unsigned char *pMemFile, int fileSize, int *pFilePos, char *pBuffer, int bufferSize )
 {

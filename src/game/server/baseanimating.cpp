@@ -5,6 +5,7 @@
 //===========================================================================//
 
 #include "cbase.h"
+#include <mutex>
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -31,9 +32,6 @@
 #include "collisionutils.h"
 #include "toolframework/itoolframework.h"
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 ConVar ai_sequence_debug( "ai_sequence_debug", "0" );
 
@@ -129,7 +127,7 @@ void CBaseAnimating::Activate()
 void CBaseAnimating::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
 {
 	// Are we already marked for transmission?
-	if ( pInfo->m_pTransmitEdict->Get( entindex() ) )
+	if ( (*pInfo->m_pTransmitEdict)[ entindex() ] )
 		return;
 
 	BaseClass::SetTransmit( pInfo, bAlways );
@@ -406,7 +404,7 @@ int CBaseAnimating::SelectWeightedSequence ( Activity activity, int curSequence 
 	return ::SelectWeightedSequence( GetModelPtr(), activity, curSequence );
 }
 
-int CBaseAnimating::SelectWeightedSequenceFromModifiers( Activity activity, CUtlSymbol *pActivityModifiers, int iModifierCount )
+int CBaseAnimating::SelectWeightedSequenceFromModifiers( Activity activity, const ActivityModifierSym_t *pActivityModifiers, int iModifierCount )
 {
 	Assert( activity != ACT_INVALID );
 	Assert( GetModelPtr() );
@@ -1463,7 +1461,7 @@ void CBaseAnimating::CalculateIKLocks( float currentTime )
 		Vector up;
 		GetVectors( nullptr, nullptr, &up );
 		// FIXME: check number of slots?
-		for (int i = 0; i < m_pIk->m_target.Count(); i++)
+		for (int i = 0; i < std::ssize( m_pIk->m_target ); i++)
 		{
 			trace_t trace;
 			CIKTarget *pTarget = &m_pIk->m_target[i];
@@ -1484,7 +1482,7 @@ void CBaseAnimating::CalculateIKLocks( float currentTime )
 					VectorMA( estGround, pTarget->est.height, up, p1 );
 					VectorMA( estGround, -pTarget->est.height, up, p2 );
 
-					float r = MAX(pTarget->est.radius,1);
+					float r = std::max<std::common_type_t<float, int>>(pTarget->est.radius,1);
 
 					// don't IK to other characters
 					ray.Init( p1, p2, Vector(-r,-r,0), Vector(r,r,1) );
@@ -1578,7 +1576,7 @@ bool CBaseAnimating::CanSkipAnimation( void )
 
 void CBaseAnimating::SetupBones( matrix3x4a_t *pBoneToWorld, int boneMask )
 {
-	AUTO_LOCK( m_BoneSetupMutex );
+	std::scoped_lock lock( m_BoneSetupMutex );
 	
 	VPROF_BUDGET( "CBaseAnimating::SetupBones", VPROF_BUDGETGROUP_SERVER_ANIM );
 	
@@ -2122,40 +2120,40 @@ int CBaseAnimating::FindDamagedBodyGroupVariant( int group )
 	int current = GetBodygroup( group );
 	const char *currentName = GetBodygroupPartName( group, current );
 
-	CUtlVector< int > damaged;
+	std::vector< int > damaged;
 	int count = GetBodygroupCount( group );
 	for ( int j=0; j<count; ++j )
 	{
 		const char *partName = GetBodygroupPartName( group, j );
 		if ( *partName == 'D' && Q_strstr( partName, currentName ) )
 		{
-			damaged.AddToTail( j );
+			damaged.push_back( j );
 		}
 	}
 
-	if ( !damaged.Count() )
+	if ( damaged.empty() )
 	{
 		return -1;
 	}
 
-	return damaged[ RandomInt( 0, damaged.Count()-1 ) ];
+	return damaged[ RandomInt( 0, std::ssize( damaged )-1 ) ];
 }
 
 
-void CBaseAnimating::RandomizeBodygroups( CUtlVector< const char * >& groups )
+void CBaseAnimating::RandomizeBodygroups( std::vector< const char * >& groups )
 {
-	CUtlVector< int > groupIndex;
+	std::vector< int > groupIndex;
 
 	int i;
 	int numVariants = 10000;
-	for ( i=0; i<groups.Count(); ++i )
+	for ( i=0; i<std::ssize( groups ); ++i )
 	{
 		int index = FindBodygroupByName( groups[i] );
 		if ( index < 0 )
 			continue;
 
-		groupIndex.AddToTail( index );
-		numVariants = MIN( numVariants, CountBodyGroupVariants( index ) );
+		groupIndex.push_back( index );
+		numVariants = std::min( numVariants, CountBodyGroupVariants( index ) );
 	}
 
 	if ( !numVariants )
@@ -2166,7 +2164,7 @@ void CBaseAnimating::RandomizeBodygroups( CUtlVector< const char * >& groups )
 	int variant = RandomInt( 1, numVariants );
 	int partIndex;
 
-	for ( i=0; i<groupIndex.Count(); ++i )
+	for ( i=0; i<std::ssize( groupIndex ); ++i )
 	{
 		partIndex = FindBodyGroupVariant( groupIndex[i], variant );
 		if ( partIndex >= 0 )
@@ -2553,7 +2551,7 @@ void CBaseAnimating::SetModel( const char *szModelName )
 //-----------------------------------------------------------------------------
 void CBaseAnimating::LockStudioHdr()
 {
-	AUTO_LOCK( m_StudioHdrInitLock );
+	std::scoped_lock lock( m_StudioHdrInitLock );
 	const model_t *mdl = GetModel();
 	if (mdl)
 	{

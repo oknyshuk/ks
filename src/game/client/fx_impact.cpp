@@ -18,9 +18,6 @@
 #include "c_impact_effects.h"
 #include "tier0/vprof.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static ConVar  r_drawflecks( "r_drawflecks", "1" );
 static ConVar  r_impacts_alt_orientation ( "r_impacts_alt_orientation", "1" );
 extern ConVar r_drawmodeldecals;
@@ -348,13 +345,13 @@ static void PerformNewCustomEffects( const Vector &vecOrigin, trace_t &tr, const
 	}
 #endif
 
-	CSmartPtr<CNewParticleEffect> pEffect = CNewParticleEffect::CreateOrAggregatePrecached( nullptr, nEffectIndex, vecImpactPoint );
+	ks::intrusive_ptr<CNewParticleEffect> pEffect = CNewParticleEffect::CreateOrAggregatePrecached( nullptr, nEffectIndex, vecImpactPoint );
 	if ( !pEffect->IsValid() )
 		return;
 
-	SetImpactControlPoint( pEffect.GetObject(), 0, vecImpactPoint, tr.plane.normal, tr.Ent<CBaseEntity>() ); 
-	SetImpactControlPoint( pEffect.GetObject(), 1, vecImpactPoint, vecReflect,		tr.Ent<CBaseEntity>() ); 
-	SetImpactControlPoint( pEffect.GetObject(), 2, vecImpactPoint, vecShotBackward,	tr.Ent<CBaseEntity>() ); 
+	SetImpactControlPoint( pEffect.get(), 0, vecImpactPoint, tr.plane.normal, tr.Ent<CBaseEntity>() ); 
+	SetImpactControlPoint( pEffect.get(), 1, vecImpactPoint, vecReflect,		tr.Ent<CBaseEntity>() ); 
+	SetImpactControlPoint( pEffect.get(), 2, vecImpactPoint, vecShotBackward,	tr.Ent<CBaseEntity>() ); 
 	pEffect->SetControlPoint( 3, Vector( iScale, iScale, iScale ) );
 
 	if ( pEffect->m_pDef->ReadsControlPoint( 4 ) )

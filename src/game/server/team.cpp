@@ -14,10 +14,7 @@
 
 #include "cs_bot.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
-CUtlVector< CTeam * > g_Teams;
+std::vector< CTeam * > g_Teams;
 
 extern ConVar mp_radar_showall;
 
@@ -30,7 +27,7 @@ void SendProxy_PlayerList( const SendProp *pProp, const void *pStruct, const voi
 	CTeam *pTeam = (CTeam*)pData;
 
 	// If this assertion fails, then SendProxyArrayLength_PlayerArray must have failed.
-	Assert( iElement < pTeam->m_aPlayers.Count() );
+	Assert( iElement < std::ssize( pTeam->m_aPlayers ) );
 
 	CBasePlayer *pPlayer = pTeam->m_aPlayers[iElement];
 	pOut->m_Int = pPlayer->entindex();
@@ -40,7 +37,7 @@ void SendProxy_PlayerList( const SendProp *pProp, const void *pStruct, const voi
 int SendProxyArrayLength_PlayerArray( const void *pStruct, int objectID )
 {
 	CTeam *pTeam = (CTeam*)pStruct;
-	return pTeam->m_aPlayers.Count();
+	return std::ssize( pTeam->m_aPlayers );
 }
 
 
@@ -65,7 +62,7 @@ CTeam *GetGlobalTeam( int iIndex )
 //-----------------------------------------------------------------------------
 int GetNumberOfTeams( void )
 {
-	return g_Teams.Count();
+	return std::ssize( g_Teams );
 }
 
 const char* GetTeamName( int iTeam )
@@ -103,8 +100,8 @@ CTeam::CTeam( void )
 //-----------------------------------------------------------------------------
 CTeam::~CTeam( void )
 {
-	m_aSpawnPoints.Purge();
-	m_aPlayers.Purge();
+	m_aSpawnPoints.clear(); m_aSpawnPoints.shrink_to_fit();
+	m_aPlayers.clear(); m_aPlayers.shrink_to_fit();
 }
 
 void CTeam::ResetTeamLeaders()
@@ -130,8 +127,8 @@ void CTeam::Think( void )
 
 void CTeam::DetermineGGLeaderAndSort( void )
 {
-	CUtlVector< CCSPlayer* >	playerList_CT;
-	CUtlVector< CCSPlayer* >	playerList_T;
+	std::vector< CCSPlayer* >	playerList_CT;
+	std::vector< CCSPlayer* >	playerList_T;
 
 	int iNumPlayers = GetNumPlayers();
 	//		m_aPlayers.Sort( PlayerSortFunction );
@@ -145,14 +142,14 @@ void CTeam::DetermineGGLeaderAndSort( void )
 				if ( player->GetPlayerGunGameWeaponIndex() > 0 )
 					m_bGGHasLeader_CT = true;
 
-				playerList_CT.AddToTail( player );
+				playerList_CT.push_back( player );
 			}
 			else if ( player->GetTeamNumber() == TEAM_TERRORIST )
 			{
 				if ( player->GetPlayerGunGameWeaponIndex() > 0 )
 					m_bGGHasLeader_T = true;
 
-				playerList_T.AddToTail( player );
+				playerList_T.push_back( player );
 			}
 		}
 	}
@@ -160,12 +157,12 @@ void CTeam::DetermineGGLeaderAndSort( void )
 	m_nStaticGGLeader_CT = m_nGGLeaderEntIndex_CT;
 	m_nStaticGGLeader_T = m_nGGLeaderEntIndex_T;
 
-	playerList_CT.Sort( TeamGGSortFunction );
-	playerList_T.Sort( TeamGGSortFunction );
+	ks::qsort( playerList_CT, TeamGGSortFunction );
+	ks::qsort( playerList_T, TeamGGSortFunction );
 
-	if ( playerList_CT.Count() > 0 && m_bGGHasLeader_CT )
+	if ( !playerList_CT.empty() && m_bGGHasLeader_CT )
 		m_nGGLeaderEntIndex_CT = playerList_CT[0]->entindex();
-	if ( playerList_T.Count() > 0 && m_bGGHasLeader_T )
+	if ( !playerList_T.empty() && m_bGGHasLeader_T )
 		m_nGGLeaderEntIndex_T = playerList_T[0]->entindex();
 
 	// send an event down so the client gets it asap
@@ -413,7 +410,7 @@ void CTeam::InitializeSpawnpoints( void )
 //-----------------------------------------------------------------------------
 void CTeam::AddSpawnpoint( CTeamSpawnPoint *pSpawnpoint )
 {
-	m_aSpawnPoints.AddToTail( pSpawnpoint );
+	m_aSpawnPoints.push_back( pSpawnpoint );
 }
 
 //-----------------------------------------------------------------------------
@@ -421,11 +418,11 @@ void CTeam::AddSpawnpoint( CTeamSpawnPoint *pSpawnpoint )
 //-----------------------------------------------------------------------------
 void CTeam::RemoveSpawnpoint( CTeamSpawnPoint *pSpawnpoint )
 {
-	for (int i = 0; i < m_aSpawnPoints.Count(); i++ )
+	for (int i = 0; i < std::ssize( m_aSpawnPoints ); i++ )
 	{
 		if ( m_aSpawnPoints[i] == pSpawnpoint )
 		{
-			m_aSpawnPoints.Remove( i );
+			m_aSpawnPoints.erase( m_aSpawnPoints.begin() + i );
 			return;
 		}
 	}
@@ -436,20 +433,20 @@ void CTeam::RemoveSpawnpoint( CTeamSpawnPoint *pSpawnpoint )
 //-----------------------------------------------------------------------------
 CBaseEntity *CTeam::SpawnPlayer( CBasePlayer *pPlayer )
 {
-	if ( m_aSpawnPoints.Count() == 0 )
+	if ( m_aSpawnPoints.empty() )
 		return nullptr;
 
 	// Randomize the start spot
 	int iSpawn = m_iLastSpawn + random->RandomInt( 1,3 );
-	if ( iSpawn >= m_aSpawnPoints.Count() )
-		iSpawn -= m_aSpawnPoints.Count();
+	if ( iSpawn >= std::ssize( m_aSpawnPoints ) )
+		iSpawn -= std::ssize( m_aSpawnPoints );
 	int iStartingSpawn = iSpawn;
 
 	// Now loop through the spawnpoints and pick one
 	int loopCount = 0;
 	do 
 	{
-		if ( iSpawn >= m_aSpawnPoints.Count() )
+		if ( iSpawn >= std::ssize( m_aSpawnPoints ) )
 		{
 			++loopCount;
 			iSpawn = 0;
@@ -485,7 +482,7 @@ void CTeam::InitializePlayers( void )
 //-----------------------------------------------------------------------------
 void CTeam::AddPlayer( CBasePlayer *pPlayer )
 {
-	m_aPlayers.AddToTail( pPlayer );
+	m_aPlayers.push_back( pPlayer );
 	NetworkStateChanged();
 }
 
@@ -494,7 +491,7 @@ void CTeam::AddPlayer( CBasePlayer *pPlayer )
 //-----------------------------------------------------------------------------
 void CTeam::RemovePlayer( CBasePlayer *pPlayer )
 {
-	m_aPlayers.FindAndRemove( pPlayer );
+	ks::erase_first( m_aPlayers, pPlayer );
 	NetworkStateChanged();
 }
 
@@ -503,7 +500,7 @@ void CTeam::RemovePlayer( CBasePlayer *pPlayer )
 //-----------------------------------------------------------------------------
 int CTeam::GetNumPlayers( void )
 {
-	return m_aPlayers.Count();
+	return std::ssize( m_aPlayers );
 }
 
 //-----------------------------------------------------------------------------
@@ -511,7 +508,7 @@ int CTeam::GetNumPlayers( void )
 //-----------------------------------------------------------------------------
 CBasePlayer *CTeam::GetPlayer( int iIndex )
 {
-	Assert( iIndex >= 0 && iIndex < m_aPlayers.Count() );
+	Assert( iIndex >= 0 && iIndex < std::ssize( m_aPlayers ) );
 	return m_aPlayers[ iIndex ];
 }
 
@@ -572,7 +569,7 @@ int CTeam::GetAliveMembers( void )
 	return iAlive;
 }
 
-int CTeam::GetBotMembers( CUtlVector< CCSBot* > *pOutVecBots /*= NULL*/ )
+int CTeam::GetBotMembers( std::vector< CCSBot* > *pOutVecBots /*= NULL*/ )
 {
 	int iBots = 0;
 	for ( int i = 0; i < GetNumPlayers(); i++ )
@@ -584,7 +581,7 @@ int CTeam::GetBotMembers( CUtlVector< CCSBot* > *pOutVecBots /*= NULL*/ )
 				CCSBot* pBot = dynamic_cast< CCSBot* > ( GetPlayer( i ) );
 				if ( pBot )
 				{
-					pOutVecBots->AddToTail( pBot );
+					pOutVecBots->push_back( pBot );
 				}
 			}
 			iBots++;
@@ -594,7 +591,7 @@ int CTeam::GetBotMembers( CUtlVector< CCSBot* > *pOutVecBots /*= NULL*/ )
 	return iBots;
 }
 
-int CTeam::GetHumanMembers( CUtlVector< class CCSPlayer* > *pOutVecPlayers /*= NULL */ )
+int CTeam::GetHumanMembers( std::vector< class CCSPlayer* > *pOutVecPlayers /*= NULL */ )
 {
 	int iPlayers = 0;
 	for ( int i = 0; i < GetNumPlayers(); i++ )
@@ -606,7 +603,7 @@ int CTeam::GetHumanMembers( CUtlVector< class CCSPlayer* > *pOutVecPlayers /*= N
 				CCSPlayer* pPlayer = dynamic_cast< CCSPlayer * > ( GetPlayer( i ) );
 				if ( pPlayer )
 				{
-					pOutVecPlayers->AddToTail( pPlayer );
+					pOutVecPlayers->push_back( pPlayer );
 				}
 			}
 			iPlayers++;

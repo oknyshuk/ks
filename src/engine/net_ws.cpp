@@ -9,9 +9,13 @@
 // Windows IP Support layer.
 
 #include "tier0/vprof.h"
+#include <mutex>
+#include <atomic>
 #include "net_ws_headers.h"
 #include "net_ws_queued_packet_sender.h"
 #include "tier1/lzss.h"
+#include "tier1/vector_ops.h"
+#include "tier1/small_vector.h"
 #include "tier1/tokenset.h"
 #include "matchmaking/imatchframework.h"
 #include "tier2/tier2.h"
@@ -19,6 +23,7 @@
 #include "server.h"
 #include "mathlib/IceKey.H"
 #include "engine/inetsupport.h"
+#include <deque>
 
 
 #ifndef DEDICATED
@@ -27,9 +32,7 @@
 
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 #define NET_COMPRESSION_STACKBUF_SIZE 4096 
 
 static ConVar net_showsplits( "net_showsplits", "0", FCVAR_RELEASE, "Show info about packet splits" );
@@ -115,8 +118,6 @@ typedef struct
 } pendingsocket_t;
 
 
-#include "tier0/memdbgoff.h"
-
 struct loopback_t
 {
 	char		*data;		// loopback buffer
@@ -126,9 +127,7 @@ struct loopback_t
 	DECLARE_FIXEDSIZE_ALLOCATOR( loopback_t );
 };
 
-#include "tier0/memdbgon.h"
-
-DEFINE_FIXEDSIZE_ALLOCATOR( loopback_t, 2, CUtlMemoryPool::GROW_SLOW );
+DEFINE_FIXEDSIZE_ALLOCATOR( loopback_t, 2, ks::fixed_pool::grow::slow );
 
 // Split long packets.  Anything over 1460 is failing on some routers
 typedef struct
@@ -181,8 +180,8 @@ ConVar net_maxroutable
 netadr_t	net_local_adr;
 double		net_time = 0.0f;	// current time, updated each frame
 
-static	CUtlVector<netsocket_t> net_sockets;	// the sockets
-static	CUtlVector<netpacket_t>	net_packets;
+static	std::vector< netsocket_t > net_sockets;	// the sockets
+static	std::vector< netpacket_t >	net_packets;
 
 static	bool net_multiplayer = false;	// if true, configured for Multiplayer
 static	bool net_noip = false;	// Disable IP support, can't switch to MP mode
@@ -198,9 +197,10 @@ static	int  net_error = 0;			// global error code updated with NET_GetLastError(
 
 static int g_nFakeSocketHandle = 0;	// for when we are only using Steam. Need a fake socket handle.
 
-volatile int g_NetChannelsRefreshCounter = 0;
-static CUtlVectorMT< CUtlVector< CNetChan* > >			s_NetChannels;
-static CUtlVectorMT< CUtlVector< pendingsocket_t > >	s_PendingSockets;
+std::atomic<int> g_NetChannelsRefreshCounter{ 0 };
+template < class V > struct LockedVector : V, std::recursive_mutex {};	// lock()/unlock() guard the vector
+static LockedVector< std::vector< CNetChan* > >		s_NetChannels;
+static LockedVector< std::vector< pendingsocket_t > >	s_PendingSockets;
 
 CTSQueue<loopback_t *> s_LoopBacks[LOOPBACK_SOCKETS];
 static netpacket_t*	s_pLagData[MAX_SOCKETS];  // List of lag structures, if fakelag is set.
@@ -315,11 +315,11 @@ bool NET_StringToAdr ( const char *s, netadr_t *a)
 	return a->SetFromString( s, !net_nodns );
 }
 
-void NET_FindAllNetChannelAddresses( int socket, CUtlVector< struct sockaddr > &arrNetChans )
+void NET_FindAllNetChannelAddresses( int socket, std::vector< struct sockaddr > &arrNetChans )
 {
-	AUTO_LOCK_FM( s_NetChannels );
+	std::scoped_lock lock( s_NetChannels );
 
-	int numChannels = s_NetChannels.Count();
+	int numChannels = std::ssize( s_NetChannels );
 
 	for ( int i = 0; i < numChannels; i++ )
 	{
@@ -338,15 +338,15 @@ void NET_FindAllNetChannelAddresses( int socket, CUtlVector< struct sockaddr > &
 		// and the IP:Port address 
 		struct sockaddr sockAddress;
 		chan->GetRemoteAddress().m_adr.ToSockadr( &sockAddress );
-		arrNetChans.AddToTail( sockAddress );
+		arrNetChans.push_back( sockAddress );
 	}
 }
 
 CNetChan *NET_FindNetChannel(int socket, const ns_address &adr )
 {
-	AUTO_LOCK_FM( s_NetChannels );
+	std::scoped_lock lock( s_NetChannels );
 
-	int numChannels = s_NetChannels.Count();
+	int numChannels = std::ssize( s_NetChannels );
 
 	for ( int i = 0; i < numChannels; i++ )
 	{
@@ -598,7 +598,7 @@ int NET_OpenSocket ( const char *net_interface, int& port, int protocol )
 
 int NET_ConnectSocket( int sock, const netadr_t &addr )
 {
-	Assert( (sock >= 0) && (sock < net_sockets.Count()) );
+	Assert( (sock >= 0) && (sock < std::ssize( net_sockets )) );
 
 	netsocket_t *netsock = &net_sockets[sock];
 
@@ -709,8 +709,8 @@ INetChannel *NET_CreateNetChannel( int socket, const ns_address *adr, const char
 		// create new channel
 		chan = new CNetChan();
 
-		AUTO_LOCK_FM( s_NetChannels );
-		s_NetChannels.AddToTail( chan );
+		std::scoped_lock lock( s_NetChannels );
+		s_NetChannels.push_back( chan );
 	}
 
 	NET_ClearLagData( socket );
@@ -735,14 +735,14 @@ void NET_RemoveNetChannel(INetChannel *netchan, bool bDeleteNetChan)
 		return;
 	}
 
-	AUTO_LOCK_FM( s_NetChannels );
-	if ( s_NetChannels.Find( static_cast<CNetChan*>(netchan) ) == s_NetChannels.InvalidIndex() )
+	std::scoped_lock lock( s_NetChannels );
+	if ( ks::find_index( s_NetChannels, static_cast<CNetChan*>(netchan) ) == -1 )
 	{
 		DevMsg(1, "NET_CloseNetChannel: unknown channel.\n");
 		return;
 	}
 
-	s_NetChannels.FindAndRemove( static_cast<CNetChan*>(netchan) );
+	ks::erase_first( s_NetChannels, static_cast<CNetChan*>(netchan) );
 
 	NET_ClearQueuedPacketsForChannel( netchan );
 	
@@ -949,7 +949,7 @@ bool NET_LagPacket (bool newdata, netpacket_t * packet)
 			int ninterval;
 
 			ninterval = (int)(fabs( fakeloss.GetFloat() ) );
-			ninterval = MAX( 2, ninterval );
+			ninterval = std::max( 2, ninterval );
 
 			if ( !( losscount[packet->source] % ninterval ) )
 			{
@@ -983,7 +983,7 @@ bool NET_LagPacket (bool newdata, netpacket_t * packet)
 	float target = s_FakeLag;
 	if ( fakejitter.GetFloat() > 0.0f )
 	{
-		float maxjitter = MIN( fakejitter.GetFloat(), target * 0.5f );
+		float maxjitter = std::min( fakejitter.GetFloat(), target * 0.5f );
 		target += RandomFloat( -maxjitter, maxjitter );
 	}
 
@@ -1054,20 +1054,20 @@ public:
 	float			lastactivetime;
 };
 
-typedef CUtlVector< CSplitPacketEntry > vecSplitPacketEntries_t;
-static CUtlVector<vecSplitPacketEntries_t> net_splitpackets;
+typedef std::vector< CSplitPacketEntry > vecSplitPacketEntries_t;
+static std::vector< vecSplitPacketEntries_t > net_splitpackets;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 void NET_DiscardStaleSplitpackets( const int sock )
 {
-	if ( !net_splitpackets.IsValidIndex( sock ) )
+	if ( !ks::is_valid_index( net_splitpackets, sock ) )
 		return;
 	
 	vecSplitPacketEntries_t &splitPacketEntries = net_splitpackets[sock];
 	int i;
-	for ( i = splitPacketEntries.Count() - 1; i >= 0; i-- )
+	for ( i = std::ssize( splitPacketEntries ) - 1; i >= 0; i-- )
 	{
 		CSplitPacketEntry *entry = &splitPacketEntries[ i ];
 		Assert( entry );
@@ -1075,7 +1075,7 @@ void NET_DiscardStaleSplitpackets( const int sock )
 		if ( net_time < ( entry->lastactivetime + SPLIT_PACKET_STALE_TIME ) )
 			continue;
 
-		splitPacketEntries.Remove( i );
+		splitPacketEntries.erase( splitPacketEntries.begin() + i );
 	}
 }
 
@@ -1087,7 +1087,7 @@ void NET_DiscardStaleSplitpackets( const int sock )
 CSplitPacketEntry *NET_FindOrCreateSplitPacketEntry( const int sock, const ns_address &from )
 {
 	vecSplitPacketEntries_t &splitPacketEntries = net_splitpackets[sock];
-	int i, count = splitPacketEntries.Count();
+	int i, count = std::ssize( splitPacketEntries );
 	CSplitPacketEntry *entry = nullptr;
 	for ( i = 0; i < count; i++ )
 	{
@@ -1103,9 +1103,9 @@ CSplitPacketEntry *NET_FindOrCreateSplitPacketEntry( const int sock, const ns_ad
 		CSplitPacketEntry newentry;
 		newentry.from = from;
 
-		splitPacketEntries.AddToTail( newentry );
+		splitPacketEntries.push_back( newentry );
 
-		entry = &splitPacketEntries[ splitPacketEntries.Count() - 1 ];
+		entry = &splitPacketEntries[ std::ssize( splitPacketEntries ) - 1 ];
 	}
 
 	Assert( entry );
@@ -1174,8 +1174,8 @@ bool NET_GetLong( const int sock, netpacket_t *packet )
 			packetNumber, 
 			packetCount, 
 			nSplitSizeMinusHeader,
-			MIN_SPLIT_SIZE,
-			MAX_SPLIT_SIZE );
+			(int)MIN_SPLIT_SIZE,
+			(int)MAX_SPLIT_SIZE );
 		return false;
 	}
 
@@ -1186,7 +1186,7 @@ bool NET_GetLong( const int sock, netpacket_t *packet )
 			ns_address_render( packet->from ).String(), 
 			packetNumber, 
 			packetCount, 
-			MAX_SPLITPACKET_SPLITS );
+			(int)MAX_SPLITPACKET_SPLITS );
 		return false;
 	}
 
@@ -1232,7 +1232,7 @@ bool NET_GetLong( const int sock, netpacket_t *packet )
 				packetCount, 
 				sequenceNumber,
 				size, 
-				nSplitSizeMinusHeader + sizeof( SPLITPACKET ), 
+				nSplitSizeMinusHeader + (int)sizeof( SPLITPACKET ), 
 				ns_address_render( packet->from ).String() );
 		}
 	}
@@ -1298,7 +1298,7 @@ bool NET_GetLoopPacket ( netpacket_t * packet )
 
 	if ( loop->data != loop->defbuffer )
 	{
-		delete loop->data;
+		delete[] loop->data;
 		loop->data = loop->defbuffer;
 	}
 
@@ -1356,7 +1356,7 @@ static bool NET_ReceiveDatagram_Helper( const int sock, netpacket_t * packet, bo
 		packet->wiresize = ret;
 
 		MEM_ALLOC_CREDIT();
-		CUtlMemoryFixedGrowable< byte, NET_COMPRESSION_STACKBUF_SIZE > bufVoice( NET_COMPRESSION_STACKBUF_SIZE );
+		ks::small_vector< byte, NET_COMPRESSION_STACKBUF_SIZE > bufVoice( NET_COMPRESSION_STACKBUF_SIZE );
 
 		unsigned int nVoiceBits = 0u;
 
@@ -1374,7 +1374,7 @@ static bool NET_ReceiveDatagram_Helper( const int sock, netpacket_t * packet, bo
 			}
 
 			// Now check if the data on the wire is encrypted?
-			CUtlMemoryFixedGrowable< byte, NET_COMPRESSION_STACKBUF_SIZE > memDecryptedAll( NET_COMPRESSION_STACKBUF_SIZE );
+			ks::small_vector< byte, NET_COMPRESSION_STACKBUF_SIZE > memDecryptedAll( NET_COMPRESSION_STACKBUF_SIZE );
 			if ( LittleLong( *(int *)packet->data ) != CONNECTIONLESS_HEADER )
 			{
 				// If the channel has encryption then decrypt the packet
@@ -1391,21 +1391,21 @@ static bool NET_ReceiveDatagram_Helper( const int sock, netpacket_t * packet, bo
 					if ( ( packet->size % iceKey.blockSize() ) == 0 )
 					{
 						// Decrypt the message
-						memDecryptedAll.EnsureCapacity( packet->size );
+						ks::grow_to( memDecryptedAll, packet->size );
 						unsigned char *pchCryptoBuffer = ( unsigned char * ) stackalloc( iceKey.blockSize() );
 						for ( int k = 0; k < ( int ) packet->size; k += iceKey.blockSize() )
 						{
 							iceKey.decrypt( ( const unsigned char * ) ( packet->data + k ), pchCryptoBuffer );
-							Q_memcpy( memDecryptedAll.Base() + k, pchCryptoBuffer, iceKey.blockSize() );
+							Q_memcpy( memDecryptedAll.data() + k, pchCryptoBuffer, iceKey.blockSize() );
 						}
 
 						// Check how much random fudge we have
-						int numRandomFudgeBytes = *memDecryptedAll.Base();
+						int numRandomFudgeBytes = *memDecryptedAll.data();
 						if ( ( numRandomFudgeBytes > 0 ) && ( int( numRandomFudgeBytes + 1 + sizeof( int32 ) ) < packet->size ) )
 						{
 							// Fetch the size of the encrypted message
 							int32 numBytesWrittenWire = 0;
-							Q_memcpy( &numBytesWrittenWire, memDecryptedAll.Base() + 1 + numRandomFudgeBytes, sizeof( int32 ) );
+							Q_memcpy( &numBytesWrittenWire, memDecryptedAll.data() + 1 + numRandomFudgeBytes, sizeof( int32 ) );
 							int32 const numBytesWritten = BigLong( numBytesWrittenWire );	// byteswap from the wire
 
 							// Make sure the total size of the message matches the expectations
@@ -1413,7 +1413,7 @@ static bool NET_ReceiveDatagram_Helper( const int sock, netpacket_t * packet, bo
 							{
 								// Fix the packet to point at decrypted data!
 								packet->size = numBytesWritten;
-								Q_memcpy( packet->data, memDecryptedAll.Base() + 1 + numRandomFudgeBytes + sizeof( int32 ), packet->size );
+								Q_memcpy( packet->data, memDecryptedAll.data() + 1 + numRandomFudgeBytes + sizeof( int32 ), packet->size );
 							}
 						}
 					}
@@ -1432,17 +1432,17 @@ static bool NET_ReceiveDatagram_Helper( const int sock, netpacket_t * packet, bo
 					return false;
 
 				MEM_ALLOC_CREDIT();
-				CUtlMemoryFixedGrowable< byte, NET_COMPRESSION_STACKBUF_SIZE > memDecompressed( NET_COMPRESSION_STACKBUF_SIZE );
-				memDecompressed.EnsureCapacity( actualSize );
+				ks::small_vector< byte, NET_COMPRESSION_STACKBUF_SIZE > memDecompressed( NET_COMPRESSION_STACKBUF_SIZE );
+				ks::grow_to( memDecompressed, actualSize );
 
-				unsigned int uDecompressedSize = lzss.SafeUncompress( pCompressedData, memDecompressed.Base(), actualSize );
+				unsigned int uDecompressedSize = lzss.SafeUncompress( pCompressedData, memDecompressed.data(), actualSize );
 				if ( uDecompressedSize == 0 || ((unsigned int)actualSize) != uDecompressedSize )
 				{
 					return false;
 				}
 
 				// packet->wiresize is already set
-				Q_memcpy( packet->data, memDecompressed.Base(), uDecompressedSize );
+				Q_memcpy( packet->data, memDecompressed.data(), uDecompressedSize );
 
 				packet->size = uDecompressedSize;
 			}
@@ -1486,7 +1486,7 @@ static bool NET_ReceiveDatagram_Helper( const int sock, netpacket_t * packet, bo
 				bf_write fixup;
 				fixup.SetDebugName( "X360 Fixup" );
 				fixup.StartWriting( packet->data, NET_MAX_MESSAGE, unPacketBits );
-				fixup.WriteBits( bufVoice.Base(), nVoiceBits );
+				fixup.WriteBits( bufVoice.data(), nVoiceBits );
 
 				// Make sure we have enough bits to read a final ks::net::net_NOP opcode before compressing 
 				int nRemainingBits = fixup.GetNumBitsWritten() % 8;
@@ -1553,7 +1553,7 @@ static uint64 g_nSockUDPTotalProcess = 0;
 CON_COMMAND( net_show_packet_stats, "Displays UDP packet statistics and resets the counters\n" )
 {
 	Msg( "UDP processed: %llu pumps, %llu good pkts, %llu bad pkts.\n", g_nSockUDPTotalProcess, g_nSockUDPTotalGood, g_nSockUDPTotalBad );
-	Msg( "UDP rate: %.6f good pkt/pmp, %.6f bad pkt/pmp.\n", double( g_nSockUDPTotalGood )/double( MAX( g_nSockUDPTotalProcess, 1 ) ), double( g_nSockUDPTotalBad )/double( MAX( g_nSockUDPTotalProcess, 1 ) ) );
+	Msg( "UDP rate: %.6f good pkt/pmp, %.6f bad pkt/pmp.\n", double( g_nSockUDPTotalGood )/double( std::max( g_nSockUDPTotalProcess, 1 ) ), double( g_nSockUDPTotalBad )/double( std::max( g_nSockUDPTotalProcess, 1 ) ) );
 	g_nSockUDPTotalGood = 0;
 	g_nSockUDPTotalBad = 0;
 	g_nSockUDPTotalProcess = 0;
@@ -1586,7 +1586,7 @@ bool NET_ReceiveDatagram ( const int sock, netpacket_t * packet )
 
 netpacket_t *NET_GetPacket (int sock, byte *scratch )
 {
-	if ( !net_packets.IsValidIndex( sock ) )
+	if ( !ks::is_valid_index( net_packets, sock ) )
 		return nullptr;
 	
 	// Each socket has its own netpacket to allow multithreading
@@ -1641,8 +1641,8 @@ netpacket_t *NET_GetPacket (int sock, byte *scratch )
 
 void NET_ProcessPending( void )
 {
-	AUTO_LOCK_FM( s_PendingSockets );
-	for ( int i=0; i<s_PendingSockets.Count();i++ )
+	std::scoped_lock lock( s_PendingSockets );
+	for ( int i=0; i<std::ssize( s_PendingSockets );i++ )
 	{
 		pendingsocket_t * psock = &s_PendingSockets[i];
 
@@ -1651,7 +1651,7 @@ void NET_ProcessPending( void )
 		if ( (net_time - psock->time) > TCP_CONNECT_TIMEOUT )
 		{
 			NET_CloseSocket( psock->newsock );
-			s_PendingSockets.Remove( i );
+			s_PendingSockets.erase( s_PendingSockets.begin() + i );
 			continue;
 		}
 
@@ -1664,7 +1664,7 @@ void NET_ProcessPending( void )
 		else if ( ret == -1 )
 		{
 			NET_CloseSocket( psock->newsock );
-			s_PendingSockets.Remove( i );
+			s_PendingSockets.erase( s_PendingSockets.begin() + i );
 			continue;	// connection closed somehow
 		}
 		
@@ -1676,8 +1676,8 @@ void NET_ProcessPending( void )
 
 		if ( cmd == STREAM_CMD_ACKN )
 		{
-			AUTO_LOCK_FM( s_NetChannels );
-			for ( int j = 0; j < s_NetChannels.Count(); j++ )
+			std::scoped_lock channelsLock( s_NetChannels );
+			for ( int j = 0; j < std::ssize( s_NetChannels ); j++ )
 			{
 				CNetChan * chan = s_NetChannels[j];
 
@@ -1716,7 +1716,7 @@ void NET_ProcessPending( void )
 			NET_CloseSocket( psock->newsock );
 		}
 
-		s_PendingSockets.Remove( i );
+		s_PendingSockets.erase( s_PendingSockets.begin() + i );
 	}
 }
 
@@ -1751,8 +1751,8 @@ void NET_ProcessListen(int sock)
 	psock.addr.SetFromSockadr( &sa );
 	psock.time = net_time;
 
-	AUTO_LOCK_FM( s_PendingSockets );
-	s_PendingSockets.AddToTail( psock );
+	std::scoped_lock lock( s_PendingSockets );
+	s_PendingSockets.push_back( psock );
 
 	// tell client to send challenge number to identify
 
@@ -1793,10 +1793,10 @@ void NET_ProcessSocket( int sock, IConnectionlessPacketHandler *handler )
 
 	// Scope for the auto_lock
 	{
-		AUTO_LOCK_FM( s_NetChannels );
+		std::scoped_lock lock( s_NetChannels );
 
 		// get streaming data from channel sockets
-		int numChannels = s_NetChannels.Count();
+		int numChannels = std::ssize( s_NetChannels );
 
 		for ( int i = (numChannels-1); i >= 0 ; i-- )
 		{
@@ -1969,7 +1969,7 @@ static int NET_SendTo( bool verbose, SOCKET s, const char * buf, int len, const 
 	{
 		Error( "NET_SendTo: Error" );
 	}
-#endif // _WIN32
+#endif // !DEDICATED
 
 	nSend = NET_SendToImpl
 	( 
@@ -2049,7 +2049,7 @@ struct SendQueueItem_t
 
 	CNetChan	*m_pChannel;
 	SOCKET		m_Socket;
-	CUtlBuffer	m_Buffer;
+	std::vector< std::byte >	m_Buffer;
 	ns_address	m_To;
 };
 
@@ -2060,7 +2060,7 @@ struct SendQueue_t
 	{
 	}
 	int									m_nHostFrame;
-	CUtlLinkedList< SendQueueItem_t >	m_SendQueue;
+	std::deque< SendQueueItem_t >		m_SendQueue;
 };
 
 static SendQueue_t g_SendQueue;
@@ -2076,10 +2076,10 @@ static int NET_QueuePacketForSend( CNetChan *chan, bool verbose, SOCKET s, const
 	{
 		Assert( chan );
 		// Set up data structure
-		SendQueueItem_t *sq = &g_SendQueue.m_SendQueue[ g_SendQueue.m_SendQueue.AddToTail() ];
+		SendQueueItem_t *sq = &g_SendQueue.m_SendQueue.emplace_back();
 		sq->m_Socket = s;
 		sq->m_pChannel = chan;
-		sq->m_Buffer.Put( (const void *)buf, len );
+		sq->m_Buffer.assign( (const std::byte *)buf, (const std::byte *)buf + len );
 		sq->m_To = to;
 		sq->m_pChannel->IncrementQueuedPackets();
 	}
@@ -2089,13 +2089,13 @@ static int NET_QueuePacketForSend( CNetChan *chan, bool verbose, SOCKET s, const
 
 void NET_SendQueuedPacket( SendQueueItem_t *sq )
 {
-	// Msg( "Send queued packet %d\n", sq->m_Buffer.TellPut() );
+	// Msg( "Send queued packet %d\n", sq->m_Buffer.size() );
 	NET_SendTo
 	( 
 		false, 
 		sq->m_Socket, 
-		( const char FAR * )sq->m_Buffer.Base(), 
-		sq->m_Buffer.TellPut(), 
+		( const char FAR * )sq->m_Buffer.data(), 
+		sq->m_Buffer.size(), 
 		sq->m_To,
 		-1
 	);
@@ -2105,18 +2105,7 @@ void NET_SendQueuedPacket( SendQueueItem_t *sq )
 
 void NET_ClearQueuedPacketsForChannel( INetChannel *channel )
 {
-	CUtlLinkedList< SendQueueItem_t >& list = g_SendQueue.m_SendQueue;
-
-	for ( unsigned short i = list.Head(); i != list.InvalidIndex();  )
-	{
-		unsigned short n = list.Next( i );
-		SendQueueItem_t &e = list[ i ];
-		if ( e.m_pChannel == channel )
-		{
-			list.Remove( i );
-		}
-		i = n;
-	}
+	std::erase_if( g_SendQueue.m_SendQueue, [channel]( const SendQueueItem_t &e ) { return e.m_pChannel == channel; } );
 }
 
 void NET_SendQueuedPackets()
@@ -2126,16 +2115,15 @@ void NET_SendQueuedPackets()
 		return;
 	g_SendQueue.m_nHostFrame = host_framecount;
 
-	CUtlLinkedList< SendQueueItem_t >& list = g_SendQueue.m_SendQueue;
+	std::deque< SendQueueItem_t >& list = g_SendQueue.m_SendQueue;
 
 	int nRemaining = net_splitrate.GetInt();
 	while ( nRemaining )
 	{
-		if ( list.IsValidIndex( list.Head() ) )
+		if ( !list.empty() )
 		{
-			SendQueueItem_t *sq = &list[ list.Head() ];
-			NET_SendQueuedPacket( sq );
-			list.Remove( list.Head() );
+			NET_SendQueuedPacket( &list.front() );
+			list.pop_front();
 			--nRemaining;
 		}
 		else
@@ -2156,7 +2144,7 @@ void NET_SendQueuedPackets()
 //			tolen - 
 // Output : int
 //-----------------------------------------------------------------------------
-static volatile int32 s_SplitPacketSequenceNumber[ MAX_SOCKETS ] = {1};
+static std::atomic<int32> s_SplitPacketSequenceNumber[ MAX_SOCKETS ] = {1};
 
 static int NET_SendLong( INetChannel *chan, int sock, SOCKET s, const char * buf, int len, const ns_address &to, int nMaxRoutableSize )
 {
@@ -2171,7 +2159,7 @@ static int NET_SendLong( INetChannel *chan, int sock, SOCKET s, const char * buf
 	}
 	else
 	{
-		nSequenceNumber = ThreadInterlockedIncrement( &s_SplitPacketSequenceNumber[ sock ] );
+		nSequenceNumber = ++s_SplitPacketSequenceNumber[ sock ];
 	}
 
 	const char *sendbuf = buf;
@@ -2212,7 +2200,7 @@ static int NET_SendLong( INetChannel *chan, int sock, SOCKET s, const char * buf
 
 	while ( nBytesLeft > 0 )
 	{
-		int size = MIN( nSplitSizeMinusHeader, nBytesLeft );
+		int size = std::min<std::common_type_t<short int, int>>( nSplitSizeMinusHeader, nBytesLeft );
 
 		pPacket->packetID = LittleShort( (short)(( nPacketNumber << 8 ) + nPacketCount) );
 		
@@ -2350,9 +2338,9 @@ int NET_SendPacket ( INetChannel *chan, int sock,  const ns_address &to, const u
 	}
 
 	MEM_ALLOC_CREDIT();
-	CUtlMemoryFixedGrowable< byte, NET_COMPRESSION_STACKBUF_SIZE > memCompressed( NET_COMPRESSION_STACKBUF_SIZE );
-	CUtlMemoryFixedGrowable< byte, NET_COMPRESSION_STACKBUF_SIZE > memCompressedVoice( NET_COMPRESSION_STACKBUF_SIZE );
-	CUtlMemoryFixedGrowable< byte, NET_COMPRESSION_STACKBUF_SIZE > memEncryptedAll( NET_COMPRESSION_STACKBUF_SIZE );
+	ks::small_vector< byte, NET_COMPRESSION_STACKBUF_SIZE > memCompressed( NET_COMPRESSION_STACKBUF_SIZE );
+	ks::small_vector< byte, NET_COMPRESSION_STACKBUF_SIZE > memCompressedVoice( NET_COMPRESSION_STACKBUF_SIZE );
+	ks::small_vector< byte, NET_COMPRESSION_STACKBUF_SIZE > memEncryptedAll( NET_COMPRESSION_STACKBUF_SIZE );
 
 	int iGameDataLength = pVoicePayload ? length : -1;
 
@@ -2361,9 +2349,9 @@ int NET_SendPacket ( INetChannel *chan, int sock,  const ns_address &to, const u
 
 	if ( pVoicePayload )
 	{
-		memCompressedVoice.EnsureCapacity( pVoicePayload->GetNumBytesWritten() + sizeof( unsigned short ) );
+		ks::grow_to( memCompressedVoice, pVoicePayload->GetNumBytesWritten() + sizeof( unsigned short ) );
 
-		byte *pVoice = (byte *)memCompressedVoice.Base();
+		byte *pVoice = (byte *)memCompressedVoice.data();
 
 		unsigned short usVoiceBits = pVoicePayload->GetNumBitsWritten();
 		*( unsigned short * )pVoice = LittleShort( usVoiceBits );
@@ -2394,20 +2382,20 @@ int NET_SendPacket ( INetChannel *chan, int sock,  const ns_address &to, const u
 		CLZSS lzss;
 		unsigned int nCompressedLength = length;
 	
-		memCompressed.EnsureCapacity( length + nVoiceBytes + sizeof( unsigned int ) );
+		ks::grow_to( memCompressed, length + nVoiceBytes + sizeof( unsigned int ) );
 
-		*(int *)memCompressed.Base() = LittleLong( NET_HEADER_FLAG_COMPRESSEDPACKET );
+		*(int *)memCompressed.data() = LittleLong( NET_HEADER_FLAG_COMPRESSEDPACKET );
 
-		byte *pOutput = lzss.CompressNoAlloc( (byte *)data, length, memCompressed.Base() + sizeof( unsigned int ), &nCompressedLength );
+		byte *pOutput = lzss.CompressNoAlloc( (byte *)data, length, memCompressed.data() + sizeof( unsigned int ), &nCompressedLength );
 		if ( pOutput )
 		{
-			data	= memCompressed.Base();
+			data	= memCompressed.data();
 			length	= nCompressedLength + sizeof( unsigned int );
 
 			if ( pVoicePayload && pVoicePayload->GetNumBitsWritten() > 0 )
 			{
-				byte *pVoice = (byte *)memCompressed.Base() + length;
-				Q_memcpy( pVoice, memCompressedVoice.Base(), nVoiceBytes );
+				byte *pVoice = (byte *)memCompressed.data() + length;
+				Q_memcpy( pVoice, memCompressedVoice.data(), nVoiceBytes );
 			}
 			
 			iGameDataLength = length;
@@ -2420,13 +2408,13 @@ int NET_SendPacket ( INetChannel *chan, int sock,  const ns_address &to, const u
 	
 	if ( !bWroteVoice && pVoicePayload && pVoicePayload->GetNumBitsWritten() > 0 )
 	{
-		memCompressed.EnsureCapacity( length + nVoiceBytes );
+		ks::grow_to( memCompressed, length + nVoiceBytes );
 
-		byte *pVoice = (byte *)memCompressed.Base();
+		byte *pVoice = (byte *)memCompressed.data();
 		Q_memcpy( pVoice, (const void *)data, length );
 		pVoice += length;
-		Q_memcpy( pVoice, memCompressedVoice.Base(), nVoiceBytes );
-		data	= memCompressed.Base();
+		Q_memcpy( pVoice, memCompressedVoice.data(), nVoiceBytes );
+		data	= memCompressed.data();
 
 		length  += nVoiceBytes;
 	}
@@ -2448,24 +2436,24 @@ int NET_SendPacket ( INetChannel *chan, int sock,  const ns_address &to, const u
 			pchRandomFudgeBytes[ k ] = RandomInt( 16, 250 );
 
 		// Prepare the encrypted memory
-		memEncryptedAll.EnsureCapacity( numTotalEncryptedBytes );
-		* memEncryptedAll.Base() = numRandomFudgeBytes;
-		Q_memcpy( memEncryptedAll.Base() + 1, pchRandomFudgeBytes, numRandomFudgeBytes );
+		ks::grow_to( memEncryptedAll, numTotalEncryptedBytes );
+		* memEncryptedAll.data() = numRandomFudgeBytes;
+		Q_memcpy( memEncryptedAll.data() + 1, pchRandomFudgeBytes, numRandomFudgeBytes );
 
 		int32 const numBytesWrittenWire = BigLong( length );	// byteswap for the wire
-		Q_memcpy( memEncryptedAll.Base() + 1 + numRandomFudgeBytes, &numBytesWrittenWire, sizeof( numBytesWrittenWire ) );
-		Q_memcpy( memEncryptedAll.Base() + 1 + numRandomFudgeBytes + sizeof( int32 ), data, length );
+		Q_memcpy( memEncryptedAll.data() + 1 + numRandomFudgeBytes, &numBytesWrittenWire, sizeof( numBytesWrittenWire ) );
+		Q_memcpy( memEncryptedAll.data() + 1 + numRandomFudgeBytes + sizeof( int32 ), data, length );
 
 		// Encrypt the message
 		unsigned char *pchCryptoBuffer = ( unsigned char * ) stackalloc( iceKey.blockSize() );
 		for ( int k = 0; k < numTotalEncryptedBytes; k += iceKey.blockSize() )
 		{
-			iceKey.encrypt( ( const unsigned char * ) ( memEncryptedAll.Base() + k ), pchCryptoBuffer );
-			Q_memcpy( memEncryptedAll.Base() + k, pchCryptoBuffer, iceKey.blockSize() );
+			iceKey.encrypt( ( const unsigned char * ) ( memEncryptedAll.data() + k ), pchCryptoBuffer );
+			Q_memcpy( memEncryptedAll.data() + k, pchCryptoBuffer, iceKey.blockSize() );
 		}
 
 		// Set the pointers to network out the encrypted data
-		data = memEncryptedAll.Base();
+		data = memEncryptedAll.data();
 		length = numTotalEncryptedBytes;
 	}
 
@@ -2473,7 +2461,7 @@ int NET_SendPacket ( INetChannel *chan, int sock,  const ns_address &to, const u
 	int nMaxRoutable = MAX_ROUTABLE_PAYLOAD;
 	if ( chan )
 	{
-		nMaxRoutable = clamp( chan->GetMaxRoutablePayloadSize(), MIN_USER_MAXROUTABLE_SIZE, MIN( sv_maxroutable.GetInt(), MAX_USER_MAXROUTABLE_SIZE ) );
+		nMaxRoutable = clamp( chan->GetMaxRoutablePayloadSize(), MIN_USER_MAXROUTABLE_SIZE, std::min( sv_maxroutable.GetInt(), MAX_USER_MAXROUTABLE_SIZE ) );
 	}
 
 	if ( ( unMillisecondsDelay != 0u ) &&
@@ -2562,7 +2550,7 @@ NET_CloseAllSockets
 void NET_CloseAllSockets (void)
 {
 	// shut down any existing and open sockets
-	for (int i=0 ; i<net_sockets.Count() ; i++)
+	for (int i=0 ; i<std::ssize( net_sockets ) ; i++)
 	{
 		if ( net_sockets[i].nPort )
 		{
@@ -2577,13 +2565,13 @@ void NET_CloseAllSockets (void)
 	}
 
 	// shut down all pending sockets
-	AUTO_LOCK_FM( s_PendingSockets );
-	for(int j=0; j<s_PendingSockets.Count();j++ )
+	std::scoped_lock lock( s_PendingSockets );
+	for(int j=0; j<std::ssize( s_PendingSockets );j++ )
 	{
 		NET_CloseSocket( s_PendingSockets[j].newsock );
 	}
 
-	s_PendingSockets.RemoveAll();
+	s_PendingSockets.clear();
 
 	// Close steam sockets as well
 	g_pSteamSocketMgr->Shutdown();
@@ -2601,7 +2589,7 @@ void NET_FlushAllSockets( void )
 	char data[2048];
 	ns_address from;
 	
-	for (int i=0 ; i<net_sockets.Count() ; i++)
+	for (int i=0 ; i<std::ssize( net_sockets ) ; i++)
 	{
 		if ( net_sockets[i].hUDP )
 		{
@@ -2619,18 +2607,18 @@ void NET_FlushAllSockets( void )
 
 static void OpenSocketInternal( int nModule, int nSetPort, int nDefaultPort, const char *pName, int nProtocol, bool bTryAny )
 {
-	CUtlVector< CUtlString > vecBindableAddresses;
+	std::vector< std::string > vecBindableAddresses;
 	if ( ( NS_HLTV == nModule )&& ipname_tv.GetString()[0] )
 	{
-		vecBindableAddresses.AddToTail( CUtlString( ipname_tv.GetString() ) );
+		vecBindableAddresses.push_back( std::string( ipname_tv.GetString() ) );
 	}
 	else if ( ( NS_HLTV1 == nModule ) && ipname_tv1.GetString()[ 0 ] )
 	{
-		vecBindableAddresses.AddToTail( CUtlString( ipname_tv1.GetString() ) );
+		vecBindableAddresses.push_back( std::string( ipname_tv1.GetString() ) );
 	}
 	else
 	{
-		vecBindableAddresses.AddToTail( CUtlString( ipname.GetString() ) );
+		vecBindableAddresses.push_back( std::string( ipname.GetString() ) );
 	}
 
 	int port = nSetPort ? nSetPort : nDefaultPort;
@@ -2652,11 +2640,11 @@ static void OpenSocketInternal( int nModule, int nSetPort, int nDefaultPort, con
 	if ( !net_sockets[nModule].nPort )
 	{
 		int nSavePort = port;
-		for ( int i = 0; i < vecBindableAddresses.Count(); ++i )
+		for ( int i = 0; i < std::ssize( vecBindableAddresses ); ++i )
 		{
 			port = nSavePort;
 
-			char const *pchIPAddressToBind = vecBindableAddresses[ i ].String();
+			char const *pchIPAddressToBind = vecBindableAddresses[ i ].c_str();
 
 			if ( i > 0 )
 			{
@@ -2679,8 +2667,8 @@ static void OpenSocketInternal( int nModule, int nSetPort, int nDefaultPort, con
 
 		if ( !*handle )
 		{
-			Warning( "Couldn't allocate any %s IP port, tried %d addresses %s", pName, vecBindableAddresses.Count(),
-				( vecBindableAddresses.Count() ? vecBindableAddresses.Head().Get() : "(none)" ) );
+			Warning( "Couldn't allocate any %s IP port, tried %d addresses %s", pName, (int)std::ssize( vecBindableAddresses ),
+				( (int)std::ssize( vecBindableAddresses ) ? vecBindableAddresses.front().data() : "(none)" ) );
 			Plat_ExitProcess( 0 );	// cause a silent exit without writing a core dump
 			return;
 		}
@@ -2731,7 +2719,7 @@ void NET_OpenSockets (void)
 
 bool NET_IsSocketOpen( int nSockIdx )
 {
-	if ( !net_sockets.IsValidIndex( nSockIdx ) )
+	if ( !ks::is_valid_index( net_sockets, nSockIdx ) )
 		return false;
 
 	if ( !net_sockets[nSockIdx].hUDP )
@@ -2742,21 +2730,21 @@ bool NET_IsSocketOpen( int nSockIdx )
 
 int NET_AddExtraSocket( int port )
 {
-	int newSocket = net_sockets.AddToTail();
+	int newSocket = std::ssize( net_sockets ); net_sockets.emplace_back();
 
 	Q_memset( &net_sockets[newSocket], 0, sizeof(netsocket_t) );
 
 	OpenSocketInternal( newSocket, port, PORT_ANY, "extra", IPPROTO_UDP, true );
 
-	net_packets.EnsureCount( newSocket+1 );
-	net_splitpackets.EnsureCount( newSocket+1 );
+	ks::ensure_size( net_packets, newSocket+1 );
+	ks::ensure_size( net_splitpackets, newSocket+1 );
 
 	return newSocket;
 }
 
 void NET_RemoveAllExtraSockets()
 {
-	for (int i=MAX_SOCKETS ; i<net_sockets.Count() ; i++)
+	for (int i=MAX_SOCKETS ; i<std::ssize( net_sockets ) ; i++)
 	{
 		if ( net_sockets[i].nPort )
 		{
@@ -2764,14 +2752,14 @@ void NET_RemoveAllExtraSockets()
 			NET_CloseSocket( net_sockets[i].hTCP );
 		}
 	}
-	net_sockets.RemoveMultiple( MAX_SOCKETS, net_sockets.Count()-MAX_SOCKETS );
+	net_sockets.erase( net_sockets.begin() + MAX_SOCKETS, net_sockets.begin() + MAX_SOCKETS + ( std::ssize( net_sockets )-MAX_SOCKETS ) );
 
-	Assert( net_sockets.Count() == MAX_SOCKETS );
+	Assert( std::ssize( net_sockets ) == MAX_SOCKETS );
 }
 
 unsigned short NET_GetUDPPort(int socket)
 {
-	return net_sockets.IsValidIndex( socket ) ?
+	return ks::is_valid_index( net_sockets, socket ) ?
 		net_sockets[socket].nPort : 0;
 }
 
@@ -2949,7 +2937,7 @@ void NET_RunFrame( double realtime )
 		return;
 
 	// process TCP sockets:
-	for ( int i=0; i< net_sockets.Count(); i++ )
+	for ( int i=0; i< std::ssize( net_sockets ); i++ )
 	{
 		if ( net_sockets[i].hTCP && net_sockets[i].bListening )
 		{
@@ -3052,7 +3040,7 @@ void NET_SetDedicated ()
 
 void NET_ListenSocket( int sock, bool bListen )
 {
-	Assert( (sock >= 0) && (sock < net_sockets.Count()) );
+	Assert( (sock >= 0) && (sock < std::ssize( net_sockets )) );
 
 	netsocket_t * netsock = &net_sockets[sock];
 
@@ -3238,9 +3226,9 @@ void NET_Init( bool bIsDedicated )
 	}
 
 	// clear static stuff
-	net_sockets.EnsureCount( MAX_SOCKETS );
-	net_packets.EnsureCount( MAX_SOCKETS );
-	net_splitpackets.EnsureCount( MAX_SOCKETS );
+	ks::ensure_size( net_sockets, MAX_SOCKETS );
+	ks::ensure_size( net_packets, MAX_SOCKETS );
+	ks::ensure_size( net_splitpackets, MAX_SOCKETS );
 
 	for ( int i = 0; i < MAX_SOCKETS; ++i )
 	{
@@ -3309,8 +3297,8 @@ void NET_Shutdown (void)
 	NET_ConfigLoopbackBuffers( false );
 
 
-	Assert( s_NetChannels.Count() == 0 );
-	Assert( s_PendingSockets.Count() == 0);
+	Assert( std::ssize( s_NetChannels ) == 0 );
+	Assert( std::ssize( s_PendingSockets ) == 0);
 }
 
 void NET_PrintChannelStatus( INetChannel * chan )
@@ -3328,7 +3316,7 @@ void NET_PrintChannelStatus( INetChannel * chan )
 
 CON_COMMAND( net_channels, "Shows net channel info" )
 {
-	int numChannels = s_NetChannels.Count();
+	int numChannels = std::ssize( s_NetChannels );
 
 	if ( numChannels == 0 )
 	{
@@ -3336,7 +3324,7 @@ CON_COMMAND( net_channels, "Shows net channel info" )
 		return;
 	}
 
-	AUTO_LOCK_FM( s_NetChannels );
+	std::scoped_lock lock( s_NetChannels );
 	for ( int i = 0; i < numChannels; i++ )
 	{
 		NET_PrintChannelStatus( s_NetChannels[i] );
@@ -3351,8 +3339,8 @@ CON_COMMAND( net_start, "Inits multiplayer network sockets" )
 
 CON_COMMAND( net_status, "Shows current network status" )
 {
-	AUTO_LOCK_FM( s_NetChannels );
-	int numChannels = s_NetChannels.Count();
+	std::scoped_lock lock( s_NetChannels );
+	int numChannels = std::ssize( s_NetChannels );
 
 	ConMsg("Net status for host %s:\n", 
 		net_local_adr.ToString(true) );
@@ -3433,13 +3421,13 @@ bool NET_BufferToBufferCompress( char *dest, unsigned int *destLen, char *source
 	{
 		Q_memcpy( dest, pbOut, uCompressedLen );
 		*destLen = uCompressedLen;
-		free( pbOut );
+		g_pMemAlloc->Free( pbOut );
 	}
 	else
 	{
 		if ( pbOut )
 		{
-			free( pbOut );
+			g_pMemAlloc->Free( pbOut );
 		}
 		Q_memcpy( dest, source, sourceLen );
 		*destLen = sourceLen;

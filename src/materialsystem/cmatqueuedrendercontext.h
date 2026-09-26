@@ -10,11 +10,9 @@
 #include "imatrendercontextinternal.h"
 #include "cmatrendercontext.h"
 #include "tier1/callqueue.h"
-#include "tier1/utlenvelope.h"
+#include "tier1/envelope.h"
 #include "tier1/memstack.h"
 #include "mathlib/mathlib.h"
-
-#include "tier0/memdbgon.h"
 
 
 #ifndef MATSYS_INTERNAL
@@ -734,7 +732,5 @@ private:
 };
 
 //-----------------------------------------------------------------------------
-
-#include "tier0/memdbgoff.h"
 
 #endif // CMATQUEUEDRENDERCONTEXT_H

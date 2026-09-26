@@ -114,11 +114,14 @@ entities. Each one is useful under different conditions.
 #include "iclientrenderable.h"
 #include "clientleafsystem.h"
 #include "tier0/fasttimer.h"
-#include "utllinkedlist.h"
-#include "utldict.h"
+#include <list>
+#include <optional>
+#include <vector>
+#include "tier1/map_ops.h"
 #include <typeinfo>
-#include "tier1/utlintrusivelist.h"
-#include "tier1/utlobjectreference.h"
+#include <memory>
+#include "tier1/intrusive_list.h"
+#include "tier1/tracked_ref.h"
 #include "tier1/utlstring.h"
 
 
@@ -131,7 +134,6 @@ class IClientParticleListener;
 struct Particle;
 class ParticleDraw;
 class CMeshBuilder;
-class CUtlMemoryPool;
 class CEffectMaterial;
 class CParticleSimulateIterator;
 class CParticleRenderIterator;
@@ -309,7 +311,7 @@ public:
 #define REGISTER_EFFECT_USING_CREATE( effect )											\
 	IParticleEffect* effect##_Factory()													\
 	{																					\
-		return effect::Create( #effect ).GetObject();									\
+		return effect::Create( #effect ).get();									\
 	}																					\
 	struct effect##_RegistrationHelper													\
 	{																					\
@@ -560,8 +562,8 @@ private:
 	// See CParticleMgr::m_FrameCode.
 	unsigned short					m_FrameCode;
 
-	// For CParticleMgr's list index.
-	unsigned short					m_ListIndex;
+	// Position in CParticleMgr::m_Effects, if added.
+	std::optional< std::list< CParticleEffectBinding * >::iterator > m_ListIndex;
 
 	IParticleEffect					*m_pSim;
 	CParticleMgr					*m_pParticleMgr;
@@ -578,7 +580,7 @@ private:
 	public:
 #endif
 	// For faster iteration.
-	CUtlLinkedList<CEffectMaterial*, unsigned short> m_Materials;
+	std::vector< std::unique_ptr< CEffectMaterial > > m_Materials;
 
 	// auto updates the bbox after N frames
 	unsigned short					m_UpdateBBoxCounter;
@@ -743,7 +745,7 @@ private:
 		const CViewSetup& view, const VMatrix &worldToPixels, float flFocalDist );
 
 	bool RetireParticleCollections( CParticleSystemDefinition* pDef, int nCount, RetireInfo_t *pInfo, float flScreenArea, float flMaxTotalArea );
-	void BuildParticleSimList( CUtlVector< CNewParticleEffect* > &list );
+	void BuildParticleSimList( std::vector< CNewParticleEffect* > &list );
 	bool EarlyRetireParticleSystems( int nCount, CNewParticleEffect **ppEffects );
 	static int RetireSort( const void *p1, const void *p2 ); 
 
@@ -763,26 +765,26 @@ private:
 	bool							m_bRenderParticleEffects;
 
 	// All the active effects.
-	CUtlLinkedList<CParticleEffectBinding*, unsigned short>		m_Effects;
+	std::list<CParticleEffectBinding*>		m_Effects;
 
 	// all the active effects using the new particle interface
-	CUtlIntrusiveDList< CNewParticleEffect > m_NewEffects;
-	CUtlIntrusiveDList< CNonDrawingParticleSystem > m_NonDrawingParticleSystems;
+	ks::intrusive_dlist< CNewParticleEffect > m_NewEffects;
+	ks::intrusive_dlist< CNonDrawingParticleSystem > m_NonDrawingParticleSystems;
 
 
 	
-	CUtlVector< IClientParticleListener *> m_effectListeners;
+	std::vector< IClientParticleListener * > m_effectListeners;
 
 	IMaterialSystem					*m_pMaterialSystem;
 
 	// Store the concatenated modelview matrix
 	VMatrix							m_mModelView;
 	
-	CUtlVector<CParticleSubTextureGroup*>				m_SubTextureGroups;	// lookup by group name
-	CUtlDict<CParticleSubTexture*,unsigned short>		m_SubTextures;		// lookup by material name
+	std::vector< std::unique_ptr< CParticleSubTextureGroup > >	m_SubTextureGroups;	// lookup by group name
+	ks::idict< std::unique_ptr< CParticleSubTexture > >	m_SubTextures;		// lookup by material name
 	CParticleSubTexture m_DefaultInvalidSubTexture; // Used when they specify an invalid material name.
 
-	CUtlMap< const char*, CreateParticleEffectFN > m_effectFactories;
+	std::map< const char*, CreateParticleEffectFN, ks::cstr_less > m_effectFactories;	// keys are typeid names
 
 	int m_nToolParticleEffectId;
 

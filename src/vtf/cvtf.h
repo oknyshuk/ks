@@ -149,8 +149,8 @@ public:
 
 	// When unserializing, we can skip a certain number of mip levels,
 	// and we also can just load everything but the image data
-	virtual bool Unserialize( CUtlBuffer &buf, bool bBufferHeaderOnly = false, int nSkipMipLevels = 0 );
-	virtual bool Serialize( CUtlBuffer &buf );
+	virtual bool Unserialize( ks::byte_reader &buf, bool bBufferHeaderOnly = false, int nSkipMipLevels = 0 );
+	virtual bool Serialize( ks::byte_writer &buf );
 
 	// Attributes...
 	virtual int Width() const;
@@ -256,7 +256,7 @@ public:
 
 private:
 	// Unserialization
-	bool ReadHeader( CUtlBuffer &buf, VTFFileHeader_t &header );
+	bool ReadHeader( ks::byte_reader &buf, VTFFileHeader_t &header );
 
 	void BlendCubeMapEdgePalettes(
 		int iFrame,
@@ -303,13 +303,13 @@ private:
 	int ComputeMipCount( ) const;
 
 	// Unserialization of low-res data
-	bool LoadLowResData( CUtlBuffer &buf );
+	bool LoadLowResData( ks::byte_reader &buf );
 
 	// Unserialization of new resource data
-	bool LoadNewResources( CUtlBuffer &buf );
+	bool LoadNewResources( ks::byte_reader &buf );
 
 	// Unserialization of image data
-	bool LoadImageData( CUtlBuffer &buf, const VTFFileHeader_t &header, int nSkipMipLevels );
+	bool LoadImageData( ks::byte_reader &buf, const VTFFileHeader_t &header, int nSkipMipLevels );
 
 	// Shutdown
 	void Shutdown();
@@ -322,7 +322,7 @@ private:
 	void ComputeHemispheremapFrame( unsigned char **ppCubeFaces, unsigned char *pSpheremap, LookDir_t lookDir );
 
 	// Serialization of image data
-	bool WriteImageData( CUtlBuffer &buf );
+	bool WriteImageData( ks::byte_writer &buf );
 
 	// Computes the size (in bytes) of a single mipmap of a single face of a single frame 
 	int ComputeMipSize( int iMipLevel, ImageFormat fmt ) const;
@@ -378,13 +378,13 @@ private:
 	unsigned char	*m_pLowResImageData;
 
 	// Used while fixing mipmap edges.
-	CUtlVector<S3RGBA> m_OriginalData;
+	std::vector< S3RGBA > m_OriginalData;
 
 	// Alpha threshholds
 	float			m_flAlphaThreshhold;
 	float			m_flAlphaHiFreqThreshhold;
 
-	CUtlVector< ResourceEntryInfo > m_arrResourcesInfo;
+	std::vector< ResourceEntryInfo > m_arrResourcesInfo;
 
 	struct ResourceMemorySection
 	{
@@ -395,11 +395,11 @@ private:
 		unsigned char	*m_pData;
 
 		bool AllocateData( int nMemorySize );
-		bool LoadData( CUtlBuffer &buf );
-		bool WriteData( CUtlBuffer &buf ) const;
+		bool LoadData( ks::byte_reader &buf );
+		bool WriteData( ks::byte_writer &buf ) const;
 	};
-	CUtlVector< ResourceMemorySection > m_arrResourcesData;
-	CUtlVector< ResourceMemorySection > m_arrResourcesData_ForReuse;	// Maintained to keep allocated memory blocks when unserializing from files
+	std::vector< ResourceMemorySection > m_arrResourcesData;
+	std::vector< ResourceMemorySection > m_arrResourcesData_ForReuse;	// Maintained to keep allocated memory blocks when unserializing from files
 
 	VtfProcessingOptions m_Options;
 };

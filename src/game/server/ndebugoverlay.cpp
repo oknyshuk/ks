@@ -17,9 +17,6 @@
 #include "ai_network.h"
 #include "ai_networkmanager.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 #define		NUM_DEBUG_OVERLAY_LINES		20
 

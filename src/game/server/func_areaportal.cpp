@@ -14,9 +14,6 @@
 #include "reflect_annotations.h"
 #include "func_areaportalbase.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 enum areaportal_state
 {
 	AREAPORTAL_CLOSED = 0,
@@ -43,7 +40,7 @@ public:
 	[[= ks::reflect::Input{ .name = "Close", .type = FIELD_VOID } ]] [[= ks::reflect::Input{ .name = "TurnOn", .type = FIELD_VOID } ]] void InputClose( inputdata_t &inputdata );
 	[[= ks::reflect::Input{ .name = "Toggle", .type = FIELD_VOID } ]] void InputToggle( inputdata_t &inputdata );
 
-	virtual bool	UpdateVisibility( const CUtlVector< Vector > &vecOrigins, float fovDistanceAdjustFactor, bool &bIsOpenOnClient );
+	virtual bool	UpdateVisibility( const std::vector< Vector > &vecOrigins, float fovDistanceAdjustFactor, bool &bIsOpenOnClient );
 
 	DECLARE_DATADESC();
 
@@ -111,7 +108,7 @@ void CAreaPortal::InputToggle( inputdata_t &inputdata )
 }
 
 
-bool CAreaPortal::UpdateVisibility( const CUtlVector< Vector > &vecOrigins, float fovDistanceAdjustFactor, bool &bIsOpenOnClient )
+bool CAreaPortal::UpdateVisibility( const std::vector< Vector > &vecOrigins, float fovDistanceAdjustFactor, bool &bIsOpenOnClient )
 {
 	if ( m_state )
 	{

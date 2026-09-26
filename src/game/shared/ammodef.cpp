@@ -10,9 +10,6 @@
 #include "cbase.h"
 #include "ammodef.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: Return a pointer to the Ammo at the Index passed in
 //-----------------------------------------------------------------------------

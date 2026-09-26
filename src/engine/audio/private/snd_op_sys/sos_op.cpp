@@ -8,9 +8,6 @@
 
 #include "sos_op.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern ConVar snd_sos_show_operator_init;
 extern ConVar snd_sos_show_operator_shutdown;
 
@@ -69,12 +66,12 @@ void CSosOperator::SetBaseDefaults( void *pVoidMem ) const
 void CSosOperator::PrintIO( CSosOperator_t *pStructMem, CSosOperatorStack *pStack, int nLevel ) const
 {
 
-	int nNumberOfInputs = m_vInputs.Count();
+	int nNumberOfInputs = std::ssize( m_vInputs );
 	for(int i = 0; i < nNumberOfInputs; i++ )
 	{
 		const InputData_t & inputData = m_vInputs[i];
 
-		const char *pInputName = m_vInputMap.GetElementName( i );
+		const char *pInputName = inputData.m_pName;
 		Log_Msg( LOG_SND_OPERATORS, OpColor , "%*s%s: ", nLevel, "    ", pInputName );
 
 		int nConnections[8];
@@ -130,11 +127,11 @@ void CSosOperator::PrintIO( CSosOperator_t *pStructMem, CSosOperatorStack *pStac
 		
 	}
 
-	int nNumberOfOutputs = m_vOutputs.Count();
+	int nNumberOfOutputs = std::ssize( m_vOutputs );
 	for(int i = 0; i < nNumberOfOutputs; i++ )
 	{
 		const OutputData_t & outputData = m_vOutputs[i];
-		const char *pOutputName = m_vOutputMap.GetElementName( i );
+		const char *pOutputName = outputData.m_pName;
 		Log_Msg( LOG_SND_OPERATORS, OpColor, "%*s%s: ", nLevel, "    ", pOutputName );
 
 		char *pOutput = (char *)pStructMem + outputData.m_nValueOffset;
@@ -252,9 +249,10 @@ bool CSosOperator::BaseParseKV( CSosOperatorStack *pStack, CSosOperator_t *pStru
 		}
 
 		// find the input
-		int nInputParamIndex = m_vInputMap.Find( pInputParamString );
+		auto itInputParam = m_vInputMap.find( pInputParamString );
+		int nInputParamIndex = itInputParam != m_vInputMap.end() ? itInputParam->second : -1;
 
-		if ( ! m_vInputs.IsValidIndex( nInputParamIndex ) )
+		if ( ! ks::is_valid_index( m_vInputs, nInputParamIndex ) )
 		{
 			// Log_Warning( LOG_SND_OPERATORS, "Error: Unable to find input parameter %s", pParamString );
 			return false;
@@ -340,8 +338,9 @@ bool CSosOperator::BaseParseKV( CSosOperatorStack *pStack, CSosOperator_t *pStru
 
 int CSosOperator::GetOutputOffset( const char *pOutputName ) const
 {
-	int nIndex = m_vOutputMap.Find( pOutputName );
-	if ( !m_vOutputs.IsValidIndex( nIndex ) )
+	auto itOutput = m_vOutputMap.find( pOutputName );
+	int nIndex = itOutput != m_vOutputMap.end() ? itOutput->second : -1;
+	if ( !ks::is_valid_index( m_vOutputs, nIndex ) )
 	{
 		Log_Warning( LOG_SND_OPERATORS, "Error: Unable to find referenced sound operator output: %s", pOutputName );
 		return -1;
@@ -387,10 +386,8 @@ void CSosOperator::ResolveInputValue( void *pInputDefault, int *pOffsetArray, sh
 
 void CSosOperator::ResolveInputValues( void *pStructMem, void *pStackMem ) const
 {
-	for ( unsigned int i = 0; i < m_vInputMap.Count(); i++ )
+	for ( const InputData_t &inputData : m_vInputs )
 	{
-		int nInputIndex = m_vInputMap[ i ];
-		const InputData_t & inputData = m_vInputs[ nInputIndex ];
 		SODataType_t nDataType = inputData.m_Type;
 		short nDataCount = inputData.m_nCount;
 
@@ -407,15 +404,12 @@ void CSosOperator::ResolveInputValues( void *pStructMem, void *pStackMem ) const
 void CSosOperator::OffsetConnections( void *pVoidMem, size_t nOffset ) const
 {
 	// point offsets to a different memory segment
-	for ( unsigned int i = 0; i < m_vInputMap.Count(); i++ )
+	for ( const InputData_t &inputData : m_vInputs )
 	{
-		int nInputIndex = m_vInputMap[ i ];
-
-		const InputData_t & inputData = m_vInputs[ nInputIndex ];
 //		SODataType_t nDataType = inputData.m_Type;
 		short nDataCount = inputData.m_nCount;
 
-		int nOffsetOffset = m_vInputs[ nInputIndex ].m_nOffsetOffset;
+		int nOffsetOffset = inputData.m_nOffsetOffset;
 		int *pOffset = (int *)( (char *)pVoidMem + nOffsetOffset );
 
 		for( int j = 0;  j < nDataCount; j++ )

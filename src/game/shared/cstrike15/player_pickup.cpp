@@ -10,9 +10,6 @@
 
 #include "igameevents.h" 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // player pickup utility routine
 void Pickup_ForcePlayerToDropThisObject( CBaseEntity *pTarget )
 {

@@ -9,14 +9,15 @@
 #ifndef MATERIALBUCKETS_H
 #define MATERIALBUCKETS_H
 
+#include <vector>
+
 // FLASHLIGHTFIXME: Make all of the buckets share the same m_Elements (ie. make m_Elements static)
 
 template <class Element_t>
 class CMaterialsBuckets
 {
 public:
-	typedef unsigned short SortIDHandle_t;
-	typedef unsigned short ElementHandle_t;
+	typedef int ElementHandle_t;
 	CMaterialsBuckets()
 	{
 		m_FlushCount = -1;
@@ -26,42 +27,25 @@ public:
 	// a level is loaded.
 	void SetNumMaterialSortIDs( int n )
 	{
-		m_MaterialSortInfoArray.Purge();
-		m_MaterialSortInfoArray.SetCount( n );
-		m_Elements.Purge();
+		m_MaterialSortInfoArray.clear(); m_MaterialSortInfoArray.shrink_to_fit();
+		m_MaterialSortInfoArray.assign( n, {} );
+		m_Elements.clear(); m_Elements.shrink_to_fit();
 
-		m_UsedSortIDs.Purge();
+		m_UsedSortIDs.clear(); m_UsedSortIDs.shrink_to_fit();
 	}
 
 	// Clear out all buckets.  This should get called once a frame.
 	void Flush( void )
 	{
 		m_FlushCount++;
-		m_Elements.RemoveAll();
-		m_UsedSortIDs.RemoveAll();
+		m_Elements.clear();
+		m_UsedSortIDs.clear();
 	}
 
-	//
-	// These functions are used to get at the list of used buckets.
-	//
-	SortIDHandle_t GetFirstUsedSortID()
+	// The buckets used since flush, in first-use order.
+	const std::vector<unsigned short> &UsedSortIDs() const
 	{
-		return m_UsedSortIDs.Head();
-	}
-
-	SortIDHandle_t GetNextUsedSortID( SortIDHandle_t prevSortID )
-	{
-		return m_UsedSortIDs.Next( prevSortID );
-	}
-
-	int GetSortID( SortIDHandle_t handle )
-	{
-		return m_UsedSortIDs[handle];
-	}
-	
-	SortIDHandle_t InvalidSortIDHandle()
-	{
-		return m_UsedSortIDs.InvalidIndex();
+		return m_UsedSortIDs;
 	}
 
 
@@ -75,26 +59,24 @@ public:
 
 	ElementHandle_t GetElementListNext( ElementHandle_t h )
 	{
-		return m_Elements.Next( h );
+		return m_Elements[h].m_Next;
 	}
 
 	Element_t GetElement( ElementHandle_t h )
 	{
-		return m_Elements[h];
+		return m_Elements[h].m_Element;
 	}
 
 	ElementHandle_t InvalidElementHandle()
 	{
-		return m_Elements.InvalidIndex();
+		return -1;
 	}
 
 
 	// Add an element to the the bucket specified by sortID
 	void AddElement( int sortID, Element_t elem )
 	{
-		// Allocate an element to stick this in.
-		unsigned short elemID = m_Elements.Alloc( true );
-		m_Elements[elemID] = elem;
+		ElementHandle_t elemID = std::ssize( m_Elements );
 		
 		if( m_MaterialSortInfoArray[sortID].m_FlushCount != m_FlushCount )
 		{
@@ -106,18 +88,18 @@ public:
 			m_MaterialSortInfoArray[sortID].m_FlushCount = m_FlushCount;
 
 			// Add this sortID to the list of sortIDs used since flush.
-			m_UsedSortIDs.AddToTail( sortID );
+			m_UsedSortIDs.push_back( sortID );
 
-			// Set the head pointer for this sort id to this element.
-			m_MaterialSortInfoArray[sortID].m_Head = elemID;
+			m_Elements.push_back( { elem, InvalidElementHandle() } );
 		}
 		else
 		{
 			// We already have an element in this sort id since flush, so chain
 			// into thelist of elements for this sort id.
-			m_Elements.LinkBefore( m_MaterialSortInfoArray[sortID].m_Head, elemID );
-			m_MaterialSortInfoArray[sortID].m_Head = elemID;
+			m_Elements.push_back( { elem, m_MaterialSortInfoArray[sortID].m_Head } );
 		}
+		// Set the head pointer for this sort id to this element.
+		m_MaterialSortInfoArray[sortID].m_Head = elemID;
 	}
 
 private:
@@ -126,22 +108,28 @@ private:
 	{
 		MaterialSortInfo_t() :
 			m_FlushCount( -1 ),
-			m_Head( (unsigned short)-1 )  // i.e., InvalidIndex()
+			m_Head( -1 )  // i.e., InvalidElementHandle()
 		{
 		}
 		
 		int m_FlushCount;
-		unsigned short m_Head;
+		ElementHandle_t m_Head;
+	};
+
+	struct Element_s
+	{
+		Element_t m_Element;
+		ElementHandle_t m_Next;	// next element in the same sortID
 	};
 	
 	// This is a list of material sort info ids that have been used since flush.
-	CUtlLinkedList<unsigned short> m_UsedSortIDs;
+	std::vector<unsigned short> m_UsedSortIDs;
 
 	// This is m_NumMaterialSortIDs big.
-	CUtlVector<MaterialSortInfo_t> m_MaterialSortInfoArray;
+	std::vector< MaterialSortInfo_t > m_MaterialSortInfoArray;
 	
-	// This is used in multilist mode to make elements that belong in the multiple lists of 
-	CUtlLinkedList<Element_t, unsigned short, true> m_Elements;
+	// Pool of per-sortID singly linked chains, reset on flush.
+	std::vector<Element_s> m_Elements;
 
 	int m_FlushCount;
 		

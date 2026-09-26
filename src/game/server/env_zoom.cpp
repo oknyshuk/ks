@@ -10,9 +10,6 @@
 #include "env_zoom.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define ENV_ZOOM_OVERRIDE (1<<0)
 
 class CEnvZoom : public CPointEntity

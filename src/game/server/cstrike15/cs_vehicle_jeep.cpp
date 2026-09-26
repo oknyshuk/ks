@@ -25,8 +25,6 @@
 #include "ai_basenpc.h"
 #include "ai_hint.h"
 #include "globalstate.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 #define	VEHICLE_HITBOX_DRIVER		1
 #define LOCK_SPEED					10

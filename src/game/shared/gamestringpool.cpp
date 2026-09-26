@@ -7,24 +7,25 @@
 
 #include "cbase.h"
 
-#include "stringpool.h"
-
 #if !defined( GC )
 #include "igamesystem.h"
 #endif
 
 #include "gamestringpool.h"
+#include "tier1/map_ops.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include <algorithm>
+#include <string>
+#include <unordered_set>
 
+#include "tier0/memalloc.h"
 //-----------------------------------------------------------------------------
 // Purpose: The actual storage for pooled per-level strings
 //-----------------------------------------------------------------------------
 #if !defined( GC )
-class CGameStringPool : public CStringPool,	public CBaseGameSystem
+class CGameStringPool : public CBaseGameSystem
 #else
-class CGameStringPool : public CStringPool
+class CGameStringPool
 #endif
 {
 	virtual char const *Name() { return "CGameStringPool"; }
@@ -37,42 +38,63 @@ class CGameStringPool : public CStringPool
 	}
 
 public:
-	~CGameStringPool()
+	// Case-insensitive; keeps the first spelling. string_t holds the returned pointer, which a node set keeps stable.
+	const char *Allocate( const char *pszValue )
 	{
-		PurgeDeferredDeleteList();
+		auto it = m_Strings.find( std::string_view( pszValue ) );
+		if ( it == m_Strings.end() )
+			it = m_Strings.emplace( pszValue ).first;
+		return it->c_str();
 	}
-	
+
+	const char *Find( const char *pszValue )
+	{
+		if ( !pszValue )
+			return nullptr;
+		auto it = m_Strings.find( std::string_view( pszValue ) );
+		return it == m_Strings.end() ? nullptr : it->c_str();
+	}
+
+	void FreeAll()
+	{
+		m_Strings.clear();
+	}
+
 	void PurgeDeferredDeleteList()
 	{
-		for ( int i = 0; i < m_DeferredDeleteList.Count(); ++ i )
-		{
-			free( ( void * )m_DeferredDeleteList[ i ] );
-		}
-		m_DeferredDeleteList.Purge();
+		m_DeferredDeleteList.clear(); m_DeferredDeleteList.shrink_to_fit();
 	}
 
 	void Dump( void )
 	{
-		for ( int i = m_Strings.FirstInorder(); i != m_Strings.InvalidIndex(); i = m_Strings.NextInorder(i) )
+		std::vector< const char * > sorted;
+		for ( const std::string &s : m_Strings )
+			sorted.push_back( s.c_str() );
+		std::sort( sorted.begin(), sorted.end(), ks::cstr_iless() );
+		for ( int i = 0; i < std::ssize( sorted ); i++ )
 		{
-			DevMsg( "  %d (0x%p) : %s\n", i, m_Strings[i], m_Strings[i] );
+			DevMsg( "  %d (0x%p) : %s\n", i, sorted[i], sorted[i] );
 		}
 		DevMsg( "\n" );
-		DevMsg( "Size:  %d items\n", m_Strings.Count() );
+		DevMsg( "Size:  %d items\n", (int)m_Strings.size() );
 	}
 
+	// Existing string_t's may still point at the string, so it stays allocated until level shutdown.
 	void Remove( const char *pszValue )
 	{
-		int i = m_Strings.Find( pszValue );
-		if ( i != m_Strings.InvalidIndex() )
+		if ( !pszValue )
+			return;
+		auto it = m_Strings.find( std::string_view( pszValue ) );
+		if ( it != m_Strings.end() )
 		{
-			m_DeferredDeleteList.AddToTail( m_Strings[ i ] );
-			m_Strings.RemoveAt( i );
+			m_DeferredDeleteList.push_back( m_Strings.extract( it ) );
 		}
 	}
 
 private:
-	CUtlVector< const char * > m_DeferredDeleteList;
+	using StringSet_t = std::unordered_set< std::string, ks::ihash, ks::iequal >;
+	StringSet_t m_Strings;
+	std::vector< StringSet_t::node_type > m_DeferredDeleteList;
 };
 
 static CGameStringPool g_GameStringPool;

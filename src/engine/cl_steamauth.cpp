@@ -24,11 +24,7 @@
 #include "matchmaking/imatchframework.h"
 #endif
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
-
-#pragma warning( disable: 4355 ) // disables ' 'this' : used in base member initializer list'
 
 extern ConVar cl_hideserverip;
 

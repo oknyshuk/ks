@@ -8,13 +8,12 @@
 
 #include "vstdlib/ieventsystem.h"
 #include "tier1/generichash.h"
-#include "tier1/utllinkedlist.h"
 #include "tier0/tslist.h"
-#include "tier1/utltshash.h"
 #include "tier1/tier1.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
+#include <atomic>
+#include <mutex>
+#include <shared_mutex>
+#include <unordered_map>
 
 
 //-----------------------------------------------------------------------------
@@ -63,7 +62,7 @@ private:
 
 	CTSQueue< CFunctorCallback* > m_QueuedEventDiscards;
 	CTSQueue< QueuedEvent_t > m_Queue;
-	CInterlockedInt m_nRefCount;
+	std::atomic<int> m_nRefCount;
 
 #ifdef _DEBUG
 	bool m_bIsProcessingEvents;
@@ -164,16 +163,17 @@ void CEventQueue::ProcessEvents( )
 	else
 	{
 		// Build list of callbacks which are stale and need to die
-		CUtlVector< CFunctorCallback * > callbacks( 0, m_QueuedEventDiscards.Count() );
+		std::vector< CFunctorCallback * > callbacks;
+		callbacks.reserve( m_QueuedEventDiscards.Count() );
 
 		CFunctorCallback *pCallback = nullptr;
 		while( m_QueuedEventDiscards.PopItem( &pCallback ) )
 		{
-			callbacks.AddToTail( pCallback );
+			callbacks.push_back( pCallback );
 		}
 
 		// Only invoke events on non-stale callbacks
-		int nCount = callbacks.Count();
+		int nCount = std::ssize( callbacks );
 		QueuedEvent_t event;
 		while ( m_Queue.PopItem( &event ) )
 		{
@@ -223,8 +223,8 @@ private:
 		CFunctorCallback *m_pCallback;
 	};
 
-	CUtlFixedLinkedList< SubscribedQueue_t > m_SubscribedQueueList;
-	CThreadSpinRWLock m_ListenerLock;
+	std::vector< SubscribedQueue_t > m_SubscribedQueueList;
+	std::shared_mutex m_ListenerLock;
 };
 
 
@@ -235,19 +235,19 @@ void CEventId::RegisterListener( CEventQueue *pEventQueue, CFunctorCallback *pCa
 {
 	// NOTE: We could probably move the write locks so they cover less code
 	// but I'm wanting to be cautious
-	m_ListenerLock.LockForWrite();
+	std::unique_lock lock( m_ListenerLock );
 
-	intp i;
-	for( i = m_SubscribedQueueList.Head(); i != m_SubscribedQueueList.InvalidIndex(); i = m_SubscribedQueueList.Next( i ) )
+	auto i = m_SubscribedQueueList.begin();
+	for( ; i != m_SubscribedQueueList.end(); ++i )
 	{
-		if ( ( m_SubscribedQueueList[i].m_pEventQueue == pEventQueue ) && m_SubscribedQueueList[i].m_pCallback->IsEqual( pCallback ) )
+		if ( ( i->m_pEventQueue == pEventQueue ) && i->m_pCallback->IsEqual( pCallback ) )
 		{
 			Warning( "Tried to install the same listener on the same event id + queue twice!\n" );
 			break;
 		}
 	}
 
-	if ( i == m_SubscribedQueueList.InvalidIndex() )
+	if ( i == m_SubscribedQueueList.end() )
 	{
 		SubscribedQueue_t queue;
 		queue.m_pEventQueue = pEventQueue;
@@ -255,10 +255,8 @@ void CEventId::RegisterListener( CEventQueue *pEventQueue, CFunctorCallback *pCa
 		pCallback->AddRef();
 		pEventQueue->AddRef();
 
-		m_SubscribedQueueList.AddToTail( queue );
+		m_SubscribedQueueList.push_back( queue );
 	}
-
-	m_ListenerLock.UnlockWrite();
 }
 
 
@@ -269,20 +267,20 @@ void CEventId::UnregisterListener( CEventQueue *pEventQueue, CFunctorCallback *p
 {
 	// NOTE: We could probably move the write locks so they cover less code
 	// but I'm wanting to be cautious
-	m_ListenerLock.LockForWrite();
+	std::unique_lock lock( m_ListenerLock );
 
-	intp i;
-	for( i = m_SubscribedQueueList.Head(); i != m_SubscribedQueueList.InvalidIndex(); i = m_SubscribedQueueList.Next( i ) )
+	auto i = m_SubscribedQueueList.begin();
+	for( ; i != m_SubscribedQueueList.end(); ++i )
 	{
-		if ( ( m_SubscribedQueueList[i].m_pEventQueue == pEventQueue ) && m_SubscribedQueueList[i].m_pCallback->IsEqual( pCallback ) )
+		if ( ( i->m_pEventQueue == pEventQueue ) && i->m_pCallback->IsEqual( pCallback ) )
 			break;
 	}
 
-	if ( i != m_SubscribedQueueList.InvalidIndex() )
+	if ( i != m_SubscribedQueueList.end() )
 	{
-		CFunctorCallback *pCachedCallback = m_SubscribedQueueList[ i ].m_pCallback;
+		CFunctorCallback *pCachedCallback = i->m_pCallback;
 
-		m_SubscribedQueueList.Remove( i );
+		m_SubscribedQueueList.erase( i );
 
 		// Remove the cached callback from the queued list of events
 		// if it has a non-zero refcount
@@ -292,8 +290,6 @@ void CEventId::UnregisterListener( CEventQueue *pEventQueue, CFunctorCallback *p
 		}
 		pEventQueue->Release();
 	}
-
-	m_ListenerLock.UnlockWrite();
 }
 
 
@@ -304,22 +300,17 @@ void CEventId::UnregisterAllListeners( CEventQueue *pEventQueue )
 {
 	// NOTE: We could probably move the write locks so they cover less code
 	// but I'm wanting to be cautious
-	m_ListenerLock.LockForWrite();
+	std::unique_lock lock( m_ListenerLock );
 
-	intp j, next;
-	for( j = m_SubscribedQueueList.Head(); j != m_SubscribedQueueList.InvalidIndex(); j = next )
+	std::erase_if( m_SubscribedQueueList, [pEventQueue]( const SubscribedQueue_t &queue )
 	{
-		next = m_SubscribedQueueList.Next( j );
-		if ( m_SubscribedQueueList[j].m_pEventQueue != pEventQueue )
-			continue;
+		if ( queue.m_pEventQueue != pEventQueue )
+			return false;
 
-		m_SubscribedQueueList[j].m_pCallback->Release();
+		queue.m_pCallback->Release();
 		pEventQueue->Release();
-
-		m_SubscribedQueueList.Remove( j );
-	}
-
-	m_ListenerLock.UnlockWrite();
+		return true;
+	} );
 }
 
 
@@ -328,11 +319,10 @@ void CEventId::UnregisterAllListeners( CEventQueue *pEventQueue )
 //-----------------------------------------------------------------------------
 void CEventId::PostEvent( CEventQueue *pEventQueue, const void *pListener, CFunctorData *pData )
 {
-	m_ListenerLock.LockForRead();
+	std::shared_lock lock( m_ListenerLock );
 
-	for( intp i = m_SubscribedQueueList.Head(); i != m_SubscribedQueueList.InvalidIndex(); i = m_SubscribedQueueList.Next( i ) )
+	for( SubscribedQueue_t &queue : m_SubscribedQueueList )
 	{
-		SubscribedQueue_t &queue = m_SubscribedQueueList[i];
 		if ( pEventQueue && queue.m_pEventQueue != pEventQueue )
 			continue;
 
@@ -341,8 +331,6 @@ void CEventId::PostEvent( CEventQueue *pEventQueue, const void *pListener, CFunc
 
 		queue.m_pEventQueue->PostEvent( queue.m_pCallback, pData );
 	}
-
-	m_ListenerLock.UnlockRead();
 }
 
 
@@ -373,7 +361,9 @@ public:
 	virtual ~CEventSystem();
 
 private:
-	CUtlTSHash< CEventId, 251, EventNameHash_t, CUtlTSHashGenericHash< 251, EventNameHash_t>, 8 > m_EventIds;
+	// Node-based, so the CEventId pointers handed out as EventId_t stay valid.
+	std::unordered_map< EventNameHash_t, CEventId > m_EventIds;
+	std::mutex m_EventIdsMutex;
 };
 
 
@@ -417,13 +407,19 @@ void CEventSystem::DestroyEventQueue( EventQueue_t hQueue )
 		// This means it's still sitting in a listener list
 		Warning( "Perf warning: Forgot to unregister listeners on event queue %p\n", hQueue );
 
-		int nCount = m_EventIds.Count();
-		UtlTSHashHandle_t *pHandles = (UtlTSHashHandle_t*)stackalloc( nCount * sizeof(UtlTSHashHandle_t) );
-		nCount = m_EventIds.GetElements( 0, nCount, pHandles );
-
-		for ( int i = 0; i < nCount; ++i )
+		std::vector< CEventId * > eventIds;
 		{
-			m_EventIds[ pHandles[i] ].UnregisterAllListeners( pEventQueue );
+			std::lock_guard lock( m_EventIdsMutex );
+			eventIds.reserve( m_EventIds.size() );
+			for ( auto &[hId, eventId] : m_EventIds )
+			{
+				eventIds.push_back( &eventId );
+			}
+		}
+
+		for ( CEventId *pEventId : eventIds )
+		{
+			pEventId->UnregisterAllListeners( pEventQueue );
 		}
 	}
 
@@ -437,9 +433,8 @@ void CEventSystem::DestroyEventQueue( EventQueue_t hQueue )
 EventId_t CEventSystem::RegisterEvent( const char *pEventName )
 {
 	EventNameHash_t hId = (EventNameHash_t)MurmurHash2( pEventName, Q_strlen(pEventName), 0xE1E47644 );
-	CDefaultTSHashConstructor< CEventId > constructor;
-	UtlTSHashHandle_t hList = m_EventIds.Insert( hId, &constructor );
-	return ( EventId_t )( &m_EventIds[ hList ] );
+	std::lock_guard lock( m_EventIdsMutex );
+	return ( EventId_t )( &m_EventIds.try_emplace( hId ).first->second );
 }
 
 

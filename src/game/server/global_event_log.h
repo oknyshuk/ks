@@ -43,9 +43,9 @@ protected:
 
 private:
 	unsigned int					m_nNextID;
-	CUtlVector< CGlobalEvent * >	m_Events;
-	CUtlVector< CGlobalEvent * >	m_TempEvents;
-	CUtlVector< CGlobalEvent * >	m_DirtyEvents;
+	std::vector< CGlobalEvent * >	m_Events;
+	std::vector< CGlobalEvent * >	m_TempEvents;
+	std::vector< CGlobalEvent * >	m_DirtyEvents;
 	CGlobalEvent					*m_pGlobalEvents[ GLOBAL_EVENT_MAX ];
 };
 

@@ -7,6 +7,7 @@
 //===========================================================================//
 #include "server_pch.h"
 #include <algorithm>
+#include <bitset>
 #include "vengineserver_impl.h"
 #include "vox.h"
 #include "sound.h"
@@ -50,9 +51,7 @@
 #include "sv_packedentities.h"
 #include "hltvserver.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 #define MAX_MESSAGE_SIZE	2500
 #define MAX_TOTAL_ENT_LEAFS		128
 
@@ -279,7 +278,7 @@ struct HltvRelayProxyWhitelistMask_t
 		return 0 == Q_memcmp( this, &other, sizeof( *this ) );
 	}
 };
-static CUtlVector< HltvRelayProxyWhitelistMask_t > s_arrHltvRelayProxyWhitelist;
+static std::vector< HltvRelayProxyWhitelistMask_t > s_arrHltvRelayProxyWhitelist;
 
 bool IsHltvRelayProxyWhitelisted( ns_address const &adr )
 {
@@ -289,9 +288,8 @@ bool IsHltvRelayProxyWhitelisted( ns_address const &adr )
 	uint32 uiServerIP = adr.AsType<netadr_t>().GetIPHostByteOrder();
 #define MAKE_IP_MASK( a, b, c, d, numbits ) ( uint32( ( (uint32(a)&0xFF) << 24 ) | ( (uint32(b)&0xFF) << 16 ) | ( (uint32(c)&0xFF) << 8 ) | ( (uint32(d)&0xFF) ) ) & ( (~0u) << (32-numbits) ) )
 #define IPRANGEENTRY( a, b, c, d, numbits ) if ( ( uiServerIP & ( (~0u) << (32-numbits) ) ) == MAKE_IP_MASK( a, b, c, d, numbits ) ) return true;
-	FOR_EACH_VEC( s_arrHltvRelayProxyWhitelist, idx )
+	for ( HltvRelayProxyWhitelistMask_t const &e : s_arrHltvRelayProxyWhitelist )
 	{
-		HltvRelayProxyWhitelistMask_t const &e = s_arrHltvRelayProxyWhitelist[idx];
 		IPRANGEENTRY( e.a, e.b, e.c, e.d, e.numbits );
 	}
 #undef IPRANGEENTRY
@@ -698,7 +696,7 @@ public:
 	//
 	virtual void *PvAllocEntPrivateData( long cb )
 	{
-		return calloc( 1, cb );
+		return MemAlloc_Calloc( 1, cb );
 	}
 
 
@@ -710,7 +708,7 @@ public:
 
 		if ( pEntity )
 		{
-			free( pEntity );
+			g_pMemAlloc->Free( pEntity );
 		}
 	}
 
@@ -1090,7 +1088,7 @@ public:
 		if ( bytesWritten > MAX_ENTITY_MSG_DATA )	// TODO use a define or so
 		{
 			Warning( "Entity Message to %i, %i bytes written (max is %d)\n",
-				s_MsgData.entityMsg.ent_index, bytesWritten, MAX_ENTITY_MSG_DATA );
+				(int)s_MsgData.entityMsg.ent_index, bytesWritten, MAX_ENTITY_MSG_DATA );
 			return -1;
 		}
 
@@ -1331,14 +1329,14 @@ public:
 				int iWorldVert = pData->vertindices[surfID->firstvertindex + iVert];
 				const Vector &vPos = pData->vertexes[iWorldVert].position;
 
-				vertList.m_Verts.AddToTail( CSPVert( vPos ) );
+				vertList.m_Verts.push_back( CSPVert( vPos ) );
 			}
 
 			pPad->DrawPolygon( vertList );
 		}
 	}
 
-	const CBitVec<MAX_EDICTS>* GetEntityTransmitBitsForClient( int iClientIndex )
+	const std::bitset<MAX_EDICTS>* GetEntityTransmitBitsForClient( int iClientIndex )
 	{
 		if ( iClientIndex < 0 || iClientIndex >= sv.GetClientCount() )
 		{
@@ -1615,8 +1613,8 @@ public:
 		mask.d = d;
 		mask.numbits = numbits;
 		// Add a mask if it hasn't been added yet
-		if ( s_arrHltvRelayProxyWhitelist.Find( mask ) == s_arrHltvRelayProxyWhitelist.InvalidIndex() )
-			s_arrHltvRelayProxyWhitelist.AddToTail( mask );
+		if ( ks::find_index( s_arrHltvRelayProxyWhitelist, mask ) == -1 )
+			s_arrHltvRelayProxyWhitelist.push_back( mask );
 	}
 
 	// On master HLTV this call updates number of external viewers and which portion of those are linked with Steam
@@ -1765,7 +1763,7 @@ public:
 		return ShootPaintSphere( pModel, vPosition, colorIndex, flSphereRadius, flPaintCoatPercent );
 	}
 
-	virtual void SphereTracePaintSurface( const model_t *pModel, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, CUtlVector<BYTE>& surfColors )
+	virtual void SphereTracePaintSurface( const model_t *pModel, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, std::vector< BYTE >& surfColors )
 	{
 		TracePaintSphere( pModel, vPosition, vContactNormal, flSphereRadius, surfColors );
 	}
@@ -1780,12 +1778,12 @@ public:
 		g_PaintManager.PaintAllSurfaces( color );
 	}
 
-	virtual void GetPaintmapDataRLE( CUtlVector<uint32> &data )
+	virtual void GetPaintmapDataRLE( std::vector< uint32 > &data )
 	{
 		g_PaintManager.GetPaintmapDataRLE( data );
 	}
 
-	virtual void LoadPaintmapDataRLE( const CUtlVector<uint32> &data )
+	virtual void LoadPaintmapDataRLE( const std::vector< uint32 > &data )
 	{
 		g_PaintManager.LoadPaintmapDataRLE( data );
 	}
@@ -1806,16 +1804,16 @@ public:
 		if ( !client )
 			return;
 
-		CUtlVector< uint32 > data;
+		std::vector< uint32 > data;
 		g_PaintManager.GetPaintmapDataRLE( data );
 
-		AssertMsg2( data.Count() < NET_MAX_PAYLOAD, "Sending paint data with size [%d bytes] to client, max payload is [%d bytes]\n", data.Count(), NET_MAX_PAYLOAD );
+		AssertMsg2( std::ssize( data ) < NET_MAX_PAYLOAD, "Sending paint data with size [%d bytes] to client, max payload is [%d bytes]\n", std::ssize( data ), NET_MAX_PAYLOAD );
 
-		if ( data.Count() > 0 )
+		if ( !data.empty() )
 		{
 			CSVCMsg_PaintmapData_t svcPaintmap;
-			int nBytes = data.Count() * sizeof( data.Base()[0] );
-			svcPaintmap.paintmap = std::string( ( const char * ) (void*)data.Base(), nBytes );
+			int nBytes = std::ssize( data ) * sizeof( data.data()[0] );
+			svcPaintmap.paintmap = std::string( ( const char * ) (void*)data.data(), nBytes );
 
 			client->SendNetMsg( svcPaintmap, true );
 		}
@@ -2003,7 +2001,7 @@ IVEngineServer *g_pVEngineServer = &g_VEngineServer;
 //-----------------------------------------------------------------------------
 // Used to allocate pvs infos
 //-----------------------------------------------------------------------------
-static CUtlMemoryPool s_PVSInfoAllocator( 128, 128 * 64, CUtlMemoryPool::GROW_SLOW, "pvsinfopool", 128 );
+static ks::fixed_pool s_PVSInfoAllocator( 128, 128 * 64, ks::fixed_pool::grow::slow, "pvsinfopool", 128 );
 
 //-----------------------------------------------------------------------------
 // Purpose: Sends a temp entity to the client, using the reliable data stream
@@ -2068,11 +2066,11 @@ void CVEngineServer::PlaybackTempEntity( IRecipientFilter& filter, float delay, 
 	VPROF( "PlaybackTempEntity" );
 
 	// don't add more events to a snapshot than a client can receive
-	if ( sv.m_TempEntities.Count() >= ((1<<CEventInfo::EVENT_INDEX_BITS)-1) )
+	if ( std::ssize( sv.m_TempEntities ) >= ((1<<CEventInfo::EVENT_INDEX_BITS)-1) )
 	{
 		// remove oldest effect
 		delete sv.m_TempEntities[0];
-		sv.m_TempEntities.Remove( 0 );
+		sv.m_TempEntities.erase( sv.m_TempEntities.begin() + 0 );
 	}
 
 	// Make this start at 1
@@ -2081,7 +2079,7 @@ void CVEngineServer::PlaybackTempEntity( IRecipientFilter& filter, float delay, 
 	SerializedEntityHandle_t handle = g_pSerializedEntities->AllocateSerializedEntity(__FILE__, __LINE__);
 
 	// write all properties, if init or reliable message delta against zero values
-	if( !SendTable_Encode( pST, handle, pSender, classID, nullptr ) )
+	if( !SendTable_Encode( pST, handle, pSender, classID ) )
 	{
 		Host_Error( "PlaybackTempEntity: SendTable_Encode returned false (ent %d), overflow?\n", classID );
 		return;
@@ -2123,7 +2121,7 @@ void CVEngineServer::PlaybackTempEntity( IRecipientFilter& filter, float delay, 
 	newEvent->m_Packed = handle;
 
 	// add to list
-	sv.m_TempEntities[sv.m_TempEntities.AddToTail()] = newEvent;
+	sv.m_TempEntities.emplace_back() = newEvent;
 }
 
 int	CVEngineServer::CheckAreasConnected( int area1, int area2 )
@@ -2326,14 +2324,14 @@ void CVEngineServer::BuildEntityClusterList( edict_t *pEdict, PVSInfo_t *pPVSInf
 
 			if ( pPVSInfo->m_nClusterCount == MAX_FAST_ENT_CLUSTERS )
 			{
-				unsigned short *pClusters = (unsigned short *)s_PVSInfoAllocator.Alloc();
+				unsigned short *pClusters = (unsigned short *)s_PVSInfoAllocator.alloc();
 				memcpy( pClusters, pPVSInfo->m_pClusters, MAX_FAST_ENT_CLUSTERS * sizeof(unsigned short) );
 				pPVSInfo->m_pClusters = pClusters;
 			}
 			else if ( pPVSInfo->m_nClusterCount == MAX_ENT_CLUSTERS )
 			{
 				// assume we missed some leafs, and mark by headnode
-				s_PVSInfoAllocator.Free( pPVSInfo->m_pClusters );
+				s_PVSInfoAllocator.free( pPVSInfo->m_pClusters );
 				pPVSInfo->m_pClusters = 0;
 				pPVSInfo->m_nClusterCount = -1;
 				break;
@@ -2360,14 +2358,14 @@ void CVEngineServer::BuildEntityClusterList( edict_t *pEdict, PVSInfo_t *pPVSInf
 
 		if ( pPVSInfo->m_nClusterCount == MAX_FAST_ENT_CLUSTERS )
 		{
-			unsigned short *pClusters = (unsigned short*)s_PVSInfoAllocator.Alloc();
+			unsigned short *pClusters = (unsigned short*)s_PVSInfoAllocator.alloc();
 			memcpy( pClusters, pPVSInfo->m_pClusters, MAX_FAST_ENT_CLUSTERS * sizeof(unsigned short) );
 			pPVSInfo->m_pClusters = pClusters;
 		}
 		else if ( pPVSInfo->m_nClusterCount == MAX_ENT_CLUSTERS )
 		{
 			// assume we missed some leafs, and mark by headnode
-			s_PVSInfoAllocator.Free( pPVSInfo->m_pClusters );
+			s_PVSInfoAllocator.free( pPVSInfo->m_pClusters );
 			pPVSInfo->m_pClusters = 0;
 			pPVSInfo->m_nClusterCount = -1;
 			break;
@@ -2385,7 +2383,7 @@ void CVEngineServer::CleanUpEntityClusterList( PVSInfo_t *pPVSInfo )
 {
 	if ( pPVSInfo->m_nClusterCount > MAX_FAST_ENT_CLUSTERS )
 	{
-		s_PVSInfoAllocator.Free( pPVSInfo->m_pClusters );
+		s_PVSInfoAllocator.free( pPVSInfo->m_pClusters );
 		pPVSInfo->m_pClusters = 0;
 		pPVSInfo->m_nClusterCount = 0;
 	}

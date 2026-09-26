@@ -19,10 +19,7 @@
 #include "tier0/vprof.h"
 
 #include "tier1/tier1.h"
-#include "tier1/utlstack.h"
 #include "tier1/generichash.h"
-#include "tier1/utlsymbol.h"
-#include "tier1/utlrbtree.h"
 #include "tier1/strtools.h"
 #include "tier0/icommandline.h"
 #include "mathlib/vmatrix.h"

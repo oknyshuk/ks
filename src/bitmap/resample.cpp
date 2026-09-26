@@ -12,13 +12,11 @@
 #include <memory.h>
 #include "mathlib/mathlib.h"
 #include "mathlib/vector.h"
-#include "tier1/utlmemory.h"
+#include <vector>
 #include "tier1/strtools.h"
 #include "mathlib/compressed_vector.h"
 
-// Should be last include
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 
 namespace ImageLoader
 {
@@ -668,7 +666,7 @@ bool ResampleRGBA8888( const ResampleInfo_t& info )
 	else if ( info.m_nFlags & RESAMPLE_ALPHATEST )
 	{
 		int nSize = info.m_nSrcHeight * info.m_nSrcWidth * info.m_nSrcDepth * sizeof(float);
-		pAlphaResult = (float*)malloc( nSize );
+		pAlphaResult = (float*)MemAlloc_Alloc( nSize );
 		memset( pAlphaResult, 0, nSize );
 		type = KERNEL_ALPHATEST;
 	}
@@ -689,7 +687,7 @@ bool ResampleRGBA8888( const ResampleInfo_t& info )
 
 	if ( pAlphaResult )
 	{
-		free( pAlphaResult );
+		g_pMemAlloc->Free( pAlphaResult );
 	}
 
 	return true;
@@ -737,8 +735,8 @@ bool ResampleRGBA16161616( const ResampleInfo_t& info )
 			for( i = 0; i < 4; i++ )
 			{
 				accum[i] /= ( nSampleWidth * nSampleHeight );
-				accum[i] = MAX( accum[i], 0 );
-				accum[i] = MIN( accum[i], 65535 );
+				accum[i] = std::max( accum[i], 0 );
+				accum[i] = std::min( accum[i], 65535 );
 				pDst[(x+y*info.m_nDestWidth)*4+i] = ( unsigned short )accum[i];
 			}
 		}
@@ -847,15 +845,14 @@ void GenerateMipmapLevels( unsigned char* pSrc, unsigned char* pDst, int width,
 
 	// temporary storage for the mipmaps
 	int tempMem = GetMemRequired( dstWidth, dstHeight, dstDepth, IMAGE_FORMAT_RGBA8888, false );
-	CUtlMemory<unsigned char> tmpImage;
-	tmpImage.EnsureCapacity( tempMem );
+	std::vector<unsigned char> tmpImage( tempMem );
 
 	while( true )
 	{
 		// This generates a mipmap in RGBA8888, linear space
 		ResampleInfo_t info;
 		info.m_pSrc = pSrc;
-		info.m_pDest = tmpImage.Base();
+		info.m_pDest = tmpImage.data();
 		info.m_nSrcWidth = width;
 		info.m_nSrcHeight = height;
 		info.m_nSrcDepth = depth;
@@ -868,7 +865,7 @@ void GenerateMipmapLevels( unsigned char* pSrc, unsigned char* pDst, int width,
 		ResampleRGBA8888( info );
 
 		// each mipmap level needs to be color converted separately
-		ConvertImageFormat( tmpImage.Base(), IMAGE_FORMAT_RGBA8888,
+		ConvertImageFormat( tmpImage.data(), IMAGE_FORMAT_RGBA8888,
 			pDst, imageFormat, dstWidth, dstHeight, 0, 0 );
 
 		if (numLevels == 0)

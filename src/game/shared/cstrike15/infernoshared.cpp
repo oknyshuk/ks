@@ -19,9 +19,6 @@
 	#define FIRECRACKERBLASTCLASS	C_FireCrackerBlast
 #endif
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 //---------------------------------------------------------
 const char *INFERNOCLASS::GetParticleEffectName()
 {

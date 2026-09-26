@@ -172,7 +172,7 @@ public:
 			funfact.id = GetId();
 			funfact.szLocalizationToken = GetLocalizationToken();
 			funfact.fMagnitude = 0.0f;
-			results.AddToTail(funfact);
+			results.push_back( funfact );
 			return true;
 		}
 		else
@@ -308,7 +308,7 @@ public:
 						funfact.iPlayer = i;
 						funfact.iData1 = iValue;
 						funfact.fMagnitude = 1.0f - ((float)m_min / iValue);
-						results.AddToTail(funfact);
+						results.push_back( funfact );
 						bResult = true;
 					}
 				}
@@ -323,7 +323,7 @@ public:
 			funfact.iData1 = iBestValue;
 			funfact.fMagnitude = 1.0f - ((float)m_min / iBestValue);
 
-			results.AddToTail(funfact);
+			results.push_back( funfact );
 			bResult = true;
 		}
 		return bResult;
@@ -371,7 +371,7 @@ public:
 			funfact.id = GetId();
 			funfact.szLocalizationToken = GetLocalizationToken();
 			funfact.fMagnitude = 0.0f;
-			results.AddToTail(funfact);
+			results.push_back( funfact );
 			return true;
 		}
 		return false;
@@ -444,7 +444,7 @@ public:
 			funfact.iData1 = iBestValue;
 			funfact.fMagnitude = 1.0f - ((float)m_min / iBestValue);
 
-			results.AddToTail(funfact);
+			results.push_back( funfact );
 			return true;
 		}
 		return false;
@@ -508,7 +508,7 @@ public:
 			funfact.iData1 = iSum;
 			funfact.fMagnitude = 1.0f - ((float)m_min / iSum);
 
-			results.AddToTail(funfact);
+			results.push_back( funfact );
 			return true;
 		}
 		return false;

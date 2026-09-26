@@ -279,6 +279,19 @@ FORCEINLINE fltx4 LoadUnaligned3SIMD( const void *pSIMD )
 	return _mm_loadu_ps( reinterpret_cast<const float *>( pSIMD ) );
 }
 
+// Loads exactly 3 floats (x, y, z) and zeroes the W lane. Unlike LoadUnaligned3SIMD
+// (which reads a full 16 bytes), this is safe on bare 12-byte Vectors, including
+// stack temporaries and trailing struct members. Prefer this for 3-component data.
+FORCEINLINE fltx4 LoadVector3SIMD( const Vector &v )
+{
+	return _mm_set_ps( 0.0f, v.z, v.y, v.x );
+}
+
+FORCEINLINE fltx4 LoadVector3SIMD( const float *p )
+{
+	return _mm_set_ps( 0.0f, p[2], p[1], p[0] );
+}
+
 // load a single unaligned float into the x component of a SIMD word
 FORCEINLINE fltx4 LoadUnalignedFloatSIMD( const float *pFlt )
 {

@@ -11,6 +11,12 @@
 
 #include "keyvalues.h"
 
+namespace ks
+{
+	class byte_reader;
+	class byte_writer;
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: Handles packing KeyValues binary packing and unpacking in a a
 //			consistent way across all branches, including Steam. If you change
@@ -21,8 +27,8 @@
 class KVPacker
 {
 public:
-	bool WriteAsBinary( KeyValues *pNode, CUtlBuffer &buffer );
-	bool ReadAsBinary( KeyValues *pNode, CUtlBuffer &buffer );
+	bool WriteAsBinary( KeyValues *pNode, ks::byte_writer &buffer );
+	bool ReadAsBinary( KeyValues *pNode, ks::byte_reader &buffer );
 
 private:
 	// These types are used for serialization of KeyValues nodes.

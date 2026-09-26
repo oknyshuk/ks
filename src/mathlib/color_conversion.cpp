@@ -12,9 +12,6 @@
 #include "mathlib/mathlib.h"
 #include "mathlib/vector.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Gamma conversion support
 //-----------------------------------------------------------------------------
@@ -106,8 +103,6 @@ ALIGN128 float	power2_n[256] = 			// 2**(index - 128) / 255
 // You can use this to double check the exponent table and assert that 
 // the precomputation is correct.
 #ifdef DBGFLAG_ASSERT
-#pragma warning(push)
-#pragma warning( disable : 4189 ) // disable unused local variable warning
 static void CheckExponentTable()
 {
 	for( int i = 0; i < 256; i++ )
@@ -120,7 +115,6 @@ static void CheckExponentTable()
 				power2_n[i] == testAgainst );
 	}
 }
-#pragma warning(pop)
 #endif
 
 void BuildGammaTable( float gamma, float texGamma, float brightness, int overbright )

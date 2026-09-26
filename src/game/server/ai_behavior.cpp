@@ -14,9 +14,6 @@
 #include "env_debughistory.h"
 #include "checksum_crc.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 bool g_bBehaviorHost_PreventBaseClassGatherConditions;
 
 //-----------------------------------------------------------------------------
@@ -74,7 +71,7 @@ int CAI_BehaviorBase::DrawDebugTextOverlays( int text_offset )
 		GetOuter()->EntityText( text_offset, tempstr, 0 );
 		text_offset++;
 
-		for ( int i = 0; i < m_ScheduleChannels.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_ScheduleChannels ); i++ )
 		{
 			AIChannelScheduleState_t *pScheduleState = &m_ScheduleChannels[i];
 
@@ -169,7 +166,7 @@ int CAI_BehaviorBase::TranslateSchedule( int scheduleType )
 
 CAI_Schedule *CAI_BehaviorBase::GetNewSchedule( int channel )
 {
-	if ( !m_ScheduleChannels.IsValidIndex( channel ) )
+	if ( !ks::is_valid_index( m_ScheduleChannels, channel ) )
 	{
 		AssertMsg( 0, "Bad schedule channel" );
 		return nullptr;
@@ -278,7 +275,7 @@ void CAI_BehaviorBase::StartChannel( int channel )
 		return;
 	}
 
-	m_ScheduleChannels.EnsureCount( channel + 1 );
+	ks::ensure_size( m_ScheduleChannels, channel + 1 );
 	m_ScheduleChannels[channel].bActive = true;
 }
 
@@ -286,7 +283,7 @@ void CAI_BehaviorBase::StartChannel( int channel )
 //-------------------------------------
 void CAI_BehaviorBase::StopChannel( int channel )
 {
-	if ( !m_ScheduleChannels.IsValidIndex( channel ) )
+	if ( !ks::is_valid_index( m_ScheduleChannels, channel ) )
 	{
 		AssertMsg( 0, "Bad schedule channel" );
 		return;
@@ -300,7 +297,7 @@ void CAI_BehaviorBase::StopChannel( int channel )
 
 void CAI_BehaviorBase::MaintainChannelSchedules()
 {
-	for ( int i = 0; i < m_ScheduleChannels.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_ScheduleChannels ); i++ )
 	{
 		MaintainSchedule( i );
 	}
@@ -315,7 +312,7 @@ void CAI_BehaviorBase::MaintainSchedule( int channel )
 	CAI_Schedule *pNewSchedule;
 	bool		runTask = true;
 
-	AssertMsg( m_ScheduleChannels.IsValidIndex( channel ), "Bad schedule channel" );
+	AssertMsg( ks::is_valid_index( m_ScheduleChannels, channel ), "Bad schedule channel" );
 
 	AIChannelScheduleState_t *pScheduleState = &m_ScheduleChannels[channel];
 
@@ -461,9 +458,9 @@ bool CAI_BehaviorBase::IsScheduleValid( AIChannelScheduleState_t *pScheduleState
 	//Start out with the base schedule's set interrupt conditions
 	CAI_ScheduleBits testBits;
 	pSchedule->GetInterruptMask( &testBits );
-	testBits.And( GetOuter()->AccessConditionBits(), &testBits  );
+	testBits &= GetOuter()->AccessConditionBits();
 
-	if (!testBits.IsAllClear()) 
+	if (testBits.any()) 
 	{
 		// If in developer mode save the interrupt text for debug output
 		if (developer.GetInt()) 
@@ -471,9 +468,9 @@ bool CAI_BehaviorBase::IsScheduleValid( AIChannelScheduleState_t *pScheduleState
 			// Find the first non-zero bit
 			for (int i=0;i<MAX_CONDITIONS;i++)
 			{
-				if (testBits.IsBitSet(i))
+				if (testBits[i])
 				{
-					int channel = pScheduleState - m_ScheduleChannels.Base();
+					int channel = pScheduleState - m_ScheduleChannels.data();
 					const char *pszInterruptText = GetOuter()->ConditionName( AI_RemapToGlobal( i ) );
 					if (!pszInterruptText)
 					{
@@ -502,7 +499,7 @@ bool CAI_BehaviorBase::IsScheduleValid( AIChannelScheduleState_t *pScheduleState
 
 void CAI_BehaviorBase::SetSchedule( int channel, CAI_Schedule *pNewSchedule )
 {
-	if ( !m_ScheduleChannels.IsValidIndex( channel ) )
+	if ( !ks::is_valid_index( m_ScheduleChannels, channel ) )
 	{
 		AssertMsg( 0, "Bad schedule channel" );
 		return;
@@ -537,7 +534,7 @@ void CAI_BehaviorBase::SetSchedule( int channel, CAI_Schedule *pNewSchedule )
 
 bool CAI_BehaviorBase::SetSchedule( int channel, int localScheduleID )
 {
-	if ( !m_ScheduleChannels.IsValidIndex( channel ) )
+	if ( !ks::is_valid_index( m_ScheduleChannels, channel ) )
 	{
 		AssertMsg( 0, "Bad schedule channel" );
 		return false;
@@ -567,7 +564,7 @@ bool CAI_BehaviorBase::SetSchedule( int channel, int localScheduleID )
 
 void CAI_BehaviorBase::ClearSchedule( int channel, const char *szReason )
 {
-	if ( !m_ScheduleChannels.IsValidIndex( channel ) )
+	if ( !ks::is_valid_index( m_ScheduleChannels, channel ) )
 	{
 		AssertMsg( 0, "Bad schedule channel" );
 		return;
@@ -597,7 +594,7 @@ void CAI_BehaviorBase::ClearSchedule( int channel, const char *szReason )
 
 CAI_Schedule *CAI_BehaviorBase::GetCurSchedule( int channel )
 {
-	if ( !m_ScheduleChannels.IsValidIndex( channel ) )
+	if ( !ks::is_valid_index( m_ScheduleChannels, channel ) )
 	{
 		AssertMsg( 0, "Bad schedule channel" );
 		return nullptr;
@@ -610,7 +607,7 @@ CAI_Schedule *CAI_BehaviorBase::GetCurSchedule( int channel )
 
 bool CAI_BehaviorBase::IsCurSchedule( int channel, int schedId, bool fIdeal )
 {
-	if ( !m_ScheduleChannels.IsValidIndex( channel ) )
+	if ( !ks::is_valid_index( m_ScheduleChannels, channel ) )
 	{
 		AssertMsg( 0, "Bad schedule channel" );
 		return false;
@@ -659,7 +656,7 @@ int CAI_BehaviorBase::SelectFailSchedule(  int channel, int failedSchedule, int 
 
 void CAI_BehaviorBase::TaskComplete( int channel, bool fIgnoreSetFailedCondition )
 {
-	if ( !m_ScheduleChannels.IsValidIndex( channel ) )
+	if ( !ks::is_valid_index( m_ScheduleChannels, channel ) )
 	{
 		AssertMsg( 0, "Bad schedule channel" );
 		return;
@@ -676,7 +673,7 @@ void CAI_BehaviorBase::TaskComplete( int channel, bool fIgnoreSetFailedCondition
 
 void CAI_BehaviorBase::TaskFail( int channel, AI_TaskFailureCode_t code )
 {
-	if ( !m_ScheduleChannels.IsValidIndex( channel ) )
+	if ( !ks::is_valid_index( m_ScheduleChannels, channel ) )
 	{
 		AssertMsg( 0, "Bad schedule channel" );
 		return;
@@ -698,7 +695,7 @@ void CAI_BehaviorBase::TaskFail( int channel, AI_TaskFailureCode_t code )
 
 const Task_t *CAI_BehaviorBase::GetCurTask( int channel ) 
 {
-	if ( !m_ScheduleChannels.IsValidIndex( channel ) )
+	if ( !ks::is_valid_index( m_ScheduleChannels, channel ) )
 	{
 		AssertMsg( 0, "Bad schedule channel" );
 		return nullptr;

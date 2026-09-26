@@ -13,9 +13,6 @@
 #include "host.h"
 #include "common.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //=========================================================
 // Cheat Codes
 //=========================================================
@@ -36,11 +33,11 @@ struct CheatCodeData_t
 
 	char			szCommand[ CHEAT_COMMAND_MAX_LEN ];
 };
-static CUtlVector<CheatCodeData_t> s_CheatCodeCommands;
+static std::vector< CheatCodeData_t > s_CheatCodeCommands;
 
 void ClearCheatCommands( void )
 {
-	s_CheatCodeCommands.RemoveAll();
+	s_CheatCodeCommands.clear();
 }
 
 void ReadCheatCommandsFromFile( const char *pchFileName )
@@ -51,7 +48,7 @@ void ReadCheatCommandsFromFile( const char *pchFileName )
 		KeyValues *pKey = nullptr;
 		for ( pKey = pCheatCodeKeys->GetFirstTrueSubKey(); pKey; pKey = pKey->GetNextTrueSubKey() )
 		{
-			int iCheat = s_CheatCodeCommands.AddToTail();
+			int iCheat = std::ssize( s_CheatCodeCommands ); s_CheatCodeCommands.emplace_back();
 			CheatCodeData_t *pNewCheatCode = &(s_CheatCodeCommands[ iCheat ]);
 
 			Q_strncpy( pNewCheatCode->szName, pKey->GetName(), CHEAT_NAME_MAX_LEN );	// Get the name
@@ -118,7 +115,7 @@ void LogKeyPress( ButtonCode_t code )
 void CheckCheatCodes()
 {
 	// Loop through all cheat codes
-	int iNumCheatCodes = s_CheatCodeCommands.Count();
+	int iNumCheatCodes = std::ssize( s_CheatCodeCommands );
 	for ( int iCheatCode = 0; iCheatCode < iNumCheatCodes; ++iCheatCode )
 	{
 		CheatCodeData_t *pCheatCode = &(s_CheatCodeCommands[ iCheatCode ]);

@@ -26,12 +26,12 @@ public:
 	// Purpose: Tries to linearly push an entity hierarchy, returns the blocker if any
 	CBaseEntity *PerformLinearPush( CBaseEntity *pRoot, float movetime );
 
-	int			CountMovedEntities() { return m_rgMoved.Count(); }
+	int			CountMovedEntities() { return std::ssize( m_rgMoved ); }
 	void		StoreMovedEntities( physicspushlist_t &list );
 	void		BeginPush( CBaseEntity *pRootEntity );
 	// updates physics for all pushers that moved this tick
 	void		UpdatePusherPhysicsEndOfTick();
-	void		QueueChildUpdate( CBaseEntity *pChild ) { m_rgUpdatedChildren.AddToTail(pChild); }
+	void		QueueChildUpdate( CBaseEntity *pChild ) { m_rgUpdatedChildren.push_back( pChild ); }
 
 protected:
 
@@ -117,8 +117,8 @@ protected:
 
 protected:
 
-	CUtlVector<PhysicsPusherInfo_t>	m_rgPusher;
-	CUtlVector<PhysicsPushedInfo_t>	m_rgMoved;
+	std::vector< PhysicsPusherInfo_t >	m_rgPusher;
+	std::vector< PhysicsPushedInfo_t >	m_rgMoved;
 	int								m_nBlocker;
 	bool							m_bIsUnblockableByPlayer;
 	Vector							m_rootPusherStartLocalOrigin;
@@ -126,8 +126,8 @@ protected:
 	float							m_rootPusherStartLocaltime;
 	float							m_flMoveTime;
 
-	CUtlVector<PhysicsPusherInfo_t>	m_rgUpdatedPushers;
-	CUtlVector<CBaseEntity *>	m_rgUpdatedChildren;
+	std::vector< PhysicsPusherInfo_t >	m_rgUpdatedPushers;
+	std::vector< CBaseEntity * >	m_rgUpdatedChildren;
 	friend class CPushBlockerEnum;
 };
 

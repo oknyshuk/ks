@@ -16,9 +16,6 @@
 #include "tier0/icommandline.h"
 #include "strtools.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // Only allow recursive references to be 8 levels deep.
 // This test will flag any circular references and bail.
 #define MAX_SOUNDSCAPE_RECURSION	8
@@ -190,8 +187,8 @@ public:
 			ACTIVE_SPLITSCREEN_PLAYER_GUARD( hh );
 			GetPerUser(hh).m_params.entIndex = 0;
 			GetPerUser(hh).m_params.soundscapeIndex = -1;
-			GetPerUser(hh).m_loopingSounds.Purge();
-			GetPerUser(hh).m_randomSounds.Purge();
+			GetPerUser(hh).m_loopingSounds.clear();
+			GetPerUser(hh).m_randomSounds.clear();
 		}
 	}
 
@@ -246,7 +243,7 @@ public:
 	void PrintDebugInfo()
 	{
 		Msg( "\n------- CLIENT SOUNDSCAPES -------\n" );
-		for ( int i=0; i < m_soundscapes.Count(); i++ )
+		for ( int i=0; i < std::ssize( m_soundscapes ); i++ )
 		{
 			Msg( "- %d: %s\n", i, m_soundscapes[i]->GetName() );
 		}
@@ -333,13 +330,13 @@ private:
 
 	int							m_nRestoreFrame;
 
-	CUtlVector< KeyValues * >	m_SoundscapeScripts;	// The whole script file in memory
-	CUtlVector<KeyValues *>		m_soundscapes;			// Lookup by index of each root section
+	std::vector< KeyValues * >	m_SoundscapeScripts;	// The whole script file in memory
+	std::vector< KeyValues * >		m_soundscapes;			// Lookup by index of each root section
 	struct Split_t
 	{
 		audioparams_t				m_params;				// current player audio params
-		CUtlVector<loopingsound_t>	m_loopingSounds;		// list of currently playing sounds
-		CUtlVector<randomsound_t>	m_randomSounds;			// list of random sound commands
+		std::vector< loopingsound_t >	m_loopingSounds;		// list of currently playing sounds
+		std::vector< randomsound_t >	m_randomSounds;			// list of random sound commands
 		float						m_nextRandomTime;		// next time to play a random sound
 		int							m_loopingSoundId;		// marks when the sound was issued
 		int							m_forcedSoundscapeIndex;// >= 0 if this a "forced" soundscape? i.e. debug mode?
@@ -407,13 +404,13 @@ void C_SoundscapeSystem::AddSoundScapeFile( const char *filename )
 			// each one is a soundscape
 			if ( pKeys->GetFirstSubKey() )
 			{
-				m_soundscapes.AddToTail( pKeys );
+				m_soundscapes.push_back( pKeys );
 			}
 			pKeys = pKeys->GetNextKey();
 		}
 
 		// Keep pointer around so we can delete it at exit
-		m_SoundscapeScripts.AddToTail( script );
+		m_SoundscapeScripts.push_back( script );
 	}
 	else
 	{
@@ -476,7 +473,7 @@ bool C_SoundscapeSystem::Init()
 int C_SoundscapeSystem::FindSoundscapeByName( const char *pSoundscapeName )
 {
 	// UNDONE: Bad perf, linear search!
-	for ( int i = m_soundscapes.Count()-1; i >= 0; --i )
+	for ( int i = std::ssize( m_soundscapes )-1; i >= 0; --i )
 	{
 		if ( !Q_stricmp( m_soundscapes[i]->GetName(), pSoundscapeName ) )
 			return i;
@@ -487,14 +484,14 @@ int C_SoundscapeSystem::FindSoundscapeByName( const char *pSoundscapeName )
 
 KeyValues *C_SoundscapeSystem::SoundscapeByIndex( int index )
 {
-	if ( m_soundscapes.IsValidIndex(index) )
+	if ( ks::is_valid_index( m_soundscapes, index ) )
 		return m_soundscapes[index];
 	return nullptr;
 }
 
 const char *C_SoundscapeSystem::SoundscapeNameByIndex( int index )
 {
-	if ( index < m_soundscapes.Count() )
+	if ( index < std::ssize( m_soundscapes ) )
 	{
 		return m_soundscapes[index]->GetName();
 	}
@@ -507,7 +504,7 @@ void C_SoundscapeSystem::Shutdown()
 	for ( int hh = 0; hh < MAX_SPLITSCREEN_PLAYERS; ++hh )
 	{
 		ACTIVE_SPLITSCREEN_PLAYER_GUARD( hh );
-		for ( int i = GetPerUser(hh).m_loopingSounds.Count() - 1; i >= 0; --i )
+		for ( int i = std::ssize( GetPerUser(hh).m_loopingSounds ) - 1; i >= 0; --i )
 		{
 			loopingsound_t &sound = GetPerUser(hh).m_loopingSounds[i];
 
@@ -517,18 +514,18 @@ void C_SoundscapeSystem::Shutdown()
 
 		// These are only necessary so we can use shutdown/init calls
 		// to flush soundscape data
-		GetPerUser(hh).m_loopingSounds.RemoveAll();
-		GetPerUser(hh).m_randomSounds.RemoveAll();
+		GetPerUser(hh).m_loopingSounds.clear();
+		GetPerUser(hh).m_randomSounds.clear();
 		GetPerUser(hh).m_params.entIndex = 0;
 		GetPerUser(hh).m_params.soundscapeIndex = -1;
 	}
 
-	m_soundscapes.RemoveAll();
+	m_soundscapes.clear();
 
-	while ( m_SoundscapeScripts.Count() > 0 )
+	while ( !m_SoundscapeScripts.empty() )
 	{
 		KeyValues *kv = m_SoundscapeScripts[ 0 ];
-		m_SoundscapeScripts.Remove( 0 );
+		m_SoundscapeScripts.erase( m_SoundscapeScripts.begin() + 0 );
 		kv->deleteThis();
 	}
 }
@@ -632,7 +629,7 @@ void C_SoundscapeSystem::ForceSoundscape( const char *pSoundscapeName, float rad
 void C_SoundscapeSystem::DevReportSoundscapeName( int index )
 {
 	const char *pName = "none";
-	if ( index >= 0 && index < m_soundscapes.Count() )
+	if ( index >= 0 && index < std::ssize( m_soundscapes ) )
 	{
 		pName = m_soundscapes[index]->GetName();
 	}
@@ -648,7 +645,7 @@ void C_SoundscapeSystem::DevReportSoundscapeName( int index )
 void C_SoundscapeSystem::UpdateLoopingSounds( float frametime )
 {
 	Split_t &slot = GetPerUser(GET_ACTIVE_SPLITSCREEN_SLOT());
-	int fadeCount = slot.m_loopingSounds.Count();
+	int fadeCount = std::ssize( slot.m_loopingSounds );
 	while ( fadeCount > 0 )
 	{
 		fadeCount--;
@@ -700,7 +697,7 @@ void C_SoundscapeSystem::UpdateLoopingSounds( float frametime )
 			{
 				// sound is done, remove from list.
 				StopLoopingSound( sound );
-				slot.m_loopingSounds.FastRemove( fadeCount );
+				ks::swap_remove( slot.m_loopingSounds, fadeCount );
 			}
 			else
 			{
@@ -748,7 +745,7 @@ void C_SoundscapeSystem::UpdateAudioParams( audioparams_t &audio )
 
 	slot.m_params = audio;
 	slot.m_forcedSoundscapeIndex = -1;
-	if ( audio.entIndex > 0 && audio.soundscapeIndex >= 0 && audio.soundscapeIndex < m_soundscapes.Count() )
+	if ( audio.entIndex > 0 && audio.soundscapeIndex >= 0 && audio.soundscapeIndex < std::ssize( m_soundscapes ) )
 	{
 		DevReportSoundscapeName( audio.soundscapeIndex );
 		StartNewSoundscape( m_soundscapes[audio.soundscapeIndex] );
@@ -777,8 +774,8 @@ void C_SoundscapeSystem::StartNewSoundscape( KeyValues *pSoundscape )
 	// Reset the system
 	// fade out the current loops
 	// save off the count of old looping sounds
-	int nOldLoopingSoundMax = slot.m_loopingSounds.Count()-1;
-	for ( i = slot.m_loopingSounds.Count()-1; i >= 0; --i )
+	int nOldLoopingSoundMax = std::ssize( slot.m_loopingSounds )-1;
+	for ( i = std::ssize( slot.m_loopingSounds )-1; i >= 0; --i )
 	{
 		slot.m_loopingSounds[i].m_volume.FadeToValue( 0, flFadeRate, FADE_VOLUME_SINE );
 		if ( !pSoundscape )
@@ -791,7 +788,7 @@ void C_SoundscapeSystem::StartNewSoundscape( KeyValues *pSoundscape )
 	slot.m_loopingSoundId++;
 
 	// clear all random sounds
-	slot.m_randomSounds.RemoveAll();
+	slot.m_randomSounds.clear();
 	slot.m_nextRandomTime = gpGlobals->curtime;
 
 	if ( pSoundscape )
@@ -1119,7 +1116,7 @@ void C_SoundscapeSystem::TouchSoundFiles()
 	if ( !CommandLine()->FindParm( "-makereslists" ) )
 		return;
 
-	int c = m_soundscapes.Count();
+	int c = std::ssize( m_soundscapes );
 	for ( int i = 0; i < c ; ++i )
 	{
 		TouchWaveFiles( m_soundscapes[ i ] );
@@ -1396,7 +1393,7 @@ int C_SoundscapeSystem::AddLoopingSound( const char *pSoundName, bool isAmbient,
 	Split_t &slot = GetPerUser(GET_ACTIVE_SPLITSCREEN_SLOT());
 
 	loopingsound_t *pSoundSlot = nullptr;
-	int soundSlot = slot.m_loopingSounds.Count() - 1;
+	int soundSlot = std::ssize( slot.m_loopingSounds ) - 1;
 	bool bForceSoundUpdate = false;
 	while ( soundSlot >= 0 )
 	{
@@ -1432,7 +1429,7 @@ int C_SoundscapeSystem::AddLoopingSound( const char *pSoundName, bool isAmbient,
 	if ( soundSlot < 0 )
 	{
 		// can't find the sound in the list, make a new one
-		soundSlot = slot.m_loopingSounds.AddToTail();
+		soundSlot = std::ssize( slot.m_loopingSounds ); slot.m_loopingSounds.emplace_back();
 		if ( isAmbient )
 		{
 			// start at 0 and fade in
@@ -1525,7 +1522,7 @@ void C_SoundscapeSystem::UpdateLoopingSound( loopingsound_t &loopSound )
 int C_SoundscapeSystem::AddRandomSound( const randomsound_t &sound )
 {
 	Split_t &slot = GetPerUser(GET_ACTIVE_SPLITSCREEN_SLOT());
-	int index = slot.m_randomSounds.AddToTail( sound );
+	int index = std::ssize( slot.m_randomSounds ); slot.m_randomSounds.push_back( sound );
 	slot.m_randomSounds[index].nextPlayTime = gpGlobals->curtime + 0.5 * RandomInterval( sound.time );
 
 	return index;
@@ -1584,7 +1581,7 @@ void C_SoundscapeSystem::UpdateRandomSounds( float gameTime )
 
 	slot.m_nextRandomTime = gameTime + 3600;	// add some big time to check again (an hour)
 
-	for ( int i = slot.m_randomSounds.Count()-1; i >= 0; i-- )
+	for ( int i = std::ssize( slot.m_randomSounds )-1; i >= 0; i-- )
 	{
 		// time to play?
 		if ( gameTime >= slot.m_randomSounds[i].nextPlayTime )

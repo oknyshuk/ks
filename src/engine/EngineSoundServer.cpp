@@ -24,9 +24,6 @@
 #endif
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 //
 // Server-side implementation of the engine sound interface
@@ -52,15 +49,15 @@ public:
 
 	virtual int EmitSound( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH iSoundEntryHash, const char *pSample, 
 		float flVolume, float flAttenuation, int nSeed, int iFlags, int iPitch, 
-		const Vector *pOrigin, const Vector *pDirection, CUtlVector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
+		const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
 
 	virtual int EmitSound( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH iSoundEntryHash, const char *pSample, 
 		float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch, 
-		const Vector *pOrigin, const Vector *pDirection, CUtlVector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
+		const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
 
 	virtual void EmitSentenceByIndex( IRecipientFilter& filter, int iEntIndex, int iChannel, int iSentenceIndex, 
 		float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch,
-		const Vector *pOrigin, const Vector *pDirection, CUtlVector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
+		const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
 
 	virtual void StopSound( int iEntIndex, int iChannel, const char *pSample, HSOUNDSCRIPTHASH nSoundEntryHash = SOUNDEMITTER_INVALID_HASH );
 
@@ -94,7 +91,7 @@ public:
 	}
 
 	// Retrieves list of all active sounds
-	virtual void	GetActiveSounds( CUtlVector< SndInfo_t >& sndlist )
+	virtual void	GetActiveSounds( std::vector< SndInfo_t >& sndlist )
 	{ 
 		Warning( "Can't call GetActiveSounds from server\n" );
 		return; 
@@ -155,7 +152,7 @@ public:
 private:
 	void EmitSoundInternal( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH iSoundEntryHash, const char *pSample, 
 		float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch, 
-		const Vector *pOrigin, const Vector *pDirection, CUtlVector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
+		const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime = 0.0f, int speakerentity = -1 );
 };
 
 
@@ -261,7 +258,7 @@ void CEngineSoundServer::PrefetchSound( const char *pSample )
 //-----------------------------------------------------------------------------
 void CEngineSoundServer::EmitSoundInternal( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH iSoundEntryHash, const char *pSample, 
 	float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch, 
-	const Vector *pOrigin, const Vector *pDirection, CUtlVector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime /*= 0.0f*/, int speakerentity /*=-1*/ )
+	const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime /*= 0.0f*/, int speakerentity /*=-1*/ )
 {
 	AssertMsg( pDirection == nullptr, "Direction specification not currently supported on server sounds" );
 	AssertMsg( bUpdatePositions, "Non-updated positions not currently supported on server sounds" );
@@ -295,7 +292,7 @@ void CEngineSoundServer::EmitSoundInternal( IRecipientFilter& filter, int iEntIn
 //-----------------------------------------------------------------------------
 void CEngineSoundServer::EmitSentenceByIndex( IRecipientFilter& filter, int iEntIndex, int iChannel, 
 	int iSentenceIndex, float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch,
-	const Vector *pOrigin, const Vector *pDirection, CUtlVector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime /*= 0.0f*/, int speakerentity /*= -1*/ )
+	const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime /*= 0.0f*/, int speakerentity /*= -1*/ )
 {
 	if ( iSentenceIndex >= 0 )
 	{
@@ -312,7 +309,7 @@ void CEngineSoundServer::EmitSentenceByIndex( IRecipientFilter& filter, int iEnt
 //-----------------------------------------------------------------------------
 int CEngineSoundServer::EmitSound( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH iSoundEntryHash, const char *pSample, 
 	float flVolume, float flAttenuation, int nSeed, int iFlags, int iPitch, 
-	const Vector *pOrigin, const Vector *pDirection, CUtlVector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime /*= 0.0f*/, int speakerentity /*= -1*/ )
+	const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime /*= 0.0f*/, int speakerentity /*= -1*/ )
 {
 	VPROF( "CEngineSoundServer::EmitSound" );
 	EmitSound( filter, iEntIndex, iChannel, pSoundEntry, iSoundEntryHash, pSample, flVolume, ATTN_TO_SNDLVL( flAttenuation ), nSeed, iFlags, 
@@ -322,7 +319,7 @@ int CEngineSoundServer::EmitSound( IRecipientFilter& filter, int iEntIndex, int 
 
 int CEngineSoundServer::EmitSound( IRecipientFilter& filter, int iEntIndex, int iChannel, const char *pSoundEntry, HSOUNDSCRIPTHASH iSoundEntryHash, const char *pSample, 
 	float flVolume, soundlevel_t iSoundLevel, int nSeed, int iFlags, int iPitch, 
-	const Vector *pOrigin, const Vector *pDirection, CUtlVector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime /*= 0.0f*/, int speakerentity /*= -1*/ )
+	const Vector *pOrigin, const Vector *pDirection, std::vector< Vector >* pUtlVecOrigins, bool bUpdatePositions, float soundtime /*= 0.0f*/, int speakerentity /*= -1*/ )
 {
 	VPROF( "CEngineSoundServer::EmitSound" );
 	if ( pSample && TestSoundChar(pSample, CHAR_SENTENCE) )
@@ -347,7 +344,7 @@ int CEngineSoundServer::EmitSound( IRecipientFilter& filter, int iEntIndex, int 
 	return -1;	// Negative for unsupported feature.
 }
 
-void BuildRecipientList( CUtlVector< edict_t * >& list, const IRecipientFilter& filter )
+void BuildRecipientList( std::vector< edict_t * >& list, const IRecipientFilter& filter )
 {
 	int c = filter.GetRecipientCount();
 	for ( int i = 0; i < c; i++ )
@@ -364,7 +361,7 @@ void BuildRecipientList( CUtlVector< edict_t * >& list, const IRecipientFilter& 
 		if ( !cl->IsSpawned() )
 			continue;
 
-		list.AddToTail( cl->edict );
+		list.push_back( cl->edict );
 	}
 }
 
@@ -375,10 +372,10 @@ void BuildRecipientList( CUtlVector< edict_t * >& list, const IRecipientFilter& 
 //-----------------------------------------------------------------------------
 void CEngineSoundServer::SetRoomType( IRecipientFilter& filter, int roomType )
 {
-	CUtlVector< edict_t * > players;
+	std::vector< edict_t * > players;
 	BuildRecipientList( players, filter );
 
-	for ( int i = 0 ; i < players.Count(); i++ )
+	for ( int i = 0 ; i < std::ssize( players ); i++ )
 	{
 		g_pVEngineServer->ClientCommand( players[ i ], "room_type %i\n", roomType );
 	}
@@ -398,10 +395,10 @@ void CEngineSoundServer::SetPlayerDSP( IRecipientFilter& filter, int dspType, bo
 		Warning( "SetPlayerDSP:  fastReset only valid from client\n" );
 	}
 
-	CUtlVector< edict_t * > players;
+	std::vector< edict_t * > players;
 	BuildRecipientList( players, filter );
 
-	for ( int i = 0 ; i < players.Count(); i++ )
+	for ( int i = 0 ; i < std::ssize( players ); i++ )
 	{
 		g_pVEngineServer->ClientCommand( players[ i ], "dsp_player %i\n", dspType );
 

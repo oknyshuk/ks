@@ -10,9 +10,6 @@
 #include "EntityParticleTrail.h"
 #include "networkstringtable_gamedll.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Used to retire the entity
 //-----------------------------------------------------------------------------
@@ -106,7 +103,7 @@ void CEntityParticleTrail::UpdateOnRemove()
 void CEntityParticleTrail::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
 {
 	// Are we already marked for transmission?
-	if ( pInfo->m_pTransmitEdict->Get( entindex() ) )
+	if ( (*pInfo->m_pTransmitEdict)[ entindex() ] )
 		return;
 
 	BaseClass::SetTransmit( pInfo, bAlways );

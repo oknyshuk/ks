@@ -237,7 +237,7 @@ protected:
 	[[= ks::reflect::Key{ .name = "forcelimit" } ]] float			m_forceLimit;
 	[[= ks::reflect::Key{ .name = "torquelimit" } ]] float			m_torqueLimit;
 
-	CUtlVector< magnetted_objects_t >	m_MagnettedEntities;
+	std::vector< magnetted_objects_t >	m_MagnettedEntities;
 	IPhysicsConstraintGroup				*m_pConstraintGroup;
 
 	bool			m_bActive;

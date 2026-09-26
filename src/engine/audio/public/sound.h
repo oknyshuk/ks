@@ -39,7 +39,7 @@ bool S_GetPreventSound( void );
 
 #if !USE_AUDIO_DEVICE_V1
 struct audio_device_description_t;
-void S_GetAudioDeviceList( CUtlVector<audio_device_description_t> &audioList );
+void S_GetAudioDeviceList( std::vector< audio_device_description_t > &audioList );
 #endif
 
 class CAudioState
@@ -214,13 +214,13 @@ float S_SoundDurationByGuid( int guid );
 int S_GetGuidForLastSoundEmitted();
 bool S_IsSoundStillPlaying( int guid );
 bool S_GetSoundChannelVolume( const char* sound, float &flVolumeLeft, float &flVolumeRight );
-void S_GetActiveSounds( CUtlVector< SndInfo_t >& sndlist );
+void S_GetActiveSounds( std::vector< SndInfo_t >& sndlist );
 void S_SetVolumeByGuid( int guid, float fvol );
 float S_GetElapsedTime( const channel_t * pChannel );
 float S_GetElapsedTimeByGuid( int guid );
 bool S_IsLoopingSoundByGuid( int guid );
 void S_ReloadSound( const char *pSample );
-float S_GetMono16Samples( const char *pszName, CUtlVector< short >& sampleList );
+float S_GetMono16Samples( const char *pszName, std::vector< short >& sampleList );
 
 CSfxTable *S_DummySfx( const char *name );
 CSfxTable *S_PrecacheSound (const char *sample );
@@ -256,7 +256,7 @@ struct musicsave_t
 	short	master_volume;
 };
 
-void S_GetCurrentlyPlayingMusic( CUtlVector< musicsave_t >& list );
+void S_GetCurrentlyPlayingMusic( std::vector< musicsave_t >& list );
 void S_RestartSong( const musicsave_t *song );
 
 struct channelsave
@@ -274,7 +274,7 @@ struct channelsave
 	short masterVolume;
 };
 
-typedef CUtlVector< channelsave > ChannelSaveVector;
+typedef std::vector< channelsave > ChannelSaveVector;
 
 void S_GetActiveSaveRestoreChannels( ChannelSaveVector& channelSaves );
 void S_RestartChannel( channelsave const& channelSave );

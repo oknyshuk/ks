@@ -15,11 +15,6 @@
 // isn't built into Linux projects
 // [will] - Temporarily disabling for OSX until I can fix memory issues.
 
-#if defined( _MEMTEST )
-#endif
-
-
-
 #if defined( STEAM_SHARES_GAME_ALLOCATOR )
 #define MBYTES_STEAM_SBH_USAGE 2
 #define MBYTES_STEAM_MBH_USAGE 4
@@ -33,11 +28,10 @@
 
 #if !defined(STEAM) && !defined(NO_MALLOC_OVERRIDE)
 
+#include <mutex>
 #include <stddef.h>
-
-#ifdef PS3
-#define MEMALLOC_SUPPORTS_ALIGNED_ALLOCATIONS 1
-#endif
+#include <string.h>
+#include <wchar.h>
 
 #include "tier0/mem.h"
 
@@ -300,14 +294,10 @@ inline void *MemAlloc_AllocAlignedFileLine( size_t size, size_t align, const cha
 #endif
 }
 
-#ifdef USE_MEM_DEBUG
-#define MemAlloc_AllocAligned( s, a )	MemAlloc_AllocAlignedFileLine( s, a, __FILE__, __LINE__ )
-#elif defined(USE_LIGHT_MEM_DEBUG)
-extern const char *g_pszModule; 
-#define MemAlloc_AllocAligned( s, a )	MemAlloc_AllocAlignedFileLine( s, a, ::g_pszModule, 0 )
-#else
+// The USE_MEM_DEBUG and USE_LIGHT_MEM_DEBUG arms that used to be here went with the
+// memdbgon.h machinery they belonged to -- both macros are now defined by nothing. There is
+// exactly one behaviour left: unattributed aligned allocation.
 #define MemAlloc_AllocAligned( s, a )	MemAlloc_AllocAlignedUnattributed( s, a )
-#endif
 
 
 inline void *MemAlloc_ReallocAligned( void *ptr, size_t size, size_t align )
@@ -405,6 +395,55 @@ inline void MemAlloc_Free(void *pMemBlock)
 	g_pMemAlloc->Free(pMemBlock);
 }
 
+// Zeroes an already-allocated block in place and returns it; the low-level helper
+// the calloc macro in the now-retired tier0/memdbgon.h used to expand to, kept for
+// call sites that allocate (e.g. with file/line info) and zero as separate steps.
+inline void *MemAlloc_InlineCallocMemset( void *pMem, size_t nCount, size_t nElementSize )
+{
+	memset( pMem, 0, nElementSize * nCount );
+	return pMem;
+}
+
+// calloc/strdup/wcsdup equivalents that route through g_pMemAlloc, for callers that used
+// to get this via the calloc/strdup/wcsdup macros in the now-retired tier0/memdbgon.h.
+inline void *MemAlloc_Calloc( size_t nCount, size_t nElementSize )
+{
+	void *pMem = MemAlloc_Alloc( nCount * nElementSize );
+	if ( pMem )
+	{
+		memset( pMem, 0, nCount * nElementSize );
+	}
+	return pMem;
+}
+
+inline char *MemAlloc_StrDup( const char *pString )
+{
+	if ( !pString )
+		return nullptr;
+
+	size_t len = strlen( pString ) + 1;
+	char *pMemory = (char *)MemAlloc_Alloc( len );
+	if ( pMemory )
+	{
+		return strcpy( pMemory, pString );
+	}
+	return nullptr;
+}
+
+inline wchar_t *MemAlloc_WcStrDup( const wchar_t *pString )
+{
+	if ( !pString )
+		return nullptr;
+
+	size_t len = wcslen( pString ) + 1;
+	wchar_t *pMemory = (wchar_t *)MemAlloc_Alloc( len * sizeof( wchar_t ) );
+	if ( pMemory )
+	{
+		return wcscpy( pMemory, pString );
+	}
+	return nullptr;
+}
+
 inline size_t MemAlloc_GetSizeAligned( void *pMemBlock )
 {
 #ifdef MEMALLOC_SUPPORTS_ALIGNED_ALLOCATIONS
@@ -446,11 +485,6 @@ public:
 		return MemAlloc_AllocAligned( nSize, bytesAlignment );
 	}
 
-	void* operator new( size_t nSize, int nBlockUse, const char *pFileName, int nLine )
-	{
-		return MemAlloc_AllocAlignedFileLine( nSize, bytesAlignment, pFileName, nLine );
-	}
-
 	void operator delete(void *pData)
 	{
 		if ( pData )
@@ -458,19 +492,11 @@ public:
 			MemAlloc_FreeAligned( pData );
 		}
 	}
-
-	void operator delete( void* pData, int nBlockUse, const char *pFileName, int nLine )
-	{
-		if ( pData )
-		{
-			MemAlloc_FreeAligned( pData, pFileName, nLine );
-		}
-	}
 };
 
 //-----------------------------------------------------------------------------
 
-#if (defined(_DEBUG) || defined(USE_MEM_DEBUG))
+#if defined(_DEBUG)
 #define MEM_ALLOC_CREDIT_(tag)	CMemAllocAttributeAlloction memAllocAttributeAlloction( tag, __LINE__ )
 #define MemAlloc_PushAllocDbgInfo( pszFile, line ) g_pMemAlloc->PushAllocDbgInfo( pszFile, line )
 #define MemAlloc_PopAllocDbgInfo() g_pMemAlloc->PopAllocDbgInfo()
@@ -510,23 +536,24 @@ public:
 
 //-----------------------------------------------------------------------------
 
-#if (defined(_DEBUG) || defined(USE_MEM_DEBUG))
+#if defined(_DEBUG)
 struct MemAllocFileLine_t
 {
 	const char *pszFile;
 	int line;
 };
 
+// Users include <map>.
 #define MEMALLOC_DEFINE_EXTERNAL_TRACKING( tag ) \
-	static CUtlMap<void *, MemAllocFileLine_t, int> s_##tag##Allocs( DefLessFunc( void *) ); \
-	CUtlMap<void *, MemAllocFileLine_t, int> * g_p##tag##Allocs = &s_##tag##Allocs; \
-	static CThreadFastMutex s_##tag##AllocsMutex; \
-	CThreadFastMutex * g_p##tag##AllocsMutex = &s_##tag##AllocsMutex; \
+	static std::map<void *, MemAllocFileLine_t> s_##tag##Allocs; \
+	std::map<void *, MemAllocFileLine_t> * g_p##tag##Allocs = &s_##tag##Allocs; \
+	static std::recursive_mutex s_##tag##AllocsMutex; \
+	std::recursive_mutex * g_p##tag##AllocsMutex = &s_##tag##AllocsMutex; \
 	const char * g_psz##tag##Alloc = strcpy( (char *)MemAlloc_Alloc( strlen( #tag "Alloc" ) + 1, "intentional leak", 0 ), #tag "Alloc" );
 
 #define MEMALLOC_DECLARE_EXTERNAL_TRACKING( tag ) \
-	extern CUtlMap<void *, MemAllocFileLine_t, int> * g_p##tag##Allocs; \
-	extern CThreadFastMutex *g_p##tag##AllocsMutex; \
+	extern std::map<void *, MemAllocFileLine_t> * g_p##tag##Allocs; \
+	extern std::recursive_mutex *g_p##tag##AllocsMutex; \
 	extern const char * g_psz##tag##Alloc;
 
 #define MemAlloc_RegisterExternalAllocation( tag, p, size ) \
@@ -534,12 +561,12 @@ struct MemAllocFileLine_t
 		; \
 	else \
 	{ \
-		AUTO_LOCK_FM( *g_p##tag##AllocsMutex ); \
+		std::scoped_lock lock( *g_p##tag##AllocsMutex ); \
 		MemAllocFileLine_t fileLine = { g_psz##tag##Alloc, 0 }; \
 		g_pMemAlloc->GetActualDbgInfo( fileLine.pszFile, fileLine.line ); \
 		if ( fileLine.pszFile != g_psz##tag##Alloc ) \
 		{ \
-			g_p##tag##Allocs->Insert( p, fileLine ); \
+			g_p##tag##Allocs->insert_or_assign( p, fileLine ); \
 		} \
 		\
 		MemAlloc_RegisterAllocation( fileLine.pszFile, fileLine.line, size, size, 0); \
@@ -550,13 +577,13 @@ struct MemAllocFileLine_t
 		; \
 	else \
 	{ \
-		AUTO_LOCK_FM( *g_p##tag##AllocsMutex ); \
+		std::scoped_lock lock( *g_p##tag##AllocsMutex ); \
 		MemAllocFileLine_t fileLine = { g_psz##tag##Alloc, 0 }; \
-		CUtlMap<void *, MemAllocFileLine_t, int>::IndexType_t iRecordedFileLine = g_p##tag##Allocs->Find( p ); \
-		if ( iRecordedFileLine != g_p##tag##Allocs->InvalidIndex() ) \
+		auto iRecordedFileLine = g_p##tag##Allocs->find( p ); \
+		if ( iRecordedFileLine != g_p##tag##Allocs->end() ) \
 		{ \
-			fileLine = (*g_p##tag##Allocs)[iRecordedFileLine]; \
-			g_p##tag##Allocs->RemoveAt( iRecordedFileLine ); \
+			fileLine = iRecordedFileLine->second; \
+			g_p##tag##Allocs->erase( iRecordedFileLine ); \
 		} \
 		\
 		MemAlloc_RegisterDeallocation( fileLine.pszFile, fileLine.line, size, size, 0); \

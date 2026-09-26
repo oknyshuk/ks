@@ -14,7 +14,6 @@
 #include "tier1/strtools.h"
 #include "tier1/checksum_crc.h"
 #include "tier1/keyvalues.h"
-#include "tier1/utlbuffer.h"
 
 #include "mathlib/mathlib.h"
 

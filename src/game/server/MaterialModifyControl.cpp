@@ -9,9 +9,6 @@
 #include "reflect_annotations.h"
 #include "reflect_sendtable.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //------------------------------------------------------------------------------
 // FIXME: This really should inherit from something	more lightweight.
 //------------------------------------------------------------------------------

@@ -13,9 +13,6 @@
 #include "refract_ps20b.inc"
 #include "cpp_shader_constant_register_map.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 #define MAXBLUR 1
 

@@ -12,13 +12,14 @@
 #include "tier0/dbg.h"
 #include "icliententitylist.h"
 #include "iclientunknown.h"
-#include "utllinkedlist.h"
+#include "tier1/slot_pool.h"
 #include "utlvector.h"
 #include "icliententityinternal.h"
 #include "ispatialpartition.h"
 #include "cdll_util.h"
 #include "entitylist_base.h"
-#include "utlmap.h"
+#include <list>
+#include <map>
 
 class C_Beam;
 class C_BaseViewModel;
@@ -166,13 +167,12 @@ public:
 		IPVSNotify *m_pNotify;
 		IClientRenderable *m_pRenderable;
 		unsigned char m_InPVSStatus;				// Combination of the INPVS_ flags.
-		unsigned short m_PVSNotifiersLink;			// Into m_PVSNotifyInfos.
 	};
 
 	// Get the list of all PVS notifiers.
-	CUtlLinkedList<CPVSNotifyInfo,unsigned short>& GetPVSNotifiers();
+	std::list<CPVSNotifyInfo>& GetPVSNotifiers();
 
-	CUtlVector<IClientEntityListener *>	m_entityListeners;
+	std::vector< IClientEntityListener * >	m_entityListeners;
 
 	// add a class that gets notified of entity events
 	void AddListenerEntity( IClientEntityListener *pListener );
@@ -196,8 +196,8 @@ private:
 	// This holds fast lookups for special edicts.
 	EntityCacheInfo_t	m_EntityCacheInfo[NUM_ENT_ENTRIES];
 
-	// For fast iteration.
-	CUtlLinkedList<C_BaseEntity*, unsigned short> m_BaseEntities;
+	// For fast iteration. Slot handles live in EntityCacheInfo_t::m_BaseEntitiesIndex.
+	ks::slot_pool<C_BaseEntity*, unsigned short> m_BaseEntities;
 
 
 private:
@@ -208,8 +208,8 @@ private:
 	// These entities want to know when they enter and leave the PVS (server entities
 	// already can get the equivalent notification with NotifyShouldTransmit, but client
 	// entities have to get it this way).
-	CUtlLinkedList<CPVSNotifyInfo,unsigned short> m_PVSNotifyInfos;
-	CUtlMap<IClientUnknown*,unsigned short,unsigned short> m_PVSNotifierMap;	// Maps IClientUnknowns to indices into m_PVSNotifyInfos.
+	std::list<CPVSNotifyInfo> m_PVSNotifyInfos;
+	std::map<IClientUnknown*,std::list<CPVSNotifyInfo>::iterator> m_PVSNotifierMap;	// Maps IClientUnknowns to their entries in m_PVSNotifyInfos.
 };
 
 
@@ -257,7 +257,7 @@ inline IClientUnknown* CClientEntityList::GetClientUnknownFromHandle( ClientEnti
 	return (IClientUnknown*)LookupEntity( hEnt );
 }
 
-inline CUtlLinkedList<CClientEntityList::CPVSNotifyInfo,unsigned short>& CClientEntityList::GetPVSNotifiers()
+inline std::list<CClientEntityList::CPVSNotifyInfo>& CClientEntityList::GetPVSNotifiers()
 {
 	return m_PVSNotifyInfos;
 }

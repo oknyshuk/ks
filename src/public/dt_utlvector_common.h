@@ -9,89 +9,50 @@
 
 
 #include "utlvector.h"
+#include <type_traits>
+#include <utility>
 
 
-typedef void (*EnsureCapacityFn)( void *pVoid, int offsetToUtlVector, int len );
-typedef void (*ResizeUtlVectorFn)( void *pVoid, int offsetToUtlVector, int len );
+// A vector prop is a "lengthproxy" subtable plus one element prop per slot. Neither end touches
+// storage past the count: slots past it have a null base (encoder omits them, decoder skips them),
+// and the decoder applies lengths before routing element proxies (RecvTable_Decode).
 
-template< class T >
-void UtlVector_InitializeAllocatedElements( T *pBase, int count )
+typedef void (*ResizeUtlVectorFn)( void *pStruct, int offsetToUtlVector, int len );
+typedef void *(*GetVectorBaseFn)( const void *pStruct, int offsetToUtlVector );
+typedef int (*GetVectorCountFn)( const void *pStruct, int offsetToUtlVector );
+
+struct WireVecOps
 {
-	memset( (void *)pBase, 0, count * sizeof( T ) );
-}
-
-template< class T, class A >
-class UtlVectorTemplate
-{
-public:
-	static void ResizeUtlVector( void *pStruct, int offsetToUtlVector, int len )
-	{
-		CUtlVector<T,A> *pVec = (CUtlVector<T,A>*)((char*)pStruct + offsetToUtlVector);
-		if ( pVec->Count() < len )
-			pVec->AddMultipleToTail( len - pVec->Count() );
-		else if ( pVec->Count() > len )
-			pVec->RemoveMultiple( len, pVec->Count()-len );
-
-		// Ensure capacity
-		pVec->EnsureCapacity( len );
-
-		int nNumAllocated = pVec->NumAllocated();
-
-		// This is important to do because EnsureCapacity doesn't actually call the constructors
-		// on the elements, but we need them to be initialized, otherwise it'll have out-of-range
-		// values which will piss off the datatable encoder.
-		UtlVector_InitializeAllocatedElements( pVec->Base() + pVec->Count(), nNumAllocated - pVec->Count() );
-	}
-
-	static void EnsureCapacity( void *pStruct, int offsetToUtlVector, int len )
-	{
-		CUtlVector<T,A> *pVec = (CUtlVector<T,A>*)((char*)pStruct + offsetToUtlVector);
-
-		pVec->EnsureCapacity( len );
-		
-		int nNumAllocated = pVec->NumAllocated();
-
-		// This is important to do because EnsureCapacity doesn't actually call the constructors
-		// on the elements, but we need them to be initialized, otherwise it'll have out-of-range
-		// values which will piss off the datatable encoder.
-		UtlVector_InitializeAllocatedElements( pVec->Base() + pVec->Count(), nNumAllocated - pVec->Count() );
-	}
+	ResizeUtlVectorFn resize = nullptr;   // new elements value-initialised
+	GetVectorBaseFn   base   = nullptr;
+	GetVectorCountFn  count  = nullptr;
 };
 
-template< class T, class A >
-inline ResizeUtlVectorFn GetResizeUtlVectorTemplate( CUtlVector<T,A> &vec )
+
+// Customization points. Anything std-style works as is; other containers can overload these.
+template < class V >
+concept StdStyleVector = requires ( V &v ) { v.data(); v.size(); v.resize( 0 ); };
+
+template < StdStyleVector V > auto *wire_data( V &v )				{ return v.data(); }
+template < StdStyleVector V > int   wire_size( const V &v )			{ return (int)v.size(); }
+template < StdStyleVector V > void  wire_resize( V &v, int n )		{ v.resize( (size_t)n ); }
+
+
+// The wire-side view of a vector member; the emitters ask this instead of naming a container.
+template < class V >
+struct WireVec
 {
-	return &UtlVectorTemplate<T,A>::ResizeUtlVector;
-}
+	using elem_type = std::remove_pointer_t< decltype( wire_data( std::declval< V & >() ) ) >;
 
-template< class T, class A >
-inline EnsureCapacityFn GetEnsureCapacityTemplate( CUtlVector<T,A> &vec )
-{
-	return &UtlVectorTemplate<T,A>::EnsureCapacity;
-}
+	static constexpr WireVecOps ops()
+	{
+		return { .resize = []( void *s, int o, int n ) { wire_resize( at( s, o ), n ); },
+		         .base   = []( const void *s, int o ) -> void * { return wire_data( at( s, o ) ); },
+		         .count  = []( const void *s, int o ) { return wire_size( at( s, o ) ); } };
+	}
 
-
-// The wire-side view of a resizable vector member.
-//
-// Send/RecvPropUtlVector need only an element type and two thunks that reach the vector through
-// (this, offset) and know nothing of its layout. So the table emitters must not name CUtlVector:
-// they ask this trait instead. Wiring a different vector kind is then one specialization, and
-// the reflection layer stops depending on the container layer.
-//
-// The CUtlVector<T,A> partial specialization keys on the container, not on an instance -- the
-// emitters used to default-construct a probe object purely to deduce T and A through the
-// Get*Template overloads above, which also required the member type to be default-constructible.
-template <class V>
-struct WireVec;
-
-template <class T, class A>
-struct WireVec< CUtlVector<T,A> >
-{
-	using elem_type = T;
-
-	// constexpr so the emitters can describe a table at compile time rather than at load time.
-	static constexpr EnsureCapacityFn ensure() { return &UtlVectorTemplate<T,A>::EnsureCapacity; }
-	static constexpr ResizeUtlVectorFn resize() { return &UtlVectorTemplate<T,A>::ResizeUtlVector; }
+private:
+	static V &at( const void *s, int o ) { return *(V *)(void *)( (const char *)s + o ); }
 };
 
 

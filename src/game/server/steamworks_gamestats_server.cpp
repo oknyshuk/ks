@@ -14,9 +14,6 @@
 #include "steamworks_gamestats_server.h"
 #include "icommandline.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 static CSteamWorksGameStatsServer g_SteamWorksGameStatsServer;
 
 extern ConVar developer;

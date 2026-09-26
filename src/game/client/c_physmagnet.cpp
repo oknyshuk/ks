@@ -8,9 +8,6 @@
 #include "reflect_annotations.h"
 #include "c_baseentity.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -29,10 +26,10 @@ public:
 	
 public:
 	// Data received from the server
-	CUtlVector< int > m_aAttachedObjectsFromServer;
+	std::vector< int > m_aAttachedObjectsFromServer;
 
 	// Private list of entities on the magnet
-	CUtlVector< EHANDLE > m_aAttachedObjects;
+	std::vector< EHANDLE > m_aAttachedObjects;
 };
 
 //-----------------------------------------------------------------------------
@@ -49,8 +46,8 @@ void RecvProxyArrayLength_MagnetAttachedArray( void *pStruct, int objectID, int 
 {
 	C_PhysMagnet *pMagnet = (C_PhysMagnet*)pStruct;
 	
-	if ( pMagnet->m_aAttachedObjectsFromServer.Count() != currentArrayLength )
-		pMagnet->m_aAttachedObjectsFromServer.SetSize( currentArrayLength );
+	if ( std::ssize( pMagnet->m_aAttachedObjectsFromServer ) != currentArrayLength )
+		pMagnet->m_aAttachedObjectsFromServer.assign( currentArrayLength, {} );
 }
 
 IMPLEMENT_REFLECT_CLIENTCLASS( C_PhysMagnet, DT_PhysMagnet, CPhysMagnet )

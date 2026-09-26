@@ -25,7 +25,7 @@ struct DemoCommandQueue
 struct DemoCustomDataCallbackMapping_t
 {
 	pfnDemoCustomDataCallback pCallback;
-	CUtlString name;
+	std::string name;
 };
 
 struct DemoHighlightEntry_t
@@ -128,7 +128,7 @@ public:
 	CDemoPlaybackParameters_t const *m_pPlaybackParameters;
 
 	// view origin/angle interpolation:
-	CUtlVector< DemoCommandQueue >	m_DestCmdInfo;
+	std::vector< DemoCommandQueue >	m_DestCmdInfo;
 	democmdinfo_t					m_LastCmdInfo;
 	bool							m_bInterpolateView;
 	bool							m_bResetInterpolation;
@@ -146,11 +146,11 @@ public:
 	int				m_nSnapshotTick;
 	char			m_SnapshotFilename[MAX_OSPATH];
 
-	CUtlVector< DemoCustomDataCallbackMapping_t >	m_CustomDataCallbackMap; //maps callbacks in the file to callbacks in the dll when reading
+	std::vector< DemoCustomDataCallbackMapping_t >	m_CustomDataCallbackMap; //maps callbacks in the file to callbacks in the dll when reading
 
 	// important tick stuff
-	CUtlVector< DemoImportantGameEvent_t >			m_ImportantGameEvents;
-	CUtlVector< DemoImportantTick_t >				m_ImportantTicks;
+	std::vector< DemoImportantGameEvent_t >			m_ImportantGameEvents;
+	std::vector< DemoImportantTick_t >				m_ImportantTicks;
 	KeyValues										*m_pImportantEventData;
 
 private:
@@ -159,7 +159,7 @@ private:
 	CSteamID		m_highlightSteamID;
 	int				m_nHighlightPlayerIndex;
 	bool			m_bDoHighlightScan;
-	CUtlVector< DemoHighlightEntry_t > m_highlights;
+	std::vector< DemoHighlightEntry_t > m_highlights;
 	int				m_nCurrentHighlight;
 	bool			m_bLowlightsMode;
 	bool			m_bScanMode;
@@ -236,6 +236,6 @@ struct RegisteredDemoCustomDataCallbackPair_t
 	pfnDemoCustomDataCallback pCallback;
 	string_t szSaveID;
 };
-extern CUtlVector<RegisteredDemoCustomDataCallbackPair_t> g_RegisteredDemoCustomDataCallbacks;
+extern std::vector< RegisteredDemoCustomDataCallbackPair_t > g_RegisteredDemoCustomDataCallbacks;
 
 #endif // CL_DEMO_H

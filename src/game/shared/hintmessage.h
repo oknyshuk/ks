@@ -22,17 +22,17 @@ class CHintSystem;
 class CHintMessage
 {
 public:
-	CHintMessage( const char * hintString, CUtlVector< const char * > * args, float duration );
+	CHintMessage( const char * hintString, std::vector< const char * > * args, float duration );
 	~CHintMessage();
 
 	float GetDuration() const { return m_duration; }
 	void Send( CBasePlayer *client );
 
-	bool IsEquivalent( const char *hintString, CUtlVector< const char * > * args ) const;
+	bool IsEquivalent( const char *hintString, std::vector< const char * > * args ) const;
 
 private:
 	const char * m_hintString;					///< hintString is a pointer to a string that should never be deleted.
-	CUtlVector< char * > m_args;				///< list of arguments.  The memory for these strings is internal to the CHintMessage.
+	std::vector< char * > m_args;				///< list of arguments.  The memory for these strings is internal to the CHintMessage.
 	float m_duration;							///< time until the next message can be displayed
 };
 
@@ -44,12 +44,12 @@ public:
 	CHintMessageQueue( CBasePlayer *pPlayer );
 	void		Reset();
 	void		Update();
-	bool		AddMessage( const char* message, float duration = 6.0f, CUtlVector< const char * > * args = nullptr );
-	inline bool IsEmpty() { return m_messages.Count() == 0; }
+	bool		AddMessage( const char* message, float duration = 6.0f, std::vector< const char * > * args = nullptr );
+	inline bool IsEmpty() { return m_messages.empty(); }
 
 private:
 	float		m_tmMessageEnd;
-	CUtlVector< CHintMessage * > m_messages;
+	std::vector< CHintMessage * > m_messages;
 	CBasePlayer *m_pPlayer;
 };
 
@@ -67,7 +67,7 @@ public:
 	void		Update();
 
 	// Add / Register timers that will be started/stopped during play
-	void		AddTimer( int iHintID, float timer_duration, float message_duration = 6.0f, CUtlVector< const char * > * args = nullptr );
+	void		AddTimer( int iHintID, float timer_duration, float message_duration = 6.0f, std::vector< const char * > * args = nullptr );
 	void		RemoveTimer( int iHintID );
 
 	// Start / Stop timers that were previously registered via AddTimer()
@@ -89,20 +89,20 @@ private:
 
 		~hintmessagetime_t()
 		{
-			for ( int i=0; i<args.Count(); ++i )
+			for ( int i=0; i<std::ssize( args ); ++i )
 			{
 				delete[] args[i];
 			}
-			args.RemoveAll();
+			args.clear();
 		}
 
 		int						iHintID;
 		CStopwatch				timer;
 		float					flMessageDuration;
-		CUtlVector< char * >	args;
+		std::vector< char * >	args;
 	};
 
-	CUtlVector< hintmessagetime_t* >  m_Timers;
+	std::vector< hintmessagetime_t* >  m_Timers;
 	CHintMessageQueue				  *m_pQueue;
 	CHintSystem						  *m_pHintSystem;
 };

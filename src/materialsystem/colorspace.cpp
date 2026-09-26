@@ -11,9 +11,6 @@
 #include "IHardwareConfigInternal.h"
 #include "materialsystem/materialsystem_config.h"
 
-// NOTE: This has to be the last file included
-#include "tier0/memdbgon.h"
-
 //static float			texLightToLinear[256];	// texlight (0..255) to linear (0..4)
 static float			textureToLinear[256];	// texture (0..255) to linear (0..1)
 static int				linearToTexture[1024];	// linear (0..1) to texture (0..255)
@@ -191,8 +188,8 @@ int ColorSpace::LinearToScreenGamma( float f )
 uint16 ColorSpace::LinearFloatToCorrectedShort( float in )
 {
 	uint16 out;
-	in = MIN( in * 4096.0, 65535.0 );
-	out = (uint16) MAX( in, 0.0f );
+	in = std::min( in * 4096.0, 65535.0 );
+	out = (uint16) std::max( in, 0.0f );
 
 	return out;
 }

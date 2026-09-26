@@ -30,8 +30,8 @@ public:
 
 	int m_nNumRows;
 	int m_nNumCols;
-	CUtlVector<RowDescriptor_t> m_rowDescriptors;
-	CUtlVector<NonZeroValueDescriptor_t> m_entries;
+	std::vector< RowDescriptor_t > m_rowDescriptors;
+	std::vector< NonZeroValueDescriptor_t > m_entries;
 	int m_nHighestRowAppendedTo;
 
 	void AdjustAllRowIndicesAfter( int nStartRow, int nDelta );

@@ -7,6 +7,7 @@
 #ifndef PLAYER_H
 #define PLAYER_H
 
+#include <bitset>
 #include "reflect_annotations.h"
 #include "sendprop_priorities.h"
 
@@ -22,6 +23,7 @@
 #include "iclient.h"
 #include "input_device.h"
 #include "vote_controller.h"
+#include <deque>
 
 class CLogicPlayerProxy;
 
@@ -29,7 +31,7 @@ class CLogicPlayerProxy;
 class CCommandContext
 {
 public:
-	CUtlVector< CUserCmd > cmds;
+	std::vector< CUserCmd > cmds;
 
 	int				numcmds;
 	int				totalcmds;
@@ -297,7 +299,7 @@ public:
 	// Returns true if this player wants pPlayer to be moved back in time when this player runs usercmds.
 	// Saves a lot of overhead on the server if we can cull out entities that don't need to lag compensate
 	// (like team members, entities out of our PVS, etc).
-	virtual bool			WantsLagCompensationOnEntity( const CBaseEntity *entity, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const;
+	virtual bool			WantsLagCompensationOnEntity( const CBaseEntity *entity, const CUserCmd *pCmd, const std::bitset<MAX_EDICTS> *pEntityTransmitBits ) const;
 
 	virtual void			Spawn( void );
 	virtual void			Activate( void );
@@ -710,13 +712,13 @@ public:
 
 	void					AddSplitScreenPlayer( CBasePlayer *pOther );
 	void					RemoveSplitScreenPlayer( CBasePlayer *pOther );
-	CUtlVector< CHandle< CBasePlayer > >& GetSplitScreenPlayers();
+	std::vector< CHandle< CBasePlayer > >& GetSplitScreenPlayers();
 	bool					HasAttachedSplitScreenPlayers() const;
 
 	void					AddPictureInPicturePlayer( CBasePlayer *pOther );
 	void					RemovePictureInPicturePlayer( CBasePlayer *pOther );
-	CUtlVector< CHandle< CBasePlayer > >& GetSplitScreenAndPictureInPicturePlayers();
-	CUtlVector< CHandle< CBasePlayer > >& GetPictureInPicturePlayers( void );
+	std::vector< CHandle< CBasePlayer > >& GetSplitScreenAndPictureInPicturePlayers();
+	std::vector< CHandle< CBasePlayer > >& GetPictureInPicturePlayers( void );
 
 	void					SetCrossPlayPlatform( CrossPlayPlatform_t clientPlatform );
 	CrossPlayPlatform_t		GetCrossPlayPlatform( void ) const;
@@ -952,7 +954,7 @@ public:
 
 	void OnTonemapTriggerStartTouch( CTonemapTrigger *pTonemapTrigger );
 	void OnTonemapTriggerEndTouch( CTonemapTrigger *pTonemapTrigger );
-	CUtlVector< CHandle< CTonemapTrigger > > m_hTriggerTonemapList;
+	std::vector< CHandle< CTonemapTrigger > > m_hTriggerTonemapList;
 
 	CNetworkHandle( CPostProcessController, m_hPostProcessCtrl, [[= ks::reflect::Net{} ]] );	// active postprocessing controller
 	CNetworkHandle( CColorCorrection, m_hColorCorrectionCtrl, [[= ks::reflect::Net{} ]] );		// active FXVolume color correction
@@ -964,7 +966,7 @@ public:
 	// Used by env_soundscape_triggerable to manage when the player is touching multiple
 	// soundscape triggers simultaneously.
 	// The one at the HEAD of the list is always the current soundscape for the player.
-	CUtlVector<EHANDLE> m_hTriggerSoundscapeList;
+	std::vector< EHANDLE > m_hTriggerSoundscapeList;
 
 	// Player data that's sometimes needed by the engine
 	CNetworkVarEmbedded( CPlayerState, pl, [[= ks::reflect::Net{} ]] );
@@ -1130,7 +1132,7 @@ private:
 
 // DATA
 private:
-	CUtlVector< CCommandContext > m_CommandContext;
+	std::vector< CCommandContext > m_CommandContext;
 	// Player Physics Shadow
 
 protected: //used to be private, but need access for portal mod (Dave Kircher)
@@ -1267,7 +1269,7 @@ private:
 	CNetworkVar( CBaseCombatWeaponHandle, m_hLastWeapon, [[= ks::reflect::Net{ .table = "DT_LocalPlayerExclusive" } ]] );
 
 #if !defined( NO_ENTITY_PREDICTION )
-	CUtlVector< CHandle< CBaseEntity > > m_SimulatedByThisPlayer;
+	std::vector< CHandle< CBaseEntity > > m_SimulatedByThisPlayer;
 #endif
 
 	float					m_flOldPlayerZ;
@@ -1417,8 +1419,8 @@ private:
 	// One for left and one for right side of step
 	StepSoundCache_t		m_StepSoundCache[ 2 ];
 
-	CUtlLinkedList< CPlayerSimInfo >  m_vecPlayerSimInfo;
-	CUtlLinkedList< CPlayerCmdInfo >  m_vecPlayerCmdInfo;
+	std::deque< CPlayerSimInfo >  m_vecPlayerSimInfo;
+	std::deque< CPlayerCmdInfo >  m_vecPlayerCmdInfo;
 
 	friend class CMoveHelperServer;
 	Vector m_movementCollisionNormal;
@@ -1429,9 +1431,9 @@ private:
 	bool			m_bSplitScreenPlayer;
 	CHandle< CBasePlayer > m_hSplitOwner;
 	// If we have any attached split users, this is the list of them
-	CUtlVector< CHandle< CBasePlayer > > m_hSplitScreenPlayers;
-	CUtlVector< CHandle< CBasePlayer > > m_hSplitScreenAndPipPlayers;
-	CUtlVector< CHandle< CBasePlayer > > m_hPipPlayers;
+	std::vector< CHandle< CBasePlayer > > m_hSplitScreenPlayers;
+	std::vector< CHandle< CBasePlayer > > m_hSplitScreenAndPipPlayers;
+	std::vector< CHandle< CBasePlayer > > m_hPipPlayers;
 
 	CrossPlayPlatform_t m_ClientPlatform;
 
@@ -1700,11 +1702,11 @@ inline bool ForEachPlayer( IPlayerFunctor &func )
 #define COLLECT_ONLY_LIVING_PLAYERS true
 #define APPEND_PLAYERS true
 template < typename T >
-int CollectPlayers( CUtlVector< T * > *playerVector, int team = TEAM_ANY, bool isAlive = false, bool shouldAppend = false )
+int CollectPlayers( std::vector< T * > *playerVector, int team = TEAM_ANY, bool isAlive = false, bool shouldAppend = false )
 {
 	if ( !shouldAppend )
 	{
-		playerVector->RemoveAll();
+		playerVector->clear();
 	}
 
 	for( int i=1; i<=gpGlobals->maxClients; ++i )
@@ -1729,10 +1731,10 @@ int CollectPlayers( CUtlVector< T * > *playerVector, int team = TEAM_ANY, bool i
 		if ( isAlive && !player->IsAlive() )
 			continue;
 
-		playerVector->AddToTail( player );
+		playerVector->push_back( player );
 	}
 
-	return playerVector->Count();
+	return std::ssize( *playerVector );
 }
 
 

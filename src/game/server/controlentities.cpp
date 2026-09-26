@@ -12,9 +12,6 @@
 #include "player.h"
 #include "tier1/strtools.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: when fired, it changes which track the CD is playing
 //-----------------------------------------------------------------------------

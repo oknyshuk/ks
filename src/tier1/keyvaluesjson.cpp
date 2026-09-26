@@ -5,12 +5,11 @@
 //=============================================================================//
 
 #include "tier1/keyvaluesjson.h"
-#include "tier1/utlbuffer.h"
 #include "tier1/strtools.h"
 
-KeyValuesJSONParser::KeyValuesJSONParser( const CUtlBuffer &buf )
+KeyValuesJSONParser::KeyValuesJSONParser( std::string_view text )
 {
-	Init( (const char *)buf.Base(), buf.TellPut() );
+	Init( text.data(), static_cast< int >( text.size() ) );
 }
 
 KeyValuesJSONParser::KeyValuesJSONParser( const char *pszText, int cbSize )
@@ -87,7 +86,7 @@ bool KeyValuesJSONParser::ParseObject( KeyValues *pObject )
 			return false;
 		}
 
-		KeyValues *pChildValue = new KeyValues( m_vecTokenChars.Base() );
+		KeyValues *pChildValue = new KeyValues( m_vecTokenChars.data() );
 		NextToken();
 
 		// Expect and eat colon
@@ -208,13 +207,13 @@ bool KeyValuesJSONParser::ParseValue( KeyValues *pValue )
 		case '{': return ParseObject( pValue );
 		case '[': return ParseArray( pValue );
 		case kToken_String:
-			pValue->SetString( nullptr, m_vecTokenChars.Base() );
+			pValue->SetString( nullptr, m_vecTokenChars.data() );
 			NextToken();
 			return true;
 
 		case kToken_NumberInt:
 		{
-			const char *pszNum = m_vecTokenChars.Base();
+			const char *pszNum = m_vecTokenChars.data();
 
 			// Negative?
 			if ( *pszNum == '-' )
@@ -247,7 +246,7 @@ bool KeyValuesJSONParser::ParseValue( KeyValues *pValue )
 
 		case kToken_NumberFloat:
 		{
-			float f = V_atof( m_vecTokenChars.Base() );
+			float f = V_atof( m_vecTokenChars.data() );
 			pValue->SetFloat( nullptr, f );
 			NextToken();
 			return true;
@@ -284,7 +283,7 @@ void KeyValuesJSONParser::NextToken()
 		return;
 
 	// Clear token
-	m_vecTokenChars.SetCount(0);
+	m_vecTokenChars.assign( 0, {} );
 
 	// Scan until we hit the end of input
 	while ( m_cur < m_end )
@@ -404,12 +403,12 @@ void KeyValuesJSONParser::NextToken()
 void KeyValuesJSONParser::ParseNumberToken()
 {
 	// Clear token
-	m_vecTokenChars.SetCount(0);
+	m_vecTokenChars.assign( 0, {} );
 
 	// Eat leading minus sign
 	if ( *m_cur	== '-' )
 	{
-		m_vecTokenChars.AddToTail( '-' );
+		m_vecTokenChars.push_back( '-' );
 		++m_cur;
 	}
 
@@ -421,7 +420,7 @@ void KeyValuesJSONParser::ParseNumberToken()
 	}
 
 	char c = *m_cur;
-	m_vecTokenChars.AddToTail( c );
+	m_vecTokenChars.push_back( c );
 	bool bHasWholePart = false;
 	switch ( c )
 	{
@@ -445,7 +444,7 @@ void KeyValuesJSONParser::ParseNumberToken()
 
 			// Accumulate digits until we hit a non-digit
 			while ( m_cur < m_end && *m_cur >= '0' && *m_cur <= '9' )
-				m_vecTokenChars.AddToTail( *(m_cur++) );
+				m_vecTokenChars.push_back( *(m_cur++) );
 			break;
 
 		case '.':
@@ -462,21 +461,21 @@ void KeyValuesJSONParser::ParseNumberToken()
 		m_eToken = kToken_NumberFloat;
 
 		// Eat decimal point
-		m_vecTokenChars.AddToTail( *(m_cur++) );
+		m_vecTokenChars.push_back( *(m_cur++) );
 
 		// Accumulate digits until we hit a non-digit
 		bool bHasFractionPart = false;
 		while ( m_cur < m_end && *m_cur >= '0' && *m_cur <= '9' )
 		{
-			m_vecTokenChars.AddToTail( *(m_cur++) );
+			m_vecTokenChars.push_back( *(m_cur++) );
 			bHasFractionPart = true;
 		}
 
 		// Make sure we aren't just a single '.'
 		if ( !bHasWholePart && !bHasFractionPart )
 		{
-			m_vecTokenChars.AddToTail(0);
-			V_sprintf_safe( m_szErrMsg, "Invalid number starting with '%s'", m_vecTokenChars.Base() );
+			m_vecTokenChars.push_back( 0 );
+			V_sprintf_safe( m_szErrMsg, "Invalid number starting with '%s'", m_vecTokenChars.data() );
 			m_eToken = kToken_Err;
 			return;
 		}
@@ -488,17 +487,17 @@ void KeyValuesJSONParser::ParseNumberToken()
 		m_eToken = kToken_NumberFloat;
 
 		// Eat 'e'
-		m_vecTokenChars.AddToTail( *(m_cur++) );
+		m_vecTokenChars.push_back( *(m_cur++) );
 
 		// Optional sign
 		if ( m_cur < m_end && ( *m_cur == '-' || *m_cur == '+' ) )
-			m_vecTokenChars.AddToTail( *(m_cur++) );
+			m_vecTokenChars.push_back( *(m_cur++) );
 
 		// Accumulate digits until we hit a non-digit
 		bool bHasExponentDigit = false;
 		while ( m_cur < m_end && *m_cur >= '0' && *m_cur <= '9' )
 		{
-			m_vecTokenChars.AddToTail( *(m_cur++) );
+			m_vecTokenChars.push_back( *(m_cur++) );
 			bHasExponentDigit = true;
 		}
 		if ( !bHasExponentDigit )
@@ -511,7 +510,7 @@ void KeyValuesJSONParser::ParseNumberToken()
 
 	// OK, We have parsed a valid number.
 	// Terminate token
-	m_vecTokenChars.AddToTail( '\0' );
+	m_vecTokenChars.push_back( '\0' );
 
 	// EOF?  That's OK for now, at this lexical parsing level.  We'll handle the error
 	// at the higher parse level, when expecting a comma or closing delimiter
@@ -551,14 +550,14 @@ void KeyValuesJSONParser::ParseStringToken()
 		if ( c == cDelim )
 		{
 			m_eToken = kToken_String;
-			m_vecTokenChars.AddToTail( '\0' );
+			m_vecTokenChars.push_back( '\0' );
 			return;
 		}
 
 		// Ordinary character?  Just append it
 		if ( c != '\\' )
 		{
-			m_vecTokenChars.AddToTail( c );
+			m_vecTokenChars.push_back( c );
 			continue;
 		}
 
@@ -573,12 +572,12 @@ void KeyValuesJSONParser::ParseStringToken()
 			case '\\':
 			case '/':
 			case '\'':
-			case '\"': m_vecTokenChars.AddToTail( c ); break;
-			case 'b': m_vecTokenChars.AddToTail( '\b' ); break;
-			case 'f': m_vecTokenChars.AddToTail( '\f' ); break;
-			case 'n': m_vecTokenChars.AddToTail( '\n' ); break;
-			case 'r': m_vecTokenChars.AddToTail( '\r' ); break;
-			case 't': m_vecTokenChars.AddToTail( '\t' ); break;
+			case '\"': m_vecTokenChars.push_back( c ); break;
+			case 'b': m_vecTokenChars.push_back( '\b' ); break;
+			case 'f': m_vecTokenChars.push_back( '\f' ); break;
+			case 'n': m_vecTokenChars.push_back( '\n' ); break;
+			case 'r': m_vecTokenChars.push_back( '\r' ); break;
+			case 't': m_vecTokenChars.push_back( '\t' ); break;
 
 			case 'u':
 			{
@@ -617,7 +616,7 @@ void KeyValuesJSONParser::ParseStringToken()
 					return;
 				}
 				for ( int i = 0 ; i < r ; ++i )
-					m_vecTokenChars.AddToTail( utf8Encode[i] );
+					m_vecTokenChars.push_back( utf8Encode[i] );
 			} break;
 
 			default:

@@ -41,8 +41,8 @@ public:
 
 	virtual void Draw( void ) const;							// draw area for debugging & editing
 
-	virtual void Save( CUtlBuffer &fileBuffer, unsigned int version ) const;	// (EXTEND)
-	virtual NavErrorType Load( CUtlBuffer &fileBuffer, unsigned int version, unsigned int subVersion );		// (EXTEND)
+	virtual void Save( ks::byte_writer &fileBuffer, unsigned int version ) const;	// (EXTEND)
+	virtual NavErrorType Load( ks::byte_reader &fileBuffer, unsigned int version, unsigned int subVersion );		// (EXTEND)
 	virtual NavErrorType PostLoad( void );								// (EXTEND) invoked after all areas have been loaded - for pointer binding, etc
 
 	virtual void CustomAnalysis( bool isIncremental = false );		// for game-specific analysis
@@ -75,7 +75,7 @@ public:
 	void ClearPlayerCount( void );								///< set the player count to zero
 
 protected:
-	NavErrorType LoadLegacy( CUtlBuffer &fileBuffer, unsigned int version, unsigned int subVersion );
+	NavErrorType LoadLegacy( ks::byte_reader &fileBuffer, unsigned int version, unsigned int subVersion );
 
 
 private:

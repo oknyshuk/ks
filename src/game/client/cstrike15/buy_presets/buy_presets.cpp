@@ -14,9 +14,6 @@
 #include "localize/ilocalize.h"
 #include "c_cs_player.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 BuyPresetManager *TheBuyPresets = nullptr;
 
 #if USE_BUY_PRESETS
@@ -185,7 +182,7 @@ void BuyPresetManager::VerifyLoadedTeam( void )
 	if ( playerTeam != TEAM_CT && playerTeam != TEAM_TERRORIST )
 		return;
 
-	m_presets.RemoveAll();
+	m_presets.clear();
 
 	const char *filename = "cfg/BuyPresets_TER.vdf";
 	if ( playerTeam == TEAM_CT )
@@ -203,12 +200,12 @@ void BuyPresetManager::VerifyLoadedTeam( void )
 	{
 		BuyPreset preset;
 		preset.Parse( presetKey );
-		m_presets.AddToTail(preset);
+		m_presets.push_back( preset );
 
 		presetKey = presetKey->GetNextKey();
 	}
 
-	if ( !m_presets.Count() )
+	if ( m_presets.empty() )
 	{
 		const char *filename = "cfg/BuyPresetsDefault_TER.vdf";
 		if ( playerTeam == TEAM_CT )
@@ -226,7 +223,7 @@ void BuyPresetManager::VerifyLoadedTeam( void )
 		{
 			BuyPreset preset;
 			preset.Parse( presetKey );
-			m_presets.AddToTail(preset);
+			m_presets.push_back( preset );
 
 			presetKey = presetKey->GetNextKey();
 		}
@@ -235,10 +232,10 @@ void BuyPresetManager::VerifyLoadedTeam( void )
 	}
 
 	// Guarantee we have at least this many presets, even if they are blank
-	while ( m_presets.Count() < NUM_PRESETS )
+	while ( std::ssize( m_presets ) < NUM_PRESETS )
 	{
 		BuyPreset preset;
-		m_presets.AddToTail(preset);
+		m_presets.push_back( preset );
 	}
 
 	data->deleteThis();
@@ -268,7 +265,7 @@ void BuyPresetManager::ResetEditToDefaults( void )
 	if ( playerTeam != TEAM_CT && playerTeam != TEAM_TERRORIST )
 		return;
 
-	m_editPresets.RemoveAll();
+	m_editPresets.clear();
 
 	const char *filename = "cfg/BuyPresetsDefault_TER.vdf";
 	if ( playerTeam == TEAM_CT )
@@ -286,7 +283,7 @@ void BuyPresetManager::ResetEditToDefaults( void )
 	{
 		BuyPreset preset;
 		preset.Parse( presetKey );
-		m_editPresets.AddToTail(preset);
+		m_editPresets.push_back( preset );
 
 		presetKey = presetKey->GetNextKey();
 	}
@@ -321,7 +318,7 @@ void BuyPresetManager::Save()
 	}
 
 	KeyValues *data = new KeyValues( "Presets" );
-	for( int i=0; i<m_presets.Count(); ++i )
+	for( int i=0; i<std::ssize( m_presets ); ++i )
 	{
 		m_presets[i].Save( data );
 	}
@@ -337,7 +334,7 @@ void BuyPresetManager::Save()
  */
 const BuyPreset * BuyPresetManager::GetPreset( int index ) const
 {
-	if ( index < 0 || index >= m_presets.Count() )
+	if ( index < 0 || index >= std::ssize( m_presets ) )
 	{
 		return nullptr;
 	}
@@ -349,7 +346,7 @@ const BuyPreset * BuyPresetManager::GetPreset( int index ) const
 //--------------------------------------------------------------------------------------------------------------
 void BuyPresetManager::SetPreset( int index, const BuyPreset *preset )
 {
-	if ( index < 0 || index >= m_presets.Count() || !preset )
+	if ( index < 0 || index >= std::ssize( m_presets ) || !preset )
 	{
 		return;
 	}
@@ -365,7 +362,7 @@ void BuyPresetManager::SetPreset( int index, const BuyPreset *preset )
  */
 BuyPreset * BuyPresetManager::GetEditPreset( int index )
 {
-	if ( index < 0 || index >= m_editPresets.Count() )
+	if ( index < 0 || index >= std::ssize( m_editPresets ) )
 	{
 		return nullptr;
 	}
@@ -380,7 +377,7 @@ BuyPreset * BuyPresetManager::GetEditPreset( int index )
  */
 void BuyPresetManager::PurchasePreset( int presetIndex )
 {
-	if ( presetIndex >= 0 && presetIndex < m_presets.Count() )
+	if ( presetIndex >= 0 && presetIndex < std::ssize( m_presets ) )
 	{
 		const BuyPreset *preset = &(m_presets[presetIndex]);
 

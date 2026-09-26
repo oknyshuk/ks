@@ -9,7 +9,6 @@
 
 #include "materialsystem/MaterialSystemUtil.h"
 #include "materialsystem/ipaintmapdatamanager.h"
-#include "bitvec.h"
 #include "surfacehandle.h"
 
 //forward declaration
@@ -49,7 +48,7 @@ public:
 	void GetPaintSize( int *pWidth, int *pHeight );
 
 	void ClearTexture();
-	void GetPixels( const Rect_t& splatRect, CUtlVector<BYTE>& surfColors );
+	void GetPixels( const Rect_t& splatRect, std::vector< BYTE >& surfColors );
 	BYTE GetPixel( int x, int y ) const;
 	void SetPixel( int x, int y, BYTE color );
 
@@ -58,8 +57,8 @@ public:
 	
 	void PaintAllSurfaces( BYTE color );
 
-	void GetSurfacePaintData( SurfaceHandle_t surfID, CUtlVector< BYTE > &data ) const;
-	void SetSurfacePaintData( SurfaceHandle_t surfID, const CUtlVector< BYTE > &data );
+	void GetSurfacePaintData( SurfaceHandle_t surfID, std::vector< BYTE > &data ) const;
+	void SetSurfacePaintData( SurfaceHandle_t surfID, const std::vector< BYTE > &data );
 
 	BYTE* GetPaintmapData() { return m_backbuffer; }
 
@@ -67,7 +66,7 @@ public:
 	void MarkAsDirty( PaintDirtyFlags_t nDirtyFlag = PAINTMAP_DIRTY_FULLRECT );
 	void RemoveDirty();
 	void AddDirtyRect( const Rect_t& rect );
-	CUtlVectorFixedGrowable<Rect_t, 1024>* GetDirtyRectList();
+	ks::small_vector< Rect_t, 1024 >* GetDirtyRectList();
 private:
 	enum PaintChangeFlags_t
 	{
@@ -93,7 +92,7 @@ private:
 
 	PaintDirtyFlags_t m_nDirtyFlag;
 
-	CUtlVectorFixedGrowable<Rect_t, 1024> m_dirtyRects; // preallocate 1024, seems to be a conservative count
+	ks::small_vector< Rect_t, 1024 > m_dirtyRects; // preallocate 1024, seems to be a conservative count
 };
 
 class CPaintmapDataManager : public IPaintmapDataManager
@@ -120,8 +119,8 @@ public:
 
 	void UpdatePaintmapTextures();
 
-	void GetPaintmapDataRLE( CUtlVector< uint32 > &data ) const;
-	void LoadPaintmapDataRLE( const CUtlVector< uint32 > &data );
+	void GetPaintmapDataRLE( std::vector< uint32 > &data ) const;
+	void LoadPaintmapDataRLE( const std::vector< uint32 > &data );
 
 	CPaintTextureData *m_pPaintTextureDataArray;
 	int m_iPaintmaps;
@@ -133,7 +132,7 @@ extern CPaintmapDataManager g_PaintManager;
 
 // Returns true if any paint changed
 bool ShootPaintSphere( const model_t *pModel, const Vector& vPosition, BYTE colorIndex, float flSphereRadius, float flPaintCoatPercent );
-void TracePaintSphere( const model_t *pModel, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, CUtlVector<BYTE>& surfColors );
+void TracePaintSphere( const model_t *pModel, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, std::vector< BYTE >& surfColors );
 
 void R_RedownloadAllPaintmaps();
 

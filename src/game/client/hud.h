@@ -8,7 +8,8 @@
 #define HUD_H
 
 #include "utlvector.h"
-#include "utldict.h"
+#include "tier1/map_ops.h"
+#include <memory>
 #include "convar.h"
 #include <color.h>
 #include <bitbuf.h>
@@ -175,8 +176,8 @@ public:
 
 	void						SetScreenShotTime( float flTime ){ m_flScreenShotTime = flTime; }
 
-	CUtlVector< CHudElement * > &GetHudList();
-	const CUtlVector< CHudElement * > &GetHudList() const;
+	std::vector< CHudElement * > &GetHudList();
+	const std::vector< CHudElement * > &GetHudList() const;
 	void						OnSplitScreenStateChanged();
 
 	void						DisableHud( void );
@@ -196,15 +197,15 @@ public:
 	Color						m_clrCaution;
 	Color						m_clrYellowish;
 
-	CUtlVector< CHudElement * >	m_HudList;
+	std::vector< CHudElement * >	m_HudList;
 
 private:
 	void						DoElementThink( CHudElement* pElement );
 
 
 
-	CUtlVector< const char * >				m_RenderGroupNames;
-	CUtlMap< int, CHudRenderGroup * >		m_RenderGroups;
+	std::vector< const char * >				m_RenderGroupNames;
+	std::map< int, std::unique_ptr< CHudRenderGroup > >	m_RenderGroups;
 
 	float						m_flScreenShotTime; // used to take end-game screenshots
 	int							m_nSplitScreenSlot;
@@ -235,14 +236,16 @@ private:
 
 	void						SetupNewHudTexture( CHudTexture *t );
 	bool						m_bHudTexturesLoaded;
-	// Global list of known icons
-	CUtlDict< CHudTexture *, int >		m_Icons;
+	// Global list of known icons; allocated from and freed to the hud texture pool
+	ks::idict< CHudTexture * >		m_Icons;
 
 };
 
 CHudIcons &HudIcons();
 
-void LoadHudTextures( CUtlDict< CHudTexture *, int >& list, const char *szFilenameWithoutExtension, const unsigned char *pICEKey );
+// Texture scripts may repeat a name (across files); equal names keep load order.
+typedef std::multimap< std::string, std::unique_ptr< CHudTexture >, ks::iless > CHudTextureList;
+void LoadHudTextures( CHudTextureList& list, const char *szFilenameWithoutExtension, const unsigned char *pICEKey );
 
 void GetHudSize( int& w, int &h );
 

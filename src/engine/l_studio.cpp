@@ -20,7 +20,7 @@
 #include "studio_internal.h"
 #include "cdll_engine_int.h"
 #include "vphysics_interface.h"
-#include "utllinkedlist.h"
+#include "tier1/slot_pool.h"
 #include "studio.h"
 #include "icliententitylist.h"
 #include "engine/ivmodelrender.h"
@@ -42,14 +42,13 @@
 #include "materialsystem/hardwareverts.h"
 #include "tier1/callqueue.h"
 #include "tier2/tier2.h"
-#include "tier1/utlsortvector.h"
+#include <algorithm>
+#include "tier1/map_ops.h"
 #include "tier1/lzmaDecoder.h"
 #include "ipooledvballocator.h"
 #include "tier3/tier3.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 // #define VISUALIZE_TIME_AVERAGE 1
 
 //-----------------------------------------------------------------------------
@@ -709,7 +708,6 @@ public:
 //
 //-----------------------------------------------------------------------------
 
-#include "tier0/memdbgoff.h"
 // UNDONE: Move this to hud export code, subsume previous functions
 class CModelRender : public IVModelRender,
 					 public CManagedDataCacheClient< CColorMeshData, colormeshparams_t >
@@ -927,15 +925,16 @@ private:
 	void EngineLightingToMaterialLighting( MaterialLightingState_t *pLightingState, const Vector &vecLightingOrigin, const LightingState_t &srcLightingState );
 
 	// Model instance data
-	CUtlLinkedList< ModelInstance_t, ModelInstanceHandle_t > m_ModelInstances; 
+	// Handles escape through IVModelRender; the per-instance loops below are order-independent.
+	ks::slot_pool< ModelInstance_t, ModelInstanceHandle_t > m_ModelInstances;
 
 	// current active model
 	studiohdr_t *m_pStudioHdr;
 
 	bool m_bSuppressEngineLighting;
 
-	CUtlDict< DataCacheHandle_t, int > m_CachedStaticPropColorData;
-	CThreadFastMutex m_CachedStaticPropMutex;
+	ks::idict< DataCacheHandle_t > m_CachedStaticPropColorData;
+	std::recursive_mutex m_CachedStaticPropMutex;
 
 	// Allocator for static prop color mesh vertex buffers (all are pooled into one VB)
 	CPooledVBAllocator_ColorMesh	m_colorMeshVBAllocator;
@@ -945,9 +944,7 @@ static CModelRender s_ModelRender;
 EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CModelRender, IVModelRender, VENGINE_HUDMODEL_INTERFACE_VERSION, s_ModelRender );
 IVModelRender* modelrender = &s_ModelRender;
 
-DEFINE_FIXEDSIZE_ALLOCATOR( CModelRender::ModelInstanceLightingState_t, 100, CUtlMemoryPool::GROW_SLOW );
-
-#include "tier0/memdbgon.h"
+DEFINE_FIXEDSIZE_ALLOCATOR( CModelRender::ModelInstanceLightingState_t, 100, ks::fixed_pool::grow::slow );
 
 
 //-----------------------------------------------------------------------------
@@ -1151,7 +1148,7 @@ LightingState_t *CModelRender::TimeAverageLightingState( ModelInstanceHandle_t h
 	int nWorldLights;
 	if ( !g_pMaterialSystemConfig->bSoftwareLighting )
 	{
-		nWorldLights = MIN( g_pMaterialSystemHardwareConfig->MaxNumLights(), r_worldlights.GetInt() );
+		nWorldLights = std::min( g_pMaterialSystemHardwareConfig->MaxNumLights(), r_worldlights.GetInt() );
 	}
 	else
 	{
@@ -1228,7 +1225,7 @@ LightingState_t *CModelRender::TimeAverageLightingState( ModelInstanceHandle_t h
 		++nCurrLight;
 	}
 
-	actualLightingState.numlights = MIN( nCurrLight, nWorldLights );
+	actualLightingState.numlights = std::min( nCurrLight, nWorldLights );
 	instanceLightingState.m_CurrentLightingState.numlights = nCurrLight;
 
 	for ( i = 0; i < nCurrLight; ++i )
@@ -1315,7 +1312,7 @@ void CModelRender::StudioSetupLighting( const DrawModelState_t &state, const Vec
 
 	ModelInstance_t *pModelInst = nullptr;
 	bool bHasDecals = false;
-	if ( pInfo.instance != m_ModelInstances.InvalidIndex() )
+	if ( pInfo.instance != MODEL_INSTANCE_INVALID )
 	{
 		pModelInst = &m_ModelInstances[pInfo.instance];
 		if ( pModelInst )
@@ -1484,9 +1481,9 @@ void CModelRender::StudioSetupLighting( const DrawModelState_t &state, const Vec
 			int i;
 			for( i = 0; i < 6; i++ )
 			{
-				temp[i][0] = MIN( 1.0f, pState->r_boxcolor[i][0] + additiveColor[0] );
-				temp[i][1] = MIN( 1.0f, pState->r_boxcolor[i][1] + additiveColor[1] );
-				temp[i][2] = MIN( 1.0f, pState->r_boxcolor[i][2] + additiveColor[2] );
+				temp[i][0] = std::min( 1.0f, pState->r_boxcolor[i][0] + additiveColor[0] );
+				temp[i][1] = std::min( 1.0f, pState->r_boxcolor[i][1] + additiveColor[1] );
+				temp[i][2] = std::min( 1.0f, pState->r_boxcolor[i][2] + additiveColor[2] );
 			}
 			g_pStudioRender->SetAmbientLightColors( temp );
 		}
@@ -1536,7 +1533,7 @@ void CModelRender::StudioSetupLighting( const DrawModelState_t &state, const Vec
 				if ( avgCubeLuminance < r_ambientmin.GetFloat() && (avgCubeLuminance < (fDirectLight * r_ambientfraction.GetFloat())) )	
 				{
 					Vector vFinalAmbientCube[6];
-					float fBoostFactor =  MIN( (fDirectLight * r_ambientfraction.GetFloat()) / maxCubeLuminance, r_ambientfactor.GetFloat() ); // boost no more than a certain factor
+					float fBoostFactor =  std::min( (fDirectLight * r_ambientfraction.GetFloat()) / maxCubeLuminance, r_ambientfactor.GetFloat() ); // boost no more than a certain factor
 					for( int i = 0; i < 6; i++ )
 					{
 						vFinalAmbientCube[i] = pState->r_boxcolor[i] * fBoostFactor;
@@ -1785,7 +1782,7 @@ void CModelRender::ComputeAmbientBoost( int nCount, const LightingQuery_t *pQuer
 		// If ambient cube is sufficiently dim in absolute terms and ambient cube is swamped by direct lights
 		if ( ( avgCubeLuminance < r_ambientmin.GetFloat() ) && ( avgCubeLuminance < fDirectLight ) )	
 		{
-			float fBoostFactor =  MIN( fDirectLight / maxCubeLuminance, r_ambientfactor.GetFloat() ); // boost no more than a certain factor
+			float fBoostFactor =  std::min( fDirectLight / maxCubeLuminance, r_ambientfactor.GetFloat() ); // boost no more than a certain factor
 			for( int i = 0; i < 6; i++ )
 			{
 				state.m_vecAmbientCube[i] *= fBoostFactor;
@@ -2149,12 +2146,14 @@ struct ModelDebugOverlayData_t
 	Vector m_Origin;
 
 	ModelDebugOverlayData_t() {}
+	ModelDebugOverlayData_t( ModelDebugOverlayData_t && ) = default;	// std::vector relocation; copies stay private
+	ModelDebugOverlayData_t &operator=( ModelDebugOverlayData_t && ) = default;
 
 private:
 	ModelDebugOverlayData_t( const ModelDebugOverlayData_t &vOther );
 };
 
-static CUtlVector<ModelDebugOverlayData_t> s_SavedModelInfo;
+static std::vector< ModelDebugOverlayData_t > s_SavedModelInfo;
 
 void DrawModelDebugOverlay( const DrawModelInfo_t& info, const DrawModelResults_t &results, const Vector &origin, float r = 1.0f, float g = 1.0f, float b = 1.0f )
 {
@@ -2220,7 +2219,7 @@ void DrawModelDebugOverlay( const DrawModelInfo_t& info, const DrawModelResults_
 	CDebugOverlay::AddTextOverlay( origin, lineOffset++, duration, r, g, b, alpha, buf );		
 
 	int i;
-	for( i = 0; i < results.m_Materials.Count(); i++ )
+	for( i = 0; i < std::ssize( results.m_Materials ); i++ )
 	{
 		IMaterial *pMaterial = results.m_Materials[i];
 		if( pMaterial )
@@ -2230,7 +2229,7 @@ void DrawModelDebugOverlay( const DrawModelInfo_t& info, const DrawModelResults_
 			CDebugOverlay::AddTextOverlay( origin, lineOffset++, duration, r, g, b, alpha, buf );		
 		}
 	}
-	if( results.m_Materials.Count() > results.m_NumMaterials )
+	if( std::ssize( results.m_Materials ) > results.m_NumMaterials )
 	{
 		CDebugOverlay::AddTextOverlay( origin, lineOffset++, duration, r, g, b, alpha, "(Remaining materials not shown)\n" );		
 	}
@@ -2246,7 +2245,7 @@ void DrawModelDebugOverlay( const DrawModelInfo_t& info, const DrawModelResults_
 
 void AddModelDebugOverlay( const DrawModelInfo_t& info, const DrawModelResults_t &results, const Vector& origin )
 {
-	ModelDebugOverlayData_t &tmp = s_SavedModelInfo[s_SavedModelInfo.AddToTail()];
+	ModelDebugOverlayData_t &tmp = s_SavedModelInfo.emplace_back();
 	tmp.m_ModelInfo = info;
 	tmp.m_ModelResults = results;
 	tmp.m_Origin = origin;
@@ -2254,7 +2253,7 @@ void AddModelDebugOverlay( const DrawModelInfo_t& info, const DrawModelResults_t
 
 void ClearSaveModelDebugOverlays( void )
 {
-	s_SavedModelInfo.RemoveAll();
+	s_SavedModelInfo.clear();
 }
 
 int SavedModelInfo_Compare_f( const void *l, const void *r )
@@ -2269,7 +2268,7 @@ static ConVar r_drawmodelstatsoverlaymax( "r_drawmodelstatsoverlaymax", "1.5", F
 
 void DrawSavedModelDebugOverlays( void )
 {
-	if( s_SavedModelInfo.Count() == 0 )
+	if( s_SavedModelInfo.empty() )
 	{
 		return;
 	}
@@ -2278,7 +2277,7 @@ void DrawSavedModelDebugOverlays( void )
 	float ooRange = 1.0f / ( max - min );
 
 	int i;
-	for( i = 0; i < s_SavedModelInfo.Count(); i++ )
+	for( i = 0; i < std::ssize( s_SavedModelInfo ); i++ )
 	{
 		float r, g, b;
 		float t = s_SavedModelInfo[i].m_ModelResults.m_RenderTime.GetDuration().GetMillisecondsF();
@@ -3068,12 +3067,12 @@ struct rmodel_t
 	byte					bStaticLighting : 1;
 };
 
-class CRobjectLess
+struct CRobjectLess
 {
-public:
-	bool Less( const robject_t& lhs, const robject_t& rhs, void *pContext )
+	const rmodel_t *pModels;
+
+	bool operator()( const robject_t& lhs, const robject_t& rhs ) const
 	{
-		rmodel_t *pModels = static_cast<rmodel_t *>(pContext);
 		if ( lhs.modelIndex == rhs.modelIndex )
 		{
 			if ( lhs.skin != rhs.skin )
@@ -3144,12 +3143,13 @@ int CModelRender::DrawStaticPropArrayFast( StaticPropRenderInfo_t *pProps, int c
 	MDLCACHE_CRITICAL_SECTION_( g_pMDLCache );
 	CMatRenderContextPtr pRenderContext( materials );
 	const int MAX_OBJECTS = 1024;
-	CUtlSortVector<robject_t, CRobjectLess> objectList(0, MAX_OBJECTS);
-	CUtlVectorFixedGrowable<rmodel_t,256> modelList;
-	CUtlVectorFixedGrowable<short,256> lightObjects;
-	CUtlVectorFixedGrowable<short,64> shadowObjects;
-	CUtlVectorFixedGrowable<rdecalmodel_t,64> decalObjects;
-	CUtlVectorFixedGrowable<LightingState_t,256> lightStates;
+	std::vector< robject_t > objectList;
+	objectList.reserve( MAX_OBJECTS );
+	ks::small_vector< rmodel_t, 256 > modelList;
+	ks::small_vector< short, 256 > lightObjects;
+	ks::small_vector< short, 64 > shadowObjects;
+	ks::small_vector< rdecalmodel_t, 64 > decalObjects;
+	ks::small_vector< LightingState_t, 256 > lightStates;
 	bool bForceCubemap = r_showenvcubemap.GetBool();
 	int drawnCount = 0;
 	int forcedLodSetting = GetLOD();
@@ -3161,10 +3161,10 @@ int CModelRender::DrawStaticPropArrayFast( StaticPropRenderInfo_t *pProps, int c
 	{
 		drawnCount++;
 		// UNDONE: This is a perf hit in some scenes!  Use a hash?
-		int modelIndex = FindModel( modelList.Base(), modelList.Count(), pProps[i].pModel );
+		int modelIndex = FindModel( modelList.data(), std::ssize( modelList ), pProps[i].pModel );
 		if ( modelIndex < 0 )
 		{
-			modelIndex = modelList.AddToTail();
+			modelIndex = std::ssize( modelList ); modelList.emplace_back();
 			modelList[modelIndex].pModel = pProps[i].pModel;
 		}
 		robject_t obj;
@@ -3179,12 +3179,12 @@ int CModelRender::DrawStaticPropArrayFast( StaticPropRenderInfo_t *pProps, int c
 		obj.pEnvCubeMap = nullptr;
 		obj.lightIndex = -1;
 		obj.pLightingOrigin = pProps[i].pLightingOrigin;
-		objectList.InsertNoSort(obj);
+		objectList.push_back( obj );
 	}
 
 	// process list of unique models
 	int lodStart = 0;
-	for ( int i = 0; i < modelList.Count(); i++ )
+	for ( int i = 0; i < std::ssize( modelList ); i++ )
 	{
 		const model_t *pModel = modelList[i].pModel;
 		Assert( modelloader->IsLoaded( pModel ) );
@@ -3211,7 +3211,7 @@ int CModelRender::DrawStaticPropArrayFast( StaticPropRenderInfo_t *pProps, int c
 	{
 		VPROF_TEMPORARY_OVERRIDE_BECAUSE_SPECIFYING_LEVEL_2_FROM_THE_COMMANDLINE_DOESNT_WORK( "Compute LOD");
 		// compute the lod of each object
-		for ( int i = 0; i < objectList.Count(); i++ )
+		for ( int i = 0; i < std::ssize( objectList ); i++ )
 		{
 			Vector org;
 			MatrixGetColumn( *objectList[i].pMatrix, 3, org );
@@ -3223,13 +3223,13 @@ int CModelRender::DrawStaticPropArrayFast( StaticPropRenderInfo_t *pProps, int c
 			{
 				objectList[i].lod = model.pStudioHWData->m_RootLOD;
 			}
-			modelList[objectList[i].modelIndex].maxArea = MAX(modelList[objectList[i].modelIndex].maxArea, screenSize);
+			modelList[objectList[i].modelIndex].maxArea = std::max(modelList[objectList[i].modelIndex].maxArea, screenSize);
 		}
 	}
 	else
 	{
 		// force the lod of each object
-		for ( int i = 0; i < objectList.Count(); i++ )
+		for ( int i = 0; i < std::ssize( objectList ); i++ )
 		{
 			const rmodel_t &model = modelList[objectList[i].modelIndex];
 			objectList[i].lod = clamp(forcedLodSetting, model.pStudioHWData->m_RootLOD, model.lodCount-1);
@@ -3237,8 +3237,7 @@ int CModelRender::DrawStaticPropArrayFast( StaticPropRenderInfo_t *pProps, int c
 	}
 	// UNDONE: Don't sort if rendering transparent objects - for now this isn't called in the transparent case
 	// sort by model, then by lod
-	objectList.SetLessContext( static_cast<void *>(modelList.Base()) );
-	objectList.RedoSort(true);
+	std::ranges::sort( objectList, CRobjectLess{ modelList.data() } );
 
 	ICallQueue *pCallQueue = pRenderContext->GetCallQueue();
 	
@@ -3246,7 +3245,7 @@ int CModelRender::DrawStaticPropArrayFast( StaticPropRenderInfo_t *pProps, int c
 	if ( !bShadowDepth )
 	{
 		VPROF_TEMPORARY_OVERRIDE_BECAUSE_SPECIFYING_LEVEL_2_FROM_THE_COMMANDLINE_DOESNT_WORK( "build lighting states");
-		for ( int i = 0; i < objectList.Count(); i++ )
+		for ( int i = 0; i < std::ssize( objectList ); i++ )
 		{
 			robject_t &obj = objectList[i];
 			rmodel_t &model = modelList[obj.modelIndex];
@@ -3258,15 +3257,15 @@ int CModelRender::DrawStaticPropArrayFast( StaticPropRenderInfo_t *pProps, int c
 			if ( bHasDecals )
 			{
 				rdecalmodel_t decalModel;
-				decalModel.lightIndex = lightStates.AddToTail();
+				decalModel.lightIndex = std::ssize( lightStates ); lightStates.emplace_back();
 				pDecalLightState = &lightStates[decalModel.lightIndex];
 				decalModel.objectIndex = i;
-				decalObjects.AddToTail( decalModel );
+				decalObjects.push_back( decalModel );
 			}
 			// for now we skip models that have shadows - will update later to include them in a post-pass
 			if ( g_pShadowMgr->ModelHasShadows( obj.instance ) )
 			{
-				shadowObjects.AddToTail(i);
+				shadowObjects.push_back( i );
 			}
 
 			// get the static lighting from the cache
@@ -3390,8 +3389,8 @@ int CModelRender::DrawStaticPropArrayFast( StaticPropRenderInfo_t *pProps, int c
 					// if we have any real lighting state we need to save it for this object
 					if ( pState->numlights || pState->HasAmbientColors() )
 					{
-						obj.lightIndex = lightStates.AddToTail(*pState);
-						lightObjects.AddToTail( i );
+						obj.lightIndex = std::ssize( lightStates ); lightStates.push_back( *pState );
+						lightObjects.push_back( i );
 					}
 				}
 			}
@@ -3438,7 +3437,7 @@ int CModelRender::DrawStaticPropArrayFast( StaticPropRenderInfo_t *pProps, int c
 
 	// g_VProfCurrentProfile.EnterScope( "draw nonlit props", VPROF_TEMPORARY_OVERRIDE_BECAUSE_SPECIFYING_LEVEL_2_FROM_THE_COMMANDLINE_DOESNT_WORK, VPROF_BUDGETGROUP_OTHER_UNACCOUNTED, false, 0 );
 	{VPROF_TEMPORARY_OVERRIDE_BECAUSE_SPECIFYING_LEVEL_2_FROM_THE_COMMANDLINE_DOESNT_WORK( "draw nonlit props" );
-	for ( int i = 0; i < objectList.Count(); i++ )
+	for ( int i = 0; i < std::ssize( objectList ); i++ )
 	{
 		robject_t &obj = objectList[i];
 		if ( obj.lightIndex >= 0 )
@@ -3492,9 +3491,9 @@ int CModelRender::DrawStaticPropArrayFast( StaticPropRenderInfo_t *pProps, int c
 	float			vColorModulation[3] = {1.0f, 1.0f, 1.0f};
 
 	drawFlags = STUDIORENDER_DRAW_ENTIRE_MODEL | STUDIORENDER_DRAW_STATIC_LIGHTING;
-	if ( lightObjects.Count() )
+	if ( std::ssize( lightObjects ) )
 	{
-		for ( int i = 0; i < lightObjects.Count(); i++ )
+		for ( int i = 0; i < std::ssize( lightObjects ); i++ )
 		{
 			VPROF_TEMPORARY_OVERRIDE_BECAUSE_SPECIFYING_LEVEL_2_FROM_THE_COMMANDLINE_DOESNT_WORK( "render vertex lit prop");
 			robject_t &obj = objectList[lightObjects[i]];
@@ -3531,10 +3530,10 @@ int CModelRender::DrawStaticPropArrayFast( StaticPropRenderInfo_t *pProps, int c
 		}
 	}
 
-	if ( !g_pShadowMgr->SinglePassFlashlightModeEnabled() && shadowObjects.Count() )
+	if ( !g_pShadowMgr->SinglePassFlashlightModeEnabled() && std::ssize( shadowObjects ) )
 	{
 		drawFlags = STUDIORENDER_DRAW_ENTIRE_MODEL;
-		for ( int i = 0; i < shadowObjects.Count(); i++ )
+		for ( int i = 0; i < std::ssize( shadowObjects ); i++ )
 		{
 			VPROF_TEMPORARY_OVERRIDE_BECAUSE_SPECIFYING_LEVEL_2_FROM_THE_COMMANDLINE_DOESNT_WORK( "render shadow objects");
 			// draw just the shadows!
@@ -3557,7 +3556,7 @@ int CModelRender::DrawStaticPropArrayFast( StaticPropRenderInfo_t *pProps, int c
 		g_pStudioRender->ClearAllShadows();
 	}
 
-	for ( int i = 0; i < decalObjects.Count(); i++ )
+	for ( int i = 0; i < std::ssize( decalObjects ); i++ )
 	{
 		VPROF_TEMPORARY_OVERRIDE_BECAUSE_SPECIFYING_LEVEL_2_FROM_THE_COMMANDLINE_DOESNT_WORK( "render decal objects");
 		// draw just the decals!
@@ -4049,7 +4048,6 @@ void CModelRender::ValidateStaticPropColorData( ModelInstanceHandle_t handle )
 	MEM_ALLOC_CREDIT();
 
 	// fetch the header
-	CUtlBuffer utlBuf;
 	char fileName[MAX_PATH];
 	if ( g_pMaterialSystemHardwareConfig->GetHDRType() == HDR_TYPE_NONE || g_bBakedPropLightingNoSeparateHDR )
 	{
@@ -4061,7 +4059,8 @@ void CModelRender::ValidateStaticPropColorData( ModelInstanceHandle_t handle )
 	}
 
 
-	if ( !g_pFileSystem->ReadFile( fileName, "GAME", utlBuf, sizeof( HardwareVerts::FileHeader_t ), 0 ) )
+	auto vhvData = g_pFileSystem->ReadFile( fileName, "GAME", sizeof( HardwareVerts::FileHeader_t ), 0 );
+	if ( !vhvData )
 	{
 		// not available
 		return;
@@ -4072,7 +4071,9 @@ void CModelRender::ValidateStaticPropColorData( ModelInstanceHandle_t handle )
 	static ConVarRef r_staticlight_streams( "r_staticlight_streams" );
 	unsigned int numLightingComponents = r_staticlight_streams.GetInt();
 
-	HardwareVerts::FileHeader_t *pVhvHdr = (HardwareVerts::FileHeader_t *)utlBuf.Base();
+	HardwareVerts::FileHeader_t vhvHdr{};
+	std::memcpy( &vhvHdr, vhvData->data(), std::min( vhvData->size(), sizeof( vhvHdr ) ) );
+	HardwareVerts::FileHeader_t *pVhvHdr = &vhvHdr;
 
 	// total the static prop verts
 	int numStudioHdrVerts = 0;
@@ -4212,7 +4213,7 @@ cleanUp:
 
 	if ( pOriginalData )
 	{
-		free( pOriginalData );
+		g_pMemAlloc->Free( pOriginalData );
 	}
 }
 
@@ -4477,7 +4478,7 @@ bool CModelRender::UpdateStaticPropColorData( IHandleEntity *pProp, ModelInstanc
 		flConstDirLightingAmount =  (float)( pStudioHdr->constdirectionallightdot ) / 255.0;
 	}
 
-	CUtlMemory< color24 > tmpLightingMem; 
+	std::vector< color24 > tmpLightingMem; 
 	
 	// Iterate over every body part...
 	for ( int bodyPartID = 0; bodyPartID < pStudioHdr->numbodyparts; ++bodyPartID )
@@ -4490,12 +4491,12 @@ bool CModelRender::UpdateStaticPropColorData( IHandleEntity *pProp, ModelInstanc
 			mstudiomodel_t* pModel = pBodyPart->pModel(modelID);
 
 			// Make sure we've got enough space allocated
-			tmpLightingMem.EnsureCapacity( pModel->numvertices );
+			ks::grow_to( tmpLightingMem, pModel->numvertices );
 
 			if ( !bDebugColor )
 			{
 				// Compute lighting for each unique vertex in the model exactly once
-				ComputeModelVertexLightingOld( pModel, matrix, lightingState, tmpLightingMem.Base(), bUseConstDirLighting, flConstDirLightingAmount );
+				ComputeModelVertexLightingOld( pModel, matrix, lightingState, tmpLightingMem.data(), bUseConstDirLighting, flConstDirLightingAmount );
 			}
 			else
 			{
@@ -4581,9 +4582,9 @@ void CModelRender::DestroyStaticPropColorData( ModelInstanceHandle_t handle )
 
 void CModelRender::ReleaseAllStaticPropColorData( void )
 {
-	FOR_EACH_LL( m_ModelInstances, i )
+	for ( auto it = m_ModelInstances.begin(); it != m_ModelInstances.end(); ++it )
 	{
-		DestroyStaticPropColorData( i );
+		DestroyStaticPropColorData( it.handle() );
 	}
 }
 
@@ -4598,9 +4599,9 @@ void CModelRender::RestoreAllStaticPropColorData( void )
 	InvalidateStaticLightingCache();
 
 	// rebake
-	FOR_EACH_LL( m_ModelInstances, i )
+	for ( auto it = m_ModelInstances.begin(); it != m_ModelInstances.end(); ++it )
 	{
-		UpdateStaticPropColorData( m_ModelInstances[i].m_pRenderable->GetIClientUnknown(), i );
+		UpdateStaticPropColorData( it->m_pRenderable->GetIClientUnknown(), it.handle() );
 	}
 #endif
 }
@@ -4622,7 +4623,7 @@ ModelInstanceHandle_t CModelRender::CreateInstance( IClientRenderable *pRenderab
 	model_t *pModel = (model_t*)pRenderable->GetModel();
 
 	// We're ok, allocate a new instance handle
-	ModelInstanceHandle_t handle = m_ModelInstances.AddToTail();
+	ModelInstanceHandle_t handle = m_ModelInstances.emplace();
 	ModelInstance_t& instance = m_ModelInstances[handle];
 
 	instance.m_pRenderable = pRenderable;
@@ -4766,7 +4767,7 @@ void CModelRender::PurgeCachedStaticPropColorData( void )
 	}
 
 	m_colorMeshVBAllocator.Clear();
-	m_CachedStaticPropColorData.Purge();
+	m_CachedStaticPropColorData.clear();
 }
 
 bool CModelRender::IsStaticPropColorDataCached( const char *pName )
@@ -4843,7 +4844,7 @@ void CModelRender::DestroyInstance( ModelInstanceHandle_t handle )
 		DestroyStaticPropColorData( handle );
 	}
 
-	m_ModelInstances.Remove( handle );
+	m_ModelInstances.erase( handle );
 }
 
 bool CModelRender::ChangeInstance( ModelInstanceHandle_t handle, IClientRenderable *pRenderable )
@@ -5014,11 +5015,9 @@ void CModelRender::RemoveAllDecals( ModelInstanceHandle_t handle )
 //-----------------------------------------------------------------------------
 void CModelRender::RemoveAllDecalsFromAllModels( bool bRenderContextValid )
 {
-	for ( ModelInstanceHandle_t i = m_ModelInstances.Head(); 
-		i != m_ModelInstances.InvalidIndex(); 
-		i = m_ModelInstances.Next( i ) )
+	for ( auto it = m_ModelInstances.begin(); it != m_ModelInstances.end(); ++it )
 	{
-		RemoveAllDecals( i );
+		RemoveAllDecals( it.handle() );
 	}
 
 #ifndef DEDICATED

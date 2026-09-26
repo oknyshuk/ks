@@ -21,12 +21,11 @@
 #include "protocol.h"
 #include <inetmsghandler.h>
 #include <igameevents.h>
-#include <bitvec.h>
 #include "networksystem/inetworksystem.h"
 #include <engine/iserverplugin.h>
 #include <color.h>
 #include <tier0/tslist.h>
-#include <tier1/utldelegate.h>
+#include <functional>
 #include "tier1/utlstring.h"
 #include "tier1/tokenset.h"
 #include "netmessages_signon.h"
@@ -154,10 +153,10 @@ public:
 	}
 
 	template< class _N >
-	void Bind( INetChannel *pNetChannel, CUtlDelegate< bool ( const typename _N::PBType_t & obj ) > handler )
+	void Bind( INetChannel *pNetChannel, std::move_only_function< bool ( const typename _N::PBType_t & obj ) > handler )
 	{
 		delete m_pBind;
-		m_pBind = new BindParams<_N>( pNetChannel, handler );
+		m_pBind = new BindParams<_N>( pNetChannel, std::move( handler ) );
 	}
 
 	void Unbind()
@@ -175,9 +174,9 @@ private:
 	template < class _N >
 	struct BindParams : public INetMessageBinder
 	{
-		BindParams( INetChannel *pNetChannel, CUtlDelegate< bool ( const typename _N::PBType_t & obj ) > handler )
+		BindParams( INetChannel *pNetChannel, std::move_only_function< bool ( const typename _N::PBType_t & obj ) > handler )
 			: m_NetChannel( pNetChannel )
-			, m_handler( handler )
+			, m_handler( std::move( handler ) )
 		{
 			if ( m_NetChannel )
 			{
@@ -236,7 +235,7 @@ private:
 		}
 
 		INetChannel	*m_NetChannel;	// netchannel this message is from/for
-		CUtlDelegate< bool ( const typename _N::PBType_t & obj ) > m_handler;
+		std::move_only_function< bool ( const typename _N::PBType_t & obj ) > m_handler;
 	};
 
 	INetMessageBinder *m_pBind;
@@ -255,9 +254,9 @@ public:
 	{
 		SetReliable( false );
 		this->tick = tick;
-		this->host_computationtime = MIN( ( uint32 )( 1000000.0 * host_computationtime ), 1000000u );
-		this->host_computationtime_std_deviation = MIN( ( uint32 )( 1000000.0 * host_computationtime_stddeviation ), 1000000u );
-		this->host_framestarttime_std_deviation = MIN( ( uint32 )( 1000000.0 * host_framestarttime_std_deviation ), 1000000u );
+		this->host_computationtime = std::min( ( uint32 )( 1000000.0 * host_computationtime ), 1000000u );
+		this->host_computationtime_std_deviation = std::min( ( uint32 )( 1000000.0 * host_computationtime_stddeviation ), 1000000u );
+		this->host_framestarttime_std_deviation = std::min( ( uint32 )( 1000000.0 * host_framestarttime_std_deviation ), 1000000u );
 	}
 };
 

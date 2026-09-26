@@ -12,12 +12,8 @@
 #include "nvtc.h"
 #include "mathlib/mathlib.h"
 #include "mathlib/vector.h"
-#include "tier1/utlmemory.h"
 #include "tier1/strtools.h"
 #include "mathlib/compressed_vector.h"
-
-// Should be last include
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Various important function types for each color format
@@ -122,7 +118,7 @@ const ImageFormatInfo_t& ImageFormatInfo( ImageFormat fmt )
 
 int GetMemRequired( int width, int height, int depth, int nMipmapCount, ImageFormat imageFormat, int *pAdjustedHeight )
 {
-	depth = MAX( 1, depth );
+	depth = std::max( 1, depth );
 
 	int nRet = 0;
 	if ( nMipmapCount == 1 )
@@ -235,9 +231,9 @@ int GetMipMapLevelByteOffset( int width, int height, ImageFormat imageFormat, in
 		{
 			break;
 		}
-		width = MAX( 1, width >> 1 );
-		height = MAX( 1, height >> 1 );
-		nDepth = MAX( 1, nDepth >> 1 );
+		width = std::max( 1, width >> 1 );
+		height = std::max( 1, height >> 1 );
+		nDepth = std::max( 1, nDepth >> 1 );
 		skipMipLevels--;
 	}
 	return offset;
@@ -262,9 +258,9 @@ int GetMipMapLevelByteOffsetReverse( int nWidth, int nHeight, int nDepth, int nT
 		}
 		if( nWidth == 1 && nHeight == 1 && nDepth == 1 )
 			break;
-		nWidth = MAX( 1, nWidth >> 1 );
-		nHeight = MAX( 1, nHeight >> 1 );
-		nDepth = MAX( 1, nDepth >> 1 );
+		nWidth = std::max( 1, nWidth >> 1 );
+		nHeight = std::max( 1, nHeight >> 1 );
+		nDepth = std::max( 1, nDepth >> 1 );
 	}
 	return nSkipSize;
 }
@@ -304,9 +300,9 @@ void GetMipMapLevelDimensions( int &nWidth, int &nHeight, int &nDepth, int nMipL
 		nDepth >>= 1;
 	}
 
-	nWidth = MAX( nWidth, 1 );
-	nHeight = MAX( nHeight, 1 );
-	nDepth = MAX( nDepth, 1 );
+	nWidth = std::max( nWidth, 1 );
+	nHeight = std::max( nHeight, 1 );
+	nDepth = std::max( nDepth, 1 );
 }
 
 
@@ -347,7 +343,6 @@ int GetNumMipMapLevels( int width, int height, int depth )
 }
 
 // Turn off warning about FOURCC formats below...
-#pragma warning (disable:4063)
 
 #ifndef MAKEFOURCC
 #define MAKEFOURCC(ch0, ch1, ch2, ch3)                              \
@@ -512,7 +507,6 @@ D3DFORMAT ImageFormatToD3DFormat( ImageFormat format )
 	return s_pD3DFormats[ format + 1 ];
 }
 
-#pragma warning (default:4063)
 
 } // ImageLoader namespace ends
 

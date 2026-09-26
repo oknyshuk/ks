@@ -27,7 +27,6 @@
 #include "gl_drawlights.h"
 #include "Overlay.h"
 #include "vmodes.h"
-#include "tier1/utlbuffer.h"
 #include "vtf/vtf.h"
 #include "bitmap/imageformat.h"
 #include "cbenchmark.h"
@@ -37,9 +36,6 @@
 #include "ibsppack.h"
 #include "vprof.h"
 #include "paint.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 bool g_RendererInLevel = false;
 
@@ -175,7 +171,7 @@ CON_COMMAND_F( r_cleardecals, "Usage r_cleardecals <permanent>.", FCVAR_CLIENTCM
 //-----------------------------------------------------------------------------
 void R_LoadWorldGeometry( bool bDXChange )
 {
-	CUtlVector< uint32 > paintData;
+	std::vector< uint32 > paintData;
 	if ( g_PaintManager.m_bShouldRegister )
 	{
 		g_PaintManager.GetPaintmapDataRLE( paintData );
@@ -238,7 +234,7 @@ void R_LoadWorldGeometry( bool bDXChange )
 	if ( g_PaintManager.m_bShouldRegister )
 	{
 		g_PaintManager.LoadPaintmapDataRLE( paintData );
-		paintData.Purge();
+		paintData.clear(); paintData.shrink_to_fit();
 	}
 }
 
@@ -316,7 +312,7 @@ void R_LevelShutdown()
 {
 	R_Surface_LevelShutdown();
 	R_Areaportal_LevelShutdown();
-	g_DispLightmapSamplePositions.Purge();
+	g_DispLightmapSamplePositions.clear(); g_DispLightmapSamplePositions.shrink_to_fit();
 
 	g_RendererInLevel = false;
 }

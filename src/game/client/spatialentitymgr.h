@@ -34,7 +34,7 @@ public:
 	void AddSpatialEntity( C_SpatialEntity *pSpatialEntity );
 	void RemoveSpatialEntity( C_SpatialEntity *pSpatialEntity );
 
-	CUtlVector<C_SpatialEntity*> m_SpatialEntities;
+	std::vector< C_SpatialEntity* > m_SpatialEntities;
 };
 
 

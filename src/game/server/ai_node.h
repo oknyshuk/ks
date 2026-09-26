@@ -118,8 +118,8 @@ public:
 	CAI_Hint*		GetHint()					{ return m_pHint; }
 	void			SetHint( CAI_Hint *pHint )	{ m_pHint = pHint; }
 
-	int				NumLinks() const		{ return m_Links.Count(); }
-	void			ClearLinks()			{ m_Links.Purge(); }
+	int				NumLinks() const		{ return std::ssize( m_Links ); }
+	void			ClearLinks()			{ m_Links.clear(); m_Links.shrink_to_fit(); }
 	CAI_Link *		GetLink( int destNodeId );
 	CAI_Link *		GetLinkByIndex( int i )	{ return m_Links[i]; }
 
@@ -162,7 +162,7 @@ public:
 	int				m_eNodeInfo;			// bits that tell us more about this nodes
 
 	int				m_zone;
-	CUtlVector<CAI_Link *> m_Links;		// growable array of links to this node
+	std::vector< CAI_Link * > m_Links;		// growable array of links to this node
 
 	float			m_flNextUseTime;		// When can I be used again?
 	CAI_Hint*		m_pHint;				// hint attached to this node

@@ -11,9 +11,6 @@
 #include "Downsample_nohdr_ps20.inc"
 #include "Downsample_nohdr_ps20b.inc"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static ConVar r_bloomtintr( "r_bloomtintr", "0.3", FCVAR_MATERIAL_SYSTEM_THREAD );
 static ConVar r_bloomtintg( "r_bloomtintg", "0.59", FCVAR_MATERIAL_SYSTEM_THREAD );
 static ConVar r_bloomtintb( "r_bloomtintb", "0.11", FCVAR_MATERIAL_SYSTEM_THREAD );

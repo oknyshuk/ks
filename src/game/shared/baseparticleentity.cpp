@@ -23,9 +23,6 @@
 #include "toolframework_client.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 IMPLEMENT_NETWORKCLASS_ALIASED( BaseParticleEntity, DT_BaseParticleEntity )
 
 IMPLEMENT_REFLECT_TABLE( CBaseParticleEntity, DT_BaseParticleEntity );

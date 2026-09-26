@@ -15,12 +15,10 @@
 #include "color.h"
 #include "dbg.h"
 
-class CUtlBuffer;
-
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-class CUtlBuffer;
+namespace ks { class byte_reader; }
 
 
 //-----------------------------------------------------------------------------
@@ -154,16 +152,16 @@ enum BitmapFileType_t
 	BITMAP_FILE_TYPE_PFM, 
 }; 
 
-BitmapFileType_t LoadBitmapFile( CUtlBuffer &buf, Bitmap_t *pBitmap );
+BitmapFileType_t LoadBitmapFile( ks::byte_reader &buf, Bitmap_t *pBitmap );
 
 
 //-----------------------------------------------------------------------------
 // PFM file loading related methods
 //-----------------------------------------------------------------------------
-bool PFMReadFileR32F( CUtlBuffer &fileBuffer, Bitmap_t &bitmap, float pfmScale );
-bool PFMReadFileRGB323232F( CUtlBuffer &fileBuffer, Bitmap_t &bitmap, float pfmScale );
-bool PFMReadFileRGBA32323232F( CUtlBuffer &fileBuffer, Bitmap_t &bitmap, float pfmScale );
-bool PFMGetInfo_AndAdvanceToTextureBits( CUtlBuffer &pfmBuffer, int &nWidth, int &nHeight, ImageFormat &imageFormat );
+bool PFMReadFileR32F( ks::byte_reader &fileBuffer, Bitmap_t &bitmap, float pfmScale );
+bool PFMReadFileRGB323232F( ks::byte_reader &fileBuffer, Bitmap_t &bitmap, float pfmScale );
+bool PFMReadFileRGBA32323232F( ks::byte_reader &fileBuffer, Bitmap_t &bitmap, float pfmScale );
+bool PFMGetInfo_AndAdvanceToTextureBits( ks::byte_reader &pfmBuffer, int &nWidth, int &nHeight, ImageFormat &imageFormat );
 
 
 #endif // BITMAP_H

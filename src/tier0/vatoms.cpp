@@ -4,7 +4,6 @@
 // 
 #include "tier0/platform.h"
 #include "tier0/dbg.h"
-#include "tier0/memdbgon.h"
 
 PLATFORM_INTERFACE void** GetVAtom( int nAtomIndex );
 

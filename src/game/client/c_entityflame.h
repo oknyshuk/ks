@@ -35,7 +35,7 @@ private:
 	void	CreateEffect( void );
 	void	StopEffect( void );
 
-	CUtlReference<CNewParticleEffect> m_hEffect;
+	ks::tracked_ref<CNewParticleEffect> m_hEffect;
 	EHANDLE				m_hOldAttached;
 	[[= ks::reflect::Net{} ]] bool				m_bCheapEffect;
 };

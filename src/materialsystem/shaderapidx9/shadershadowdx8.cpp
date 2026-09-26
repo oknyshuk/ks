@@ -19,9 +19,6 @@
 #include "materialsystem/materialsystem_config.h"
 #include "vertexshaderdx8.h"
 
-// NOTE: This must be the last file included!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // The DX8 implementation of the shader setup interface

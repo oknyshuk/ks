@@ -48,7 +48,6 @@ def build(bld):
         "composite_texture.cpp",
         "custom_material.cpp",
         "base_visuals_data_processor.cpp",
-        "pch_materialsystem.cpp",
         "cmaterialdict.cpp",
         "cmaterialsystem.cpp",
         "cmatlightmaps.cpp",

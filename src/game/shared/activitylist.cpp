@@ -12,10 +12,7 @@
 
 #include "filesystem.h"
 #include <keyvalues.h>
-#include "utldict.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier1/map_ops.h"
 
 extern IFileSystem *filesystem;
 
@@ -25,13 +22,13 @@ extern IFileSystem *filesystem;
 struct activitylist_t
 {
 	int					activityIndex;
-	unsigned short		stringKey;
+	CStringRegistry::Key	stringKey;
 	short				isPrivate;
 };
 
-CUtlVector<activitylist_t> g_ActivityList;
+std::vector< activitylist_t > g_ActivityList;
 
-static CUtlDict< CActivityRemapCache, int > m_ActivityRemapDatabase;
+static ks::idict< CActivityRemapCache > m_ActivityRemapDatabase;
 
 // This stores the actual activity names.  Also, the string ID in the registry is simply an index 
 // into the g_ActivityList array.
@@ -51,8 +48,8 @@ void ActivityList_Init( void )
 void ActivityList_Free( void )
 {
 	g_ActivityStrings.ClearStrings();
-	g_ActivityList.Purge();
-	m_ActivityRemapDatabase.Purge();
+	g_ActivityList.clear(); g_ActivityList.shrink_to_fit();
+	m_ActivityRemapDatabase.clear();
 
 	// So studiohdrs can reindex activity indices
 	++g_nActivityListVersion;
@@ -62,7 +59,7 @@ void ActivityList_Free( void )
 activitylist_t *ActivityList_AddActivityEntry( const char *pName, int iActivityIndex, bool isPrivate )
 {
 	MEM_ALLOC_CREDIT();
-	int index = g_ActivityList.AddToTail();
+	int index = std::ssize( g_ActivityList ); g_ActivityList.emplace_back();
 	activitylist_t *pList = &g_ActivityList[index];
 	pList->activityIndex = iActivityIndex;
 	pList->stringKey = g_ActivityStrings.AddString( pName, index );
@@ -93,7 +90,7 @@ static activitylist_t *ListFromString( const char *pString )
 static activitylist_t *ListFromActivity( int activityIndex )
 {
 	// ugly linear search
-	for ( int i = 0; i < g_ActivityList.Count(); i++ )
+	for ( int i = 0; i < std::ssize( g_ActivityList ); i++ )
 	{
 		if ( g_ActivityList[i].activityIndex == activityIndex )
 		{
@@ -1377,14 +1374,11 @@ void ActivityList_RegisterSharedActivities( void )
 
 
 
-void UTIL_LoadActivityRemapFile( const char *filename, const char *section, CUtlVector <CActivityRemap> &entries )
+void UTIL_LoadActivityRemapFile( const char *filename, const char *section, std::vector< CActivityRemap > &entries )
 {
-	int iIndex = m_ActivityRemapDatabase.Find( filename );
-
-	if ( iIndex != m_ActivityRemapDatabase.InvalidIndex() )
+	if ( CActivityRemapCache *actRemap = ks::find_ptr( m_ActivityRemapDatabase, filename ) )
 	{
-		CActivityRemapCache *actRemap = &m_ActivityRemapDatabase[iIndex];
-		entries.AddVectorToTail( actRemap->m_cachedActivityRemaps );
+		entries.append_range( actRemap->m_cachedActivityRemaps );
 		return;
 	}
 
@@ -1433,14 +1427,14 @@ void UTIL_LoadActivityRemapFile( const char *filename, const char *section, CUtl
 					pRemapKey = pRemapKey->GetNextKey();
 				}
 
-				entries.AddToTail( actMap );
+				entries.push_back( actMap );
 			}
 
 			pTestKey = pTestKey->GetNextKey();
 		}
 
-		actRemap.m_cachedActivityRemaps.AddVectorToTail( entries );
-		m_ActivityRemapDatabase.Insert( filename, actRemap );
+		actRemap.m_cachedActivityRemaps.append_range( entries );
+		m_ActivityRemapDatabase.emplace( filename, actRemap );
 	}
 }
 

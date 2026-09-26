@@ -10,9 +10,6 @@
 #include "reflect_annotations.h"
 #include "c_team.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: RecvProxy that converts the Team's player UtlVector to entindexes
 //-----------------------------------------------------------------------------
@@ -27,8 +24,8 @@ void RecvProxyArrayLength_PlayerArray( void *pStruct, int objectID, int currentA
 {
 	C_Team *pTeam = (C_Team*)pStruct;
 	
-	if ( pTeam->m_aPlayers.Count() != currentArrayLength )
-		pTeam->m_aPlayers.SetSize( currentArrayLength );
+	if ( std::ssize( pTeam->m_aPlayers ) != currentArrayLength )
+		pTeam->m_aPlayers.assign( currentArrayLength, {} );
 }
 
 
@@ -37,7 +34,7 @@ IMPLEMENT_REFLECT_CLIENTCLASS( C_Team, DT_Team, CTeam )
 IMPLEMENT_REFLECT_PREDMAP( C_Team );
 
 // Global list of client side team entities
-CUtlVector< C_Team * > g_Teams;
+std::vector< C_Team * > g_Teams;
 
 //=================================================================================================
 // C_Team functionality
@@ -66,7 +63,7 @@ C_Team::C_Team()
 	m_numMapVictories = 0;
 
 	// Add myself to the global list of team entities
-	g_Teams.AddToTail( this );
+	g_Teams.push_back( this );
 }
 
 //-----------------------------------------------------------------------------
@@ -74,13 +71,13 @@ C_Team::C_Team()
 //-----------------------------------------------------------------------------
 C_Team::~C_Team()
 {
-	g_Teams.FindAndRemove( this );
+	ks::erase_first( g_Teams, this );
 }
 
 
 void C_Team::RemoveAllPlayers()
 {
-	m_aPlayers.RemoveAll();
+	m_aPlayers.clear();
 }
 
 void C_Team::PreDataUpdate( DataUpdateType_t updateType )
@@ -177,7 +174,7 @@ int C_Team::Get_Ping( void )
 //-----------------------------------------------------------------------------
 int C_Team::Get_Number_Players( void )
 {
-	return m_aPlayers.Count();
+	return std::ssize( m_aPlayers );
 }
 
 //-----------------------------------------------------------------------------
@@ -185,7 +182,7 @@ int C_Team::Get_Number_Players( void )
 //-----------------------------------------------------------------------------
 bool C_Team::ContainsPlayer( int iPlayerIndex )
 {
-	for (int i = 0; i < m_aPlayers.Count(); i++ )
+	for (int i = 0; i < std::ssize( m_aPlayers ); i++ )
 	{
 		if ( m_aPlayers[i] == iPlayerIndex )
 			return true;
@@ -229,7 +226,7 @@ C_Team *GetLocalTeam( void )
 //-----------------------------------------------------------------------------
 C_Team *GetGlobalTeam( int iTeamNumber )
 {
-	for (int i = 0; i < g_Teams.Count(); i++ )
+	for (int i = 0; i < std::ssize( g_Teams ); i++ )
 	{
 		if ( g_Teams[i]->GetTeamNumber() == iTeamNumber )
 			return g_Teams[i];
@@ -243,7 +240,7 @@ C_Team *GetGlobalTeam( int iTeamNumber )
 //-----------------------------------------------------------------------------
 int GetNumTeams()
 {
-	return g_Teams.Count() + 1; 
+	return std::ssize( g_Teams ) + 1; 
 }
 
 //-----------------------------------------------------------------------------
@@ -251,7 +248,7 @@ int GetNumTeams()
 //-----------------------------------------------------------------------------
 C_Team *GetPlayersTeam( int iPlayerIndex )
 {
-	for (int i = 0; i < g_Teams.Count(); i++ )
+	for (int i = 0; i < std::ssize( g_Teams ); i++ )
 	{
 		if ( g_Teams[i]->ContainsPlayer( iPlayerIndex ) )
 			return g_Teams[i];
@@ -273,7 +270,7 @@ C_Team *GetPlayersTeam( C_BasePlayer *pPlayer )
 //-----------------------------------------------------------------------------
 bool ArePlayersOnSameTeam( int iPlayerIndex1, int iPlayerIndex2 )
 {
-	for (int i = 0; i < g_Teams.Count(); i++ )
+	for (int i = 0; i < std::ssize( g_Teams ); i++ )
 	{
 		if ( g_Teams[i]->ContainsPlayer( iPlayerIndex1 ) && g_Teams[i]->ContainsPlayer( iPlayerIndex2 ) )
 			return true;
@@ -287,5 +284,5 @@ bool ArePlayersOnSameTeam( int iPlayerIndex1, int iPlayerIndex2 )
 //-----------------------------------------------------------------------------
 int GetNumberOfTeams( void )
 {
-	return g_Teams.Count();
+	return std::ssize( g_Teams );
 }

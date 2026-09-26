@@ -14,9 +14,6 @@
 #include "EntityFreezing.h"
 //#include "particle_parse.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Networking
@@ -314,7 +311,7 @@ bool CStatueProp::CreateVPhysicsFromHitBoxes( CBaseAnimating *pInitBaseAnimating
 	physprops->GetPhysicsProperties( nMaterialIndex, &flDensity, &flThickness, nullptr, nullptr );
 
 	// Make it more hollow
-	flThickness = MIN ( 1.0f, flThickness + 0.5f );
+	flThickness = std::min( 1.0f, flThickness + 0.5f );
 
 	if ( flThickness > 0.0f )
 	{
@@ -365,12 +362,12 @@ bool CStatueProp::CreateVPhysicsFromHitBoxes( CBaseAnimating *pInitBaseAnimating
 bool CStatueProp::CreateVPhysicsFromOBBs( CBaseAnimating *pInitBaseAnimating )
 {
 	// Make enough pointers to convexes for each hitbox
-	CPhysConvex **ppConvex = new CPhysConvex*[ m_pInitOBBs->Count() ];
+	CPhysConvex **ppConvex = new CPhysConvex*[ std::ssize( *m_pInitOBBs ) ];
 
 	float flTotalVolume = 0.0f;
 	float flTotalSurfaceArea = 0.0f;
 
-	for ( int i = 0; i < m_pInitOBBs->Count(); i++ )
+	for ( int i = 0; i < std::ssize( *m_pInitOBBs ); i++ )
 	{
 		const outer_collision_obb_t *pOBB = &((*m_pInitOBBs)[ i ]);
 
@@ -429,7 +426,7 @@ bool CStatueProp::CreateVPhysicsFromOBBs( CBaseAnimating *pInitBaseAnimating )
 	}
 
 	// Make a single collide out of the group of convex boxes
-	CPhysCollide *pPhysCollide = physcollision->ConvertConvexToCollide( ppConvex, m_pInitOBBs->Count() );
+	CPhysCollide *pPhysCollide = physcollision->ConvertConvexToCollide( ppConvex, std::ssize( *m_pInitOBBs ) );
 
 	delete[] ppConvex;
 
@@ -452,7 +449,7 @@ bool CStatueProp::CreateVPhysicsFromOBBs( CBaseAnimating *pInitBaseAnimating )
 	physprops->GetPhysicsProperties( nMaterialIndex, &flDensity, &flThickness, nullptr, nullptr );
 
 	// Make it more hollow
-	flThickness = MIN ( 1.0f, flThickness + 0.5f );
+	flThickness = std::min( 1.0f, flThickness + 0.5f );
 
 	if ( flThickness > 0.0f )
 	{
@@ -501,11 +498,11 @@ CBaseEntity *CreateServerStatue( CBaseAnimating *pAnimating, int collisionGroup 
 	return pStatue;
 }
 
-CBaseEntity *CreateServerStatueFromOBBs( const CUtlVector<outer_collision_obb_t> &vecSphereOrigins, CBaseAnimating *pAnimating )
+CBaseEntity *CreateServerStatueFromOBBs( const std::vector< outer_collision_obb_t > &vecSphereOrigins, CBaseAnimating *pAnimating )
 {
-	Assert( vecSphereOrigins.Count() > 0 );
+	Assert( std::ssize( vecSphereOrigins ) > 0 );
 
-	if ( vecSphereOrigins.Count() <= 0 )
+	if ( std::ssize( vecSphereOrigins ) <= 0 )
 		return nullptr;
 
 	CStatueProp *pStatue = static_cast<CStatueProp *>( CreateEntityByName( "physics_prop_statue" ) );

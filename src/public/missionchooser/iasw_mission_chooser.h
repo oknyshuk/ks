@@ -22,7 +22,7 @@ public:
 	virtual const char* GetDescriptionText() = 0;
 	virtual const char* GetImageName() = 0;	
 	virtual Color& GetColor() = 0;
-	virtual bool IsGroupLocked( CUtlVector<int> &completedMissions ) = 0;
+	virtual bool IsGroupLocked( std::vector< int > &completedMissions ) = 0;
 
 	virtual int GetHighestUnlockMissionID() = 0;
 	virtual int GetNumLocations() = 0;
@@ -74,7 +74,7 @@ public:
 	virtual int GetMoneyReward() = 0;
 	virtual int GetXPReward() = 0;
 	virtual int IsMissionOptional() = 0;
-	virtual bool IsLocationLocked( CUtlVector<int> &completedMissions ) = 0;
+	virtual bool IsLocationLocked( std::vector< int > &completedMissions ) = 0;
 	virtual void SetPos( int x, int y ) = 0;
 };
 

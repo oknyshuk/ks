@@ -12,9 +12,6 @@
 
 
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // RIFF reader/writers that use the file system

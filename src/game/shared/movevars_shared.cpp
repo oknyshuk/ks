@@ -8,9 +8,6 @@
 #include "cbase.h"
 #include "movevars_shared.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // some cvars used by player movement system
 #define DEFAULT_GRAVITY_STRING	"800"
 

@@ -32,9 +32,6 @@
 
 #endif
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 #define GRENADE_TIMER	3.0f //Seconds
 
 

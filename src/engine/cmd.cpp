@@ -9,6 +9,7 @@
 
 
 #include "quakedef.h"						 
+#include <mutex>
 #include "zone.h"
 #include "demo.h"
 #include "filesystem.h"
@@ -19,7 +20,7 @@
 #include "cl_splitscreen.h"
 #include "baseautocompletefilelist.h"
 #include "tier0/icommandline.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/text_writer.h"
 #include "gl_cvars.h"
 #include "tier0/memalloc.h"
 #include "netmessages.h"
@@ -28,12 +29,8 @@
 #include "tier1/commandbuffer.h"
 #include "cvar.h"
 #include "vstdlib/random.h"
-#include "tier1/utldict.h"
 #include "tier0/etwprof.h"
 #include "tier0/vprof.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 // This denotes an execution marker in the command stream.
@@ -61,9 +58,8 @@ struct cmdalias_t
 static cmdalias_t	*cmd_alias = nullptr;
 
 static CCommandBuffer s_CommandBuffer[ CBUF_COUNT ];
-static CThreadFastMutex s_CommandBufferMutex;
-CUtlStringList m_WhitelistedConvars;
-#define LOCK_COMMAND_BUFFER() AUTO_LOCK(s_CommandBufferMutex)
+static std::recursive_mutex s_CommandBufferMutex;
+std::vector< std::string > m_WhitelistedConvars;
 
 static FileAssociationInfo g_FileAssociations[] =
 {
@@ -90,24 +86,24 @@ static int gForwardedCommandQuota_nCount = 0;
 // special commands in the command buffer.
 //=============================================================================
 
-static CUtlVector<int> g_ExecutionMarkers;
+static std::vector< int > g_ExecutionMarkers;
 
 static int CreateExecutionMarker()
 {
-	if ( g_ExecutionMarkers.Count() > 2048 )
-		g_ExecutionMarkers.Remove( 0 );
+	if ( std::ssize( g_ExecutionMarkers ) > 2048 )
+		g_ExecutionMarkers.erase( g_ExecutionMarkers.begin() + 0 );
 
-	int i = g_ExecutionMarkers.AddToTail( RandomInt( 0, 1<<30 ) );
+	int i = std::ssize( g_ExecutionMarkers ); g_ExecutionMarkers.push_back( RandomInt( 0, 1<<30 ) );
 	return g_ExecutionMarkers[i];
 }
 
 static bool FindAndRemoveExecutionMarker( int iCode )
 {
-	int i = g_ExecutionMarkers.Find( iCode );
-	if ( i == g_ExecutionMarkers.InvalidIndex() )
+	int i = ks::find_index( g_ExecutionMarkers, iCode );
+	if ( i == -1 )
 		return false;
 	
-	g_ExecutionMarkers.Remove( i );
+	g_ExecutionMarkers.erase( g_ExecutionMarkers.begin() + i );
 	return true;
 }
 
@@ -184,7 +180,7 @@ void Cbuf_Clear( ECommandTarget_t eTarget )
 //-----------------------------------------------------------------------------
 void Cbuf_AddText( ECommandTarget_t eTarget, const char *pText, cmd_source_t cmdSource, int nTickDelay )
 {
-	LOCK_COMMAND_BUFFER();
+	std::scoped_lock lock( s_CommandBufferMutex );
 	if ( !s_CommandBuffer[ eTarget ].AddText( pText, cmdSource, nTickDelay ) )
 	{
 		ConMsg( "Cbuf_AddText: buffer overflow\n" );
@@ -197,7 +193,7 @@ void Cbuf_AddText( ECommandTarget_t eTarget, const char *pText, cmd_source_t cmd
 //-----------------------------------------------------------------------------
 void Cbuf_InsertText( ECommandTarget_t eTarget, const char *pText, cmd_source_t cmdSource, int nTickDelay )
 {
-	LOCK_COMMAND_BUFFER();
+	std::scoped_lock lock( s_CommandBufferMutex );
 	// NOTE: This operation is only allowed when the command buffer
 	// is in the middle of processing. If this assertion never triggers,
 	// it's safe to eliminate Cbuf_InsertText altogether.
@@ -208,7 +204,7 @@ void Cbuf_InsertText( ECommandTarget_t eTarget, const char *pText, cmd_source_t 
 
 bool Cbuf_IsProcessingCommands( ECommandTarget_t eTarget )
 {
-	LOCK_COMMAND_BUFFER();
+	std::scoped_lock lock( s_CommandBufferMutex );
 	return s_CommandBuffer[ eTarget ].IsProcessingCommands();
 }
 
@@ -259,7 +255,7 @@ void Cbuf_Execute()
 		ExecuteOnce( DebuggerBreakIfDebugging() );
 	}
 
-	LOCK_COMMAND_BUFFER();
+	std::scoped_lock lock( s_CommandBufferMutex );
 
 #if !defined( SPLIT_SCREEN_STUBS )
 	int nSaveIndex = GET_ACTIVE_SPLITSCREEN_SLOT();
@@ -364,7 +360,7 @@ CON_COMMAND( stuffcmds, "Parses and stuffs command line + commands to command bu
 
 	MEM_ALLOC_CREDIT();
 
-	CUtlBuffer build( 0, 0, CUtlBuffer::TEXT_BUFFER );
+	ks::text_writer build;
 
 	// arg[0] is the executable name
 	for ( int i=1; i < CommandLine()->ParmCount(); i++ )
@@ -396,7 +392,7 @@ CON_COMMAND( stuffcmds, "Parses and stuffs command line + commands to command bu
 						 ( szAppendParameter[0] != '-' ) )
 					{
 						szSecondParameterUsed = szAppendParameter;
-						build.PutString( va("%s %s %s\n", szParm+1, szValue, szSecondParameterUsed ) );
+						build.put( va("%s %s %s\n", szParm+1, szValue, szSecondParameterUsed ) );
 						++ i; // eat one parameter we used for map name
 						++ i; // eat another parameter that was second appended parameter
 					}
@@ -404,14 +400,14 @@ CON_COMMAND( stuffcmds, "Parses and stuffs command line + commands to command bu
 
 				if ( !szSecondParameterUsed )
 				{	// If we didn't use the second parameter, then just append command value to execution buffer
-					build.PutString( va("%s %s\n", szParm+1, szValue ) );
+					build.put( va("%s %s\n", szParm+1, szValue ) );
 					i++;
 				}
 			}
 			else
 			{
-				build.PutString(szParm+1);
-				build.PutChar('\n');
+				build.put(szParm+1);
+				build.put('\n');
 			}
 		}
 		else 
@@ -420,17 +416,15 @@ CON_COMMAND( stuffcmds, "Parses and stuffs command line + commands to command bu
 			char const *translated = Cmd_TranslateFileAssociation( CommandLine()->GetParm( i ) );
 			if (translated)
 			{
-				build.PutString(translated);
-				build.PutChar('\n');
+				build.put(translated);
+				build.put('\n');
 			}
 		}
 	}
 
-	build.PutChar( '\0' );
-		
-	if ( build.TellPut() > 1 )
+	if ( !build.empty() )
 	{
-		Cbuf_InsertText( Cbuf_GetCurrentPlayer(), (char *)build.Base(), args.Source() );
+		Cbuf_InsertText( Cbuf_GetCurrentPlayer(), build.c_str(), args.Source() );
 	}
 }
 
@@ -461,7 +455,7 @@ bool IsValidFileExtension( const char *pszFilename )
 
 bool IsWhiteListedCmd( const char *pszCmd )
 {
-	if ( m_WhitelistedConvars.Count() == 0 )
+	if ( m_WhitelistedConvars.empty() )
 	{
 		const char *svfileName = "bspconvar_whitelist.txt";
 		KeyValues *pKV_wl = new KeyValues( "convars" );
@@ -470,7 +464,7 @@ bool IsWhiteListedCmd( const char *pszCmd )
 			KeyValuesDumpAsDevMsg( pKV_wl );
 			for ( KeyValues *sub = pKV_wl->GetFirstSubKey(); sub; sub = sub->GetNextKey() )
 			{
-				m_WhitelistedConvars.CopyAndAddToTail( sub->GetName() );
+				m_WhitelistedConvars.emplace_back( sub->GetName() );
 			}
 		}
 		else
@@ -480,9 +474,9 @@ bool IsWhiteListedCmd( const char *pszCmd )
 		}
 	}
 
-	for ( int i = 0; i < m_WhitelistedConvars.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_WhitelistedConvars ); ++i )
 	{
-		if ( !Q_stricmp(m_WhitelistedConvars[i], pszCmd) )
+		if ( !Q_stricmp(m_WhitelistedConvars[i].c_str(), pszCmd) )
 		{
 			return true;
 		}
@@ -499,7 +493,7 @@ Cmd_Exec_f
 
 void _Cmd_Exec_f( const CCommand &args, bool bOnlyIfExists, bool bUseWhitelist = false )
 {
-	LOCK_COMMAND_BUFFER();
+	std::scoped_lock lock( s_CommandBufferMutex );
 	char	*f;
 	const char	*s;
 	char	fileName[MAX_OSPATH];
@@ -598,7 +592,7 @@ void _Cmd_Exec_f( const CCommand &args, bool bOnlyIfExists, bool bUseWhitelist =
 	CCommandBuffer &rCommandBuffer = s_CommandBuffer[ eTarget ];
 
 	// check to make sure we're not going to overflow the cmd_text buffer
-	int hCommand = rCommandBuffer.GetNextCommandHandle();
+	CommandHandle_t hCommand = rCommandBuffer.GetNextCommandHandle();
 
 	KeyValues *pKV_wl = new KeyValues( "convars" );
 
@@ -651,7 +645,7 @@ void _Cmd_Exec_f( const CCommand &args, bool bOnlyIfExists, bool bUseWhitelist =
 		// so we don't want to free what it allocated.
 		if ( f == original_f )
 		{
-			free( f );
+			g_pMemAlloc->Free( f );
 		}
 	}
 }
@@ -815,7 +809,7 @@ void Cmd_Shutdown( void )
 	while ( cmd_alias )
 	{
 		cmdalias_t *next = cmd_alias->next;
-		delete cmd_alias->value;	// created by StringCopy()
+		delete[] cmd_alias->value;	// created by StringCopy()
 		delete cmd_alias;
 		cmd_alias = next;
 	}

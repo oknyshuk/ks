@@ -15,9 +15,6 @@
 
 #include "cs_bot.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 LINK_ENTITY_TO_CLASS( cs_bot, CCSBot );
 
 
@@ -604,7 +601,7 @@ void CCSBot::UpdateHostageEscortCount( void )
 	// recount the hostages in case we lost some
 	m_hostageEscortCount = 0;
 
-	for( int i=0; i<g_Hostages.Count(); ++i )
+	for( int i=0; i<std::ssize( g_Hostages ); ++i )
 	{
 		CHostage *hostage = g_Hostages[i];
 
@@ -944,9 +941,8 @@ public:
 		// collect all the hiding spots in this area
 		const HidingSpotVector *pSpots = area->GetHidingSpots();
 
-		FOR_EACH_VEC( (*pSpots), it )
+		for ( const HidingSpot *spot : *pSpots )
 		{
-			const HidingSpot *spot = (*pSpots)[ it ];
 
 			if (m_count >= MAX_SPOTS)
 				break;
@@ -1139,7 +1135,7 @@ const char *CCSBot::GetMoraleName( void ) const
  */
 void CCSBot::BuildUserCmd( CUserCmd& cmd, const QAngle& viewangles, float forwardmove, float sidemove, float upmove, int buttons, byte impulse )
 {
-	Q_memset( &cmd, 0, sizeof( cmd ) );
+	cmd.Reset();
 	if ( !RunMimicCommand( cmd ) )
 	{
 		// Don't walk when ducked - it's painfully slow
@@ -1180,14 +1176,14 @@ void CCSBot::AvoidPlayers( CUserCmd *pCmd )
 	Vector forward, right;
 	EyeVectors( &forward, &right );
 
-	CUtlVector< CCSPlayer * > playerVector;
+	std::vector< CCSPlayer * > playerVector;
 	CollectPlayers( &playerVector, GetTeamNumber(), COLLECT_ONLY_LIVING_PLAYERS );
 
 	Vector avoidVector = vec3_origin;
 
 	float tooClose = 2.0f * HalfHumanWidth;
 
-	for( int i=0; i<playerVector.Count(); ++i )
+	for( int i=0; i<std::ssize( playerVector ); ++i )
 	{
 		CCSPlayer *them = playerVector[i];
 

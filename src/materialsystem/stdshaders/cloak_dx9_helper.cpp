@@ -17,9 +17,6 @@
 #include "cloak_vs30.inc"
 #include "cloak_ps30.inc"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 static ConVar r_lightwarpidentity( "r_lightwarpidentity", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 
@@ -210,7 +207,7 @@ void DrawCloak_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 				//
 				// In general, cloaking on ps_2_0 needs re-working for multipass...yuck...
 				//
-				int nPS20NumLights = MAX( lightState.m_nNumLights, 1 );
+				int nPS20NumLights = std::max( lightState.m_nNumLights, 1 );
 				DECLARE_DYNAMIC_PIXEL_SHADER( cloak_ps20 );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( NUM_LIGHTS, nPS20NumLights );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( WRITEWATERFOGTODESTALPHA,  fogType == MATERIAL_FOG_LINEAR_BELOW_FOG_Z );
@@ -262,7 +259,7 @@ void DrawCloak_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 		if ( bHasRimLight && (info.m_nRimLightPower != -1) && params[info.m_nRimLightPower]->IsDefined() )
 		{
 			vSpecularTint[3] = params[info.m_nRimLightPower]->GetFloatValue();
-			vSpecularTint[3] = MAX(vSpecularTint[3], 1.0f);	// Make sure this is at least 1
+			vSpecularTint[3] = std::max(vSpecularTint[3], 1.0f);	// Make sure this is at least 1
 		}
 
 		// Get the rim boost power (goes in w of flashlight position)

@@ -19,17 +19,14 @@
 #include "tier1/keyvalues.h"
 #include "tier0/vprof.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define  R_STUDIOSUBD 
 #include "r_studiosubd_patches.h"
 
 #ifdef _DEBUG
 // Temporary debug arrays
-extern CUtlVector<Vector4D> g_DebugCornerPositions;
-extern CUtlVector<Vector4D> g_DebugEdgePositions;
-extern CUtlVector<Vector4D> g_DebugInteriorPositions;
+extern std::vector< Vector4D > g_DebugCornerPositions;
+extern std::vector< Vector4D > g_DebugEdgePositions;
+extern std::vector< Vector4D > g_DebugInteriorPositions;
 #endif
 
 //
@@ -144,10 +141,10 @@ bool NotQuiteEqual( Vector4D &vA, Vector4D &vB )
 void DumpDebugPositions()
 {
 
-	for ( int i=0; i< g_DebugCornerPositions.Count(); i++ )
+	for ( int i=0; i< std::ssize( g_DebugCornerPositions ); i++ )
 	{
 		bool bCrack = false;
-		for ( int j=0; j< g_DebugCornerPositions.Count(); j++ )
+		for ( int j=0; j< std::ssize( g_DebugCornerPositions ); j++ )
 		{
 			if ( NotQuiteEqual( g_DebugCornerPositions[i], g_DebugCornerPositions[j] ) )
 			{
@@ -159,10 +156,10 @@ void DumpDebugPositions()
 		DevMsg( "%s C - %.15f, %.15f, %.15f\n", bCrack ? "*** " : "    ", g_DebugCornerPositions[i].x, g_DebugCornerPositions[i].y, g_DebugCornerPositions[i].z );
 	}
 
-	for ( int i=0; i< g_DebugEdgePositions.Count(); i++ )
+	for ( int i=0; i< std::ssize( g_DebugEdgePositions ); i++ )
 	{
 		bool bCrack = false;
-		for ( int j=0; j< g_DebugEdgePositions.Count(); j++ )
+		for ( int j=0; j< std::ssize( g_DebugEdgePositions ); j++ )
 		{
 			if ( NotQuiteEqual( g_DebugEdgePositions[i], g_DebugEdgePositions[j] ) )
 			{
@@ -173,10 +170,10 @@ void DumpDebugPositions()
 		DevMsg( "%s E - %.15f, %.15f, %.15f\n", bCrack ? "*** " : "    ", g_DebugEdgePositions[i].x, g_DebugEdgePositions[i].y, g_DebugEdgePositions[i].z );
 	}
 
-	for ( int i=0; i< g_DebugInteriorPositions.Count(); i++ )
+	for ( int i=0; i< std::ssize( g_DebugInteriorPositions ); i++ )
 	{
 		bool bCrack = false;
-		for ( int j=0; j< g_DebugInteriorPositions.Count(); j++ )
+		for ( int j=0; j< std::ssize( g_DebugInteriorPositions ); j++ )
 		{
 			if ( NotQuiteEqual( g_DebugInteriorPositions[i], g_DebugInteriorPositions[j] ) )
 			{
@@ -208,14 +205,14 @@ void GenerateWorldSpacePatches( float *pSubDBuff, int nNumPatches, unsigned shor
 	if ( mat_tess_dump.GetBool() )
 	{
 		// Debug Arrays
-		g_DebugCornerPositions.EnsureCapacity( nNumPatches * 4 );
-		g_DebugEdgePositions.EnsureCapacity( nNumPatches * 8 );
-		g_DebugInteriorPositions.EnsureCapacity( nNumPatches * 4 );
+		g_DebugCornerPositions.reserve( nNumPatches * 4 );
+		g_DebugEdgePositions.reserve( nNumPatches * 8 );
+		g_DebugInteriorPositions.reserve( nNumPatches * 4 );
 
 		// Empty the arrays this time around
-		g_DebugCornerPositions.RemoveAll();
-		g_DebugEdgePositions.RemoveAll();
-		g_DebugInteriorPositions.RemoveAll();
+		g_DebugCornerPositions.clear();
+		g_DebugEdgePositions.clear();
+		g_DebugInteriorPositions.clear();
 	}
 #endif
 
@@ -259,9 +256,9 @@ void GenerateWorldSpacePatches( float *pSubDBuff, int nNumPatches, unsigned shor
 	if ( mat_tess_dump.GetBool() )
 	{
 		// These should be a particular size
-		Assert( g_DebugCornerPositions.Count() == ( nNumPatches * 4 ) );
-		Assert( g_DebugEdgePositions.Count() == ( nNumPatches * 8 ) );
-		Assert( g_DebugInteriorPositions.Count() == ( nNumPatches * 4 ) );
+		Assert( std::ssize( g_DebugCornerPositions ) == ( nNumPatches * 4 ) );
+		Assert( std::ssize( g_DebugEdgePositions ) == ( nNumPatches * 8 ) );
+		Assert( std::ssize( g_DebugInteriorPositions ) == ( nNumPatches * 4 ) );
 
 		DumpDebugPositions();
 		mat_tess_dump.SetValue( 0 );		// Turn back off

@@ -31,13 +31,10 @@
 #include "ivideomode.h"
 #include "sys_dll.h"
 #include "collisionutils.h"
-#include "tier1/utlstack.h"
+#include <vector>
 #include "r_decal.h"
 #include "cl_main.h"
 #include "paint.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 extern ConVar r_waterforceexpensive;
 
@@ -61,8 +58,8 @@ extern Vector g_MainViewUp[ MAX_SPLITSCREEN_CLIENTS ];
 bool g_bCanAccessCurrentView = false;
 
 int	d_lightstyleframe[256];
-CUtlVector<LightmapUpdateInfo_t> g_LightmapUpdateList;
-CUtlVector<LightmapTransformInfo_t> g_LightmapTransformList;
+std::vector< LightmapUpdateInfo_t > g_LightmapUpdateList;
+std::vector< LightmapTransformInfo_t > g_LightmapTransformList;
 
 void ProjectPointOnPlane( Vector& dst, const Vector& p, const Vector& normal )
 {
@@ -219,12 +216,12 @@ void R_DrawPortals()
 	}
 
 	// Draw the clip rectangles.
-	for( int i=0; i < g_PortalRects.Count(); i++ )
+	for( int i=0; i < std::ssize( g_PortalRects ); i++ )
 	{
 		CPortalRect *pRect = &g_PortalRects[i];
 		R_DrawScreenRect( pRect->left, pRect->top, pRect->right, pRect->bottom );
 	}
-	g_PortalRects.Purge();
+	g_PortalRects.clear(); g_PortalRects.shrink_to_fit();
 }
 
 
@@ -302,8 +299,8 @@ private:
 	// Clear the view (assumes the render target has already been pushed)
 	void ClearView( IMatRenderContext *pRenderContext, CViewSetup &view, int nFlags, ITexture* pRenderTarget, ITexture* pDepthTexture = nullptr );
 
-	const CViewSetup &CurrentView() const { return m_ViewStack.Top().m_View; }
-	CViewSetup &CurrentView() { return m_ViewStack.Top().m_View; }
+	const CViewSetup &CurrentView() const { return m_ViewStack.back().m_View; }
+	CViewSetup &CurrentView() { return m_ViewStack.back().m_View; }
 
 	// Stack of view info
 	struct ViewStack_t
@@ -334,7 +331,7 @@ private:
 	VMatrix		m_matrixProjection;
 	VMatrix		m_matrixWorldToScreen;
 
-	CUtlStack< ViewStack_t > m_ViewStack;
+	std::vector< ViewStack_t > m_ViewStack;
 	int m_iLightmapUpdateDepth;
 };
 
@@ -352,7 +349,8 @@ IRender *g_EngineRenderer = &gRender;
 CRender::CRender()
 {
 	// Make sure the stack isn't empty
-	int i = m_ViewStack.Push();
+	const int i = std::ssize( m_ViewStack );
+	m_ViewStack.emplace_back();
 	memset( &m_ViewStack[i], 0, sizeof( CViewSetup ) );
 	m_ViewStack[i].m_bIs2DView = true;
 	m_iLightmapUpdateDepth = 0;
@@ -378,8 +376,8 @@ void CRender::FrameBegin( void )
 			R_PushDlights();
 		}
 
-		g_LightmapTransformList.RemoveAll();
-		int index = g_LightmapTransformList.AddToTail();
+		g_LightmapTransformList.clear();
+		int index = std::ssize( g_LightmapTransformList ); g_LightmapTransformList.emplace_back();
 		g_LightmapTransformList[index].pModel = host_state.worldmodel;
 		SetIdentityMatrix( g_LightmapTransformList[index].xform );
 	}
@@ -433,16 +431,16 @@ void CRender::FrameEnd( void )
 
 	g_pStudioRender->GatherRenderedFaceInfo( PrintRenderedFaceInfoCallback );
 
-	g_LightmapTransformList.RemoveAll();
+	g_LightmapTransformList.clear();
 }
 
 
 const VMatrix &CRender::ViewMatrix( ) 
 { 
 	// If we aren't in a valid view, then use the last value cached off into the global variable instead
-	if ( m_ViewStack.Count() > 1 )
+	if ( std::ssize( m_ViewStack ) > 1 )
 	{
-		return m_ViewStack.Top().m_matrixView;
+		return m_ViewStack.back().m_matrixView;
 	}
 	return m_matrixView; 
 }
@@ -450,9 +448,9 @@ const VMatrix &CRender::ViewMatrix( )
 const VMatrix &CRender::WorldToScreenMatrix( void ) 
 { 
 	// If we aren't in a valid view, then use the last value cached off into the global variable instead
-	if ( m_ViewStack.Count() > 1 )
+	if ( std::ssize( m_ViewStack ) > 1 )
 	{
-		return m_ViewStack.Top().m_matrixWorldToScreen; 
+		return m_ViewStack.back().m_matrixWorldToScreen; 
 	}
 	return m_matrixWorldToScreen;
 }
@@ -497,7 +495,7 @@ void CRender::OnViewActive( Frustum frustumPlanes )
 		OcclusionSystem()->SetView( view.origin, view.fov, m_matrixView, m_matrixProjection, frustumPlanes[ FRUSTUM_NEARZ ] );
 	}
 
-	if ( !m_ViewStack.Top().m_bNoDraw )
+	if ( !m_ViewStack.back().m_bNoDraw )
 	{
 		R_SceneBegin( );
 	}
@@ -604,7 +602,8 @@ void ComputeWorldToScreenMatrix( VMatrix *pWorldToScreen, const VMatrix &worldTo
 void CRender::Push3DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes, ITexture* pDepthTexture )
 {
 
-	int i = m_ViewStack.Push( );
+	const int i = std::ssize( m_ViewStack );
+	m_ViewStack.emplace_back();
 	m_ViewStack[i].m_View = view;
 	m_ViewStack[i].m_bIs2DView = false;
 	m_ViewStack[i].m_bNoDraw = ( ( nFlags & VIEW_NO_DRAW ) != 0 );
@@ -617,7 +616,7 @@ void CRender::Push3DView( IMatRenderContext *pRenderContext, const CViewSetup &v
 		topView.m_flAspectRatio = (topView.height != 0) ? ( (float)topView.width / (float)topView.height ) : 1.0f;
 	}
 
-	ViewStack_t &viewStack = m_ViewStack.Top();
+	ViewStack_t &viewStack = m_ViewStack.back();
 	topView.m_flAspectRatio = topView.ComputeViewMatrices( &viewStack.m_matrixView, 
 		&viewStack.m_matrixProjection, &viewStack.m_matrixWorldToScreen );
 
@@ -658,7 +657,8 @@ void CRender::Push3DView( IMatRenderContext *pRenderContext, const CViewSetup &v
 
 void CRender::Push2DView( IMatRenderContext *pRenderContext, const CViewSetup &view, int nFlags, ITexture* pRenderTarget, Frustum frustumPlanes )
 {
-	int i = m_ViewStack.Push( );
+	const int i = std::ssize( m_ViewStack );
+	m_ViewStack.emplace_back();
 	m_ViewStack[i].m_View = view;
 	m_ViewStack[i].m_bIs2DView = true;
 	m_ViewStack[i].m_bNoDraw = ( ( nFlags & VIEW_NO_DRAW ) != 0 );
@@ -697,7 +697,7 @@ void CRender::Push2DView( IMatRenderContext *pRenderContext, const CViewSetup &v
 
 void CRender::PopView( IMatRenderContext *pRenderContext, Frustum frustumPlanes )
 {
-	if ( !m_ViewStack.Top().m_bNoDraw )
+	if ( !m_ViewStack.back().m_bNoDraw )
 	{
 		pRenderContext->MatrixMode( MATERIAL_PROJECTION );
 		pRenderContext->PopMatrix();
@@ -711,20 +711,20 @@ void CRender::PopView( IMatRenderContext *pRenderContext, Frustum frustumPlanes 
 		pRenderContext->PopRenderTargetAndViewport( );
 	}
 
-	bool bReset = ( m_ViewStack.Count() > 1 ) ? true : false;
-	m_ViewStack.Pop();
+	bool bReset = ( std::ssize( m_ViewStack ) > 1 ) ? true : false;
+	m_ViewStack.pop_back();
 
 	// Don't pop off the very last view
 	g_bCanAccessCurrentView = false;
 
 	if ( bReset )
 	{
-		if ( !m_ViewStack.Top().m_bIs2DView )
+		if ( !m_ViewStack.back().m_bIs2DView )
 		{
 			ExtractMatrices();
 			
-			m_zNear = m_ViewStack.Top().m_View.zNear;
-			m_zFar = m_ViewStack.Top().m_View.zFar;
+			m_zNear = m_ViewStack.back().m_View.zNear;
+			m_zFar = m_ViewStack.back().m_View.zFar;
 
 			OnViewActive( frustumPlanes );
 		}
@@ -748,7 +748,7 @@ void CRender::BeginUpdateLightmaps( void )
 {
 	if ( ++m_iLightmapUpdateDepth  == 1)
 	{
-		Assert( g_LightmapUpdateList.Count() == 0 );
+		Assert( std::ssize( g_LightmapUpdateList ) == 0 );
 		materials->BeginUpdateLightmaps();
 	}
 }
@@ -765,7 +765,7 @@ void CRender::UpdateBrushModelLightmap( model_t *model, IClientRenderable *pRend
 
 	if ( (model->flags & MODELFLAG_HAS_DLIGHT) || bLightingChanged )
 	{
-		int transformIndex = g_LightmapTransformList.AddToTail();
+		int transformIndex = std::ssize( g_LightmapTransformList ); g_LightmapTransformList.emplace_back();
 		LightmapTransformInfo_t &transform = g_LightmapTransformList[transformIndex];
 		transform.pModel = model;
 		AngleMatrix( pRenderable->GetRenderAngles(), pRenderable->GetRenderOrigin(), transform.xform );
@@ -799,7 +799,7 @@ void CRender::EndUpdateLightmaps( void )
 	if ( --m_iLightmapUpdateDepth == 0 )
 	{
 		VPROF_BUDGET( "EndUpdateLightmaps", VPROF_BUDGETGROUP_DLIGHT_RENDERING );
-		if ( g_LightmapUpdateList.Count() && r_dynamiclighting.GetBool() && !r_unloadlightmaps.GetBool() )
+		if ( std::ssize( g_LightmapUpdateList ) && r_dynamiclighting.GetBool() && !r_unloadlightmaps.GetBool() )
 		{
 			VPROF_("R_BuildLightmapUpdateList", 1, VPROF_BUDGETGROUP_DLIGHT_RENDERING, false, 0);
 			R_BuildLightmapUpdateList();
@@ -809,7 +809,7 @@ void CRender::EndUpdateLightmaps( void )
 			materials->EndUpdateLightmaps();
 		}
 		{
-			g_LightmapUpdateList.RemoveAll();
+			g_LightmapUpdateList.clear();
 			VPROF_("lightmap_RemoveAll", 1, VPROF_BUDGETGROUP_DLIGHT_RENDERING, false, 0);
 		}
 	}
@@ -1018,9 +1018,9 @@ void CRender::OverrideViewFrustum( Frustum custom )
 
 void CRender::ExtractMatrices( void )
 {
-	m_matrixView = m_ViewStack.Top().m_matrixView;
-	m_matrixProjection = m_ViewStack.Top().m_matrixProjection;
-	m_matrixWorldToScreen = m_ViewStack.Top().m_matrixWorldToScreen;
+	m_matrixView = m_ViewStack.back().m_matrixView;
+	m_matrixProjection = m_ViewStack.back().m_matrixProjection;
+	m_matrixWorldToScreen = m_ViewStack.back().m_matrixWorldToScreen;
 }
 
 void CRender::SetViewport( int x, int y, int w, int h )
@@ -1179,7 +1179,7 @@ void CRender::BuildWorldLists( IWorldRenderList *pList, WorldListInfo_t* pInfo, 
 	VPROF_INCREMENT_COUNTER( "BuildWorldLists", 1 );
 
 	Assert( pList );
-	Assert( m_iLightmapUpdateDepth > 0 || g_LightmapUpdateList.Count() == 0 );
+	Assert( m_iLightmapUpdateDepth > 0 || std::ssize( g_LightmapUpdateList ) == 0 );
 
 	if ( !bShadowDepth )
 	{
@@ -1193,13 +1193,13 @@ void CRender::BuildWorldLists( IWorldRenderList *pList, WorldListInfo_t* pInfo, 
 		EndUpdateLightmaps();
 	}
 
-	Assert( m_iLightmapUpdateDepth > 0 || g_LightmapUpdateList.Count() == 0 );
+	Assert( m_iLightmapUpdateDepth > 0 || std::ssize( g_LightmapUpdateList ) == 0 );
 }
 
 void CRender::BuildWorldLists_Epilogue( IWorldRenderList *pList, WorldListInfo_t* pInfo, bool bShadowDepth )
 {	
 	Assert( pList );
-	Assert( m_iLightmapUpdateDepth > 0 || g_LightmapUpdateList.Count() == 0 );
+	Assert( m_iLightmapUpdateDepth > 0 || std::ssize( g_LightmapUpdateList ) == 0 );
 
 	if ( !bShadowDepth )
 	{
@@ -1213,7 +1213,7 @@ void CRender::BuildWorldLists_Epilogue( IWorldRenderList *pList, WorldListInfo_t
 		EndUpdateLightmaps();
 	}
 
-	Assert( m_iLightmapUpdateDepth > 0 || g_LightmapUpdateList.Count() == 0 );
+	Assert( m_iLightmapUpdateDepth > 0 || std::ssize( g_LightmapUpdateList ) == 0 );
 }
 
 void CRender::DrawWorldLists( IMatRenderContext *pRenderContext, IWorldRenderList *pList, unsigned long flags, float flWaterZAdjust )

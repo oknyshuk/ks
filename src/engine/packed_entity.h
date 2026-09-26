@@ -9,9 +9,10 @@
 #if !defined( PACKED_ENTITY_H )
 #define PACKED_ENTITY_H
 
+#include <atomic>
+#include <span>
 #include <const.h>
 #include <basetypes.h>
-#include <mempool.h>
 #include <utlvector.h>
 #include <tier0/dbg.h>
 
@@ -81,8 +82,8 @@ public:
 	const CSendProxyRecipients*	GetRecipients() const;
 	int							GetNumRecipients() const;
 
-	void				SetRecipients( const CUtlMemory<CSendProxyRecipients> &recipients );
-	bool				CompareRecipients( const CUtlMemory<CSendProxyRecipients> &recipients ) const;
+	void				SetRecipients( std::span<const CSendProxyRecipients> recipients );
+	bool				CompareRecipients( std::span<const CSendProxyRecipients> recipients ) const;
 
 	void				SetSnapshotCreationTick( int nTick );
 	int					GetSnapshotCreationTick() const;
@@ -98,11 +99,11 @@ public:
 	ClientClass	*m_pClientClass;	// Valid on the client
 		
 	int			m_nEntityIndex;		// Entity index.
-	CInterlockedInt 	m_ReferenceCount;	// reference count;
+	std::atomic<int>	m_ReferenceCount;	// reference count;
 
 private:
 
-	CUtlVector<CSendProxyRecipients>	m_Recipients;
+	std::vector< CSendProxyRecipients >	m_Recipients;
 
 	SerializedEntityHandle_t			m_SerializedEntity;
 	CChangeFrameList	*m_pChangeFrameList;	// Only the most current 

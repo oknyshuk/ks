@@ -9,9 +9,6 @@
 #include "game.h"
 #include "physics.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 void MapCycleFileChangedCallback( IConVar *var, const char *pOldString, float flOldValue )
 {
 	if ( Q_stricmp( pOldString, mapcyclefile.GetString() ) != 0 )

@@ -11,7 +11,7 @@
 
 #include "appframework/iappsystem.h"
 #include "tier1/utlstring.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/byte_writer.h"
 
 
 //-----------------------------------------------------------------------------
@@ -35,22 +35,22 @@ public:
 
 	// Read whatever is available without blocking.
 	// This is the same as Read( sStr, GetNumBytesAvailable() ).
-	virtual void ReadAvailable( CUtlString &sStr, int32 nMaxBytes=PIPEREAD_INFINITE  ) = 0;
-	virtual void ReadAvailable( CUtlBuffer* pOutBuffer, int32 nMaxBytes=PIPEREAD_INFINITE  ) = 0;
+	virtual void ReadAvailable( std::string &sStr, int32 nMaxBytes=PIPEREAD_INFINITE  ) = 0;
+	virtual void ReadAvailable( ks::byte_writer *pOutBuffer, int32 nMaxBytes=PIPEREAD_INFINITE ) = 0;
 
 
 	// (POTENTIALLY) BLOCKING FUNCTIONS
 
 	// Read one line of output (also returns when the process quits).
 	// sStr will not include the \n (or \r\n) at the end of the line.
-	virtual void ReadLine( CUtlString &sStr ) = 0;
+	virtual void ReadLine( std::string &sStr ) = 0;
 
 	// This will block the calling thread until it gets the number of bytes specified
 	// or until the process exits. If sStr.Length() != nBytes, then you know the process exited.
 	//
 	// The returned string will always be null-terminated.
 	// If you call with nBytes=PIPEREAD_INFINITE, it'll read until the process exits.
-	virtual void Read( CUtlString &sStr, int32 nBytes=PIPEREAD_INFINITE ) = 0;
+	virtual void Read( std::string &sStr, int32 nBytes=PIPEREAD_INFINITE ) = 0;
 };
 
 
@@ -118,7 +118,7 @@ public:
 	// If not, then the text output is ignored.
 	//
 	// Returns -1 if it was unable to run the process. Otherwise, returns the exit code from the process.
-	virtual int SimpleRunProcess( const char *pCommandLine, const char *pWorkingDir=nullptr, CUtlString *pStdout=nullptr ) = 0;
+	virtual int SimpleRunProcess( const char *pCommandLine, const char *pWorkingDir=nullptr, std::string *pStdout=nullptr ) = 0;
 };
 
 DECLARE_TIER1_INTERFACE( IProcessUtils, g_pProcessUtils );

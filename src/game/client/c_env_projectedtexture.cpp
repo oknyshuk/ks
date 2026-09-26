@@ -20,9 +20,6 @@
 #include "tier0/platform.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 float C_EnvProjectedTexture::m_flVisibleBBoxMinHeight = -FLT_MAX;
 
 
@@ -447,8 +444,8 @@ bool C_EnvProjectedTexture::Simulate( void )
 bool C_EnvProjectedTexture::IsBBoxVisible( Vector vecExtentsMin, Vector vecExtentsMax )
 {
 	// Z position clamped to the min height (but must be less than the max)
-	float flVisibleBBoxMinHeight = MIN( vecExtentsMax.z - 1.0f, m_flVisibleBBoxMinHeight );
-	vecExtentsMin.z = MAX( vecExtentsMin.z, flVisibleBBoxMinHeight );
+	float flVisibleBBoxMinHeight = std::min( vecExtentsMax.z - 1.0f, m_flVisibleBBoxMinHeight );
+	vecExtentsMin.z = std::max( vecExtentsMin.z, flVisibleBBoxMinHeight );
 
 	// Check if the bbox is in the view
 	return !engine->CullBox( vecExtentsMin, vecExtentsMax );

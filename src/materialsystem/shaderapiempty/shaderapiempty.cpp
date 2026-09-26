@@ -18,9 +18,6 @@
 #include "materialsystem/deformations.h"
 #include "shaderapi_builtin.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // The empty mesh

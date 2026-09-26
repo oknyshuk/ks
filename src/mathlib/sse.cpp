@@ -12,9 +12,6 @@
 #include "mathlib/vector.h"
 #include "sse.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static const uint32 _sincos_masks[]	  = { (uint32)0x0,  (uint32)~0x0 };
 static const uint32 _sincos_inv_masks[] = { (uint32)~0x0, (uint32)0x0 };
 
@@ -59,7 +56,7 @@ _PS_CONST(sincos_p2, 0.7969262624561800806e-1f);
 _PS_CONST(sincos_p3, -0.468175413106023168e-2f);
 
 #ifdef PFN_VECTORMA
-void  __cdecl _SSE_VectorMA( const float *start, float scale, const float *direction, float *dest );
+void  _SSE_VectorMA( const float *start, float scale, const float *direction, float *dest );
 #endif
 
 //-----------------------------------------------------------------------------

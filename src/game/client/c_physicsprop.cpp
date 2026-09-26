@@ -19,9 +19,6 @@
 #include "ivrenderview.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 IMPLEMENT_REFLECT_CLIENTCLASS( C_PhysicsProp, DT_PhysicsProp, CPhysicsProp )
 
 // We discard VVD data on consoles to save memory, so we cannot compute static lighting for models at run-time:

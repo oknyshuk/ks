@@ -250,8 +250,8 @@ namespace ColorSpace
 	{
 		unsigned short out;
 		in = in * ( 1 << nFractionalBits );
-		in = MIN( in, 65535 );
-		out = ( unsigned short ) MAX( in, 0.0f );
+		in = std::min<std::common_type_t<float, int>>( in, 65535 );
+		out = ( unsigned short ) std::max( in, 0.0f );
 		return out;
 	}
 

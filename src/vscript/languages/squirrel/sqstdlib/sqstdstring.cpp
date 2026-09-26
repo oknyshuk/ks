@@ -8,7 +8,6 @@
 #include <ctype.h>
 #include <assert.h>
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#include "memdbgon.h"
 #endif
 
 #ifdef SQUNICODE

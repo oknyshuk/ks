@@ -17,9 +17,6 @@
 #include "engineui.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static ConVar sv_forcepreload( "sv_forcepreload", "0", FCVAR_ARCHIVE, "Force server side preloading.");
 
 //-----------------------------------------------------------------------------
@@ -248,7 +245,6 @@ int CGameServer::PrecacheModel( char const *name, int flags, model_t *model /*=N
 		else
 		{
 			modelloader->ReferenceModel( name, IModelLoader::FMODELLOADER_SERVER );
-			slot->SetModel( nullptr );
 		}
 	}
 

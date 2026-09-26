@@ -10,6 +10,7 @@
 
 #include "cbase.h"
 #include "cs_client_gamestats.h"
+#include "tier1/intern_pool.h"
 #include "achievementmgr.h"
 #include "usermessages.h"
 #include "c_cs_player.h"
@@ -28,9 +29,6 @@
 #include "hltvreplaysystem.h"
 
 
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 // Added to facilitate data collection below. Add and remove to match current experimental column data
 
@@ -144,7 +142,7 @@ void CCSClientGameStats::PostInit()
 	for ( int hh = 0; hh < MAX_SPLITSCREEN_PLAYERS; ++hh )
 	{
 		ACTIVE_SPLITSCREEN_PLAYER_GUARD( hh );
-		m_UMCMsgPlayerStatsUpdate.Bind< ks::net::CS_UM_PlayerStatsUpdate, ks::net::CCSUsrMsg_PlayerStatsUpdate>( UtlMakeDelegate( ::MsgFunc_PlayerStatsUpdate ));
+		m_UMCMsgPlayerStatsUpdate.Bind< ks::net::CS_UM_PlayerStatsUpdate, ks::net::CCSUsrMsg_PlayerStatsUpdate>( ::MsgFunc_PlayerStatsUpdate);
 	}
 
 	m_RoundEndReason = Invalid_Round_End_Reason;
@@ -965,11 +963,10 @@ void CCSClientGameStats::WriteLeaderboardStats( void )
 		if ( pkv )
 		{
 			// Run through all medals to determine how many have been unlocked
-			CUtlMap<int, CBaseAchievement *> &achievements = g_AchievementMgrCS.GetAchievements( userID );
 			DWORD nMedalCount = 0;
-			for ( int i=achievements.FirstInorder(); i!=achievements.InvalidIndex(); i=achievements.NextInorder(i) )
+			for ( const auto &[nID, pAchievement] : g_AchievementMgrCS.GetAchievements( userID ) )
 			{
-				if ( achievements[i]->IsAchieved() )
+				if ( pAchievement->IsAchieved() )
 					++nMedalCount;
 			}
 
@@ -1052,12 +1049,12 @@ char const *g_CSClientCsgoGameEventTypeNames[] = {
 
 void CCSClientGameStats::AddClientCSGOGameEvent( CSClientCsgoGameEventType_t eEvent, Vector const &pos, QAngle const &ang, uint64 ullData /* = 0ull */, char const *szMapName /* = NULL */, int16 nRound /* = CSCLIENTCSGOGAMEEVENTTYPE_AUTODETECT_INT16 */, int16 nRoundSecondsElapsed /* = CSCLIENTCSGOGAMEEVENTTYPE_AUTODETECT_INT16 */ )
 {
-	CsgoGameEvent_t &cge = m_arrClientCsgoGameEvents[ m_arrClientCsgoGameEvents.AddToTail() ];
+	CsgoGameEvent_t &cge = m_arrClientCsgoGameEvents.emplace_back();
 	cge.m_eEvent = eEvent;
 	cge.m_pos = pos;
 	cge.m_ang = ang;
 	cge.m_ullData = ullData;
-	cge.m_symMap = CUtlSymbol( ( szMapName && *szMapName ) ? szMapName : engine->GetLevelNameShort() );
+	cge.m_symMap = ks::global_symbols().intern( ( szMapName && *szMapName ) ? szMapName : engine->GetLevelNameShort() );
 	cge.m_nRound = nRound;
 	if ( nRound == CSCLIENTCSGOGAMEEVENTTYPE_AUTODETECT_INT16 )
 	{
@@ -1096,7 +1093,7 @@ CCSClientGameStats::StatContainerList_t* CCSClientGameStats::s_StatLists = new C
 void CCSClientGameStats::UploadRoundStats()
 {
 	// Upload all client game events, and remove the ones that we don't need to reupload
-	FOR_EACH_VEC( m_arrClientCsgoGameEvents, i )
+	for ( int i = 0; i < std::ssize( m_arrClientCsgoGameEvents ); i++ )
 	{
 		CsgoGameEvent_t const &cge = m_arrClientCsgoGameEvents[i];
 		char const *szEvent = g_CSClientCsgoGameEventTypeNames[0];
@@ -1104,10 +1101,15 @@ void CCSClientGameStats::UploadRoundStats()
 		if ( ( cge.m_eEvent > 0 ) && ( cge.m_eEvent < Q_ARRAYSIZE( g_CSClientCsgoGameEventTypeNames ) ) )
 			szEvent = g_CSClientCsgoGameEventTypeNames[cge.m_eEvent];
 
-		if ( GetSteamWorksGameStatsClient().AddCsgoGameEventStat( cge.m_symMap.String(), szEvent, cge.m_pos, cge.m_ang, cge.m_ullData, cge.m_nRound, cge.m_numRoundSeconds )
+		if ( GetSteamWorksGameStatsClient().AddCsgoGameEventStat( cge.m_symMap.data(), szEvent, cge.m_pos, cge.m_ang, cge.m_ullData, cge.m_nRound, cge.m_numRoundSeconds )
 			|| !cge.m_bRequireMoreReliableUpload )
-			m_arrClientCsgoGameEvents.Remove( i -- );
+			m_arrClientCsgoGameEvents.erase( m_arrClientCsgoGameEvents.begin() + ( i -- ) );
 	}
+
+	// Game rules are gone once the client disconnects; there is no round to upload.
+	CCSGameRules *pGameRules = CSGameRules();
+	if ( !pGameRules )
+		return;
 
 	C_CSPlayer *pPlayer = ToCSPlayer( C_BasePlayer::GetLocalPlayer() );
 
@@ -1119,7 +1121,7 @@ void CCSClientGameStats::UploadRoundStats()
 	// Need to have played more than 10 seconds. If you haven't, then that means it's a nop round when first joining a server and having it restart
 	// due to having players on it. Also need to ensure that rounds played is greater than 0 since we'll be subtracting 1 to make it 0 based.
 	bool bIsValidTimedMatch = ( m_roundStats[0][CSSTAT_PLAYTIME] > 10 && m_matchStats[0][CSSTAT_ROUNDS_PLAYED] > 0 );
-	bool bIsValidArmsRaceMatch = CSGameRules()->IsPlayingGunGameProgressive() && ( m_RoundEndReason == CTs_Win || m_RoundEndReason == Terrorists_Win );
+	bool bIsValidArmsRaceMatch = pGameRules->IsPlayingGunGameProgressive() && ( m_RoundEndReason == CTs_Win || m_RoundEndReason == Terrorists_Win );
 
 	if ( pPlayer && ( bIsValidTimedMatch || bIsValidArmsRaceMatch ) )
 	{
@@ -1131,7 +1133,7 @@ void CCSClientGameStats::UploadRoundStats()
 		}
 		// Use servers count of rounds this match, not rounds played by this player.
 		//pRoundData->nRound = m_matchStats[0][CSSTAT_ROUNDS_PLAYED] - 1;
-		roundData.nRound = CSGameRules( )->GetTotalRoundsPlayed( );
+		roundData.nRound = pGameRules->GetTotalRoundsPlayed( );
 
 		if ( cl_debug_round_stat_submission.GetBool() )
 		{
@@ -1264,7 +1266,7 @@ void CCSClientGameStats::UploadRoundStats()
 		if ( cl_debug_round_stat_submission.GetBool() )
 			Msg( "Setting team num %d", roundData.nTeamID );
 
-		if( CSGameRules()->IsPlayingGunGameProgressive() )
+		if( pGameRules->IsPlayingGunGameProgressive() )
 		{
 			roundData.nRoundScore = m_roundStats[ 0 ][ CSSTAT_GG_PROGRESSIVE_CONTRIBUTION_SCORE ];
 		}
@@ -1299,7 +1301,7 @@ void CCSClientGameStats::UploadRoundStats()
 		// Perform the actual submission
 		SubmitGameStats( pKV );
 
-		sLastRoundSubmitted = CSGameRules()->GetTotalRoundsPlayed();
+		sLastRoundSubmitted = pGameRules->GetTotalRoundsPlayed();
 		sLastSessionIDSubmitted = GetSteamWorksGameStatsClient().GetSessionID();
 
 		pKV->deleteThis();

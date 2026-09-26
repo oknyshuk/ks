@@ -8,7 +8,8 @@
 #define DMXSERIALIZATIONDICTIONARY_H
 
 
-#include "tier1/utlrbtree.h"
+#include <unordered_map>
+#include <vector>
 
 
 //-----------------------------------------------------------------------------
@@ -64,9 +65,9 @@ private:
 
 	// Creates the list of all things to serialize
 	void BuildElementList_R( CDmxElement *pRoot, bool bFlatMode, bool bIsRoot );
-	static bool LessFunc( const DmxElementInfo_t &lhs, const DmxElementInfo_t &rhs );
-
-	CUtlRBTree< DmxElementInfo_t, DmxSerializationHandle_t > m_Dict;
+	// Handles are insertion-order positions; binary DMX writes them as element indices.
+	std::vector< DmxElementInfo_t > m_Dict;
+	std::unordered_map< CDmxElement *, DmxSerializationHandle_t > m_Handles;
 };
 
 

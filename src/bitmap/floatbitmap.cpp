@@ -20,11 +20,9 @@
 // for PSD loading
 #include "bitmap/bitmap.h"
 #include "bitmap/psd.h"
-#include "tier2/utlstreambuffer.h"
+#include "tier1/byte_reader.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 
 //-----------------------------------------------------------------------------
 // Globals
@@ -349,7 +347,8 @@ void FloatBitMap_t::WriteToBuffer( void *pBuffer, size_t nBufSize, ImageFormat f
 bool FloatBitMap_t::LoadFromPSD( const char *pFilename )
 {
 	Bitmap_t bitmap;
-	CUtlStreamBuffer buf( pFilename, "GAME", CUtlBuffer::READ_ONLY );
+	auto data = g_pFullFileSystem->ReadFile( pFilename, "GAME" );
+	ks::byte_reader buf( data ? std::span< const std::byte >( *data ) : std::span< const std::byte >() );
 	if ( IsPSDFile( buf ) )
 	{
 		if ( !PSDReadFileRGBA8888( buf, bitmap ) )
@@ -447,10 +446,10 @@ float FloatBitMap_t::InterpolatedPixel( float x, float y, int comp ) const
 {
 	int Top = ( int )floor( y );
 	float Yfrac = y - Top;
-	int Bot = MIN( NumRows() - 1, Top + 1 );
+	int Bot = std::min( NumRows() - 1, Top + 1 );
 	int Left = ( int )floor( x );
 	float Xfrac = x - Left;
-	int Right = MIN( NumCols() - 1, Left + 1 );
+	int Right = std::min( NumCols() - 1, Left + 1 );
 	return
 		BiLinInterp( Xfrac, Yfrac,
 		Pixel( Left, Top, 0, comp ),
@@ -464,13 +463,13 @@ float FloatBitMap_t::InterpolatedPixel( float x, float y, float z, int comp ) co
 {
 	int Top = ( int )floor( y );
 	float Yfrac = y - Top;
-	int Bot = MIN( NumRows() - 1, Top + 1 );
+	int Bot = std::min( NumRows() - 1, Top + 1 );
 	int Left = ( int )floor( x );
 	float Xfrac = x - Left;
-	int Right = MIN( NumCols() - 1, Left + 1 );
+	int Right = std::min( NumCols() - 1, Left + 1 );
 	int Near = ( int )floor( z );
 	float Zfrac = z - Near;
-	int Far = MIN( NumSlices() - 1, Near + 1 );
+	int Far = std::min( NumSlices() - 1, Near + 1 );
 	return
 		TriLinInterp( Xfrac, Yfrac, Zfrac,
 		Pixel( Left, Top, Near, comp ),
@@ -765,9 +764,9 @@ void FloatBitMap_t::QuarterSize( FloatBitMap_t *pBitmap )
 	int sx = NumCols() / 2;
 	int sy = NumRows() / 2;
 	int sz = NumSlices() / 2;
-	sx = MAX( sx, 1 );
-	sy = MAX( sy, 1 );
-	sz = MAX( sz, 1 );
+	sx = std::max( sx, 1 );
+	sy = std::max( sy, 1 );
+	sz = std::max( sz, 1 );
 
 	pBitmap->Init( sx, sy, sz );
 
@@ -829,9 +828,9 @@ void FloatBitMap_t::QuarterSizeBlocky( FloatBitMap_t *pBitmap )
 	int sx = NumCols() / 2;
 	int sy = NumRows() / 2;
 	int sz = NumSlices() / 2;
-	sx = MAX( sx, 1 );
-	sy = MAX( sy, 1 );
-	sz = MAX( sz, 1 );
+	sx = std::max( sx, 1 );
+	sy = std::max( sy, 1 );
+	sz = std::max( sz, 1 );
 
 	pBitmap->Init( sx, sy, sz );
 
@@ -1171,7 +1170,7 @@ void FloatBitMap_t::DownsampleNiceFiltered( const DownsampleInfo_t& downsampleIn
 	if ( downsampleInfo.m_nFlags & DOWNSAMPLE_ALPHATEST )
 	{
 		int nSize = info.m_nSrcHeight * info.m_nSrcWidth * info.m_nSrcDepth * sizeof(float);
-		info.m_pAlphaResult = (float*)malloc( nSize );
+		info.m_pAlphaResult = (float*)MemAlloc_Alloc( nSize );
 		memset( info.m_pAlphaResult, 0, nSize );
 		type = KERNEL_ALPHATEST;
 	}
@@ -1203,7 +1202,7 @@ void FloatBitMap_t::DownsampleNiceFiltered( const DownsampleInfo_t& downsampleIn
 
 	if ( info.m_pAlphaResult )
 	{
-		free( info.m_pAlphaResult );
+		g_pMemAlloc->Free( info.m_pAlphaResult );
 	}
 	ImageLoader::CleanupNiceFilterKernel( &kernel );
 }
@@ -1227,7 +1226,7 @@ float FloatBitMap_t::BrightestColor( void )
 		for( int x = 0; x < NumCols(); x++ )
 		{
 			Vector v( Pixel( x, y, 0, 0 ), Pixel( x, y, 0, 1 ), Pixel( x, y, 0, 2 ) );
-			ret = MAX( ret, v.Length() );
+			ret = std::max( ret, v.Length() );
 		}
 		return ret;
 }
@@ -1244,7 +1243,7 @@ void FloatBitMap_t::RaiseToPower( float power )
 	for( int y = 0; y < NumRows(); y++ )
 		for( int x = 0; x < NumCols(); x++ )
 			for( int c = 0; c < 3; c++ )
-				Pixel( x, y, 0, c ) = pow( ( float )MAX( 0.0, Pixel( x, y, 0, c ) ), ( float )power );
+				Pixel( x, y, 0, c ) = pow( ( float )std::max<std::common_type_t<double, float>>( 0.0, Pixel( x, y, 0, c ) ), ( float )power );
 
 }
 
@@ -1312,10 +1311,10 @@ void FloatBitMap_t::SmartPaste( const FloatBitMap_t & b, int xofs, int yofs, uin
 				{
 					int x1 = x + dx[i];
 					int y1 = y + dy[i];
-					x1 = MAX( 0, x1 );
-					x1 = MIN( NumCols() - 1, x1 );
-					y1 = MAX( 0, y1 );
-					y1 = MIN( NumRows() - 1, y1 );
+					x1 = std::max( 0, x1 );
+					x1 = std::min( NumCols() - 1, x1 );
+					y1 = std::max( 0, y1 );
+					y1 = std::min( NumRows() - 1, y1 );
 					float dx1 = Pixel( x, y, 0, c ) - Pixel( x1, y1, 0, c );
 					deltas[i]-> Pixel( x, y, 0, c ) = dx1;
 				}
@@ -1379,10 +1378,10 @@ void FloatBitMap_t::ScaleGradients( void )
 				{
 					int x1 = x + dx[i];
 					int y1 = y + dy[i];
-					x1 = MAX( 0, x1 );
-					x1 = MIN( NumCols() - 1, x1 );
-					y1 = MAX( 0, y1 );
-					y1 = MIN( NumRows() - 1, y1 );
+					x1 = std::max( 0, x1 );
+					x1 = std::min( NumCols() - 1, x1 );
+					y1 = std::max( 0, y1 );
+					y1 = std::min( NumRows() - 1, y1 );
 					float dx1 = Pixel( x, y, 0, c ) - Pixel( x1, y1, 0, c );
 					deltas[i]-> Pixel( x, y, 0, c ) = dx1;
 					gsum += fabs( dx1 );
@@ -1537,10 +1536,10 @@ void FloatBitMap_t::Poisson( FloatBitMap_t * deltas[4],
 {
 	int minx, miny, maxx, maxy;
 	GetAlphaBounds( minx, miny, maxx, maxy );
-	minx = MAX( 1, minx );
-	miny = MAX( 1, miny );
-	maxx = MIN( NumCols() - 2, maxx );
-	maxy = MIN( NumRows() - 2, maxy );
+	minx = std::max( 1, minx );
+	miny = std::max( 1, miny );
+	maxx = std::min( NumCols() - 2, maxx );
+	maxy = std::min( NumRows() - 2, maxy );
 	if ( ( ( maxx - minx ) > 25 ) && ( maxy - miny ) > 25 )
 	{
 		// perform at low resolution

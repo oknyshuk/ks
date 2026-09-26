@@ -159,7 +159,7 @@ public:
 	void	AddEntitiesToIgnore( int nCount, IHandleEntity **ppEntities );
 
 protected:
-	CUtlVector<IHandleEntity*>	m_PassEntities;
+	std::vector< IHandleEntity* >	m_PassEntities;
 };
 
 class CTraceFilterOnlyHitThis : public CTraceFilterEntitiesOnly
@@ -255,7 +255,7 @@ public:
 
 	void	AddClassnameToIgnore( const char *pchClassname );
 private:
-	CUtlVector<const char*>	m_PassClassnames;
+	std::vector< const char* >	m_PassClassnames;
 };
 
 class CTraceFilterChain : public CTraceFilter
@@ -602,9 +602,9 @@ inline float DistanceToRay( const Vector &pos, const Vector &rayStart, const Vec
 		virtual CBaseEntity* GetEntity( void ) = 0; \
 		static void Add( interfaceName *pElement ) { m_##interfaceName##AutoList.AddToTail( pElement ); } \
 		static void Remove( interfaceName *pElement ) { m_##interfaceName##AutoList.FindAndFastRemove( pElement ); } \
-		static const CUtlVector< interfaceName* >& AutoList( void ) { return m_##interfaceName##AutoList; } \
+		static const std::vector< interfaceName* >& AutoList( void ) { return m_##interfaceName##AutoList; } \
 	private: \
-	static CUtlVector< interfaceName* > m_##interfaceName##AutoList; \
+	static std::vector< interfaceName* > m_##interfaceName##AutoList; \
 	};
 
 // Creates a simple function for accessing the higher level entity
@@ -614,7 +614,7 @@ inline float DistanceToRay( const Vector &pos, const Vector &rayStart, const Vec
 // Creates the auto add/remove constructor/destructor...
 // Pass false to the constructor to not auto add
 #define IMPLEMENT_AUTO_LIST( interfaceName ) \
-	CUtlVector< class interfaceName* > interfaceName::m_##interfaceName##AutoList; \
+	std::vector< class interfaceName* > interfaceName::m_##interfaceName##AutoList; \
 	interfaceName::interfaceName( bool bAutoAdd ) \
 	{ \
 		if ( bAutoAdd ) \

@@ -16,9 +16,7 @@
 #include "filesystemasync.h"
 #include "threadtools.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 
 
 #ifdef _DEBUG
@@ -430,7 +428,7 @@ CAsyncGroupRequest::~CAsyncGroupRequest()
 {
 	// We shouldn't be destroying ourself unless the entire group has released
 	
-	Assert ( m_RequestList.Count() == 0 );
+	Assert ( std::ssize( m_RequestList ) == 0 );
 	Assert ( m_nNumRequestsOutstanding == 0 );
 		
 }
@@ -445,13 +443,13 @@ void CAsyncGroupRequest::AddAsyncRequest( IAsyncRequestBase* pRequest )
 	// A bunch of assertions.  we're moving away from error checking in release builds
 	Assert( pRequest != nullptr );	
 	Assert( g_FileSystem_Async.ValidateRequestPtr( pRequest->GetBase() ) );
-	Assert( m_RequestList.Find( pRequest ) == -1 );
+	Assert( ks::find_index( m_RequestList, pRequest ) == -1 );
 	Assert( pRequest->GetRequestStatus()  == ASYNC_REQUEST_STATE_COMPOSING );
 	Assert( pRequest->GetBase()->m_pGroup == nullptr );
 
 	// Add a valid request to the end of the list
-	m_RequestList.AddToTail( pRequest );
-	m_ValidList.AddToTail( true );
+	m_RequestList.push_back( pRequest );
+	m_ValidList.push_back( true );
 	
 }
 
@@ -463,7 +461,7 @@ void CAsyncGroupRequest::AddAsyncRequest( IAsyncRequestBase* pRequest )
 //-----------------------------------------------------------------------------
 IAsyncRequestBase* CAsyncGroupRequest::GetAsyncRequest( int32 nRNum )
 {
-	if ( nRNum < 0 || nRNum >=  m_RequestList.Count() )
+	if ( nRNum < 0 || nRNum >=  std::ssize( m_RequestList ) )
 	{
 		Assert( false );
 		return nullptr;	
@@ -479,7 +477,7 @@ IAsyncRequestBase* CAsyncGroupRequest::GetAsyncRequest( int32 nRNum )
 //-----------------------------------------------------------------------------
 IAsyncFileRequest* CAsyncGroupRequest::GetAsyncFileRequest( int32 nRNum )
 {
-	if ( nRNum < 0 || nRNum >=  m_RequestList.Count() )
+	if ( nRNum < 0 || nRNum >=  std::ssize( m_RequestList ) )
 	{
 		Assert( false );
 		return nullptr;	
@@ -506,7 +504,7 @@ IAsyncFileRequest* CAsyncGroupRequest::GetAsyncFileRequest( int32 nRNum )
 //-----------------------------------------------------------------------------
 IAsyncSearchRequest* CAsyncGroupRequest::GetAsyncSearchRequest( int32 nRNum )
 {
-	if ( nRNum < 0 || nRNum >=  m_RequestList.Count() )
+	if ( nRNum < 0 || nRNum >=  std::ssize( m_RequestList ) )
 	{
 		Assert( false );
 		return nullptr;	
@@ -558,7 +556,6 @@ void CAsyncGroupRequest::NotifyOfCompletion(  IAsyncRequestBase* pRequest )
 CAsyncFileRequest::CAsyncFileRequest() 	
 {
 	m_Base.SetOuter( this );
-	m_pFileName	= nullptr;
 	
 	m_pUserProvidedDataBuffer = nullptr;
 	m_nUserProvidedBufferSize = 0;
@@ -785,20 +782,7 @@ AsyncRequestStatus_t CAsyncFileRequest::ValidateSubmittedRequest( bool bPerformS
 //-----------------------------------------------------------------------------
 void CAsyncFileRequest::RefreshFileName( const char* pNewFileName )
 {
-	// release existing filename
-	if ( m_pFileName != nullptr )
-	{
-		delete[] m_pFileName;
-	}
-	// we duplicate the file name, and own its memory
-	if ( pNewFileName != nullptr )
-	{
-		m_pFileName	= strdup( pNewFileName );
-	}
-	else
-	{
-		m_pFileName = nullptr;
-	}
+	m_pFileName = ( pNewFileName != nullptr ) ? pNewFileName : "";
 }
 
 //-----------------------------------------------------------------------------
@@ -1004,7 +988,7 @@ void CAsyncSearchRequest::AbortAfterServicing( CAsyncResultInfo_t& results )
 void CAsyncSearchRequest::UpdateAfterServicing( CAsyncResultInfo_t& results ) 
 {
 	// determine request specific values
-	m_nNumResults = m_Results.Count();
+	m_nNumResults = std::ssize( m_Results );
 }
 
 //-----------------------------------------------------------------------------
@@ -1059,7 +1043,7 @@ CAsyncRequestQueue::CAsyncRequestQueue()
 //-----------------------------------------------------------------------------
 CAsyncRequestQueue::~CAsyncRequestQueue()
 {
-	AUTO_LOCK_FM( m_Mutex );		// wait for any other operations to finish
+	std::scoped_lock lock( m_Mutex );		// wait for any other operations to finish
 	
 	// Delete any requests remaining in the queue
 	if ( m_pHead != nullptr )
@@ -1081,7 +1065,7 @@ CAsyncRequestQueue::~CAsyncRequestQueue()
 //-----------------------------------------------------------------------------
 bool CAsyncRequestQueue::IsInQueue( CAsyncRequestBase* pItem )
 {
-	AUTO_LOCK_FM( m_Mutex );		// synchronize since we are scanning the queue?
+	std::scoped_lock lock( m_Mutex );		// synchronize since we are scanning the queue?
 	
 	if ( pItem == nullptr || m_pHead == nullptr ) return false;
 	
@@ -1102,7 +1086,7 @@ bool CAsyncRequestQueue::IsInQueue( CAsyncRequestBase* pItem )
 //-----------------------------------------------------------------------------
 bool CAsyncRequestQueue::IsInQueueIp( const IAsyncRequestBase* pInterfaceBase )
 {
-	AUTO_LOCK_FM( m_Mutex );		// synchronize since we are scanning the queue?
+	std::scoped_lock lock( m_Mutex );		// synchronize since we are scanning the queue?
 
 	if ( pInterfaceBase == nullptr || m_pHead == nullptr ) return false;
 	
@@ -1125,7 +1109,7 @@ bool CAsyncRequestQueue::IsInQueueIp( const IAsyncRequestBase* pInterfaceBase )
 //-----------------------------------------------------------------------------
 void CAsyncRequestQueue::AddToHead( CAsyncRequestBase* pItem )
 {
-	AUTO_LOCK_FM( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 		
 	// Empty queue?
 	if ( m_pHead == nullptr )
@@ -1156,7 +1140,7 @@ void CAsyncRequestQueue::AddToHead( CAsyncRequestBase* pItem )
 //-----------------------------------------------------------------------------
 void CAsyncRequestQueue::AddToTail( CAsyncRequestBase* pItem )
 {
-	AUTO_LOCK_FM( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 		
 	// Empty queue?
 	if ( m_pTail == nullptr )
@@ -1187,7 +1171,7 @@ void CAsyncRequestQueue::AddToTail( CAsyncRequestBase* pItem )
 //-----------------------------------------------------------------------------
 void CAsyncRequestQueue::InsertBefore( CAsyncRequestBase* pItem, CAsyncRequestBase* pInsertAt )
 {
-	AUTO_LOCK_FM( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 	
 	if ( pInsertAt == nullptr || m_nQueueSize == 0 || pItem == nullptr || !IsInQueue( pInsertAt ) )
 	{
@@ -1218,7 +1202,7 @@ void CAsyncRequestQueue::InsertBefore( CAsyncRequestBase* pItem, CAsyncRequestBa
 //-----------------------------------------------------------------------------
 void CAsyncRequestQueue::InsertAfter( CAsyncRequestBase* pItem, CAsyncRequestBase* pInsertAt )
 {
-	AUTO_LOCK_FM( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 	
 	if ( pInsertAt == nullptr || m_nQueueSize == 0 || pItem == nullptr ||  !IsInQueue( pInsertAt ) )
 	{
@@ -1248,7 +1232,7 @@ void CAsyncRequestQueue::InsertAfter( CAsyncRequestBase* pItem, CAsyncRequestBas
 //-----------------------------------------------------------------------------
 void CAsyncRequestQueue::PriorityInsert( CAsyncRequestBase* pItem )
 {
-	AUTO_LOCK_FM( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 	
 	if ( pItem == nullptr )
 	{	
@@ -1284,7 +1268,7 @@ void CAsyncRequestQueue::PriorityInsert( CAsyncRequestBase* pItem )
 //-----------------------------------------------------------------------------
 void CAsyncRequestQueue::Remove( CAsyncRequestBase* pItem )											
 {
-	AUTO_LOCK_FM( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 		
 	if ( pItem == nullptr || m_nQueueSize == 0 || !IsInQueue( pItem ) )
 	{
@@ -1333,7 +1317,7 @@ void CAsyncRequestQueue::Remove( CAsyncRequestBase* pItem )
 //-----------------------------------------------------------------------------
 CAsyncRequestBase* CAsyncRequestQueue::RemoveHead()											
 {
-	AUTO_LOCK_FM( m_Mutex );
+	std::scoped_lock lock( m_Mutex );
 	
 	if ( m_nQueueSize == 0 || m_pHead == nullptr )
 	{
@@ -1463,7 +1447,7 @@ void CAsyncFileSystem::ReleaseAsyncRequest( const IAsyncRequestBase* pRequest )
 {
 	CAsyncRequestBase* pRequestBase = ( (IAsyncRequestBase* ) pRequest )->GetBase();
 	
-	AUTO_LOCK_FM ( m_AsyncStateUpdateMutex );
+	std::scoped_lock lock( m_AsyncStateUpdateMutex );
 
 	if ( !ValidateRequestPtr( pRequestBase ) )
 	{
@@ -1504,7 +1488,7 @@ AsyncRequestStatus_t CAsyncFileSystem::SubmitAsyncFileRequest( const IAsyncReque
 	// An error is preventing this from being submitted
 	if ( RStatus != ASYNC_REQUEST_OK )
 	{
-		m_AsyncStateUpdateMutex.Lock();
+		m_AsyncStateUpdateMutex.lock();
 		{
 			// Move the job to the completed queue
 			m_Composing.Remove( pRequestBase );
@@ -1514,7 +1498,7 @@ AsyncRequestStatus_t CAsyncFileSystem::SubmitAsyncFileRequest( const IAsyncReque
 			pRequestBase->m_RequestState = ASYNC_REQUEST_STATE_COMPLETED;
 			pRequestBase->m_RequestStatus = RStatus;
 		}		
-		m_AsyncStateUpdateMutex.Unlock();
+		m_AsyncStateUpdateMutex.unlock();
 
 		// notify any designed message queue and/or callback
 		NotifyMessageQueueOrCallback( pRequestBase );
@@ -1523,14 +1507,14 @@ AsyncRequestStatus_t CAsyncFileSystem::SubmitAsyncFileRequest( const IAsyncReque
 		return RStatus;
 	}
 	
-	m_AsyncStateUpdateMutex.Lock();
+	m_AsyncStateUpdateMutex.lock();
 	{
 		// Move the job to the submitted queue and insert according to priority
 		m_Composing.Remove( pRequestBase );
 		pRequestBase->m_RequestState = ASYNC_REQUEST_STATE_SUBMITTED;
 		m_Submitted.PriorityInsert( pRequestBase );
 	}		
-	m_AsyncStateUpdateMutex.Unlock();
+	m_AsyncStateUpdateMutex.unlock();
 	
 	// See if we can hand this request off to the old async system
 	KickOffFileJobs();
@@ -1551,7 +1535,7 @@ AsyncRequestStatus_t CAsyncFileSystem::SubmitSyncFileRequest( const IAsyncReques
 	AsyncRequestStatus_t RStatus = ValidateRequest( pRequestBase, true );
 	if ( RStatus != ASYNC_REQUEST_OK )
 	{
-		m_AsyncStateUpdateMutex.Lock();
+		m_AsyncStateUpdateMutex.lock();
 		{
 			// Move the job to the completed queue
 			m_Composing.Remove( pRequestBase );
@@ -1561,7 +1545,7 @@ AsyncRequestStatus_t CAsyncFileSystem::SubmitSyncFileRequest( const IAsyncReques
 			pRequestBase->m_RequestState = ASYNC_REQUEST_STATE_COMPLETED;
 			pRequestBase->m_RequestStatus = RStatus;
 		}		
-		m_AsyncStateUpdateMutex.Unlock();
+		m_AsyncStateUpdateMutex.unlock();
 	
 		return RStatus;
 	}
@@ -1570,7 +1554,7 @@ AsyncRequestStatus_t CAsyncFileSystem::SubmitSyncFileRequest( const IAsyncReques
 	
 	// Move the job to the submitted queue and insert according to priority
 
-	m_AsyncStateUpdateMutex.Lock();
+	m_AsyncStateUpdateMutex.lock();
 	{
 		m_Composing.Remove( pRequestBase );
 		pRequestBase->m_RequestState = ASYNC_REQUEST_STATE_SUBMITTED;
@@ -1582,7 +1566,7 @@ AsyncRequestStatus_t CAsyncFileSystem::SubmitSyncFileRequest( const IAsyncReques
 		
 		m_Submitted.PriorityInsert( pRequestBase );
 	}		
-	m_AsyncStateUpdateMutex.Unlock();
+	m_AsyncStateUpdateMutex.unlock();
 
 	// Submit to the async system
 	KickOffFileJobs();
@@ -1610,12 +1594,12 @@ void CAsyncFileSystem::KickOffFileJobs()
 	}
 
 
-	m_AsyncStateUpdateMutex.Lock();
+	m_AsyncStateUpdateMutex.lock();
 
 	// are there any requests waiting to be submitted?
 	if ( m_Submitted.GetSize() < 1 )
 	{	
-		m_AsyncStateUpdateMutex.Unlock();
+		m_AsyncStateUpdateMutex.unlock();
 		return;
 	}
 
@@ -1724,7 +1708,7 @@ void CAsyncFileSystem::KickOffFileJobs()
 		// TO-DO: go straight to notification/callback with failure info
 	}
 	
-	m_AsyncStateUpdateMutex.Unlock();
+	m_AsyncStateUpdateMutex.unlock();
 
 }
 
@@ -1794,7 +1778,7 @@ void CAsyncFileSystem::AsyncIOCallBackHandler(CAsyncRequestBase* pRequest, CAsyn
 	}
 
 	// Move the request to the completed list
-	m_AsyncStateUpdateMutex.Lock();
+	m_AsyncStateUpdateMutex.lock();
 	
 	m_InFlight.Remove( pRequest );
 	pRequest->m_RequestState = ASYNC_REQUEST_STATE_AWATING_FINISH;
@@ -1807,7 +1791,7 @@ void CAsyncFileSystem::AsyncIOCallBackHandler(CAsyncRequestBase* pRequest, CAsyn
 		pRequest->AbortAfterServicing( results );			// Clean up any work in progress
 		pRequest->DeleteOuter();							// Destroy the request
 		
-		m_AsyncStateUpdateMutex.Unlock();		
+		m_AsyncStateUpdateMutex.unlock();		
 		KickOffFileJobs();									// go on to next ho
 		return;
 	}
@@ -1869,7 +1853,7 @@ void CAsyncFileSystem::AsyncIOCallBackHandler(CAsyncRequestBase* pRequest, CAsyn
 
 	m_Completed.AddToTail( pRequest );
 
-	m_AsyncStateUpdateMutex.Unlock();
+	m_AsyncStateUpdateMutex.unlock();
 
 	// Notify anyone who is listening that an IO has completed
 	m_CompletionSignal.Set();
@@ -1930,7 +1914,7 @@ void CAsyncFileSystem::AsyncSearchCallbackAddItem( void* pContext, char* pFoundP
 	CDirectoryEntryInfo_t result;
 	V_ComposeFileName( pFoundPath, pFoundFile, result.m_FullFileName, sizeof(result.m_FullFileName) );
 	
-	pRequest->m_Results.AddToTail( result );
+	pRequest->m_Results.push_back( result );
 }
 
 
@@ -1958,7 +1942,7 @@ AsyncRequestStatus_t CAsyncFileSystem::GetAsyncFileRequestStatus( const IAsyncRe
 //-----------------------------------------------------------------------------
 AsyncRequestStatus_t CAsyncFileSystem::AbortAsyncFileRequest( const IAsyncRequestBase* pRequest )
 {
-	AUTO_LOCK_FM( m_AsyncStateUpdateMutex );
+	std::scoped_lock lock( m_AsyncStateUpdateMutex );
 	
 	CAsyncRequestBase*	pRequestBase = nullptr;
 	AsyncRequestState_t CurrentStage = ASYNC_REQUEST_STATE_UNDEFINED;
@@ -2010,7 +1994,6 @@ AsyncRequestStatus_t CAsyncFileSystem::AbortAsyncFileRequest( const IAsyncReques
 bool CAsyncFileSystem::ResolveAsyncRequest( const IAsyncRequestBase* pRequest, CAsyncRequestBase*& pRequestBase, AsyncRequestState_t& CurrentStage )
 {
 	// We should only be called when the Mutex is taken
-	Assert( m_AsyncStateUpdateMutex.GetDepth() > 0 );
 
 	// search our queues for the pointer
 	// We do it the slow way, on the rare chance that the pointer pRequest points to invalid memory
@@ -2057,7 +2040,7 @@ bool CAsyncFileSystem::ResolveAsyncRequest( const IAsyncRequestBase* pRequest, C
 //-----------------------------------------------------------------------------
 void CAsyncFileSystem::RemoveRequest( CAsyncRequestBase* pRequest )
 {
-	AUTO_LOCK_FM( m_AsyncStateUpdateMutex );
+	std::scoped_lock lock( m_AsyncStateUpdateMutex );
 	
 	// Is status trustworthy?  maybe not?
 
@@ -2138,7 +2121,7 @@ void CAsyncFileSystem::ResumeAllAsyncIO()
 AsyncRequestStatus_t CAsyncFileSystem::AbortAllAsyncIO( bool bWaitForIOCompletion )
 {
 	{
-		AUTO_LOCK_FM( m_AsyncStateUpdateMutex );
+		std::scoped_lock lock( m_AsyncStateUpdateMutex );
 
 		if ( m_Submitted.GetSize() <= 0 )
 		{
@@ -2207,7 +2190,7 @@ bool CAsyncFileSystem::BlockUntilAsyncIOComplete( const IAsyncRequestBase* pRequ
 	bool waitforIt = false;
 	CThreadEvent syncEvent;
 	
-	m_AsyncStateUpdateMutex.Lock();
+	m_AsyncStateUpdateMutex.lock();
 	// Can we just add the signaling request?
 	if ( pRequestBase->GetRequestState() < ASYNC_REQUEST_STATE_AWATING_FINISH )
 	{
@@ -2215,7 +2198,7 @@ bool CAsyncFileSystem::BlockUntilAsyncIOComplete( const IAsyncRequestBase* pRequ
 		pRequestBase->m_pSyncThreadEvent = &syncEvent;
 		waitforIt = true;
 	}
-	m_AsyncStateUpdateMutex.Unlock();
+	m_AsyncStateUpdateMutex.unlock();
 	
 	// ok, no matetr what the request has the event set before it was finished, so even if
 	// it finished in the meantime, the thred event will get signaled and it won't notify a completion queue
@@ -2256,9 +2239,9 @@ void* CAsyncFileSystem::AllocateBuffer( size_t nBufferSize, int nAlignment)
 	void* pMem = MemAlloc_AllocAligned( nBufferSize, nAlignment );
  #if defined(_DEBUG)
  	// In debug mode we track allocations so we later can track down leaks, etc
- 	m_MemoryTrackMutex.Lock();
- 	m_AllocList.AddToTail( pMem );
- 	m_MemoryTrackMutex.Unlock();
+ 	m_MemoryTrackMutex.lock();
+ 	m_AllocList.push_back( pMem );
+ 	m_MemoryTrackMutex.unlock();
  #endif
 
 	return pMem;
@@ -2276,9 +2259,9 @@ void CAsyncFileSystem::ReleaseBuffer( void* pBuffer )
 
 #if defined(_DEBUG)
 	// In debug mode we verify that we had actually allocated this
-	m_MemoryTrackMutex.Lock();
-	Assert( m_AllocList.FindAndFastRemove( pBuffer ) == true );
-	m_MemoryTrackMutex.Unlock();
+	m_MemoryTrackMutex.lock();
+	Assert( ks::swap_erase_first( m_AllocList, pBuffer ) == true );
+	m_MemoryTrackMutex.unlock();
 #endif
 
 	MemAlloc_FreeAligned( pBuffer );
@@ -2294,7 +2277,7 @@ void CAsyncFileSystem::ReleaseBuffer( void* pBuffer )
 bool CAsyncFileSystem::ValidateRequestPtr( CAsyncRequestBase* pRequest )
 {
 	// can't let it slip state between lines here...
-	AUTO_LOCK_FM( m_AsyncStateUpdateMutex );
+	std::scoped_lock lock( m_AsyncStateUpdateMutex );
 	
 	switch ( pRequest->m_RequestState )
 	{

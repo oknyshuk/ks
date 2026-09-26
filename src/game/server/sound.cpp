@@ -27,9 +27,6 @@
 #include "filesystem.h"
 #include "ambientgeneric.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // =================== ROOM SOUND FX ==========================================
 
 

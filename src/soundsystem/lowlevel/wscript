@@ -14,7 +14,7 @@ def build(bld):
 
     includes = []
 
-    source = ["device_null.cpp", "mix.cpp", "simple_filter.cpp"]
+    source = ["device_null.cpp", "mix.cpp"]
 
     source += ["device_sdl.cpp"]
 

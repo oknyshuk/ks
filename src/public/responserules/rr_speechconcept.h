@@ -9,23 +9,24 @@
 #define RR_SPEECHCONCEPT_H
 
 
-#include "utlsymbol.h"
+#include <string_view>
+#include "tier1/intern_pool.h"
 
 #define RR_CONCEPTS_ARE_STRINGS 0
 
 
-typedef CUtlSymbolTable CRR_ConceptSymbolTable;
+typedef ks::intern_pool CRR_ConceptSymbolTable;
 
 namespace ResponseRules
 {
 class CRR_Concept
 {
 public: // local typedefs
-	typedef CUtlSymbol tGenericId; // an int-like type that can be used to refer to all concepts of this type
+	typedef std::string_view tGenericId; // pooled in g_pRRConceptTable: equal concepts share storage, so == is exact
 	tGenericId m_iConcept;
 
 public:
-	CRR_Concept() {};
+	CRR_Concept() {};	// invalid: null m_iConcept.data()
 	// construct concept from a string.
 	CRR_Concept(const char *fromString);
 
@@ -37,7 +38,7 @@ public:
 	operator const char *() const { return GetStringConcept(); }
 	inline bool operator==(const CRR_Concept &other) // default is compare by concept ids
 	{
-		return m_iConcept == other.m_iConcept;
+		return m_iConcept.data() == other.m_iConcept.data();
 	}
 	bool operator==(const char *pszConcept);
 

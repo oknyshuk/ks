@@ -6,27 +6,25 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include <flat_set>
+#include <unordered_map>
 #include "entitylist.h"
 #include "utlvector.h"
 #include "igamesystem.h"
 #include "collisionutils.h"
-#include "utlsortvector.h"
 #include "tier0/vprof.h"
+#include "tier1/generichash.h"
 #include "mapentities.h"
 #include "client.h"
 #include "ai_initutils.h"
 #include "globalstate.h"
 #include "datacache/imdlcache.h"
-#include "tier1/utlhash.h"
 
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 void SceneManager_ClientActive( CBasePlayer *player );
 
-static CUtlVector<IServerNetworkable*> g_DeleteList;
+static std::vector< IServerNetworkable* > g_DeleteList;
 
 CGlobalEntityList gEntList;
 CBaseEntityList *g_pEntityList = &gEntList;
@@ -48,7 +46,7 @@ public:
 
 	void Clear() 
 	{ 
-		m_targetList.Purge(); 
+		m_targetList.clear(); m_targetList.shrink_to_fit(); 
 	}
 
 	void ForceRepopulateList()
@@ -91,22 +89,22 @@ public:
 	{
 		if ( pEntity->IsMarkedForDeletion() )
 			return;
-		m_targetList.AddToTail( pEntity );
+		m_targetList.push_back( pEntity );
 	}
 	void RemoveEntity( CBaseEntity *pEntity )
 	{
-		int index = m_targetList.Find( pEntity );
-		if ( m_targetList.IsValidIndex(index) )
+		int index = ks::find_index( m_targetList, pEntity );
+		if ( ks::is_valid_index( m_targetList, index ) )
 		{
-			m_targetList.FastRemove( index );
+			ks::swap_remove( m_targetList, index );
 		}
 	}
 
-	int ListCount() { return m_targetList.Count(); }
+	int ListCount() { return std::ssize( m_targetList ); }
 	int ListCopy( CBaseEntity *pList[], int listMax )
 	{
-		int count = MIN(listMax, ListCount() );
-		memcpy( pList, m_targetList.Base(), sizeof(CBaseEntity *) * count );
+		int count = std::min(listMax, ListCount() );
+		memcpy( pList, m_targetList.data(), sizeof(CBaseEntity *) * count );
 		return count;
 	}
 	CBaseEntity *ListElement( int iIndex )
@@ -115,7 +113,7 @@ public:
 	}
 
 private:
-	CUtlVector<CBaseEntity *>	m_targetList;
+	std::vector< CBaseEntity * >	m_targetList;
 };
 
 static CAimTargetManager g_AimManager;
@@ -157,7 +155,7 @@ public:
 	}
 	void Clear()
 	{
-		m_simThinkList.Purge();
+		m_simThinkList.clear(); m_simThinkList.shrink_to_fit();
 		for ( int i = 0; i < ARRAYSIZE(m_entinfoIndex); i++ )
 		{
 			m_entinfoIndex[i] = 0xFFFF;
@@ -189,11 +187,11 @@ public:
 		if ( listHandle != 0xFFFF )
 		{
 			Assert(m_simThinkList[listHandle].entEntry == index);
-			m_simThinkList.FastRemove( listHandle );
+			ks::swap_remove( m_simThinkList, listHandle );
 			m_entinfoIndex[index] = 0xFFFF;
 			
 			// fast remove shifted someone, update that someone
-			if ( listHandle < m_simThinkList.Count() )
+			if ( listHandle < std::ssize( m_simThinkList ) )
 			{
 				m_entinfoIndex[m_simThinkList[listHandle].entEntry] = listHandle;
 			}
@@ -201,12 +199,12 @@ public:
 	}
 	int ListCount()
 	{
-		return m_simThinkList.Count();
+		return std::ssize( m_simThinkList );
 	}
 
 	int ListCopy( CBaseEntity *pList[], int listMax )
 	{
-		int count = MIN(listMax, ListCount());
+		int count = std::min(listMax, ListCount());
 		int out = 0;
 		for ( int i = 0; i < count; i++ )
 		{
@@ -249,7 +247,7 @@ public:
 			if ( m_entinfoIndex[index] == 0xFFFF )
 			{
 				MEM_ALLOC_CREDIT();
-				m_entinfoIndex[index] = m_simThinkList.AddToTail();
+				m_entinfoIndex[index] = std::ssize( m_simThinkList ); m_simThinkList.emplace_back();
 				m_simThinkList[m_entinfoIndex[index]].entEntry = (unsigned short)index;
 				m_simThinkList[m_entinfoIndex[index]].nextThinkTick = 0;
 				if ( pEntity->IsEFlagSet(EFL_NO_GAME_PHYSICS_SIMULATION) )
@@ -277,7 +275,7 @@ public:
 
 private:
 	unsigned short m_entinfoIndex[NUM_ENT_ENTRIES];
-	CUtlVector<simthinkentry_t>	m_simThinkList;
+	std::vector< simthinkentry_t >	m_simThinkList;
 };
 
 CSimThinkManager g_SimThinkManager;
@@ -303,16 +301,16 @@ class CPostClientMessageManager
 public:
 	void LevelShutdownPostEntity()
 	{
-		m_list.Purge();
+		m_list.clear(); m_list.shrink_to_fit();
 	}
 	void AddEntity( CBaseEntity *pEntity )
 	{
 		MEM_ALLOC_CREDIT();
-		m_list.AddToTail( (unsigned short)pEntity->GetRefEHandle().GetEntryIndex() );
+		m_list.push_back( (unsigned short)pEntity->GetRefEHandle().GetEntryIndex() );
 	}
 	void PostClientMessagesSent()
 	{
-		for ( int i = m_list.Count()-1; i >= 0; --i )
+		for ( int i = std::ssize( m_list )-1; i >= 0; --i )
 		{
 			CBaseEntity *pEntity = (CBaseEntity *)gEntList.GetEntInfoPtrByIndex( m_list[i] )->m_pEntity;
 
@@ -321,11 +319,11 @@ public:
 				pEntity->PostClientMessagesSent();
 			}
 		}
-		m_list.RemoveAll();
+		m_list.clear();
 	}
 private:
 	// UNDONE: Need to use ehandles instead?
-	CUtlVector<unsigned short>	m_list;
+	std::vector< unsigned short >	m_list;
 };
 
 static CPostClientMessageManager g_PostClientManager;
@@ -344,34 +342,17 @@ CBaseEntityClassList::~CBaseEntityClassList()
 // Entity hash tables
 //-----------------------------------------------------------------------------
 
-struct EntsByStringList_t
+struct CEntsByStringHashFuncs
 {
-	string_t iszStr;
-	CBaseEntity *pHead;
-};
-
-class CEntsByStringHashFuncs
-{
-public:
-	CEntsByStringHashFuncs( int ) {}
-
-	bool operator()( const EntsByStringList_t &lhs, const EntsByStringList_t &rhs ) const
-	{
-		return lhs.iszStr == rhs.iszStr;
-	}
-
-	unsigned int operator()( const EntsByStringList_t &item ) const
+	size_t operator()( string_t iszStr ) const
 	{
 		COMPILE_TIME_ASSERT( sizeof( char * ) == sizeof( intp ) );
-		return HashIntp( ( intp )item.iszStr.ToCStr() );
+		return HashIntp( ( intp )iszStr.ToCStr() );
 	}
 };
 
-typedef CUtlHash<EntsByStringList_t	, CEntsByStringHashFuncs, CEntsByStringHashFuncs > CEntsByStringTable;
-
-//-------------------------------------
-
-CEntsByStringTable g_EntsByClassname( 512 );
+// Pooled classname -> head of that class's entity list; entities keep a pointer to their head slot
+static std::unordered_map< string_t, CBaseEntity *, CEntsByStringHashFuncs > g_EntsByClassname( 512 );
 
 //-----------------------------------------------------------------------------
 CGlobalEntityList::CGlobalEntityList()
@@ -405,7 +386,7 @@ void CGlobalEntityList::AddToDeleteList( IServerNetworkable *ent )
 {
 	if ( ent && ent->GetEntityHandle()->GetRefEHandle() != CBaseHandle( INVALID_EHANDLE ) )
 	{
-		g_DeleteList.AddToTail( ent );
+		g_DeleteList.push_back( ent );
 	}
 }
 
@@ -420,20 +401,20 @@ void CGlobalEntityList::CleanupDeleteList( void )
 	PhysOnCleanupDeleteList();
 
 	g_bDisableEhandleAccess = true;
-	for ( int i = 0; i < g_DeleteList.Count(); i++ )
+	for ( int i = 0; i < std::ssize( g_DeleteList ); i++ )
 	{
 		g_DeleteList[i]->Release();
 	}
 	g_bDisableEhandleAccess = false;
-	g_DeleteList.RemoveAll();
+	g_DeleteList.clear();
 
 	g_fInCleanupDelete = false;
 }
 
 int CGlobalEntityList::ResetDeleteList( void )
 {
-	int result = g_DeleteList.Count();
-	g_DeleteList.RemoveAll();
+	int result = std::ssize( g_DeleteList );
+	g_DeleteList.clear();
 	return result;
 }
 
@@ -441,17 +422,17 @@ int CGlobalEntityList::ResetDeleteList( void )
 	// add a class that gets notified of entity events
 void CGlobalEntityList::AddListenerEntity( IEntityListener *pListener )
 {
-	if ( m_entityListeners.Find( pListener ) >= 0 )
+	if ( ks::find_index( m_entityListeners, pListener ) >= 0 )
 	{
 		AssertMsg( 0, "Can't add listeners multiple times\n" );
 		return;
 	}
-	m_entityListeners.AddToTail( pListener );
+	m_entityListeners.push_back( pListener );
 }
 
 void CGlobalEntityList::RemoveListenerEntity( IEntityListener *pListener )
 {
-	m_entityListeners.FindAndRemove( pListener );
+	ks::erase_first( m_entityListeners, pListener );
 }
 
 void CGlobalEntityList::Clear( void )
@@ -474,17 +455,16 @@ void CGlobalEntityList::Clear( void )
 		
 	CleanupDeleteList();
 	// free the memory
-	g_DeleteList.Purge();
+	g_DeleteList.clear(); g_DeleteList.shrink_to_fit();
 
 #ifdef _DEBUG
-	for ( UtlHashHandle_t handle = g_EntsByClassname.GetFirstHandle(); g_EntsByClassname.IsValidHandle(handle);	handle = g_EntsByClassname.GetNextHandle(handle) )
+	for ( const auto &[iszClassname, pHead] : g_EntsByClassname )
 	{
-		EntsByStringList_t &element = g_EntsByClassname[handle];
-		Assert( element.pHead == nullptr );
+		Assert( pHead == nullptr );
 	}
 #endif
 
-	g_EntsByClassname.RemoveAll();
+	g_EntsByClassname.clear();
 
 	CBaseEntity::m_nDebugPlayer = -1;
 	CBaseEntity::m_bInDebugSelect = false; 
@@ -614,11 +594,10 @@ CBaseEntity *CGlobalEntityList::FindEntityByClassnameFast( CBaseEntity *pStartEn
 		return pStartEntity->m_pNextByClass;
 	}
 
-	EntsByStringList_t key = { iszClassname };
-	UtlHashHandle_t hEntry = g_EntsByClassname.Find( key );
-	if ( hEntry != g_EntsByClassname.InvalidHandle() )
+	auto it = g_EntsByClassname.find( iszClassname );
+	if ( it != g_EntsByClassname.end() )
 	{
-		return g_EntsByClassname[hEntry].pHead;
+		return it->second;
 	}
 
 	return nullptr;
@@ -1364,7 +1343,7 @@ void CGlobalEntityList::OnAddEntity( IHandleEntity *pEnt, CBaseHandle handle )
 	// NOTE: Must be a CBaseEntity on server
 	Assert( pBaseEnt );
 	//DevMsg(2,"Created %s\n", pBaseEnt->GetClassname() );
-	for ( i = m_entityListeners.Count()-1; i >= 0; i-- )
+	for ( i = std::ssize( m_entityListeners )-1; i >= 0; i-- )
 	{
 		m_entityListeners[i]->OnEntityCreated( pBaseEnt );
 	}
@@ -1377,11 +1356,11 @@ void CGlobalEntityList::OnRemoveEntity( IHandleEntity *pEnt, CBaseHandle handle 
 	if ( !g_fInCleanupDelete )
 	{
 		int i;
-		for ( i = 0; i < g_DeleteList.Count(); i++ )
+		for ( i = 0; i < std::ssize( g_DeleteList ); i++ )
 		{
 			if ( g_DeleteList[i]->GetEntityHandle() == pEnt )
 			{
-				g_DeleteList.FastRemove( i );
+				ks::swap_remove( g_DeleteList, i );
 				Msg( "ERROR: Entity being destroyed but previously threaded on g_DeleteList\n" );
 				break;
 			}
@@ -1405,23 +1384,20 @@ void CGlobalEntityList::NotifyCreateEntity( CBaseEntity *pEnt )
 	Assert( MAKE_STRING( pEnt->GetClassname() ) == FindPooledString( pEnt->GetClassname() ) && 
 		( pEnt->GetEntityName() == NULL_STRING || pEnt->GetEntityName() == FindPooledString( pEnt->GetEntityName().ToCStr() ) ) );
 
-	Assert( pEnt->m_pPrevByClass == nullptr && pEnt->m_pNextByClass == nullptr && pEnt->m_ListByClass == g_EntsByClassname.InvalidHandle() );
+	Assert( pEnt->m_pPrevByClass == nullptr && pEnt->m_pNextByClass == nullptr && pEnt->m_ppListByClassHead == nullptr );
 
-	EntsByStringList_t dummyEntry = { MAKE_STRING( pEnt->GetClassname() ), 0 };
-	UtlHashHandle_t hEntry = g_EntsByClassname.Insert( dummyEntry );
-
-	EntsByStringList_t *pEntry = &g_EntsByClassname[hEntry];
-	pEnt->m_ListByClass = hEntry;
-	if ( pEntry->pHead )
+	CBaseEntity *&pHead = g_EntsByClassname.try_emplace( MAKE_STRING( pEnt->GetClassname() ), nullptr ).first->second;
+	pEnt->m_ppListByClassHead = &pHead;
+	if ( pHead )
 	{
-		pEntry->pHead->m_pPrevByClass = pEnt;
-		pEnt->m_pNextByClass = pEntry->pHead;
+		pHead->m_pPrevByClass = pEnt;
+		pEnt->m_pNextByClass = pHead;
 		Assert( pEnt->m_pPrevByClass == nullptr );
 	}
-	pEntry->pHead = pEnt;
+	pHead = pEnt;
 
 	//DevMsg(2,"Deleted %s\n", pBaseEnt->GetClassname() );
-	for ( int i = m_entityListeners.Count()-1; i >= 0; i-- )
+	for ( int i = std::ssize( m_entityListeners )-1; i >= 0; i-- )
 	{
 		m_entityListeners[i]->OnEntityCreated( pEnt );
 	}
@@ -1433,7 +1409,7 @@ void CGlobalEntityList::NotifySpawn( CBaseEntity *pEnt )
 		return;
 
 	//DevMsg(2,"Deleted %s\n", pBaseEnt->GetClassname() );
-	for ( int i = m_entityListeners.Count()-1; i >= 0; i-- )
+	for ( int i = std::ssize( m_entityListeners )-1; i >= 0; i-- )
 	{
 		m_entityListeners[i]->OnEntitySpawned( pEnt );
 	}
@@ -1448,22 +1424,22 @@ void CGlobalEntityList::NotifyRemoveEntity( CBaseEntity *pBaseEnt )
 		return;
 
 	//DevMsg(2,"Deleted %s\n", pBaseEnt->GetClassname() );
-	for ( int i = m_entityListeners.Count()-1; i >= 0; i-- )
+	for ( int i = std::ssize( m_entityListeners )-1; i >= 0; i-- )
 	{
 		m_entityListeners[i]->OnEntityDeleted( pBaseEnt );
 	}
 
-	if ( pBaseEnt->m_ListByClass != g_EntsByClassname.InvalidHandle() )
+	if ( pBaseEnt->m_ppListByClassHead )
 	{
-		EntsByStringList_t *pEntry = &g_EntsByClassname[pBaseEnt->m_ListByClass];
-		if ( pEntry->pHead == pBaseEnt )
+		CBaseEntity *&pHead = *pBaseEnt->m_ppListByClassHead;
+		if ( pHead == pBaseEnt )
 		{
-			pEntry->pHead = pBaseEnt->m_pNextByClass;
+			pHead = pBaseEnt->m_pNextByClass;
 			// Don't remove empty list, on the assumption that the number of classes that are not referenced again is small
 			// Plus during map load we get a lot of precache others that hit this [8/8/2008 tom]
 		}
 
-		Assert( g_EntsByClassname[pBaseEnt->m_ListByClass].pHead != pBaseEnt );
+		Assert( pHead != pBaseEnt );
 		if ( pBaseEnt->m_pNextByClass )
 		{
 			pBaseEnt->m_pNextByClass->m_pPrevByClass = pBaseEnt->m_pPrevByClass;
@@ -1475,7 +1451,7 @@ void CGlobalEntityList::NotifyRemoveEntity( CBaseEntity *pBaseEnt )
 		}
 
 		pBaseEnt->m_pPrevByClass = pBaseEnt->m_pNextByClass = nullptr;
-		pBaseEnt->m_ListByClass = g_EntsByClassname.InvalidHandle();
+		pBaseEnt->m_ppListByClassHead = nullptr;
 	}
 }
 
@@ -1509,14 +1485,14 @@ public:
 	void LevelShutdownPreEntity();
 
 private:
-	CUtlVector<entitynotify_t>	m_notifyList;
+	std::vector< entitynotify_t >	m_notifyList;
 };
 
 void CNotifyList::AddEntity( CBaseEntity *pNotify, CBaseEntity *pWatched )
 {
 	// OPTIMIZE: Also flag pNotify for faster "RemoveAllNotify" ?
 	pWatched->AddEFlags( EFL_NOTIFY );
-	int index = m_notifyList.AddToTail();
+	int index = std::ssize( m_notifyList ); m_notifyList.emplace_back();
 	entitynotify_t &notify = m_notifyList[index];
 	notify.pNotify = pNotify;
 	notify.pWatched = pWatched;
@@ -1525,11 +1501,11 @@ void CNotifyList::AddEntity( CBaseEntity *pNotify, CBaseEntity *pWatched )
 // Remove noitfication for an entity
 void CNotifyList::RemoveEntity( CBaseEntity *pNotify, CBaseEntity *pWatched )
 {
-	for ( int i = m_notifyList.Count(); --i >= 0; )
+	for ( int i = std::ssize( m_notifyList ); --i >= 0; )
 	{
 		if ( m_notifyList[i].pNotify == pNotify && m_notifyList[i].pWatched == pWatched)
 		{
-			m_notifyList.FastRemove(i);
+			ks::swap_remove( m_notifyList, i );
 		}
 	}
 }
@@ -1542,7 +1518,7 @@ void CNotifyList::ReportNamedEvent( CBaseEntity *pEntity, const char *pInputName
 	if ( !pEntity->IsEFlagSet(EFL_NOTIFY) )
 		return;
 
-	for ( int i = 0; i < m_notifyList.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_notifyList ); i++ )
 	{
 		if ( m_notifyList[i].pWatched == pEntity )
 		{
@@ -1559,7 +1535,7 @@ void CNotifyList::LevelInitPreEntity()
 void CNotifyList::LevelShutdownPreEntity( void )
 {
 	gEntList.RemoveListenerEntity( this );
-	m_notifyList.Purge();
+	m_notifyList.clear(); m_notifyList.shrink_to_fit();
 }
 
 void CNotifyList::OnEntityCreated( CBaseEntity *pEntity )
@@ -1576,11 +1552,11 @@ void CNotifyList::OnEntityDeleted( CBaseEntity *pEntity )
 // UNDONE: Slow linear search?
 void CNotifyList::ClearEntity( CBaseEntity *pNotify )
 {
-	for ( int i = m_notifyList.Count(); --i >= 0; )
+	for ( int i = std::ssize( m_notifyList ); --i >= 0; )
 	{
 		if ( m_notifyList[i].pNotify == pNotify || m_notifyList[i].pWatched == pNotify)
 		{
-			m_notifyList.FastRemove(i);
+			ks::swap_remove( m_notifyList, i );
 		}
 	}
 }
@@ -1590,7 +1566,7 @@ void CNotifyList::ReportSystemEvent( CBaseEntity *pEntity, notify_system_event_t
 	if ( !pEntity->IsEFlagSet(EFL_NOTIFY) )
 		return;
 
-	for ( int i = 0; i < m_notifyList.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_notifyList ); i++ )
 	{
 		if ( m_notifyList[i].pWatched == pEntity )
 		{
@@ -1620,7 +1596,7 @@ public:
 
 	void Clear()
 	{
-		m_updateList.Purge();
+		m_updateList.clear(); m_updateList.shrink_to_fit();
 	}
 	
 	// IEntityListener
@@ -1629,10 +1605,10 @@ public:
 	{
 		if ( !pEntity->GetCheckUntouch() )
 			return;
-		int index = m_updateList.Find( pEntity );
-		if ( m_updateList.IsValidIndex(index) )
+		int index = ks::find_index( m_updateList, pEntity );
+		if ( ks::is_valid_index( m_updateList, index ) )
 		{
-			m_updateList.FastRemove( index );
+			ks::swap_remove( m_updateList, index );
 		}
 	}
 	void AddEntity( CBaseEntity *pEntity )
@@ -1640,17 +1616,17 @@ public:
 		if ( pEntity->IsMarkedForDeletion() )
 			return;
 
-		Assert( !m_updateList.IsValidIndex( m_updateList.Find( pEntity ) ) );
-		m_updateList.AddToTail( pEntity );
+		Assert( !ks::is_valid_index( m_updateList, ks::find_index( m_updateList, pEntity ) ) );
+		m_updateList.push_back( pEntity );
 	}
 
 	void RemoveEntity( CBaseEntity *pEntity )
 	{
-		m_updateList.FindAndFastRemove( pEntity );
+		ks::swap_erase_first( m_updateList, pEntity );
 	}
 
 private:
-	CUtlVector<CBaseEntity *>	m_updateList;
+	std::vector< CBaseEntity * >	m_updateList;
 };
 
 static CEntityTouchManager g_TouchManager;
@@ -1672,14 +1648,14 @@ void CEntityTouchManager::FrameUpdatePostEntityThink()
 	SNPROF( "CEntityTouchManager::FrameUpdatePostEntityThink" );
 	// Loop through all entities again, checking their untouch if flagged to do so
 	
-	int count = m_updateList.Count();
+	int count = std::ssize( m_updateList );
 	if ( count )
 	{
 		// copy off the list
 		CBaseEntity **ents = (CBaseEntity **)stackalloc( sizeof(CBaseEntity *) * count );
-		memcpy( ents, m_updateList.Base(), sizeof(CBaseEntity *) * count );
+		memcpy( ents, m_updateList.data(), sizeof(CBaseEntity *) * count );
 		// clear it
-		m_updateList.RemoveAll();
+		m_updateList.clear();
 		
 		// now update those ents
 		for ( int i = 0; i < count; i++ )
@@ -1818,16 +1794,11 @@ class CSortedEntityList
 public:
 	CSortedEntityList() : m_sortedList(), m_emptyCount(0) {}
 
-	typedef CBaseEntity *ENTITYPTR;
-	class CEntityReportLess
+	struct CEntityReportLess
 	{
-	public:
-		bool Less( const ENTITYPTR &src1, const ENTITYPTR &src2, void *pCtx )
+		bool operator()( CBaseEntity *src1, CBaseEntity *src2 ) const
 		{
-			if ( stricmp( src1->GetClassname(), src2->GetClassname() ) < 0 )
-				return true;
-	
-			return false;
+			return stricmp( src1->GetClassname(), src2->GetClassname() ) < 0;
 		}
 	};
 
@@ -1839,7 +1810,7 @@ public:
 		}
 		else
 		{
-			m_sortedList.Insert( pEntity );
+			m_sortedList.insert( pEntity );
 		}
 	}
 	void ReportEntityList()
@@ -1847,9 +1818,8 @@ public:
 		const char *pLastClass = "";
 		int count = 0;
 		int edicts = 0;
-		for ( int i = 0; i < m_sortedList.Count(); i++ )
+		for ( CBaseEntity *pEntity : m_sortedList )
 		{
-			CBaseEntity *pEntity = m_sortedList[i];
 			if ( !pEntity )
 				continue;
 
@@ -1874,13 +1844,13 @@ public:
 		{
 			Msg("Class: %s (%d)\n", pLastClass, count );
 		}
-		if ( m_sortedList.Count() )
+		if ( !m_sortedList.empty() )
 		{
-			Msg("Total %d entities (%d empty, %d edicts)\n", m_sortedList.Count(), m_emptyCount, edicts );
+			Msg("Total %d entities (%d empty, %d edicts)\n", (int)std::ssize( m_sortedList ), m_emptyCount, edicts );
 		}
 	}
 private:
-	CUtlSortVector< CBaseEntity *, CEntityReportLess > m_sortedList;
+	std::flat_multiset< CBaseEntity *, CEntityReportLess > m_sortedList;
 	int		m_emptyCount;
 };
 

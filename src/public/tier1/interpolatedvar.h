@@ -7,13 +7,11 @@
 #ifndef INTERPOLATEDVAR_H
 #define INTERPOLATEDVAR_H
 
-#include "tier1/utllinkedlist.h"
 #include "tier1/rangecheckedvar.h"
 #include "tier1/lerp_functions.h"
 #include "tier1/convar.h"
+#include <utility>
 
-
-#include "tier0/memdbgon.h"
 
 #define COMPARE_HISTORY(a,b) \
 	( memcmp( m_VarHistory[a].GetValue(), m_VarHistory[b].GetValue(), sizeof(Type)*GetMaxCount() ) == 0 ) 			
@@ -150,7 +148,7 @@ inline QAngle ExtrapolateInterpolatedVarType( const QAngle &oldVal, const QAngle
 abstract_class IInterpolatedVar
 {
 public:
-	virtual		 ~IInterpolatedVar() {}
+	virtual		 ~IInterpolatedVar() = default;
 
 	virtual void Setup( void *pValue, int type ) = 0;
 	virtual void SetInterpolationAmount( float seconds ) = 0;
@@ -316,6 +314,29 @@ public:
 		m_pElements = nullptr;
 	}
 
+	// Owns m_pElements: movable, not copyable.
+	CSimpleRingBuffer( const CSimpleRingBuffer & ) = delete;
+	CSimpleRingBuffer &operator=( const CSimpleRingBuffer & ) = delete;
+	CSimpleRingBuffer( CSimpleRingBuffer &&src ) noexcept
+		: m_pElements( std::exchange( src.m_pElements, nullptr ) ), m_maxElement( std::exchange( src.m_maxElement, 0 ) ),
+		  m_firstElement( std::exchange( src.m_firstElement, 0 ) ), m_count( std::exchange( src.m_count, 0 ) ),
+		  m_growSize( src.m_growSize )
+	{
+	}
+	CSimpleRingBuffer &operator=( CSimpleRingBuffer &&src ) noexcept
+	{
+		if ( this != &src )
+		{
+			delete[] m_pElements;
+			m_pElements = std::exchange( src.m_pElements, nullptr );
+			m_maxElement = std::exchange( src.m_maxElement, 0 );
+			m_firstElement = std::exchange( src.m_firstElement, 0 );
+			m_count = std::exchange( src.m_count, 0 );
+			m_growSize = src.m_growSize;
+		}
+		return *this;
+	}
+
 	inline int Count() const { return m_count; }
 
 	int Head() const { return (m_count>0) ? 0 : InvalidIndex(); }
@@ -436,6 +457,12 @@ public:
 
 	CInterpolatedVarArrayBase( const char *pDebugName="no debug name" );
 	virtual ~CInterpolatedVarArrayBase();
+
+	// Owns its history and buffers; Copy() is the deep copy.
+	CInterpolatedVarArrayBase( const CInterpolatedVarArrayBase & ) = delete;
+	CInterpolatedVarArrayBase &operator=( const CInterpolatedVarArrayBase & ) = delete;
+	CInterpolatedVarArrayBase( CInterpolatedVarArrayBase &&src ) noexcept;
+	CInterpolatedVarArrayBase &operator=( CInterpolatedVarArrayBase &&src ) noexcept;
 
 	
 	// IInterpolatedVar overrides.
@@ -591,6 +618,38 @@ inline CInterpolatedVarArrayBase<Type, IS_ARRAY>::~CInterpolatedVarArrayBase()
 	ClearHistory();
 	delete [] m_bLooping;
 	delete [] m_LastNetworkedValue;
+}
+
+// m_pValue is the watched variable, not owned: both copies point at it until the owner re-Setup()s.
+template< typename Type, bool IS_ARRAY >
+inline CInterpolatedVarArrayBase<Type, IS_ARRAY>::CInterpolatedVarArrayBase( CInterpolatedVarArrayBase &&src ) noexcept
+	: m_pValue( src.m_pValue ), m_VarHistory( std::move( src.m_VarHistory ) ),
+	  m_LastNetworkedValue( std::exchange( src.m_LastNetworkedValue, nullptr ) ), m_LastNetworkedTime( src.m_LastNetworkedTime ),
+	  m_fType( src.m_fType ), m_nMaxCount( std::exchange( src.m_nMaxCount, 0 ) ), m_bLooping( std::exchange( src.m_bLooping, nullptr ) ),
+	  m_InterpolationAmount( src.m_InterpolationAmount ), m_pDebugName( src.m_pDebugName )
+{
+}
+
+template< typename Type, bool IS_ARRAY >
+inline CInterpolatedVarArrayBase<Type, IS_ARRAY> &CInterpolatedVarArrayBase<Type, IS_ARRAY>::operator=( CInterpolatedVarArrayBase &&src ) noexcept
+{
+	if ( this != &src )
+	{
+		ClearHistory();
+		delete [] m_bLooping;
+		delete [] m_LastNetworkedValue;
+
+		m_pValue = src.m_pValue;
+		m_VarHistory = std::move( src.m_VarHistory );
+		m_LastNetworkedValue = std::exchange( src.m_LastNetworkedValue, nullptr );
+		m_LastNetworkedTime = src.m_LastNetworkedTime;
+		m_fType = src.m_fType;
+		m_nMaxCount = std::exchange( src.m_nMaxCount, 0 );
+		m_bLooping = std::exchange( src.m_bLooping, nullptr );
+		m_InterpolationAmount = src.m_InterpolationAmount;
+		m_pDebugName = src.m_pDebugName;
+	}
+	return *this;
 }
 
 template< typename Type, bool IS_ARRAY >
@@ -835,7 +894,7 @@ inline bool CInterpolatedVarArrayBase<Type, IS_ARRAY>::GetInterpolationInfo(
 		if ( dt > 0.0001f )
 		{
 			pInfo->frac = ( targettime - older_change_time ) / ( newer_change_time - older_change_time );
-			pInfo->frac = MIN( pInfo->frac, 2.0f );
+			pInfo->frac = std::min( pInfo->frac, 2.0f );
 
 			int oldestindex = i+1;
 														    
@@ -1256,7 +1315,7 @@ inline void	CInterpolatedVarArrayBase<Type, IS_ARRAY>::SetMaxCount( float flCurr
 	bool changed = ( newmax != m_nMaxCount ) ? true : false;
 
 	// BUGBUG: Support 0 length properly?
-	newmax = MAX(1,newmax);
+	newmax = std::max(1,newmax);
 
 	m_nMaxCount = newmax;
 	// Wipe everything any time this changes!!!
@@ -1332,7 +1391,7 @@ inline void CInterpolatedVarArrayBase<Type, IS_ARRAY>::_Extrapolate(
 	}
 	else
 	{
-		float flExtrapolationAmount = MIN( flDestinationTime - pNew->flChangeTime, flMaxExtrapolationAmount );
+		float flExtrapolationAmount = std::min( flDestinationTime - pNew->flChangeTime, flMaxExtrapolationAmount );
 
 		float divisor = 1.0f / (pNew->flChangeTime - pOld->flChangeTime);
 		for ( int i=0; i < m_nMaxCount; i++ )
@@ -1563,7 +1622,5 @@ public:
 		CInterpolatedVarArrayBase< Type, false >::SetMaxCount( 0.0f, 1 );
 	}
 };
-
-#include "tier0/memdbgoff.h"
 
 #endif // INTERPOLATEDVAR_H

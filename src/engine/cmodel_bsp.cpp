@@ -24,9 +24,6 @@
 #include "sys_dll.h"
 #include "tier3/tier3.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 IPhysicsSurfaceProps *physprops = nullptr;
 IPhysicsCollision	 *physcollision = nullptr;
 

@@ -28,9 +28,6 @@
 	#include "decoy_projectile.h"
 #endif
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 IMPLEMENT_NETWORKCLASS_ALIASED( DecoyGrenade, DT_DecoyGrenade )
 
 IMPLEMENT_REFLECT_TABLE( CDecoyGrenade, DT_DecoyGrenade );

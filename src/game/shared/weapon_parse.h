@@ -10,10 +10,13 @@
 
 #include "shareddefs.h"
 #include "GameEventListener.h"
-#include "tier1/utlsortvector.h"
 #include "gamestringpool.h"
 #include "econ/econ_item_schema_minimal.h"
 #include "tier0/t0constants.h"
+#include "tier1/map_ops.h"
+#include <flat_set>
+#include <memory>
+#include <vector>
 
 #ifdef CLIENT_DLL
 #define CEconItemView C_EconItemView
@@ -149,7 +152,7 @@ public:
 	int GetTargetTeam() const { return 0; }
 	KeyValues* GetStringTokens() const { return nullptr; }
 	const char* GetShortNameLocToken() const { return ""; }
-	const CUtlVector<int>& GetQuestPoints() const { static CUtlVector<int> empty; return empty; }
+	const std::vector< int >& GetQuestPoints() const { static std::vector< int > empty; return empty; }
 };
 
 // Taunt definition stub
@@ -172,8 +175,8 @@ public:
 class CStickerKit
 {
 public:
-	CUtlString sMaterialPath;
-	CUtlString sMaterialPathNoDrips;
+	std::string sMaterialPath;
+	std::string sMaterialPathNoDrips;
 	int nRarity;
 };
 
@@ -249,7 +252,7 @@ public:
 	const char *GetUidModel() const { return nullptr; }
 	const char *GetStatTrakModelByType( int ) const { return nullptr; }
 	const char *GetCustomName() const { return nullptr; }
-	void GetKillEaterTypes( CUtlSortVector<uint32>& ) const {}
+	void GetKillEaterTypes( std::flat_multiset<uint32>& ) const {}
 	int GetKillEaterValueByType( int ) const { return -1; }
 	uint32 GetAccountID() const { return 0; }
 	int GetNumSupportedStickerSlots() const { return 0; }
@@ -343,15 +346,11 @@ struct WeaponInfoLookup
 };
 
 
-class CWeaponInfoLookupListLess
+struct CWeaponInfoLookupListLess
 {
-public:
-	bool Less( WeaponInfoLookup * const &src1, WeaponInfoLookup * const &src2, void *pCtx )
+	bool operator()( const WeaponInfoLookup *src1, const WeaponInfoLookup *src2 ) const
 	{
-		if ( src1->m_iszAttribClassName.Get() < src2->m_iszAttribClassName.Get() )
-			return true;
-
-		return false;
+		return src1->m_iszAttribClassName.Get() < src2->m_iszAttribClassName.Get();
 	}
 };
 
@@ -382,7 +381,7 @@ public:
 	char					szPrintName[MAX_WEAPON_STRING];			// Name for showing in HUD, etc.
 
 	int GetIndexofAttribute( string_t iszAttribClassName ) const;
-	static CUtlSortVector< WeaponInfoLookup*, CWeaponInfoLookupListLess > ms_vecWeaponInfoLookup;
+	static std::vector< WeaponInfoLookup* > ms_vecWeaponInfoLookup;	// sorted by CWeaponInfoLookupListLess
 
 protected:
 	char					szViewModel[MAX_WEAPON_STRING];			// View model of this weapon
@@ -507,7 +506,9 @@ protected:
 	void FireGameEvent( IGameEvent *event );
 
 private:
-	CUtlDict< FileWeaponInfo_t*, unsigned short > m_WeaponInfoDatabase;
+	// Handles are dense indices into m_WeaponInfos, held by weapons; the dict maps names to them.
+	std::vector< std::unique_ptr< FileWeaponInfo_t > > m_WeaponInfos;
+	ks::idict< WEAPON_FILE_INFO_HANDLE > m_WeaponInfoDatabase;
 	bool m_bPreCached;
 };
 

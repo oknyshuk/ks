@@ -5,9 +5,11 @@
 //===============================================================================
 
 #include "cbase.h"
+#include "tier0/memalloc.h"
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
+#include "tier1/map_ops.h"
 #include "globalstate.h"
 #include "client.h"
 #include "decals.h"
@@ -49,8 +51,7 @@
 #include "eventlist.h"
 #include "scriptevent.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
-#include "UtlCachedFileData.h"
-#include "utlbuffer.h"
+#include "cached_file_data.h"
 #include "positionwatcher.h"
 #include "movetype_push.h"
 #include "tier0/icommandline.h"
@@ -71,9 +72,6 @@
 #include "videocfg/videocfg.h"
 #include "tier0/stackstats.h"
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 extern bool g_bTestMoveTypeStepSimulation;
 extern ConVar sv_vehicle_autoaim_scale;
@@ -165,7 +163,7 @@ REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_ClientSideAnimation );
 IMPLEMENT_REFLECT_TABLE_IN( CBaseEntity, DT_AnimTimeMustBeFirst );
 
 
-void BuildMergedPlayerIndexListForSplitUser( int nPlayerIndex, CUtlVector< int > &list )
+void BuildMergedPlayerIndexListForSplitUser( int nPlayerIndex, std::vector< int > &list )
 {
 	CBasePlayer *pl = static_cast< CBasePlayer * >( CBaseEntity::Instance( nPlayerIndex ) );
 	Assert( pl );
@@ -185,13 +183,13 @@ void BuildMergedPlayerIndexListForSplitUser( int nPlayerIndex, CUtlVector< int >
 	}
 
 	// Now use root player to build list
-	list.AddToTail( nRootPlayer );
+	list.push_back( nRootPlayer );
 	for ( int i = 1; i < MAX_SPLITSCREEN_PLAYERS; ++i )
 	{
 		edict_t *ed = engine->GetSplitScreenPlayerForEdict( nRootPlayer, i ) ;
 		if ( ed )
 		{
-			list.AddToTail( ENTINDEX( ed ) );
+			list.push_back( ENTINDEX( ed ) );
 		}
 	}
 }
@@ -206,101 +204,17 @@ static void* SendProxy_SendPredictableId( const SendProp *pProp, const void *pSt
 
 	int id_player_index = pEntity->m_PredictableID->GetPlayer();
 
-	CUtlVector< int > rList;
+	std::vector< int > rList;
 	BuildMergedPlayerIndexListForSplitUser( id_player_index, rList );
 	pRecipients->ClearAllRecipients();
-	FOR_EACH_VEC( rList, i )
+	for ( int nPlayerIndex : rList )
 	{
-		pRecipients->SetRecipient( rList[ i ] );
+		pRecipients->SetRecipient( nPlayerIndex );
 	}	
 	return ( void * )pVarData;
 }
 REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_SendPredictableId );
 #endif
-
-/*
-//--------------------------------------------------------------------------------------------------------
-// Origin debugging
-//--------------------------------------------------------------------------------------------------------
-#if defined(_WIN32)
-#include "filesystem.h"
-
-struct SOriginDebugFP
-{
-	SOriginDebugFP()
-	{
-		m_originDebugFP = NULL;
-	}
-
-	~SOriginDebugFP()
-	{
-		if ( m_originDebugFP )
-		{
-			filesystem->Close( m_originDebugFP );
-			m_originDebugFP = NULL;
-			m_count = 0;
-		}
-	}
-
-	FileHandle_t m_originDebugFP;
-	int m_count;
-};
-
-static SOriginDebugFP sOriginDebugFP;
-
-ConVar sv_lognetorigindeltas( "sv_lognetorigindeltas", "0", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "Log entity origins" );
-
-static void LogNetOriginDeltas( CBaseEntity *entity, Vector const *v )
-{
-	if ( !sv_lognetorigindeltas.GetBool() )
-	{
-		if ( sOriginDebugFP.m_originDebugFP )
-		{
-			filesystem->Close( sOriginDebugFP.m_originDebugFP );
-			sOriginDebugFP.m_originDebugFP = NULL;
-			sOriginDebugFP.m_count = 0;
-		}
-
-		return;
-	}
-
-	if ( !sOriginDebugFP.m_originDebugFP )
-	{
-		char logFileName[MAX_PATH];
-		V_snprintf( logFileName, ARRAYSIZE( logFileName ), "origin_server_%s.csv", 
-					gpGlobals->mapname.ToCStr() );
-
-		sOriginDebugFP.m_originDebugFP = filesystem->Open( logFileName, "wt" );
-
-		if ( sOriginDebugFP.m_originDebugFP )
-		{
-			filesystem->FPrintf( sOriginDebugFP.m_originDebugFP,
-									"Count"
-									",Class"
-									",Index"
-									",X"
-									",Y"
-									",Z"
-									"\n" );
-		}
-
-	}
-
-	if ( sOriginDebugFP.m_originDebugFP )
-	{
-		filesystem->FPrintf( sOriginDebugFP.m_originDebugFP,
-								"%d,%s,%d,%6.4f,%6.4f,%6.4f\n",
-								sOriginDebugFP.m_count++,
-								entity->GetClassname(),
-								entity->entindex(),
-								v->x,
-								v->y,
-								v->z );
-	}
-}
-
-#endif // (defined(_WIN32) && (!defined(_GAMECONSOLE) ) )
-*/
 
 //--------------------------------------------------------------------------------------------------------
 void SendProxy_Origin( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID )
@@ -647,7 +561,7 @@ CBaseEntity::CBaseEntity( bool bServerOnly )
 	AddEFlags( EFL_USE_PARTITION_WHEN_NOT_SOLID );
 
 	m_pPrevByClass = m_pNextByClass = nullptr;
-	m_ListByClass = (UtlHashHandle_t)~0;
+	m_ppListByClassHead = nullptr;
 	SetNetworkQuantizeOriginAngAngles( false );
 
 #if defined(ENABLE_CREATE_TIME)
@@ -774,7 +688,7 @@ void CBaseEntity::PostClientActive( void )
 // Purpose: Verifies that this entity's data description is valid in debug builds.
 //-----------------------------------------------------------------------------
 #ifdef _DEBUG
-typedef CUtlVector< const char * >	KeyValueNameList_t;
+typedef std::vector< const char * >	KeyValueNameList_t;
 
 static void AddDataMapFieldNamesToList( KeyValueNameList_t &list, datamap_t *pDataMap )
 {
@@ -792,7 +706,7 @@ static void AddDataMapFieldNamesToList( KeyValueNameList_t &list, datamap_t *pDa
 
 			if (pField->flags & FTYPEDESC_KEY)
 			{
-				list.AddToTail( pField->externalName );
+				list.push_back( pField->externalName );
 			}
 		}
 	
@@ -814,7 +728,7 @@ void CBaseEntity::ValidateDataDescription(void)
 	KeyValueNameList_t	names(128);
 	AddDataMapFieldNamesToList( names, pDataMap );
 
-	for (int i = names.Count(); --i > 0; )
+	for (int i = std::ssize( names ); --i > 0; )
 	{
 		for (int j = i - 1; --j >= 0; )
 		{
@@ -1069,7 +983,7 @@ void CBaseEntity::DrawTimedOverlays(void)
 				m_pTimedOverlay = pNextTO;
 			}
 
-			delete pTO->msg;
+			delete[] pTO->msg;
 			delete pTO;
 		}
 		else
@@ -1852,11 +1766,11 @@ float CBaseEntity::GetAttackDamageScale( CBaseEntity *pVictim )
 {
 	float flScale = 1;
 #if ENABLE_DAMAGE_MODIFIERS
-	FOR_EACH_LL( m_DamageModifiers, i )
+	for ( CDamageModifier *pModifier : m_DamageModifiers )
 	{
-		if ( !m_DamageModifiers[i]->IsDamageDoneToMe() )
+		if ( !pModifier->IsDamageDoneToMe() )
 		{
-			flScale *= m_DamageModifiers[i]->GetModifier();
+			flScale *= pModifier->GetModifier();
 		}
 	}
 #endif
@@ -1870,11 +1784,11 @@ float CBaseEntity::GetReceivedDamageScale( CBaseEntity *pAttacker )
 {
 	float flScale = 1;
 #if ENABLE_DAMAGE_MODIFIERS
-	FOR_EACH_LL( m_DamageModifiers, i )
+	for ( CDamageModifier *pModifier : m_DamageModifiers )
 	{
-		if ( m_DamageModifiers[i]->IsDamageDoneToMe() )
+		if ( pModifier->IsDamageDoneToMe() )
 		{
-			flScale *= m_DamageModifiers[i]->GetModifier();
+			flScale *= pModifier->GetModifier();
 		}
 	}
 #endif
@@ -2181,12 +2095,12 @@ void CBaseEntity::UpdateOnRemove( void )
 	UnlinkFromParent( this );
 
 	// Any children still connected are orphans, mark all for delete
-	CUtlVector<CBaseEntity *> childrenList;
+	std::vector< CBaseEntity * > childrenList;
 	GetAllChildren( this, childrenList );
-	if ( childrenList.Count() )
+	if ( !childrenList.empty() )
 	{
 		DevMsg( 2, "Warning: Deleting orphaned children of %s\n", GetClassname() );
-		for ( int i = childrenList.Count()-1; i >= 0; --i )
+		for ( int i = std::ssize( childrenList )-1; i >= 0; --i )
 		{
 			UTIL_Remove( childrenList[i] );
 		}
@@ -2531,7 +2445,7 @@ static void CheckPushedEntity( CBaseEntity *pEntity, pushblock_t &params )
 
 				float t = expectedDist != 0.0f ? fabsf(deltaAngle / expectedDist) : 1.0f;
 				t = clamp(t,0,1);
-				fraction = MAX(fraction, t);
+				fraction = std::max(fraction, t);
 			}
 			else
 			{
@@ -2567,7 +2481,7 @@ void CBaseEntity::VPhysicsUpdatePusher( IPhysicsObject *pPhysics )
 	// don't allow vphysics to block.  Assume game physics has handled it.
 	if ( GetSolid() != SOLID_BSP && pPhysics->GetShadowPosition( &origin, &angles ) )
 	{
-		CUtlVector<CBaseEntity *> list;
+		std::vector< CBaseEntity * > list;
 		GetAllInHierarchy( this, list );
 		//NDebugOverlay::BoxAngles( origin, CollisionProp()->OBBMins(), CollisionProp()->OBBMaxs(), angles, 255,0,0,0, gpGlobals->frametime);
 
@@ -2586,7 +2500,7 @@ void CBaseEntity::VPhysicsUpdatePusher( IPhysicsObject *pPhysics )
 		params.pBlockedEntity = nullptr;
 		params.moveBackFraction = 0.0f;
 		params.movetime = movetime;
-		for ( int i = 0; i < list.Count(); i++ )
+		for ( int i = 0; i < std::ssize( list ); i++ )
 		{
 			if ( list[i]->IsSolid() )
 			{
@@ -3291,8 +3205,6 @@ bool CBaseEntity::ShouldSavePhysics()
 
 //-----------------------------------------------------------------------------
 
-#include "tier0/memdbgoff.h"
-
 //-----------------------------------------------------------------------------
 // CBaseEntity new/delete
 // allocates and frees memory for itself from the engine->
@@ -3317,8 +3229,6 @@ void CBaseEntity::operator delete( void *pMem )
 	// get the engine to free the memory
 	free( pMem );
 }
-
-#include "tier0/memdbgon.h"
 
 
 #ifdef _DEBUG
@@ -3603,12 +3513,12 @@ void CBaseEntity::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
 	int index = entindex();
 
 	// Are we already marked for transmission?
-	if ( pInfo->m_pTransmitEdict->Get( index ) )
+	if ( (*pInfo->m_pTransmitEdict)[ index ] )
 		return;
 
 	CServerNetworkProperty *pNetworkParent = NetworkProp()->GetNetworkParent();
 
-	pInfo->m_pTransmitEdict->Set( index );
+	pInfo->m_pTransmitEdict->set( index );
 
 	// HLTV/Replay need to know if this entity is culled by PVS limits
 	if ( pInfo->m_pTransmitAlways )
@@ -3618,7 +3528,7 @@ void CBaseEntity::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
 		if ( bAlways || pNetworkParent )
 		{
 			// tell HLTV/Replay that this entity is always transmitted
-			pInfo->m_pTransmitAlways->Set( index );
+			pInfo->m_pTransmitAlways->set( index );
 		}
 		else 
 		{
@@ -4562,7 +4472,7 @@ static void TeleportEntity( CBaseEntity *pSourceEntity, TeleportListEntry_t &ent
 //			This list is necessary to keep lazy updates of abs origins and angles
 //			from messing up our child/constrained entity fixup.
 //-----------------------------------------------------------------------------
-static void BuildTeleportList_r( CBaseEntity *pTeleport, CUtlVector<TeleportListEntry_t> &teleportList )
+static void BuildTeleportList_r( CBaseEntity *pTeleport, std::vector< TeleportListEntry_t > &teleportList )
 {
 	TeleportListEntry_t entry;
 	
@@ -4570,7 +4480,7 @@ static void BuildTeleportList_r( CBaseEntity *pTeleport, CUtlVector<TeleportList
 	entry.prevAbsOrigin = pTeleport->GetAbsOrigin();
 	entry.prevAbsAngles = pTeleport->GetAbsAngles();
 
-	teleportList.AddToTail( entry );
+	teleportList.push_back( entry );
 
 	CBaseEntity *pList = pTeleport->FirstMoveChild();
 	while ( pList )
@@ -4581,24 +4491,24 @@ static void BuildTeleportList_r( CBaseEntity *pTeleport, CUtlVector<TeleportList
 }
 
 
-static CUtlVector<CBaseEntity *> g_TeleportStack;
+static std::vector< CBaseEntity * > g_TeleportStack;
 void CBaseEntity::Teleport( const Vector *newPosition, const QAngle *newAngles, const Vector *newVelocity, bool bUseSlowHighAccuracyContacts )
 {
-	if ( g_TeleportStack.Find( this ) >= 0 )
+	if ( ks::find_index( g_TeleportStack, this ) >= 0 )
 		return;
-	int index = g_TeleportStack.AddToTail( this );
+	int index = std::ssize( g_TeleportStack ); g_TeleportStack.push_back( this );
 
-	CUtlVector<TeleportListEntry_t> teleportList;
+	std::vector< TeleportListEntry_t > teleportList;
 	BuildTeleportList_r( this, teleportList );
 
 	int i;
-	for ( i = 0; i < teleportList.Count(); i++)
+	for ( i = 0; i < std::ssize( teleportList ); i++)
 	{
 		TeleportEntity( this, teleportList[i], newPosition, newAngles, newVelocity, bUseSlowHighAccuracyContacts );
 	}
 
 	Assert( g_TeleportStack[index] == this );
-	g_TeleportStack.FastRemove( index );
+	ks::swap_remove( g_TeleportStack, index );
 
 	// FIXME: add an initializer function to StepSimulationData
 	StepSimulationData *step = ( StepSimulationData * )GetDataObject( STEPSIMULATION );
@@ -4644,7 +4554,7 @@ void ModelSoundsCache_PrecacheScriptSound( const char *soundname )
 	CBaseEntity::PrecacheScriptSound( soundname );
 }
 
-static CUtlCachedFileData< CModelSoundsCache > g_ModelSoundsCache( "modelsounds.cache", MODELSOUNDSCACHE_VERSION, 0, UTL_CACHED_FILE_USE_FILESIZE, false );																  
+static CCachedFileData< CModelSoundsCache > g_ModelSoundsCache( "modelsounds.cache", MODELSOUNDSCACHE_VERSION, 0, CACHED_FILE_USE_FILESIZE, false );																  
 
 void ClearModelSoundsCache()
 {
@@ -4671,7 +4581,6 @@ void ModelSoundsCacheShutdown()
 	g_ModelSoundsCache.Shutdown();
 }
 
-static CUtlSymbolTable g_ModelSoundsSymbolHelper( 0, 32, true );
 class CModelSoundsCacheSaver: public CAutoGameSystem
 {
 public:
@@ -4755,32 +4664,31 @@ void CBaseEntity::PrecacheSoundHelper( const char *pName )
 class CModelPrecacheSystem : public CAutoGameSystem
 {
 public:
-	CModelPrecacheSystem() : CAutoGameSystem( "CModelPrecacheSystem" ), m_RepeatCounts( 0, 0, DefLessFunc( int ) )
+	CModelPrecacheSystem() : CAutoGameSystem( "CModelPrecacheSystem" )
 	{
 	}
 
 	// Level init, shutdown
 	virtual void LevelShutdownPreEntity()
 	{
-		m_RepeatCounts.Purge();
+		m_RepeatCounts.clear();
 	}
 
 	bool ShouldPrecache( int nModelIndex )
 	{
-		int slot = m_RepeatCounts.Find( nModelIndex );
-		if ( slot != m_RepeatCounts.InvalidIndex() )
+		auto [it, bInserted] = m_RepeatCounts.try_emplace( nModelIndex, 0 );
+		if ( !bInserted )
 		{
-			m_RepeatCounts[ slot ]++;
+			it->second++;
 			return false;
 		}
 
-		m_RepeatCounts.Insert( nModelIndex, 0 );
 		return true;
 	}
 
 private:
 
-	CUtlMap< int, int > m_RepeatCounts;
+	std::map< int, int > m_RepeatCounts;
 };
 
 static CModelPrecacheSystem g_ModelPrecacheSystem;
@@ -5407,11 +5315,6 @@ void CC_Ent_FireTarget( const CCommand& args )
 }
 static ConCommand firetarget("firetarget", CC_Ent_FireTarget, 0, FCVAR_CHEAT);
 
-static bool UtlStringLessFunc( const CUtlString &lhs, const CUtlString &rhs )
-{
-	return Q_stricmp( lhs.String(), rhs.String() ) < 0;
-}
-
 class CEntFireAutoCompletionFunctor : public ICommandCallback, public ICommandCompletionCallback
 {
 public:
@@ -5468,7 +5371,7 @@ public:
 		}
 	}
 
-	virtual int CommandCompletionCallback( const char *partial, CUtlVector< CUtlString > &commands )
+	virtual int CommandCompletionCallback( const char *partial, std::vector< std::string > &commands )
 	{
 		if ( !g_pGameRules )
 		{
@@ -5494,7 +5397,7 @@ public:
 			checklen = Q_strlen( substring );
 		}
 
-		CUtlRBTree< CUtlString > symbols( 0, 0, UtlStringLessFunc );
+		std::set< std::string, ks::iless > symbols;
 
 		CBaseEntity *pos = nullptr;
 		while ( ( pos = gEntList.NextEnt( pos ) ) != nullptr )
@@ -5506,36 +5409,32 @@ public:
 			if ( Q_strnicmp( STRING( pos->GetEntityName() ), substring, checklen ) )
 				continue;
 
-			CUtlString sym = STRING( pos->GetEntityName() );
-			int idx = symbols.Find( sym );
-			if ( idx == symbols.InvalidIndex() )
-			{
-				symbols.Insert( sym );
-			}
+			std::string sym = STRING( pos->GetEntityName() );
+			symbols.insert( sym );
 
 			// Too many
-			if ( symbols.Count() >= COMMAND_COMPLETION_MAXITEMS )
+			if ( std::ssize( symbols ) >= COMMAND_COMPLETION_MAXITEMS )
 				break;
 		}
 
 		// Now fill in the results
-		for ( int i = symbols.FirstInorder(); i != symbols.InvalidIndex(); i = symbols.NextInorder( i ) )
+		for ( const std::string &sym : symbols )
 		{
-			const char *name = symbols[ i ].String();
+			const char *name = sym.c_str();
 
 			char buf[ 512 ];
 			Q_strncpy( buf, name, sizeof( buf ) );
 			Q_strlower( buf );
 
-			CUtlString command;
+			std::string command;
 			command = CFmtStr( "%s %s", cmdname, buf );
-			commands.AddToTail( command );
+			commands.push_back( command );
 		}
 
-		return symbols.Count();
+		return std::ssize( symbols );
 	}
 private:
-	int EntFire_AutoCompleteInput( const char *partial, CUtlVector< CUtlString > &commands )
+	int EntFire_AutoCompleteInput( const char *partial, std::vector< std::string > &commands )
 	{
 		const char *cmdname = "ent_fire";
 
@@ -5565,7 +5464,7 @@ private:
 		if ( target == nullptr )
 			return 0;
 
-		CUtlRBTree< CUtlString > symbols( 0, 0, UtlStringLessFunc );
+		std::set< std::string, ks::iless > symbols;
 
 		// Find the next portion of the text chain, if any (removing space)
 		int nInputNameLength = (checklen-nEntityNameLength-1);
@@ -5576,7 +5475,7 @@ private:
 		for ( datamap_t *dmap = target->GetDataDescMap(); dmap != nullptr; dmap = dmap->baseMap )
 		{
 			// Make sure we don't keep adding things in if the satisfied the limit
-			if ( symbols.Count() >= COMMAND_COMPLETION_MAXITEMS )
+			if ( std::ssize( symbols ) >= COMMAND_COMPLETION_MAXITEMS )
 				break;
 
 			int c = dmap->dataNumFields;
@@ -5599,35 +5498,31 @@ private:
 						continue;
 				}
 
-				CUtlString sym = field->externalName;
+				std::string sym = ks::nz( field->externalName );
 
-				int idx = symbols.Find( sym );
-				if ( idx == symbols.InvalidIndex() )
-				{
-					symbols.Insert( sym );
-				}
+				symbols.insert( sym );
 
 				// Too many items have been added
-				if ( symbols.Count() >= COMMAND_COMPLETION_MAXITEMS )
+				if ( std::ssize( symbols ) >= COMMAND_COMPLETION_MAXITEMS )
 					break;
 			}
 		}
 
 		// Now fill in the results
-		for ( int i = symbols.FirstInorder(); i != symbols.InvalidIndex(); i = symbols.NextInorder( i ) )
+		for ( const std::string &sym : symbols )
 		{
-			const char *name = symbols[ i ].String();
+			const char *name = sym.c_str();
 
 			char buf[ 512 ];
 			Q_strncpy( buf, name, sizeof( buf ) );
 			Q_strlower( buf );
 
-			CUtlString command;
+			std::string command;
 			command = CFmtStr( "%s %s %s", cmdname, targetEntity, buf );
-			commands.AddToTail( command );
+			commands.push_back( command );
 		}
 
-		return symbols.Count();
+		return std::ssize( symbols );
 	}
 };
 
@@ -6519,7 +6414,7 @@ void CBaseEntity::RemoveExpiredConcepts( void )
 	{
 		if ( ContextExpired( i ) )
 		{
-			m_ResponseContexts.Remove( i );
+			m_ResponseContexts.erase( m_ResponseContexts.begin() + i );
 			c--;
 			i--;
 			continue;
@@ -6533,7 +6428,7 @@ void CBaseEntity::RemoveExpiredConcepts( void )
 //-----------------------------------------------------------------------------
 int CBaseEntity::GetContextCount() const
 {
-	return m_ResponseContexts.Count();
+	return std::ssize( m_ResponseContexts );
 }
 
 //-----------------------------------------------------------------------------
@@ -6543,7 +6438,7 @@ int CBaseEntity::GetContextCount() const
 //-----------------------------------------------------------------------------
 const char *CBaseEntity::GetContextName( int index ) const
 {
-	if ( index < 0 || index >= m_ResponseContexts.Count() )
+	if ( index < 0 || index >= std::ssize( m_ResponseContexts ) )
 	{
 		Assert( 0 );
 		return "";
@@ -6559,7 +6454,7 @@ const char *CBaseEntity::GetContextName( int index ) const
 //-----------------------------------------------------------------------------
 const char *CBaseEntity::GetContextValue( int index ) const
 {
-	if ( index < 0 || index >= m_ResponseContexts.Count() )
+	if ( index < 0 || index >= std::ssize( m_ResponseContexts ) )
 	{
 		Assert( 0 );
 		return "";
@@ -6573,7 +6468,7 @@ const char *CBaseEntity::GetContextValue( int index ) const
 //-----------------------------------------------------------------------------
 void CBaseEntity::ClearAllContexts( )
 {
-	m_ResponseContexts.RemoveAll();
+	m_ResponseContexts.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -6583,7 +6478,7 @@ void CBaseEntity::ClearAllContexts( )
 //-----------------------------------------------------------------------------
 bool CBaseEntity::ContextExpired( int index ) const
 {
-	if ( index < 0 || index >= m_ResponseContexts.Count() )
+	if ( index < 0 || index >= std::ssize( m_ResponseContexts ) )
 	{
 		Assert( 0 );
 		return true;
@@ -6604,7 +6499,7 @@ bool CBaseEntity::ContextExpired( int index ) const
 //-----------------------------------------------------------------------------
 int CBaseEntity::FindContextByName( const char *name ) const
 {
-	int c = m_ResponseContexts.Count();
+	int c = std::ssize( m_ResponseContexts );
 	for ( int i = 0; i < c; i++ )
 	{
 		if ( FStrEq( name, GetContextName( i ) ) )
@@ -6987,7 +6882,7 @@ void CBaseEntity::AddContext( const char *pKey, const char *pValue, float durati
 		}
 		newContext.m_fExpirationTime = duration;
 
-		m_ResponseContexts.AddToTail( newContext );
+		m_ResponseContexts.push_back( newContext );
 	}
 }
 
@@ -7002,7 +6897,7 @@ void CBaseEntity::InputRemoveContext( inputdata_t& inputdata )
 	if ( idx == -1 )
 		return;
 
-	m_ResponseContexts.Remove( idx );
+	m_ResponseContexts.erase( m_ResponseContexts.begin() + idx );
 }
 
 //-----------------------------------------------------------------------------
@@ -7011,7 +6906,7 @@ void CBaseEntity::InputRemoveContext( inputdata_t& inputdata )
 //-----------------------------------------------------------------------------
 void CBaseEntity::InputClearContext( inputdata_t& inputdata )
 {
-	m_ResponseContexts.RemoveAll();
+	m_ResponseContexts.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -7537,7 +7432,7 @@ void CBaseEntity::EmitSentenceByIndex( IRecipientFilter& filter, int iEntIndex, 
 	const Vector *pOrigin /*=NULL*/, const Vector *pDirection /*=NULL*/, 
 	bool bUpdatePositions /*=true*/, float soundtime /*=0.0f*/ )
 {
-	CUtlVector< Vector > dummy;
+	std::vector< Vector > dummy;
 	enginesound->EmitSentenceByIndex( filter, iEntIndex, iChannel, iSentenceIndex, 
 		flVolume, iSoundlevel, 0, iFlags, iPitch, pOrigin, pDirection, &dummy, bUpdatePositions, soundtime );
 }
@@ -7682,7 +7577,7 @@ void CBaseEntity::SUB_PerformFadeOut( void )
 		dt = 0.1f;
 	}
 	m_nRenderMode = kRenderTransTexture;
-	int speed = MAX(1,256*dt); // fade out over 1 second
+	int speed = std::max<std::common_type_t<int, float>>(1,256*dt); // fade out over 1 second
 	SetRenderAlpha( UTIL_Approach( 0, m_clrRender->a, speed ) );
 }
 
@@ -7831,15 +7726,15 @@ void CBaseEntity::RunVScripts()
 
 	char szScriptsList[255];
 	V_strcpy_safe( szScriptsList, STRING(m_iszVScripts) );
-	CUtlStringList szScripts;
+	std::vector< std::string > szScripts;
 
 	V_SplitString( szScriptsList, " ", szScripts);
 
-	for( int i = 0 ; i < szScripts.Count() ; i++ )
+	for( int i = 0 ; i < std::ssize( szScripts ) ; i++ )
 	{
-		Log_Msg( LOG_VScript, "%s executing script: %s\n", GetDebugName(), szScripts[i] );
+		Log_Msg( LOG_VScript, "%s executing script: %s\n", GetDebugName(), szScripts[i].c_str() );
 
-		RunScriptFile( szScripts[i], IsWorld() );
+		RunScriptFile( szScripts[i].c_str(), IsWorld() );
 
 		for ( int j = 0; j < ARRAYSIZE( sCallChainFunctions ); ++j )
 		{
@@ -8070,8 +7965,8 @@ void CBaseEntity::SetIsSpottedBy( int nPlayerEntIndex )
 	if ( nPlayerEntIndex > 0 && nPlayerEntIndex <= MAX_PLAYERS )
 	{
 		int maskBitIndex = nPlayerEntIndex - 1; // player ents start at 1
-		int maskIndex = BitVec_Int( maskBitIndex );
-		m_bSpottedByMask.Set( maskIndex, m_bSpottedByMask.Get( maskIndex ) | BitVec_Bit( maskBitIndex ) );
+		int maskIndex = maskBitIndex >> 5;
+		m_bSpottedByMask.Set( maskIndex, m_bSpottedByMask.Get( maskIndex ) | ( 1u << ( maskBitIndex & 31 ) ) );
 	}
 }
 

@@ -9,9 +9,6 @@
 #include "matchsystem.h"
 #include "playermanager.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 static CMatchSystem s_MatchSystem;
 CMatchSystem *g_pMatchSystem = &s_MatchSystem;

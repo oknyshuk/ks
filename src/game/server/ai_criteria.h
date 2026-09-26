@@ -7,8 +7,6 @@
 #ifndef AI_CRITERIA_H
 #define AI_CRITERIA_H
 
-#include "tier1/utlrbtree.h"
-#include "tier1/utlsymbol.h"
 #include "tier2/interval.h"
 #include "mathlib/compressed_vector.h"
 #include "../../public/responserules/response_types.h"

@@ -15,7 +15,6 @@
 #include "tier1/strtools.h"
 #include "utlvector.h"
 #include "filesystem_helpers.h"
-#include "utllinkedlist.h"
 #include "tier0/icommandline.h"
 #include "keyvalues.h"
 #include "filesystem_tools.h"
@@ -43,7 +42,7 @@ char		archivedir[ 1024 ];
 
 
 
-CUtlLinkedList<CleanupFn, unsigned short> g_CleanupFunctions;
+std::vector<CleanupFn> g_CleanupFunctions;
 
 bool g_bStopOnExit = false;
 

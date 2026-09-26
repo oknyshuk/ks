@@ -16,9 +16,6 @@
 #include "tier0/vprof.h"
 #include "particles_ez.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 IMPLEMENT_REFLECT_CLIENTCLASS( C_Func_Dust, DT_Func_Dust, CFunc_Dust )
 
 
@@ -176,7 +173,7 @@ void C_Func_Dust::ClientThink()
 	// Spawn particles?
 	if( m_DustFlags & DUSTFLAGS_ON )
 	{
-		float flDelta = MIN( gpGlobals->frametime, 0.1f );
+		float flDelta = std::min( gpGlobals->frametime, 0.1f );
 		while( m_Spawner.NextEvent( flDelta ) )
 		{
 			AttemptSpawnNewParticle();

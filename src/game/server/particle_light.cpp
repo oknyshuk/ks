@@ -10,9 +10,6 @@
 #include "reflect_annotations.h"
 #include "particle_light.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 LINK_ENTITY_TO_CLASS( env_particlelight, CParticleLight );
 
 

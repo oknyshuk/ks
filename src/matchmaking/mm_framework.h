@@ -14,8 +14,10 @@
 #include "tier1/strtools.h"
 #include "tier1/checksum_crc.h"
 #include "tier1/keyvalues.h"
-#include "tier1/utlbuffer.h"
 #include "tier1/fmtstr.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
+#include <vector>
 
 #include "mathlib/mathlib.h"
 

@@ -1,12 +1,16 @@
 //========= Copyright (c) Valve Corporation, All rights reserved. ============//
 #include "feagglomerator.h"
-#include "bitvec.h"
+#include <vector>
+#include "tier1/small_vector.h"
+
+static constexpr CFeAgglomerator::LinkLessFunc_t s_LinkLess{};
+static constexpr CFeAgglomerator::ClusterLessFunc_t s_ClusterLess{};
+static constexpr CFeAgglomerator::ClusterSetIndexFunc_t s_ClusterSetIndex{};
 
 CFeAgglomerator::CFeAgglomerator( uint nReserveNodes )
 {
-	m_Clusters.EnsureCapacity( nReserveNodes * 2 );
-	m_Clusters.SetCount( nReserveNodes );
-	m_Clusters.FillWithValue( nullptr ); // client needs to set all the nodes
+	m_Clusters.reserve( nReserveNodes * 2 );
+	m_Clusters.resize( nReserveNodes );	// client needs to set all the nodes
 /*
 	for ( uint i = 0; i < nReserveNodes; ++i )
 	{
@@ -16,10 +20,7 @@ CFeAgglomerator::CFeAgglomerator( uint nReserveNodes )
 }
 
 
-CFeAgglomerator::~CFeAgglomerator()
-{
-	m_Clusters.PurgeAndDeleteElements();
-}
+CFeAgglomerator::~CFeAgglomerator() = default;
 
 
 
@@ -32,14 +33,14 @@ CFeAgglomerator::CCluster::CCluster( int nIndex, int nChildLeafs ) :m_nParent( -
 
 bool CFeAgglomerator::CCluster::HasLinks()const
 {
-	return m_Links.Count() > 0;
+	return !m_Links.empty();
 }
 
 float CFeAgglomerator::CCluster::GetBestCost()const
 {
 	if ( HasLinks() )
 	{
-		return m_Links.ElementAtHead().m_flCost;
+		return m_Links.front().m_flCost;
 	}
 	else
 	{
@@ -49,11 +50,11 @@ float CFeAgglomerator::CCluster::GetBestCost()const
 
 void CFeAgglomerator::CCluster::RemoveLink( CCluster *pOtherCluster )
 {
-	for ( int i = 0; i < m_Links.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_Links ); ++i )
 	{
-		if ( m_Links.Element( i ).m_pOtherCluster == pOtherCluster )
+		if ( m_Links[ i ].m_pOtherCluster == pOtherCluster )
 		{
-			m_Links.RemoveAt( i );
+			ks::heap_erase( m_Links, i, s_LinkLess );
 			return;
 		}
 	}
@@ -62,9 +63,8 @@ void CFeAgglomerator::CCluster::RemoveLink( CCluster *pOtherCluster )
 
 const CFeAgglomerator::CLink *CFeAgglomerator::CCluster::FindLink( CCluster *pOtherCluster )
 {
-	for ( int i = 0; i < m_Links.Count(); ++i )
+	for ( const CLink &link : m_Links )
 	{
-		const CLink &link = m_Links.Element( i );
 		if ( link.m_pOtherCluster == pOtherCluster )
 		{
 			return &link;
@@ -86,9 +86,9 @@ float CFeAgglomerator::CCluster::ComputeCost( const Vector &vSize, int nChildLea
 void CFeAgglomerator::CCluster::AddLink( CCluster *pOtherCluster )
 {
 #ifdef _DEBUG
-	for ( int i = 0; i < m_Links.Count(); i++ )
+	for ( const CLink &link : m_Links )
 	{
-		Assert( m_Links.Element( i ).m_pOtherCluster != pOtherCluster );
+		Assert( link.m_pOtherCluster != pOtherCluster );
 	}
 #endif
 
@@ -99,7 +99,7 @@ void CFeAgglomerator::CCluster::AddLink( CCluster *pOtherCluster )
 	// (m_Aabb + pOtherCluster->m_Aabb ).GetSurfaceArea()
 	//
 	link.m_flCost = ComputeCost( ( m_Aabb + pOtherCluster->m_Aabb ).GetSize(), m_nChildLeafs + pOtherCluster->m_nChildLeafs );
-	m_Links.Insert( link );
+	ks::heap_push( m_Links, link, s_LinkLess );
 }
 
 
@@ -117,12 +117,12 @@ void CFeAgglomerator::AddLink( CCluster* pCluster0, CCluster *pCluster1, Cluster
 	
 	if ( flNewBestDist0 != flBestDist0 )
 	{
-		queue.RevaluateElement( pCluster0->m_nPriorityIndex );
+		ks::heap_update( queue, pCluster0->m_nPriorityIndex, s_ClusterLess, s_ClusterSetIndex );
 	}
 
 	if ( flNewBestDist1 != flBestDist1 )
 	{
-		queue.RevaluateElement( pCluster1->m_nPriorityIndex );
+		ks::heap_update( queue, pCluster1->m_nPriorityIndex, s_ClusterLess, s_ClusterSetIndex );
 	}
 }
 
@@ -132,8 +132,8 @@ void CFeAgglomerator::LinkNodes( int nNode0, int nNode1 )
 {
 	if ( nNode0 == nNode1 )
 		return;
-	CCluster* pCluster0 = m_Clusters[ nNode0 ];
-	CCluster *pCluster1 = m_Clusters[ nNode1 ];
+	CCluster* pCluster0 = m_Clusters[ nNode0 ].get();
+	CCluster *pCluster1 = m_Clusters[ nNode1 ].get();
 	if ( pCluster0->FindLink( pCluster1 ) )
 	{
 		AssertDbg( pCluster1->FindLink( pCluster0 ) );
@@ -152,32 +152,32 @@ void CFeAgglomerator::LinkNodes( int nNode0, int nNode1 )
 void CFeAgglomerator::Build( bool bSingleRoot )
 {
 	ClustersPriorityQueue_t queue;
-	for ( int i = 0; i < m_Clusters.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_Clusters ); ++i )
 	{
-		queue.Insert( m_Clusters[ i ] );
+		ks::heap_push( queue, m_Clusters[ i ].get(), s_ClusterLess, s_ClusterSetIndex );
 	}
 	Process( queue );
 	// create links of all-with-all
 	// this will be ultra-slow if we have degenerate case (like 1000 small disconnected pieces of cloth)
-	if ( bSingleRoot && queue.Count() > 1 )
+	if ( bSingleRoot && std::ssize( queue ) > 1 )
 	{
-		for ( int i = queue.Count(); i-- > 1; )
+		for ( int i = std::ssize( queue ); i-- > 1; )
 		{
 			for ( int j = i; j-- > 0; )
 			{
-				queue.Element( i )->AddLink( queue.Element( j ) );
-				queue.Element( j )->AddLink( queue.Element( i ) );
+				queue[ i ]->AddLink( queue[ j ] );
+				queue[ j ]->AddLink( queue[ i ] );
 			}			
 		}
 		// the old queue order is destroyed; create a new queue (we could re-heapify the old queue
 		ClustersPriorityQueue_t queue2;
-		for ( int i = queue.Count(); i-- > 0; )
+		for ( int i = std::ssize( queue ); i-- > 0; )
 		{
-			queue2.Insert( queue.Element( i ) );
+			ks::heap_push( queue2, queue[ i ], s_ClusterLess, s_ClusterSetIndex );
 		}
 
 		Process( queue2 );
-		Assert( queue2.Count() == 1 );
+		Assert( queue2.size() == 1 );
 	}
 }
 
@@ -187,27 +187,27 @@ void CFeAgglomerator::Validate( ClustersPriorityQueue_t *pQueue )
 #ifdef _DEBUG
 	if ( pQueue )
 	{
-		Assert( pQueue->IsHeapified() );
-		CVarBitVec used( m_Clusters.Count() );
-		for ( int i = 0; i < pQueue->Count(); ++i )
+		Assert( std::is_heap( pQueue->begin(), pQueue->end(), s_ClusterLess ) );
+		std::vector< bool > used( std::ssize( m_Clusters ) );
+		for ( CCluster *pQueued : *pQueue )
 		{
-			int nCluster = pQueue->Element( i )->m_nIndex;
-			Assert( !used.IsBitSet( nCluster ) );
-			used.Set( nCluster );
+			int nCluster = pQueued->m_nIndex;
+			Assert( !used[ nCluster ] );
+			used[ nCluster ] = true;
 		}
-		for ( int i = 0; i < m_Clusters.Count(); ++i )
+		for ( int i = 0; i < std::ssize( m_Clusters ); ++i )
 		{
-			CCluster *pCluster = m_Clusters[ i ];
-			if ( !used.IsBitSet( i ) )
+			CCluster *pCluster = m_Clusters[ i ].get();
+			if ( !used[ i ] )
 			{
-				Assert( pCluster->m_Links.Count() == 0 );
+				Assert( pCluster->m_Links.empty() );
 			}
 		}
 	}
 
-	for ( int nIndex = 0; nIndex < m_Clusters.Count(); ++nIndex )
+	for ( int nIndex = 0; nIndex < std::ssize( m_Clusters ); ++nIndex )
 	{
-		CCluster *pThisCluster = m_Clusters[ nIndex ];
+		CCluster *pThisCluster = m_Clusters[ nIndex ].get();
 		Assert( pThisCluster->m_nIndex == nIndex );
 		if ( pThisCluster->m_nChild[ 0 ] < 0 )
 		{
@@ -219,17 +219,17 @@ void CFeAgglomerator::Validate( ClustersPriorityQueue_t *pQueue )
 		}
 
 		ClusterLinkQueue_t &links = pThisCluster->m_Links;
-		Assert( links.IsHeapified() );
-		CVarBitVec used( m_Clusters.Count() );
-		for ( int i = 0; i < links.Count(); ++i )
+		Assert( std::is_heap( links.begin(), links.end(), s_LinkLess ) );
+		std::vector< bool > used( std::ssize( m_Clusters ) );
+		for ( CLink &thisLink : links )
 		{
-			CLink *pThisLink = &links.Element( i );
+			CLink *pThisLink = &thisLink;
 			CCluster *pOtherCluster = pThisLink->m_pOtherCluster;
 			const CLink *pOtherLink = pOtherCluster->FindLink( pThisCluster );
 			Assert( pOtherLink );
 			Assert( pOtherLink->m_pOtherCluster == pThisCluster && pThisLink->m_flCost == pOtherLink->m_flCost ); // can't have a link with self & the cost of link should be the same from both sides
-			Assert( !used.IsBitSet( pOtherCluster->m_nIndex ) );// can't have 2 links to the same cluster
-			used.Set( pOtherCluster->m_nIndex ); 
+			Assert( !used[ pOtherCluster->m_nIndex ] );// can't have 2 links to the same cluster
+			used[ pOtherCluster->m_nIndex ] = true; 
 		}
 	}
 #endif
@@ -238,27 +238,26 @@ void CFeAgglomerator::Validate( ClustersPriorityQueue_t *pQueue )
 
 void CFeAgglomerator::Process( ClustersPriorityQueue_t &queue )
 {
-	while ( queue.Count() > 0 && queue.ElementAtHead()->HasLinks() )
+	while ( !queue.empty() && queue.front()->HasLinks() )
 	{
 		Validate( &queue );
 
 		// remove the clusters we're merging from priority queue
 		CCluster *pChild[ 2 ];
-		pChild[ 0 ] = queue.ElementAtHead();
-		pChild[ 1 ] = queue.ElementAtHead()->m_Links.ElementAtHead().m_pOtherCluster;
+		pChild[ 0 ] = queue.front();
+		pChild[ 1 ] = queue.front()->m_Links.front().m_pOtherCluster;
 
 		// remove the children from the queue
 		Assert( pChild[ 0 ]->m_nPriorityIndex == 0 );
-		queue.RemoveAtHead(); // removing pChild[0]
-		queue.RemoveAt( pChild[ 1 ]->m_nPriorityIndex );
+		ks::heap_pop( queue, s_ClusterLess, s_ClusterSetIndex ); // removing pChild[0]
+		ks::heap_erase( queue, pChild[ 1 ]->m_nPriorityIndex, s_ClusterLess, s_ClusterSetIndex );
 
 		pChild[ 0 ]->m_nPriorityIndex = -1;
 		pChild[ 1 ]->m_nPriorityIndex = -1;
 
 		// make the new cluster, link and compute its distances to nearest clusters
-		int nParentIndex = m_Clusters.AddToTail();
-		CCluster *pParent = new CCluster( nParentIndex, pChild[ 0 ]->m_nChildLeafs + pChild[ 1 ]->m_nChildLeafs );
-		m_Clusters[ nParentIndex ] = pParent ;
+		int nParentIndex = std::ssize( m_Clusters );
+		CCluster *pParent = m_Clusters.emplace_back( std::make_unique< CCluster >( nParentIndex, pChild[ 0 ]->m_nChildLeafs + pChild[ 1 ]->m_nChildLeafs ) ).get();
 		pParent->m_Aabb = pChild[ 0 ]->m_Aabb + pChild[ 1 ]->m_Aabb;
 		pParent->m_nChild[ 0 ] = pChild[ 0 ]->m_nIndex;
 		pParent->m_nChild[ 1 ] = pChild[ 1 ]->m_nIndex;
@@ -268,14 +267,14 @@ void CFeAgglomerator::Process( ClustersPriorityQueue_t &queue )
 		pChild[ 1 ]->m_nParent = nParentIndex;
 
 
-		CUtlVectorFixedGrowable< CCluster*, 8 >	reAdd;
-		CVarBitVec skipAddLink( m_Clusters.Count() );
+		ks::small_vector< CCluster*, 8 >	reAdd;
+		std::vector< bool > skipAddLink( std::ssize( m_Clusters ) );
 		// remove all links to the children, replace them with links to the parent
 		{
 			ClusterLinkQueue_t &links = pChild[ 0 ]->m_Links;
-			for ( int i = 0; i < links.Count(); ++i )
+			for ( const CLink &link : links )
 			{
-				CCluster *pOther = links.Element( i ).m_pOtherCluster;
+				CCluster *pOther = link.m_pOtherCluster;
 				Assert( pOther != pChild[ 0 ] );
 				if ( pOther == pChild[ 1 ] )
 					continue; // just skip the connection to the other child
@@ -285,22 +284,22 @@ void CFeAgglomerator::Process( ClustersPriorityQueue_t &queue )
 				pOther->RemoveLink( pChild[ 0 ] );
 				pOther->AddLink( pParent );
 				pParent->AddLink( pOther );
-				skipAddLink.Set( pOther->m_nIndex );
+				skipAddLink[ pOther->m_nIndex ] = true;
 				float flNewDistance = pOther->GetBestCost();
 				if ( flOldDistance != flNewDistance )
 				{
-					reAdd.AddToTail( pOther );
-					queue.RemoveAt( pOther->m_nPriorityIndex );
+					reAdd.push_back( pOther );
+					ks::heap_erase( queue, pOther->m_nPriorityIndex, s_ClusterLess, s_ClusterSetIndex );
 					pOther->m_nPriorityIndex = -1;
 				}
 			}
-			links.Purge(); // the links don't matter any more, we can free the memory
+			ClusterLinkQueue_t().swap( links ); // the links don't matter any more, we can free the memory
 		}
 		{
 			ClusterLinkQueue_t &links = pChild[ 1 ]->m_Links;
-			for ( int i = 0; i < links.Count(); ++i )
+			for ( const CLink &link : links )
 			{
-				CCluster *pOther = links.Element( i ).m_pOtherCluster;
+				CCluster *pOther = link.m_pOtherCluster;
 				Assert( pOther != pChild[ 1 ] );
 				if ( pOther == pChild[ 0 ] )
 					continue; // just skip the connection to the other child
@@ -310,7 +309,7 @@ void CFeAgglomerator::Process( ClustersPriorityQueue_t &queue )
 					float flOldDistance = pOther->GetBestCost();
 					pOther->RemoveLink( pChild[ 1 ] );
 					// if we saw this pOther already, and didn't remove it from the queue, then we marked it as added
-					if ( !skipAddLink.IsBitSet( pOther->m_nIndex ) )
+					if ( !skipAddLink[ pOther->m_nIndex ] )
 					{
 						pOther->AddLink( pParent );
 						pParent->AddLink( pOther );
@@ -318,7 +317,7 @@ void CFeAgglomerator::Process( ClustersPriorityQueue_t &queue )
 					float flNewDistance = pOther->GetBestCost();
 					if ( flOldDistance != flNewDistance )
 					{
-						queue.RevaluateElement( pOther->m_nPriorityIndex ); // no need to remove, this is the first and last edit of this other element
+						ks::heap_update( queue, pOther->m_nPriorityIndex, s_ClusterLess, s_ClusterSetIndex ); // no need to remove, this is the first and last edit of this other element
 					}
 				}
 				else
@@ -327,21 +326,21 @@ void CFeAgglomerator::Process( ClustersPriorityQueue_t &queue )
 					pOther->RemoveLink( pChild[ 1 ] );
 				}
 			}
-			links.Purge(); // the links don't matter any more, we can free the memory
+			ClusterLinkQueue_t().swap( links ); // the links don't matter any more, we can free the memory
 		}
 
-		for ( int nCluster = 0; nCluster < reAdd.Count(); ++nCluster )
+		for ( int nCluster = 0; nCluster < std::ssize( reAdd ); ++nCluster )
 		{
-			queue.Insert( reAdd[nCluster] );
+			ks::heap_push( queue, reAdd[nCluster], s_ClusterLess, s_ClusterSetIndex );
 		}
-		queue.Insert( pParent );
+		ks::heap_push( queue, pParent, s_ClusterLess, s_ClusterSetIndex );
 		
 		Validate( &queue );
 	}
 
-	for ( int i = 0; i < queue.Count(); ++i )
+	for ( CCluster *pCluster : queue )
 	{
-		Assert( !queue.Element( i )->HasLinks() );
+		Assert( !pCluster->HasLinks() );
 	}
 }
 

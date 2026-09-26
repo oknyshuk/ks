@@ -19,9 +19,6 @@
 #include "shaderapi_global.h"
 #include "materialsystem/materialsystem_config.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
- 
 
 enum
 {
@@ -54,33 +51,10 @@ inline CTransitionTable::CurrentState_t& CurrentState()
 
 
 //-----------------------------------------------------------------------------
-// Less functions
-//-----------------------------------------------------------------------------
-bool CTransitionTable::ShadowStateDictLessFunc::Less( const CTransitionTable::ShadowStateDictEntry_t &src1, const CTransitionTable::ShadowStateDictEntry_t &src2, void *pCtx )
-{
-	return src1.m_nChecksum < src2.m_nChecksum;
-}
-
-bool CTransitionTable::SnapshotDictLessFunc::Less( const CTransitionTable::SnapshotDictEntry_t &src1, const CTransitionTable::SnapshotDictEntry_t &src2, void *pCtx )
-{
-	return src1.m_nChecksum < src2.m_nChecksum;
-}
-
-bool CTransitionTable::UniqueSnapshotLessFunc::Less( const CTransitionTable::TransitionList_t &src1, const CTransitionTable::TransitionList_t &src2, void *pCtx )
-{
-	return src1.m_NumOperations > src2.m_NumOperations;
-}
-
-	
-//-----------------------------------------------------------------------------
 // Constructor, destructor
 //-----------------------------------------------------------------------------
 CTransitionTable::CTransitionTable() : m_DefaultStateSnapshot(-1),
-	m_CurrentShadowId(-1), m_CurrentSnapshotId(-1), m_TransitionOps( 0, 8192 ), m_ShadowStateList( 0, 256 ),
-	m_TransitionTable( 0, 256 ), m_SnapshotList( 0, 256 ), 
-	m_ShadowStateDict(0, 256 ), 
-	m_SnapshotDict( 0, 256 ), 
-	m_UniqueTransitions( 0, 4096 ),
+	m_CurrentShadowId(-1), m_CurrentSnapshotId(-1),
 	m_bShadowDepthBiasValuesDirty( false )
 {
 	Assert( !g_pTransitionTable );
@@ -118,7 +92,7 @@ void CTransitionTable::Shutdown( )
 //-----------------------------------------------------------------------------
 StateSnapshot_t CTransitionTable::CreateStateSnapshot( ShadowStateId_t shadowStateId, const ShadowShaderState_t& currentShaderState )
 {
-	StateSnapshot_t snapshotId = m_SnapshotList.AddToTail();
+	StateSnapshot_t snapshotId = std::ssize( m_SnapshotList ); m_SnapshotList.emplace_back();
 
 	// Copy our snapshot into the list
 	SnapshotShaderState_t &shaderState = m_SnapshotList[snapshotId];
@@ -135,7 +109,7 @@ StateSnapshot_t CTransitionTable::CreateStateSnapshot( ShadowStateId_t shadowSta
 	CRC32_Final( &insert.m_nChecksum );
 
 	insert.m_nSnapshot = snapshotId;
-	m_SnapshotDict.Insert( insert );
+	m_SnapshotDict.insert( insert );
 
 	return snapshotId;
 }
@@ -146,7 +120,7 @@ StateSnapshot_t CTransitionTable::CreateStateSnapshot( ShadowStateId_t shadowSta
 //-----------------------------------------------------------------------------
 CTransitionTable::ShadowStateId_t CTransitionTable::CreateShadowState( const ShadowState_t &currentState )
 {
-	int newShaderState = m_ShadowStateList.AddToTail();
+	int newShaderState = std::ssize( m_ShadowStateList ); m_ShadowStateList.emplace_back();
 
 	// Copy our snapshot into the list
 	memcpy( &m_ShadowStateList[newShaderState], &currentState, sizeof(ShadowState_t) );
@@ -156,20 +130,20 @@ CTransitionTable::ShadowStateId_t CTransitionTable::CreateShadowState( const Sha
 	for ( i = 0; i < newShaderState; ++i )
 	{
 		// Add a new transition to all existing states
-		int newElem = m_TransitionTable[i].AddToTail();
+		int newElem = std::ssize( m_TransitionTable[i] ); m_TransitionTable[i].emplace_back();
 		m_TransitionTable[i][newElem].m_FirstOperation = INVALID_TRANSITION_OP;
 		m_TransitionTable[i][newElem].m_NumOperations = 0;
 	}
 
 	// Add a new vector for this transition
-	int newTransitionElem = m_TransitionTable.AddToTail();
-	m_TransitionTable[newTransitionElem].EnsureCapacity( 32 );
+	int newTransitionElem = std::ssize( m_TransitionTable ); m_TransitionTable.emplace_back();
+	m_TransitionTable[newTransitionElem].reserve( 32 );
 	Assert( newShaderState == newTransitionElem );
 
 	for ( i = 0; i <= newShaderState; ++i )
 	{
 		// Add a new transition from all existing states
-		int newElem = m_TransitionTable[newShaderState].AddToTail();
+		int newElem = std::ssize( m_TransitionTable[newShaderState] ); m_TransitionTable[newShaderState].emplace_back();
 		m_TransitionTable[newShaderState][newElem].m_FirstOperation = INVALID_TRANSITION_OP;
 		m_TransitionTable[newShaderState][newElem].m_NumOperations = 0;
 	}
@@ -182,7 +156,7 @@ CTransitionTable::ShadowStateId_t CTransitionTable::CreateShadowState( const Sha
 	CRC32_Final( &insert.m_nChecksum );
 
 	insert.m_nShadowStateId = newShaderState;
-	m_ShadowStateDict.Insert( insert );
+	m_ShadowStateDict.insert( insert );
 
 	return newShaderState;
 }
@@ -199,21 +173,10 @@ CTransitionTable::ShadowStateId_t CTransitionTable::FindShadowState( const Shado
 	CRC32_ProcessBuffer( &find.m_nChecksum, &currentState, sizeof(ShadowState_t) );
 	CRC32_Final( &find.m_nChecksum );
 	
-	int nDictCount = m_ShadowStateDict.Count();
-	int i = m_ShadowStateDict.FindLessOrEqual( find );
-	if ( i < 0 )
-		return (ShadowStateId_t)-1;
-
-	for ( ; i < nDictCount; ++i )
+	auto [itFirst, itLast] = m_ShadowStateDict.equal_range( find );
+	for ( auto it = itFirst; it != itLast; ++it )
 	{
-		const ShadowStateDictEntry_t &entry = m_ShadowStateDict[i];
-
-		// Didn't find a match
-		if ( entry.m_nChecksum > find.m_nChecksum )
-			break;
-
-		if ( entry.m_nChecksum != find.m_nChecksum )
-			continue;
+		const ShadowStateDictEntry_t &entry = *it;
 
 		ShadowStateId_t nShadowState = entry.m_nShadowStateId;
 		if (!memcmp(&m_ShadowStateList[nShadowState], &currentState, sizeof(ShadowState_t) ))
@@ -242,21 +205,10 @@ StateSnapshot_t CTransitionTable::FindStateSnapshot( ShadowStateId_t id, const S
 	CRC32_ProcessBuffer( &find.m_nChecksum, &temp, sizeof(temp) );
 	CRC32_Final( &find.m_nChecksum );
 
-	int nDictCount = m_SnapshotDict.Count();
-	int i = m_SnapshotDict.FindLessOrEqual( find );
-	if ( i < 0 )
-		return (StateSnapshot_t)-1;
-
-	for ( ; i < nDictCount; ++i )
+	auto [itFirst, itLast] = m_SnapshotDict.equal_range( find );
+	for ( auto it = itFirst; it != itLast; ++it )
 	{
-		// Didn't find a match
-		if ( m_SnapshotDict[i].m_nChecksum > find.m_nChecksum )
-			break;
-
-		if ( m_SnapshotDict[i].m_nChecksum != find.m_nChecksum )
-			continue;
-
-		StateSnapshot_t nShapshot = m_SnapshotDict[i].m_nSnapshot;
+		StateSnapshot_t nShapshot = it->m_nSnapshot;
 		if ( (id == m_SnapshotList[nShapshot].m_ShadowStateId) && 
 			!memcmp(&m_SnapshotList[nShapshot].m_ShaderState, &currentState, sizeof(ShadowShaderState_t)) )
 		{
@@ -274,13 +226,13 @@ StateSnapshot_t CTransitionTable::FindStateSnapshot( ShadowStateId_t id, const S
 //-----------------------------------------------------------------------------
 void CTransitionTable::Reset()
 {
-	m_ShadowStateList.RemoveAll();
-	m_SnapshotList.RemoveAll();
-	m_TransitionTable.RemoveAll();
-	m_TransitionOps.RemoveAll();
-	m_ShadowStateDict.RemoveAll();
-	m_SnapshotDict.RemoveAll();
-	m_UniqueTransitions.RemoveAll();
+	m_ShadowStateList.clear();
+	m_SnapshotList.clear();
+	m_TransitionTable.clear();
+	m_TransitionOps.clear();
+	m_ShadowStateDict.clear();
+	m_SnapshotDict.clear();
+	m_UniqueTransitions.clear();
 	m_CurrentShadowId = -1;
 	m_CurrentSnapshotId = -1;
 	m_DefaultStateSnapshot = -1;
@@ -767,10 +719,8 @@ unsigned int CTransitionTable::FindIdenticalTransitionList( unsigned int firstEl
 	// Look for a common list
 	const TransitionOp_t &op = m_TransitionOps[firstElem];
 
-	int nCount = m_UniqueTransitions.Count();
-	for ( int i = 0; i < nCount; ++i )
+	for ( const TransitionList_t &list : m_UniqueTransitions )
 	{
-		const TransitionList_t &list = m_UniqueTransitions[i];
 
 		// We can early out here because we've sorted the unique transitions
 		// descending by count 

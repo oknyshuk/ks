@@ -10,9 +10,6 @@
 #include "convar.h"
 #include "sound.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 void DbReferenceChanged( IConVar *var, const char *pOldValue, float flOldValue );
 

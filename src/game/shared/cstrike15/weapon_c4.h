@@ -143,7 +143,7 @@
 		virtual void Explode( trace_t *pTrace, int bitsDamageType );
 	};
 
-	extern CUtlVector< CPlantedC4* > g_PlantedC4s;
+	extern std::vector< CPlantedC4* > g_PlantedC4s;
 
 
 
@@ -187,7 +187,7 @@ public:
 		char *GetScreenText( void );
 		char m_szScreenText[32];
 
-		CUtlReference<CNewParticleEffect> m_hC4LED;
+		ks::tracked_ref<CNewParticleEffect> m_hC4LED;
 		void CreateLEDEffect( void );
 		void RemoveLEDEffect( void );
 		EHANDLE		   m_hParticleEffectOwner;

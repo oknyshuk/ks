@@ -638,7 +638,7 @@ public:
 				m_batch_vis_bitmap.additive_fill_box(0, m_nBatchVisY, (uint)(.5f + flTotalPresentTime / d3d_present_vis_abs_scale.GetFloat() * m_batch_vis_bitmap.width()), 10, 0, 255, 128);
 				m_nBatchVisY += 10;
 			
-				uint y = MAX( 600, m_nBatchVisY + 20 ), l = 0;
+				uint y = std::max( 600, m_nBatchVisY + 20 ), l = 0;
 				m_batch_vis_bitmap.draw_formatted_text(0, y+8*(l++), 1, 255, 255, 255, "Frame: %u, Batches: %u, Prims: %u", nFrameIndex, m_nTotalDraws, m_nTotalPrims );
 				m_batch_vis_bitmap.draw_formatted_text(0, y+8*(l++), 1, 255, 255, 255, "Frame: D3D Calls: %u, D3D Time: %3.3fms", m_nTotalD3DCalls, m_flTotalD3DTime);
 				l++;
@@ -958,7 +958,7 @@ public:
 			if ( d3d_batch_vis_y_scale.GetFloat() > 0.0f)
 			{
 				h = ceil( t / d3d_batch_vis_y_scale.GetFloat() );
-				h = MAX(h, 1);
+				h = std::max(h, 1);
 			}
 
 			m_batch_vis_bitmap.fill_box(0, m_nBatchVisY, (uint)(.5f + t / d3d_batch_vis_abs_scale.GetFloat() * m_batch_vis_bitmap.width()), h, 64, 64, 64);

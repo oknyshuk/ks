@@ -18,10 +18,7 @@
 #include "generic_classmap.h"
 
 #ifdef DEBUG
-#pragma warning(push)
 #include <typeinfo>
-#pragma warning(pop)
-#pragma warning(disable:4290)
 #endif
 
 
@@ -189,7 +186,7 @@ private:
 	const Task_t *GetTask( AIChannelScheduleState_t *pScheduleState );
 
 
-	CUtlVector<AIChannelScheduleState_t> m_ScheduleChannels;
+	std::vector< AIChannelScheduleState_t > m_ScheduleChannels;
 
 protected:
 	int GetNpcState() { return GetOuter()->m_NPCState; }
@@ -578,7 +575,7 @@ template <class BASE_NPC>
 inline void CAI_BehaviorHost<BASE_NPC>::CleanupOnDeath( CBaseEntity *pCulprit, bool bFireDeathOutput )
 {
 	this->DeferSchedulingToBehavior( nullptr );
-	for( int i = 0; i < this->m_Behaviors.Count(); i++ )
+	for( int i = 0; i < std::ssize( this->m_Behaviors ); i++ )
 	{
 		this->m_Behaviors[i]->CleanupOnDeath( pCulprit, bFireDeathOutput );
 	}
@@ -592,7 +589,7 @@ inline void CAI_BehaviorHost<BASE_NPC>::GatherConditions()
 { 
 	// Iterate over behaviors and call GatherConditionsNotActive() on each behavior
 	// not currently active.
-	for( int i = 0; i < this->m_Behaviors.Count(); i++ )
+	for( int i = 0; i < std::ssize( this->m_Behaviors ); i++ )
 	{
 		if( this->m_Behaviors[i] != this->m_pPrimaryBehavior )
 		{
@@ -763,7 +760,7 @@ inline void CAI_BehaviorHost<BASE_NPC>::BuildScheduleTestBits()
 {
 	// Iterate over behaviors and call BuildScheduleTestBitsNotActive() on each behavior
 	// not currently active.
-	for( int i = 0; i < this->m_Behaviors.Count(); i++ )
+	for( int i = 0; i < std::ssize( this->m_Behaviors ); i++ )
 	{
 		if( this->m_Behaviors[i] != this->m_pPrimaryBehavior )
 		{
@@ -782,7 +779,7 @@ inline void CAI_BehaviorHost<BASE_NPC>::BuildScheduleTestBits()
 template <class BASE_NPC>
 inline void CAI_BehaviorHost<BASE_NPC>::OnChangeHintGroup( string_t oldGroup, string_t newGroup )
 {
-	for( int i = 0; i < this->m_Behaviors.Count(); i++ )
+	for( int i = 0; i < std::ssize( this->m_Behaviors ); i++ )
 	{
 		this->m_Behaviors[i]->OnChangeHintGroup( oldGroup, newGroup );
 	}
@@ -818,7 +815,7 @@ inline bool CAI_BehaviorHost<BASE_NPC>::BehaviorBridge_MovementCost( int moveTyp
 template <class BASE_NPC>
 inline void CAI_BehaviorHost<BASE_NPC>::OnChangeActiveWeapon( CBaseCombatWeapon *pOldWeapon, CBaseCombatWeapon *pNewWeapon )
 {
-	for( int i = 0; i < this->m_Behaviors.Count(); i++ )
+	for( int i = 0; i < std::ssize( this->m_Behaviors ); i++ )
 	{
 		this->m_Behaviors[i]->OnChangeActiveWeapon( pOldWeapon, pNewWeapon );
 	}
@@ -830,7 +827,7 @@ inline void CAI_BehaviorHost<BASE_NPC>::OnChangeActiveWeapon( CBaseCombatWeapon 
 template <class BASE_NPC>
 inline void CAI_BehaviorHost<BASE_NPC>::OnRestore()
 {
-	for( int i = 0; i < this->m_Behaviors.Count(); i++ )
+	for( int i = 0; i < std::ssize( this->m_Behaviors ); i++ )
 	{
 		this->m_Behaviors[i]->OnRestore();
 	}
@@ -843,7 +840,7 @@ template <class BASE_NPC>
 inline void CAI_BehaviorHost<BASE_NPC>::Precache()
 {
 	BaseClass::Precache();
-	for( int i = 0; i < this->m_Behaviors.Count(); i++ )
+	for( int i = 0; i < std::ssize( this->m_Behaviors ); i++ )
 	{
 		this->m_Behaviors[i]->Precache();
 	}
@@ -854,7 +851,7 @@ inline void CAI_BehaviorHost<BASE_NPC>::Precache()
 template <class BASE_NPC>
 inline void CAI_BehaviorHost<BASE_NPC>::UpdateOnRemove()
 {
-	for( int i = 0; i < this->m_Behaviors.Count(); i++ )
+	for( int i = 0; i < std::ssize( this->m_Behaviors ); i++ )
 	{
 		this->m_Behaviors[i]->UpdateOnRemove();
 	}
@@ -866,7 +863,7 @@ inline void CAI_BehaviorHost<BASE_NPC>::UpdateOnRemove()
 template <class BASE_NPC>
 inline void CAI_BehaviorHost<BASE_NPC>::Event_Killed( const CTakeDamageInfo &info )
 {
-	for( int i = 0; i < this->m_Behaviors.Count(); i++ )
+	for( int i = 0; i < std::ssize( this->m_Behaviors ); i++ )
 	{
 		this->m_Behaviors[i]->Event_Killed( info );
 	}
@@ -880,7 +877,7 @@ inline float CAI_BehaviorHost<BASE_NPC>::GetJumpGravity() const
 {
 	// @HACKHACK
 	float base = BaseClass::GetJumpGravity();
-	for( int i = 0; i < this->m_Behaviors.Count(); i++ )
+	for( int i = 0; i < std::ssize( this->m_Behaviors ); i++ )
 	{
 		float current  = this->m_Behaviors[i]->GetJumpGravity();
 		if ( current != base )
@@ -899,7 +896,7 @@ inline bool CAI_BehaviorHost<BASE_NPC>::IsJumpLegal( const Vector &startPos, con
 {
 	// @HACKHACK
 	bool base = BaseClass::IsJumpLegal( startPos, apex, endPos, maxUp, maxDown, maxDist );
-	for( int i = 0; i < this->m_Behaviors.Count(); i++ )
+	for( int i = 0; i < std::ssize( this->m_Behaviors ); i++ )
 	{
 		bool current  = this->m_Behaviors[i]->IsJumpLegal( startPos, apex, endPos, maxUp, maxDown, maxDist );
 		if ( current != base )
@@ -917,7 +914,7 @@ inline bool CAI_BehaviorHost<BASE_NPC>::MovementCost( int moveType, const Vector
 	// @HACKHACK
 	bool base = BaseClass::MovementCost( moveType, vecStart, vecEnd, pCost );
 
-	for( int i = 0; i < this->m_Behaviors.Count(); i++ )
+	for( int i = 0; i < std::ssize( this->m_Behaviors ); i++ )
 	{
 		bool current  = this->m_Behaviors[i]->MovementCost( moveType, vecStart, vecEnd, pCost );
 		if ( current != base )

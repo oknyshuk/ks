@@ -12,6 +12,8 @@
 #define _NAV_LADDER_H_
 
 #include "nav.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
 
 class CNavArea;
 
@@ -39,8 +41,8 @@ public:
 
 	void OnRoundRestart( void );			///< invoked when a game round restarts
 
-	void Save( CUtlBuffer &fileBuffer, unsigned int version ) const;
-	void Load( CUtlBuffer &fileBuffer, unsigned int version );
+	void Save( ks::byte_writer &fileBuffer, unsigned int version ) const;
+	void Load( ks::byte_reader &fileBuffer, unsigned int version );
 
 	unsigned int GetID( void ) const	{ return m_id; }		///< return this ladder's unique ID
 	static void CompressIDs( void );							///<re-orders ladder ID's so they are continuous
@@ -116,7 +118,7 @@ private:
 	static unsigned int m_nextID;					///< used to allocate unique IDs
 	unsigned int m_id;								///< unique area ID
 };
-typedef CUtlVector< CNavLadder * > NavLadderVector;
+typedef std::vector< CNavLadder * > NavLadderVector;
 
 
 //--------------------------------------------------------------------------------------------------------------

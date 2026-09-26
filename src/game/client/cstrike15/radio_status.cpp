@@ -21,9 +21,6 @@
 #include "menu.h" // for CHudMenu defs
 #include "cs_gamerules.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 // ---------------------------------------------------------------------- //
 // The radio feedback manager for the client.

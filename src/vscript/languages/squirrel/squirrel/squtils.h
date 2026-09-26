@@ -20,7 +20,6 @@
 #define sq_delete(__ptr,__type) {__ptr->~__type();sq_vm_free(__ptr,sizeof(__type));}
 
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#include "memdbgon.h"
 #undef new // allow placement new
 #endif
 //sqvector mini vector class, supports objects by value
@@ -117,6 +116,5 @@ private:
 };
 
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#include "memdbgoff.h"
 #endif
 #endif //_SQUTILS_H_

@@ -14,6 +14,7 @@
 
 #include "c_baseanimating.h"
 #include "toolframework/itoolframework.h"
+#include <vector>
 
 // For shared code.
 #define CBaseAnimatingOverlay C_BaseAnimatingOverlay
@@ -79,8 +80,8 @@ public:
 private:
 	void CheckForLayerChanges( CStudioHdr *hdr, float currentTime );
 
-	CUtlVector < CAnimationLayer >	m_AnimOverlay;
-	CUtlVector < CInterpolatedVar< CAnimationLayer > >	m_iv_AnimOverlay;
+	std::vector< CAnimationLayer >	m_AnimOverlay;
+	std::vector< CInterpolatedVar< CAnimationLayer > >	m_iv_AnimOverlay;
 
 	float m_flOverlayPrevEventCycle[ MAX_OVERLAYS ];
 

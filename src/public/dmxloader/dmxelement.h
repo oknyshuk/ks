@@ -10,22 +10,21 @@
 
 #include "datamodel/dmattributetypes.h"
 #include "tier1/utlvector.h"
-#include "tier1/utlrbtree.h"
-#include "tier1/utlsymbol.h"
-#include "tier1/mempool.h"
-#include "tier1/utlsortvector.h"
+#include "tier1/intern_pool.h"
+#include <functional>
+#include <memory>
+#include <vector>
 #include "dmxloader/dmxattribute.h"
 
 
 //-----------------------------------------------------------------------------
-// Sort functor class for attributes 
+// Sort functor class for attributes: by pooled name address, null (and nameless) first
 //-----------------------------------------------------------------------------
-class CDmxAttributeLess
+struct CDmxAttributeLess
 {
-public:
-	bool Less( const CDmxAttribute * pAttribute1, const CDmxAttribute *pAttribute2, void *pContext )
+	bool operator()( const CDmxAttribute * pAttribute1, const CDmxAttribute *pAttribute2 ) const
 	{
-		return (pAttribute1?pAttribute1->GetNameSymbol():CUtlSymbolLarge(UTL_INVAL_SYMBOL_LARGE)) < (pAttribute2?pAttribute2->GetNameSymbol():CUtlSymbolLarge(UTL_INVAL_SYMBOL_LARGE));
+		return std::less< const char * >()( pAttribute1 ? pAttribute1->GetNameSymbol().data() : nullptr, pAttribute2 ? pAttribute2->GetNameSymbol().data() : nullptr );
 	}
 };
 
@@ -120,7 +119,7 @@ struct DmxElementUnpackStructure_t
 
 // NOTE: DMXELEMENT_UNPACK_FIELD_ARRAY is for fixed-size arrays, not pointers or CUtlVectors (TODO: doesn't work for strings or bitfields yet!)
 #define DMXELEMENT_UNPACK_FIELD_ARRAY( _attributeName, _defaultString, _type, _varName )	\
-	{ _attributeName, _defaultString, CDmAttributeInfo< CUtlVector< _type > >::AttributeType(), offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName[0]), NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, ARRAYSIZE( ((DestStructType_t *)0)->_varName ) },
+	{ _attributeName, _defaultString, CDmAttributeInfo< std::vector< _type > >::AttributeType(), offsetof( DestStructType_t, _varName ), sizeof( ((DestStructType_t *)0)->_varName[0]), NO_BIT_OFFSET, NOT_A_BITFIELD, NO_USER_DATA, NO_EMBEDDED_TYPENAME, NO_EMBEDDED_STRUCT_PTR, ARRAYSIZE( ((DestStructType_t *)0)->_varName ) },
 
 
 #define DMXELEMENT_UNPACK_FIELD_USERDATA( _attributeName, _defaultString, _type, _varName, _userData )	\
@@ -292,9 +291,6 @@ template <> inline bool GetAllOnesNumber<bool>()
 	friend class CBitFieldInfo_##_fieldName; 									\
 
 
-// A bit of a hack, but we don't have access to 
-extern CUtlSymbolTableLargeMT g_DmxAttributeStrings;
-
 //-----------------------------------------------------------------------------
 // Element used to read dmx files from mod code. Similar to keyvalues.
 //-----------------------------------------------------------------------------
@@ -309,7 +305,7 @@ public:
 	int					AttributeCount() const;
 	CDmxAttribute		*GetAttribute( int nIndex );
 	const CDmxAttribute *GetAttribute( int nIndex ) const;
-	CUtlSymbolLarge			GetType() const;
+	std::string_view		GetType() const;
 	const char*			GetTypeString() const;
 	const char*			GetName() const;
 	const DmObjectId_t &GetId() const;
@@ -329,8 +325,8 @@ public:
 	template< class T > const T& GetValue( const char *pAttributeName ) const;
 	template< class T > const T& GetValue( const char *pAttributeName, const T& defaultValue ) const;
 
-	template< class T > const CUtlVector<T>& GetArray( const char *pAttributeName ) const;
-	template< class T > const CUtlVector<T>& GetArray( const char *pAttributeName, const CUtlVector<T>& defaultValue ) const;
+	template< class T > const std::vector< T >& GetArray( const char *pAttributeName ) const;
+	template< class T > const std::vector< T >& GetArray( const char *pAttributeName, const std::vector< T >& defaultValue ) const;
 
 	// Set methods
 	void SetName( const char *pName );
@@ -345,7 +341,15 @@ public:
 	void AddAttributesFromStructure( const void *pData, const DmxElementUnpackStructure_t *pUnpack );
 
 private:
-	typedef CUtlSortVector< CDmxAttribute*, CDmxAttributeLess > AttributeList_t;
+	// CDmxAttribute's destructor and allocator are private to its friends.
+	struct AttributeDeleter
+	{
+		void operator()( CDmxAttribute *pAttribute ) const { delete pAttribute; }
+	};
+	typedef std::unique_ptr< CDmxAttribute, AttributeDeleter > AttributePtr_t;
+
+	// Sorted by CDmxAttributeLess, lazily (see Resort); positions are the attribute indices.
+	typedef std::vector< AttributePtr_t > AttributeList_t;
 
 	CDmxElement( const char *pType );
 	~CDmxElement();
@@ -354,14 +358,14 @@ private:
 	void RemoveAllElementsRecursive();
 
 	// Adds elements to delete to the deletion list
-	void AddElementsToDelete( CUtlVector< CDmxElement * >& elementsToDelete );
+	void AddElementsToDelete( std::vector< CDmxElement * >& elementsToDelete );
 
 	// Sorts the vector when a change has occurred
 	void Resort( ) const;
 
 	// Finds an attribute by name
 	int FindAttribute( const char *pAttributeName ) const;
-	int FindAttribute( CUtlSymbolLarge attributeName ) const;
+	int FindAttribute( std::string_view attributeName ) const;
 
 	// Sets the object id
 	void SetId( const DmObjectId_t &id );
@@ -373,12 +377,12 @@ private:
 
 	AttributeList_t m_Attributes;
 	DmObjectId_t m_Id;	// We need this strictly because we support serialization
-	CUtlSymbolLarge m_Type;
+	std::string_view m_Type;
 	char m_nLockCount;
 	mutable bool m_bResortNeeded : 1;
 	bool m_bIsMarkedForDeletion : 1;
 
-	static CUtlSymbolTableLargeMT s_TypeSymbols;
+	static ks::intern_pool_mt s_TypeSymbols;
 
 	friend class CDmxSerializer;
 	friend class CDmxSerializerKeyValues2;
@@ -427,18 +431,18 @@ inline const T& CDmxElement::GetValue( const char *pAttributeName, const T& defa
 }
 
 template< class T > 
-inline const CUtlVector<T>& CDmxElement::GetArray( const char *pAttributeName ) const
+inline const std::vector< T >& CDmxElement::GetArray( const char *pAttributeName ) const
 {
 	const CDmxAttribute* pAttribute = GetAttribute( pAttributeName );
 	if ( pAttribute )
 		return pAttribute->GetArray<T>();
 
-	static CUtlVector<T> defaultValue;
+	static std::vector< T > defaultValue;
 	return defaultValue;
 }
 
 template< class T > 
-inline const CUtlVector<T>& CDmxElement::GetArray( const char *pAttributeName, const CUtlVector<T>& defaultValue ) const
+inline const std::vector< T >& CDmxElement::GetArray( const char *pAttributeName, const std::vector< T >& defaultValue ) const
 {
 	const CDmxAttribute* pAttribute = GetAttribute( pAttributeName );
 	if ( pAttribute )

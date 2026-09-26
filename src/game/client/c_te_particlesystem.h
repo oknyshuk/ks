@@ -20,6 +20,7 @@
 #include "particlemgr.h"
 #include "c_basetempentity.h"
 #include "particles_simple.h"
+#include "tier1/intrusive_ptr.h"
 
 
 #define SIMSHIFT	10
@@ -74,7 +75,7 @@ public:
 	virtual						~CTEParticleRenderer();
 
 	// Create a CTEParticleRenderer. Pass in your sort origin (m_vecOrigin).
-	static CSmartPtr<CTEParticleRenderer>	Create( const char *pDebugName, const Vector &vOrigin );
+	static ks::intrusive_ptr<CTEParticleRenderer>	Create( const char *pDebugName, const Vector &vOrigin );
 
 	StandardParticle_t*		AddParticle();
 

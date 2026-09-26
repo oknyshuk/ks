@@ -17,9 +17,6 @@
 	#include "shadowbuildtexture_ps30.inc"
 	#include "unlitgeneric_vs30.inc"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static ConVar mat_displacementmap( "mat_displacementmap", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 
 DEFINE_FALLBACK_SHADER( ShadowBuild, ShadowBuild_DX9 )

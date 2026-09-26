@@ -12,9 +12,6 @@
 #include "snd_dma.h"
 #include "../../cl_splitscreen.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 
 extern Color OpColor;

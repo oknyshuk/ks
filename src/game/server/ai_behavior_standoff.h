@@ -9,7 +9,7 @@
 #define AI_BEHAVIOR_STANDOFF_H
 
 #include "utlvector.h"
-#include "utlmap.h"
+#include <map>
 
 #include "ai_behavior.h"
 #include "ai_utils.h"
@@ -67,7 +67,6 @@ public:
 	CAI_MappedActivityBehavior_Temporary( CAI_BaseNPC *pOuter = nullptr ) 
 	 :	CAI_SimpleBehavior(pOuter)
 	{
-		SetDefLessFunc( m_ActivityMap );
 	}
 
 protected:
@@ -77,7 +76,7 @@ protected:
 	virtual void UpdateTranslateActivityMap();
 
 private:
-	CUtlMap<unsigned, Activity> m_ActivityMap;
+	std::map<unsigned, Activity> m_ActivityMap;
 };
 
 class CAI_StandoffBehavior : public CAI_MappedActivityBehavior_Temporary
@@ -198,7 +197,7 @@ private:
 	};
 
 	CThinkOnceSemaphore		 m_UpdateBattleLinesSemaphore;
-	CUtlVector<BattleLine_t> m_BattleLines;
+	std::vector< BattleLine_t > m_BattleLines;
 	bool					 m_fIgnoreFronts;
 
 	//---------------------------------

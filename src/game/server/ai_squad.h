@@ -10,6 +10,8 @@
 #include "ai_memory.h"
 #include "ai_squadslot.h"
 #include "bitstring.h"
+#include <bitset>
+#include <vector>
 
 class CAI_Squad;
 typedef CHandle<CAI_BaseNPC> AIHANDLE;
@@ -69,7 +71,7 @@ extern CAI_SquadManager g_AI_SquadManager;
 struct AISquadEnemyInfo_t
 {
 	EHANDLE 						hEnemy;
-	CBitVec<MAX_SQUADSLOTS>	slots;									// What squad slots are filled?
+	std::bitset<MAX_SQUADSLOTS>	slots;									// What squad slots are filled?
 
 	DECLARE_SIMPLE_DATADESC();
 };
@@ -169,7 +171,7 @@ private:
 	CAI_Squad *										m_pNextSquad;								// The next squad is list of all squads
 
 	string_t										m_Name;
-	CUtlVectorFixed<AIHANDLE, MAX_SQUAD_MEMBERS>	m_SquadMembers;
+	std::inplace_vector< AIHANDLE, MAX_SQUAD_MEMBERS >	m_SquadMembers;
 
 	float											m_flSquadSoundWaitTime;			// Time when I'm allowed to make another sound
 	int												m_nSquadSoundPriority;			// if we're still waiting, this is the priority of the current sound
@@ -185,12 +187,12 @@ private:
 
 	AISquadEnemyInfo_t *			m_pLastFoundEnemyInfo; // Occupy/Vacate need to be reworked to not want this
 	
-	CUtlVector<AISquadEnemyInfo_t>	m_EnemyInfos;
+	std::vector< AISquadEnemyInfo_t >	m_EnemyInfos;
 	float							m_flEnemyInfoCleanupTime;
 
 #else
 	
-	CVarBitVec	m_squadSlotsUsed;							// What squad slots are filled?
+	std::vector<bool>	m_squadSlotsUsed;							// What squad slots are filled?
 
 #endif
 
@@ -255,8 +257,8 @@ inline CAI_Squad *CAI_SquadManager::FindCreateSquad(string_t squadName)
 
 inline CAI_BaseNPC *CAI_Squad::GetAnyMember()
 {
-	if ( m_SquadMembers.Count() )
-		return m_SquadMembers[random->RandomInt( 0, m_SquadMembers.Count()-1 )];
+	if ( std::ssize( m_SquadMembers ) )
+		return m_SquadMembers[random->RandomInt( 0, std::ssize( m_SquadMembers )-1 )];
 	return nullptr;
 }
 
@@ -264,7 +266,7 @@ inline CAI_BaseNPC *CAI_Squad::GetAnyMember()
 
 inline int CAI_Squad::GetSquadIndex( CAI_BaseNPC *pAI )
 {
-	for ( int i = 0; i < m_SquadMembers.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_SquadMembers ); i++ )
 	{
 		if ( m_SquadMembers[i] == pAI )
 			return i;

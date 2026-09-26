@@ -10,10 +10,6 @@
 
 #include "writez_vs20.inc"
 #include "white_ps20.inc"
-#include "white_ps20b.inc"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 DEFINE_FALLBACK_SHADER( WriteZ, WriteZ_DX9 )
 

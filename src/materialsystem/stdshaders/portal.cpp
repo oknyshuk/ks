@@ -12,9 +12,6 @@
 #include "convar.h"
 #include "cpp_shader_constant_register_map.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 DEFINE_FALLBACK_SHADER( Portal, Portal_DX90 )
 

@@ -15,6 +15,7 @@
 #include "ai_task.h"
 #include "ai_namespaces.h"
 #include "bitstring.h"
+#include <bitset>
 
 
 class CAI_Agent;
@@ -24,7 +25,7 @@ void DevMsg( CAI_Agent *pAI, unsigned flags, PRINTF_FORMAT_STRING const char *ps
 void DevMsg( CAI_Agent *pAI, PRINTF_FORMAT_STRING const char *pszFormat, ... ) FMTFUNCTION( 2, 3 );
 #endif
 
-typedef CBitVec<MAX_CONDITIONS> CAI_ScheduleBits;
+typedef std::bitset<MAX_CONDITIONS> CAI_ScheduleBits;
 
 
 //=============================================================================
@@ -388,8 +389,8 @@ inline void CAI_Agent::ResetScheduleCurTaskIndex()
 		typedef baseClass CAgentBase; \
 		const char *pszClassName = #derivedClass; \
 		\
-		CUtlVector<char *> schedulesToLoad; \
-		CUtlVector<AIScheduleLoadFunc_t> reqiredOthers; \
+		std::vector< char * > schedulesToLoad; \
+		std::vector< AIScheduleLoadFunc_t > reqiredOthers; \
 		CAI_AgentNamespaceInfos scheduleIds; \
 		CAI_AgentNamespaceInfos taskIds; \
 		CAI_AgentNamespaceInfos conditionIds;
@@ -408,7 +409,7 @@ inline void CAI_Agent::ResetScheduleCurTaskIndex()
 //		"\n		" #id \
 //		text \
 //		"\n"; \
-//	schedulesToLoad.AddToTail( (char *)g_psz##id );
+//	schedulesToLoad.push_back( (char *)g_psz##id );
 //
 ////-----------------
 //
@@ -433,17 +434,17 @@ inline void CAI_Agent::ResetScheduleCurTaskIndex()
 		taskIds.Sort(); \
 		conditionIds.Sort(); \
 		\
-		for ( i = 0; i < scheduleIds.Count(); i++ ) \
+		for ( i = 0; i < std::ssize( scheduleIds ); i++ ) \
 		{ \
 			ADD_CUSTOM_SCHEDULE_NAMED( CNpc, scheduleIds[i].pszName, scheduleIds[i].localId );  \
 		} \
 		\
-		for ( i = 0; i < taskIds.Count(); i++ ) \
+		for ( i = 0; i < std::ssize( taskIds ); i++ ) \
 		{ \
 			ADD_CUSTOM_TASK_NAMED( CNpc, taskIds[i].pszName, taskIds[i].localId );  \
 		} \
 		\
-		for ( i = 0; i < conditionIds.Count(); i++ ) \
+		for ( i = 0; i < std::ssize( conditionIds ); i++ ) \
 		{ \
 			if ( AIAgentValidateConditionLimits( conditionIds[i].pszName ) ) \
 			{ \
@@ -451,12 +452,12 @@ inline void CAI_Agent::ResetScheduleCurTaskIndex()
 			} \
 		} \
 		\
-		for ( i = 0; i < reqiredOthers.Count(); i++ ) \
+		for ( i = 0; i < std::ssize( reqiredOthers ); i++ ) \
 		{ \
 			(*reqiredOthers[i])();  \
 		} \
 		\
-		for ( i = 0; i < schedulesToLoad.Count(); i++ ) \
+		for ( i = 0; i < std::ssize( schedulesToLoad ); i++ ) \
 		{ \
 			if ( CNpc::gm_SchedLoadStatus.fValid ) \
 			{ \
@@ -494,21 +495,21 @@ struct AI_AgentNamespaceAddInfo_t
 	int			localId;
 };
 
-class CAI_AgentNamespaceInfos : public CUtlVector<AI_AgentNamespaceAddInfo_t>
+class CAI_AgentNamespaceInfos : public std::vector< AI_AgentNamespaceAddInfo_t >
 {
 public:
 	void PushBack(  const char *pszName, int localId )
 	{
-		AddToTail( AI_AgentNamespaceAddInfo_t( pszName, localId ) );
+		this->push_back( AI_AgentNamespaceAddInfo_t( pszName, localId ) );
 	}
 
 	void Sort()
 	{
-		CUtlVector<AI_AgentNamespaceAddInfo_t>::Sort( Compare );
+		ks::qsort( *this, Compare );
 	}
 	
 private:
-	static int __cdecl Compare(const AI_AgentNamespaceAddInfo_t *pLeft, const AI_AgentNamespaceAddInfo_t *pRight )
+	static int Compare(const AI_AgentNamespaceAddInfo_t *pLeft, const AI_AgentNamespaceAddInfo_t *pRight )
 	{
 		return pLeft->localId - pRight->localId;
 	}

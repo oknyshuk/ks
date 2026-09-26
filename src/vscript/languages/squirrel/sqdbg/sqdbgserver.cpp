@@ -9,7 +9,6 @@
 #include "sqrdbg.h"
 #include "sqdbgserver.h"
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#include "memdbgon.h"
 #endif
 
 #define scstrcpy strcpy

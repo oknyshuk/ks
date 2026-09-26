@@ -9,8 +9,7 @@
 
 #undef XBX_GetPrimaryUserId
 
-#include "tier1/utllinkedlist.h"
-#include "tier1/UtlMap.h"
+#include <map>
 #include "tier1/keyvalues.h"
 #include "tier1/fmtstr.h"
 
@@ -202,8 +201,8 @@ protected:
 	float m_flTimeLastFrame;
 	bool  m_bShowConnectionProblemActive;
 
-	CUtlMap< XUID, CGameUiAvatarImage * > m_mapUserXuidToAvatar;
-	CUtlMap< XUID, CUtlString > m_mapUserXuidToName;
+	std::map< XUID, CGameUiAvatarImage * > m_mapUserXuidToAvatar;
+	std::map< XUID, std::string > m_mapUserXuidToName;
 
 	//XUI info
 	bool m_bXUIOpen;

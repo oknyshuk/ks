@@ -5,6 +5,7 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include <map>
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -42,9 +43,6 @@
 
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 extern ConVar weapon_showproficiency;
 
@@ -69,7 +67,7 @@ IMPLEMENT_REFLECT_DATAMAP_SIMPLE( Relationship_t )
 int					CBaseCombatCharacter::m_lastInteraction   = 0;
 Relationship_t**	CBaseCombatCharacter::m_DefaultRelationship	= nullptr;
 Relationship_t**	CBaseCombatCharacter::m_FactionRelationship	= nullptr;
-CUtlVector< CUtlVector< EHANDLE> > CBaseCombatCharacter::m_aFactions;
+std::vector< std::vector< EHANDLE > > CBaseCombatCharacter::m_aFactions;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -97,12 +95,12 @@ public:
 
 		if ( CBaseCombatCharacter::m_FactionRelationship != nullptr )
 		{
-			for( int i = 0; i < CBaseCombatCharacter::m_aFactions.Count(); i++ )
+			for( int i = 0; i < std::ssize( CBaseCombatCharacter::m_aFactions ); i++ )
 			{
 				delete[] CBaseCombatCharacter::m_FactionRelationship[ i ];
-				CBaseCombatCharacter::m_aFactions[ i ].Purge();
+				CBaseCombatCharacter::m_aFactions[ i ].clear(); CBaseCombatCharacter::m_aFactions[ i ].shrink_to_fit();
 			}
-			CBaseCombatCharacter::m_aFactions.Purge();
+			CBaseCombatCharacter::m_aFactions.clear(); CBaseCombatCharacter::m_aFactions.shrink_to_fit();
 			delete[] CBaseCombatCharacter::m_FactionRelationship;
 			CBaseCombatCharacter::m_FactionRelationship = nullptr;
 		}
@@ -227,24 +225,14 @@ void CBaseCombatCharacter::CorpseFade( void )
 
 struct VisibilityCacheEntry_t
 {
-	CBaseEntity *pEntity1;
-	CBaseEntity *pEntity2;
 	EHANDLE		pBlocker;
 	float		time;
 };
 
-class CVisibilityCacheEntryLess
-{
-public:
-	CVisibilityCacheEntryLess( int ) {}
-	bool operator!() const { return false; }
-	bool operator()( const VisibilityCacheEntry_t &lhs, const VisibilityCacheEntry_t &rhs ) const
-	{
-		return ( memcmp( &lhs, &rhs, offsetof( VisibilityCacheEntry_t, pBlocker ) ) < 0 );
-	}
-};
-
-static CUtlRBTree<VisibilityCacheEntry_t, unsigned short, CVisibilityCacheEntryLess> g_VisibilityCache;
+// Keyed by the entity pair, lower pointer first.
+static std::map<std::pair<CBaseEntity *, CBaseEntity *>, VisibilityCacheEntry_t> g_VisibilityCache;
+// Legacy tree used unsigned short indices; keep its capacity limit.
+const size_t VIS_CACHE_MAX_ENTRIES = 0xFFFF;
 const float VIS_CACHE_ENTRY_LIFE = .090;
 
 bool CBaseCombatCharacter::FVisible( CBaseEntity *pEntity, int traceMask, CBaseEntity **ppBlocker )
@@ -257,31 +245,29 @@ bool CBaseCombatCharacter::FVisible( CBaseEntity *pEntity, int traceMask, CBaseE
 		return BaseClass::FVisible( pEntity, traceMask, ppBlocker );
 	}
 
-	VisibilityCacheEntry_t cacheEntry;
+	std::pair<CBaseEntity *, CBaseEntity *> cacheKey;
 
 	if ( this < pEntity )
 	{
-		cacheEntry.pEntity1 = this;
-		cacheEntry.pEntity2 = pEntity;
+		cacheKey = { this, pEntity };
 	}
 	else
 	{
-		cacheEntry.pEntity1 = pEntity;
-		cacheEntry.pEntity2 = this;
+		cacheKey = { pEntity, this };
 	}
 
-	int iCache = g_VisibilityCache.Find( cacheEntry );
+	auto iCache = g_VisibilityCache.find( cacheKey );
 
-	if ( iCache != g_VisibilityCache.InvalidIndex() )
+	if ( iCache != g_VisibilityCache.end() )
 	{
-		if ( gpGlobals->curtime - g_VisibilityCache[iCache].time < VIS_CACHE_ENTRY_LIFE )
+		if ( gpGlobals->curtime - iCache->second.time < VIS_CACHE_ENTRY_LIFE )
 		{
-			bool bBlockerValid = g_VisibilityCache[iCache].pBlocker.IsValid();
+			bool bBlockerValid = iCache->second.pBlocker.IsValid();
 			if ( bBlockerValid )
 			{
 				if ( ppBlocker )
 				{
-					*ppBlocker = g_VisibilityCache[iCache].pBlocker;
+					*ppBlocker = iCache->second.pBlocker;
 					if ( !*ppBlocker )
 					{
 						*ppBlocker = GetWorldEntity();
@@ -301,9 +287,9 @@ bool CBaseCombatCharacter::FVisible( CBaseEntity *pEntity, int traceMask, CBaseE
 	}
 	else
 	{
-		if ( g_VisibilityCache.Count() != g_VisibilityCache.InvalidIndex() )
+		if ( g_VisibilityCache.size() < VIS_CACHE_MAX_ENTRIES )
 		{
-			iCache = g_VisibilityCache.Insert( cacheEntry );
+			iCache = g_VisibilityCache.emplace( cacheKey, VisibilityCacheEntry_t{} ).first;
 		}
 		else
 		{
@@ -321,14 +307,14 @@ bool CBaseCombatCharacter::FVisible( CBaseEntity *pEntity, int traceMask, CBaseE
 
 	if ( !bResult )
 	{
-		g_VisibilityCache[iCache].pBlocker = *ppBlocker;
+		iCache->second.pBlocker = *ppBlocker;
 	}
 	else
 	{
-		g_VisibilityCache[iCache].pBlocker = nullptr;
+		iCache->second.pBlocker = nullptr;
 	}
 
-	g_VisibilityCache[iCache].time = gpGlobals->curtime;
+	iCache->second.time = gpGlobals->curtime;
 
 	return bResult;
 }
@@ -338,25 +324,11 @@ void CBaseCombatCharacter::ResetVisibilityCache( CBaseCombatCharacter *pBCC )
 	VPROF( "CBaseCombatCharacter::ResetVisibilityCache" );
 	if ( !pBCC )
 	{
-		g_VisibilityCache.RemoveAll();
+		g_VisibilityCache.clear();
 		return;
 	}
 
-	int i = g_VisibilityCache.FirstInorder();
-	CUtlVector<unsigned short> removals;
-	while ( i != g_VisibilityCache.InvalidIndex() )
-	{
-		if ( g_VisibilityCache[i].pEntity1 == pBCC || g_VisibilityCache[i].pEntity2 == pBCC )
-		{
-			removals.AddToTail( i );
-		}
-		i = g_VisibilityCache.NextInorder( i );
-	}
-
-	for ( i = 0; i < removals.Count(); i++ )
-	{
-		g_VisibilityCache.RemoveAt( removals[i] );
-	}
+	std::erase_if( g_VisibilityCache, [pBCC]( const auto &entry ) { return entry.first.first == pBCC || entry.first.second == pBCC; } );
 }
 
 
@@ -495,9 +467,9 @@ CBaseCombatCharacter::CBaseCombatCharacter( void )
 //------------------------------------------------------------------------------
 CBaseCombatCharacter::~CBaseCombatCharacter( void )
 {
-	if ( ( m_nFaction != FACTION_NONE ) && ( m_aFactions.Count() != 0 ) )
+	if ( ( m_nFaction != FACTION_NONE ) && ( !m_aFactions.empty() ) )
 	{
-		m_aFactions[ m_nFaction ].FindAndFastRemove( this );
+		ks::swap_erase_first( m_aFactions[ m_nFaction ], this );
 	}
 	ResetVisibilityCache( this );
 	ClearLastKnownArea();
@@ -540,12 +512,12 @@ void CBaseCombatCharacter::Precache()
 	PrecacheScriptSound( "BaseCombatCharacter.StopWeaponSounds" );
 	PrecacheScriptSound( "BaseCombatCharacter.AmmoPickup" );
 
-	for ( int i = m_Relationship.Count() - 1; i >= 0 ; i--) 
+	for ( int i = std::ssize( m_Relationship ) - 1; i >= 0 ; i--) 
 	{
 		if ( !m_Relationship[i].entity && m_Relationship[i].classType == CLASS_NONE ) 
 		{
 			DevMsg( 2, "Removing relationship for lost entity\n" );
-			m_Relationship.FastRemove( i );
+			ks::swap_remove( m_Relationship, i );
 		}
 	}
 }
@@ -2238,7 +2210,7 @@ Vector CBaseCombatCharacter::BodyDirection3D( void )
 void CBaseCombatCharacter::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
 {
 	// Skip this work if we're already marked for transmission.
-	if ( pInfo->m_pTransmitEdict->Get( entindex() ) )
+	if ( (*pInfo->m_pTransmitEdict)[ entindex() ] )
 		return;
 
 	BaseClass::SetTransmit( pInfo, bAlways );
@@ -2292,7 +2264,7 @@ void CBaseCombatCharacter::AddClassRelationship ( Class_T class_type, Dispositio
 {
 	// First check to see if a relationship has already been declared for this class
 	// If so, update it with the new relationship
-	for (int i=m_Relationship.Count()-1;i >= 0;i--) 
+	for (int i=std::ssize( m_Relationship )-1;i >= 0;i--) 
 	{
 		if (m_Relationship[i].classType == class_type) 
 		{
@@ -2303,7 +2275,7 @@ void CBaseCombatCharacter::AddClassRelationship ( Class_T class_type, Dispositio
 		}
 	}
 
-	int index = m_Relationship.AddToTail();
+	int index = std::ssize( m_Relationship ); m_Relationship.emplace_back();
 	// Add the new class relationship to our relationship table
 	m_Relationship[index].classType		= class_type;
 	m_Relationship[index].entity		= nullptr;
@@ -2321,7 +2293,7 @@ void CBaseCombatCharacter::AddEntityRelationship ( CBaseEntity* pEntity, Disposi
 {
 	// First check to see if a relationship has already been declared for this entity
 	// If so, update it with the new relationship
-	for (int i=m_Relationship.Count()-1;i >= 0;i--) 
+	for (int i=std::ssize( m_Relationship )-1;i >= 0;i--) 
 	{
 		if (m_Relationship[i].entity == pEntity) 
 		{
@@ -2332,7 +2304,7 @@ void CBaseCombatCharacter::AddEntityRelationship ( CBaseEntity* pEntity, Disposi
 		}
 	}
 
-	int index = m_Relationship.AddToTail();
+	int index = std::ssize( m_Relationship ); m_Relationship.emplace_back();
 	// Add the new class relationship to our relationship table
 	m_Relationship[index].classType		= CLASS_NONE;
 	m_Relationship[index].entity		= pEntity;
@@ -2349,12 +2321,12 @@ void CBaseCombatCharacter::AddEntityRelationship ( CBaseEntity* pEntity, Disposi
 bool CBaseCombatCharacter::RemoveEntityRelationship( CBaseEntity *pEntity )
 {
 	// Find the entity in our list, if it exists
-	for ( int i = m_Relationship.Count()-1; i >= 0; i-- ) 
+	for ( int i = std::ssize( m_Relationship )-1; i >= 0; i-- ) 
 	{
 		if ( m_Relationship[i].entity == pEntity )
 		{
 			// Done, remove it
-			m_Relationship.Remove( i );
+			m_Relationship.erase( m_Relationship.begin() + i );
 			return true;
 		}
 	}
@@ -2371,7 +2343,7 @@ void CBaseCombatCharacter::AddFactionRelationship(int nFaction, Disposition_t di
 {
 	// First check to see if a relationship has already been declared for this faction
 	// If so, update it with the new relationship
-	for (int i=m_Relationship.Count()-1;i >= 0;i--) 
+	for (int i=std::ssize( m_Relationship )-1;i >= 0;i--) 
 	{
 		if (m_Relationship[i].faction == nFaction) 
 		{
@@ -2382,7 +2354,7 @@ void CBaseCombatCharacter::AddFactionRelationship(int nFaction, Disposition_t di
 		}
 	}
 
-	int index = m_Relationship.AddToTail();
+	int index = std::ssize( m_Relationship ); m_Relationship.emplace_back();
 	// Add the new class relationship to our relationship table
 	m_Relationship[index].classType		= CLASS_NONE;
 	m_Relationship[index].entity		= nullptr;
@@ -2399,34 +2371,34 @@ void CBaseCombatCharacter::AddFactionRelationship(int nFaction, Disposition_t di
 void CBaseCombatCharacter::ChangeFaction( int nNewFaction ) {
 	int nOldFaction = m_nFaction;
 
-	if ( ( m_nFaction != FACTION_NONE ) && ( m_aFactions.Count() != 0 ) )
+	if ( ( m_nFaction != FACTION_NONE ) && ( !m_aFactions.empty() ) )
 	{
-		m_aFactions[ m_nFaction ].FindAndFastRemove( this );
+		ks::swap_erase_first( m_aFactions[ m_nFaction ], this );
 	}
 
 	m_nFaction = nNewFaction;
 
 	if ( m_nFaction != FACTION_NONE )
 	{
-		if ( !m_aFactions.Count() )
+		if ( m_aFactions.empty() )
 		{
 			AllocateDefaultFactionRelationships();
 		}
 
-		m_aFactions[ m_nFaction ].AddToTail( this );
+		m_aFactions[ m_nFaction ].push_back( this );
 	}
 
 	// remove any relationship to entities where the relationship may change due to the faction change
 	if ( ( m_FactionRelationship ) && ( m_nFaction != FACTION_NONE ) )
 	{
-		for(int i = 0; i < m_Relationship.Count(); i++ )
+		for(int i = 0; i < std::ssize( m_Relationship ); i++ )
 		{
 			if ( (CBaseEntity *)m_Relationship[ i ].entity && ( (CBaseEntity *)m_Relationship[ i ].entity )->IsNPC() )
 			{
 				int nFaction = ( (CBaseEntity *)m_Relationship[ i ].entity )->MyNPCPointer()->GetFaction();
 				if ( m_FactionRelationship[ m_nFaction ][ nFaction ].disposition != m_FactionRelationship[ nOldFaction ][ nFaction ].disposition )
 				{
-					m_Relationship.FastRemove( i );
+					ks::swap_remove( m_Relationship, i );
 					i--;
 					continue;
 				}
@@ -2441,12 +2413,12 @@ void CBaseCombatCharacter::ChangeFaction( int nNewFaction ) {
 // Output :
 //-----------------------------------------------------------------------------
 int CBaseCombatCharacter::GetNumFactions( void ) {
-	if ( !m_aFactions.Count() )
+	if ( m_aFactions.empty() )
 	{
 		AllocateDefaultFactionRelationships();
 	}
 
-	return m_aFactions.Count();
+	return std::ssize( m_aFactions );
 }
 
 //-----------------------------------------------------------------------------
@@ -2454,8 +2426,8 @@ int CBaseCombatCharacter::GetNumFactions( void ) {
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-CUtlVector<EHANDLE> *CBaseCombatCharacter::GetEntitiesInFaction( int nFaction ) {
-	if ( !m_aFactions.Count() )
+std::vector< EHANDLE > *CBaseCombatCharacter::GetEntitiesInFaction( int nFaction ) {
+	if ( m_aFactions.empty() )
 	{
 		return nullptr;
 	}
@@ -2489,7 +2461,7 @@ void CBaseCombatCharacter::AllocateDefaultFactionRelationships( )
 	if (!m_FactionRelationship)
 	{
 		int nNumFactions = GameRules() ? GameRules()->NumFactions() : NUM_SHARED_FACTIONS;
-		m_aFactions.SetCount( nNumFactions );
+		m_aFactions.assign( nNumFactions, {} );
 		m_FactionRelationship = new Relationship_t*[nNumFactions];
 
 		for (int i=0; i<nNumFactions; ++i)
@@ -2558,7 +2530,7 @@ Relationship_t *CBaseCombatCharacter::FindEntityRelationship( CBaseEntity *pTarg
 
 	// First check for specific relationship with this edict
 	int i;
-	for (i=0;i<m_Relationship.Count();i++) 
+	for (i=0;i<std::ssize( m_Relationship );i++) 
 	{
 		if (pTarget == (CBaseEntity *)m_Relationship[i].entity) 
 		{
@@ -2569,7 +2541,7 @@ Relationship_t *CBaseCombatCharacter::FindEntityRelationship( CBaseEntity *pTarg
 	if (pTarget->Classify() != CLASS_NONE)
 	{
 		// Then check for relationship with this edict's class
-		for (i=0;i<m_Relationship.Count();i++) 
+		for (i=0;i<std::ssize( m_Relationship );i++) 
 		{
 			if (pTarget->Classify() == m_Relationship[i].classType) 
 			{
@@ -2585,7 +2557,7 @@ Relationship_t *CBaseCombatCharacter::FindEntityRelationship( CBaseEntity *pTarg
 		if ( nFaction != FACTION_NONE )
 		{
 			// Then check for relationship with this edict's faction
-			for (i=0;i<m_Relationship.Count();i++) 
+			for (i=0;i<std::ssize( m_Relationship );i++) 
 			{
 				if (nFaction == m_Relationship[i].faction) 
 				{
@@ -2833,7 +2805,7 @@ int CBaseCombatCharacter::GiveAmmo( int iCount, int iAmmoIndex, bool bSuppressSo
 		return 0;
 
 	int iMax = GetAmmoDef()->MaxCarry(iAmmoIndex, this);
-	int iAdd = MIN( iCount, iMax - m_iAmmo[iAmmoIndex] );
+	int iAdd = std::min( iCount, iMax - m_iAmmo[iAmmoIndex] );
 	if ( iAdd < 1 )
 		return 0;
 
@@ -3030,7 +3002,7 @@ void RadiusDamage( const CTakeDamageInfo &info, const Vector &vecSrc, float flRa
 	{
 		// Even the tiniest explosion gets attention. Don't let the radius
 		// be less than 128 units.
-		float soundRadius = MAX( 128.0f, flRadius * 1.5 );
+		float soundRadius = std::max<std::common_type_t<float, double>>( 128.0f, flRadius * 1.5 );
 
 		CSoundEnt::InsertSound( SOUND_COMBAT | SOUND_CONTEXT_EXPLOSION, vecSrc, soundRadius, 0.25, info.GetInflictor() );
 	}
@@ -3160,7 +3132,7 @@ void CBaseCombatCharacter::DoMuzzleFlash()
 //-----------------------------------------------------------------------------
 void CBaseCombatCharacter::OnFogTriggerStartTouch( CBaseEntity *fogTrigger )
 {
-	m_hTriggerFogList.AddToHead( fogTrigger );
+	m_hTriggerFogList.insert( m_hTriggerFogList.begin(), fogTrigger );
 }
 
 //-----------------------------------------------------------------------------
@@ -3168,7 +3140,7 @@ void CBaseCombatCharacter::OnFogTriggerStartTouch( CBaseEntity *fogTrigger )
 //-----------------------------------------------------------------------------
 void CBaseCombatCharacter::OnFogTriggerEndTouch( CBaseEntity *fogTrigger )
 {
-	m_hTriggerFogList.FindAndRemove( fogTrigger );
+	ks::erase_first( m_hTriggerFogList, fogTrigger );
 }
 
 //-----------------------------------------------------------------------------
@@ -3179,7 +3151,7 @@ CBaseEntity *CBaseCombatCharacter::GetFogTrigger( void )
 	float bestDist = 999999.0f;
 	CBaseEntity *bestTrigger = nullptr;
 
-	for ( int i=0; i<m_hTriggerFogList.Count(); ++i )
+	for ( int i=0; i<std::ssize( m_hTriggerFogList ); ++i )
 	{
 		CBaseEntity *fogTrigger = m_hTriggerFogList[i];
 		if ( fogTrigger != nullptr )

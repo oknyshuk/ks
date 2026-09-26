@@ -8,6 +8,7 @@
 #ifndef CS_ENTITY_SPOTTING_H
 #define CS_ENTITY_SPOTTING_H
 
+#include <bitset>
 #include "igamesystem.h"
 
 class CCSPlayer;
@@ -58,7 +59,7 @@ public:
 
 	bool operator()( CBaseEntity * pEntity );
 
-	const CBitVec<MAX_EDICTS> & GetSpotted( void )
+	const std::bitset<MAX_EDICTS> & GetSpotted( void )
 	{
 		return m_EntitySpotted;
 	}
@@ -66,7 +67,7 @@ public:
 private:
 	CCSPlayer          *m_pPlayer;
 	int					m_nSourceTeam;
-	CBitVec<MAX_EDICTS> m_EntitySpotted;
+	std::bitset<MAX_EDICTS> m_EntitySpotted;
 	byte				m_pSourcePVS[MAX_MAP_LEAFS/8];
 	bool				m_bForceSpot;
 };

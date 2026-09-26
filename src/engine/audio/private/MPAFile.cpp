@@ -7,18 +7,17 @@
 #include "winlite.h"
 #include "MPAFile.h"
 #include "soundchars.h"
-#include "tier1/utlrbtree.h"
+#include "tier1/map_ops.h"
+#include <map>
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 
 // exception class
 CMPAException::CMPAException(ErrorIDs ErrorID, const char *szFile, const char *szFunction, bool bGetLastError ) :
 m_ErrorID( ErrorID ), m_bGetLastError( bGetLastError )
 {
-    m_szFile = strdup(szFile);
-    m_szFunction = strdup(szFunction);
+    m_szFile = MemAlloc_StrDup(szFile);
+    m_szFunction = MemAlloc_StrDup(szFunction);
 }
 
 // copy constructor (necessary for exception throwing without pointers)
@@ -26,17 +25,17 @@ CMPAException::CMPAException(const CMPAException& Source)
 {
     m_ErrorID = Source.m_ErrorID;
     m_bGetLastError = Source.m_bGetLastError;
-    m_szFile = strdup(Source.m_szFile);
-    m_szFunction = strdup(Source.m_szFunction);
+    m_szFile = MemAlloc_StrDup(Source.m_szFile);
+    m_szFunction = MemAlloc_StrDup(Source.m_szFunction);
 }
 
 // destructor
 CMPAException::~CMPAException()
 {
     if( m_szFile )
-        free( (void*)m_szFile );
+        g_pMemAlloc->Free( (void*)m_szFile );
     if( m_szFunction )
-        free( (void*)m_szFunction );
+        g_pMemAlloc->Free( (void*)m_szFunction );
 }
 
 // should be in resource file for multi language applications
@@ -92,7 +91,7 @@ m_pMPAHeader(nullptr), m_hFile( hFile ), m_szFile(nullptr), m_dwFrameNo(1)
         m_bMustReleaseFile = true;
     }
     // save filename
-    m_szFile = strdup( szFile );
+    m_szFile = MemAlloc_StrDup( szFile );
     
     // set end of MPEG data (assume file end)
     if( m_dwEnd <= 0 )
@@ -228,7 +227,7 @@ CMPAFile::~CMPAFile(void)
         g_pFullFileSystem->Close( m_hFile );    
 
     if( m_szFile )
-        free( (void*)m_szFile );
+        g_pMemAlloc->Free( (void*)m_szFile );
 }
 
 // open file
@@ -339,18 +338,7 @@ void CMPAFile::FillBuffer( uint32 dwOffsetToRead )
 
 // Uses mp3 code from:  http://www.codeproject.com/audio/MPEGAudioInfo.asp
 
-struct MP3Duration_t
-{
-    FileNameHandle_t h;
-    float           duration;
-
-    static bool LessFunc( const MP3Duration_t& lhs, const MP3Duration_t& rhs )
-    {
-        return lhs.h < rhs.h;
-    }
-};
-
-CUtlRBTree< MP3Duration_t, int >    g_MP3Durations( 0, 0, MP3Duration_t::LessFunc );
+std::map< FileNameHandle_t, float >    g_MP3Durations;
 
 float GetMP3Duration_Helper( char const *filename )
 {
@@ -362,13 +350,9 @@ float GetMP3Duration_Helper( char const *filename )
 
 	FileNameHandle_t h = g_pFullFileSystem->FindOrAddFileName( fn );
 
-	MP3Duration_t search;
-	search.h = h;
-	
-	int idx = g_MP3Durations.Find( search );
-	if ( idx != g_MP3Durations.InvalidIndex() )
+	if ( float *pDuration = ks::find_ptr( g_MP3Durations, h ) )
 	{
-		return g_MP3Durations[ idx ].duration;
+		return *pDuration;
 	}
 
 	try
@@ -383,8 +367,7 @@ float GetMP3Duration_Helper( char const *filename )
 	{
 	}
 
-	search.duration = duration;
-	g_MP3Durations.Insert( search );
+	g_MP3Durations.emplace( h, duration );
 
 	return duration;
 }

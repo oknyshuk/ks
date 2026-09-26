@@ -15,8 +15,6 @@
 #include "triggers.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 // Spawn Flags
 #define SF_TONEMAP_MASTER			0x0001
 

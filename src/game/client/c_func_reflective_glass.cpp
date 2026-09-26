@@ -10,9 +10,6 @@
 #include "view_shared.h"
 #include "c_func_brush.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 class [[= ks::reflect::NetTable{ .name = "DT_FuncReflectiveGlass" } ]]
       C_FuncReflectiveGlass : public C_FuncBrush
 {

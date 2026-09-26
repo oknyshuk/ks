@@ -9,9 +9,6 @@
 #include "reflect_annotations.h"
 #include "c_basetempentity.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 IMPLEMENT_CLIENTCLASS(C_BaseTempEntity, DT_BaseTempEntity, CBaseTempEntity);
 
 IMPLEMENT_REFLECT_TABLE( C_BaseTempEntity, DT_BaseTempEntity );

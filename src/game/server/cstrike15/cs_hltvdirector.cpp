@@ -10,9 +10,6 @@
 #include "hltvdirector.h"
 #include "igameevents.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 class CCSHLTVDirector : public CHLTVDirector
 {
@@ -21,7 +18,7 @@ public:
 
 	const char** GetModEvents();
 	void AddHLTVServer( IHLTVServer *hltv );
-	void CreateShotFromEvent( CHLTVGameEvent *event );
+	void CreateShotFromEvent( const CHLTVGameEvent *event );
 
 };
 
@@ -46,7 +43,7 @@ void CCSHLTVDirector::AddHLTVServer( IHLTVServer *hltv )
 }
 
 
-void CCSHLTVDirector::CreateShotFromEvent( CHLTVGameEvent *event )
+void CCSHLTVDirector::CreateShotFromEvent( const CHLTVGameEvent *event )
 {
 	// show event at least for 2 more seconds after it occured
 	const char *name = event->m_Event->GetName();
@@ -73,7 +70,7 @@ void CCSHLTVDirector::CreateShotFromEvent( CHLTVGameEvent *event )
 		shot->SetInt( "phi", 20 );
 
 		// shot 2 seconds after event
-		m_nNextShotTick = MIN( m_nNextShotTick, (event->m_Tick+TIME_TO_TICKS(2.0)) );
+		m_nNextShotTick = std::min( m_nNextShotTick, (event->m_Tick+TIME_TO_TICKS(2.0)) );
 		m_iPVSEntity = player->entindex();
 	}
 
@@ -99,10 +96,10 @@ void CCSHLTVDirector::CreateShotFromEvent( CHLTVGameEvent *event )
 			shot->SetBool( "ineye", true );
 
 			// shot 3 seconds after pickup
-			m_nNextShotTick = MIN( m_nNextShotTick, (event->m_Tick+TIME_TO_TICKS(3.0)) );
+			m_nNextShotTick = std::min( m_nNextShotTick, (event->m_Tick+TIME_TO_TICKS(3.0)) );
 			m_iPVSEntity = player->entindex();
 
-			for ( int i = 0; i < m_HltvServers.Count(); ++i )
+			for ( int i = 0; i < std::ssize( m_HltvServers ); ++i )
 			{
 				m_HltvServers[ i ].m_pHLTVServer->BroadcastEvent( shot );
 			}

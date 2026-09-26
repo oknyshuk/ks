@@ -31,7 +31,8 @@
 #include "matchmaking/imatchframework.h"
 #include "mathlib/IceKey.H"
 #include "hltvserver.h"
-#include "UtlStringMap.h"
+#include "tier1/map_ops.h"
+#include <memory>
 
 #include "localize/ilocalize.h"
 #include "eiface.h"
@@ -39,9 +40,6 @@
 #include "csgo_limits.h"
 #include "csgo_limits.inl"
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 ConVar cl_teammate_color_1( "cl_teammate_color_1", "240 243 32" );
 ConVar cl_teammate_color_2( "cl_teammate_color_2", "150 34 223" );
@@ -240,7 +238,7 @@ CServerMsg_CheckReservation::CServerMsg_CheckReservation( CBaseClientState *pPar
 void CServerMsg_CheckReservation::Release()
 {
 	if ( m_pParent )
-		m_pParent->m_arrSvReservationCheck.FindAndFastRemove( this );
+		ks::swap_erase_first( m_pParent->m_arrSvReservationCheck, this );
 	delete this;
 }
 
@@ -304,7 +302,7 @@ CServerMsg_Ping::CServerMsg_Ping( CBaseClientState *pParent, IMatchAsyncOperatio
 void CServerMsg_Ping::Release()
 {
 	if ( m_pParent )
-		m_pParent->m_arrSvPing.FindAndFastRemove( this );
+		ks::swap_erase_first( m_pParent->m_arrSvPing, this );
 	delete this;
 }
 
@@ -341,8 +339,7 @@ void CServerMsg_Ping::ResponseReceived( const ns_address& from, bf_read &msg, in
 // C_ServerClassInfo implementation.
 // ---------------------------------------------------------------------------------------- //
 
-CBaseClientState::CBaseClientState() :
-	m_BaselineHandles( DefLessFunc( int ) )
+CBaseClientState::CBaseClientState()
 {
 	m_bSplitScreenUser = false;
 	m_Socket = NS_CLIENT;
@@ -404,11 +401,11 @@ CBaseClientState::~CBaseClientState()
 		m_pKVGameSettings = nullptr;
 	}
 
-	FOR_EACH_MAP( m_BaselineHandles, i )
+	for ( auto &[index, handle] : m_BaselineHandles )
 	{
-		g_pSerializedEntities->ReleaseSerializedEntity( m_BaselineHandles[ i ] );
+		g_pSerializedEntities->ReleaseSerializedEntity( handle );
 	}
-	m_BaselineHandles.RemoveAll();
+	m_BaselineHandles.clear();
 }
 
 void CBaseClientState::Clear( void )
@@ -470,7 +467,7 @@ void CBaseClientState::Clear( void )
 	m_nServerInfoMsgProtocol = 0;
 
 	// Free all avatar data
-	m_mapPlayerAvatarData.PurgeAndDeleteElements();
+	m_mapPlayerAvatarData.clear();
 }
 
 void CBaseClientState::FileReceived( const char * fileName, unsigned int transferID, bool bIsReplayDemoFile )
@@ -509,39 +506,39 @@ void CBaseClientState::FileSent(const char *fileName, unsigned int transferID, b
 
 void CBaseClientState::ConnectionStart(INetChannel *chan)
 {
-	m_NETMsgTick.Bind< CNETMsg_Tick_t >( chan, UtlMakeDelegate( this, &CBaseClientState::NETMsg_Tick ) );
-	m_NETMsgStringCmd.Bind< CNETMsg_StringCmd_t >( chan, UtlMakeDelegate( this, &CBaseClientState::NETMsg_StringCmd ) );
-	m_NETMsgSignonState.Bind< CNETMsg_SignonState_t >( chan, UtlMakeDelegate( this, &CBaseClientState::NETMsg_SignonState ) );
-	m_NETMsgSetConVar.Bind< CNETMsg_SetConVar_t >( chan, UtlMakeDelegate( this, &CBaseClientState::NETMsg_SetConVar ) );
-	m_NETMsgPlayerAvatarData.Bind< CNETMsg_PlayerAvatarData_t >( chan, UtlMakeDelegate( this, &CBaseClientState::NETMsg_PlayerAvatarData ) );
+	m_NETMsgTick.Bind< CNETMsg_Tick_t >( chan, std::bind_front( &CBaseClientState::NETMsg_Tick, this ) );
+	m_NETMsgStringCmd.Bind< CNETMsg_StringCmd_t >( chan, std::bind_front( &CBaseClientState::NETMsg_StringCmd, this ) );
+	m_NETMsgSignonState.Bind< CNETMsg_SignonState_t >( chan, std::bind_front( &CBaseClientState::NETMsg_SignonState, this ) );
+	m_NETMsgSetConVar.Bind< CNETMsg_SetConVar_t >( chan, std::bind_front( &CBaseClientState::NETMsg_SetConVar, this ) );
+	m_NETMsgPlayerAvatarData.Bind< CNETMsg_PlayerAvatarData_t >( chan, std::bind_front( &CBaseClientState::NETMsg_PlayerAvatarData, this ) );
 	
-	m_SVCMsgServerInfo.Bind< CSVCMsg_ServerInfo_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_ServerInfo ) );
-	m_SVCMsgClassInfo.Bind< CSVCMsg_ClassInfo_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_ClassInfo ) );
-	m_SVCMsgSendTable.Bind< CSVCMsg_SendTable_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_SendTable ) );
-	m_SVCMsgCmdKeyValues.Bind< CSVCMsg_CmdKeyValues_t>( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_CmdKeyValues ) );
-	m_SVCMsg_EncryptedData.Bind< CSVCMsg_EncryptedData_t>( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_EncryptedData ) );
-	m_SVCMsgPrint.Bind< CSVCMsg_Print_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_Print ) );
-	m_SVCMsgSetPause.Bind< CSVCMsg_SetPause_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_SetPause ) );
-	m_SVCMsgSetView.Bind< CSVCMsg_SetView_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_SetView ) );
-	m_SVCMsgCreateStringTable.Bind< CSVCMsg_CreateStringTable_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_CreateStringTable ) );
-	m_SVCMsgUpdateStringTable.Bind< CSVCMsg_UpdateStringTable_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_UpdateStringTable ) );
-	m_SVCMsgVoiceInit.Bind< CSVCMsg_VoiceInit_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_VoiceInit ) );
-	m_SVCMsgVoiceData.Bind< CSVCMsg_VoiceData_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_VoiceData ) );	
-	m_SVCMsgFixAngle.Bind< CSVCMsg_FixAngle_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_FixAngle ) );
-	m_SVCMsgPrefetch.Bind< CSVCMsg_Prefetch_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_Prefetch ) );
-	m_SVCMsgCrosshairAngle.Bind< CSVCMsg_CrosshairAngle_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_CrosshairAngle ) );
-	m_SVCMsgBSPDecal.Bind< CSVCMsg_BSPDecal_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_BSPDecal ) );
-	m_SVCMsgSplitScreen.Bind< CSVCMsg_SplitScreen_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_SplitScreen ) );
-	m_SVCMsgGetCvarValue.Bind< CSVCMsg_GetCvarValue_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_GetCvarValue ) );
-	m_SVCMsgMenu.Bind< CSVCMsg_Menu_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_Menu ) );
-	m_SVCMsgUserMessage.Bind< CSVCMsg_UserMessage_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_UserMessage ) );
-	m_SVCMsgPaintmapData.Bind< CSVCMsg_PaintmapData_t >( chan, UtlMakeDelegate(this, &CBaseClientState::SVCMsg_PaintmapData ) );
-	m_SVCMsgGameEvent.Bind< CSVCMsg_GameEvent_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_GameEvent ) );
-	m_SVCMsgGameEventList.Bind< CSVCMsg_GameEventList_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_GameEventList ) );
-	m_SVCMsgTempEntities.Bind< CSVCMsg_TempEntities_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_TempEntities ) );
-	m_SVCMsgPacketEntities.Bind< CSVCMsg_PacketEntities_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_PacketEntities ) );
-	m_SVCMsgSounds.Bind< CSVCMsg_Sounds_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_Sounds ) );
-	m_SVCMsgEntityMsg.Bind< CSVCMsg_EntityMsg_t >( chan, UtlMakeDelegate( this, &CBaseClientState::SVCMsg_EntityMsg ) );	
+	m_SVCMsgServerInfo.Bind< CSVCMsg_ServerInfo_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_ServerInfo, this ) );
+	m_SVCMsgClassInfo.Bind< CSVCMsg_ClassInfo_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_ClassInfo, this ) );
+	m_SVCMsgSendTable.Bind< CSVCMsg_SendTable_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_SendTable, this ) );
+	m_SVCMsgCmdKeyValues.Bind< CSVCMsg_CmdKeyValues_t>( chan, std::bind_front( &CBaseClientState::SVCMsg_CmdKeyValues, this ) );
+	m_SVCMsg_EncryptedData.Bind< CSVCMsg_EncryptedData_t>( chan, std::bind_front( &CBaseClientState::SVCMsg_EncryptedData, this ) );
+	m_SVCMsgPrint.Bind< CSVCMsg_Print_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_Print, this ) );
+	m_SVCMsgSetPause.Bind< CSVCMsg_SetPause_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_SetPause, this ) );
+	m_SVCMsgSetView.Bind< CSVCMsg_SetView_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_SetView, this ) );
+	m_SVCMsgCreateStringTable.Bind< CSVCMsg_CreateStringTable_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_CreateStringTable, this ) );
+	m_SVCMsgUpdateStringTable.Bind< CSVCMsg_UpdateStringTable_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_UpdateStringTable, this ) );
+	m_SVCMsgVoiceInit.Bind< CSVCMsg_VoiceInit_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_VoiceInit, this ) );
+	m_SVCMsgVoiceData.Bind< CSVCMsg_VoiceData_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_VoiceData, this ) );	
+	m_SVCMsgFixAngle.Bind< CSVCMsg_FixAngle_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_FixAngle, this ) );
+	m_SVCMsgPrefetch.Bind< CSVCMsg_Prefetch_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_Prefetch, this ) );
+	m_SVCMsgCrosshairAngle.Bind< CSVCMsg_CrosshairAngle_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_CrosshairAngle, this ) );
+	m_SVCMsgBSPDecal.Bind< CSVCMsg_BSPDecal_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_BSPDecal, this ) );
+	m_SVCMsgSplitScreen.Bind< CSVCMsg_SplitScreen_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_SplitScreen, this ) );
+	m_SVCMsgGetCvarValue.Bind< CSVCMsg_GetCvarValue_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_GetCvarValue, this ) );
+	m_SVCMsgMenu.Bind< CSVCMsg_Menu_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_Menu, this ) );
+	m_SVCMsgUserMessage.Bind< CSVCMsg_UserMessage_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_UserMessage, this ) );
+	m_SVCMsgPaintmapData.Bind< CSVCMsg_PaintmapData_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_PaintmapData, this ) );
+	m_SVCMsgGameEvent.Bind< CSVCMsg_GameEvent_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_GameEvent, this ) );
+	m_SVCMsgGameEventList.Bind< CSVCMsg_GameEventList_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_GameEventList, this ) );
+	m_SVCMsgTempEntities.Bind< CSVCMsg_TempEntities_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_TempEntities, this ) );
+	m_SVCMsgPacketEntities.Bind< CSVCMsg_PacketEntities_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_PacketEntities, this ) );
+	m_SVCMsgSounds.Bind< CSVCMsg_Sounds_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_Sounds, this ) );
+	m_SVCMsgEntityMsg.Bind< CSVCMsg_EntityMsg_t >( chan, std::bind_front( &CBaseClientState::SVCMsg_EntityMsg, this ) );	
 }
 
 void CBaseClientState::ConnectionStop( )
@@ -621,15 +618,13 @@ bool CBaseClientState::SetSignonState ( int state, int count, const ks::net::CNE
 		m_DirectConnectLobby = DirectConnectLobby_t();
 
 		// Reset all client-generated keys that are too old
-		if ( m_mapGeneratedEncryptionKeys.Count() > 300 )
+		if ( m_mapGeneratedEncryptionKeys.size() > 300 )
 		{
-			int numPurge = 300 - m_mapGeneratedEncryptionKeys.Count();
-			numPurge = MIN( numPurge, 3000 );
+			int numPurge = 300 - (int)m_mapGeneratedEncryptionKeys.size();
+			numPurge = std::min( numPurge, 3000 );
 			while ( numPurge -- > 0 )
 			{
-				int32 idxOldestKey = m_mapGeneratedEncryptionKeys.FirstInorder();
-				delete [] m_mapGeneratedEncryptionKeys.Element( idxOldestKey );
-				m_mapGeneratedEncryptionKeys.RemoveAt( idxOldestKey );
+				m_mapGeneratedEncryptionKeys.erase( m_mapGeneratedEncryptionKeys.begin() );
 			}
 		}
 	}
@@ -642,25 +637,11 @@ bool CBaseClientState::SetSignonState ( int state, int count, const ks::net::CNE
 //
 // 3rd party plugins managed encryption keys map
 //
-static CUtlStringMap< CUtlBuffer * > g_mapServersToCertificates;
+static ks::idict< std::vector< std::byte > > g_mapServersToCertificates;
 void RegisterServerCertificate( char const *szServerAddress, int numBytesPayload, void const *pvPayload )
 {
-	// Allocate new storage
-	CUtlBuffer *pNew = new CUtlBuffer;
-	pNew->EnsureCapacity( numBytesPayload );
-	pNew->SeekPut( CUtlBuffer::SEEK_HEAD, numBytesPayload );
-	V_memcpy( pNew->Base(), pvPayload, numBytesPayload );
-
-	UtlSymId_t symid = g_mapServersToCertificates.Find( szServerAddress );
-	if ( symid != UTL_INVAL_SYMBOL )
-	{
-		delete g_mapServersToCertificates[ symid ];
-		g_mapServersToCertificates[ symid ] = pNew;
-	}
-	else
-	{
-		g_mapServersToCertificates.Insert( szServerAddress, pNew );
-	}
+	const auto payload = ks::byte_view( pvPayload, numBytesPayload );
+	g_mapServersToCertificates[ szServerAddress ].assign( payload.begin(), payload.end() );
 }
 
 //-----------------------------------------------------------------------------
@@ -738,10 +719,10 @@ void CBaseClientState::SendConnectPacket ( const ns_address &netAdrRemote, int c
 	{
 		msg.WriteLong( dc.m_nEncryptionKey );
 		byte *pbEncryptionKey = nullptr;
-		int32 idx = m_mapGeneratedEncryptionKeys.Find( dc.m_nEncryptionKey );
-		if ( idx != m_mapGeneratedEncryptionKeys.InvalidIndex() )
+		auto idx = m_mapGeneratedEncryptionKeys.find( dc.m_nEncryptionKey );
+		if ( idx != m_mapGeneratedEncryptionKeys.end() )
 		{
-			pbEncryptionKey = m_mapGeneratedEncryptionKeys.Element( idx );
+			pbEncryptionKey = idx->second.get();
 		}
 		else
 		{
@@ -756,19 +737,21 @@ void CBaseClientState::SendConnectPacket ( const ns_address &netAdrRemote, int c
 		// Try to see if there's a client-plugin override for the encryption key for this server?
 		bool bWriteZeroEncryptionKey = true;
 		ns_address_render renderRemoteAsString( netAdrRemote );
-		UtlSymId_t utlKey = g_mapServersToCertificates.Find( renderRemoteAsString.String() );
-		if ( utlKey != UTL_INVAL_SYMBOL )
+		auto itCert = g_mapServersToCertificates.find( renderRemoteAsString.String() );
+		if ( itCert != g_mapServersToCertificates.end() )
 		{
-			CUtlBuffer &buf = *g_mapServersToCertificates[ utlKey ];
+			const std::vector< std::byte > &buf = itCert->second;
 			const int32 numMetadataBytes = sizeof( int32 ) + NET_CRYPT_KEY_LENGTH;
-			if ( buf.TellPut() > numMetadataBytes )
+			if ( std::ssize( buf ) > numMetadataBytes )
 			{
 				bWriteZeroEncryptionKey = false;
 				
-				msg.WriteLong( *reinterpret_cast< int32 * >( buf.Base() ) );
-				int32 numEncryptedSize = buf.TellPut() - numMetadataBytes;
+				int32 nFirstWord;
+				V_memcpy( &nFirstWord, buf.data(), sizeof( nFirstWord ) );
+				msg.WriteLong( nFirstWord );
+				int32 numEncryptedSize = std::ssize( buf ) - numMetadataBytes;
 				msg.WriteLong( numEncryptedSize );
-				msg.WriteBytes( ( const char * )( buf.Base() ) + numMetadataBytes, numEncryptedSize );
+				msg.WriteBytes( ( const char * )( buf.data() ) + numMetadataBytes, numEncryptedSize );
 			}
 		}
 		
@@ -853,14 +836,14 @@ bool Remote_t::Resolve()
 	// CL_Connect) while a numeric 127.0.0.1 is a separate process such as srcds.
 	// SetFromString() rewrites "localhost" to 127.0.0.1 and loses that
 	// distinction, so resolve it to NA_LOOPBACK here instead.
-	if ( StringHasPrefixCaseSensitive( m_szRetryAddress.String(), "localhost" ) )
+	if ( StringHasPrefixCaseSensitive( m_szRetryAddress.c_str(), "localhost" ) )
 	{
 		m_adrRemote.SetAddrType( NSAT_NETADR );
 		m_adrRemote.m_adr.SetType( NA_LOOPBACK );
 		return true;
 	}
 
-	if ( !m_adrRemote.SetFromString( m_szRetryAddress ) )
+	if ( !m_adrRemote.SetFromString( m_szRetryAddress.c_str() ) )
 	{
 		return false;
 	}
@@ -875,9 +858,9 @@ bool Remote_t::Resolve()
 
 bool CAddressList::IsRemoteInList( char const *pchAdrCheck ) const
 {
-	for ( int i = 0; i < m_List.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_List ); ++i )
 	{
-		if ( !Q_stricmp( pchAdrCheck, Get( i ).m_szRetryAddress.String() ) )
+		if ( !Q_stricmp( pchAdrCheck, Get( i ).m_szRetryAddress.c_str() ) )
 			return true;
 	}
 	return false;
@@ -885,7 +868,7 @@ bool CAddressList::IsRemoteInList( char const *pchAdrCheck ) const
 
 bool CAddressList::IsAddressInList( const ns_address &adr ) const
 {
-	for ( int i = 0; i < m_List.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_List ); ++i )
 	{
 		if ( adr.CompareAdr( Get( i ).m_adrRemote ) )
 			return true;
@@ -895,31 +878,31 @@ bool CAddressList::IsAddressInList( const ns_address &adr ) const
 
 void CAddressList::RemoveAll()
 {
-	m_List.RemoveAll();
+	m_List.clear();
 }
 
-void CAddressList::Describe( CUtlString &str )
+void CAddressList::Describe( std::string &str )
 {
-	for ( int i = 0; i < m_List.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_List ); ++i )
 	{
-		str += va( "%s(%s) ", Get( i ).m_szAlias.String(), ns_address_render( Get( i ).m_adrRemote ).String() );
+		str += va( "%s(%s) ", Get( i ).m_szAlias.c_str(), ns_address_render( Get( i ).m_adrRemote ).String() );
 	}
 }
 
 int	CAddressList::Count() const
 {
-	return m_List.Count();
+	return std::ssize( m_List );
 }
 
 Remote_t &CAddressList::Get( int index )
 {
-	Assert( index >= 0 && index < m_List.Count() );
+	Assert( index >= 0 && index < std::ssize( m_List ) );
 	return m_List[ index ];
 }
 
 const Remote_t &CAddressList::Get( int index ) const
 {
-	Assert( index >= 0 && index < m_List.Count() );
+	Assert( index >= 0 && index < std::ssize( m_List ) );
 	return m_List[ index ];
 }
 
@@ -929,11 +912,11 @@ void CAddressList::AddRemote( char const *pchAddress, char const *pchAlias )
 		return;
 
 	Remote_t remote;
-	remote.m_szRetryAddress = pchAddress;
-	remote.m_szAlias = pchAlias;
+	remote.m_szRetryAddress = ks::nz( pchAddress );
+	remote.m_szAlias = ks::nz( pchAlias );
 	remote.Resolve();
 
-	m_List.AddToTail( remote );
+	m_List.push_back( remote );
 }
 
 
@@ -1012,22 +995,22 @@ void CBaseClientState::FullConnect( const ns_address &adr, int nEncryptionKey )
 	byte *pbEncryptionKey = nullptr;
 	if ( nEncryptionKey )
 	{
-		int32 idxEncryptedKey = m_mapGeneratedEncryptionKeys.Find( nEncryptionKey );
-		if ( idxEncryptedKey != m_mapGeneratedEncryptionKeys.InvalidIndex() )
+		auto idxEncryptedKey = m_mapGeneratedEncryptionKeys.find( nEncryptionKey );
+		if ( idxEncryptedKey != m_mapGeneratedEncryptionKeys.end() )
 		{
-			pbEncryptionKey = m_mapGeneratedEncryptionKeys.Element( idxEncryptedKey );
+			pbEncryptionKey = idxEncryptedKey->second.get();
 		}
 		else
 		{
 			ns_address_render renderRemoteAsString( adr );
-			UtlSymId_t utlKey = g_mapServersToCertificates.Find( renderRemoteAsString.String() );
-			if ( utlKey != UTL_INVAL_SYMBOL )
+			auto itCert = g_mapServersToCertificates.find( renderRemoteAsString.String() );
+			if ( itCert != g_mapServersToCertificates.end() )
 			{
-				CUtlBuffer &buf = *g_mapServersToCertificates[ utlKey ];
+				std::vector< std::byte > &buf = itCert->second;
 				const int32 numMetadataBytes = sizeof( int32 ) + NET_CRYPT_KEY_LENGTH;
-				if ( buf.Size() > numMetadataBytes )
+				if ( std::ssize( buf ) > numMetadataBytes )
 				{
-					pbEncryptionKey = ( ( byte * ) ( buf.Base() ) + sizeof( int32 ) );
+					pbEncryptionKey = ( ( byte * ) ( buf.data() ) + sizeof( int32 ) );
 				}
 			}
 		}
@@ -1101,8 +1084,8 @@ void CBaseClientState::Disconnect( bool bShowMainMenu )
 	}
 	else if ( m_Remote.Count() > 0 )
 	{
-		const char *pszAddr = m_Remote.Get( 0 ).m_szRetryAddress;
-		if ( !adr.SetFromString( m_Remote.Get( 0 ).m_szRetryAddress ) )
+		const char *pszAddr = m_Remote.Get( 0 ).m_szRetryAddress.c_str();
+		if ( !adr.SetFromString( m_Remote.Get( 0 ).m_szRetryAddress.c_str() ) )
 		{
 			Warning( "Unable to parse retry address '%s'\n", pszAddr );
 		}
@@ -1165,7 +1148,7 @@ void CBaseClientState::RunFrame (void)
 
 	CheckForReservationResend();
 
-	for ( int i = 0; i < m_arrSvReservationCheck.Count(); ++ i )
+	for ( int i = 0; i < std::ssize( m_arrSvReservationCheck ); ++ i )
 	{
 		CServerMsg_CheckReservation *pSv = m_arrSvReservationCheck[ i ];
 		Assert( pSv );
@@ -1180,18 +1163,18 @@ void CBaseClientState::RunFrame (void)
 			// since update is only responsible for re-sends of the pings
 		}
 	}
-	for ( int i = 0; i < m_arrSvReservationCheck.Count(); ++ i )
+	for ( int i = 0; i < std::ssize( m_arrSvReservationCheck ); ++ i )
 	{
 		CServerMsg_CheckReservation *pSv = m_arrSvReservationCheck[ i ];
 		Assert( pSv );
 		if ( pSv && pSv->IsFinished() )
 		{
 			// delete pSvPing; -- client will release
-			m_arrSvReservationCheck.FastRemove( i -- );
+			ks::swap_remove( m_arrSvReservationCheck, i -- );
 		}
 	}
 
-	for ( int iSvPing = 0; iSvPing < m_arrSvPing.Count(); ++ iSvPing )
+	for ( int iSvPing = 0; iSvPing < std::ssize( m_arrSvPing ); ++ iSvPing )
 	{
 		CServerMsg_Ping *pSvPing = m_arrSvPing[ iSvPing ];
 		Assert( pSvPing );
@@ -1206,14 +1189,14 @@ void CBaseClientState::RunFrame (void)
 			// since update is only responsible for re-sends of the pings
 		}
 	}
-	for ( int iSvPing = 0; iSvPing < m_arrSvPing.Count(); ++ iSvPing )
+	for ( int iSvPing = 0; iSvPing < std::ssize( m_arrSvPing ); ++ iSvPing )
 	{
 		CServerMsg_Ping *pSvPing = m_arrSvPing[ iSvPing ];
 		Assert( pSvPing );
 		if ( pSvPing && pSvPing->IsFinished() )
 		{
 			// delete pSvPing; -- client will release
-			m_arrSvPing.FastRemove( iSvPing -- );
+			ks::swap_remove( m_arrSvPing, iSvPing -- );
 		}
 	}
 }
@@ -1264,7 +1247,7 @@ void CBaseClientState::CheckForResend ( bool bForceResendNow /* = false */ )
 	{
 		if ( !m_Remote.Get( i ).Resolve() )
 		{
-			ConMsg( "Bad server address %s(%s)\n", m_Remote.Get( i ).m_szAlias.String(), m_Remote.Get( i ).m_szRetryAddress.String() );
+			ConMsg( "Bad server address %s(%s)\n", m_Remote.Get( i ).m_szAlias.c_str(), m_Remote.Get( i ).m_szRetryAddress.c_str() );
 			Disconnect();
 			return;
 		}
@@ -1283,11 +1266,11 @@ void CBaseClientState::CheckForResend ( bool bForceResendNow /* = false */ )
 	m_flConnectTime = net_time;	// for retransmit requests
 
 	// Display appropriate message
-	if ( !StringHasPrefix( m_Remote.Get( 0 ).m_szRetryAddress, "localhost" ) )
+	if ( !StringHasPrefix( m_Remote.Get( 0 ).m_szRetryAddress.c_str(), "localhost" ) )
 	{
-		CUtlString desc;
+		std::string desc;
 		m_Remote.Describe( desc );
-		ConMsg ("%s %s...\n", m_nRetryNumber == 0 ? "Connecting to" : "Retrying", desc.String() );
+		ConMsg ("%s %s...\n", m_nRetryNumber == 0 ? "Connecting to" : "Retrying", desc.c_str() );
 	}
 
 #ifndef DEDICATED
@@ -1357,7 +1340,7 @@ if ( m_ListenServerSteamID ) // PORTAL2-specific: force Steam cnx for P2P (todo:
 			}
 			if ( developer.GetInt() != 0 )
 			{
-				ConColorMsg( Color( 0, 255, 0, 255 ), "%.3f:  Sending connect to %s address %s via %s\n", net_time, remote.m_szAlias.String(), szAddress, pszProtocol );
+				ConColorMsg( Color( 0, 255, 0, 255 ), "%.3f:  Sending connect to %s address %s via %s\n", net_time, remote.m_szAlias.c_str(), szAddress, pszProtocol );
 			}
 			
 			NET_OutOfBandDelayedPrintf( m_Socket, remote.m_adrRemote, GetPrivateIPDelayMsecs() * i, payload, Q_strlen( payload ) + 1 );
@@ -1365,12 +1348,12 @@ if ( m_ListenServerSteamID ) // PORTAL2-specific: force Steam cnx for P2P (todo:
 	}
 	else if ( m_ListenServerSteamID )
 	{
-		Msg( "%.3f:  Sending Steam connect to %s %llx\n", net_time, m_Remote.Get( 0 ).m_szRetryAddress.String(), m_ListenServerSteamID );
+		Msg( "%.3f:  Sending Steam connect to %s %llx\n", net_time, m_Remote.Get( 0 ).m_szRetryAddress.c_str(), m_ListenServerSteamID );
 		m_Remote.Get( 0 ).m_adrRemote = NET_InitiateSteamConnection( m_Socket, m_ListenServerSteamID, payload, Q_strlen( payload ) + 1 );
 	}
 	else
 	{
-		Warning( "%.3f:  Steam connection to unknown SteamId (%s) failed!\n", net_time, m_Remote.Get( 0 ).m_szRetryAddress.String() );
+		Warning( "%.3f:  Steam connection to unknown SteamId (%s) failed!\n", net_time, m_Remote.Get( 0 ).m_szRetryAddress.c_str() );
 	}
 
 	++m_nRetryNumber;
@@ -1508,7 +1491,7 @@ bool CBaseClientState::ProcessConnectionlessPacket( netpacket_t *packet )
 				chEncryptionKeyIndex[j] = msg.ReadByte();
 
 			bool bConnectionExpectingEncryptionKey = ( m_DeferredConnection.m_nEncryptionKey != 0 ) ||
-				( g_mapServersToCertificates.Find( ns_address_render( packet->from ).String() ) != UTL_INVAL_SYMBOL );
+				g_mapServersToCertificates.contains( ns_address_render( packet->from ).String() );
 
 			int nEncryptionKeyIndex = 0;
 			if ( ( 1 == sscanf( chEncryptionKeyIndex, "%08X", &nEncryptionKeyIndex ) ) &&
@@ -1631,7 +1614,7 @@ bool CBaseClientState::ProcessConnectionlessPacket( netpacket_t *packet )
 					if ( !s_nGeneratedEncryptionKey )
 						++ s_nGeneratedEncryptionKey;
 
-					m_mapGeneratedEncryptionKeys.InsertOrReplace( s_nGeneratedEncryptionKey, pbAllocatedKey );
+					m_mapGeneratedEncryptionKeys.insert_or_assign( s_nGeneratedEncryptionKey, std::unique_ptr< byte[] >( pbAllocatedKey ) );
 					dc.m_nEncryptionKey = s_nGeneratedEncryptionKey;
 					dc.m_nEncryptedSize = nAllocatedCryptoBlockSize;
 				}
@@ -1802,7 +1785,7 @@ bool CBaseClientState::ProcessConnectionlessPacket( netpacket_t *packet )
 		{
 			int32 hostVersion = msg.ReadLong();
 			uint32 token = msg.ReadLong();
-			for ( int i = 0; i < m_arrSvReservationCheck.Count(); ++ i )
+			for ( int i = 0; i < std::ssize( m_arrSvReservationCheck ); ++ i )
 			{
 				CServerMsg_CheckReservation *pSv = m_arrSvReservationCheck[ i ];
 				if ( pSv && pSv->m_serverAdr.CompareAdr( packet->from ) )
@@ -1818,7 +1801,7 @@ bool CBaseClientState::ProcessConnectionlessPacket( netpacket_t *packet )
 		{
 			int32 hostVersion = msg.ReadLong();
 			uint32 token = msg.ReadLong();
-			for ( int iSvPing = 0; iSvPing < m_arrSvPing.Count(); ++ iSvPing )
+			for ( int iSvPing = 0; iSvPing < std::ssize( m_arrSvPing ); ++ iSvPing )
 			{
 				CServerMsg_Ping *pSvPing = m_arrSvPing[ iSvPing ];
 				if ( pSvPing && pSvPing->m_serverAdr.CompareAdr( packet->from ) )
@@ -2134,16 +2117,10 @@ bool CBaseClientState::InternalProcessStringCmd( const ks::net::CNETMsg_StringCm
 
 bool CBaseClientState::NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAvatarData& msg )
 {
-	PlayerAvatarDataMap_t::IndexType_t idxData = m_mapPlayerAvatarData.Find( msg.accountid );
-	if ( idxData != m_mapPlayerAvatarData.InvalidIndex() )
-	{
-		delete m_mapPlayerAvatarData.Element( idxData );
-		m_mapPlayerAvatarData.RemoveAt( idxData );
-	}
-
-	CNETMsg_PlayerAvatarData_t *pClientDataCopy = new CNETMsg_PlayerAvatarData_t;
+	auto pClientDataCopy = std::make_unique< CNETMsg_PlayerAvatarData_t >();
 	pClientDataCopy->CopyFrom( msg );
-	m_mapPlayerAvatarData.Insert( pClientDataCopy->accountid, pClientDataCopy );
+	uint32 accountid = pClientDataCopy->accountid;
+	m_mapPlayerAvatarData.insert_or_assign( accountid, std::move( pClientDataCopy ) );
 
 	return true;
 }
@@ -2165,18 +2142,18 @@ CNETMsg_PlayerAvatarData_t * CBaseClientState::AllocOwnPlayerAvatarData() const
 			uint32 wide = 0, tall = 0;
 			if ( Steam3Client().SteamUtils()->GetImageSize( iAvatar, &wide, &tall ) && ( wide == 64 ) && ( tall == 64 ) )
 			{
-				CUtlVector< byte > memAvatarData;
-				memAvatarData.SetCount( 64 * 64 * 4 );
-				memset( memAvatarData.Base(), 0xFF, memAvatarData.Count() );
+				std::vector< byte > memAvatarData;
+				memAvatarData.assign( 64 * 64 * 4, {} );
+				memset( memAvatarData.data(), 0xFF, std::ssize( memAvatarData ) );
 
-				Steam3Client().SteamUtils()->GetImageRGBA( iAvatar, memAvatarData.Base(), memAvatarData.Count() );
+				Steam3Client().SteamUtils()->GetImageRGBA( iAvatar, memAvatarData.data(), std::ssize( memAvatarData ) );
 				// trim alpha for size
 				for ( int y = 0; y < 64; ++y ) for ( int x = 0; x < 64; ++x )
 				{
-					V_memmove( memAvatarData.Base() + y * 64 * 3 + x * 3, memAvatarData.Base() + y * 64 * 4 + x * 4, 3 );
+					V_memmove( memAvatarData.data() + y * 64 * 3 + x * 3, memAvatarData.data() + y * 64 * 4 + x * 4, 3 );
 				}
 
-				return new CNETMsg_PlayerAvatarData_t( steamID.GetAccountID(), memAvatarData.Base(), 64 * 64 * 3 );
+				return new CNETMsg_PlayerAvatarData_t( steamID.GetAccountID(), memAvatarData.data(), 64 * 64 * 3 );
 			}
 		}
 
@@ -2278,12 +2255,12 @@ bool CBaseClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg
 #if !defined( DEDICATED )
 		if ( demoplayer && demoplayer->IsPlayingBack() )
 		{
-			ConMsg ( "WARNING: Server demo version %i, client version %i.\n", msg.protocol, GetHostVersion() );
+			ConMsg ( "WARNING: Server demo version %i, client version %i.\n", (int)msg.protocol, GetHostVersion() );
 		}
 		else
 #endif
 		{
-			ConMsg ( "WARNING: Server version %i, client version %i.\n", msg.protocol, GetHostVersion() );
+			ConMsg ( "WARNING: Server version %i, client version %i.\n", (int)msg.protocol, GetHostVersion() );
 		}
 	}
 
@@ -2337,7 +2314,7 @@ bool CBaseClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg
 		 msg.tick_interval > MAXIMUM_TICK_INTERVAL )
 	{
 		ConMsg ("Interval_per_tick %f out of range [%f to %f]\n",
-			msg.tick_interval, MINIMUM_TICK_INTERVAL, MAXIMUM_TICK_INTERVAL );
+			(float)msg.tick_interval, MINIMUM_TICK_INTERVAL, MAXIMUM_TICK_INTERVAL );
 		return false;
 	}
 	
@@ -2374,7 +2351,7 @@ bool CBaseClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg
 		ns_address adr = m_NetChannel->GetRemoteAddress();
 		if ( adr.IsType<netadr_t>() )
 		{
-			pEvent->SetString( "address", CUtlNetAdrRender( adr.AsType<netadr_t>(), true ).String() );
+			pEvent->SetString( "address", CNetAdrRender( adr.AsType<netadr_t>(), true ).String() );
 			pEvent->SetInt(    "port", adr.GetPort() );
 		}
 		else
@@ -2386,7 +2363,7 @@ bool CBaseClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg
 		pEvent->SetString( "mapname", msg.map_name->c_str() );
 		pEvent->SetInt(    "maxplayers", msg.max_clients );
 		pEvent->SetInt(	   "password", 0 );				// TODO
-		pEvent->SetString( "os", Q_strupr( va("%c", msg.c_os ) ) );
+		pEvent->SetString( "os", Q_strupr( va("%c", (int)msg.c_os ) ) );
 		pEvent->SetBool(    "dedicated", msg.is_dedicated );
 		pEvent->SetBool(    "official", msg.is_official_valve_server );
 		if ( m_ulGameServerSteamID != 0 )
@@ -2499,12 +2476,12 @@ bool CBaseClientState::SVCMsg_ServerInfo( const ks::net::CSVCMsg_ServerInfo& msg
 					if ( debug_map_crc.GetBool() && !uiKnownVersionWkshpId )
 					{	// Force a debug error when debugging map CRC's
 						Warning( "debug_map_crc: Map version mismatch for %s CRC=%u, no fallback version specified in csgo_official_map_versions!\n",
-							chMapName, msg.map_crc );
+							chMapName, (uint32)msg.map_crc );
 					}
 
 					if ( uiKnownVersionWkshpId )
 					{	// We have a fallback version specified for the CRC mismatch
-						Msg( "Map version fallback for %s CRC=%u: %llu (CRC=%u)\n", chMapName, msg.map_crc, uiKnownVersionWkshpId, uiRepackedWkshpCrc );
+						Msg( "Map version fallback for %s CRC=%u: %llu (CRC=%u)\n", chMapName, (uint32)msg.map_crc, uiKnownVersionWkshpId, uiRepackedWkshpCrc );
 						Q_snprintf( m_szLevelName, sizeof( m_szLevelName ), "maps/workshop/%llu/%s.bsp", uiKnownVersionWkshpId, chMapName );
 						Q_FixSlashes( m_szLevelName );
 						Q_snprintf( m_szLevelNameShort, sizeof( m_szLevelNameShort ), "workshop/%llu/%s", uiKnownVersionWkshpId, chMapName );
@@ -2609,7 +2586,7 @@ bool CBaseClientState::SVCMsg_ClassInfo( const ks::net::CSVCMsg_ClassInfo& msg )
 
 		if( svclass.class_id >= m_nServerClasses )
 		{
-			Host_EndGame(true, "SVCMsg_ClassInfo: invalid class index (%d).\n", svclass.class_id);
+			Host_EndGame(true, "SVCMsg_ClassInfo: invalid class index (%d).\n", (int)svclass.class_id);
 			return false;
 		}
 
@@ -2895,16 +2872,16 @@ ClientClass *CBaseClientState::GetClientClass( int index )
 
 void CBaseClientState::UpdateInstanceBaseline( int nStringNumber )
 {
-	int nSlot = m_BaselineHandles.Find( nStringNumber );
-	if ( nSlot != m_BaselineHandles.InvalidIndex() )
+	auto nSlot = m_BaselineHandles.find( nStringNumber );
+	if ( nSlot != m_BaselineHandles.end() )
 	{
 		// Release old
-		g_pSerializedEntities->ReleaseSerializedEntity( m_BaselineHandles[ nSlot ] );
-		m_BaselineHandles[ nSlot ] = SERIALIZED_ENTITY_HANDLE_INVALID;
+		g_pSerializedEntities->ReleaseSerializedEntity( nSlot->second );
+		nSlot->second = SERIALIZED_ENTITY_HANDLE_INVALID;
 	}
 	else
 	{
-		m_BaselineHandles.Insert( nStringNumber, SERIALIZED_ENTITY_HANDLE_INVALID );
+		m_BaselineHandles.emplace( nStringNumber, SERIALIZED_ENTITY_HANDLE_INVALID );
 	}
 }
 
@@ -2936,10 +2913,10 @@ bool CBaseClientState::GetClassBaseline( int iClass, SerializedEntityHandle_t *p
 			);
 	}
 
-	int slot = m_BaselineHandles.Find( pInfo->m_InstanceBaselineIndex );
-	Assert( slot != m_BaselineHandles.InvalidIndex() );
+	auto slot = m_BaselineHandles.find( pInfo->m_InstanceBaselineIndex );
+	Assert( slot != m_BaselineHandles.end() );
 
-	*pHandle = m_BaselineHandles[ slot ];
+	*pHandle = slot->second;
 	if ( *pHandle == SERIALIZED_ENTITY_HANDLE_INVALID )
 	{
 		SerializedEntityHandle_t handle = g_pSerializedEntities->AllocateSerializedEntity( __FILE__, __LINE__ );
@@ -2951,7 +2928,7 @@ bool CBaseClientState::GetClassBaseline( int iClass, SerializedEntityHandle_t *p
 
 		RecvTable_ReadFieldList( pInfo->m_pClientClass->m_pRecvTable, readbuf, handle, -1, false );
 
-		*pHandle = m_BaselineHandles[ slot ] = handle;
+		*pHandle = slot->second = handle;
 	}
 
 	return *pHandle != SERIALIZED_ENTITY_HANDLE_INVALID;
@@ -3195,7 +3172,7 @@ bool CBaseClientState::CheckServerReservation( const ns_address &netAdrPublic, u
 	CServerMsg_CheckReservation *pSvReservationCheck = new CServerMsg_CheckReservation( this, pCallback, netAdrPublic, 
 		m_Socket, nServerReservationCookie, uiReservationStage );
 	*ppAsyncOperation = pSvReservationCheck;
-	m_arrSvReservationCheck.AddToTail( pSvReservationCheck );
+	m_arrSvReservationCheck.push_back( pSvReservationCheck );
 
 	return true;
 }
@@ -3211,7 +3188,7 @@ bool CBaseClientState::ServerPing( const ns_address &netAdrPublic,
 
 	CServerMsg_Ping *pSvPing = new CServerMsg_Ping( this, pCallback, netAdrPublic, m_Socket );
 	*ppAsyncOperation = pSvPing;
-	m_arrSvPing.AddToTail( pSvPing );
+	m_arrSvPing.push_back( pSvPing );
 
 	return true;
 }
@@ -3285,9 +3262,9 @@ void CBaseClientState::CheckForReservationResend()
 	// fail if too many resends
 	if ( m_nReservationMsgRetryNumber >= MAX_RESERVATION_RETRIES )
 	{
-		CUtlString desc;
+		std::string desc;
 		m_netadrReserveServer.Describe( desc );
-		Msg( "[MM] Attempt to reserve server %s failed; timed out after %d attempts\n", desc.String(), m_nReservationMsgRetryNumber + 1 );
+		Msg( "[MM] Attempt to reserve server %s failed; timed out after %d attempts\n", desc.c_str(), m_nReservationMsgRetryNumber + 1 );
 		
 		ReservationResponseReply_t reply;
 		reply.m_adrFrom = m_netadrReserveServer.Get( 0 ).m_adrRemote;
@@ -3372,13 +3349,13 @@ void CBaseClientState::BuildReserveServerPayload( bf_write &msg, int nChallengeN
 	payload.WriteLongLong( m_nServerReservationCookie );
 
 	int nSettingsLength = 0;
-	CUtlBuffer buf;
+	ks::byte_writer buf;
 	// binary keyvalues are written in the platform-native byte order
 	if ( m_pKVGameSettings )
 	{
 		// if we have KeyValues with game settings, convert to binary blob
 		m_pKVGameSettings->WriteAsBinary( buf );
-		nSettingsLength = buf.TellPut();
+		nSettingsLength = buf.size();
 		// make sure it's not going to overflow one UDP packet
 		Assert( nSettingsLength <= MAX_OOB_KEYVALUES );
 		if ( nSettingsLength > MAX_OOB_KEYVALUES )
@@ -3395,7 +3372,7 @@ void CBaseClientState::BuildReserveServerPayload( bf_write &msg, int nChallengeN
 	if ( nSettingsLength > 0 )
 	{
 		// write game setting keyvalues
-		payload.WriteBytes( buf.Base(), nSettingsLength );
+		payload.WriteBytes( buf.data(), nSettingsLength );
 	}
 
 	// Pad it to multiple of 8 bytes

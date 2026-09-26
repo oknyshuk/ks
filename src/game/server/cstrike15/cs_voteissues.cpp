@@ -17,8 +17,6 @@
 #include "gametypes.h"
 
 //[tj]removing this to get voting to compile
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 extern ConVar mp_maxrounds;
 extern ConVar mp_winlimit;
@@ -345,9 +343,9 @@ const char *CKickIssue::GetDetailsString( void )
 	if ( pReason != nullptr )
 	{
 		pReason += 1;
-		CUtlString userID;
-		userID.SetDirect( m_szDetailsString, pReason - m_szDetailsString );
-		iUserID = atoi( userID );
+		std::string userID;
+		userID.assign( m_szDetailsString, pReason - m_szDetailsString );
+		iUserID = atoi( userID.c_str() );
 	}
 	else
 	{
@@ -375,9 +373,9 @@ void CKickIssue::ExtractDataFromDetails( const char *pszDetails, CCSPlayer **pSu
 	if ( pReasonString != nullptr )
 	{
 		pReasonString += 1;
-		CUtlString userID;
-		userID.SetDirect( pszDetails, pReasonString - pszDetails );
-		iUserID = atoi( userID );
+		std::string userID;
+		userID.assign( pszDetails, pReasonString - pszDetails );
+		iUserID = atoi( userID.c_str() );
 		if ( pReason )
 		{
 			//[tj] Not applicable without TF-specific GC code
@@ -588,14 +586,14 @@ bool CChangeLevelIssue::CanCallVote( int iEntIndex, const char *pszTypeString, c
 	if ( gpGlobals )
 	{	
 		const char* groupName = gpGlobals->mapGroupName.ToCStr();
-		const CUtlStringList* mapsInGroup = g_pGameTypes->GetMapGroupMapList( groupName );
+		const std::vector< std::string >* mapsInGroup = g_pGameTypes->GetMapGroupMapList( groupName );
 		if ( mapsInGroup )
 		{
-			int numMaps = mapsInGroup->Count();
+			int numMaps = std::ssize( *mapsInGroup );
 
 			for( int i = 0 ; i < numMaps ; ++i )
 			{
-				const char* internalMapName = ( *mapsInGroup )[i];
+				const char* internalMapName = ( *mapsInGroup )[i].c_str();
 				if ( !V_strcmp( pszDetails, internalMapName ) )
 				{
 					mapIsInGroup = true;
@@ -692,14 +690,14 @@ void CNextLevelIssue::ExecuteCommand( void )
 		if ( gpGlobals )
 		{	
 			const char* groupName = gpGlobals->mapGroupName.ToCStr();
-			const CUtlStringList* mapsInGroup = g_pGameTypes->GetMapGroupMapList( groupName );
+			const std::vector< std::string >* mapsInGroup = g_pGameTypes->GetMapGroupMapList( groupName );
 			if ( mapsInGroup )
 			{
-				int numMaps = mapsInGroup->Count();
+				int numMaps = std::ssize( *mapsInGroup );
 
 				for( int i = 0 ; i < numMaps ; ++i )
 				{
-					const char* internalMapName = ( *mapsInGroup )[i];
+					const char* internalMapName = ( *mapsInGroup )[i].c_str();
 					if ( !V_strcmp( m_szDetailsString, internalMapName ) )
 					{
 						CSGameRules()->SetNextMapInMapGroup(i);
@@ -781,14 +779,14 @@ bool CNextLevelIssue::CanCallVote( int iEntIndex, const char *pszTypeString, con
 	if ( gpGlobals )
 	{	
 		const char* groupName = gpGlobals->mapGroupName.ToCStr();
-		const CUtlStringList* mapsInGroup = g_pGameTypes->GetMapGroupMapList( groupName );
+		const std::vector< std::string >* mapsInGroup = g_pGameTypes->GetMapGroupMapList( groupName );
 		if ( mapsInGroup )
 		{
-			int numMaps = mapsInGroup->Count();
+			int numMaps = std::ssize( *mapsInGroup );
 
 			for( int i = 0 ; i < numMaps ; ++i )
 			{
-				const char* internalMapName = ( *mapsInGroup )[i];
+				const char* internalMapName = ( *mapsInGroup )[i].c_str();
 				if ( !V_strcmp( pszDetails, internalMapName ) )
 				{
 					mapIsInGroup = true;
@@ -1612,9 +1610,9 @@ bool CSurrender::CanTeamCallVote( int iTeam ) const
 		return false;
 
 	bool bTeamsArePlayingSwitchedSides = CSGameRules()->AreTeamsPlayingSwitchedSides();
-	FOR_EACH_MAP( CSGameRules()->m_mapQueuedMatchmakingPlayersData, idxQPD )
+	for ( const auto &[uiAccountID, pQPD] : CSGameRules()->m_mapQueuedMatchmakingPlayersData )
 	{
-		CCSGameRules::CQMMPlayerData_t const &qpd = * CSGameRules()->m_mapQueuedMatchmakingPlayersData.Element( idxQPD );
+		CCSGameRules::CQMMPlayerData_t const &qpd = *pQPD;
 		if ( qpd.m_bAbandonAllowsSurrender )
 		{
 			bool bSecondTeam = ( qpd.m_iDraftIndex >= 5 );

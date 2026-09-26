@@ -7,9 +7,6 @@
 #include "mathlib/vector.h"
 #include "bspfile.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 void SetupLightNormalFromProps( const QAngle &angles, float angle, float pitch, Vector &output )
 {
 	if (angle == ANGLE_UP)

@@ -14,9 +14,6 @@
 #include "soundent.h"
 #include "logic_random_outputs.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 const int SF_REMOVE_ON_FIRE				= 0x001;	// Relay will remove itself after being triggered.
 const int SF_ALLOW_FAST_RETRIGGER		= 0x002;	// Unless set, entity will disable itself until the last output is sent.
 
@@ -161,7 +158,7 @@ void CLogicRandomOutputs::InputTrigger( inputdata_t &inputdata )
 			float fMaxDelay = 0;
 			for ( int i=0 ; i < NUM_RANDOM_OUTPUTS ; i++ )
 			{
-				fMaxDelay = MAX( fMaxDelay, m_Output[i].GetMaxDelay() );
+				fMaxDelay = std::max( fMaxDelay, m_Output[i].GetMaxDelay() );
 			}
 			if ( fMaxDelay > 0 )
 			{

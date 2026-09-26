@@ -15,19 +15,23 @@
 #define STRINGREGISTRY_H
 #pragma once
 
-struct StringTable_t;
+#include "tier1/map_ops.h"
 
 //-----------------------------------------------------------------------------
-// Purpose: Just a convenience/legacy wrapper for CUtlDict<> .
+// Purpose: Just a convenience/legacy wrapper for ks::idict<> .
 //-----------------------------------------------------------------------------
 class CStringRegistry
 {
+public:
+	// Keys are iterators: valid until ClearStrings.
+	using Key = ks::idict<int>::const_iterator;
+
 private:
-	StringTable_t	*m_pStringList;
+	ks::idict<int>	*m_pStringList;
 
 public:
-	// returns a key for a given string
-	unsigned short AddString(const char *stringText, int stringID);
+	// returns a key for a given string; an existing string keeps its first ID
+	Key AddString(const char *stringText, int stringID);
 
 	// This is optimized.  It will do 2 O(logN) searches
 	// Only one of the searches needs to compare strings, the other compares symbols (ints)
@@ -38,17 +42,17 @@ public:
 	const char	*GetStringText(int stringID);
 
 	// This is O(1).  It will not search.  key MUST be a value that was returned by AddString
-	const char *GetStringForKey(unsigned short key);
+	const char *GetStringForKey(Key key);
 	// This is O(1).  It will not search.  key MUST be a value that was returned by AddString
-	int		GetIDForKey(unsigned short key);
+	int		GetIDForKey(Key key);
 
 	void	ClearStrings(void);
 
 
 	// Iterate all the keys.
-	unsigned short First() const;
-	unsigned short Next( unsigned short key ) const;
-	unsigned short InvalidIndex() const;
+	Key First() const;
+	Key Next( Key key ) const;
+	Key InvalidIndex() const;
 
 	~CStringRegistry(void);			// Need to free allocated memory
 	CStringRegistry(void);

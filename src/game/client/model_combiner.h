@@ -26,8 +26,8 @@ public:
 // Request a combined model to be created for the base model and the attached additional models.
 // The requester it must derive from IModelCombinerRequesterInterface. The ModelCombineFinished
 // function will be called with the result of the combine request.
-bool	ModelCombiner_CombineModel( IModelCombinerRequesterInterface *pRequester, const char *pszBaseModel, CUtlVector<const char *> *vecAdditionalModels );
-bool	ModelCombiner_CombineModel( IModelCombinerRequesterInterface *pRequester, const CUtlVector< SCombinerModelInput_t > &vecModelsToCombine );
+bool	ModelCombiner_CombineModel( IModelCombinerRequesterInterface *pRequester, const char *pszBaseModel, std::vector< const char * > *vecAdditionalModels );
+bool	ModelCombiner_CombineModel( IModelCombinerRequesterInterface *pRequester, const std::vector< SCombinerModelInput_t > &vecModelsToCombine );
 
 // Call this when you're being destroyed. It'll remove you from any pending callback lists.
 void	ModelCombiner_AbortCombineModelFor( IModelCombinerRequesterInterface *pRequester );

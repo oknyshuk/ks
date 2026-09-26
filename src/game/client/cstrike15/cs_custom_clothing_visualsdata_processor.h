@@ -52,17 +52,17 @@ public:
 	CCSClothingVisualsDataCompare() = default;
 
 	CCSClothingVisualsDataCompare( CCSClothingVisualsDataCompare&& moveFrom )
-	: CBaseVisualsDataCompare( Move( moveFrom ) )
-	, m_nTeamId( Move( moveFrom.m_nTeamId ) )
-	, m_bMirrorPattern( Move( moveFrom.m_bMirrorPattern ) )
-	, m_nMaterialId( Move( moveFrom.m_nMaterialId ) )
+	: CBaseVisualsDataCompare( std::move( moveFrom ) )
+	, m_nTeamId( std::move( moveFrom.m_nTeamId ) )
+	, m_bMirrorPattern( std::move( moveFrom.m_bMirrorPattern ) )
+	, m_nMaterialId( std::move( moveFrom.m_nMaterialId ) )
 	{}
 	CCSClothingVisualsDataCompare& operator=( CCSClothingVisualsDataCompare&& moveFrom )
 	{
-		*(CBaseVisualsDataCompare*)this = Move( moveFrom );
-		m_nTeamId = Move( moveFrom.m_nTeamId );
-		m_bMirrorPattern = Move( moveFrom.m_bMirrorPattern );
-		m_nMaterialId = Move( moveFrom.m_nMaterialId );
+		*(CBaseVisualsDataCompare*)this = std::move( moveFrom );
+		m_nTeamId = std::move( moveFrom.m_nTeamId );
+		m_bMirrorPattern = std::move( moveFrom.m_bMirrorPattern );
+		m_nMaterialId = std::move( moveFrom.m_nMaterialId );
 		return *this;
 	}
 
@@ -70,7 +70,7 @@ public:
 	bool m_bMirrorPattern;
 	int m_nMaterialId;
 
-	virtual void SerializeToBuffer( CUtlBuffer &buf );
+	virtual void SerializeToBuffer( ks::byte_writer &buf );
 };
 
 class CCSClothingVisualsDataProcessor : public CBaseVisualsDataProcessor< CCSClothingVisualsDataCompare >

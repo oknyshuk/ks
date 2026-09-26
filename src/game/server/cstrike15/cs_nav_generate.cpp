@@ -120,7 +120,7 @@ void CCSNavArea::ComputeApproachAreas( void )
 		// and keep the union of the approach area sets
 		//
 		int it;
-		for( it = 0; it < TheNavAreas.Count(); ++it )
+		for( it = 0; it < std::ssize( TheNavAreas ); ++it )
 		{
 			CNavArea *farArea = TheNavAreas[ it ];
 

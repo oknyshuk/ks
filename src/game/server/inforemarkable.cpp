@@ -16,9 +16,7 @@
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 #include "inforemarkable.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier1/vector_ops.h"
 
 
 /// A global list of entities that can be remarked upon.
@@ -31,25 +29,25 @@ public:
 
 	virtual void LevelShutdownPostEntity()  
 	{ 
-		m_list.Purge();
+		m_list = {};
 	}
 
 	void AddEntity( CInfoRemarkable *pItem )
 	{
-		m_list.AddToTail( pItem );
+		m_list.push_back( pItem );
 	}
 
 	void RemoveEntity( CInfoRemarkable *pItem )
 	{
-		m_list.FindAndRemove( pItem );
+		ks::erase_first( m_list, pItem );
 	}
-	CUtlLinkedList< CInfoRemarkable * > m_list;
+	CInfoRemarkable::tRemarkableList m_list;
 };
 
 CRemarkableEntityList g_RemarkableList( "CRemarkableEntityList" );
 
 
-CUtlLinkedList< CInfoRemarkable * > *CInfoRemarkable::GetListOfAllThatIsRemarkable( void )
+CInfoRemarkable::tRemarkableList *CInfoRemarkable::GetListOfAllThatIsRemarkable( void )
 {
 	return &g_RemarkableList.m_list;
 }

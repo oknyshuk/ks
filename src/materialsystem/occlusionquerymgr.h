@@ -7,8 +7,6 @@
 #ifndef OCCLUSIONQUERY_H
 #define OCCLUSIONQUERY_H
 
-#include "tier1/utlsymbol.h"
-#include "tier1/utlrbtree.h"
 
 #ifndef MATSYS_INTERNAL
 #error "This file is private to the implementation of IMaterialSystem/IMaterialSystemInternal"
@@ -16,7 +14,9 @@
 
 
 
-#include "tier1/utllinkedlist.h"
+#include <mutex>
+#include <deque>
+#include <vector>
 #include "shaderapi/ishaderapi.h"
 
 
@@ -70,6 +70,7 @@ private:
 		int m_nFrameIssued;
 		int m_nCurrentIssue;
 		bool m_bHasBeenIssued[COUNT_OCCLUSION_QUERY_STACK];
+		bool m_bInUse = true;
 
 		OcclusionQueryObject_t(void)
 		{
@@ -87,9 +88,14 @@ private:
 	// Flushes an outstanding query
 	void FlushQuery( OcclusionQueryObjectHandle_t hOcclusionQuery, int nIndex );
 
-	// Occlusion query objects
-	CUtlFixedLinkedList<OcclusionQueryObject_t>	m_OcclusionQueryObjects;
-	CThreadFastMutex m_Mutex;
+	// Handles are object addresses; freed slots are reused
+	static OcclusionQueryObject_t &FromHandle( OcclusionQueryObjectHandle_t h ) { return *(OcclusionQueryObject_t *)h; }
+	static bool IsValidHandle( OcclusionQueryObjectHandle_t h ) { return h != INVALID_OCCLUSION_QUERY_OBJECT_HANDLE && FromHandle( h ).m_bInUse; }
+
+	// Occlusion query objects; a deque so slots never move
+	std::deque<OcclusionQueryObject_t>	m_OcclusionQueryObjects;
+	std::vector<OcclusionQueryObject_t *>	m_FreeOcclusionQueryObjects;
+	std::recursive_mutex m_Mutex;
 	int m_nFrameCount;
 };
 

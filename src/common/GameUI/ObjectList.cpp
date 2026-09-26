@@ -14,8 +14,7 @@
 
 //#include "port.h"
 //#include "mem.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include <tier0/memdbgon.h>
+#include "tier0/memalloc.h"
 
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
@@ -35,7 +34,7 @@ ObjectList::~ObjectList()
 bool ObjectList::AddHead(void * newObject)
 {
 	// create new element
-	element_t * newElement = (element_t *) calloc(1, sizeof(element_t));
+	element_t * newElement = (element_t *) MemAlloc_Calloc(1, sizeof(element_t));
 
 	if (newElement == nullptr )
 		return false; // out of memory
@@ -75,7 +74,7 @@ void * ObjectList::RemoveHead()
 		// if we remove this prev element
 		if (tail==head) tail = nullptr;
 
-		free(head);
+		g_pMemAlloc->Free(head);
 		head = newHead;
 
 		number--;
@@ -88,7 +87,7 @@ void * ObjectList::RemoveHead()
 
 bool ObjectList::AddTail(void * newObject)
 {
-	element_t * newElement = (element_t *) calloc(1, sizeof(element_t));
+	element_t * newElement = (element_t *) MemAlloc_Calloc(1, sizeof(element_t));
 
 	if (newElement == nullptr) 
 		return false; // out of memory;
@@ -127,7 +126,7 @@ void * ObjectList::RemoveTail()
 		// if we remove this prev element
 		if (head==tail) head = nullptr;
 
-		free(tail);
+		g_pMemAlloc->Free(tail);
 		tail = newTail;
 
 		number--;
@@ -175,9 +174,9 @@ void ObjectList::Clear( bool freeElementsMemory )
 		ne = e->next; 
 
 		if ( freeElementsMemory && e->object )
-			free( e->object );
+			g_pMemAlloc->Free( e->object );
 
-		free(e);
+		g_pMemAlloc->Free(e);
 		e = ne; 
 	}
 
@@ -199,7 +198,7 @@ bool ObjectList::Remove( void * object )
 		if (head==e) head = e->next;
 		if (tail==e) tail = e->prev;
 		if (current == e) current= e->next;
-		free(e);
+		g_pMemAlloc->Free(e);
 		number--;
 	}
 

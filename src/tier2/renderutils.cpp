@@ -5,6 +5,7 @@
 //===========================================================================//
 
 #include "tier2/renderutils.h"
+#include <mutex>
 #include "tier2/tier2.h"
 #include "tier1/keyvalues.h"
 #include "materialsystem/imaterialsystem.h"
@@ -14,9 +15,6 @@
 #include "tier0/vprof.h"
 #include "tier0/basetypes.h"
 #include "togl/rendermechanism.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 #if !defined(M_PI)
 	#define M_PI			3.14159265358979323846
@@ -37,7 +35,8 @@ static IMaterial *s_pVertexColorIgnoreZ;
 //-----------------------------------------------------------------------------
 void InitializeStandardMaterials()
 {
-	LOCAL_THREAD_LOCK();
+	static std::recursive_mutex s_initMutex;
+	std::scoped_lock lock( s_initMutex );
 
 	if ( s_bMaterialsInitialized )
 		return;
@@ -1009,8 +1008,8 @@ void DrawScreenSpaceRectangle( IMaterial *pMaterial,
 
 	pRenderContext->Bind( pMaterial, pClientRenderable );
 
-	int xSegments = MAX( nXDice, 1);
-	int ySegments = MAX( nYDice, 1);
+	int xSegments = std::max( nXDice, 1);
+	int ySegments = std::max( nYDice, 1);
 
 	CMeshBuilder meshBuilder;
 	

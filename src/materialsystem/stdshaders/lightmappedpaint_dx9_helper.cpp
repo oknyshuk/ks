@@ -17,8 +17,6 @@
 #include "tier0/vprof.h"
 #include "shaderapifast.h"
 
-#include "tier0/memdbgon.h"
-
 extern ConVar mat_ambient_light_r;
 extern ConVar mat_ambient_light_g;
 extern ConVar mat_ambient_light_b;

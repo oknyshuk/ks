@@ -226,7 +226,7 @@ struct vehicleparams_t
 
 // Iterator for queries
 class CPassengerSeatTransition;
-typedef CUtlVector< CPassengerSeatTransition> PassengerSeatAnims_t;
+typedef std::vector< CPassengerSeatTransition > PassengerSeatAnims_t;
 
 // Seat query types
 enum VehicleSeatQuery_e

@@ -19,9 +19,6 @@
 #include "cs_achievement_constants.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern IPhysicsCollision *physcollision;
 
 
@@ -73,7 +70,7 @@ private:
 		trace_t trace;
 	};
 
-	CUtlVector<touchlist_t>	m_TouchList;
+	std::vector< touchlist_t >	m_TouchList;
 
 	Vector m_collisionNormal;
 	Vector m_groundNormal;
@@ -102,7 +99,7 @@ static inline edict_t* GetEdict( EntityHandle_t handle )
 // Constructor
 //-----------------------------------------------------------------------------
 
-CMoveHelperServer::CMoveHelperServer( void ) : m_TouchList( 0, 128 )
+CMoveHelperServer::CMoveHelperServer( void )
 {
 	m_pHost = 0;
 	SetSingleton( this );
@@ -157,7 +154,7 @@ char const* CMoveHelperServer::GetName( EntityHandle_t handle ) const
 
 void CMoveHelperServer::ResetTouchList( void )
 {
-	m_TouchList.RemoveAll();
+	m_TouchList.clear();
 
 	// Track collision normal
 	m_collisionNormal.Init();
@@ -187,7 +184,7 @@ bool CMoveHelperServer::AddToTouched( const trace_t &tr, const Vector& impactvel
 	m_collisionNormal += tr.plane.normal;
 
 	// Check for duplicate entities
-	for ( int j = m_TouchList.Count(); --j >= 0; )
+	for ( int j = std::ssize( m_TouchList ); --j >= 0; )
 	{
 		if ( m_TouchList[j].trace.Ent<CBaseEntity>() == tr.Ent<CBaseEntity>() )
 		{
@@ -195,7 +192,7 @@ bool CMoveHelperServer::AddToTouched( const trace_t &tr, const Vector& impactvel
 		}
 	}
 	
-	int i = m_TouchList.AddToTail();
+	int i = std::ssize( m_TouchList ); m_TouchList.emplace_back();
 	m_TouchList[i].trace = tr;
 	VectorCopy( impactvelocity, m_TouchList[i].deltavelocity );
 
@@ -230,7 +227,7 @@ void CMoveHelperServer::ProcessImpacts( void )
 	Vector vel = m_pHost->GetAbsVelocity();
 
 	// Touch other objects that were intersected during the movement.
-	for (int i = 0 ; i < m_TouchList.Count(); i++)
+	for (int i = 0 ; i < std::ssize( m_TouchList ); i++)
 	{
 		CBaseHandle entindex = m_TouchList[i].trace.Ent<CBaseEntity>()->GetRefEHandle();
 

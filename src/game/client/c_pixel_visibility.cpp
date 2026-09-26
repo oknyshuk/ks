@@ -13,11 +13,10 @@
 #include "precache_register.h"
 #include "view.h"
 #include "viewrender.h"
-#include "utlmultilist.h"
+#include "tier1/vector_ops.h"
+#include <deque>
+#include <vector>
 #include "vprof.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 
 static void PixelvisDrawChanged( IConVar *pPixelvisVar, const char *pOld, float flOldValue );
@@ -53,14 +52,14 @@ struct OcclusionHandleViewIDPair_t
 struct OcclusionQueryHiddenData_t
 {
 	COcclusionQuerySet *pOwner;
-	CUtlVector<OcclusionHandleViewIDPair_t> occlusionHandles[MAX_SPLITSCREEN_PLAYERS];
+	std::vector< OcclusionHandleViewIDPair_t > occlusionHandles[MAX_SPLITSCREEN_PLAYERS];
 };
 
-static CUtlVector<OcclusionQueryHiddenData_t> s_OcclusionQueries;
+static std::vector< OcclusionQueryHiddenData_t > s_OcclusionQueries;
 static inline int FindQueryHandlePairIndex( OcclusionQueryHiddenData_t *pData, int iViewID, int iSplitScreenSlot )
 {
-	int iPairCount = pData->occlusionHandles[iSplitScreenSlot].Count();
-	OcclusionHandleViewIDPair_t *pPairs = pData->occlusionHandles[iSplitScreenSlot].Base();
+	int iPairCount = std::ssize( pData->occlusionHandles[iSplitScreenSlot] );
+	OcclusionHandleViewIDPair_t *pPairs = pData->occlusionHandles[iSplitScreenSlot].data();
 	
 	for( int i = 0; i != iPairCount; ++i )
 	{
@@ -68,7 +67,7 @@ static inline int FindQueryHandlePairIndex( OcclusionQueryHiddenData_t *pData, i
 			return i;
 	}
 
-	return pData->occlusionHandles[iSplitScreenSlot].InvalidIndex();
+	return -1;
 }
 
 
@@ -81,7 +80,7 @@ float PixelVisibility_DrawProxy( IMatRenderContext *pRenderContext, OcclusionQue
 	float forwardScale = scale;
 	// draw a pyramid of points touching a sphere of radius "scale" at origin
 	float pixelsPerUnit = pRenderContext->ComputePixelDiameterOfSphere( origin, 1.0f );
-	pixelsPerUnit = MAX( pixelsPerUnit, 1e-4f );
+	pixelsPerUnit = std::max( pixelsPerUnit, 1e-4f );
 	if ( screenspace )
 	{
 		// Force this to be the size of a sphere of diameter "scale" at some reference distance (1.0 unit)
@@ -130,8 +129,8 @@ float PixelVisibility_DrawProxy( IMatRenderContext *pRenderContext, OcclusionQue
 	// compute area and screen-clipped area
 	float w = screen[1].x - screen[0].x;
 	float h = screen[0].y - screen[3].y;
-	float ws = MIN(1.0f, screen[1].x) - MAX(-1.0f, screen[0].x);
-	float hs = MIN(1.0f, screen[0].y) - MAX(-1.0f, screen[3].y);
+	float ws = std::min(1.0f, screen[1].x) - std::max(-1.0f, screen[0].x);
+	float hs = std::min(1.0f, screen[0].y) - std::max(-1.0f, screen[3].y);
 	float area = w*h; // area can be zero when we ALT-TAB
 	float areaClipped = ws*hs;
 	float ratio = 0.0f;
@@ -178,7 +177,6 @@ public:
 	{
 		frameIssued = 0;
 		serial = 0;
-		queryList = 0xFFFF;
 		sizeIsScreenSpace = false;
 	}
 
@@ -186,7 +184,7 @@ public:
 	float			proxySize;
 	float			proxyAspect;
 	float			fadeTimeInv;
-	unsigned short	queryList;
+	std::vector<unsigned short> queryList;	// indices into CPixelVisibilitySystem::m_queryList
 	unsigned short	serial;
 	bool			sizeIsScreenSpace;
 private:
@@ -478,22 +476,25 @@ public:
 	void ShowQueries( bool show );
 	unsigned short AllocQuery();
 	unsigned short AllocSet();
-	void FreeSet( unsigned short node );
+	static constexpr unsigned short INVALID_QUERY = 0xFFFF;
 	CPixelVisSet *FindOrCreatePixelVisSet( const pixelvis_queryparams_t &params, pixelvis_handle_t *queryHandle );
 	bool SupportsOcclusion() { return m_hwCanTestGlows; }
 	void DebugInfo()
 	{
 		Msg("Pixel vis system using %d sets total (%d in free list), %d queries total (%d in free list)\n", 
-			m_setList.TotalCount(), m_setList.Count(m_freeSetsList), m_queryList.TotalCount(), m_queryList.Count( m_freeQueriesList ) );
+			(int)m_setList.size(), (int)m_freeSetsList.size(), (int)m_queryList.size(), (int)m_freeQueriesList.size() );
 	}
 
 private:
-	CUtlMultiList< CPixelVisSet, unsigned short >	m_setList;
-	CUtlMultiList<CPixelVisibilityQuery, unsigned short> m_queryList;
-	unsigned short m_freeQueriesList;
-	unsigned short m_activeSetsList;
-	unsigned short m_freeSetsList;
-	unsigned short m_pad0;
+	void FreeActiveSet( size_t activeIndex );
+
+	// Pools never shrink before level shutdown: queries keep their occlusion query objects, sets their serials.
+	// Deques so elements never move; an index is a node.
+	std::deque< CPixelVisSet >	m_setList;
+	std::deque< CPixelVisibilityQuery > m_queryList;
+	std::vector< unsigned short > m_freeQueriesList;
+	std::vector< unsigned short > m_activeSetsList;
+	std::vector< unsigned short > m_freeSetsList;
 
 	IMaterial	*m_pProxyMaterial;
 	IMaterial	*m_pDrawMaterial;
@@ -534,9 +535,6 @@ void CPixelVisibilitySystem::LevelInitPreEntity()
 	m_pProxyMaterial->IncrementReferenceCount();
 	m_pDrawMaterial = materials->FindMaterial("engine/occlusionproxy_countdraw", TEXTURE_GROUP_CLIENT_EFFECTS);
 	m_pDrawMaterial->IncrementReferenceCount();
-	m_freeQueriesList = m_queryList.CreateList();
-	m_activeSetsList = m_setList.CreateList();
-	m_freeSetsList = m_setList.CreateList();
 }
 
 void CPixelVisibilitySystem::LevelShutdownPostEntity()
@@ -546,11 +544,11 @@ void CPixelVisibilitySystem::LevelShutdownPostEntity()
 	m_pDrawMaterial->DecrementReferenceCount();
 	m_pDrawMaterial = nullptr;
 	DeleteUnusedSets(true);
-	m_setList.Purge();
-	m_queryList.Purge();
-	m_freeQueriesList = m_queryList.InvalidIndex();
-	m_activeSetsList = m_setList.InvalidIndex();
-	m_freeSetsList = m_setList.InvalidIndex();
+	m_setList.clear();
+	m_queryList.clear();
+	m_freeQueriesList.clear();
+	m_activeSetsList.clear();
+	m_freeSetsList.clear();
 }
 
 float CPixelVisibilitySystem::GetFractionVisible( const pixelvis_queryparams_t &params, pixelvis_handle_t *queryHandle )
@@ -580,7 +578,7 @@ void CPixelVisibilitySystem::EndView()
 	if ( !PixelVisibility_IsAvailable() && CurrentViewID() >= 0 )
 		return;
 	
-	if ( m_setList.Head( m_activeSetsList ) == m_setList.InvalidIndex() )
+	if ( m_activeSetsList.empty() )
 		return;
 
 	ASSERT_LOCAL_PLAYER_RESOLVABLE();
@@ -595,31 +593,27 @@ void CPixelVisibilitySystem::EndView()
 	if ( r_pixelvisibility_partial.GetBool() && !m_drawQueries )
 	{
 		pRenderContext->DepthRange( 0.0f, 0.01f );
-		unsigned short node = m_setList.Head( m_activeSetsList );
-		while( node != m_setList.InvalidIndex() )
+		for ( unsigned short node : m_activeSetsList )
 		{
 			CPixelVisSet *pSet = &m_setList[node];
 			unsigned short queryNode = FindQueryForView( pSet, nPlayerSlot, CurrentViewID() );
-			if ( queryNode != m_queryList.InvalidIndex() )
+			if ( queryNode != INVALID_QUERY )
 			{
 				m_queryList[queryNode].IssueCountingQuery( pRenderContext, pSet->proxySize, pSet->proxyAspect, pProxy, pSet->sizeIsScreenSpace );
 			}
-			node = m_setList.Next( node );
 		}
 		pRenderContext->DepthRange( 0.0f, 1.0f );
 	}
 
 	{
-		unsigned short node = m_setList.Head( m_activeSetsList );
-		while( node != m_setList.InvalidIndex() )
+		for ( unsigned short node : m_activeSetsList )
 		{
 			CPixelVisSet *pSet = &m_setList[node];
 			unsigned short queryNode = FindQueryForView( pSet, nPlayerSlot, CurrentViewID() );
-			if ( queryNode != m_queryList.InvalidIndex() )
+			if ( queryNode != INVALID_QUERY )
 			{
 				m_queryList[queryNode].IssueQuery( pRenderContext, pSet->proxySize, pSet->proxyAspect, pProxy, pSet->sizeIsScreenSpace );
 			}
-			node = m_setList.Next( node );
 		}
 	}
 }
@@ -631,23 +625,21 @@ void CPixelVisibilitySystem::EndScene()
 
 unsigned short CPixelVisibilitySystem::FindQueryForView( CPixelVisSet *pSet, int nPlayerSlot, int viewID )
 {
-	unsigned short node = m_queryList.Head( pSet->queryList );
-	while ( node != m_queryList.InvalidIndex() )
+	for ( unsigned short node : pSet->queryList )
 	{
 		if ( m_queryList[node].IsForView( nPlayerSlot, viewID ) )
 			return node;
-		node = m_queryList.Next( node );
 	}
-	return m_queryList.InvalidIndex();
+	return INVALID_QUERY;
 }
 unsigned short CPixelVisibilitySystem::FindOrCreateQueryForView( CPixelVisSet *pSet, int nPlayerSlot, int viewID )
 {
 	unsigned short node = FindQueryForView( pSet, nPlayerSlot, viewID );
-	if ( node != m_queryList.InvalidIndex() )
+	if ( node != INVALID_QUERY )
 		return node;
 
 	node = AllocQuery();
-	m_queryList.LinkToHead( pSet->queryList, node );
+	pSet->queryList.push_back( node );
 	m_queryList[node].SetView( nPlayerSlot, viewID );
 	return node;
 }
@@ -655,26 +647,20 @@ unsigned short CPixelVisibilitySystem::FindOrCreateQueryForView( CPixelVisSet *p
 
 void CPixelVisibilitySystem::DeleteUnusedQueries( CPixelVisSet *pSet, bool bDeleteAll )
 {
-	unsigned short node = m_queryList.Head( pSet->queryList );
-	while ( node != m_queryList.InvalidIndex() )
+	std::erase_if( pSet->queryList, [&]( unsigned short node )
 	{
-		unsigned short next = m_queryList.Next( node );
-		if ( bDeleteAll || !m_queryList[node].IsActive() )
-		{
-			m_queryList.Unlink( pSet->queryList, node);
-			m_queryList.LinkToHead( m_freeQueriesList, node );
-		}
-		node = next;
-	}
+		if ( !bDeleteAll && m_queryList[node].IsActive() )
+			return false;
+		m_freeQueriesList.push_back( node );
+		return true;
+	} );
 }
 void CPixelVisibilitySystem::DeleteUnusedSets( bool bDeleteAll )
 {
-	unsigned short node = m_setList.Head( m_activeSetsList );
-	while ( node != m_setList.InvalidIndex() )
+	for ( size_t i = 0; i < m_activeSetsList.size(); )
 	{
-		unsigned short next = m_setList.Next( node );
-		CPixelVisSet *pSet = &m_setList[node];
-		if ( bDeleteAll || !m_setList[node].IsActive() )
+		CPixelVisSet *pSet = &m_setList[m_activeSetsList[i]];
+		if ( bDeleteAll || !pSet->IsActive() )
 		{
 			DeleteUnusedQueries( pSet, true );
 		}
@@ -682,11 +668,12 @@ void CPixelVisibilitySystem::DeleteUnusedSets( bool bDeleteAll )
 		{
 			DeleteUnusedQueries( pSet, false );
 		}
-		if ( m_queryList.Head(pSet->queryList) == m_queryList.InvalidIndex() )
+		if ( pSet->queryList.empty() )
 		{
-			FreeSet( node );
+			FreeActiveSet( i );
+			continue;
 		}
-		node = next;
+		++i;
 	}
 }
 
@@ -697,39 +684,43 @@ void CPixelVisibilitySystem::ShowQueries( bool show )
 
 unsigned short CPixelVisibilitySystem::AllocQuery()
 {
-	unsigned short node = m_queryList.Head(m_freeQueriesList);
-	if ( node != m_queryList.InvalidIndex() )
+	unsigned short node;
+	if ( !m_freeQueriesList.empty() )
 	{
-		m_queryList.Unlink( m_freeQueriesList, node );
+		node = m_freeQueriesList.back();
+		m_freeQueriesList.pop_back();
 		m_queryList[node].ResetOcclusionQueries();
 	}
 	else
 	{
-		node = m_queryList.Alloc();
+		node = (unsigned short)m_queryList.size();
+		m_queryList.emplace_back();
 	}
 	return node;
 }
 
 unsigned short CPixelVisibilitySystem::AllocSet()
 {
-	unsigned short node = m_setList.Head(m_freeSetsList);
-	if ( node != m_setList.InvalidIndex() )
+	unsigned short node;
+	if ( !m_freeSetsList.empty() )
 	{
-		m_setList.Unlink( m_freeSetsList, node );
+		node = m_freeSetsList.back();
+		m_freeSetsList.pop_back();
 	}
 	else
 	{
-		node = m_setList.Alloc();
-		m_setList[node].queryList = m_queryList.CreateList();
+		node = (unsigned short)m_setList.size();
+		m_setList.emplace_back();
 	}
-	m_setList.LinkToHead( m_activeSetsList, node );
+	m_activeSetsList.push_back( node );
 	return node;
 }
 
-void CPixelVisibilitySystem::FreeSet( unsigned short node )
+void CPixelVisibilitySystem::FreeActiveSet( size_t activeIndex )
 {
-	m_setList.Unlink( m_activeSetsList, node );
-	m_setList.LinkToHead( m_freeSetsList, node );
+	unsigned short node = m_activeSetsList[activeIndex];
+	m_activeSetsList.erase( m_activeSetsList.begin() + activeIndex );
+	m_freeSetsList.push_back( node );
 	m_setList[node].serial++;
 }
 
@@ -740,7 +731,7 @@ CPixelVisSet *CPixelVisibilitySystem::FindOrCreatePixelVisSet( const pixelvis_qu
 		unsigned short handle = queryHandle[0] & 0xFFFF;
 		handle--;
 		unsigned short serial = queryHandle[0] >> 16;
-		if ( m_setList.IsValidIndex(handle) && m_setList[handle].serial == serial )
+		if ( handle < m_setList.size() && m_setList[handle].serial == serial )
 		{
 			return &m_setList[handle];
 		}
@@ -840,42 +831,44 @@ bool PixelVisibility_IsAvailable()
 //and I didn't want to make the whole class a friend or shift all the functions and class declarations around in this file
 void PixelVisibility_ShiftVisibilityViews( int nPlayerSlot, int iSourceViewID, int iDestViewID )
 {
-	unsigned short node = g_PixelVisibilitySystem.m_setList.Head( g_PixelVisibilitySystem.m_activeSetsList );
-	while ( node != g_PixelVisibilitySystem.m_setList.InvalidIndex() )
+	CPixelVisibilitySystem &sys = g_PixelVisibilitySystem;
+	for ( size_t i = 0; i < sys.m_activeSetsList.size(); )
 	{
-		unsigned short next = g_PixelVisibilitySystem.m_setList.Next( node );
-		CPixelVisSet *pSet = &g_PixelVisibilitySystem.m_setList[node];
+		CPixelVisSet *pSet = &sys.m_setList[sys.m_activeSetsList[i]];
 
-		unsigned short iSourceQueryNode = g_PixelVisibilitySystem.FindQueryForView( pSet, nPlayerSlot, iSourceViewID );
-		unsigned short iDestQueryNode = g_PixelVisibilitySystem.FindQueryForView( pSet, nPlayerSlot, iDestViewID );
+		unsigned short iSourceQueryNode = sys.FindQueryForView( pSet, nPlayerSlot, iSourceViewID );
+		unsigned short iDestQueryNode = sys.FindQueryForView( pSet, nPlayerSlot, iDestViewID );
 
-		if( iDestQueryNode != g_PixelVisibilitySystem.m_queryList.InvalidIndex() )
+		bool bFreed = false;
+		if( iDestQueryNode != CPixelVisibilitySystem::INVALID_QUERY )
 		{
 			//delete the destination if found
-			g_PixelVisibilitySystem.m_queryList.Unlink( pSet->queryList, iDestQueryNode );
-			g_PixelVisibilitySystem.m_queryList.LinkToHead( g_PixelVisibilitySystem.m_freeQueriesList, iDestQueryNode );
+			ks::erase_first( pSet->queryList, iDestQueryNode );
+			sys.m_freeQueriesList.push_back( iDestQueryNode );
 
-			if ( g_PixelVisibilitySystem.m_queryList.Head(pSet->queryList) == g_PixelVisibilitySystem.m_queryList.InvalidIndex() )
+			if ( pSet->queryList.empty() )
 			{
-				g_PixelVisibilitySystem.FreeSet( node );
+				sys.FreeActiveSet( i );
+				bFreed = true;
 			}
 		}
 
-		if( iSourceQueryNode != g_PixelVisibilitySystem.m_queryList.InvalidIndex() )
+		if( iSourceQueryNode != CPixelVisibilitySystem::INVALID_QUERY )
 		{
 			//make the source believe it's the destination
-			g_PixelVisibilitySystem.m_queryList[iSourceQueryNode].m_viewID = iDestViewID;
+			sys.m_queryList[iSourceQueryNode].m_viewID = iDestViewID;
 		}		
 
-		node = next;
+		if ( !bFreed )
+			++i;
 	}
 
-	for( int i = 0; i != s_OcclusionQueries.Count(); ++i )
+	for( int i = 0; i != std::ssize( s_OcclusionQueries ); ++i )
 	{
-		int iPairCount = s_OcclusionQueries[i].occlusionHandles[nPlayerSlot].Count();
-		OcclusionHandleViewIDPair_t *pPairs = s_OcclusionQueries[i].occlusionHandles[nPlayerSlot].Base();
+		int iPairCount = std::ssize( s_OcclusionQueries[i].occlusionHandles[nPlayerSlot] );
+		OcclusionHandleViewIDPair_t *pPairs = s_OcclusionQueries[i].occlusionHandles[nPlayerSlot].data();
 		int iSourceIndex, iDestIndex, iInvalidIndex;
-		iDestIndex = iSourceIndex = iInvalidIndex = s_OcclusionQueries[i].occlusionHandles[nPlayerSlot].InvalidIndex();
+		iDestIndex = iSourceIndex = iInvalidIndex = -1;
 		for( int j = 0; j != iPairCount; ++j )
 		{
 			if( pPairs[j].iViewID == iSourceViewID )
@@ -903,7 +896,7 @@ void PixelVisibility_ShiftVisibilityViews( int nPlayerSlot, int iSourceViewID, i
 		{
 			//destroy dest
 			materials->GetRenderContext()->DestroyOcclusionQueryObject( pPairs[iDestIndex].hOcclusionHandle );
-			s_OcclusionQueries[i].occlusionHandles[nPlayerSlot].FastRemove( iDestIndex );
+			ks::swap_remove( s_OcclusionQueries[i].occlusionHandles[nPlayerSlot], iDestIndex );
 		}
 	}
 }
@@ -912,17 +905,17 @@ void PixelVisibility_ShiftVisibilityViews( int nPlayerSlot, int iSourceViewID, i
 
 COcclusionQuerySet::COcclusionQuerySet( void )
 {	
-	OcclusionQueryHiddenData_t &data = s_OcclusionQueries[s_OcclusionQueries.AddToTail()];
+	OcclusionQueryHiddenData_t &data = s_OcclusionQueries.emplace_back();
 	data.pOwner = this;
 	m_pManagedData = &data;
 
 	//handle base address shifting
-	if( s_OcclusionQueries.Count() > 1 )
+	if( std::ssize( s_OcclusionQueries ) > 1 )
 	{
 		OcclusionQueryHiddenData_t &baseData = s_OcclusionQueries[0];
 		if( baseData.pOwner->m_pManagedData != &baseData )
 		{
-			for( int i = 0; i != s_OcclusionQueries.Count(); ++i )
+			for( int i = 0; i != std::ssize( s_OcclusionQueries ); ++i )
 			{
 				s_OcclusionQueries[i].pOwner->m_pManagedData = &s_OcclusionQueries[i];
 			}
@@ -933,12 +926,12 @@ COcclusionQuerySet::COcclusionQuerySet( void )
 COcclusionQuerySet::~COcclusionQuerySet( void )
 {
 	int iIndex;
-	for( iIndex = 0; iIndex != s_OcclusionQueries.Count(); ++iIndex )
+	for( iIndex = 0; iIndex != std::ssize( s_OcclusionQueries ); ++iIndex )
 	{
 		if( &s_OcclusionQueries[iIndex] == m_pManagedData )
 			break;
 	}
-	if( iIndex != s_OcclusionQueries.Count() )
+	if( iIndex != std::ssize( s_OcclusionQueries ) )
 	{
 		//destroy query handles
 		{
@@ -946,24 +939,24 @@ COcclusionQuerySet::~COcclusionQuerySet( void )
 			OcclusionQueryHiddenData_t &data = s_OcclusionQueries[iIndex];
 			for( int i = 0; i != MAX_SPLITSCREEN_PLAYERS; ++i )
 			{
-				for( int j = 0; j != data.occlusionHandles[i].Count(); ++j )
+				for( int j = 0; j != std::ssize( data.occlusionHandles[i] ); ++j )
 				{
-					pRenderContext->DestroyOcclusionQueryObject( data.occlusionHandles[i].Element(j).hOcclusionHandle );
+					pRenderContext->DestroyOcclusionQueryObject( data.occlusionHandles[i][ j ].hOcclusionHandle );
 				}
 			}
 		}
 
-		s_OcclusionQueries.FastRemove( iIndex );
-		if( s_OcclusionQueries.Count() != 0 )
+		ks::swap_remove( s_OcclusionQueries, iIndex );
+		if( !s_OcclusionQueries.empty() )
 		{
 			s_OcclusionQueries[iIndex].pOwner->m_pManagedData = &s_OcclusionQueries[iIndex];
 			//handle base address shifting
-			if( s_OcclusionQueries.Count() > 1 )
+			if( std::ssize( s_OcclusionQueries ) > 1 )
 			{
 				OcclusionQueryHiddenData_t &baseData = s_OcclusionQueries[iIndex == 0 ? 1 : 0];
 				if( baseData.pOwner->m_pManagedData != &baseData )
 				{
-					for( int i = 0; i != s_OcclusionQueries.Count(); ++i )
+					for( int i = 0; i != std::ssize( s_OcclusionQueries ); ++i )
 					{
 						s_OcclusionQueries[i].pOwner->m_pManagedData = &s_OcclusionQueries[i];
 					}
@@ -980,18 +973,18 @@ void COcclusionQuerySet::BeginQueryDrawing( int iViewID, int iSplitScreenSlot )
 	OcclusionQueryHiddenData_t *pData = (OcclusionQueryHiddenData_t *)m_pManagedData;
 
 	int iIndex = FindQueryHandlePairIndex( pData, iViewID, iSplitScreenSlot );
-	if( iIndex == pData->occlusionHandles[iSplitScreenSlot].InvalidIndex() )
+	if( iIndex == -1 )
 	{
 		//create a new one
-		iIndex = pData->occlusionHandles[iSplitScreenSlot].AddToTail();
-		OcclusionHandleViewIDPair_t &Entry = pData->occlusionHandles[iSplitScreenSlot].Element(iIndex);
+		iIndex = std::ssize( pData->occlusionHandles[iSplitScreenSlot] ); pData->occlusionHandles[iSplitScreenSlot].emplace_back();
+		OcclusionHandleViewIDPair_t &Entry = pData->occlusionHandles[iSplitScreenSlot][ iIndex ];
 		Entry.iViewID = iViewID;
 		Entry.hOcclusionHandle = materials->GetRenderContext()->CreateOcclusionQueryObject();	
 		materials->GetRenderContext()->ResetOcclusionQueryObject( Entry.hOcclusionHandle );
 	}
 
-	materials->GetRenderContext()->BeginOcclusionQueryDrawing( pData->occlusionHandles[iSplitScreenSlot].Element(iIndex).hOcclusionHandle );
-	pData->occlusionHandles[iSplitScreenSlot].Element(iIndex).iLastFrameRendered = gpGlobals->framecount;
+	materials->GetRenderContext()->BeginOcclusionQueryDrawing( pData->occlusionHandles[iSplitScreenSlot][ iIndex ].hOcclusionHandle );
+	pData->occlusionHandles[iSplitScreenSlot][ iIndex ].iLastFrameRendered = gpGlobals->framecount;
 }
 
 void COcclusionQuerySet::BeginQueryDrawing( void )
@@ -1006,9 +999,9 @@ void COcclusionQuerySet::EndQueryDrawing( int iViewID, int iSplitScreenSlot )
 	OcclusionQueryHiddenData_t *pData = (OcclusionQueryHiddenData_t *)m_pManagedData;
 
 	int iIndex = FindQueryHandlePairIndex( pData, iViewID, iSplitScreenSlot );
-	if( iIndex != pData->occlusionHandles[iSplitScreenSlot].InvalidIndex() )
+	if( iIndex != -1 )
 	{
-		materials->GetRenderContext()->EndOcclusionQueryDrawing( pData->occlusionHandles[iSplitScreenSlot].Element(iIndex).hOcclusionHandle );
+		materials->GetRenderContext()->EndOcclusionQueryDrawing( pData->occlusionHandles[iSplitScreenSlot][ iIndex ].hOcclusionHandle );
 	}
 }
 
@@ -1024,9 +1017,9 @@ int COcclusionQuerySet::QueryNumPixelsRendered( int iViewID, int iSplitScreenSlo
 	OcclusionQueryHiddenData_t *pData = (OcclusionQueryHiddenData_t *)m_pManagedData;
 
 	int iIndex = FindQueryHandlePairIndex( pData, iViewID, iSplitScreenSlot );
-	if( iIndex != pData->occlusionHandles[iSplitScreenSlot].InvalidIndex() )
+	if( iIndex != -1 )
 	{
-		return materials->GetRenderContext()->OcclusionQuery_GetNumPixelsRendered( pData->occlusionHandles[iSplitScreenSlot].Element(iIndex).hOcclusionHandle );
+		return materials->GetRenderContext()->OcclusionQuery_GetNumPixelsRendered( pData->occlusionHandles[iSplitScreenSlot][ iIndex ].hOcclusionHandle );
 	}
 
 	return 0;
@@ -1044,11 +1037,11 @@ float COcclusionQuerySet::QueryPercentageOfScreenRendered( int iViewID, int iSpl
 	OcclusionQueryHiddenData_t *pData = (OcclusionQueryHiddenData_t *)m_pManagedData;
 
 	int iIndex = FindQueryHandlePairIndex( pData, iViewID, iSplitScreenSlot );
-	if( iIndex != pData->occlusionHandles[iSplitScreenSlot].InvalidIndex() )
+	if( iIndex != -1 )
 	{
 		int iX, iY, iWidth, iHeight;
 		materials->GetRenderContext()->GetViewport( iX, iY, iWidth, iHeight );
-		return ((float)materials->GetRenderContext()->OcclusionQuery_GetNumPixelsRendered( pData->occlusionHandles[iSplitScreenSlot].Element(iIndex).hOcclusionHandle )) / ((float)(iWidth * iHeight));
+		return ((float)materials->GetRenderContext()->OcclusionQuery_GetNumPixelsRendered( pData->occlusionHandles[iSplitScreenSlot][ iIndex ].hOcclusionHandle )) / ((float)(iWidth * iHeight));
 	}
 
 	return 0.0f;
@@ -1066,11 +1059,11 @@ int COcclusionQuerySet::QueryNumPixelsRenderedForAllViewsLastFrame( int iSplitSc
 	int iResult = 0;
 	CMatRenderContextPtr pRenderContext( materials );
 	
-	for( int i = 0; i != pData->occlusionHandles[iSplitScreenSlot].Count(); ++i )
+	for( int i = 0; i != std::ssize( pData->occlusionHandles[iSplitScreenSlot] ); ++i )
 	{
-		if( pData->occlusionHandles[iSplitScreenSlot].Element(i).iLastFrameRendered == iMatchFrame )
+		if( pData->occlusionHandles[iSplitScreenSlot][ i ].iLastFrameRendered == iMatchFrame )
 		{
-			iResult += pRenderContext->OcclusionQuery_GetNumPixelsRendered( pData->occlusionHandles[iSplitScreenSlot].Element(i).hOcclusionHandle );
+			iResult += pRenderContext->OcclusionQuery_GetNumPixelsRendered( pData->occlusionHandles[iSplitScreenSlot][ i ].hOcclusionHandle );
 		}
 	}
 
@@ -1088,9 +1081,9 @@ int COcclusionQuerySet::GetLastFrameDrawn( int iViewID, int iSplitScreenSlot )
 	OcclusionQueryHiddenData_t *pData = (OcclusionQueryHiddenData_t *)m_pManagedData;
 
 	int iIndex = FindQueryHandlePairIndex( pData, iViewID, iSplitScreenSlot );
-	if( iIndex != pData->occlusionHandles[iSplitScreenSlot].InvalidIndex() )
+	if( iIndex != -1 )
 	{
-		return pData->occlusionHandles[iSplitScreenSlot].Element(iIndex).iLastFrameRendered;
+		return pData->occlusionHandles[iSplitScreenSlot][ iIndex ].iLastFrameRendered;
 	}
 
 	return -1;

@@ -24,8 +24,8 @@
 
 #include "locald3dtypes.h"
 #include "tier1/strtools.h"
-#include "tier1/utlqueue.h"
-#include "tier0/memdbgon.h"
+#include "tier1/utlvector.h"
+#include "tier0/memalloc.h"
 
 // Helper function to unbind an index buffer
 void Unbind( IDirect3DIndexBuffer9 *pIndexBuffer );
@@ -239,7 +239,7 @@ inline CIndexBuffer::CIndexBuffer( D3DDeviceWrapper *pD3D, int count,
 
     if ( !g_pShaderUtil->IsRenderThreadSafe() )
 	{
-		m_pSysmemBuffer = ( byte * )malloc( count * IndexSize() );
+		m_pSysmemBuffer = ( byte * )MemAlloc_Alloc( count * IndexSize() );
 		m_nSysmemBufferStartBytes = 0;
 	}
 	else
@@ -352,7 +352,7 @@ inline CIndexBuffer::~CIndexBuffer()
 
 	if ( m_pSysmemBuffer )
 	{
-		free( m_pSysmemBuffer );
+		g_pMemAlloc->Free( m_pSysmemBuffer );
 		m_pSysmemBuffer = nullptr;
 	}
 
@@ -495,7 +495,7 @@ inline unsigned short* CIndexBuffer::Lock( bool bReadOnly, int numIndices, int& 
 	// the non-current thread. 
 	if ( !m_pSysmemBuffer && !g_pShaderUtil->IsRenderThreadSafe() )
 	{
-		m_pSysmemBuffer = ( byte * )malloc( m_IndexCount * IndexSize() );
+		m_pSysmemBuffer = ( byte * )MemAlloc_Alloc( m_IndexCount * IndexSize() );
 		m_nSysmemBufferStartBytes = position * IndexSize();
 	}
 
@@ -636,7 +636,7 @@ inline void CIndexBuffer::HandleLateCreation( )
 	memcpy( pWritePtr, m_pSysmemBuffer + m_nSysmemBufferStartBytes, dataToWriteBytes );
 	ReallyUnlock( dataToWriteBytes );
 
-	free( m_pSysmemBuffer );
+	g_pMemAlloc->Free( m_pSysmemBuffer );
 	m_pSysmemBuffer = nullptr;
 }
 
@@ -652,7 +652,5 @@ inline int CIndexBuffer::AllocationCount() const
 	return m_IndexCount;
 }
 
-
-#include "tier0/memdbgoff.h"
 
 #endif  // DYNAMICIB_H

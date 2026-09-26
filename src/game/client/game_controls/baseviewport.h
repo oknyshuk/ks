@@ -11,7 +11,8 @@
 // viewport interface for the rest of the dll
 #include "game/client/iviewport.h"
 
-#include <utlqueue.h>
+#include "tier1/utlvector.h"
+#include "tier1/map_ops.h"
 #include "igameevents.h"
 #include "noopanimcontroller.h"
 
@@ -68,8 +69,8 @@ protected:
 	IGameUIFuncs*		m_GameuiFuncs; // for key binding details
 	IGameEventManager2*	m_GameEventManager;
 
-	CUtlDict<IViewPortPanel*,int>	m_Panels;
-	CUtlVector< IViewPortPanel* >	m_UnorderedPanels;
+	ks::idict<IViewPortPanel*>	m_Panels;
+	std::vector< IViewPortPanel* >	m_UnorderedPanels;
 
 	bool				m_bHasParent;
 	bool				m_bInitialized;

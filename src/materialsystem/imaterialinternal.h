@@ -11,7 +11,6 @@
 
 
 // identifier was truncated to '255' characters in the debug information
-#pragma warning(disable: 4786)
 
 #include "materialsystem/imaterialsystem.h"
 #include "materialsystem/imaterial.h"
@@ -71,7 +70,7 @@ public:
 	virtual void	Uncache( bool bPreserveVars = false ) = 0;
 	virtual void	Precache() = 0;
 	// If supplied, pKeyValues and pPatchKeyValues should come from LoadVMTFile()
-	virtual bool	PrecacheVars( KeyValues *pKeyValues = nullptr, KeyValues *pPatchKeyValues = nullptr, CUtlVector<FileNameHandle_t> *pIncludes = nullptr ) = 0;
+	virtual bool	PrecacheVars( KeyValues *pKeyValues = nullptr, KeyValues *pPatchKeyValues = nullptr, std::vector< FileNameHandle_t > *pIncludes = nullptr ) = 0;
 
 	// reload all textures used by this materals
 	virtual void	ReloadTextures() = 0;
@@ -175,7 +174,7 @@ extern void ExpandPatchFile( KeyValues& keyValues, KeyValues &patchKeyValues );
 // patchKeyValues accumulates keys applied by VMT patch files (this is necessary to make $fallbackmaterial
 // work properly - the patch keys need to be reapplied when the fallback VMT is loaded). It may contain
 // previously accumulated patch keys on entry, and may contain more encountered patch keys on exit.
-extern bool LoadVMTFile( KeyValues &vmtKeyValues, KeyValues &patchKeyValues, const char *pMaterialName, bool bUsesUNCFilename, CUtlVector<FileNameHandle_t> *pIncludes  );
+extern bool LoadVMTFile( KeyValues &vmtKeyValues, KeyValues &patchKeyValues, const char *pMaterialName, bool bUsesUNCFilename, std::vector< FileNameHandle_t > *pIncludes  );
 
 extern void CompactMaterialVars( IMaterialVar **ppMaterialVars, int nVars );
 extern void CompactMaterialVarHeap();

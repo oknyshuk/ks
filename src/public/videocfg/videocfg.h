@@ -30,7 +30,7 @@ struct VidMatConfigData_t
 	unsigned int nVideoMemory;
 	int nPhysicalScreenWidth;
 	int nPhysicalScreenHeight;
-	CUtlVector< ShaderDisplayMode_t > displayModes;
+	std::vector< ShaderDisplayMode_t > displayModes;
 	bool bIsVideo;
 };
 

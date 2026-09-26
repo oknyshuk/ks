@@ -8,9 +8,6 @@
 #include "BaseVSShader.h"
 #include "common_hlsl_cpp_consts.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 BEGIN_VS_SHADER( Sample4x4_Blend, "Help for Sample4x4_Blend" )
 	BEGIN_SHADER_PARAMS

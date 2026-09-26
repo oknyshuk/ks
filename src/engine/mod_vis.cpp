@@ -12,12 +12,9 @@
 #include "view_shared.h"
 #include "cmodel_engine.h"
 #include "tier0/vprof.h"
-#include "utllinkedlist.h"
+#include <list>
 #include "ivrenderview.h"
 #include "tier0/cache_hints.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 static ConVar	r_novis( "r_novis","0", FCVAR_CHEAT	, "Turn off the PVS." );
 static ConVar	r_lockpvs( "r_lockpvs", "0", FCVAR_CHEAT, "Lock the PVS so you can fly around and inspect what is being drawn." );
@@ -76,12 +73,13 @@ public:
 
 	int nClusters;
 	int originclusters[MAX_VIS_LEAVES];
-	CUtlVector< unsigned short > leaflist;
-	CUtlVector< unsigned short > nodelist;
+	std::vector< unsigned short > leaflist;
+	std::vector< unsigned short > nodelist;
 };
 
 
-static CUtlLinkedList< VisCacheEntry > viscache( 0, VISCACHE_SIZE );
+// Most recently used first.
+static std::list< VisCacheEntry > viscache;
 
 
 static void SortVisViewClusters()
@@ -105,8 +103,8 @@ static void VisMark_Cached( const VisCacheEntry &cache, const worldbrushdata_t &
 
 	visframe = r_visframecount;
 
-	count = cache.leaflist.Count();
-	const unsigned short * RESTRICT pSrc = cache.leaflist.Base();
+	count = std::ssize( cache.leaflist );
+	const unsigned short * RESTRICT pSrc = cache.leaflist.data();
 
 
 	while ( count >= 8 )
@@ -129,8 +127,8 @@ static void VisMark_Cached( const VisCacheEntry &cache, const worldbrushdata_t &
 		pSrc++;
 	}
 
-	count = cache.nodelist.Count();
-	pSrc = cache.nodelist.Base();
+	count = std::ssize( cache.nodelist );
+	pSrc = cache.nodelist.data();
 
 	while ( count >= 8 )
 	{
@@ -166,8 +164,8 @@ static void VisCache_Build( VisCacheEntry &cache, const worldbrushdata_t &worldb
 		cache.originclusters[i] = vis.rgVisClusters[i].viewcluster;
 	}
 	
-	cache.leaflist.RemoveAll();
-	cache.nodelist.RemoveAll();
+	cache.leaflist.clear();
+	cache.nodelist.clear();
 
 	int visframe = r_visframecount;
 
@@ -181,11 +179,11 @@ static void VisCache_Build( VisCacheEntry &cache, const worldbrushdata_t &worldb
 		if (vis.rgCurrentVis[cluster>>3] & (1<<(cluster&7)))
 		{
 			leaf->visframe = visframe;
-			cache.leaflist.AddToTail( i );
+			cache.leaflist.push_back( i );
 			mnode_t *node = leaf->parent;
 			while (node && node->visframe != visframe)
 			{
-				cache.nodelist.AddToTail( node - worldbrush.nodes );
+				cache.nodelist.push_back( node - worldbrush.nodes );
 				node->visframe = visframe;
 				node = node->parent;
 			}
@@ -308,9 +306,9 @@ void Map_VisMark( bool forcenovis, model_t *worldmodel )
 
 	// search the cache for a pre-built list of leaves and nodes that matches
 	// the desired vis setup, and use that to mark the map if found
-	for (i = viscache.Head(); i != viscache.InvalidIndex(); i = viscache.Next(i))
+	for (auto it = viscache.begin(); it != viscache.end(); ++it)
 	{
-		VisCacheEntry &cache = viscache[i];
+		VisCacheEntry &cache = *it;
 		if (cache.nClusters != vis.nClusters) continue;
 		for (c = 0; c < cache.nClusters; ++c)
 		{
@@ -322,7 +320,7 @@ void Map_VisMark( bool forcenovis, model_t *worldmodel )
 			}
 		}
 
-		viscache.LinkToHead( i );
+		viscache.splice( viscache.begin(), viscache, it );
 		VisMark_Cached( cache, *worldmodel->brush.pShared );
 
 		return;
@@ -331,17 +329,17 @@ next_cache_check:;
 	}
 
 	// if we get here, we need to update the cache with a new entry
-	if (viscache.Count() < VISCACHE_SIZE)
+	if (viscache.size() < VISCACHE_SIZE)
 	{
-		viscache.AddToHead();
+		viscache.emplace_front();
 	}
 	else
 	{
-		viscache.LinkToHead( viscache.Tail() );
+		viscache.splice( viscache.begin(), viscache, std::prev( viscache.end() ) );
 	}
 
 	// this also will mark the visleafs in order to build the cache data
-	VisCache_Build( viscache[viscache.Head()], *worldmodel->brush.pShared );
+	VisCache_Build( viscache.front(), *worldmodel->brush.pShared );
 }
 
 //-----------------------------------------------------------------------------
@@ -356,7 +354,7 @@ void Map_VisSetup( model_t *worldmodel, int visorigincount, const Vector origins
 	assert( visorigincount <= MAX_VIS_LEAVES );
 
 	// Don't crash if the client .dll tries to do something weird/dumb
-	vis.nClusters = MIN( visorigincount, MAX_VIS_LEAVES );
+	vis.nClusters = std::min( visorigincount, MAX_VIS_LEAVES );
 	vis.bForceFullSky = false;
 	vis.bSkyVisible = false;
 	returnFlags = 0;
@@ -398,7 +396,7 @@ void Map_VisClear( void )
 		VectorClear( vis.rgVisClusters[ i ].origin );
 		vis.rgVisClusters[ i ].viewcluster = -2;
 	}
-	viscache.RemoveAll();
+	viscache.clear();
 }
 
 //-----------------------------------------------------------------------------

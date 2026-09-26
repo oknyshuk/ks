@@ -92,10 +92,10 @@ private:
 	void InitLessonPrerequisites( void );
 
 private:
-	CUtlVector < CBaseLesson* >	m_Lessons;
-	CUtlVector < CBaseLesson* >	m_OpenOpportunities;
+	std::vector< CBaseLesson* >	m_Lessons;
+	std::vector< CBaseLesson* >	m_OpenOpportunities;
 
-	CUtlVector < LessonGroupConVarToggle_t > m_LessonGroupConVarToggles;
+	std::vector< LessonGroupConVarToggle_t > m_LessonGroupConVarToggles;
 
 	KeyValues	*m_pScriptKeys;
 

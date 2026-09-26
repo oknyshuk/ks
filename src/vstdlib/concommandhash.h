@@ -9,7 +9,8 @@
 #if !defined( CONCOMMANDHASH_H )
 #define CONCOMMANDHASH_H
 
-#include "utllinkedlist.h"
+#include <list>
+#include <vector>
 #include "generichash.h"
 
 // This is a hash table class very similar to the CUtlHashFast, but
@@ -23,8 +24,25 @@
 class CConCommandHash
 {
 public:
+	// Address of the entry; entries never move while they are in the hash
 	typedef intp CCommandHashHandle_t;
 	typedef unsigned int HashKey_t;
+
+protected:
+	struct HashEntry_t
+	{
+		HashKey_t m_uiKey;
+		ConCommandBase *m_Data;
+
+		HashEntry_t(unsigned int _hash, ConCommandBase * _cmd)
+			: m_uiKey(_hash), m_Data(_cmd) {};
+
+		HashEntry_t(){};
+	};
+
+	typedef std::list<HashEntry_t> bucket_t;
+
+public:
 
 	// Constructor/Deconstructor.
 	CConCommandHash();
@@ -73,17 +91,16 @@ public:
 	struct CCommandHashIterator_t
 	{
 		int bucket;
-		CCommandHashHandle_t handle;
+		bucket_t::const_iterator it;
 
-		CCommandHashIterator_t(int _bucket, const CCommandHashHandle_t &_handle) 
-			: bucket(_bucket), handle(_handle) {};
-		// inline operator UtlHashFastHandle_t() const { return handle; };
+		CCommandHashIterator_t() : bucket(-1) {}
+		CCommandHashIterator_t(int _bucket, bucket_t::const_iterator _it)
+			: bucket(_bucket), it(_it) {};
 	};
 	inline CCommandHashIterator_t First() const;
 	inline CCommandHashIterator_t Next( const CCommandHashIterator_t &hHash ) const;
 	inline bool IsValidIterator( const CCommandHashIterator_t &iter ) const;
-	inline ConCommandBase * &operator[]( const CCommandHashIterator_t &iter ) { return (*this)[iter.handle];  }
-	inline ConCommandBase * const &operator[]( const CCommandHashIterator_t &iter ) const { return (*this)[iter.handle];  }
+	inline ConCommandBase *operator[]( const CCommandHashIterator_t &iter ) const { return iter.it->m_Data;  }
 private:
 	// a find func where we've already computed the hash for the string.
 	// (hidden private in case we decide to invent a custom string hash func
@@ -97,26 +114,16 @@ protected:
 		kBUCKETMASK  = kNUM_BUCKETS - 1,
 	};
 
-	struct HashEntry_t
-	{
-		HashKey_t m_uiKey;
-		ConCommandBase *m_Data;
+	static CCommandHashHandle_t ToHandle( const HashEntry_t &entry ) { return (CCommandHashHandle_t)&entry; }
+	static HashEntry_t *FromHandle( CCommandHashHandle_t hHash ) { return (HashEntry_t *)hHash; }
 
-		HashEntry_t(unsigned int _hash, ConCommandBase * _cmd)
-			: m_uiKey(_hash), m_Data(_cmd) {};
-
-		HashEntry_t(){};
-	};
-
-	typedef CUtlFixedLinkedList<HashEntry_t> datapool_t;
-
-	CUtlVector<CCommandHashHandle_t>	m_aBuckets;
-	datapool_t							m_aDataPool;
+	// Each bucket holds its entries newest first
+	std::vector< bucket_t >	m_aBuckets;
 };
 
 inline bool CConCommandHash::IsValidHandle( CCommandHashHandle_t hHash ) const
 {
-	return m_aDataPool.IsValidIndex(hHash);
+	return hHash != InvalidHandle();
 }
 
 
@@ -127,12 +134,12 @@ inline CConCommandHash::CCommandHashHandle_t CConCommandHash::Find( const char *
 
 inline ConCommandBase * &CConCommandHash::operator[]( CCommandHashHandle_t hHash )
 {
-	return ( m_aDataPool[hHash].m_Data );
+	return ( FromHandle( hHash )->m_Data );
 }
 
 inline ConCommandBase *const &CConCommandHash::operator[]( CCommandHashHandle_t hHash ) const
 {
-	return ( m_aDataPool[hHash].m_Data );
+	return ( FromHandle( hHash )->m_Data );
 }
 
 //-----------------------------------------------------------------------------
@@ -141,17 +148,16 @@ inline ConCommandBase *const &CConCommandHash::operator[]( CCommandHashHandle_t 
 CConCommandHash::CCommandHashIterator_t CConCommandHash::First() const
 {
 	// walk through the buckets to find the first one that has some data
-	int bucketCount = m_aBuckets.Count();
-	const CCommandHashHandle_t invalidIndex = m_aDataPool.InvalidIndex();
+	int bucketCount = std::ssize( m_aBuckets );
 	for ( int bucket = 0 ; bucket < bucketCount ; ++bucket )
 	{
-		CCommandHashHandle_t iElement = m_aBuckets[bucket]; // get the head of the bucket
-		if ( iElement != invalidIndex )
-			return CCommandHashIterator_t( bucket, iElement );
+		const bucket_t &list = m_aBuckets[bucket];
+		if ( !list.empty() )
+			return CCommandHashIterator_t( bucket, list.begin() );
 	}
 
 	// if we are down here, the list is empty 
-	return CCommandHashIterator_t( -1, invalidIndex );
+	return CCommandHashIterator_t();
 }
 
 //-----------------------------------------------------------------------------
@@ -162,30 +168,29 @@ CConCommandHash::CCommandHashIterator_t
 CConCommandHash::Next( const CConCommandHash::CCommandHashIterator_t &iter ) const
 {
 	// look for the next entry in the current bucket
-	CCommandHashHandle_t next = m_aDataPool.Next(iter.handle);
-	const CCommandHashHandle_t invalidIndex = m_aDataPool.InvalidIndex();
-	if ( next != invalidIndex )
+	bucket_t::const_iterator next = std::next( iter.it );
+	if ( next != m_aBuckets[iter.bucket].end() )
 	{
 		// this bucket still has more elements in it
 		return CCommandHashIterator_t(iter.bucket, next);
 	}
 
 	// otherwise look for the next bucket with data
-	int bucketCount = m_aBuckets.Count();
+	int bucketCount = std::ssize( m_aBuckets );
 	for ( int bucket = iter.bucket+1 ; bucket < bucketCount ; ++bucket )
 	{
-		CCommandHashHandle_t next = m_aBuckets[bucket]; // get the head of the bucket
-		if (next != invalidIndex)
-			return CCommandHashIterator_t( bucket, next );
+		const bucket_t &list = m_aBuckets[bucket];
+		if ( !list.empty() )
+			return CCommandHashIterator_t( bucket, list.begin() );
 	}
 
 	// if we're here, there's no more data to be had
-	return CCommandHashIterator_t(-1, invalidIndex);
+	return CCommandHashIterator_t();
 }
 
 bool CConCommandHash::IsValidIterator( const CCommandHashIterator_t &iter ) const
 {
-	return ( (iter.bucket >= 0) && (m_aDataPool.IsValidIndex(iter.handle)) );
+	return iter.bucket >= 0;
 }
 
 inline CConCommandHash::HashKey_t CConCommandHash::Hash( const ConCommandBase *cmd )

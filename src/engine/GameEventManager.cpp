@@ -10,16 +10,16 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "GameEventManager.h"
+#include <bitset>
+#include <mutex>
 #include "filesystem_engine.h"
 #include "server.h"
 #include "client.h"
 #include "tier0/vprof.h"
 #include "cl_splitscreen.h"
 #include "tier1/tokenset.h"
+#include "tier1/bit_ops.h"
 #include "gameeventtransmitter.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 #define NETWORKED_TYPE_BITS 4
 
@@ -225,12 +225,12 @@ void CGameEventManager::Shutdown()
 
 void CGameEventManager::Reset()
 {
-	AUTO_LOCK_FM( m_mutex );
-	int number = m_GameEvents.Count();
+	std::scoped_lock lock( m_mutex );
+	int number = std::ssize( m_GameEvents );
 
 	for (int i = 0; i<number; i++)
 	{
-		CGameEventDescriptor &e = m_GameEvents.Element( i );
+		CGameEventDescriptor &e = m_GameEvents[ i ];
 
 		if ( e.keys )
 		{
@@ -238,17 +238,17 @@ void CGameEventManager::Reset()
 			e.keys = nullptr;
 		}
 
-		e.listeners.Purge();	// remove listeners
+		e.listeners.clear(); e.listeners.shrink_to_fit();	// remove listeners
 	}
 
-	m_GameEvents.Purge();
-	m_Listeners.PurgeAndDeleteElements();
-	m_EventFiles.RemoveAll();
-	m_EventFileNames.RemoveAll();
-	m_EventMap.Purge();
+	m_GameEvents.clear(); m_GameEvents.shrink_to_fit();
+	m_Listeners.clear();
+	m_EventFiles.clear();
+	m_EventFileNames.clear();
+	m_EventMap.clear();
 	m_bClientListenersChanged = true;
 
-	Assert( m_GameEvents.Count() == 0 );
+	Assert( std::ssize( m_GameEvents ) == 0 );
 }
 
 bool CGameEventManager::HasClientListenersChanged( bool bReset /* = true  */)
@@ -264,7 +264,7 @@ bool CGameEventManager::HasClientListenersChanged( bool bReset /* = true  */)
 
 void CGameEventManager::WriteEventList(ks::net::CSVCMsg_GameEventList *msg)
 {
-	for (int i=0; i < m_GameEvents.Count(); i++ )
+	for (int i=0; i < std::ssize( m_GameEvents ); i++ )
 	{
 		CGameEventDescriptor &descriptor = m_GameEvents[i];
 
@@ -274,7 +274,7 @@ void CGameEventManager::WriteEventList(ks::net::CSVCMsg_GameEventList *msg)
 		Assert( descriptor.eventid >= 0 && descriptor.eventid < MAX_EVENT_NUMBER );
 
 		ks::net::CSVCMsg_GameEventList::descriptor_t *pDescriptor = &msg->descriptors.emplace_back();
-		const char *pName = m_EventMap.GetElementName( descriptor.elementIndex );
+		const char *pName = descriptor.name;
 
 		pDescriptor->eventid = descriptor.eventid;
 		pDescriptor->name = pName;
@@ -301,10 +301,10 @@ void CGameEventManager::WriteEventList(ks::net::CSVCMsg_GameEventList *msg)
 bool CGameEventManager::ParseEventList(const ks::net::CSVCMsg_GameEventList& msg)
 {
 	int i;
-	AUTO_LOCK_FM( m_mutex );
+	std::scoped_lock lock( m_mutex );
 
 	// reset eventids to -1 first
-	for ( i=0; i < m_GameEvents.Count(); i++ )
+	for ( i=0; i < std::ssize( m_GameEvents ); i++ )
 	{
 		CGameEventDescriptor &descriptor = m_GameEvents[i];
 		descriptor.eventid = -1;
@@ -349,12 +349,12 @@ bool CGameEventManager::ParseEventList(const ks::net::CSVCMsg_GameEventList& msg
 
 void CGameEventManager::WriteListenEventList(ks::net::CCLCMsg_ListenEvents *msg)
 {
-	CBitVec<MAX_EVENT_NUMBER> EventArray;
+	std::bitset<MAX_EVENT_NUMBER> EventArray;
 
-	EventArray.ClearAll();
+	EventArray.reset();
 
 	// and know tell the server what events we want to listen to
-	for (int i=0; i < m_GameEvents.Count(); i++ )
+	for (int i=0; i < std::ssize( m_GameEvents ); i++ )
 	{
 		CGameEventDescriptor &descriptor = m_GameEvents[i];
 
@@ -365,7 +365,7 @@ void CGameEventManager::WriteListenEventList(ks::net::CCLCMsg_ListenEvents *msg)
 
 		bool bHasClientListener = false;
 
-		for ( int j=0; j<descriptor.listeners.Count(); j++ )
+		for ( int j=0; j<std::ssize( descriptor.listeners ); j++ )
 		{
 			CGameEventCallback *listener = descriptor.listeners[j];
 
@@ -383,30 +383,30 @@ void CGameEventManager::WriteListenEventList(ks::net::CCLCMsg_ListenEvents *msg)
 
 		if ( descriptor.eventid == -1 )
 		{
-			const char *pName = m_EventMap.GetElementName(descriptor.elementIndex);
+			const char *pName = descriptor.name;
 			DevMsg("Warning! Client listens to event '%s' unknown by server.\n", pName );
 			continue;
 		}
 
-		EventArray.Set( descriptor.eventid );
+		EventArray.set( descriptor.eventid );
 	}
 
-	int count = ( m_GameEvents.Count() + 31 ) / 32;
+	int count = ( std::ssize( m_GameEvents ) + 31 ) / 32;
 	for( int i = 0; i < count; i++ )
 	{
-		msg->event_mask.emplace_back( EventArray.GetDWord( i ) );
+		msg->event_mask.emplace_back( ks::get_word( EventArray, i ) );
 	}
 }
 
 IGameEvent *CGameEventManager::CreateEvent( CGameEventDescriptor *descriptor, const char *name )
 {
-	AUTO_LOCK_FM( m_mutex );
+	std::scoped_lock lock( m_mutex );
 	return new CGameEvent ( descriptor, name );
 }
 
 IGameEvent *CGameEventManager::CreateEvent( const char *name, bool bForce, int *pCookie )
 {
-	AUTO_LOCK_FM( m_mutex );
+	std::scoped_lock lock( m_mutex );
 	if ( !name || !name[0] )
 		return nullptr;
 
@@ -420,7 +420,7 @@ IGameEvent *CGameEventManager::CreateEvent( const char *name, bool bForce, int *
 	}
 
 	// event is known but no one listen to it
-	if ( descriptor->listeners.Count() == 0 && !bForce )
+	if ( descriptor->listeners.empty() && !bForce )
 	{
 		return nullptr;
 	}
@@ -453,7 +453,7 @@ IGameEvent *CGameEventManager::DuplicateEvent( IGameEvent *event )
 		return nullptr;
 
 	// create new instance
-	const char *pName = m_EventMap.GetElementName(gameEvent->m_pDescriptor->elementIndex );
+	const char *pName = gameEvent->m_pDescriptor->name;
 	CGameEvent *newEvent = new CGameEvent ( gameEvent->m_pDescriptor, pName );
 
 	// free keys
@@ -494,7 +494,7 @@ void CGameEventManager::ConPrintEvent( IGameEvent *event)
 
 bool CGameEventManager::FireEventIntern( IGameEvent *event, bool bServerOnly, bool bClientOnly )
 {
-	AUTO_LOCK_FM( m_mutex );
+	std::scoped_lock lock( m_mutex );
 	if ( event == nullptr )
 		return false;
 
@@ -518,14 +518,14 @@ bool CGameEventManager::FireEventIntern( IGameEvent *event, bool bServerOnly, bo
 		if ( bClientOnly )
 		{
 #ifndef DEDICATED
-			const char *pName = m_EventMap.GetElementName(descriptor->elementIndex);
+			const char *pName = descriptor->name;
 			ConMsg( "Game event \"%s\", Tick %i:\n", pName, GetBaseLocalClient().GetClientTickCount() );
 			ConPrintEvent( event );
 #endif
 		}
 		else if ( net_showevents.GetInt() > 1 )
 		{
-			const char *pName = m_EventMap.GetElementName(descriptor->elementIndex);
+			const char *pName = descriptor->name;
 			ConMsg( "Server event \"%s\", Tick %i:\n", pName, sv.GetTick() );
 			ConPrintEvent( event );
 		}
@@ -533,9 +533,9 @@ bool CGameEventManager::FireEventIntern( IGameEvent *event, bool bServerOnly, bo
 
 	}
 
-	for ( int i = 0; i < descriptor->listeners.Count(); i++ )
+	for ( int i = 0; i < std::ssize( descriptor->listeners ); i++ )
 	{
-		CGameEventCallback *listener = descriptor->listeners.Element( i );
+		CGameEventCallback *listener = descriptor->listeners[ i ];
 
 		Assert ( listener );
 
@@ -609,7 +609,7 @@ bool CGameEventManager::FireEventIntern( IGameEvent *event, bool bServerOnly, bo
 
 bool CGameEventManager::SerializeEvent( IGameEvent *event, ks::net::CSVCMsg_GameEvent *eventMsg )
 {
-	AUTO_LOCK_FM( m_mutex );
+	std::scoped_lock lock( m_mutex );
 	CGameEventDescriptor *descriptor = GetEventDescriptor( event );
 
 	Assert( descriptor );
@@ -622,7 +622,7 @@ bool CGameEventManager::SerializeEvent( IGameEvent *event, ks::net::CSVCMsg_Game
 
 	if ( net_showevents.GetInt() > 2 )
 	{
-		const char *pName = m_EventMap.GetElementName(descriptor->elementIndex);
+		const char *pName = descriptor->name;
 		DevMsg("Serializing event '%s' (%i):\n", pName, descriptor->eventid );
 	}
 
@@ -683,7 +683,7 @@ bool CGameEventManager::SerializeEvent( IGameEvent *event, ks::net::CSVCMsg_Game
 
 IGameEvent *CGameEventManager::UnserializeEvent( const ks::net::CSVCMsg_GameEvent& eventMsg )
 {
-	AUTO_LOCK_FM( m_mutex );
+	std::scoped_lock lock( m_mutex );
 
 	// read event id
 
@@ -699,7 +699,7 @@ IGameEvent *CGameEventManager::UnserializeEvent( const ks::net::CSVCMsg_GameEven
 	}
 
 	// create new event
-	const char *pName = m_EventMap.GetElementName(descriptor->elementIndex);
+	const char *pName = descriptor->name;
 	IGameEvent *event = CreateEvent( descriptor, pName );
 
 	if ( !event )
@@ -755,7 +755,7 @@ KeyValues* CGameEventManager::GetEventDataTypes( IGameEvent* event )
 // returns true if this listener is listens to given event
 bool CGameEventManager::FindListener( IGameEventListener2 *listener, const char *name )
 {
-	AUTO_LOCK_FM( m_mutex );
+	std::scoped_lock lock( m_mutex );
 	CGameEventDescriptor *pDescriptor = GetEventDescriptor( name );
 
 	if ( !pDescriptor )
@@ -767,14 +767,14 @@ bool CGameEventManager::FindListener( IGameEventListener2 *listener, const char 
 		return false; // listener is unknown
 
 	// see if listener is in the list for this event
-	return pDescriptor->listeners.IsValidIndex( pDescriptor->listeners.Find( pCallback ) );
+	return ks::is_valid_index( pDescriptor->listeners, ks::find_index( pDescriptor->listeners, pCallback ) );
 }
 
 CGameEventCallback* CGameEventManager::FindEventListener( void* pCallback )
 {
-	for (int i=0; i < m_Listeners.Count(); i++ )
+	for (int i=0; i < std::ssize( m_Listeners ); i++ )
 	{
-		CGameEventCallback *listener = m_Listeners.Element(i);
+		CGameEventCallback *listener = m_Listeners[ i ].get();
 
 		if ( listener->m_pCallback == pCallback )
 		{
@@ -787,7 +787,7 @@ CGameEventCallback* CGameEventManager::FindEventListener( void* pCallback )
 
 void CGameEventManager::RemoveListener(IGameEventListener2 *listener)
 {
-	AUTO_LOCK_FM( m_mutex );
+	std::scoped_lock lock( m_mutex );
 	CGameEventCallback *pCallback = FindEventListener( listener );
 
 	if ( pCallback == nullptr )
@@ -796,31 +796,29 @@ void CGameEventManager::RemoveListener(IGameEventListener2 *listener)
 	}
 
 	// remove reference from events
-	for (int i=0; i < m_GameEvents.Count(); i++ )
+	for (int i=0; i < std::ssize( m_GameEvents ); i++ )
 	{
-		CGameEventDescriptor &et = m_GameEvents.Element( i );
-		et.listeners.FindAndRemove( pCallback );
+		CGameEventDescriptor &et = m_GameEvents[ i ];
+		ks::erase_first( et.listeners, pCallback );
 	}
-
-	// and from global list
-	m_Listeners.FindAndRemove( pCallback );
 
 	if ( pCallback->m_nListenerType == CLIENTSIDE )
 	{
 		m_bClientListenersChanged = true;
 	}
 
-	delete pCallback;
+	// and from global list
+	std::erase_if( m_Listeners, [pCallback]( const auto &p ) { return p.get() == pCallback; } );	// frees the callback
 }
 
 bool CGameEventManager::AddListenerGlobal( IGameEventListener2 *listener, bool bServerSide )
 {
-	AUTO_LOCK_FM( m_mutex );
+	std::scoped_lock lock( m_mutex );
 
 	if ( !listener )
 		return false;
 
-	for ( int i = 0; i < m_GameEvents.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_GameEvents ); i++ )
 	{
 		CGameEventDescriptor *descriptor = &m_GameEvents[ i ];
 
@@ -832,11 +830,10 @@ bool CGameEventManager::AddListenerGlobal( IGameEventListener2 *listener, bool b
 
 int CGameEventManager::LoadEventsFromFile( const char * filename )
 {
-	AUTO_LOCK_FM( m_mutex );
-	if ( !m_EventFiles.Find( filename ).IsValid() )
+	std::scoped_lock lock( m_mutex );
+	if ( !m_EventFiles.contains( filename ) )
 	{
-		CUtlSymbol id = m_EventFiles.AddString( filename );
-		m_EventFileNames.AddToTail( id );
+		m_EventFileNames.push_back( m_EventFiles.intern( filename ) );
 	}
 
 	KeyValues * key = new KeyValues(filename);
@@ -861,21 +858,21 @@ int CGameEventManager::LoadEventsFromFile( const char * filename )
 	}
 
 	if ( net_showevents.GetBool() )
-		DevMsg( "Event System loaded %i events from file %s.\n", m_GameEvents.Count(), filename );
+		DevMsg( "Event System loaded %i events from file %s.\n", (int)std::ssize( m_GameEvents ), filename );
 
-	return m_GameEvents.Count();
+	return std::ssize( m_GameEvents );
 }
 
 void CGameEventManager::ReloadEventDefinitions()
 {
-	for ( int i=0; i< m_EventFileNames.Count(); i++ )
+	for ( int i=0; i< std::ssize( m_EventFileNames ); i++ )
 	{
-		const char *filename = m_EventFiles.String( m_EventFileNames[i] );
+		const char *filename = m_EventFileNames[i].data();
 		LoadEventsFromFile( filename );
 	}
 
 	// we are the server, build string table now
-	int number = m_GameEvents.Count();
+	int number = std::ssize( m_GameEvents );
 
 	for (int j = 0; j<number; j++)
 	{
@@ -885,7 +882,7 @@ void CGameEventManager::ReloadEventDefinitions()
 
 bool CGameEventManager::AddListener( IGameEventListener2 *listener, const char *event, bool bServerSide )
 {
-	AUTO_LOCK_FM( m_mutex );
+	std::scoped_lock lock( m_mutex );
 	if ( !event )
 		return false;
 
@@ -903,7 +900,7 @@ bool CGameEventManager::AddListener( IGameEventListener2 *listener, const char *
 
 bool CGameEventManager::AddListener( void *listener, CGameEventDescriptor *descriptor,  int nListenerType )
 {
-	AUTO_LOCK_FM( m_mutex );
+	std::scoped_lock lock( m_mutex );
 	if ( !listener || !descriptor )
 		return false;	// bahh
 
@@ -913,8 +910,7 @@ bool CGameEventManager::AddListener( void *listener, CGameEventDescriptor *descr
 	if ( pCallback == nullptr )
 	{
 		// add new callback
-		pCallback = new CGameEventCallback;
-		m_Listeners.AddToTail( pCallback );
+		pCallback = m_Listeners.emplace_back( std::make_unique< CGameEventCallback >() ).get();
 
 		pCallback->m_nListenerType = nListenerType;
 		pCallback->m_pCallback = listener;
@@ -927,13 +923,13 @@ bool CGameEventManager::AddListener( void *listener, CGameEventDescriptor *descr
 	}
 
 	// add to event listeners list if not already in there
-	if ( descriptor->listeners.Find( pCallback ) == descriptor->listeners.InvalidIndex() )
+	if ( ks::find_index( descriptor->listeners, pCallback ) == -1 )
 	{
-		descriptor->listeners.AddToTail( pCallback );
+		descriptor->listeners.push_back( pCallback );
 
 		if ( net_showeventlisteners.GetBool() )
 		{
-			const char *name = m_EventMap.GetElementName( descriptor->elementIndex );
+			const char *name = descriptor->name;
 			Msg("[GAMEEVENT] Event '%s' added %s listener %p\n",
 				name ? name : "UNKNOWN",
 				s_GameListenerTypeMap->GetNameByToken( nListenerType ),
@@ -953,8 +949,8 @@ bool CGameEventManager::RegisterEvent( KeyValues * event)
 	if ( event == nullptr )
 		return false;
 
-	AUTO_LOCK_FM( m_mutex );
-	if ( m_GameEvents.Count() == MAX_EVENT_NUMBER )
+	std::scoped_lock lock( m_mutex );
+	if ( std::ssize( m_GameEvents ) == MAX_EVENT_NUMBER )
 	{
 		DevMsg( "CGameEventManager: couldn't register event '%s', limit reached (%i).\n",
 			event->GetName(), MAX_EVENT_NUMBER );
@@ -968,10 +964,10 @@ bool CGameEventManager::RegisterEvent( KeyValues * event)
 	if ( !descriptor )
 	{
 		// event not known yet, create new one
-		int index = m_GameEvents.AddToTail();
-		descriptor =  &m_GameEvents.Element(index);
+		int index = std::ssize( m_GameEvents ); m_GameEvents.emplace_back();
+		descriptor =  &m_GameEvents[ index ];
 
-		descriptor->elementIndex = m_EventMap.Insert( event->GetName(), index );
+		descriptor->name = m_EventMap.emplace( event->GetName(), index ).first->first.c_str();
 	}
 	else
 	{
@@ -1038,7 +1034,7 @@ CGameEventDescriptor *CGameEventManager::GetEventDescriptor(int eventid) // retu
 	if ( eventid < 0 )
 		return nullptr;
 
-	for ( int i = 0; i < m_GameEvents.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_GameEvents ); i++ )
 	{
 		CGameEventDescriptor *descriptor = &m_GameEvents[i];
 
@@ -1051,7 +1047,7 @@ CGameEventDescriptor *CGameEventManager::GetEventDescriptor(int eventid) // retu
 
 void CGameEventManager::FreeEvent( IGameEvent *event )
 {
-	AUTO_LOCK_FM( m_mutex );
+	std::scoped_lock lock( m_mutex );
 	if ( !event )
 		return;
 
@@ -1070,15 +1066,15 @@ CGameEventDescriptor *CGameEventManager::GetEventDescriptor(const char * name, i
 	{
 		int gameEventIndex = uint32(*pCookie) & cookieMask;
 		CGameEventDescriptor *pDescriptor = &m_GameEvents[gameEventIndex];
-		if ( !V_stricmp( m_EventMap.GetElementName(pDescriptor->elementIndex), name ) )
+		if ( !V_stricmp( pDescriptor->name, name ) )
 		{
 			return pDescriptor;
 		}
 	}
-	int eventMapIndex = m_EventMap.Find( name );
-	if ( eventMapIndex == m_EventMap.InvalidIndex() )
+	auto eventMapIndex = m_EventMap.find( name );
+	if ( eventMapIndex == m_EventMap.end() )
 		return nullptr;
-	int gameEventIndex = m_EventMap[eventMapIndex];
+	int gameEventIndex = eventMapIndex->second;
 	if ( pCookie )
 	{
 		*pCookie = cookieBit | gameEventIndex;
@@ -1088,11 +1084,11 @@ CGameEventDescriptor *CGameEventManager::GetEventDescriptor(const char * name, i
 
 bool CGameEventManager::AddListenerAll( void *listener, int nListenerType )
 {
-	AUTO_LOCK_FM( m_mutex );
+	std::scoped_lock lock( m_mutex );
 	if ( !listener )
 		return false;
 
-	for (int i=0; i < m_GameEvents.Count(); i++ )
+	for (int i=0; i < std::ssize( m_GameEvents ); i++ )
 	{
 		CGameEventDescriptor *descriptor = &m_GameEvents[i];
 
@@ -1106,7 +1102,7 @@ bool CGameEventManager::AddListenerAll( void *listener, int nListenerType )
 
 void CGameEventManager::RemoveListenerOld( void *listener)
 {
-	AUTO_LOCK_FM( m_mutex );
+	std::scoped_lock lock( m_mutex );
 	CGameEventCallback *pCallback = FindEventListener( listener );
 
 	if ( pCallback == nullptr )
@@ -1116,40 +1112,38 @@ void CGameEventManager::RemoveListenerOld( void *listener)
 	}
 
 	// remove reference from events
-	for (int i=0; i < m_GameEvents.Count(); i++ )
+	for (int i=0; i < std::ssize( m_GameEvents ); i++ )
 	{
-		CGameEventDescriptor &et = m_GameEvents.Element( i );
-		et.listeners.FindAndRemove( pCallback );
+		CGameEventDescriptor &et = m_GameEvents[ i ];
+		ks::erase_first( et.listeners, pCallback );
 	}
-
-	// and from global list
-	m_Listeners.FindAndRemove( pCallback );
 
 	if ( pCallback->m_nListenerType == CLIENTSIDE_OLD )
 	{
 		m_bClientListenersChanged = true;
 	}
 
-	delete pCallback;
+	// and from global list
+	std::erase_if( m_Listeners, [pCallback]( const auto &p ) { return p.get() == pCallback; } );	// frees the callback
 }
 
 void CGameEventManager::VerifyListenerList( void )
 {
-	int nGameEventCount = m_GameEvents.Count();
+	int nGameEventCount = std::ssize( m_GameEvents );
 	for ( int iEvent = 0; iEvent < nGameEventCount; ++iEvent )
 	{
-		CGameEventDescriptor *pEvent = &m_GameEvents.Element( iEvent );
-		const char *pName = m_EventMap.GetElementName( iEvent );
+		CGameEventDescriptor *pEvent = &m_GameEvents[ iEvent ];
+		const char *pName = pEvent->name;
 		if ( !pEvent )
 		{
 			Msg( "VerifyListenerList-Bug: Bad event in list! (%d)\n", iEvent);
 			continue;
 		}
 
-		int nListenerCount = pEvent->listeners.Count();
+		int nListenerCount = std::ssize( pEvent->listeners );
 		for ( int iListen = 0; iListen < nListenerCount; ++iListen )
 		{
-			CGameEventCallback *pListener = pEvent->listeners.Element( iListen );
+			CGameEventCallback *pListener = pEvent->listeners[ iListen ];
 			if ( !pListener)
 			{
 				Msg( "VerifyListenerList-Bug: Bad listener in list! (%s)\n", pName );
@@ -1170,10 +1164,10 @@ void CGameEventManager::DumpEventNetworkStats( void )
 {
 	// find longest name
 	int len = 0;
-	for ( int i = 0; i < m_GameEvents.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_GameEvents ); ++i )
 	{
-		CGameEventDescriptor &e = m_GameEvents.Element( i );
-		const char *name = m_EventMap.GetElementName( e.elementIndex );
+		CGameEventDescriptor &e = m_GameEvents[ i ];
+		const char *name = e.name;
 		if ( !name )
 		{
 			continue;
@@ -1191,10 +1185,10 @@ void CGameEventManager::DumpEventNetworkStats( void )
 	//            %5d %5d %7d %7d %7d %7d
 
 
-	for ( int i = 0; i < m_GameEvents.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_GameEvents ); ++i )
 	{
-		CGameEventDescriptor &e = m_GameEvents.Element( i );
-		const char *name = m_EventMap.GetElementName( e.elementIndex );
+		CGameEventDescriptor &e = m_GameEvents[ i ];
+		const char *name = e.name;
 		if ( !name )
 		{
 			continue;

@@ -10,6 +10,9 @@
 #include "sv_ipratelimit.h"
 
 #include <poll.h>
+#include <atomic>
+#include <map>
+#include <memory>
 
 #if !defined(NO_STEAM) && !defined(DEDICATED)
 #define USE_STEAM_SOCKETS
@@ -51,10 +54,10 @@ int32 g_numRatelimitedPackets = -100;
 class CThreadedSocketQueue
 {
 public:
-	CThreadedSocketQueue() : m_mapSocketThreads( DefLessFunc( int ) ) {}
+	CThreadedSocketQueue() {}
 	~CThreadedSocketQueue()
 	{
-		m_mapSocketThreads.PurgeAndDeleteElements();
+		m_mapSocketThreads.clear();
 	}
 
 	static bool ShouldUseSocketsThreaded()
@@ -77,13 +80,7 @@ public:
 
 	void CloseSocket( int s )
 	{
-		CUtlMap< int, CSocketThread * >::IndexType_t idx = m_mapSocketThreads.Find( s );
-		if ( idx != m_mapSocketThreads.InvalidIndex() )
-		{
-			CSocketThread *pThread = m_mapSocketThreads.Element( idx );
-			delete pThread;
-			m_mapSocketThreads.RemoveAt( idx );
-		}
+		m_mapSocketThreads.erase( s );
 	}
 
 private:
@@ -138,7 +135,7 @@ private:
 			if ( !m_tslstDataQueue.PopItem( &data ) )
 				return 0;
 
-			Q_memcpy( buf, data.buf, MIN( len, data.len ) );
+			Q_memcpy( buf, data.buf, std::min( len, data.len ) );
 			Q_memcpy( from, &data.from, sizeof( data.from ) );
 
 			//
@@ -180,10 +177,10 @@ private:
 			adrt.SetType( NA_IP );
 			adrt.Clear();
 
-			extern volatile int g_NetChannelsRefreshCounter;
+			extern std::atomic<int> g_NetChannelsRefreshCounter;
 			int pumpNetChannelsRefreshCounter = -1;
-			CUtlVector< struct sockaddr > arrNetChans;
-			typedef CUtlMap< uint64, CPerNetChanRatelimit_t, int, CDefLess< uint64 > > MapPerClientRatelimit_t;
+			std::vector< struct sockaddr > arrNetChans;
+			typedef std::map< uint64, CPerNetChanRatelimit_t > MapPerClientRatelimit_t;
 			MapPerClientRatelimit_t mapPerClientRatelimit;
 
 			const int numSyscallPollFDs = 2;
@@ -231,23 +228,21 @@ private:
 						if ( pumpNetChannelsRefreshCounter != g_NetChannelsRefreshCounter )
 						{
 							pumpNetChannelsRefreshCounter = g_NetChannelsRefreshCounter;
-							arrNetChans.RemoveAll();
-							extern void NET_FindAllNetChannelAddresses( int socket, CUtlVector< struct sockaddr > &arrNetChans );
+							arrNetChans.clear();
+							extern void NET_FindAllNetChannelAddresses( int socket, std::vector< struct sockaddr > &arrNetChans );
 							NET_FindAllNetChannelAddresses( m_nsSock, arrNetChans );
 
 							// Since we just recomputed net channels, use this opportunity to expire obsolete ratelimits for old clients
-							FOR_EACH_MAP_FAST( mapPerClientRatelimit, idxPerClientRateLimit )
+							std::erase_if( mapPerClientRatelimit, [&]( const auto &entry )
 							{
-								CPerNetChanRatelimit_t &pncrt = mapPerClientRatelimit.Element( idxPerClientRateLimit );
-								double dblTimeSinceTimeMark = ( vdblNetTimeForThread - pncrt.m_dblNetTimeMark );
-								if ( dblTimeSinceTimeMark > net_threaded_socket_recovery_time.GetFloat() )
-									mapPerClientRatelimit.RemoveAt( idxPerClientRateLimit );
-							}
+								double dblTimeSinceTimeMark = ( vdblNetTimeForThread - entry.second.m_dblNetTimeMark );
+								return dblTimeSinceTimeMark > net_threaded_socket_recovery_time.GetFloat();
+							} );
 						}
 
 						// This is a connection-oriented packet, must have a netchan
 						bool bNetChanAvailable = false;
-						for ( int k = 0; k < arrNetChans.Count(); ++ k )
+						for ( int k = 0; k < std::ssize( arrNetChans ); ++ k )
 						{
 							struct sockaddr &sockAddressNetChan = arrNetChans[k];
 							if (
@@ -261,18 +256,18 @@ private:
 								// Track ratelimit on this netchan
 								//
 								uint64 uiRatelimitKey = ( uint64( ((struct sockaddr_in*)&from)->sin_addr.s_addr ) << 32 ) | uint32( ((struct sockaddr_in*)&from)->sin_port );
-								MapPerClientRatelimit_t::IndexType_t idxPerClientRateLimit = mapPerClientRatelimit.Find( uiRatelimitKey );
-								if ( idxPerClientRateLimit == mapPerClientRatelimit.InvalidIndex() )
+								auto idxPerClientRateLimit = mapPerClientRatelimit.find( uiRatelimitKey );
+								if ( idxPerClientRateLimit == mapPerClientRatelimit.end() )
 								{
 									CPerNetChanRatelimit_t pncrt;
 									Q_memset( &pncrt, 0, sizeof( pncrt ) );
 									pncrt.m_dblNetTimeMark = vdblNetTimeForThread;
 									pncrt.m_numPackets = 1;
-									mapPerClientRatelimit.Insert( uiRatelimitKey, pncrt );
+									mapPerClientRatelimit.emplace( uiRatelimitKey, pncrt );
 								}
 								else
 								{
-									CPerNetChanRatelimit_t &pncrt = mapPerClientRatelimit.Element( idxPerClientRateLimit );
+									CPerNetChanRatelimit_t &pncrt = idxPerClientRateLimit->second;
 									double dblTimeSinceTimeMark = ( vdblNetTimeForThread - pncrt.m_dblNetTimeMark );
 									if ( ( dblTimeSinceTimeMark > net_threaded_socket_recovery_time.GetFloat() ) ||
 										( dblTimeSinceTimeMark < 0 ) )
@@ -282,7 +277,7 @@ private:
 									else if ( dblTimeSinceTimeMark > 0 )
 									{
 										int32 numPacketsToRecover = dblTimeSinceTimeMark * net_threaded_socket_recovery_rate.GetFloat();
-										pncrt.m_numPackets = MAX( pncrt.m_numPackets - numPacketsToRecover, 0 );
+										pncrt.m_numPackets = std::max( pncrt.m_numPackets - numPacketsToRecover, 0 );
 									}
 									
 									if ( pncrt.m_numPackets > net_threaded_socket_burst_cap.GetInt() )
@@ -358,18 +353,16 @@ private:
 	};
 	CSocketThread * GetSocketThread( int s, int nsSock = -1, bool bRequired = false )
 	{
-		CUtlMap< int, CSocketThread * >::IndexType_t idx = m_mapSocketThreads.Find( s );
-		if ( idx != m_mapSocketThreads.InvalidIndex() )
-			return m_mapSocketThreads.Element( idx );
+		auto idx = m_mapSocketThreads.find( s );
+		if ( idx != m_mapSocketThreads.end() )
+			return idx->second.get();
 		if ( bRequired )
 		{
-			CSocketThread *pNew = new CSocketThread( s, nsSock );
-			m_mapSocketThreads.Insert( s, pNew );
-			return pNew;
+			return m_mapSocketThreads.emplace( s, std::make_unique< CSocketThread >( s, nsSock ) ).first->second.get();
 		}
 		return nullptr;
 	}
-	CUtlMap< int, CSocketThread * > m_mapSocketThreads;
+	std::map< int, std::unique_ptr< CSocketThread > > m_mapSocketThreads;
 };
 CThreadedSocketQueue g_ThreadedSocketQueue;
 
@@ -393,7 +386,6 @@ void On_NET_ProcessSocket_End( int hUDP, int sock )
 
 #include "cl_steamauth.h"
 #include "tier1/tokenset.h"
-#include "utlmap.h"
 
 // matchmaking
 #include "matchmaking/imatchframework.h"
@@ -536,9 +528,9 @@ private:
 	}
 
 	// For Remote clients
-	CUtlVector< CSteamSocket * > m_vecRemoteSockets;
-	CUtlMap< netadr_t, CSteamSocket * > m_mapAdrToSteamSocket;
-	CUtlMap< int, ESocketIndex_t > m_mapSocketToESocketType;
+	std::vector< CSteamSocket * > m_vecRemoteSockets;
+	std::map< netadr_t, CSteamSocket * > m_mapAdrToSteamSocket;
+	std::map< int, ESocketIndex_t > m_mapSocketToESocketType;
 
 	int			m_nNextRemoteAddress;
 	bool		m_bInitialized;
@@ -547,8 +539,6 @@ private:
 CSteamSocketMgr::CSteamSocketMgr() : 
 	m_bInitialized( false ),
 	m_nNextRemoteAddress( 1 ),
-	m_mapAdrToSteamSocket( 0, 0, DefLessFunc( netadr_t ) ),
-	m_mapSocketToESocketType( 0, 0, DefLessFunc( int ) ),
 	m_callbackP2PSessionRequest( this, &CSteamSocketMgr::OnP2PSessionRequest ),
 	m_callbackP2PSessionConnectFail( this, &CSteamSocketMgr::OnP2PSessionConnectFail )
 {
@@ -571,7 +561,7 @@ void CSteamSocketMgr::Shutdown()
 		return;
 
 	// Destroy remote sockets
-	FOR_EACH_VEC_BACK( m_vecRemoteSockets, i )
+	for ( int i = (int)std::ssize( m_vecRemoteSockets ) - 1; i >= 0; i-- )
 	{
 		CSteamSocket *pSocket = m_vecRemoteSockets[i];
 		// this will delete pSocket
@@ -579,9 +569,9 @@ void CSteamSocketMgr::Shutdown()
 	}
 	m_vecRemoteSockets.RemoveAll();
 
-	Assert( m_mapAdrToSteamSocket.Count() == 0 );
-	m_mapAdrToSteamSocket.RemoveAll();
-	m_mapSocketToESocketType.RemoveAll();
+	Assert( m_mapAdrToSteamSocket.empty() );
+	m_mapAdrToSteamSocket.clear();
+	m_mapSocketToESocketType.clear();
 
 	m_bInitialized = false;
 }
@@ -603,9 +593,9 @@ void CSteamSocketMgr::OpenSocket( int s, int nModule, int nSetPort, int nDefault
 		return;	
 
 	// make sure we dont have a socket for this type
-	FOR_EACH_MAP_FAST( m_mapSocketToESocketType, i )
+	for ( const auto &[sock, eType] : m_mapSocketToESocketType )
 	{
-		if ( m_mapSocketToESocketType[i] == eSocketType )
+		if ( eType == eSocketType )
 		{
 			AssertMsg1( false, "Already have a socket for this type: %s", s_SocketIndexMap->GetNameByToken( eSocketType ) );
 			return;
@@ -613,7 +603,7 @@ void CSteamSocketMgr::OpenSocket( int s, int nModule, int nSetPort, int nDefault
 	}
 
 	// save socket
-	m_mapSocketToESocketType.InsertOrReplace( s, eSocketType );
+	m_mapSocketToESocketType.insert_or_assign( s, eSocketType );
 
 	if ( net_steamcnx_debug.GetBool() )
 	{
@@ -638,18 +628,18 @@ void CSteamSocketMgr::CloseSocket( int s, int nModule )
 		ConColorMsg( STEAM_CNX_COLOR, "Closed Steam Socket %s\n", s_SocketIndexMap->GetNameByToken( eSocketType ) );
 	}
 
-	FOR_EACH_VEC_BACK( m_vecRemoteSockets, i )
+	for ( int i = (int)std::ssize( m_vecRemoteSockets ) - 1; i >= 0; i-- )
 	{
 		CSteamSocket *pSocket = m_vecRemoteSockets[i];
 		if ( pSocket->GetSocketType() == eSocketType )
 			DestroyConnection( pSocket );
 	}
 	
-	FOR_EACH_MAP( m_mapSocketToESocketType, i )
+	for ( auto it = m_mapSocketToESocketType.begin(); it != m_mapSocketToESocketType.end(); ++it )
 	{
-		if ( m_mapSocketToESocketType[ i ] == eSocketType )
+		if ( it->second == eSocketType )
 		{
-			m_mapSocketToESocketType.RemoveAt( i );
+			m_mapSocketToESocketType.erase( it );
 			break;
 		}
 	}
@@ -686,7 +676,7 @@ CSteamSocket *CSteamSocketMgr::CreateConnection( ESocketIndex_t eSocketType, con
 
 	// create
 	pSocket = new CSteamSocket( steamID, eSocketType, adrRemote );
-	m_mapAdrToSteamSocket.Insert( adrRemote, pSocket );
+	m_mapAdrToSteamSocket.emplace( adrRemote, pSocket );
 	m_vecRemoteSockets.AddToTail( pSocket );
 
 	if ( net_steamcnx_debug.GetBool() )
@@ -703,7 +693,7 @@ void CSteamSocketMgr::DestroyConnection( CSteamSocket *pSocket )
 		return;	
 
 	// remove from address map & vector
-	m_mapAdrToSteamSocket.Remove( pSocket->GetNetAddress() );
+	m_mapAdrToSteamSocket.erase( pSocket->GetNetAddress() );
 	m_vecRemoteSockets.FindAndFastRemove( pSocket );
 
 	// we can close both channels with this user, as we can only talk to his server or client. If their client is talking to our server,
@@ -742,17 +732,16 @@ CSteamSocket *CSteamSocketMgr::FindSocketForAddress( const ns_address &adr )
 		return nullptr;
 	}
 
-	int idx = m_mapAdrToSteamSocket.Find( adr.AsType<netadr_t>() );
-	if ( idx == m_mapAdrToSteamSocket.InvalidIndex() )
+	auto idx = m_mapAdrToSteamSocket.find( adr.AsType<netadr_t>() );
+	if ( idx == m_mapAdrToSteamSocket.end() )
 		return nullptr;
-	return m_mapAdrToSteamSocket[ idx ];
+	return idx->second;
 }
 
 CSteamSocket *CSteamSocketMgr::FindSocketForUser( ESocketIndex_t eSocketType, const CSteamID &steamID )
 {
-	FOR_EACH_VEC( m_vecRemoteSockets, i )
+	for ( CSteamSocket *pSocket : m_vecRemoteSockets )
 	{
-		CSteamSocket *pSocket = m_vecRemoteSockets[i];
 		if ( pSocket->GetSteamID() == steamID && pSocket->GetSocketType() == eSocketType )
 			return pSocket;
 	}
@@ -793,7 +782,7 @@ void CSteamSocketMgr::OnP2PSessionConnectFail( P2PSessionConnectFail_t *pParam )
 	}
 
 	// close all connections to this user
-	FOR_EACH_VEC_BACK( m_vecRemoteSockets, i )
+	for ( int i = (int)std::ssize( m_vecRemoteSockets ) - 1; i >= 0; i-- )
 	{
 		CSteamSocket *pSocket = m_vecRemoteSockets[i];
 		if ( pSocket->GetSteamID() != pParam->m_steamIDRemote )
@@ -863,11 +852,11 @@ int CSteamSocketMgr::sendto( int s, const char * buf, int len, int flags, const 
 
 bool CSteamSocketMgr::GetTypeForSocket( int s, ESocketIndex_t *peType )
 {
-	int i = m_mapSocketToESocketType.Find( s );
-	if ( i == m_mapSocketToESocketType.InvalidIndex() )
+	auto i = m_mapSocketToESocketType.find( s );
+	if ( i == m_mapSocketToESocketType.end() )
 		return false;
 
-	*peType = m_mapSocketToESocketType[i];
+	*peType = i->second;
 	return true;
 }
 
@@ -982,7 +971,7 @@ void CSteamSocketMgr::PrintStatus()
 
 	// print socket info
 	ConColorMsg( STEAM_CNX_COLOR, " %d connections\n", m_vecRemoteSockets.Count() );
-	FOR_EACH_VEC( m_vecRemoteSockets, i )
+	for ( int i = 0; i < std::ssize( m_vecRemoteSockets ); i++ )
 	{	
 		CSteamSocket *pSocket = m_vecRemoteSockets[i];
 
@@ -1085,9 +1074,9 @@ netadr_t NET_InitiateSteamConnection(int sock, uint64 uSteamID, const char *form
 
 	int length = Q_strlen( string );
 
-	CUtlBuffer sendBuf;
-	sendBuf.PutUnsignedInt( (unsigned int)-1 );
-	sendBuf.Put( string, length );
+	ks::byte_writer sendBuf;
+	sendBuf.write<unsigned int>( (unsigned int)-1 );
+	sendBuf.write_bytes( string, length );
 
 	CSteamID steamID;
 	steamID.SetFromUint64( uSteamID );
@@ -1097,7 +1086,7 @@ netadr_t NET_InitiateSteamConnection(int sock, uint64 uSteamID, const char *form
 		ConColorMsg( STEAM_CNX_COLOR, "Initiate %llx\n", uSteamID );
 	}
 
-	CSteamSocket *pSocket = g_SteamSocketMgr.InitiateConnection( (ESocketIndex_t)sock, steamID, (const byte *)sendBuf.Base(), sendBuf.TellPut() );
+	CSteamSocket *pSocket = g_SteamSocketMgr.InitiateConnection( (ESocketIndex_t)sock, steamID, (const byte *)sendBuf.data(), sendBuf.size() );
 	if ( !pSocket )
 	{
 		Warning( "NET_InitiateSteamConnection failed to create a socket\n" );

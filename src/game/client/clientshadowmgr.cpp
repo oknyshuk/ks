@@ -73,6 +73,8 @@
 
 
 #include "cbase.h"
+#include <bitset>
+#include <mutex>
 #include "engine/ishadowmgr.h"
 #include "model_types.h"
 #include "bitmap/imageformat.h"
@@ -82,7 +84,8 @@
 #include "materialsystem/imesh.h"
 #include "materialsystem/itexture.h"
 #include "bsptreedata.h"
-#include "utlmultilist.h"
+#include "tier1/slot_pool.h"
+#include <list>
 #include "collisionutils.h"
 #include "iviewrender.h"
 #include "ivrenderview.h"
@@ -107,9 +110,6 @@
 #include "imaterialproxydict.h"
 
 #include "c_env_cascade_light.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 // Slam blobby shadows to disabled in CS:GO (RTT shadows are also disabled too).
 static ConVar r_disable_update_shadow( "r_disable_update_shadow", "1", FCVAR_CHEAT );
@@ -230,6 +230,9 @@ private:
 
 		// Makes sure we don't overflow
 		unsigned int	m_FrameUsed;
+
+		// Position in m_Cache[power].m_List; moved by splicing, so it stays valid
+		std::list< FragmentHandle_t >::iterator m_LRUPos;
 	};
 
 	struct BlockInfo_t
@@ -239,14 +242,11 @@ private:
 
 	struct Cache_t
 	{
-		unsigned short	m_List;
+		std::list< FragmentHandle_t >	m_List;	// LRU at the front
 	};
 
 	// Adds a block worth of fragments to the LRU
 	void AddBlockToLRU( int block );
-
-	// Unlink fragment from cache
-	void UnlinkFragmentFromCache( Cache_t& cache, FragmentHandle_t fragment );
 
 	// Mark something as being used (MRU)..
 	void MarkUsed( FragmentHandle_t fragment );
@@ -263,8 +263,8 @@ private:
 	// Stores the actual texture we're writing into
 	CTextureReference	m_TexturePage;
 
-	CUtlLinkedList< TextureInfo_t, TextureHandle_t >	m_Textures;
-	CUtlMultiList< FragmentInfo_t, FragmentHandle_t >	m_Fragments;
+	ks::slot_pool< TextureInfo_t, TextureHandle_t >	m_Textures;
+	std::vector< FragmentInfo_t >	m_Fragments;	// never freed individually; index is the handle
 
 	Cache_t		m_Cache[MAX_TEXTURE_POWER+1]; 
 	BlockInfo_t	m_Blocks[BLOCK_COUNT];
@@ -276,11 +276,6 @@ private:
 //-----------------------------------------------------------------------------
 void CTextureAllocator::Init()
 {
-	for ( int i = 0; i <= MAX_TEXTURE_POWER; ++i )
-	{
-		m_Cache[i].m_List = m_Fragments.InvalidIndex();
-	}
-
 	InitRenderTargets();
 }
 
@@ -305,8 +300,7 @@ void CTextureAllocator::Reset()
 {
 	DeallocateAllTextures();
 
-	m_Textures.EnsureCapacity(256);
-	m_Fragments.EnsureCapacity(256);
+	m_Fragments.reserve(256);
 
 	// Set up the block sizes....
 #ifdef RTT_TEXTURE_SIZE_640
@@ -360,10 +354,6 @@ void CTextureAllocator::Reset()
 
 	// Initialize the LRU
 	int i;
-	for ( i = 0; i <= MAX_TEXTURE_POWER; ++i )
-	{
-		m_Cache[i].m_List = m_Fragments.CreateList();
-	}
 
 	// Now that the block sizes are allocated, create LRUs for the various block sizes
 	for ( i = 0; i < BLOCK_COUNT; ++i)
@@ -377,11 +367,11 @@ void CTextureAllocator::Reset()
 
 void CTextureAllocator::DeallocateAllTextures()
 {
-	m_Textures.Purge();
-	m_Fragments.Purge();
+	m_Textures.clear();
+	m_Fragments.clear();
 	for ( int i = 0; i <= MAX_TEXTURE_POWER; ++i )
 	{
-		m_Cache[i].m_List = m_Fragments.InvalidIndex();
+		m_Cache[i].m_List.clear();
 	}
 }
 
@@ -392,7 +382,7 @@ void CTextureAllocator::DeallocateAllTextures()
 void CTextureAllocator::DebugPrintCache( void )
 {
 	// For each fragment
-	int nNumFragments = m_Fragments.TotalCount();
+	int nNumFragments = (int)m_Fragments.size();
 	int nNumInvalidFragments = 0;
 
 	Warning("Fragments (%d):\n===============\n", nNumFragments);
@@ -431,22 +421,15 @@ void CTextureAllocator::AddBlockToLRU( int block )
 	// and then stick in at the top of the LRU
 	while (--fragmentCount >= 0 )
 	{
-		FragmentHandle_t f = m_Fragments.Alloc( );
-		m_Fragments[f].m_Block = block;
-		m_Fragments[f].m_Index = fragmentCount;
-		m_Fragments[f].m_Texture = INVALID_TEXTURE_HANDLE;
-		m_Fragments[f].m_FrameUsed = 0xFFFFFFFF;
-		m_Fragments.LinkToHead( m_Cache[power].m_List, f );
+		FragmentHandle_t f = (FragmentHandle_t)m_Fragments.size();
+		FragmentInfo_t &info = m_Fragments.emplace_back();
+		info.m_Block = block;
+		info.m_Index = fragmentCount;
+		info.m_Texture = INVALID_TEXTURE_HANDLE;
+		info.m_FrameUsed = 0xFFFFFFFF;
+		m_Cache[power].m_List.push_front( f );
+		info.m_LRUPos = m_Cache[power].m_List.begin();
 	}
-}
-
-
-//-----------------------------------------------------------------------------
-// Unlink fragment from cache
-//-----------------------------------------------------------------------------
-void CTextureAllocator::UnlinkFragmentFromCache( Cache_t& cache, FragmentHandle_t fragment )
-{
-	m_Fragments.Unlink( cache.m_List, fragment);
 }
 
 
@@ -460,7 +443,7 @@ void CTextureAllocator::MarkUsed( FragmentHandle_t fragment )
 
 	// Hook it at the end of the LRU
 	Cache_t& cache = m_Cache[power];
-	m_Fragments.LinkToTail( cache.m_List, fragment );
+	cache.m_List.splice( cache.m_List.end(), cache.m_List, m_Fragments[fragment].m_LRUPos );
 	m_Fragments[fragment].m_FrameUsed = m_CurrentFrame;
 }
 
@@ -475,7 +458,7 @@ void CTextureAllocator::MarkUnused( FragmentHandle_t fragment )
 
 	// Hook it at the end of the LRU
 	Cache_t& cache = m_Cache[power];
-	m_Fragments.LinkToHead( cache.m_List, fragment );
+	cache.m_List.splice( cache.m_List.begin(), cache.m_List, m_Fragments[fragment].m_LRUPos );
 }
 
 
@@ -493,7 +476,7 @@ TextureHandle_t	CTextureAllocator::AllocateTexture( int w, int h )
 	else if (w > MAX_TEXTURE_SIZE)
 		w = MAX_TEXTURE_SIZE;
 
-	TextureHandle_t handle = m_Textures.AddToTail();
+	TextureHandle_t handle = m_Textures.emplace();
 	m_Textures[handle].m_Fragment = INVALID_FRAGMENT_HANDLE;
 	m_Textures[handle].m_Size = w;
 
@@ -523,7 +506,7 @@ void CTextureAllocator::DeallocateTexture( TextureHandle_t h )
 		m_Fragments[m_Textures[h].m_Fragment].m_FrameUsed = 0xFFFFFFFF;	// non-zero frame
 		DisconnectTextureFromFragment( m_Textures[h].m_Fragment );
 	}
-	m_Textures.Remove(h);
+	m_Textures.erase(h);
 
 //	Warning("End of DeallocateTexture\n");
 //	DebugPrintCache();
@@ -615,12 +598,12 @@ bool CTextureAllocator::UseTexture( TextureHandle_t h, bool bWillRedraw, float f
 	bool done = false;
 	while (!done && power >= 0)
 	{
-		f = m_Fragments.Head( m_Cache[power].m_List );
+		f = m_Cache[power].m_List.empty() ? INVALID_FRAGMENT_HANDLE : m_Cache[power].m_List.front();
 	
 		// This represents an overflow condition (used too many textures of
 		// the same size in a single frame). It that happens, just use a texture
 		// of lower res.
-		if ( (f != m_Fragments.InvalidIndex()) && (m_Fragments[f].m_FrameUsed != m_CurrentFrame) )
+		if ( (f != INVALID_FRAGMENT_HANDLE) && (m_Fragments[f].m_FrameUsed != m_CurrentFrame) )
 		{
 			done = true;
 		}
@@ -782,7 +765,7 @@ public:
 
 	virtual void ReprojectShadows();
 
-	virtual ClientShadowHandle_t CreateShadow( ClientEntityHandle_t entity, int nEntIndex, int flags, CBitVec< MAX_SPLITSCREEN_PLAYERS > *pSplitScreenBits = nullptr );
+	virtual ClientShadowHandle_t CreateShadow( ClientEntityHandle_t entity, int nEntIndex, int flags, std::bitset< MAX_SPLITSCREEN_PLAYERS > *pSplitScreenBits = nullptr );
 	virtual void DestroyShadow( ClientShadowHandle_t handle );
 
 	// Create flashlight (projected texture light source)
@@ -908,7 +891,7 @@ private:
 		EHANDLE					m_hTargetEntity;
 
 		bool					m_bUseSplitScreenBits;
-		CBitVec< MAX_SPLITSCREEN_PLAYERS > m_SplitScreenBits;
+		std::bitset< MAX_SPLITSCREEN_PLAYERS > m_SplitScreenBits;
 		int						m_nLastUpdateFrame;
 
 		// Extra info for deferred shadows.
@@ -1042,12 +1025,7 @@ private:
 	void ShutdownDeferredShadows();
 
 	void ShutdownRenderTargets( void );
-	static bool ShadowHandleCompareFunc( const ClientShadowHandle_t& lhs, const ClientShadowHandle_t& rhs )
-	{
-		return lhs < rhs;
-	}
-
-	ClientShadowHandle_t CreateProjectedTexture( ClientEntityHandle_t entity, int nEntIndex, int flags, CBitVec< MAX_SPLITSCREEN_PLAYERS > *pSplitScreenBits, bool bShareProjectedTextureBetweenSplitscreenPlayers );
+	ClientShadowHandle_t CreateProjectedTexture( ClientEntityHandle_t entity, int nEntIndex, int flags, std::bitset< MAX_SPLITSCREEN_PLAYERS > *pSplitScreenBits, bool bShareProjectedTextureBetweenSplitscreenPlayers );
 
 	// Lock down the usage of a shadow depth texture...must be unlocked use on subsequent views / frames
 	bool	LockShadowDepthTexture( CTextureReference *shadowDepthTexture, int nStartTexture );
@@ -1101,7 +1079,7 @@ private:
 	CMaterialReference m_RenderDeferredShadowMat;
 	CMaterialReference m_RenderDeferredSimpleShadowMat;
 	CTextureReference m_DummyColorTexture;
-	CUtlLinkedList< ClientShadow_t, ClientShadowHandle_t >	m_Shadows;
+	ks::slot_pool< ClientShadow_t, ClientShadowHandle_t >	m_Shadows;
 	CTextureAllocator m_ShadowAllocator;
 
 	bool m_RenderToTextureActive;
@@ -1110,12 +1088,12 @@ private:
 	float m_flShadowCastDist;
 	float m_flMinShadowArea;
 
-	typedef CUtlRBTree< ClientShadowHandle_t, unsigned short > ClientShadowHandleSet;
+	typedef std::set< ClientShadowHandle_t > ClientShadowHandleSet;
 	ClientShadowHandleSet	m_DirtyShadows;
 	ClientShadowHandleSet	m_DirtyShadowsLeftOver;	// shadows left over to update from previous frame
 
-	CUtlVector< ClientShadowHandle_t > m_TransparentShadows;
-	CUtlVector< ClientShadowHandle_t > m_shadowsToDestroy;
+	std::vector< ClientShadowHandle_t > m_TransparentShadows;
+	std::vector< ClientShadowHandle_t > m_shadowsToDestroy;
 
 	int m_nPrevFrameCount;
 
@@ -1128,8 +1106,8 @@ private:
 
 	bool m_bDepthTexturesAllocated;
 	uint32 m_uiDepthTextureCache;
-	CUtlVector< CTextureReference > m_DepthTextureCache;
-	CUtlVector< bool > m_DepthTextureCacheLocks;
+	std::vector< CTextureReference > m_DepthTextureCache;
+	std::vector< bool > m_DepthTextureCacheLocks;
 	int	m_nMaxDepthTextureShadows;
 
 	bool m_bShadowFromWorldLights;
@@ -1178,9 +1156,9 @@ private:
 	float ComputeScreenArea( const Vector &vecCenter, float r ) const;
 	void PrioritySort();
 
-	CUtlVector<VisibleShadowInfo_t> m_ShadowsInView;
-	CUtlVector<VisibleShadowInfo_t> m_BlobbyShadowsInView;
-	CUtlVector<int>	m_PriorityIndex;
+	std::vector< VisibleShadowInfo_t > m_ShadowsInView;
+	std::vector< VisibleShadowInfo_t > m_BlobbyShadowsInView;
+	std::vector< int >	m_PriorityIndex;
 };
 
 
@@ -1192,19 +1170,19 @@ static CVisibleShadowList			s_VisibleShadowList;
 //-----------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------
-static CUtlVector<C_BaseAnimating *> s_NPCShadowBoneSetups;
-static CUtlVector<C_BaseAnimating *> s_NonNPCShadowBoneSetups;
+static std::vector< C_BaseAnimating * > s_NPCShadowBoneSetups;
+static std::vector< C_BaseAnimating * > s_NonNPCShadowBoneSetups;
 
 //-----------------------------------------------------------------------------
 // CVisibleShadowList - Constructor and Accessors
 //-----------------------------------------------------------------------------
-CVisibleShadowList::CVisibleShadowList() : m_ShadowsInView( 0, 64 ), m_PriorityIndex( 0, 64 ) 
+CVisibleShadowList::CVisibleShadowList() 
 {
 }
 
 int CVisibleShadowList::GetVisibleShadowCount() const
 {
-	return m_ShadowsInView.Count();
+	return std::ssize( m_ShadowsInView );
 }
 
 const VisibleShadowInfo_t &CVisibleShadowList::GetVisibleShadow( int i ) const
@@ -1214,7 +1192,7 @@ const VisibleShadowInfo_t &CVisibleShadowList::GetVisibleShadow( int i ) const
 
 int CVisibleShadowList::GetVisibleBlobbyShadowCount() const
 {
-	return m_BlobbyShadowsInView.Count();
+	return std::ssize( m_BlobbyShadowsInView );
 }
 
 const VisibleShadowInfo_t &CVisibleShadowList::GetVisibleBlobbyShadow( int i ) const
@@ -1282,7 +1260,7 @@ void CVisibleShadowList::EnumShadow( unsigned short clientShadowHandle )
 
 	if ( shadowType == SHADOWS_RENDER_TO_TEXTURE )
 	{
-		int i = m_ShadowsInView.AddToTail( );
+		int i = std::ssize( m_ShadowsInView ); m_ShadowsInView.emplace_back();
 		VisibleShadowInfo_t &info = m_ShadowsInView[i];
 
 		info.m_hShadow = clientShadowHandle;
@@ -1296,7 +1274,7 @@ void CVisibleShadowList::EnumShadow( unsigned short clientShadowHandle )
 	}
 	else
 	{
-		int i = m_BlobbyShadowsInView.AddToTail( );
+		int i = std::ssize( m_BlobbyShadowsInView ); m_BlobbyShadowsInView.emplace_back();
 		VisibleShadowInfo_t &info = m_BlobbyShadowsInView[i];
 
 		info.m_hShadow = clientShadowHandle;
@@ -1310,15 +1288,15 @@ void CVisibleShadowList::EnumShadow( unsigned short clientShadowHandle )
 //-----------------------------------------------------------------------------
 void CVisibleShadowList::PrioritySort()
 {
-	int nCount = m_ShadowsInView.Count();
-	m_PriorityIndex.EnsureCapacity( nCount );
+	int nCount = std::ssize( m_ShadowsInView );
+	m_PriorityIndex.reserve( nCount );
 
-	m_PriorityIndex.RemoveAll();
+	m_PriorityIndex.clear();
 
 	int i, j;
 	for ( i = 0; i < nCount; ++i )
 	{
-		m_PriorityIndex.AddToTail(i);
+		m_PriorityIndex.push_back( i );
 	}
 
 	for ( i = 0; i < nCount - 1; ++i )
@@ -1346,11 +1324,11 @@ int CVisibleShadowList::FindShadows( const CViewSetup *pView, int nLeafCount, Wo
 {
 	VPROF_BUDGET( "CVisibleShadowList::FindShadows", VPROF_BUDGETGROUP_SHADOW_RENDERING );
 
-	m_ShadowsInView.RemoveAll();
-	m_BlobbyShadowsInView.RemoveAll();
+	m_ShadowsInView.clear();
+	m_BlobbyShadowsInView.clear();
 	ClientLeafSystem()->EnumerateShadowsInLeaves( nLeafCount, pLeafList, this );
 
-	int nCount = m_ShadowsInView.Count();
+	int nCount = std::ssize( m_ShadowsInView );
 	if (nCount != 0)
 	{
 		// Sort based on screen area/priority
@@ -1379,8 +1357,6 @@ void CClientShadowMgr::CalculateRenderTargetsAndSizes( void )
 // Constructor
 //-----------------------------------------------------------------------------
 CClientShadowMgr::CClientShadowMgr() :
-	m_DirtyShadows( 0, 0, ShadowHandleCompareFunc ),
-	m_DirtyShadowsLeftOver( 0, 0, ShadowHandleCompareFunc ),
 	m_nPrevFrameCount( -1 ),
 	m_RenderToTextureActive( false ),
 	m_bDepthTextureActive( false ),
@@ -1541,7 +1517,7 @@ void CClientShadowMgr::InitRenderTargets()
 	r_flashlightdepthres.SetValue( m_nDepthTextureResolution );
 	r_flashlightdepthreshigh.SetValue( m_nDepthTextureResolutionHigh );
 
-	if ( m_DepthTextureCache.Count() )
+	if ( !m_DepthTextureCache.empty() )
 	{
 		bool bTools = CommandLine()->CheckParm( "-tools" ) != nullptr;
 		int nNumShadows = bTools ? MAX_DEPTH_TEXTURE_SHADOWS_TOOLS : MAX_DEPTH_TEXTURE_SHADOWS;
@@ -1577,7 +1553,7 @@ void CClientShadowMgr::Shutdown()
 {
 	ShutdownRenderTargets();
 	m_SimpleShadow.Shutdown();
-	m_Shadows.RemoveAll();
+	m_Shadows.clear();
 	ShutdownRenderToTextureShadows();
 
 	ShutdownDepthTextureShadows();
@@ -1619,8 +1595,8 @@ void CClientShadowMgr::InitDepthTextureShadows()
 		m_DummyColorTexture.InitRenderTarget( m_nDepthTextureResolution, m_nDepthTextureResolution, sizeMode, nullFormat, MATERIAL_RT_DEPTH_NONE, false, "_rt_ShadowDummy" );
 
 		// Create some number of depth-stencil textures
-		m_DepthTextureCache.Purge();
-		m_DepthTextureCacheLocks.Purge();
+		m_DepthTextureCache.clear(); m_DepthTextureCache.shrink_to_fit();
+		m_DepthTextureCacheLocks.clear(); m_DepthTextureCacheLocks.shrink_to_fit();
 		for( int i=0; i < m_nMaxDepthTextureShadows; i++ )
 		{
 			CTextureReference depthTex;	// Depth-stencil surface
@@ -1633,8 +1609,8 @@ void CClientShadowMgr::InitDepthTextureShadows()
 
 			depthTex.InitRenderTarget( nTextureResolution, nTextureResolution, sizeMode, dstFormat, MATERIAL_RT_DEPTH_NONE, false, strRTName );
 
-			m_DepthTextureCache.AddToTail( depthTex );
-			m_DepthTextureCacheLocks.AddToTail( bFalse );
+			m_DepthTextureCache.push_back( depthTex );
+			m_DepthTextureCacheLocks.push_back( bFalse );
 		}
 
 
@@ -1649,12 +1625,12 @@ void CClientShadowMgr::ShutdownDepthTextureShadows()
 		// Shut down the dummy texture
 		m_DummyColorTexture.Shutdown();
 
-		while( m_DepthTextureCache.Count() )
+		while ( !m_DepthTextureCache.empty() )
 		{
-			m_DepthTextureCache[ m_DepthTextureCache.Count()-1 ].Shutdown();
+			m_DepthTextureCache[ std::ssize( m_DepthTextureCache )-1 ].Shutdown();
 
-			m_DepthTextureCacheLocks.Remove( m_DepthTextureCache.Count()-1 );
-			m_DepthTextureCache.Remove( m_DepthTextureCache.Count()-1 );
+			m_DepthTextureCacheLocks.erase( m_DepthTextureCacheLocks.begin() + ( std::ssize( m_DepthTextureCache )-1 ) );
+			m_DepthTextureCache.erase( m_DepthTextureCache.begin() + ( std::ssize( m_DepthTextureCache )-1 ) );
 		}
 
 		m_bDepthTexturesAllocated = false;
@@ -1688,8 +1664,9 @@ void CClientShadowMgr::InitRenderToTextureShadows()
 		m_RenderModelShadow->ColorModulate( fr, fg, fb );
 
 		// Iterate over all existing textures and allocate shadow textures
-		for (ClientShadowHandle_t i = m_Shadows.Head(); i != m_Shadows.InvalidIndex(); i = m_Shadows.Next(i) )
+		for ( auto it = m_Shadows.begin(); it != m_Shadows.end(); ++it )
 		{
+			ClientShadowHandle_t i = it.handle();
 			ClientShadow_t& shadow = m_Shadows[i];
 			if ( shadow.m_Flags & SHADOW_FLAGS_USE_RENDER_TO_TEXTURE )
 			{
@@ -1708,8 +1685,9 @@ void CClientShadowMgr::ShutdownRenderToTextureShadows()
 	if (m_RenderToTextureActive)
 	{
 		// Iterate over all existing textures and deallocate shadow textures
-		for (ClientShadowHandle_t i = m_Shadows.Head(); i != m_Shadows.InvalidIndex(); i = m_Shadows.Next(i) )
+		for ( auto it = m_Shadows.begin(); it != m_Shadows.end(); ++it )
 		{
+			ClientShadowHandle_t i = it.handle();
 			CleanUpRenderToTextureShadow( i );
 
 			// Switch the material to use blobby shadows
@@ -1836,14 +1814,13 @@ void CClientShadowMgr::LevelShutdownPostEntity()
 
 	// All shadows *should* have been cleaned up when the entities went away
 	// but, just in case....
-	Assert( m_Shadows.Count() == 0 );
+	Assert( m_Shadows.empty() );
 
-	ClientShadowHandle_t h = m_Shadows.Head();
-	while (h != CLIENTSHADOW_INVALID_HANDLE)
+	for ( auto it = m_Shadows.begin(); it != m_Shadows.end(); )
 	{
-		ClientShadowHandle_t next = m_Shadows.Next(h);
+		ClientShadowHandle_t h = it.handle();
+		++it;
 		DestroyShadow( h );
-		h = next;
 	}
 
 	// Deallocate all textures
@@ -1862,10 +1839,9 @@ void CClientShadowMgr::LevelShutdownPostEntity()
 void CClientShadowMgr::RestoreRenderState()
 {
 	// Mark all shadows dirty; they need to regenerate their state
-	ClientShadowHandle_t h;
-	for ( h = m_Shadows.Head(); h != m_Shadows.InvalidIndex(); h = m_Shadows.Next(h) )
+	for ( ClientShadow_t &shadow : m_Shadows )
 	{
-		m_Shadows[h].m_Flags |= SHADOW_FLAGS_TEXTURE_DIRTY;
+		shadow.m_Flags |= SHADOW_FLAGS_TEXTURE_DIRTY;
 	}
 
 	SetShadowColor( m_AmbientLightColor.r, m_AmbientLightColor.g, m_AmbientLightColor.b );
@@ -1891,8 +1867,8 @@ void CClientShadowMgr::SetupRenderToTextureShadow( ClientShadowHandle_t h )
 	// Compute the maximum dimension
 	Vector size;
 	VectorSubtract( maxs, mins, size );
-	float maxSize = MAX( size.x, size.y );
-	maxSize = MAX( maxSize, size.z );
+	float maxSize = std::max( size.x, size.y );
+	maxSize = std::max( maxSize, size.z );
 
 	// Figure out the texture size
 	// For now, we're going to assume a fixed number of shadow texels
@@ -1926,8 +1902,9 @@ void CClientShadowMgr::CleanUpRenderToTextureShadow( ClientShadowHandle_t h )
 //-----------------------------------------------------------------------------
 void CClientShadowMgr::UpdateAllShadows()
 {
-	for ( ClientShadowHandle_t i = m_Shadows.Head(); i != m_Shadows.InvalidIndex(); i = m_Shadows.Next(i) )
+	for ( auto it = m_Shadows.begin(); it != m_Shadows.end(); ++it )
 	{
+		ClientShadowHandle_t i = it.handle();
 		ClientShadow_t& shadow = m_Shadows[i];
 
 		// Don't bother with flashlights
@@ -1945,8 +1922,9 @@ void CClientShadowMgr::UpdateAllShadows()
 
 void CClientShadowMgr::RemoveAllShadowDecals()
 {
-	for ( ClientShadowHandle_t i = m_Shadows.Head(); i != m_Shadows.InvalidIndex(); i = m_Shadows.Next(i) )
+	for ( auto it = m_Shadows.begin(); it != m_Shadows.end(); ++it )
 	{
+		ClientShadowHandle_t i = it.handle();
 		ClientShadow_t& shadow = m_Shadows[i];
 
 		// Don't bother with flashlights
@@ -2247,7 +2225,7 @@ void CClientShadowMgr::RenderShadowTexture( int w, int h )
 //-----------------------------------------------------------------------------
 // Create/destroy a shadow
 //-----------------------------------------------------------------------------
-ClientShadowHandle_t CClientShadowMgr::CreateProjectedTexture( ClientEntityHandle_t entity, int nEntIndex, int flags, CBitVec< MAX_SPLITSCREEN_PLAYERS > *pSplitScreenBits,
+ClientShadowHandle_t CClientShadowMgr::CreateProjectedTexture( ClientEntityHandle_t entity, int nEntIndex, int flags, std::bitset< MAX_SPLITSCREEN_PLAYERS > *pSplitScreenBits,
 															   bool bShareProjectedTextureBetweenSplitscreenPlayers )
 {
 	// We need to know if it's a brush model for shadows
@@ -2255,7 +2233,7 @@ ClientShadowHandle_t CClientShadowMgr::CreateProjectedTexture( ClientEntityHandl
 	{
 		IClientRenderable *pRenderable = ClientEntityList().GetClientRenderableFromHandle( entity );
 		if ( !pRenderable )
-			return m_Shadows.InvalidIndex();
+			return m_Shadows.invalid;
 
 		int modelType = modelinfo->GetModelType( pRenderable->GetModel() );
 		if (modelType == mod_brush)
@@ -2264,7 +2242,7 @@ ClientShadowHandle_t CClientShadowMgr::CreateProjectedTexture( ClientEntityHandl
 		}
 	}
 
-	ClientShadowHandle_t h = m_Shadows.AddToTail();
+	ClientShadowHandle_t h = m_Shadows.emplace();
 	ClientShadow_t& shadow = m_Shadows[h];
 	shadow.m_Entity = entity;
 	if ( ( flags & SHADOW_FLAGS_SIMPLE_PROJECTION ) == 0 )
@@ -2351,7 +2329,7 @@ ClientShadowHandle_t CClientShadowMgr::CreateProjectedTexture( ClientEntityHandl
 	shadow.m_bUseSplitScreenBits = pSplitScreenBits ? true : false;
 	if ( pSplitScreenBits )
 	{
-		shadow.m_SplitScreenBits.Copy( *pSplitScreenBits );
+		shadow.m_SplitScreenBits = *pSplitScreenBits;
 	}
 	return h;
 }
@@ -2374,7 +2352,7 @@ ClientShadowHandle_t CClientShadowMgr::CreateFlashlight( const FlashlightState_t
 	return shadowHandle;
 }
 
-ClientShadowHandle_t CClientShadowMgr::CreateShadow( ClientEntityHandle_t entity, int nEntIndex, int flags, CBitVec< MAX_SPLITSCREEN_PLAYERS > *pSplitScreenBits /*= NULL*/ )
+ClientShadowHandle_t CClientShadowMgr::CreateShadow( ClientEntityHandle_t entity, int nEntIndex, int flags, std::bitset< MAX_SPLITSCREEN_PLAYERS > *pSplitScreenBits /*= NULL*/ )
 {
 	// We don't really need a model entity handle for a projective light source, so use an invalid one.
 	flags &= ~SHADOW_FLAGS_PROJECTED_TEXTURE_TYPE_MASK;
@@ -2486,8 +2464,8 @@ void CClientShadowMgr::DestroyProjection( ClientShadowHandle_t shadowHandle )
 //-----------------------------------------------------------------------------
 void CClientShadowMgr::RemoveShadowFromDirtyList( ClientShadowHandle_t handle )
 {
-	int idx = m_DirtyShadows.Find( handle );
-	if ( idx != m_DirtyShadows.InvalidIndex() )
+	auto idx = m_DirtyShadows.find( handle );
+	if ( idx != m_DirtyShadows.end() )
 	{
 		// Clean up the shadow update bit.
 		IClientRenderable *pRenderable = ClientEntityList().GetClientRenderableFromHandle( m_Shadows[handle].m_Entity );
@@ -2495,10 +2473,10 @@ void CClientShadowMgr::RemoveShadowFromDirtyList( ClientShadowHandle_t handle )
 		{
 			pRenderable->MarkShadowDirty( false );
 		}
-		m_DirtyShadows.RemoveAt( idx );
+		m_DirtyShadows.erase( idx );
 	}
-	idx = m_DirtyShadowsLeftOver.Find( handle );
-	if ( idx != m_DirtyShadowsLeftOver.InvalidIndex() )
+	auto idxLeftOver = m_DirtyShadowsLeftOver.find( handle );
+	if ( idxLeftOver != m_DirtyShadowsLeftOver.end() )
 	{
 		// Clean up the shadow update bit.
 		IClientRenderable *pRenderable = ClientEntityList().GetClientRenderableFromHandle( m_Shadows[handle].m_Entity );
@@ -2506,7 +2484,7 @@ void CClientShadowMgr::RemoveShadowFromDirtyList( ClientShadowHandle_t handle )
 		{
 			pRenderable->MarkShadowDirty( false );
 		}
-		m_DirtyShadowsLeftOver.RemoveAt( idx );
+		m_DirtyShadowsLeftOver.erase( idxLeftOver );
 	}
 }
 
@@ -2525,7 +2503,7 @@ void CClientShadowMgr::DestroyShadow( ClientShadowHandle_t handle )
 		return;
 	}
 
-	Assert( m_Shadows.IsValidIndex(handle) );
+	Assert( m_Shadows.contains(handle) );
 	RemoveShadowFromDirtyList( handle );
 	IClientRenderable *pRenderable = ClientEntityList().GetClientRenderableFromHandle( m_Shadows[handle].m_Entity );
 	if ( pRenderable )
@@ -2542,7 +2520,7 @@ void CClientShadowMgr::DestroyShadow( ClientShadowHandle_t handle )
 		ClientLeafSystem()->RemoveShadow( m_Shadows[handle].m_ClientLeafShadowHandle );
 	}
 	CleanUpRenderToTextureShadow( handle );
-	m_Shadows.Remove(handle);
+	m_Shadows.erase(handle);
 }
 
 
@@ -2553,13 +2531,13 @@ void CClientShadowMgr::QueueShadowForDestruction( ClientShadowHandle_t handle )
 {
 	// this function should be called infrequently (it is a failsafe)
 	// so check to make sure it's not queued to delete twice
-	if ( m_shadowsToDestroy.IsValidIndex( m_shadowsToDestroy.Find(handle) ) )
+	if ( ks::is_valid_index( m_shadowsToDestroy, ks::find_index( m_shadowsToDestroy, handle ) ) )
 	{
 		AssertMsg1( false, "Tried to queue shadow %d for deletion twice!\n", (int)(handle) );
 	} 
 	else
 	{
-		m_shadowsToDestroy.AddToTail( handle );
+		m_shadowsToDestroy.push_back( handle );
 	}
 }
 
@@ -2571,11 +2549,11 @@ void CClientShadowMgr::DestroyQueuedShadows()
 {
 	Assert( !m_bUpdatingDirtyShadows );
 
-	for ( int i = 0; i < m_shadowsToDestroy.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_shadowsToDestroy ); i++ )
 	{
 		DestroyShadow( m_shadowsToDestroy[i] );
 	}
-	m_shadowsToDestroy.RemoveAll();
+	m_shadowsToDestroy.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -2913,28 +2891,28 @@ class CShadowLeafEnum : public ISpatialLeafEnumerator
 public:
 	bool EnumerateLeaf( int leaf, intp context )
 	{
-		m_LeafList.AddToTail( leaf );
+		m_LeafList.push_back( leaf );
 		return true;
 	}
 
 	void ExtractUnconnectedLeaves( const Vector &vecOrigin )
 	{
 		VPROF_BUDGET( "ExtractUnconnectedLeaves", "ExtractUnconnectedLeaves" );
-		int nCount = m_LeafList.Count();
+		int nCount = std::ssize( m_LeafList );
 		bool *pIsConnected = (bool*)stackalloc( nCount * sizeof(bool) );
-		engine->ComputeLeavesConnected( vecOrigin, nCount, m_LeafList.Base(), pIsConnected );
+		engine->ComputeLeavesConnected( vecOrigin, nCount, m_LeafList.data(), pIsConnected );
 		int nCountRemoved = 0;
 		for ( int i = nCount; --i >= 0; )
 		{
 			if ( !pIsConnected[i] )
 			{
 				++nCountRemoved;
-				m_LeafList.FastRemove( i );
+				ks::swap_remove( m_LeafList, i );
 			}
 		}
 	}
 
-	CUtlVectorFixedGrowable< int, 512 > m_LeafList;
+	ks::small_vector< int, 512 > m_LeafList;
 };
 
 
@@ -3051,8 +3029,8 @@ void CClientShadowMgr::BuildOrthoShadow( IClientRenderable* pRenderable,
 
 	CShadowLeafEnum leafList;
 	BuildShadowLeafList( &leafList, worldOrigin, vecShadowDir, size, maxHeight );
-	int nCount = leafList.m_LeafList.Count();
-	const int *pLeafList = leafList.m_LeafList.Base();
+	int nCount = std::ssize( leafList.m_LeafList );
+	const int *pLeafList = leafList.m_LeafList.data();
 
 	if ( !r_shadow_deferred.GetBool() )
 	{
@@ -3240,8 +3218,8 @@ void CClientShadowMgr::BuildRenderToTextureShadow( IClientRenderable* pRenderabl
 
 	CShadowLeafEnum leafList;
 	BuildShadowLeafList( &leafList, worldOrigin, vecShadowDir, size, maxHeight );
-	int nCount = leafList.m_LeafList.Count();
-	const int *pLeafList = leafList.m_LeafList.Base();
+	int nCount = std::ssize( leafList.m_LeafList );
+	const int *pLeafList = leafList.m_LeafList.data();
 
 	if ( !r_shadow_deferred.GetBool() )
 	{
@@ -3935,8 +3913,8 @@ void CClientShadowMgr::BuildFlashlight( ClientShadowHandle_t handle )
 	{
 		const FlashlightState_t& flashlightState = shadowmgr->GetFlashlightState( shadow.m_ShadowHandle );
 		BuildFlashlightLeafList( &leafList, flashlightState.m_vecLightOrigin, shadow.m_WorldToShadow );
-		nCount = leafList.m_LeafList.Count();
-		pLeafList = leafList.m_LeafList.Base();
+		nCount = std::ssize( leafList.m_LeafList );
+		pLeafList = leafList.m_LeafList.data();
 	}
 
 	if( bLightWorld )
@@ -4266,26 +4244,23 @@ void CClientShadowMgr::UpdateDirtyShadows()
 {
 	if ( r_shadow_debug_spew.GetBool() )
 	{
-		DevMsg( "dirty shadows: %3d\n", m_DirtyShadows.Count() );
+		DevMsg( "dirty shadows: %3d\n", (int)m_DirtyShadows.size() );
 	}
 
-	unsigned short i = m_DirtyShadows.FirstInorder();
-	while ( i != m_DirtyShadows.InvalidIndex() )
+	for ( ClientShadowHandle_t handle : m_DirtyShadows )
 	{
 		MDLCACHE_CRITICAL_SECTION();
-		ClientShadowHandle_t& handle = m_DirtyShadows[ i ];
 		UpdateDirtyShadow( handle );
-		i = m_DirtyShadows.NextInorder(i);
 	}
-	m_DirtyShadows.RemoveAll();
+	m_DirtyShadows.clear();
 
 	// Transparent shadows must remain dirty, since they were not re-projected
-	int nCount = m_TransparentShadows.Count();
+	int nCount = std::ssize( m_TransparentShadows );
 	for ( int i = 0; i < nCount; ++i )
 	{
-		m_DirtyShadows.Insert( m_TransparentShadows[i] );
+		m_DirtyShadows.insert( m_TransparentShadows[i] );
 	}
-	m_TransparentShadows.RemoveAll();
+	m_TransparentShadows.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -4293,24 +4268,17 @@ void CClientShadowMgr::UpdateDirtyShadows()
 //-----------------------------------------------------------------------------
 void CClientShadowMgr::UpdateDirtyShadowsHalfRate()
 {
-	unsigned short i = m_DirtyShadowsLeftOver.FirstInorder();
-	while ( i != m_DirtyShadowsLeftOver.InvalidIndex() )
+	for ( ClientShadowHandle_t handle : m_DirtyShadowsLeftOver )
 	{
 		MDLCACHE_CRITICAL_SECTION();
-		ClientShadowHandle_t& handle = m_DirtyShadowsLeftOver[ i ];
 		UpdateDirtyShadow( handle );
 
 		// remove from real dirty set, so that we don't touch shadows twice
-		unsigned short nIdx = m_DirtyShadows.Find( handle );
-		if ( nIdx != m_DirtyShadows.InvalidIndex() )
-		{
-			m_DirtyShadows.RemoveAt( nIdx );
-		}
-		i = m_DirtyShadowsLeftOver.NextInorder( i );
+		m_DirtyShadows.erase( handle );
 	}
-	int nNumShadowsProcessed = m_DirtyShadowsLeftOver.Count();
+	int nNumShadowsProcessed = (int)m_DirtyShadowsLeftOver.size();
 
-	int nNumTotalDirtyShadows = nNumShadowsProcessed + m_DirtyShadows.Count();
+	int nNumTotalDirtyShadows = nNumShadowsProcessed + (int)m_DirtyShadows.size();
 	int nNumShadowsToProcess = nNumTotalDirtyShadows / 2 + 1;
 	if ( r_shadow_debug_spew.GetBool() )
 	{
@@ -4318,41 +4286,35 @@ void CClientShadowMgr::UpdateDirtyShadowsHalfRate()
 	}
 
 	nNumShadowsToProcess -= nNumShadowsProcessed;
-	nNumShadowsToProcess = MAX( 0, nNumShadowsToProcess );
-	nNumShadowsToProcess = MIN( m_DirtyShadows.Count(), nNumShadowsToProcess );
-	//DevMsg( "dirty: %2d leftover: %2d total: %2d from main list: %2d processed: %d\n", m_DirtyShadows.Count(), m_DirtyShadowsLeftOver.Count(), nNumTotalDirtyShadows, nNumShadowsToProcess, nNumShadowsProcessed + nNumShadowsToProcess );
+	nNumShadowsToProcess = std::max( 0, nNumShadowsToProcess );
+	nNumShadowsToProcess = std::min( (int)m_DirtyShadows.size(), nNumShadowsToProcess );
+	//DevMsg( "dirty: %2d leftover: %2d total: %2d from main list: %2d processed: %d\n", (int)m_DirtyShadows.size(), (int)m_DirtyShadowsLeftOver.size(), nNumTotalDirtyShadows, nNumShadowsToProcess, nNumShadowsProcessed + nNumShadowsToProcess );
 
-	m_DirtyShadowsLeftOver.RemoveAll();
+	m_DirtyShadowsLeftOver.clear();
 
 	//
 	// process any additional dirty shadows
 	//
 
-	i = m_DirtyShadows.FirstInorder();
+	auto i = m_DirtyShadows.begin();
 	for ( int j = 0; j < nNumShadowsToProcess; j++ )
 	{
 		MDLCACHE_CRITICAL_SECTION();
-		ClientShadowHandle_t& handle = m_DirtyShadows[ i ];
-		UpdateDirtyShadow( handle );
-		i = m_DirtyShadows.NextInorder( i );
+		UpdateDirtyShadow( *i );
+		++i;
 	}
 	// put the leftover shadows into the leftover bucket
-	while ( i != m_DirtyShadows.InvalidIndex() )
-	{
-		ClientShadowHandle_t& handle = m_DirtyShadows[ i ];
-		i = m_DirtyShadows.NextInorder( i );
-		m_DirtyShadowsLeftOver.Insert( handle );
-	}
+	m_DirtyShadowsLeftOver.insert( i, m_DirtyShadows.end() );
 
-	m_DirtyShadows.RemoveAll();
+	m_DirtyShadows.clear();
 
 	// Transparent shadows must remain dirty, since they were not re-projected
-	int nCount = m_TransparentShadows.Count();
+	int nCount = std::ssize( m_TransparentShadows );
 	for ( int i = 0; i < nCount; ++i )
 	{
-		m_DirtyShadows.Insert( m_TransparentShadows[i] );
+		m_DirtyShadows.insert( m_TransparentShadows[i] );
 	}
-	m_TransparentShadows.RemoveAll();
+	m_TransparentShadows.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -4360,7 +4322,7 @@ void CClientShadowMgr::UpdateDirtyShadowsHalfRate()
 //-----------------------------------------------------------------------------
 void CClientShadowMgr::UpdateDirtyShadow( ClientShadowHandle_t handle )
 {
-	Assert( m_Shadows.IsValidIndex( handle ) );
+	Assert( m_Shadows.contains( handle ) );
 	if ( IsShadowingFromWorldLights() )
 	{
 		UpdateShadowDirectionFromLocalLightSource( handle );
@@ -4381,13 +4343,8 @@ void HalfUpdateRateCallback( IConVar *var, const char *pOldValue, float flOldVal
 //-----------------------------------------------------------------------------
 void CClientShadowMgr::FlushLeftOverDirtyShadows()
 {
-	unsigned short i = m_DirtyShadowsLeftOver.FirstInorder();
-	while ( i != m_DirtyShadowsLeftOver.InvalidIndex() )
-	{
-		m_DirtyShadows.InsertIfNotFound( m_DirtyShadowsLeftOver[ i ] );
-		i = m_DirtyShadowsLeftOver.NextInorder(i);
-	}
-	m_DirtyShadowsLeftOver.RemoveAll();
+	m_DirtyShadows.insert( m_DirtyShadowsLeftOver.begin(), m_DirtyShadowsLeftOver.end() );
+	m_DirtyShadowsLeftOver.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -4417,7 +4374,7 @@ IClientRenderable *CClientShadowMgr::GetParentShadowEntity( ClientShadowHandle_t
 //-----------------------------------------------------------------------------
 // Marks a shadow as needing re-projection
 //-----------------------------------------------------------------------------
-CThreadFastMutex g_DirtyListAddMutex; // This should be made lock free? [3/19/2008 tom]
+std::recursive_mutex g_DirtyListAddMutex; // This should be made lock free? [3/19/2008 tom]
 void CClientShadowMgr::AddToDirtyShadowList( ClientShadowHandle_t handle, bool bForce )
 {
 	// Don't add to the dirty shadow list while we're iterating over it
@@ -4429,10 +4386,10 @@ void CClientShadowMgr::AddToDirtyShadowList( ClientShadowHandle_t handle, bool b
 	if ( handle == CLIENTSHADOW_INVALID_HANDLE )
 		return;
 
-	AUTO_LOCK( g_DirtyListAddMutex );
+	std::scoped_lock lock( g_DirtyListAddMutex );
 
-	Assert( m_DirtyShadows.Find( handle ) == m_DirtyShadows.InvalidIndex() );
-	m_DirtyShadows.Insert( handle );
+	Assert( !m_DirtyShadows.contains( handle ) );
+	m_DirtyShadows.insert( handle );
 
 	// This pretty much guarantees we'll recompute the shadow
 	if ( bForce )
@@ -4460,7 +4417,7 @@ void CClientShadowMgr::AddToDirtyShadowList( IClientRenderable *pRenderable, boo
 	if ( m_bUpdatingDirtyShadows )
 		return;
 
-	AUTO_LOCK( g_DirtyListAddMutex );
+	std::scoped_lock lock( g_DirtyListAddMutex );
 
 	// Are we already in the dirty list?
 	if ( pRenderable->IsShadowDirty( ) )
@@ -4567,7 +4524,7 @@ void CClientShadowMgr::UpdateShadow( ClientShadowHandle_t handle, bool force )
 			shadowmgr->EnableShadow( shadow.m_ShadowHandle, false );
 		}
 
-		m_TransparentShadows.AddToTail( handle );
+		m_TransparentShadows.push_back( handle );
 		return;
 	}
 
@@ -5108,11 +5065,11 @@ bool CClientShadowMgr::BuildSetupShadowHierarchy( IClientRenderable *pRenderable
 			{
 				if ( pEntity->IsNPC() )
 				{
-					s_NPCShadowBoneSetups.AddToTail( assert_cast<C_BaseAnimating *>( pEntity ) );
+					s_NPCShadowBoneSetups.push_back( assert_cast<C_BaseAnimating *>( pEntity ) );
 				}
 				else if ( pEntity->GetBaseAnimating() )
 				{
-					s_NonNPCShadowBoneSetups.AddToTail( assert_cast<C_BaseAnimating *>( pEntity ) );
+					s_NonNPCShadowBoneSetups.push_back( assert_cast<C_BaseAnimating *>( pEntity ) );
 				}
 
 			}
@@ -5234,7 +5191,7 @@ bool CClientShadowMgr::DrawRenderToTextureShadow( int nSlot, unsigned short clie
 	ClientShadow_t& shadow = m_Shadows[clientShadowHandle];
 
 	if ( shadow.m_bUseSplitScreenBits && 
-		!shadow.m_SplitScreenBits.IsBitSet( nSlot ) )
+		!shadow.m_SplitScreenBits[nSlot] )
 	{
 		return false;
 	}
@@ -5322,7 +5279,7 @@ void CClientShadowMgr::DrawRenderToTextureShadowLOD( int nSlot, unsigned short c
 
 	ClientShadow_t &shadow = m_Shadows[clientShadowHandle];
 	if ( shadow.m_bUseSplitScreenBits && 
-		!shadow.m_SplitScreenBits.IsBitSet( nSlot ) )
+		!shadow.m_SplitScreenBits[nSlot] )
 	{
 		return;
 	}
@@ -5365,8 +5322,9 @@ int CClientShadowMgr::BuildActiveShadowDepthList( const CViewSetup &viewSetup, i
 
 	int nActiveDepthShadowCount = 0;
 
-	for ( ClientShadowHandle_t i = m_Shadows.Head(); i != m_Shadows.InvalidIndex(); i = m_Shadows.Next(i) )
+	for ( auto it = m_Shadows.begin(); it != m_Shadows.end(); ++it )
 	{
+		ClientShadowHandle_t i = it.handle();
 		if ( nActiveDepthShadowCount >= nMaxDepthShadows && nNumHighRes == nActiveDepthShadowCount )
 		{
 			// Easy out! There's nothing more we can do
@@ -5477,8 +5435,9 @@ int CClientShadowMgr::BuildActiveShadowDepthList( const CViewSetup &viewSetup, i
 int CClientShadowMgr::BuildActiveFlashlightList( const CViewSetup &viewSetup, int nMaxFlashlights, ClientShadowHandle_t *pActiveFlashlights )
 {
 	int nActiveFlashlightCount = 0;
-	for ( ClientShadowHandle_t i = m_Shadows.Head(); i != m_Shadows.InvalidIndex(); i = m_Shadows.Next(i) )
+	for ( auto it = m_Shadows.begin(); it != m_Shadows.end(); ++it )
 	{
+		ClientShadowHandle_t i = it.handle();
 		ClientShadow_t& shadow = m_Shadows[i];
 
 		if ( ( shadow.m_Flags & ( SHADOW_FLAGS_FLASHLIGHT | SHADOW_FLAGS_SIMPLE_PROJECTION ) ) == 0 )
@@ -5569,7 +5528,7 @@ void AddPointToExtentsHelper( const VMatrix &flashlightToWorld, const Vector &ve
 
 void CClientShadowMgr::GetFrustumExtents( ClientShadowHandle_t handle, Vector &vecMin, Vector &vecMax )
 {
-	Assert( m_Shadows.IsValidIndex( handle ) );
+	Assert( m_Shadows.contains( handle ) );
 
 	CClientShadowMgr::ClientShadow_t &shadow = m_Shadows[ handle ];
 
@@ -5722,8 +5681,8 @@ void CClientShadowMgr::ComputeShadowDepthTextures( const CViewSetup &viewSetup, 
 			Vector vecExtentsMin, vecExtentsMax;
 			GetFrustumExtents( pActiveDepthShadows[j], vecExtentsMin, vecExtentsMax );
 
-			float flVisibleBBoxMinHeight = MIN( vecExtentsMax.z - 1.0f, C_EnvProjectedTexture::GetVisibleBBoxMinHeight() );
-			vecExtentsMin.z = MAX( vecExtentsMin.z, flVisibleBBoxMinHeight );
+			float flVisibleBBoxMinHeight = std::min( vecExtentsMax.z - 1.0f, C_EnvProjectedTexture::GetVisibleBBoxMinHeight() );
+			vecExtentsMin.z = std::max( vecExtentsMin.z, flVisibleBBoxMinHeight );
 
 			NDebugOverlay::Box( Vector( 0.0f, 0.0f, 0.0f ), vecExtentsMin, vecExtentsMax, 0, 0, 255, 100, 0.0f );
 		}
@@ -5857,7 +5816,7 @@ void CClientShadowMgr::ComputeShadowTextures( const CViewSetup &view, int leafCo
 //-------------------------------------------------------------------------------------------------------
 bool CClientShadowMgr::LockShadowDepthTexture( CTextureReference *shadowDepthTexture, int nStartTexture )
 {
-	for ( int i = nStartTexture; i < m_DepthTextureCache.Count(); i++ )		// Search for cached shadow depth texture
+	for ( int i = nStartTexture; i < std::ssize( m_DepthTextureCache ); i++ )		// Search for cached shadow depth texture
 	{
 		if ( m_DepthTextureCacheLocks[i] == false && m_DepthTextureCache[i].IsValid() )				// If a free one is found
 		{
@@ -5879,7 +5838,7 @@ bool ClientShadowMgrAcquireShadowDepthTexture( CTextureReference *pDummyColorTex
 
 	if ( pShadowDepthTexture )
 	{
-		if ( s_ClientShadowMgr.m_DepthTextureCache.Count() && s_ClientShadowMgr.m_DepthTextureCache[0].IsValid() )
+		if ( std::ssize( s_ClientShadowMgr.m_DepthTextureCache ) && s_ClientShadowMgr.m_DepthTextureCache[0].IsValid() )
 		{
 			*pShadowDepthTexture = s_ClientShadowMgr.m_DepthTextureCache[0];
 			return true;
@@ -5897,7 +5856,7 @@ bool ClientShadowMgrAcquireShadowDepthTexture( CTextureReference *pDummyColorTex
 //------------------------------------------------------------------
 void CClientShadowMgr::UnlockAllShadowDepthTextures()
 {
-	for (int i=0; i< m_DepthTextureCache.Count(); i++ )
+	for (int i=0; i< std::ssize( m_DepthTextureCache ); i++ )
 	{
 		m_DepthTextureCacheLocks[i] = false;
 	}
@@ -5908,7 +5867,7 @@ void CClientShadowMgr::UnlockAllShadowDepthTextures()
 
 void CClientShadowMgr::SetFlashlightTarget( ClientShadowHandle_t shadowHandle, EHANDLE targetEntity )
 {
-	Assert( m_Shadows.IsValidIndex( shadowHandle ) );
+	Assert( m_Shadows.contains( shadowHandle ) );
 
 	CClientShadowMgr::ClientShadow_t &shadow = m_Shadows[ shadowHandle ];
 	if( ( shadow.m_Flags & ( SHADOW_FLAGS_FLASHLIGHT | SHADOW_FLAGS_SIMPLE_PROJECTION ) ) == 0 )
@@ -5921,7 +5880,7 @@ void CClientShadowMgr::SetFlashlightTarget( ClientShadowHandle_t shadowHandle, E
 
 void CClientShadowMgr::SetFlashlightLightWorld( ClientShadowHandle_t shadowHandle, bool bLightWorld )
 {
-	Assert( m_Shadows.IsValidIndex( shadowHandle ) );
+	Assert( m_Shadows.contains( shadowHandle ) );
 
 	ClientShadow_t &shadow = m_Shadows[ shadowHandle ];
 	if( ( shadow.m_Flags & ( SHADOW_FLAGS_FLASHLIGHT | SHADOW_FLAGS_SIMPLE_PROJECTION ) ) == 0 )

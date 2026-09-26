@@ -37,20 +37,20 @@ class CCSEpidermisVisualsDataCompare : public CBaseVisualsDataCompare
 public:
 	CCSEpidermisVisualsDataCompare() = default;
 	CCSEpidermisVisualsDataCompare( CCSEpidermisVisualsDataCompare&& moveFrom ) // = default;
-		: CBaseVisualsDataCompare( Move( moveFrom ) )
-		, m_bIsBody( Move( moveFrom.m_bIsBody ) )
+		: CBaseVisualsDataCompare( std::move( moveFrom ) )
+		, m_bIsBody( std::move( moveFrom.m_bIsBody ) )
 	{
 		memcpy( m_pchSkinIdent, moveFrom.m_pchSkinIdent, sizeof( m_pchSkinIdent ) );
 	}
 	CCSEpidermisVisualsDataCompare& operator=(CCSEpidermisVisualsDataCompare && moveFrom) // = default;
 	{
-		*( CBaseVisualsDataCompare* )this = Move( moveFrom );
-		m_bIsBody = Move( moveFrom.m_bIsBody );
+		*( CBaseVisualsDataCompare* )this = std::move( moveFrom );
+		m_bIsBody = std::move( moveFrom.m_bIsBody );
 		memcpy( m_pchSkinIdent, moveFrom.m_pchSkinIdent, sizeof( m_pchSkinIdent ) );
 		return *this;
 	}
 
-	virtual void SerializeToBuffer( CUtlBuffer &buf );
+	virtual void SerializeToBuffer( ks::byte_writer &buf );
 
 	bool m_bIsBody;
 	char m_pchSkinIdent[ 16 ];

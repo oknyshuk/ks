@@ -14,8 +14,6 @@
 
 #include "tier1/utlvector.h"
 
-#include "tier0/memdbgon.h"
-
 // SINGLE_INHERITANCE restricts the size of CBaseEntity pointers-to-member-functions to 4 bytes
 class SINGLE_INHERITANCE CBaseEntity;
 struct inputdata_t;
@@ -286,7 +284,5 @@ struct datamap_t
 #define END_BITFIELD() \
 		}; \
 	};
-
-#include "tier0/memdbgoff.h"
 
 #endif // DATAMAP_H

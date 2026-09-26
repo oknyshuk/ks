@@ -7,9 +7,6 @@
 #include "env_debughistory.h"
 #include "tier0/vprof.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // Number of characters worth of debug to use per history category
 #define DEBUG_HISTORY_VERSION			6
 #define DEBUG_HISTORY_FIRST_VERSIONED	5
@@ -98,7 +95,7 @@ void CDebugHistory::AddDebugHistoryLine( int iCategory, const char *szLine )
 		int iCharsLeftBeforeLoop = sizeof(m_DebugLines[iCategory]) - (m_DebugLineEnd[iCategory] - m_DebugLines[iCategory]);
 
 		// Write into the buffer
-		int iWrote = MIN( iCharsToWrite, iCharsLeftBeforeLoop );
+		int iWrote = std::min( iCharsToWrite, iCharsLeftBeforeLoop );
 		memcpy( m_DebugLineEnd[iCategory], pszRemaining, iWrote );	
 		m_DebugLineEnd[iCategory] += iWrote;
 		pszRemaining += iWrote;

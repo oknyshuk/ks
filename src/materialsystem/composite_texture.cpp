@@ -26,9 +26,6 @@ ConVar mat_verbose_texture_gen( "mat_verbose_texture_gen", "0" );
 		Msg( "TextureGeneration: " msg, ##__VA_ARGS__ ); \
 	} \
 	
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 int CCompositeTexture::m_nTextureCount = 0;
 
 int s_nCompositeMaterialIndex = 0;
@@ -139,7 +136,7 @@ void CCompositeTextureResult::Release()
 // Composite Texture - used to make a custom texture using a Shader that can be used with custom materials
 //
 
-CCompositeTexture::CCompositeTexture( const CUtlBuffer &compareBlob, KeyValues *pCompositingMaterialKeyValues, CompositeTextureSize_t size, CompositeTextureFormat_t format, int nMaterialParamNameId, bool bSRGB, bool bIgnorePicMip )
+CCompositeTexture::CCompositeTexture( std::span< const std::byte > compareBlob, KeyValues *pCompositingMaterialKeyValues, CompositeTextureSize_t size, CompositeTextureFormat_t format, int nMaterialParamNameId, bool bSRGB, bool bIgnorePicMip )
 	: m_size( size )
 	, m_format( format )
 	, m_nMaterialParamNameId( nMaterialParamNameId )
@@ -161,7 +158,7 @@ CCompositeTexture::CCompositeTexture( const CUtlBuffer &compareBlob, KeyValues *
 		m_pPreLoadTextures[ i ] = nullptr;
 	}
 
-	m_compareBlob.CopyBuffer( compareBlob );
+	m_compareBlob.assign( compareBlob.begin(), compareBlob.end() );
 
 	// we need to copy this, because the passed in one was allocated outside materialsystem.dll
 	m_pCompositingMaterialKeyValues = pCompositingMaterialKeyValues->MakeCopy();
@@ -289,7 +286,7 @@ void CCompositeTexture::GenerateComposite( void )
 			}
 
 #ifdef WRITE_OUT_VTF_PRE_COMPRESS
-			CUtlBuffer buf;
+			ks::byte_writer buf;
 			m_pScratchVTF->Serialize(buf);
 
 			char szTextureName[MAX_PATH];
@@ -299,7 +296,7 @@ void CCompositeTexture::GenerateComposite( void )
 
 			if ( f != FILESYSTEM_INVALID_HANDLE )
 			{
-				g_pFullFileSystem->Write( buf.Base(), buf.TellMaxPut(), f );
+				g_pFullFileSystem->Write( buf.data(), buf.size(), f );
 				g_pFullFileSystem->Close(f);
 			}
 #endif
@@ -619,8 +616,8 @@ CCompositeTextureGenerator::CCompositeTextureGenerator( void )
 	, m_pPaintWearTexture( nullptr )
 {
 #ifndef DEDICATED
-	m_pCompositeTextures.EnsureCapacity( 256 );
-	m_pPendingCompositeTextures.EnsureCapacity( 256 );
+	m_pCompositeTextures.reserve( 256 );
+	m_pPendingCompositeTextures.reserve( 256 );
 #endif
 }
 
@@ -642,7 +639,7 @@ bool CCompositeTextureGenerator::Process( void )
 
 	bool bDidWork = false;
 
-	for ( int i = m_pPendingCompositeTextures.Count() - 1; i >= 0; i-- )
+	for ( int i = std::ssize( m_pPendingCompositeTextures ) - 1; i >= 0; i-- )
 	{
 		CCompositeTexture *pTexture = m_pPendingCompositeTextures[ i ];
 		if ( pTexture && !pTexture->IsReady() )
@@ -651,8 +648,8 @@ bool CCompositeTextureGenerator::Process( void )
 			{
 				pTexture->Finalize();
 				// move from pending to final list
-				m_pCompositeTextures.AddToTail( pTexture );
-				m_pPendingCompositeTextures.Remove( i );
+				m_pCompositeTextures.push_back( pTexture );
+				m_pPendingCompositeTextures.erase( m_pPendingCompositeTextures.begin() + i );
 				break;
 			}
 			else if ( pTexture->NeedsAsyncTextureLoad() )
@@ -696,7 +693,7 @@ bool CCompositeTextureGenerator::Process( void )
 		}
 	}
 
-	for ( int i = m_pCompositeTextures.Count() - 1; i >= 0; i-- )
+	for ( int i = std::ssize( m_pCompositeTextures ) - 1; i >= 0; i-- )
 	{
 		CCompositeTexture *pTexture = m_pCompositeTextures[ i ];
 		if ( pTexture )
@@ -709,19 +706,19 @@ bool CCompositeTextureGenerator::Process( void )
 				pTexture->Init();
 
 				// move back to the pending list
-				m_pPendingCompositeTextures.AddToTail( pTexture );
-				m_pCompositeTextures.Remove( i );
+				m_pPendingCompositeTextures.push_back( pTexture );
+				m_pCompositeTextures.erase( m_pCompositeTextures.begin() + i );
 				
 				// add material to generation queue
-				m_GenerateQueueMutex.Lock();
-				m_pGenerateQueue.AddToTail( pTexture );
-				m_GenerateQueueMutex.Unlock();
+				m_GenerateQueueMutex.lock();
+				m_pGenerateQueue.push_back( pTexture );
+				m_GenerateQueueMutex.unlock();
 			}
 			// clean up materials that are no longer used (we are the only reference)
 			else if ( pTexture->ShouldRelease() )
 			{
 				pTexture->Release();
-				m_pCompositeTextures.Remove( i );
+				m_pCompositeTextures.erase( m_pCompositeTextures.begin() + i );
 			}
 		}
 	}
@@ -836,7 +833,7 @@ ICompositeTexture *CCompositeTextureGenerator::GetCompositeTexture( IVisualsData
 	CCompositeTexture *pTexture = nullptr;
 	
 	// Look for an existing material match
-	for ( int i = 0; i < m_pCompositeTextures.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_pCompositeTextures ); ++i )
 	{
 		CCompositeTexture *pCompareTexture = m_pCompositeTextures[ i ];
 		if ( pCompareTexture->Format() == format && 
@@ -849,7 +846,7 @@ ICompositeTexture *CCompositeTextureGenerator::GetCompositeTexture( IVisualsData
 			break;
 		}
 	}
-	for ( int i = 0; i < m_pPendingCompositeTextures.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_pPendingCompositeTextures ); ++i )
 	{
 		CCompositeTexture *pCompareTexture = m_pPendingCompositeTextures[ i ];
 		if ( pCompareTexture->Format() == format && 
@@ -875,12 +872,12 @@ ICompositeTexture *CCompositeTextureGenerator::GetCompositeTexture( IVisualsData
 
 		if ( pTexture->Init() )
 		{
-			m_pPendingCompositeTextures.AddToTail( pTexture );
+			m_pPendingCompositeTextures.push_back( pTexture );
 
 			// add texture to generation queue (handled in the generation thread)
-			m_GenerateQueueMutex.Lock();
-			m_pGenerateQueue.AddToHead( pTexture );
-			m_GenerateQueueMutex.Unlock();
+			m_GenerateQueueMutex.lock();
+			m_pGenerateQueue.push_front( pTexture );
+			m_GenerateQueueMutex.unlock();
 		}
 		else
 		{
@@ -901,14 +898,14 @@ bool CCompositeTextureGenerator::ForceRegenerate( ICompositeTexture *pTextureInt
 		return false;
 	}
 
-	int nTexture = m_pCompositeTextures.Find( pTexture );
+	int nTexture = ks::find_index( m_pCompositeTextures, pTexture );
 	if ( nTexture != -1 )
 	{
 		// move back to the pending list
-		m_pPendingCompositeTextures.AddToTail( pTexture );
-		m_pCompositeTextures.Remove( nTexture );
+		m_pPendingCompositeTextures.push_back( pTexture );
+		m_pCompositeTextures.erase( m_pCompositeTextures.begin() + nTexture );
 	}
-	else if ( m_pPendingCompositeTextures.Find( pTexture ) == -1 )
+	else if ( ks::find_index( m_pPendingCompositeTextures, pTexture ) == -1 )
 	{
 		// texture isn't in either list, so we can't regenerate it
 		return false;
@@ -917,16 +914,16 @@ bool CCompositeTextureGenerator::ForceRegenerate( ICompositeTexture *pTextureInt
 	pTexture->Refresh();
 
 	// add texture to generation queue (handled in the generation thread)
-	m_GenerateQueueMutex.Lock();
-	m_pGenerateQueue.AddToTail( pTexture );
-	m_GenerateQueueMutex.Unlock();
+	m_GenerateQueueMutex.lock();
+	m_pGenerateQueue.push_back( pTexture );
+	m_GenerateQueueMutex.unlock();
 
 	return true;
 }
 
 void CCompositeTextureGenerator::DestroyTextures( void )
 {
-	for ( int i = 0; i < m_pCompositeTextures.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_pCompositeTextures ); ++i )
 	{
 		CCompositeTexture *pTexture = m_pCompositeTextures[ i ];
 		if ( pTexture )
@@ -935,9 +932,9 @@ void CCompositeTextureGenerator::DestroyTextures( void )
 			pTexture->Release();
 		}
 	}
-	m_pCompositeTextures.RemoveAll();
+	m_pCompositeTextures.clear();
 
-	for ( int i = 0; i < m_pPendingCompositeTextures.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_pPendingCompositeTextures ); ++i )
 	{
 		CCompositeTexture *pTexture = m_pPendingCompositeTextures[ i ];
 		if ( pTexture )
@@ -946,7 +943,7 @@ void CCompositeTextureGenerator::DestroyTextures( void )
 			pTexture->Release();
 		}
 	}
-	m_pPendingCompositeTextures.RemoveAll();
+	m_pPendingCompositeTextures.clear();
 }
 
 void CCompositeTextureGenerator::CreateGenerateThread()
@@ -961,9 +958,9 @@ void CCompositeTextureGenerator::DestroyGenerateThread()
 	if ( m_hGenerateThread )
 	{
 		// remove all the queued materials from the generate queue
-		m_GenerateQueueMutex.Lock();
-		m_pGenerateQueue.RemoveAll();
-		m_GenerateQueueMutex.Unlock();
+		m_GenerateQueueMutex.lock();
+		m_pGenerateQueue.clear();
+		m_GenerateQueueMutex.unlock();
 
 		m_bGenerateThreadExit = true;
 		ThreadJoin( m_hGenerateThread );
@@ -979,13 +976,13 @@ void CCompositeTextureGenerator::GenerateThread()
 		CCompositeTexture *pTexture = nullptr;
 
 		// pull a material that needs generation off the queue (if any exist)
-		m_GenerateQueueMutex.Lock();
-		if ( m_pGenerateQueue.Count() > 0 )
+		m_GenerateQueueMutex.lock();
+		if ( !m_pGenerateQueue.empty() )
 		{
-			pTexture = m_pGenerateQueue.Element( m_pGenerateQueue.Head() );
-			m_pGenerateQueue.Remove( m_pGenerateQueue.Head() );
+			pTexture = m_pGenerateQueue.front();
+			m_pGenerateQueue.pop_front();
 		}
-		m_GenerateQueueMutex.Unlock();
+		m_GenerateQueueMutex.unlock();
 
 		if ( pTexture )
 		{
@@ -1008,7 +1005,7 @@ void CCompositeTextureGenerator::GenerateThread()
 		}
 	}
 
-	m_GenerateQueueMutex.Lock();
-	m_pGenerateQueue.RemoveAll();
-	m_GenerateQueueMutex.Unlock();
+	m_GenerateQueueMutex.lock();
+	m_pGenerateQueue.clear();
+	m_GenerateQueueMutex.unlock();
 }

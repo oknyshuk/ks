@@ -6,18 +6,15 @@
 
 #include "dmxloader/dmxelement.h"
 #include "dmxloader/dmxattribute.h"
-#include "tier1/utlbuffer.h"
 #include "mathlib/ssemath.h"
-#include "tier1/utlbufferutil.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier1/serialization.h"
+#include <algorithm>
 
 
 //-----------------------------------------------------------------------------
 // globals
 //-----------------------------------------------------------------------------
-CUtlSymbolTableLargeMT CDmxElement::s_TypeSymbols;
+ks::intern_pool_mt CDmxElement::s_TypeSymbols;
 
 
 //-----------------------------------------------------------------------------
@@ -34,7 +31,7 @@ CDmxElement* CreateDmxElement( const char *pType )
 //-----------------------------------------------------------------------------
 CDmxElement::CDmxElement( const char *pType )
 {
-	m_Type = s_TypeSymbols.AddString( pType );
+	m_Type = pType ? s_TypeSymbols.intern( pType ) : std::string_view();
 	m_nLockCount = 0;
 	m_bResortNeeded = false;
 	m_bIsMarkedForDeletion = false;
@@ -51,19 +48,19 @@ CDmxElement::~CDmxElement()
 //-----------------------------------------------------------------------------
 // Utility method for getting at the type
 //-----------------------------------------------------------------------------
-CUtlSymbolLarge CDmxElement::GetType()  const
+std::string_view CDmxElement::GetType()  const
 {
 	return m_Type;
 }
 
 const char* CDmxElement::GetTypeString() const
 {
-	return m_Type.String();
+	return m_Type.data() ? m_Type.data() : "";
 }
 
 const char* CDmxElement::GetName() const
 {
-	return GetValue< CUtlString >( "name" );
+	return GetValue< std::string >( "name" ).c_str();
 }
 
 const DmObjectId_t &CDmxElement::GetId() const
@@ -82,7 +79,7 @@ void CDmxElement::SetId( const DmObjectId_t &id )
 
 void CDmxElement::SetName( const char *pName )
 {
-	SetValue< CUtlString >( "name", pName );
+	SetValue< std::string >( "name", ks::nz( pName ) );
 }
 
 
@@ -94,11 +91,11 @@ void CDmxElement::Resort( )	const
 	if ( m_bResortNeeded )
 	{
 		AttributeList_t *pAttributes = const_cast< AttributeList_t *>( &m_Attributes );
-		pAttributes->RedoSort();
+		std::ranges::sort( *pAttributes, CDmxAttributeLess(), &AttributePtr_t::get );
 		m_bResortNeeded = false;
 
 		// NOTE: This checks for duplicate attribute names
-		int nCount = m_Attributes.Count();
+		int nCount = std::ssize( m_Attributes );
 		for ( int i = nCount; --i >= 1; )
 		{
 			if ( m_Attributes[i] == nullptr || m_Attributes[i-1] == nullptr )
@@ -106,10 +103,12 @@ void CDmxElement::Resort( )	const
 				continue;
 			}
 
-			if ( m_Attributes[i]->GetNameSymbol() == m_Attributes[i-1]->GetNameSymbol() )
+			if ( m_Attributes[i]->GetNameSymbol().data() == m_Attributes[i-1]->GetNameSymbol().data() )
 			{
 				Warning( "Duplicate attribute name %s encountered!\n", m_Attributes[i]->GetName() );
-				pAttributes->Remove(i);
+				// dropped but not freed: whoever added it may still hold the pointer
+				(void)( *pAttributes )[i].release();
+				pAttributes->erase( pAttributes->begin() + i );
 				Assert( 0 );
 			}
 		}
@@ -144,12 +143,12 @@ CDmxAttribute *CDmxElement::AddAttribute( const char *pAttributeName )
 {
 	int nIndex = FindAttribute( pAttributeName );
 	if ( nIndex >= 0 )
-		return m_Attributes[nIndex];
+		return m_Attributes[nIndex].get();
 
 	CDmxElementModifyScope modify( this );
 	m_bResortNeeded = true;
 	CDmxAttribute *pAttribute = new CDmxAttribute( pAttributeName );
-	m_Attributes.InsertNoSort( pAttribute );
+	m_Attributes.emplace_back( pAttribute );
 	return pAttribute;
 }
 
@@ -159,34 +158,23 @@ void CDmxElement::RemoveAttribute( const char *pAttributeName )
 	int idx = FindAttribute( pAttributeName );
 	if ( idx >= 0 )
 	{
-		delete m_Attributes[idx];
-		m_Attributes.Remove( idx );
+		m_Attributes.erase( m_Attributes.begin() + idx );
 	}
 }
 
 void CDmxElement::RemoveAttributeByPtr( CDmxAttribute *pAttribute )
 {	
 	CDmxElementModifyScope modify( this );
-	int nCount = m_Attributes.Count();
-	for ( int i = 0; i < nCount; ++i )
+	auto it = std::ranges::find( m_Attributes, pAttribute, &AttributePtr_t::get );
+	if ( it != m_Attributes.end() )
 	{
-		if ( m_Attributes[i] != pAttribute )
-			continue;
-
-		delete pAttribute;
-		m_Attributes.Remove( i );
-		break;
+		m_Attributes.erase( it );
 	}
 }
 
 void CDmxElement::RemoveAllAttributes()
 {
-	int nCount = m_Attributes.Count();
-	for ( int i = 0; i < nCount; ++i )
-	{
-		delete m_Attributes[i];
-	}
-	m_Attributes.RemoveAll();
+	m_Attributes.clear();
 	m_bResortNeeded = false;
 }
 
@@ -229,18 +217,24 @@ int CDmxElement::FindAttribute( const char *pAttributeName ) const
 	// We can eliminate log M by using a hash table in the symbol lookup
 	Resort();
 	CDmxAttribute search( pAttributeName );
-	return m_Attributes.Find( &search );
+	auto it = std::ranges::lower_bound( m_Attributes, &search, CDmxAttributeLess(), &AttributePtr_t::get );
+	if ( it == m_Attributes.end() || CDmxAttributeLess()( &search, it->get() ) )
+		return -1;
+	return (int)( it - m_Attributes.begin() );
 }
 
 
 //-----------------------------------------------------------------------------
 // Find an attribute by name-based lookup
 //-----------------------------------------------------------------------------
-int CDmxElement::FindAttribute( CUtlSymbolLarge attributeName ) const
+int CDmxElement::FindAttribute( std::string_view attributeName ) const
 {
 	Resort();
 	CDmxAttribute search( attributeName );
-	return m_Attributes.Find( &search );
+	auto it = std::ranges::lower_bound( m_Attributes, &search, CDmxAttributeLess(), &AttributePtr_t::get );
+	if ( it == m_Attributes.end() || CDmxAttributeLess()( &search, it->get() ) )
+		return -1;
+	return (int)( it - m_Attributes.begin() );
 }
 
 
@@ -257,7 +251,7 @@ CDmxAttribute *CDmxElement::GetAttribute( const char *pAttributeName )
 {
 	int idx = FindAttribute( pAttributeName );
 	if ( idx >= 0 )
-		return m_Attributes[ idx ];
+		return m_Attributes[ idx ].get();
 	return nullptr;
 }
 
@@ -265,7 +259,7 @@ const CDmxAttribute *CDmxElement::GetAttribute( const char *pAttributeName ) con
 {
 	int idx = FindAttribute( pAttributeName );
 	if ( idx >= 0 )
-		return m_Attributes[ idx ];
+		return m_Attributes[ idx ].get();
 	return nullptr;
 }
 
@@ -275,30 +269,30 @@ const CDmxAttribute *CDmxElement::GetAttribute( const char *pAttributeName ) con
 //-----------------------------------------------------------------------------
 int CDmxElement::AttributeCount() const
 {
-	return m_Attributes.Count();
+	return std::ssize( m_Attributes );
 }
 
 CDmxAttribute *CDmxElement::GetAttribute( int nIndex )
 {
-	return m_Attributes[ nIndex ];
+	return m_Attributes[ nIndex ].get();
 }
 
 const CDmxAttribute *CDmxElement::GetAttribute( int nIndex ) const
 {
-	return m_Attributes[ nIndex ];
+	return m_Attributes[ nIndex ].get();
 }
 
 
 //-----------------------------------------------------------------------------
 // Removes all elements recursively
 //-----------------------------------------------------------------------------
-void CDmxElement::AddElementsToDelete( CUtlVector< CDmxElement * >& elementsToDelete )
+void CDmxElement::AddElementsToDelete( std::vector< CDmxElement * >& elementsToDelete )
 {
 	if ( m_bIsMarkedForDeletion )
 		return;
 
 	m_bIsMarkedForDeletion = true;
-	elementsToDelete.AddToTail( this );
+	elementsToDelete.push_back( this );
 
 	int nCount = AttributeCount();
 	for ( int i = 0; i < nCount; ++i )
@@ -316,8 +310,8 @@ void CDmxElement::AddElementsToDelete( CUtlVector< CDmxElement * >& elementsToDe
 
 		if ( pAttribute->GetType() == AT_ELEMENT_ARRAY )
 		{
-			const CUtlVector< CDmxElement * > &elements = pAttribute->GetArray< CDmxElement* >();
-			int nElementCount = elements.Count();
+			const std::vector< CDmxElement * > &elements = pAttribute->GetArray< CDmxElement* >();
+			int nElementCount = std::ssize( elements );
 			for ( int j = 0; j < nElementCount; ++j )
 			{
 				if ( elements[j] )
@@ -336,9 +330,9 @@ void CDmxElement::AddElementsToDelete( CUtlVector< CDmxElement * >& elementsToDe
 //-----------------------------------------------------------------------------
 void CDmxElement::RemoveAllElementsRecursive()
 {
-	CUtlVector< CDmxElement * > elementsToDelete; 
+	std::vector< CDmxElement * > elementsToDelete; 
 	AddElementsToDelete( elementsToDelete );
-	int nCount = elementsToDelete.Count();
+	int nCount = std::ssize( elementsToDelete );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		delete elementsToDelete[i];
@@ -471,7 +465,7 @@ void CDmxElement::UnpackIntoStructure( void *pData, const DmxElementUnpackStruct
 		{
 			if ( pUnpack->m_nSize == UTL_STRING_SIZE )  // the string is a UtlString.
 			{
-				*(CUtlString *)pDest = pAttribute->GetValueString();		
+				*(std::string *)pDest = pAttribute->GetValueString();		
 			}
 			else  // the string is a preallocated char array.
 			{
@@ -491,7 +485,7 @@ void CDmxElement::UnpackIntoStructure( void *pData, const DmxElementUnpackStruct
 			{
 				// Copy from the attribute into a fixed-size array:
 				float *pfDest = (float *)pDest;
-				const CUtlVector< float > &floatVector = pAttribute->GetArray< float >();
+				const std::vector< float > &floatVector = pAttribute->GetArray< float >();
 				for ( int i = 0; i < pUnpack->m_nArrayLength; i++ )
 				{
 					for ( int j = 0; j < 4; j++ ) memcpy( pfDest++, &floatVector[ i ], sizeof( float ) );
@@ -620,7 +614,7 @@ void CDmxElement::AddAttributesFromStructure( const void *pData, const DmxElemen
 			{
 				if ( pUnpack->m_nSize == UTL_STRING_SIZE )	  // it is a UtlString. 
 				{
-					const char *test = (*(CUtlString *)pSrc).Get();
+					const char *test = (*(std::string *)pSrc).data();
 					pAttribute->SetValue( test );
 				}
 				else

@@ -6,7 +6,6 @@
 //===========================================================================//
 
 
-#pragma warning( disable: 4018 ) // '==' : signed/unsigned mismatch in rbtree
 #include <iconv.h>
 
 #include <wchar.h>
@@ -15,18 +14,17 @@
 
 #include "localize/ilocalize.h"
 #include "tier1/utlvector.h"
-#include "tier1/utlrbtree.h"
-#include "tier1/utlsymbol.h"
+#include "tier1/map_ops.h"
+#include "tier1/intern_pool.h"
+#include "tier1/string_ops.h"
 #include "tier1/utlstring.h"
+#include <vector>
 #include "UnicodeFileHelpers.h"
 #include "tier0/icommandline.h"
 #include "exprevaluator.h"
 #include "iregistry.h"
 #include <vstdlib/vstrtools.h>
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 #define MAX_LOCALIZED_CHARS	4096
 
@@ -96,39 +94,37 @@ private:
 	struct localizedstring_t
 	{
 		LocalizeStringIndex_t nameIndex;
-		// nameIndex == LOCALIZE_INVALID_STRING_INDEX is used only for searches and implies
-		// that pszValueString will be used from union fields.
-		union
-		{
-			LocalizeStringIndex_t valueIndex;		// Used when nameIndex != LOCALIZE_INVALID_STRING_INDEX
-			const char * pszValueString;	// Used only if nameIndex == LOCALIZE_INVALID_STRING_INDEX
-		};
-		CUtlSymbol filename;
+		LocalizeStringIndex_t valueIndex;
+		const char *filename;	// in ks::global_symbols(), so equal names share a pointer; null if none
 	};
 
 	struct LocalizationFileInfo_t
 	{
-		CUtlSymbol	symName;
-		CUtlSymbol	symPathID;
+		std::string	symName;
+		std::string	symPathID;
 		bool		bIncludeFallbacks;
 
 		static bool LessFunc( const LocalizationFileInfo_t& lhs, const LocalizationFileInfo_t& rhs )
 		{
-			int iresult = Q_stricmp( lhs.symPathID.String(), rhs.symPathID.String() );
+			int iresult = Q_stricmp( lhs.symPathID.c_str(), rhs.symPathID.c_str() );
 			if ( iresult != 0 )
 			{
 				return iresult == -1;
 			}
 
-			return Q_stricmp( lhs.symName.String(), rhs.symName.String() ) < 0;
+			return Q_stricmp( lhs.symName.c_str(), rhs.symName.c_str() ) < 0;
 		}
 	};
 
-	struct fastvalue_t
+	// Orders value indices by their text in m_Values.
+	struct FastValueLess
 	{
-		int				valueindex;
-		const wchar_t	*search;
-		static CLocalize	*s_pTable;
+		using is_transparent = void;
+		const std::vector< wchar_t > *m_pValues;
+		const wchar_t *Str( int i ) const { return &( *m_pValues )[ i ]; }
+		bool operator()( int a, int b ) const { return wcscmp( Str( a ), Str( b ) ) < 0; }
+		bool operator()( int a, const wchar_t *b ) const { return wcscmp( Str( a ), b ) < 0; }
+		bool operator()( const wchar_t *a, int b ) const { return wcscmp( a, Str( b ) ) < 0; }
 	};
 
 private:
@@ -146,25 +142,24 @@ private:
 	bool m_bSuppressChangeCallbacks;
 	bool m_bQueuedChangeCallback;
 
-	// Stores the symbol lookup
-	CUtlRBTree<localizedstring_t, LocalizeStringIndex_t> m_Lookup;
+	// Stores the symbol lookup. String indices are handles given out through ILocalize: stable
+	// until RemoveAll, so they index this vector; m_LookupByName orders them by name. A multimap:
+	// FindIndex strips '#' but AddString doesn't, so a '#' token can be added twice.
+	std::vector< localizedstring_t > m_Lookup;
+	std::multimap< std::string, LocalizeStringIndex_t, ks::iless > m_LookupByName;
 	
 	// stores the string data
-	CUtlVector<char> m_Names;
-	CUtlVector<wchar_t> m_Values;
-	CUtlSymbol m_CurrentFile;
-	CUtlVector< LocalizationFileInfo_t > m_LocalizationFiles;
-	CUtlRBTree< fastvalue_t, int >	m_FastValueLookup;
+	std::vector< char > m_Names;
+	std::vector< wchar_t > m_Values;
+	const char *m_CurrentFile = nullptr;	// in ks::global_symbols()
+	std::vector< LocalizationFileInfo_t > m_LocalizationFiles;
+	std::multiset< int, FastValueLess >	m_FastValueLookup{ FastValueLess{ &m_Values } };
 	ILocalizeTextQuery *m_pQuery;
 	static CLocalize *s_pTable;
-	CUtlVector< ILocalizationChangeCallback* > m_ChangeCallbacks;
+	std::vector< ILocalizationChangeCallback* > m_ChangeCallbacks;
 
-	CUtlBuffer m_bufAsianFrequencySequence;
+	std::vector< std::byte > m_AsianFrequencySequence;
 	bool m_bAsianFrequencySequenceLoaded;
-
-	// Less function, for sorting strings
-	static bool SymLess( localizedstring_t const& i1, localizedstring_t const& i2 );
-	static bool FastValueLessFunc( const fastvalue_t& lhs, const fastvalue_t& rhs );
 };
 
 // global instance of table
@@ -177,8 +172,7 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR(CLocalize, ILocalize, LOCALIZE_INTERFACE_VERSI
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
-CLocalize::CLocalize() : 
-	m_Lookup( 0, 0, SymLess ), m_Names( 1024 ), m_Values( 2048 ), m_FastValueLookup( 0, 0, FastValueLessFunc )
+CLocalize::CLocalize()
 {
 	m_bUseOnlyLongestLanguageString = false;
 	m_bSuppressChangeCallbacks = false;
@@ -192,9 +186,9 @@ CLocalize::CLocalize() :
 //-----------------------------------------------------------------------------
 CLocalize::~CLocalize()
 {
-	m_Names.Purge();
-	m_Values.Purge();
-	m_LocalizationFiles.Purge();
+	m_Names.clear(); m_Names.shrink_to_fit();
+	m_Values.clear(); m_Values.shrink_to_fit();
+	m_LocalizationFiles.clear(); m_LocalizationFiles.shrink_to_fit();
 }
 
 
@@ -226,18 +220,18 @@ void CLocalize::SetTextQuery( ILocalizeTextQuery *pQuery )
 //-----------------------------------------------------------------------------
 void CLocalize::InstallChangeCallback( ILocalizationChangeCallback *pCallback )
 {
-	if ( m_ChangeCallbacks.Find( pCallback ) != m_ChangeCallbacks.InvalidIndex() )
+	if ( ks::find_index( m_ChangeCallbacks, pCallback ) != -1 )
 	{
 		Warning( "CLocalize::InstallChangeCallback: Attempted to add the same callback twice!\n" );
 		return;
 	}
 
-	m_ChangeCallbacks.AddToTail( pCallback );
+	m_ChangeCallbacks.push_back( pCallback );
 }
 
 void CLocalize::RemoveChangeCallback( ILocalizationChangeCallback *pCallback )
 {
-	m_ChangeCallbacks.FindAndRemove( pCallback );
+	ks::erase_first( m_ChangeCallbacks, pCallback );
 }
 
 
@@ -265,7 +259,7 @@ void CLocalize::InvokeChangeCallbacks( )
 		return;
 	}
 
-	int nCount = m_ChangeCallbacks.Count();
+	int nCount = std::ssize( m_ChangeCallbacks );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		m_ChangeCallbacks[i]->OnLocalizationChanged();
@@ -312,7 +306,7 @@ bool CLocalize::ReadLocalizationFile( const char *pRelativePath, const char *pPa
 		return false;
 
 	// this is an optimization so that the filename string doesn't have to get converted to a symbol for each key/value
-	m_CurrentFile = pRelativePath;
+	m_CurrentFile = ks::global_symbols().intern( pRelativePath ).data();
 
 	// read into a memory block
 	int fileSize = g_pFullFileSystem->Size(file);
@@ -333,7 +327,7 @@ bool CLocalize::ReadLocalizationFile( const char *pRelativePath, const char *pPa
 	{
 		Msg( "Ignoring non-unicode close caption file %s\n", pRelativePath );
 		g_pFullFileSystem->FreeOptimalReadBuffer( memBlock );
-		m_CurrentFile = UTL_INVAL_SYMBOL;
+		m_CurrentFile = nullptr;
 		return false;
 	}
 
@@ -461,7 +455,7 @@ bool CLocalize::ReadLocalizationFile( const char *pRelativePath, const char *pPa
 	}
 
 	g_pFullFileSystem->FreeOptimalReadBuffer( memBlock );
-	m_CurrentFile = UTL_INVAL_SYMBOL;
+	m_CurrentFile = nullptr;
 	DiscardFastValueLookup();
 	return true;
 }
@@ -558,18 +552,18 @@ bool CLocalize::AddFile( const char *szFileName, const char *pPathID, bool bIncl
 	search.symPathID = pPathID ? pPathID : "";
 	search.bIncludeFallbacks = false;
 
-	int lfc = m_LocalizationFiles.Count();
+	int lfc = std::ssize( m_LocalizationFiles );
 	for ( int lf = 0; lf < lfc; ++lf )
 	{
 		LocalizationFileInfo_t& entry = m_LocalizationFiles[ lf ];
-		if ( !Q_stricmp( entry.symName.String(), szFileName ) )
+		if ( !Q_stricmp( entry.symName.c_str(), szFileName ) )
 		{
-			m_LocalizationFiles.Remove( lf );
+			m_LocalizationFiles.erase( m_LocalizationFiles.begin() + lf );
 			break;
 		}
 	}
 
-	m_LocalizationFiles.AddToTail( search );
+	m_LocalizationFiles.push_back( search );
 
 	bool bOk = ReadLocalizationFile( szFileName, pPathID );
 	if ( !bOk )
@@ -652,7 +646,7 @@ bool CLocalize::SaveToFile( const char *szFileName )
 		return false;
 
 	// only save the symbols relevant to this file
-	CUtlSymbol fileName = szFileName;
+	const char *fileName = ks::global_symbols().intern( szFileName ).data();
 
 	// write litte-endian unicode marker
 	unsigned short marker = 0xFEFF;
@@ -724,31 +718,17 @@ bool CLocalize::SaveToFile( const char *szFileName )
 void CLocalize::ReloadLocalizationFiles( )
 {
 	// re-add all the localization files
-	for (int i = 0; i < m_LocalizationFiles.Count(); i++)
+	for (int i = 0; i < std::ssize( m_LocalizationFiles ); i++)
 	{
 		LocalizationFileInfo_t& entry = m_LocalizationFiles[ i ];
 		AddFile
 		(
-			entry.symName.String(), 
-			entry.symPathID.String()[0] ? entry.symPathID.String() : nullptr,
+			entry.symName.c_str(), 
+			entry.symPathID.empty() ? nullptr : entry.symPathID.c_str(),
 			entry.bIncludeFallbacks 
 		);
 	}
 }
-
-//-----------------------------------------------------------------------------
-// Purpose: Used to sort strings
-//-----------------------------------------------------------------------------
-bool CLocalize::SymLess(localizedstring_t const &i1, localizedstring_t const &i2)
-{
-	const char *str1 = (i1.nameIndex == LOCALIZE_INVALID_STRING_INDEX) ? i1.pszValueString :
-											&s_Localize.m_Names[i1.nameIndex];
-	const char *str2 = (i2.nameIndex == LOCALIZE_INVALID_STRING_INDEX) ? i2.pszValueString :
-											&s_Localize.m_Names[i2.nameIndex];
-	
-	return stricmp(str1, str2) < 0;
-}
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Finds a string in the table
@@ -795,12 +775,8 @@ LocalizeStringIndex_t CLocalize::FindIndex(const char *pName)
 		pName++;
 	}
 	
-	// Passing this special invalid symbol makes the comparison function
-	// use the string passed in the context
-	localizedstring_t invalidItem;
-	invalidItem.nameIndex = LOCALIZE_INVALID_STRING_INDEX;
-	invalidItem.pszValueString = pName;
-	return m_Lookup.Find( invalidItem );
+	const LocalizeStringIndex_t *pIndex = ks::find_ptr( m_LookupByName, pName );
+	return pIndex ? *pIndex : LOCALIZE_INVALID_STRING_INDEX;
 }
 
 void CLocalize::AddString(const char *pString, ucs2 *pUCS2Value, const char *fileName)
@@ -828,7 +804,7 @@ void CLocalize::AddString(const char *pString, wchar_t *pValue, const char *file
 	if ( valueIndex == LOCALIZE_INVALID_STRING_INDEX )
 	{
 		int len = wcslen( pValue ) + 1;
-		valueIndex = m_Values.AddMultipleToTail( len );
+		valueIndex = std::ssize( m_Values ); m_Values.resize( m_Values.size() + len );
 		memcpy( &m_Values[valueIndex], pValue, len * sizeof(wchar_t) );
 	}
 
@@ -841,14 +817,15 @@ void CLocalize::AddString(const char *pString, wchar_t *pValue, const char *file
 	{
 		// didn't find, insert the string into the vector.
 		int len = strlen(pString) + 1;
-		stridx = m_Names.AddMultipleToTail( len );
+		stridx = std::ssize( m_Names ); m_Names.resize( m_Names.size() + len );
 		memcpy( &m_Names[stridx], pString, len * sizeof(char) );
 
 		item.nameIndex = stridx;
 		item.valueIndex = valueIndex;
-		item.filename = fileName ? fileName : m_CurrentFile;
+		item.filename = fileName ? ks::global_symbols().intern( fileName ).data() : m_CurrentFile;
 
-		m_Lookup.Insert( item );
+		m_LookupByName.emplace( pString, (LocalizeStringIndex_t)m_Lookup.size() );
+		m_Lookup.push_back( item );
 	}
 	else
 	{
@@ -874,7 +851,7 @@ void CLocalize::AddString(const char *pString, wchar_t *pValue, const char *file
 		// replace the current item
 		item.nameIndex = GetNameByIndex( stridx ) - &m_Names[ 0 ];
 		item.valueIndex = valueIndex;
-		item.filename = fileName ? fileName : m_CurrentFile;
+		item.filename = fileName ? ks::global_symbols().intern( fileName ).data() : m_CurrentFile;
 		m_Lookup[ stridx ] = item;
 
 		InvokeChangeCallbacks();
@@ -886,10 +863,11 @@ void CLocalize::AddString(const char *pString, wchar_t *pValue, const char *file
 //-----------------------------------------------------------------------------
 void CLocalize::RemoveAll()
 {
-	m_Lookup.RemoveAll();
-	m_Names.RemoveAll();
-	m_Values.RemoveAll();
-	m_LocalizationFiles.RemoveAll();
+	m_Lookup.clear();
+	m_LookupByName.clear();
+	m_Names.clear();
+	m_Values.clear();
+	m_LocalizationFiles.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -897,7 +875,7 @@ void CLocalize::RemoveAll()
 //-----------------------------------------------------------------------------
 LocalizeStringIndex_t CLocalize::GetFirstStringIndex()
 {
-	return m_Lookup.FirstInorder();
+	return m_LookupByName.empty() ? LOCALIZE_INVALID_STRING_INDEX : m_LookupByName.begin()->second;
 }
 
 //-----------------------------------------------------------------------------
@@ -905,10 +883,12 @@ LocalizeStringIndex_t CLocalize::GetFirstStringIndex()
 //-----------------------------------------------------------------------------
 LocalizeStringIndex_t CLocalize::GetNextStringIndex(LocalizeStringIndex_t index)
 {
-	LocalizeStringIndex_t idx = m_Lookup.NextInorder(index);
-	if (idx == m_Lookup.InvalidIndex())
+	auto [it, itEnd] = m_LookupByName.equal_range( GetNameByIndex( index ) );
+	while ( it != itEnd && it->second != index )
+		++it;
+	if ( it == itEnd || ++it == m_LookupByName.end() )
 		return LOCALIZE_INVALID_STRING_INDEX;
-	return idx;
+	return it->second;
 }
 
 //-----------------------------------------------------------------------------
@@ -935,36 +915,21 @@ wchar_t *CLocalize::GetValueByIndex(LocalizeStringIndex_t index)
 
 CLocalize *CLocalize::s_pTable = nullptr;
 
-bool CLocalize::FastValueLessFunc( const fastvalue_t& lhs, const fastvalue_t& rhs )
-{
-	Assert( s_pTable );
-
-	const wchar_t *w1 = lhs.search ? lhs.search : &s_pTable->m_Values[ lhs.valueindex ];
-	const wchar_t *w2 = rhs.search ? rhs.search : &s_pTable->m_Values[ rhs.valueindex ];
-
-	return ( wcscmp( w1, w2 ) < 0 ) ? true : false;
-}
-
 void CLocalize::BuildFastValueLookup()
 {
-	m_FastValueLookup.RemoveAll();
+	m_FastValueLookup.clear();
 	s_pTable = this;
 
 	// Build it
-	int c = m_Lookup.Count();
-	for ( int i = 0; i < c; ++i )
+	for ( const localizedstring_t &lstr : m_Lookup )
 	{
-		fastvalue_t val;
-		val.valueindex = m_Lookup[ i ].valueIndex;
-		val.search = nullptr;
-
-		m_FastValueLookup.Insert( val );
+		m_FastValueLookup.insert( (int)lstr.valueIndex );
 	}
 }
 
 void CLocalize::DiscardFastValueLookup()
 {
-	m_FastValueLookup.RemoveAll();
+	m_FastValueLookup.clear();
 	s_pTable = nullptr;
 }
 
@@ -976,14 +941,10 @@ int CLocalize::FindExistingValueIndex( const wchar_t *value )
 	if ( !s_pTable )
 		return (int)LOCALIZE_INVALID_STRING_INDEX;
 
-	fastvalue_t val;
-	val.valueindex = -1;
-	val.search = value;
-
-	int idx = m_FastValueLookup.Find( val );
-	if ( idx != m_FastValueLookup.InvalidIndex() )
+	auto it = m_FastValueLookup.find( value );
+	if ( it != m_FastValueLookup.end() )
 	{
-		return m_FastValueLookup[ idx ].valueindex;
+		return *it;
 	}
 	return (int)LOCALIZE_INVALID_STRING_INDEX;
 }
@@ -994,7 +955,7 @@ int CLocalize::FindExistingValueIndex( const wchar_t *value )
 const char *CLocalize::GetFileNameByIndex(LocalizeStringIndex_t index)
 {
 	localizedstring_t &lstr = m_Lookup[index];
-	return lstr.filename.String();
+	return ks::nz( lstr.filename );
 }
 
 //-----------------------------------------------------------------------------
@@ -1013,7 +974,7 @@ void CLocalize::SetValueByIndex(LocalizeStringIndex_t index, wchar_t *newValue)
 	if (newLen > oldLen)
 	{
 		// it won't fit, so allocate new memory - this is wasteful, but only happens in edit mode
-		lstr.valueIndex = m_Values.AddMultipleToTail(newLen + 1);
+		lstr.valueIndex = std::ssize( m_Values ); m_Values.resize( m_Values.size() + ( newLen + 1 ) );
 		memcpy(&m_Values[lstr.valueIndex], newValue, (newLen + 1) * sizeof(wchar_t));
 	}
 	else
@@ -1030,7 +991,7 @@ void CLocalize::SetValueByIndex(LocalizeStringIndex_t index, wchar_t *newValue)
 //-----------------------------------------------------------------------------
 int CLocalize::GetLocalizationFileCount()
 {
-	return m_LocalizationFiles.Count();
+	return std::ssize( m_LocalizationFiles );
 }
 
 //-----------------------------------------------------------------------------
@@ -1038,7 +999,7 @@ int CLocalize::GetLocalizationFileCount()
 //-----------------------------------------------------------------------------
 const char *CLocalize::GetLocalizationFileName(int index)
 {
-	return m_LocalizationFiles[index].symName.String();
+	return m_LocalizationFiles[index].symName.c_str();
 }
 
 //-----------------------------------------------------------------------------
@@ -1046,10 +1007,10 @@ const char *CLocalize::GetLocalizationFileName(int index)
 //-----------------------------------------------------------------------------
 bool CLocalize::LocalizationFileIsLoaded(const char *name)
 {
-	int c = m_LocalizationFiles.Count();
+	int c = std::ssize( m_LocalizationFiles );
 	for ( int i = 0; i < c; ++i )
 	{
-		if ( !Q_stricmp( m_LocalizationFiles[ i ].symName.String(), name ) )
+		if ( !Q_stricmp( m_LocalizationFiles[ i ].symName.c_str(), name ) )
 			return true;
 	}
 
@@ -1153,7 +1114,7 @@ void CLocalize::ConstructString(wchar_t *unicodeOutput, int unicodeBufferSizeInB
 				int paramSize = wcslen(value);
 				if (paramSize >= unicodeBufferSize)
 				{
-					paramSize = MAX( 0, unicodeBufferSize - 1 );
+					paramSize = std::max( 0, unicodeBufferSize - 1 );
 				}
 
 				wcsncpy(outputPos, value, paramSize);
@@ -1196,7 +1157,7 @@ void CLocalize::ConstructString(wchar_t *unicodeOutput, int unicodeBufferSizeInB
 						int paramSize = wcslen(value);
 						if (paramSize >= unicodeBufferSize)
 						{
-							paramSize = MAX( 0, unicodeBufferSize - 1 );
+							paramSize = std::max( 0, unicodeBufferSize - 1 );
 						}
 
 						wcsncpy(outputPos, value, paramSize);
@@ -1233,11 +1194,12 @@ wchar_t* CLocalize::GetAsianFrequencySequence( const char * pLanguage )
 		m_bAsianFrequencySequenceLoaded = true;
 		char szFileName[128];
 		V_snprintf( szFileName, sizeof( szFileName ), "resource/%s_frequency.txt", pLanguage );
-		g_pFullFileSystem->ReadFile( szFileName, "GAME", m_bufAsianFrequencySequence );
-		uint nSize = m_bufAsianFrequencySequence.TellPut() / sizeof( wchar_t );
-		m_bufAsianFrequencySequence.PutUnsignedShort( 0 ); // 0-terminate
+		if ( auto file = g_pFullFileSystem->ReadFile( szFileName, "GAME" ) )
+			m_AsianFrequencySequence = std::move( *file );
+		uint nSize = m_AsianFrequencySequence.size() / sizeof( wchar_t );
+		m_AsianFrequencySequence.resize( m_AsianFrequencySequence.size() + sizeof( wchar_t ) ); // 0-terminate
 
-		wchar_t * pAsianFrequencySequence = (wchar_t*) m_bufAsianFrequencySequence.Base();
+		wchar_t * pAsianFrequencySequence = (wchar_t*) m_AsianFrequencySequence.data();
 		// transcode from LT Unicode to GT Unicode
 		if( pAsianFrequencySequence[0] == 0xFFFE )
 		{
@@ -1250,9 +1212,9 @@ wchar_t* CLocalize::GetAsianFrequencySequence( const char * pLanguage )
 		}
 	}	
 
-	if( m_bufAsianFrequencySequence.TellPut() > 2 )
+	if( m_AsianFrequencySequence.size() > sizeof( wchar_t ) )
 	{
-		wchar_t * pAsianFrequencySequence = (wchar_t*) m_bufAsianFrequencySequence.Base();
+		wchar_t * pAsianFrequencySequence = (wchar_t*) m_AsianFrequencySequence.data();
 
 		if( pAsianFrequencySequence[0] == 0xFEFF )
 		{
@@ -1455,7 +1417,7 @@ void ConstructStringKeyValuesInternal_Impl( T *unicodeOutput, int unicodeBufferS
 					int paramSize = StringFuncs<T>::Length( value );
 					if (paramSize >= unicodeBufferSize)
 					{
-						paramSize = MAX( 0, unicodeBufferSize - 1 );
+						paramSize = std::max( 0, unicodeBufferSize - 1 );
 					}
 
 					StringFuncs<T>::Copy( outputPos, value, paramSize );

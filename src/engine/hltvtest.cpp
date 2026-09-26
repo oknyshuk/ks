@@ -15,9 +15,6 @@
 #include "hltvserver.h"
 #include "host.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 CHLTVTestSystem *hltvtest = nullptr;
 
 CHLTVTestSystem::CHLTVTestSystem(void)
@@ -32,21 +29,20 @@ CHLTVTestSystem::~CHLTVTestSystem(void)
 
 void CHLTVTestSystem::RunFrame()
 {
-	FOR_EACH_VEC( m_Servers, iServer )
+	for ( auto &pServer : m_Servers )
 	{
-		m_Servers[iServer]->RunFrame();
+		pServer->RunFrame();
 	}
 }
 
 bool CHLTVTestSystem::StartTest(int nClients, const char *pszAddress)
 {
-	Assert( m_Servers.Count() == 0 );
+	Assert( std::ssize( m_Servers ) == 0 );
 
-	while ( m_Servers.Count() < nClients )
+	while ( std::ssize( m_Servers ) < nClients )
 	{
 		extern ConVar tv_snapshotrate;
-		CHLTVServer *pServer = new CHLTVServer(0, tv_snapshotrate.GetFloat() );
-		m_Servers.AddToTail( pServer );
+		CHLTVServer *pServer = m_Servers.emplace_back( std::make_unique< CHLTVServer >( 0, tv_snapshotrate.GetFloat() ) ).get();
 		pServer->Init( NET_IsDedicated() );
 		pServer->m_ClientState.m_Socket = NET_AddExtraSocket( PORT_ANY );
 	}
@@ -61,26 +57,26 @@ bool CHLTVTestSystem::StartTest(int nClients, const char *pszAddress)
 
 void CHLTVTestSystem::RetryTest(int nClients)
 {
-	int maxClients = MIN( nClients+1, m_Servers.Count() );
+	int maxClients = std::min<int>( nClients+1, std::ssize( m_Servers ) );
 		
 	for ( int i=0; i<maxClients; i++ )
 	{
-		CHLTVServer *pHLTV = m_Servers[i];
+		CHLTVServer *pHLTV = m_Servers[i].get();
 		if ( pHLTV->m_ClientState.m_Remote.Count() > 0 )
 		{
-			pHLTV->ConnectRelay( pHLTV->m_ClientState.m_Remote.Get( 0 ).m_szRetryAddress );
+			pHLTV->ConnectRelay( pHLTV->m_ClientState.m_Remote.Get( 0 ).m_szRetryAddress.c_str() );
 		}
 	}
 }
 
 bool CHLTVTestSystem::StopsTest()
 {
-	FOR_EACH_VEC( m_Servers, iServer )
+	for ( auto &pServer : m_Servers )
 	{
-		m_Servers[iServer]->Shutdown();
+		pServer->Shutdown();
 	}
 
-	m_Servers.PurgeAndDeleteElements();
+	m_Servers.clear();
 
 	NET_RemoveAllExtraSockets();
 

@@ -7,9 +7,6 @@
 #include "SourceAppInfo.h"
 #include "tier0/dbg.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 struct SourceAppInfo_t
 {	

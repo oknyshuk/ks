@@ -23,7 +23,7 @@ public:
 		{
 		}
 
-		CUtlString m_Name;
+		std::string m_Name;
 		int m_Kills;
 	};
 
@@ -62,8 +62,8 @@ public:
 	virtual void DisplayConvarsForCurrentMode( void ) = 0;
 
 	// Returns the weapon progression for the current game type and mode.
-	virtual const CUtlVector< WeaponProgression > *GetWeaponProgressionForCurrentModeCT( void ) = 0;
-	virtual const CUtlVector< WeaponProgression > *GetWeaponProgressionForCurrentModeT( void ) = 0;
+	virtual const std::vector< WeaponProgression > *GetWeaponProgressionForCurrentModeCT( void ) = 0;
+	virtual const std::vector< WeaponProgression > *GetWeaponProgressionForCurrentModeT( void ) = 0;
 
 	virtual int GetNoResetVoteThresholdForCurrentModeCT( void ) = 0;
 	virtual int GetNoResetVoteThresholdForCurrentModeT( void ) = 0;
@@ -75,7 +75,7 @@ public:
 	virtual bool GetGameModeAndTypeNameIdsFromStrings( const char* szGameType, const char* szGameMode, const char*& szOutGameTypeNameId, const char*& szOutGameModeNameId ) = 0;
 
 
-	virtual bool CreateOrUpdateWorkshopMapGroup( const char* szName, const CUtlStringList& vecMapNames ) = 0;
+	virtual bool CreateOrUpdateWorkshopMapGroup( const char* szName, const std::vector< std::string >& vecMapNames ) = 0;
 	virtual bool IsWorkshopMapGroup( const char* szMapGroupName ) = 0;
 
 	//
@@ -101,9 +101,9 @@ public:
 	virtual bool GetMapInfo( const char *mapName, uint32 &richPresence ) = 0;
 
 	// Returns the available character model names (T or CT) for the given map.
-	virtual const CUtlStringList *GetTModelsForMap( const char *mapName ) = 0;
-	virtual const CUtlStringList *GetCTModelsForMap( const char *mapName ) = 0;
-	virtual const CUtlStringList *GetHostageModelsForMap( const char *mapName ) = 0;
+	virtual const std::vector< std::string > *GetTModelsForMap( const char *mapName ) = 0;
+	virtual const std::vector< std::string > *GetCTModelsForMap( const char *mapName ) = 0;
+	virtual const std::vector< std::string > *GetHostageModelsForMap( const char *mapName ) = 0;
 	virtual const int GetDefaultGameTypeForMap( const char *mapName ) = 0;
 	virtual const int GetDefaultGameModeForMap( const char *mapName ) = 0;
 
@@ -118,7 +118,7 @@ public:
 	virtual int GetRewardDropListForMap( const char *mapName ) = 0;
 
 	// Map group properties
-	virtual const CUtlStringList *GetMapGroupMapList( const char *mapGroup ) = 0;
+	virtual const std::vector< std::string > *GetMapGroupMapList( const char *mapGroup ) = 0;
 	
 	virtual bool GetRunMapWithDefaultGametype() = 0;
 	virtual void SetRunMapWithDefaultGametype( bool bDefaultGametype ) = 0;

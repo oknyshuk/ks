@@ -7,16 +7,19 @@
 #include "cbase.h"
 #include "global_event_log.h"
 #include "filesystem.h"
-#include "utlbuffer.h"
+#include "tier1/text_writer.h"
+#include "tier1/intern_pool.h"
+#include "tier1/string_ops.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include <map>
+#include <memory>
 
+#include "tier0/memalloc.h"
 
 
 CGlobalEventLog	GlobalEventLog;
 
-static	CUtlSymbolTable	EventSymbols;
+static	ks::intern_pool	EventSymbols;
 static	ConVar			global_event_log_enabled( "global_event_log_enabled", "0", FCVAR_CHEAT, "Enables the global event log system" );
 
 class CGlobalEventLine
@@ -31,18 +34,17 @@ public:
 
 	bool	IsDirty( ) { return m_bDirty; }
 
-	void	Write( CUtlBuffer *pBuffer );
+	void	Write( ks::text_writer &buffer );
 	void	ClearDirty( );		
 
 private:
-	CUtlSymbol	m_ValueSymbol;
+	std::string_view	m_ValueSymbol;	// view into EventSymbols
 	char		*m_pszValue;
 	bool		m_bDirty;
 };
 
 CGlobalEventLine::CGlobalEventLine( )
 {
-	m_ValueSymbol = UTL_INVAL_SYMBOL;
 	m_pszValue = nullptr;
 	m_bDirty = true;
 }
@@ -54,10 +56,10 @@ CGlobalEventLine::~CGlobalEventLine( )
 
 void CGlobalEventLine::Clear( )
 {
-	m_ValueSymbol = UTL_INVAL_SYMBOL;
+	m_ValueSymbol = {};
 	if ( m_pszValue != nullptr )
 	{
-		delete m_pszValue;
+		MemAlloc_Free( m_pszValue );
 		m_pszValue = nullptr;
 	}
 	m_bDirty = true;
@@ -65,14 +67,14 @@ void CGlobalEventLine::Clear( )
 
 bool CGlobalEventLine::SetStaticText( const char *pszValue )
 {
-	if ( m_ValueSymbol != UTL_INVAL_SYMBOL && m_ValueSymbol == EventSymbols.Find( pszValue ) )
+	if ( m_ValueSymbol.data() && m_ValueSymbol == pszValue )
 	{
 		return false;
 	}
 
 	Clear();
 
-	m_ValueSymbol = EventSymbols.AddString( pszValue );
+	m_ValueSymbol = EventSymbols.intern( pszValue );
 
 	return true;
 }
@@ -86,13 +88,13 @@ bool CGlobalEventLine::SetVaryingText( const char *pszValue )
 
 	Clear();
 
-	m_pszValue = ( char * )malloc( strlen( pszValue ) + 1 );
+	m_pszValue = ( char * )MemAlloc_Alloc( strlen( pszValue ) + 1 );
 	strcpy( m_pszValue, pszValue );
 
 	return true;
 }
 
-void CGlobalEventLine::Write( CUtlBuffer *pBuffer )
+void CGlobalEventLine::Write( ks::text_writer &buffer )
 {
 	const char *pszValue;
 
@@ -102,16 +104,16 @@ void CGlobalEventLine::Write( CUtlBuffer *pBuffer )
 	}
 	else
 	{
-		pszValue = EventSymbols.String( m_ValueSymbol );
+		pszValue = ks::nz( m_ValueSymbol.data() );
 	}
 
 	if ( strchr( pszValue, ' ' ) != nullptr )
 	{
-		pBuffer->Printf( "\"%s\"\n", pszValue );
+		buffer.printf( "\"%s\"\n", pszValue );
 	}
 	else
 	{
-		pBuffer->Printf( "%s\n", pszValue );
+		buffer.printf( "%s\n", pszValue );
 	}
 }
 
@@ -132,25 +134,25 @@ public:
 	unsigned int	GetID( ) { return m_nID; }
 	bool			IsDirty( ) { return m_bDirty; }
 
-	void			Write( CUtlBuffer *pBuffer );
+	void			Write( ks::text_writer &buffer );
 	void			ClearDirty( );		
 
 private:
 	unsigned int								m_nID;
-	CUtlSymbol									m_Name;
+	std::string_view							m_Name;	// view into EventSymbols
 	float										m_flTime;
 	bool										m_bIsHighLevel;
 	bool										m_bFullUpdate;
 	bool										m_bDirty;
 	CGlobalEvent								*m_pParent;
-	CUtlMap< CUtlSymbol, CGlobalEventLine * >	m_EventLines;
+	// Keys view EventSymbols; lines are written in key order.
+	std::map< std::string_view, std::unique_ptr< CGlobalEventLine >, std::less<> >	m_EventLines;
 };
 
 
-CGlobalEvent::CGlobalEvent( const char *pszName, unsigned int nID, bool bIsHighLevel, CGlobalEvent *pParent ) :
-	m_EventLines( DefLessFunc( const CUtlSymbol ) )
+CGlobalEvent::CGlobalEvent( const char *pszName, unsigned int nID, bool bIsHighLevel, CGlobalEvent *pParent )
 {
-	m_Name = EventSymbols.AddString( pszName );
+	m_Name = EventSymbols.intern( pszName );
 	m_nID = nID;
 	m_bIsHighLevel = bIsHighLevel;
 	m_pParent = pParent;
@@ -160,22 +162,17 @@ CGlobalEvent::CGlobalEvent( const char *pszName, unsigned int nID, bool bIsHighL
 
 bool CGlobalEvent::AddValue( bool bVarying, const char *pszKey, const char *pszValue )
 {
-	CUtlSymbol			KeyID;
+	std::string_view	KeyID;
 	CGlobalEventLine	*pEvent;
-	int					nIndex;
 	bool				bResult;
 
-	KeyID = EventSymbols.AddString( pszKey );
-	nIndex = m_EventLines.Find( KeyID );
-	if ( nIndex == m_EventLines.InvalidIndex() )
+	KeyID = EventSymbols.intern( pszKey );
+	std::unique_ptr< CGlobalEventLine > &pLine = m_EventLines[ KeyID ];
+	if ( !pLine )
 	{
-		pEvent = new CGlobalEventLine();
-		m_EventLines.Insert( KeyID, pEvent );
+		pLine = std::make_unique< CGlobalEventLine >();
 	}
-	else
-	{
-		pEvent = m_EventLines.Element( nIndex );
-	}
+	pEvent = pLine.get();
 
 	if ( bVarying )
 	{
@@ -195,62 +192,62 @@ bool CGlobalEvent::AddValue( bool bVarying, const char *pszKey, const char *pszV
 	return bResult;
 }
 
-void CGlobalEvent::Write( CUtlBuffer *pBuffer )
+void CGlobalEvent::Write( ks::text_writer &buffer )
 {
-	pBuffer->Printf( "event %u\n", m_nID );
-	pBuffer->Printf( "{\n" );
+	buffer.printf( "event %u\n", m_nID );
+	buffer.printf( "{\n" );
 
 	if ( m_bFullUpdate )
 	{
-		const char *pszName = EventSymbols.String( m_Name );
+		const char *pszName = m_Name.data();
 
 		if ( strchr( pszName, ' ' ) != nullptr )
 		{
-			pBuffer->Printf( "\tName\t\"%s\"\n", pszName );
+			buffer.printf( "\tName\t\"%s\"\n", pszName );
 		}
 		else
 		{
-			pBuffer->Printf( "\tName\t%s\n", pszName );
+			buffer.printf( "\tName\t%s\n", pszName );
 		}
 		if ( m_pParent != nullptr )
 		{
-			pBuffer->Printf( "\tParent_ID\t%u\n", m_pParent->GetID() );
+			buffer.printf( "\tParent_ID\t%u\n", m_pParent->GetID() );
 		}
 		if ( m_bIsHighLevel == true )
 		{
-			pBuffer->Printf( "\tHighLevel\t1\n" );
+			buffer.printf( "\tHighLevel\t1\n" );
 		}
 	}
 
-	pBuffer->Printf( "\tTime\t%g\n", m_flTime );
+	buffer.printf( "\tTime\t%g\n", m_flTime );
 
-	for( unsigned i = 0; i < m_EventLines.Count(); i++ )
+	for ( auto &[key, pLine] : m_EventLines )
 	{
-		if ( m_EventLines.Element( i )->IsDirty() )
+		if ( pLine->IsDirty() )
 		{
-			const char *pszKey = EventSymbols.String( m_EventLines.Key( i ) );
+			const char *pszKey = key.data();
 
 			if ( strchr( pszKey, ' ' ) != nullptr )
 			{
-				pBuffer->Printf( "\t\"%s\"\t", pszKey );
+				buffer.printf( "\t\"%s\"\t", pszKey );
 			}
 			else
 			{
-				pBuffer->Printf( "\t%s\t", pszKey );
+				buffer.printf( "\t%s\t", pszKey );
 			}
-			m_EventLines.Element( i )->Write( pBuffer );
+			pLine->Write( buffer );
 		}
 	}
-	pBuffer->Printf( "}\n" );
+	buffer.printf( "}\n" );
 }
 
 void CGlobalEvent::ClearDirty( )
 {
 	m_bFullUpdate = false;
 	m_bDirty = false;
-	for( unsigned i = 0; i < m_EventLines.Count(); i++ )
+	for ( auto &[key, pLine] : m_EventLines )
 	{
-		m_EventLines.Element( i )->ClearDirty();
+		pLine->ClearDirty();
 	}
 }
 
@@ -269,8 +266,8 @@ CGlobalEvent *CGlobalEventLog::CreateEvent( const char *pszName, bool bIsHighLev
 {
 	CGlobalEvent	*pEvent = new CGlobalEvent( pszName, m_nNextID, bIsHighLevel, pParent );
 
-	m_Events.AddToTail( pEvent );
-	m_DirtyEvents.AddToTail( pEvent );
+	m_Events.push_back( pEvent );
+	m_DirtyEvents.push_back( pEvent );
 	m_nNextID++;
 
 	return pEvent;
@@ -280,8 +277,8 @@ CGlobalEvent *CGlobalEventLog::CreateTempEvent( const char *pszName, CGlobalEven
 {
 	CGlobalEvent	*pEvent = new CGlobalEvent( pszName, m_nNextID, false, pParent );
 
-	m_TempEvents.AddToTail( pEvent );
-	m_DirtyEvents.AddToTail( pEvent );
+	m_TempEvents.push_back( pEvent );
+	m_DirtyEvents.push_back( pEvent );
 	m_nNextID++;
 
 	return pEvent;
@@ -289,9 +286,9 @@ CGlobalEvent *CGlobalEventLog::CreateTempEvent( const char *pszName, CGlobalEven
 
 void CGlobalEventLog::RemoveEvent( CGlobalEvent *pEvent )
 {
-	if ( m_Events.FindAndRemove( pEvent ) == true && m_TempEvents.Find( pEvent ) == -1 )
+	if ( ks::erase_first( m_Events, pEvent ) == true && ks::find_index( m_TempEvents, pEvent ) == -1 )
 	{
-		m_TempEvents.AddToTail( pEvent );
+		m_TempEvents.push_back( pEvent );
 	}
 }
 
@@ -300,7 +297,6 @@ void CGlobalEventLog::AddKeyValue( CGlobalEvent *pEvent, bool bVarying, const ch
 	va_list		Args;
 	int			nLen;
 	char		*pszBuffer;
-	CUtlSymbol	KeyID;
 	bool		bResult;
 
 	va_start( Args, pszValueFormat );
@@ -311,15 +307,15 @@ void CGlobalEventLog::AddKeyValue( CGlobalEvent *pEvent, bool bVarying, const ch
 	
 	bResult = pEvent->AddValue( bVarying, pszKey, pszBuffer );
 
-	if ( bResult == true && m_DirtyEvents.Find( pEvent ) == -1 )
+	if ( bResult == true && ks::find_index( m_DirtyEvents, pEvent ) == -1 )
 	{
-		m_DirtyEvents.AddToTail( pEvent );
+		m_DirtyEvents.push_back( pEvent );
 	}
 }
 
 void CGlobalEventLog::SendUpdate( )
 {
-	if ( m_DirtyEvents.Count() == 0 )
+	if ( m_DirtyEvents.empty() )
 	{
 		return;
 	}
@@ -327,32 +323,30 @@ void CGlobalEventLog::SendUpdate( )
 	if ( global_event_log_enabled.GetBool() == true )
 	{
 		FileHandle_t fh = g_pFullFileSystem->Open( "c:\\o.events", "a" );
-		CUtlBuffer	*pBuffer = new CUtlBuffer( 0, 0, CUtlBuffer::TEXT_BUFFER );
+		ks::text_writer buffer;
 
-		pBuffer->Clear();
-
-		for( int i = 0; i < m_DirtyEvents.Count(); i++ )
+		for( int i = 0; i < std::ssize( m_DirtyEvents ); i++ )
 		{
-			m_DirtyEvents[ i ]->Write( pBuffer );
+			m_DirtyEvents[ i ]->Write( buffer );
 
-			g_pFullFileSystem->Write( pBuffer->Base(), pBuffer->TellPut(), fh );
-			pBuffer->Clear();
+			g_pFullFileSystem->Write( buffer.c_str(), buffer.size(), fh );
+			buffer.clear();
 		}
 
 		g_pFullFileSystem->Close( fh );
 	}
 
-	for( int i = 0; i < m_DirtyEvents.Count(); i++ )
+	for( int i = 0; i < std::ssize( m_DirtyEvents ); i++ )
 	{
 		m_DirtyEvents[ i ]->ClearDirty();
 	}
-	m_DirtyEvents.Purge();
+	m_DirtyEvents.clear(); m_DirtyEvents.shrink_to_fit();
 
-	for( int i = 0; i < m_TempEvents.Count(); i++ )
+	for( int i = 0; i < std::ssize( m_TempEvents ); i++ )
 	{
 		delete m_TempEvents[ i ];
 	}
-	m_TempEvents.Purge();
+	m_TempEvents.clear(); m_TempEvents.shrink_to_fit();
 }
 
 void CGlobalEventLog::PostInit( )

@@ -27,8 +27,7 @@
 #include "raytrace.h"
 #include "c_cs_player.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include <memory>
 
 ConVar	cl_winddir			( "cl_winddir", "0", FCVAR_CHEAT, "Weather effects wind direction angle" );
 ConVar	cl_windspeed		( "cl_windspeed", "0", FCVAR_CHEAT, "Weather effects wind speed scalar" );
@@ -78,7 +77,7 @@ PRECACHE_REGISTER_BEGIN( GLOBAL, PrecachePrecipitation )
 		PRECACHE( PARTICLE_SYSTEM, "snow_outer" )
 PRECACHE_REGISTER_END()
 
-CUtlVector< RayTracingEnvironment* > g_RayTraceEnvironments;
+std::vector< std::unique_ptr< RayTracingEnvironment > > g_RayTraceEnvironments;
 
 //-----------------------------------------------------------------------------
 // Precipitation blocker entity
@@ -88,21 +87,21 @@ CUtlVector< RayTracingEnvironment* > g_RayTraceEnvironments;
 IMPLEMENT_REFLECT_CLIENTCLASS( C_PrecipitationBlocker, DT_PrecipitationBlocker, CPrecipitationBlocker )
 
 
-static CUtlVector< C_PrecipitationBlocker * > g_PrecipitationBlockers;
+static std::vector< C_PrecipitationBlocker * > g_PrecipitationBlockers;
 
 C_PrecipitationBlocker::C_PrecipitationBlocker()
 {
-	g_PrecipitationBlockers.AddToTail( this );
+	g_PrecipitationBlockers.push_back( this );
 }
 
 C_PrecipitationBlocker::~C_PrecipitationBlocker()
 {
-	g_PrecipitationBlockers.FindAndRemove( this );
+	ks::erase_first( g_PrecipitationBlockers, this );
 }
 
 bool ParticleIsBlocked( const Vector &end, const Vector &start )
 {
-	for ( int i=0; i<g_PrecipitationBlockers.Count(); ++i )
+	for ( int i=0; i<std::ssize( g_PrecipitationBlockers ); ++i )
 	{
 		C_PrecipitationBlocker *blocker = g_PrecipitationBlockers[i];
 		if ( blocker->CollisionProp()->IsPointInBounds( end ) )
@@ -141,7 +140,7 @@ static ConVar r_SnowRayEnable( "r_SnowRayEnable", "1", FCVAR_CHEAT, "Snow." );
 
 void DrawPrecipitation()
 {
-	for ( int i=0; i < g_Precipitations.Count(); i++ )
+	for ( int i=0; i < std::ssize( g_Precipitations ); i++ )
 	{
 		g_Precipitations[i]->Render();
 	}
@@ -223,11 +222,11 @@ inline bool CClient_Precipitation::SimulateRain( CPrecipitationParticle* pPartic
 			float wind = s_WindVector[i];
 			if ( vel < wind )
 			{
-				vel = MIN( vel+drift, wind);
+				vel = std::min( vel+drift, wind);
 			}
 			else if ( vel > wind )
 			{
-				vel = MAX( vel-drift, wind);
+				vel = std::max( vel-drift, wind);
 			}
 			pParticle->m_Velocity[i] = vel;
 		}
@@ -243,7 +242,7 @@ inline bool CClient_Precipitation::SimulateRain( CPrecipitationParticle* pPartic
 		if ( !IsInAir( pParticle->m_Pos ) )
 		{
 			// Possibly make a splash if we hit a water surface and it's in front of the view.
-			if ( m_Splashes.Count() < 20 )
+			if ( std::ssize( m_Splashes ) < 20 )
 			{
 				if ( RandomInt( 0, 100 ) < r_RainSplashPercentage.GetInt() )
 				{
@@ -251,7 +250,7 @@ inline bool CClient_Precipitation::SimulateRain( CPrecipitationParticle* pPartic
 					UTIL_TraceLine(vOldPos, pParticle->m_Pos, MASK_WATER, nullptr, COLLISION_GROUP_NONE, &trace);
 					if( trace.fraction < 1 )
 					{
-						m_Splashes.AddToTail( trace.endpos );
+						m_Splashes.push_back( trace.endpos );
 					}
 				}
 			}
@@ -360,30 +359,19 @@ void CClient_Precipitation::Simulate( float dt )
 	EmitParticles( dt );
 
 	// Simulate all the particles.
-	int iNext;
 	if ( m_nPrecipType == PRECIPITATION_TYPE_RAIN )
 	{
-		for ( int i=m_Particles.Head(); i != m_Particles.InvalidIndex(); i=iNext )
-		{
-			iNext = m_Particles.Next( i );
-			if ( !SimulateRain( &m_Particles[i], dt ) )
-				m_Particles.Remove( i );
-		}
+		std::erase_if( m_Particles, [this, dt]( CPrecipitationParticle &p ) { return !SimulateRain( &p, dt ); } );
 	}
 	else if ( m_nPrecipType == PRECIPITATION_TYPE_SNOW )
 	{
-		for ( int i=m_Particles.Head(); i != m_Particles.InvalidIndex(); i=iNext )
-		{
-			iNext = m_Particles.Next( i );
-			if ( !SimulateSnow( &m_Particles[i], dt ) )
-				m_Particles.Remove( i );
-		}
+		std::erase_if( m_Particles, [this, dt]( CPrecipitationParticle &p ) { return !SimulateSnow( &p, dt ); } );
 	}
 
 	if ( r_RainProfile.GetInt() )
 	{
 		timer.End();
-		engine->Con_NPrintf( 15, "Rain simulation: %du (%d tracers)", timer.GetDuration().GetMicroseconds(), m_Particles.Count() );
+		engine->Con_NPrintf( 15, "Rain simulation: %du (%d tracers)", timer.GetDuration().GetMicroseconds(), (int)m_Particles.size() );
 	}
 }
 
@@ -473,7 +461,7 @@ inline void CClient_Precipitation::RenderParticle( CPrecipitationParticle* pPart
 
 void CClient_Precipitation::CreateWaterSplashes()
 {
-	for ( int i=0; i < m_Splashes.Count(); i++ )
+	for ( int i=0; i < std::ssize( m_Splashes ); i++ )
 	{
 		Vector vSplash = m_Splashes[i];
 		
@@ -482,7 +470,7 @@ void CClient_Precipitation::CreateWaterSplashes()
 			FX_WaterRipple( vSplash, g_flSplashScale, &g_vSplashColor, g_flSplashLifetime, g_flSplashAlpha );
 		}
 	}
-	m_Splashes.Purge();
+	m_Splashes.clear(); m_Splashes.shrink_to_fit();
 }
 
 
@@ -535,11 +523,11 @@ void CClient_Precipitation::Render()
 	if ( pMesh )
 	{
 		CMeshBuilder mb;
-		mb.Begin( pMesh, MATERIAL_QUADS, m_Particles.Count() );
+		mb.Begin( pMesh, MATERIAL_QUADS, (int)m_Particles.size() );
 
-		for ( int i=m_Particles.Head(); i != m_Particles.InvalidIndex(); i=m_Particles.Next( i ) )
+		for ( CPrecipitationParticle &particle : m_Particles )
 		{
-			CPrecipitationParticle *p = &m_Particles[i];
+			CPrecipitationParticle *p = &particle;
 			if ( p->m_nSplitScreenPlayerSlot != nSlot )
 				continue;
 			RenderParticle( p, mb );
@@ -578,12 +566,12 @@ CClient_Precipitation::CClient_Precipitation() : m_Remainder(0.0f)
 		m_bActiveParticlePrecipEmitter[ i ] = false;
 	}
 
-	g_Precipitations.AddToTail( this );
+	g_Precipitations.push_back( this );
 }
 
 CClient_Precipitation::~CClient_Precipitation()
 {
-	g_Precipitations.FindAndRemove( this );
+	ks::erase_first( g_Precipitations, this );
 	SnowFallManagerDestroy();
 }
 
@@ -672,8 +660,7 @@ inline float CClient_Precipitation::GetRemainingLifetime( CPrecipitationParticle
 
 inline CPrecipitationParticle* CClient_Precipitation::CreateParticle()
 {
-	int i = m_Particles.AddToTail();
-	CPrecipitationParticle* pParticle = &m_Particles[i];
+	CPrecipitationParticle* pParticle = &m_Particles.emplace_back();
 
 	pParticle->m_SpawnTime = gpGlobals->curtime;
 	pParticle->m_Ramp = m_InitialRamp;
@@ -709,7 +696,7 @@ bool CClient_Precipitation::ComputeEmissionArea( Vector& origin, Vector2D& size,
 	}
 
 	// Determine how much time it'll take a falling particle to hit the player
-	float emissionHeight = MIN( vMaxs[2], pCharacter->GetAbsOrigin()[2] + 512 );
+	float emissionHeight = std::min( vMaxs[2], pCharacter->GetAbsOrigin()[2] + 512 );
 	float distToFall = emissionHeight - pCharacter->GetAbsOrigin()[2];
 	float fallTime = distToFall / GetSpeed();
 	
@@ -729,12 +716,12 @@ bool CClient_Precipitation::ComputeEmissionArea( Vector& origin, Vector2D& size,
 		 ( vMins[0] > hibound[0] ) || ( vMins[1] > hibound[1] ) )
 		return false;
 
-	origin[0] = MAX( vMins[0], lobound[0] );
-	origin[1] = MAX( vMins[1], lobound[1] );
+	origin[0] = std::max( vMins[0], lobound[0] );
+	origin[1] = std::max( vMins[1], lobound[1] );
 	origin[2] = emissionHeight;
 
-	hibound[0] = MIN( vMaxs[0], hibound[0] );
-	hibound[1] = MIN( vMaxs[1], hibound[1] );
+	hibound[0] = std::min( vMaxs[0], hibound[0] );
+	hibound[1] = std::min( vMaxs[1], hibound[1] );
 
 	size[0] = hibound[0] - origin[0];
 	size[1] = hibound[1] - origin[1];
@@ -1037,7 +1024,7 @@ void CClient_Precipitation::UpdateParticlePrecip( C_BasePlayer *pPlayer, int nSl
 		Vector vDensity = Vector( r_RainParticleDensity.GetFloat(), 0, 0 ) * m_flDensity;
 
 		// Get the rain volume Ray Tracing Environment.  Currently hard coded to 0, should have this lookup 
-		RayTracingEnvironment *RtEnv = g_RayTraceEnvironments.Element( 0 );
+		RayTracingEnvironment *RtEnv = g_RayTraceEnvironments[ 0 ].get();
 
 		// Our 4 Rays are forward, off to the left and right, and directly up.
 		// Use the first three to determine if there's generally visible rain where we're looking.
@@ -1144,19 +1131,17 @@ void CClient_Precipitation::InitializeParticlePrecip( void )
 	Assert( m_pParticleInnerFarDef != nullptr );
 
 	//We'll want to change this if/when we add more raytrace environments.
-	g_RayTraceEnvironments.PurgeAndDeleteElements();
+	g_RayTraceEnvironments.clear();
 
 	// Sets up ray tracing environments for all func_precipitations and func_precipitation_blockers
-	RayTracingEnvironment *rtEnvRainEmission = new RayTracingEnvironment();
-	g_RayTraceEnvironments.AddToTail( rtEnvRainEmission );
-	RayTracingEnvironment *rtEnvRainBlocker = new RayTracingEnvironment();
-	g_RayTraceEnvironments.AddToTail( rtEnvRainBlocker );
+	RayTracingEnvironment *rtEnvRainEmission = g_RayTraceEnvironments.emplace_back( std::make_unique< RayTracingEnvironment >() ).get();
+	RayTracingEnvironment *rtEnvRainBlocker = g_RayTraceEnvironments.emplace_back( std::make_unique< RayTracingEnvironment >() ).get();
 
 	rtEnvRainEmission->Flags |= RTE_FLAGS_DONT_STORE_TRIANGLE_COLORS;	// save some ram
 	rtEnvRainBlocker->Flags |= RTE_FLAGS_DONT_STORE_TRIANGLE_COLORS;		// save some ram
 
 	int nTriCount = 1;
-	for ( int i=0; i<g_Precipitations.Count(); ++i )
+	for ( int i=0; i<std::ssize( g_Precipitations ); ++i )
 	{
 		CClient_Precipitation *volume = g_Precipitations[i];
 
@@ -1181,7 +1166,7 @@ void CClient_Precipitation::InitializeParticlePrecip( void )
 
 	nTriCount = 1;
 
-	for ( int i=0; i<g_PrecipitationBlockers.Count(); ++i )
+	for ( int i=0; i<std::ssize( g_PrecipitationBlockers ); ++i )
 	{
 		C_PrecipitationBlocker *blocker = g_PrecipitationBlockers[i];
 
@@ -1539,7 +1524,7 @@ class CEmberEmitter : public CSimpleEmitter
 {
 public:
 	explicit 				CEmberEmitter( const char *pDebugName );
-	static CSmartPtr<CEmberEmitter>	Create( const char *pDebugName );
+	static ks::intrusive_ptr<CEmberEmitter>	Create( const char *pDebugName );
 	virtual void			UpdateVelocity( SimpleParticle *pParticle, float timeDelta );
 	virtual Vector			UpdateColor( const SimpleParticle *pParticle );
 
@@ -1558,7 +1543,7 @@ CEmberEmitter::CEmberEmitter( const char *pDebugName ) : CSimpleEmitter( pDebugN
 }
 
 
-CSmartPtr<CEmberEmitter> CEmberEmitter::Create( const char *pDebugName )
+ks::intrusive_ptr<CEmberEmitter> CEmberEmitter::Create( const char *pDebugName )
 {
 	return new CEmberEmitter( pDebugName );
 }
@@ -1629,7 +1614,7 @@ protected:
 
 	PMaterialHandle		m_hMaterial;
 	TimedEvent			m_tParticleSpawn;
-	CSmartPtr<CEmberEmitter> m_pEmitter;
+	ks::intrusive_ptr<CEmberEmitter> m_pEmitter;
 
 };
 
@@ -1932,7 +1917,7 @@ private:
 	TimedEvent						m_tSnowFallParticleTraceTimer;
 
 	int								m_iSnowFallArea;
-	CSmartPtr<SnowFallEffect>		m_pSnowFallEmitter;
+	ks::intrusive_ptr<SnowFallEffect>		m_pSnowFallEmitter;
 	Vector							m_vecSnowFallEmitOrigin;
 	float							m_flSnowRadius;
 
@@ -1948,12 +1933,12 @@ private:
 	{
 		PMaterialHandle				m_hMaterial;
 		CClient_Precipitation		*m_pEntity;
-		CSmartPtr<SnowFallEffect>	m_pEffect;
+		ks::intrusive_ptr<SnowFallEffect>	m_pEffect;
 		Vector						m_vecMin;
 		Vector						m_vecMax;
 	};
 
-	CUtlVector<SnowFall_t>		m_aSnow;
+	std::vector< SnowFall_t >		m_aSnow;
 	int								m_nSplitScreenPlayerSlot;
 };
 
@@ -1969,7 +1954,7 @@ CSnowFallManager::CSnowFallManager( void )
 	m_vecMin.Init( FLT_MAX, FLT_MAX, FLT_MAX );
 	m_vecMax.Init( FLT_MIN, FLT_MIN, FLT_MIN );
 	m_nActiveSnowCount = 0;
-	m_aSnow.Purge();
+	m_aSnow.clear(); m_aSnow.shrink_to_fit();
 	m_nSplitScreenPlayerSlot = -1;
 }
 
@@ -1978,7 +1963,7 @@ CSnowFallManager::CSnowFallManager( void )
 //-----------------------------------------------------------------------------
 CSnowFallManager::~CSnowFallManager( void )
 {
-	m_aSnow.Purge();
+	m_aSnow.clear(); m_aSnow.shrink_to_fit();
 }
 
 //-----------------------------------------------------------------------------
@@ -2053,7 +2038,7 @@ void CSnowFallManager::AddSnowFallEntity( CClient_Precipitation *pSnowEntity )
 	if ( !pSnowEntity )
 		return;
 
-	int nSnowCount = m_aSnow.Count();
+	int nSnowCount = std::ssize( m_aSnow );
 	int iSnow = 0;
 	for ( iSnow = 0; iSnow < nSnowCount; ++iSnow )
 	{
@@ -2064,7 +2049,7 @@ void CSnowFallManager::AddSnowFallEntity( CClient_Precipitation *pSnowEntity )
 	if ( iSnow != nSnowCount )
 		return;
 
-	iSnow = m_aSnow.AddToTail();
+	iSnow = std::ssize( m_aSnow ); m_aSnow.emplace_back();
 	m_aSnow[iSnow].m_pEntity = pSnowEntity;
 	m_aSnow[iSnow].m_pEffect = SnowFallEffect::Create( "snowfall" );
 	m_aSnow[iSnow].m_hMaterial = ParticleMgr()->GetPMaterial( "particle/snow" );
@@ -2107,7 +2092,7 @@ int CSnowFallManager::StandingInSnowVolume( Vector &vecPoint )
 {
 	trace_t traceSnow;
 
-	int nSnowCount = m_aSnow.Count();
+	int nSnowCount = std::ssize( m_aSnow );
 	int iSnow = 0;
 	for ( iSnow = 0; iSnow < nSnowCount; ++iSnow )
 	{
@@ -2130,7 +2115,7 @@ void CSnowFallManager::FindSnowVolumes( Vector const &vecCenter, float flRadius,
 	m_nActiveSnowCount = 0;
 	m_bRayParticles = false;
 
-	int nSnowCount = m_aSnow.Count();
+	int nSnowCount = std::ssize( m_aSnow );
 	int iSnow = 0;
 	for ( iSnow = 0; iSnow < nSnowCount; ++iSnow )
 	{

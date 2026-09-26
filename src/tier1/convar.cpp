@@ -13,12 +13,11 @@
 #include "tier1/convar.h"
 #include "tier1/strtools.h"
 #include "tier1/characterset.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/text_reader.h"
 #include "tier1/tier1.h"
 #include "tier1/convar_serverbounded.h"
 #include "icvar.h"
 #include "tier0/dbg.h"
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Statically constructed list of ConCommandBases, 
@@ -424,28 +423,33 @@ bool CCommand::Tokenize( const char *pCommand, cmd_source_t source, characterset
 	memcpy( m_pArgSBuffer, pCommand, nLen + 1 );
 
 	// Parse the current command into the current command buffer
-	CUtlBuffer bufParse( m_pArgSBuffer, nLen, CUtlBuffer::TEXT_BUFFER | CUtlBuffer::READ_ONLY ); 
+	ks::text_reader bufParse( m_pArgSBuffer, nLen );
 	int nArgvBufferSize = 0;
-	while ( bufParse.IsValid() && ( m_nArgc < COMMAND_MAX_ARGC ) )
+	while ( bufParse.ok() && ( m_nArgc < COMMAND_MAX_ARGC ) )
 	{
 		char *pArgvBuf = &m_pArgvBuffer[nArgvBufferSize];
 		int nMaxLen = COMMAND_MAX_LENGTH - nArgvBufferSize;
-		int nStartGet = bufParse.TellGet();
-		int	nSize = bufParse.ParseToken( pBreakSet, pArgvBuf, nMaxLen );
-		if ( nSize < 0 )
+		int nStartGet = (int)bufParse.tell();
+		const std::optional< std::string_view > token = bufParse.read_token( *pBreakSet );
+		if ( !token )
 			break;
 
+		int nSize = (int)token->size();
+
 		// Check for overflow condition
-		if ( nMaxLen == nSize )
+		if ( nMaxLen <= nSize )
 		{
 			Reset();
 			return false;
 		}
 
+		memcpy( pArgvBuf, token->data(), nSize );
+		pArgvBuf[nSize] = 0;
+
 		if ( m_nArgc == 1 )
 		{
 			// Deal with the case where the arguments were quoted
-			m_nArgv0Size = bufParse.TellGet();
+			m_nArgv0Size = (int)bufParse.tell();
 			bool bFoundEndQuote = m_pArgSBuffer[m_nArgv0Size-1] == '\"';
 			if ( bFoundEndQuote )
 			{
@@ -613,7 +617,7 @@ void ConCommand::Dispatch( const CCommand &command )
 //-----------------------------------------------------------------------------
 // Purpose: Calls the autocompletion method to get autocompletion suggestions
 //-----------------------------------------------------------------------------
-int	ConCommand::AutoCompleteSuggest( const char *partial, CUtlVector< CUtlString > &commands )
+int	ConCommand::AutoCompleteSuggest( const char *partial, std::vector< std::string > &commands )
 {
 	if ( m_bUsingCommandCallbackInterface )
 	{
@@ -630,8 +634,8 @@ int	ConCommand::AutoCompleteSuggest( const char *partial, CUtlVector< CUtlString
 	int iret = ( m_fnCompletionCallback )( partial, rgpchCommands );
 	for ( int i = 0 ; i < iret; ++i )
 	{
-		CUtlString str = rgpchCommands[ i ];
-		commands.AddToTail( str );
+		std::string str = rgpchCommands[ i ];
+		commands.push_back( str );
 	}
 	return iret;
 }
@@ -706,14 +710,14 @@ void ConVar::InstallChangeCallback( FnChangeCallback_t callback, bool bInvoke /*
 		return;
 	}
 
-	if ( m_pParent->m_fnChangeCallbacks.Find( callback ) != m_pParent->m_fnChangeCallbacks.InvalidIndex() )
+	if ( ks::find_index( m_pParent->m_fnChangeCallbacks, callback ) != -1 )
 	{
 		// Same ptr added twice, sigh...
 		Warning( "InstallChangeCallback ignoring duplicate change callback!!!\n" );
 		return;
 	}
 
-	m_pParent->m_fnChangeCallbacks.AddToTail( callback );
+	m_pParent->m_fnChangeCallbacks.push_back( callback );
 
 	// Call it immediately to set the initial value...
 	if ( bInvoke )
@@ -724,7 +728,7 @@ void ConVar::InstallChangeCallback( FnChangeCallback_t callback, bool bInvoke /*
 
 void ConVar::RemoveChangeCallback( FnChangeCallback_t callback )
 {
-	m_pParent->m_fnChangeCallbacks.FindAndRemove( callback );
+	ks::erase_first( m_pParent->m_fnChangeCallbacks, callback );
 }
 
 bool ConVar::IsFlagSet( int flag ) const
@@ -917,7 +921,7 @@ void ConVar::ChangeStringValue( const char *tempVal, float flOldValue )
 	memcpy( m_Value.m_pszString, tempVal, len );
 
 	// Invoke any necessary callback function
-	for ( int i = 0; i < m_fnChangeCallbacks.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_fnChangeCallbacks ); ++i )
 	{
 		m_fnChangeCallbacks[ i ]( this, pszOldValue, flOldValue );
 	}
@@ -988,7 +992,7 @@ void ConVar::InternalSetFloatValue( float fNewValue )
 	}
 	else
 	{
-		Assert( m_fnChangeCallbacks.Count() == 0 );
+		Assert( std::ssize( m_fnChangeCallbacks ) == 0 );
 	}
 }
 
@@ -1031,7 +1035,7 @@ void ConVar::InternalSetIntValue( int nValue )
 	}
 	else
 	{
-		Assert( m_fnChangeCallbacks.Count() == 0 );
+		Assert( std::ssize( m_fnChangeCallbacks ) == 0 );
 	}
 }
 
@@ -1076,7 +1080,7 @@ void ConVar::Create( const char *pName, const char *pDefaultValue, int flags /*=
 
 	if ( callback )
 	{
-		m_fnChangeCallbacks.AddToTail( callback );
+		m_fnChangeCallbacks.push_back( callback );
 	}
 
 	m_Value.m_StringLength = strlen( m_pszDefaultValue ) + 1;

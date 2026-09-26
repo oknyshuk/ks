@@ -11,7 +11,8 @@
 #include "dt_encode.h"
 #include "dt_instrumentation.h"
 #include "dt_stack.h"
-#include "utllinkedlist.h"
+#include <memory>
+#include <vector>
 #include "tier0/dbg.h"
 #include "dt_recv_decoder.h"
 #include "tier1/strtools.h"
@@ -20,9 +21,7 @@
 #include "common.h"
 #include "serializedentity.h"
 #include "netmessages.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include <map>
 
 
 class CClientSendTable;
@@ -63,9 +62,9 @@ class CClientSendTable;
 // Globals.
 // ------------------------------------------------------------------------------------ //
 
-CUtlLinkedList< RecvTable*, unsigned short > g_RecvTables;
-CUtlLinkedList< CRecvDecoder *, unsigned short > g_RecvDecoders;
-CUtlLinkedList< CClientSendTable*, unsigned short > g_ClientSendTables;
+std::vector< RecvTable* > g_RecvTables;
+std::vector< std::unique_ptr< CRecvDecoder > > g_RecvDecoders;
+std::vector< std::unique_ptr< CClientSendTable > > g_ClientSendTables;
 
 // ------------------------------------------------------------------------------------ //
 // Static helper functions.
@@ -73,10 +72,10 @@ CUtlLinkedList< CClientSendTable*, unsigned short > g_ClientSendTables;
 
 RecvTable* FindRecvTable( const char *pName )
 {
-	FOR_EACH_LL( g_RecvTables, i )
+	for ( RecvTable *pTable : g_RecvTables )
 	{
-		if ( stricmp( g_RecvTables[i]->GetName(), pName ) == 0 )
-			return g_RecvTables[i];
+		if ( stricmp( pTable->GetName(), pName ) == 0 )
+			return pTable;
 	}
 	return 0;
 }
@@ -84,12 +83,10 @@ RecvTable* FindRecvTable( const char *pName )
 
 static CClientSendTable* FindClientSendTable( const char *pName )
 {
-	FOR_EACH_LL( g_ClientSendTables, i )
+	for ( const auto &pTable : g_ClientSendTables )
 	{
-		CClientSendTable *pTable = g_ClientSendTables[i];
-
 		if ( stricmp( pTable->GetName(), pName ) == 0 )
-			return pTable;
+			return pTable.get();
 	}
 
 	return nullptr;
@@ -99,9 +96,9 @@ static CClientSendTable* FindClientSendTable( const char *pName )
 // Find all child datatable properties for the send tables.
 bool SetupClientSendTableHierarchy()
 {
-	FOR_EACH_LL( g_ClientSendTables, iClientTable )
+	for ( const auto &pClientTable : g_ClientSendTables )
 	{
-		CClientSendTable *pTable = g_ClientSendTables[iClientTable];
+		CClientSendTable *pTable = pClientTable.get();
 		
 		// For each datatable property, find the table it references.
 		for ( int iProp=0; iProp < pTable->GetNumProps(); iProp++ )
@@ -284,18 +281,10 @@ bool CompareRecvPropToSendProp( const RecvProp *pRecvProp, const SendProp *pSend
 	}
 }
 
-struct MatchingProp_t
-{
-	SendProp	*m_pProp;
-	RecvProp	*m_pMatchingRecvProp;
+// SendProp -> its matching RecvProp; the first match wins if a table is visited twice.
+typedef std::map< const SendProp *, RecvProp * > MatchingProps_t;
 
-	static bool LessFunc( const MatchingProp_t& lhs, const MatchingProp_t& rhs )
-	{
-		return lhs.m_pProp < rhs.m_pProp;
-	}
-};
-
-static bool MatchRecvPropsToSendProps_R( CUtlRBTree< MatchingProp_t, unsigned short >& lookup, char const *sendTableName, SendTable *pSendTable, RecvTable *pRecvTable, bool bAllowMismatches, bool *pAnyMismatches )
+static bool MatchRecvPropsToSendProps_R( MatchingProps_t& lookup, char const *sendTableName, SendTable *pSendTable, RecvTable *pRecvTable, bool bAllowMismatches, bool *pAnyMismatches )
 {
 	for ( int i=0; i < pSendTable->m_nProps; i++ )
 	{
@@ -317,11 +306,7 @@ static bool MatchRecvPropsToSendProps_R( CUtlRBTree< MatchingProp_t, unsigned sh
 				return false;
 			}
 
-			MatchingProp_t info;
-			info.m_pProp = pSendProp;
-			info.m_pMatchingRecvProp = pRecvProp;
-
-			lookup.Insert( info );
+			lookup.emplace( pSendProp, pRecvProp );
 		}
 		else
 		{
@@ -420,7 +405,7 @@ bool RecvTable_Init( RecvTable **pTables, int nTables )
 					("RecvTable_Init: table '%s' has a decoder already.", pTable->GetName()));
 				
 				pTable->SetInMainList( true );
-				g_RecvTables.AddToTail( pTable );
+				g_RecvTables.push_back( pTable );
 			},
 
 			{}
@@ -437,9 +422,9 @@ void RecvTable_Term( bool clearall /*= true*/ )
 
 	SETUP_VISIT();
 
-	FOR_EACH_LL( g_RecvTables, i )
+	for ( RecvTable *pRecvTable : g_RecvTables )
 	{
-		RECVPROP_VISIT( g_RecvTables[i],
+		RECVPROP_VISIT( pRecvTable,
 			{
 				if ( !pTable->IsInMainList() )
 					return;
@@ -454,10 +439,10 @@ void RecvTable_Term( bool clearall /*= true*/ )
 
 	if ( clearall )
 	{
-		g_RecvTables.Purge();
+		g_RecvTables.clear(); g_RecvTables.shrink_to_fit();
 	}
-	g_RecvDecoders.PurgeAndDeleteElements();
-	g_ClientSendTables.PurgeAndDeleteElements();
+	g_RecvDecoders.clear(); g_RecvDecoders.shrink_to_fit();
+	g_ClientSendTables.clear(); g_ClientSendTables.shrink_to_fit();
 }
 
 void RecvTable_FreeSendTable( SendTable *pTable )
@@ -543,25 +528,23 @@ bool RecvTable_RecvClassInfos( const ks::net::CSVCMsg_SendTable& msg, int nDemoP
 }
 
 static void CopySendPropsToRecvProps( 
-	CUtlRBTree< MatchingProp_t, unsigned short >& lookup, 
-	const CUtlVector<const SendProp*> &sendProps, 
-	CUtlVector<const RecvProp*> &recvProps 
+	const MatchingProps_t& lookup, 
+	const std::vector< const SendProp* > &sendProps, 
+	std::vector< const RecvProp* > &recvProps 
 	)
 {
-	recvProps.SetSize( sendProps.Count() );
-	for ( int iSendProp=0; iSendProp < sendProps.Count(); iSendProp++ )
+	recvProps.assign( std::ssize( sendProps ), {} );
+	for ( int iSendProp=0; iSendProp < std::ssize( sendProps ); iSendProp++ )
 	{
 		const SendProp *pSendProp = sendProps[iSendProp];
-		MatchingProp_t search;
-		search.m_pProp = (SendProp *)pSendProp;
-		int idx = lookup.Find( search );
-		if ( idx == lookup.InvalidIndex() )
+		auto it = lookup.find( pSendProp );
+		if ( it == lookup.end() )
 		{
 			recvProps[iSendProp] = 0;
 		}
 		else
 		{
-			recvProps[iSendProp] = lookup[ idx ].m_pMatchingRecvProp;
+			recvProps[iSendProp] = it->second;
 		}
 	}
 }
@@ -584,9 +567,9 @@ bool RecvTable_CreateDecoders( const CStandardSendProxies *pSendProxies, bool bA
 
 	bool bRet = true;
 
-	FOR_EACH_LL( g_RecvDecoders, i )
+	for ( const auto &pRecvDecoder : g_RecvDecoders )
 	{
-		CRecvDecoder *pDecoder = g_RecvDecoders[i];
+		CRecvDecoder *pDecoder = pRecvDecoder.get();
 
 
 		// It should already have been linked to its ClientSendTable.
@@ -599,7 +582,7 @@ bool RecvTable_CreateDecoders( const CStandardSendProxies *pSendProxies, bool bA
 		if ( !pDecoder->m_Precalc.SetupFlatPropertyArray() )
 			return false;
 
-		CUtlRBTree< MatchingProp_t, unsigned short >	PropLookup( 0, 0, MatchingProp_t::LessFunc );
+		MatchingProps_t	PropLookup;
 
 		// Now match RecvProp with SendProps.
 		if ( !MatchRecvPropsToSendProps_R( PropLookup, pDecoder->GetSendTable()->m_pNetTableName, pDecoder->GetSendTable(), pDecoder->GetRecvTable(), bAllowMismatches, pAnyMismatches ) )
@@ -613,6 +596,10 @@ bool RecvTable_CreateDecoders( const CStandardSendProxies *pSendProxies, bool bA
 			CSendTablePrecalc *pPrecalc = &pDecoder->m_Precalc;
 			CopySendPropsToRecvProps( PropLookup, pPrecalc->m_Props, pDecoder->m_Props );
 			CopySendPropsToRecvProps( PropLookup, pPrecalc->m_DatatableProps, pDecoder->m_DatatableProps );
+
+			pDecoder->m_bHasVectorLengths = false;
+			for ( int iProp = 0; iProp < std::ssize( pDecoder->m_Props ); iProp++ )
+				pDecoder->m_bHasVectorLengths |= pDecoder->IsVectorLength( iProp );
 		
 			DTI_HookRecvDecoder( pDecoder );
 		}
@@ -621,6 +608,33 @@ bool RecvTable_CreateDecoders( const CStandardSendProxies *pSendProxies, bool bA
 	return bRet;
 }
 
+// Decode one field of a serialized entity onto the struct the stack is walking.
+static inline void RecvTable_DecodeField(
+	CRecvDecoder *pDecoder,
+	CClientDatatableStack &theStack,
+	CFieldPath path,
+	bf_read &buf,
+	int objectID )
+{
+	theStack.SeekToProp( path );
+	unsigned char *pBase = theStack.UpdateRoutesExplicit();
+
+	// A missing prop is allowed when playing back a demo with older tables.
+	const RecvProp *pProp = pDecoder->GetProp( path );
+
+	DecodeInfo decodeInfo;
+	decodeInfo.m_pStruct = pBase;
+	decodeInfo.m_pData = pBase && pProp ? pBase + pProp->GetOffset() : nullptr;
+	decodeInfo.m_pRecvProp = pBase ? pProp : nullptr; // no base: skip the data
+	decodeInfo.m_pProp = pDecoder->GetSendProp( path );
+	decodeInfo.m_pIn = &buf;
+	decodeInfo.m_ObjectID = objectID;
+
+	g_PropTypeFns[ decodeInfo.m_pProp->GetType() ].Decode( &decodeInfo );
+}
+
+// Routes are lazy and lengths go first, so a vector's element routes are formed after its resize.
+// (Prop order alone can't guarantee that: SPROP_CHANGES_OFTEN.) Nested vectors are unsupported.
 bool RecvTable_Decode( 
 	RecvTable *pTable, 
 	void *pStruct, 
@@ -636,49 +650,23 @@ bool RecvTable_Decode(
 	CSerializedEntity *pEntity = reinterpret_cast< CSerializedEntity * >( dest );
 	Assert( pEntity );
 
-	// While there are properties, decode them.. walk the stack as you go.
 	CClientDatatableStack theStack( pDecoder, (unsigned char*)pStruct, objectID );
-	theStack.Init( false, false );
+	theStack.Init( true, false );
 
 	bf_read buf;
 	buf.SetDebugName( "CFlattenedSerializer::Decode" );
 	pEntity->StartReading( buf );
 
-	CFieldPath path;
-
-	int nDataOffset;
-	int nNextDataOffset;
-
-	for ( int nFieldIndex = 0 ; nFieldIndex < pEntity->GetFieldCount() ; ++nFieldIndex )
-	{
-		pEntity->GetField( nFieldIndex, path, &nDataOffset, &nNextDataOffset );
-		buf.Seek( nDataOffset );
-
-		theStack.SeekToProp( path );
-
-		const RecvProp *pProp = pDecoder->GetProp( path );
-
-		DecodeInfo decodeInfo;
-		decodeInfo.m_pStruct = theStack.GetCurStructBase();
-
-		if ( pProp )
+	pDecoder->ForEachLengthsFirst( pEntity->GetFieldCount(),
+		[&]( int i ) { return pEntity->GetFieldPath( i ); },
+		[&]( int i )
 		{
-			decodeInfo.m_pData = theStack.GetCurStructBase() + pProp->GetOffset();
-		}
-		else
-		{
-			// They're allowed to be missing props here if they're playing back a demo.
-			// This allows us to change the datatables and still preserve old demos.
-			decodeInfo.m_pData = nullptr;
-		}
-
-		decodeInfo.m_pRecvProp = theStack.IsCurProxyValid() ? pProp : nullptr; // Just skip the data if the proxies are screwed.
-		decodeInfo.m_pProp = pDecoder->GetSendProp( path );
-		decodeInfo.m_pIn = &buf;
-		decodeInfo.m_ObjectID = objectID;
-
-		g_PropTypeFns[ decodeInfo.m_pProp->GetType() ].Decode( &decodeInfo );
-	}
+			CFieldPath path;
+			int nDataOffset, nNextDataOffset;
+			pEntity->GetField( i, path, &nDataOffset, &nNextDataOffset );
+			buf.Seek( nDataOffset );
+			RecvTable_DecodeField( pDecoder, theStack, path, buf, objectID );
+		} );
 
 	return !buf.IsOverflowed();			
 }
@@ -690,27 +678,27 @@ void RecvTable_DecodeZeros( RecvTable *pTable, void *pStruct, int objectID )
 		("RecvTable_DecodeZeros: table '%s' missing a decoder.", pTable->GetName())
 	);
 
-	// While there are properties, decode them.. walk the stack as you go.
 	CClientDatatableStack theStack( pDecoder, (unsigned char*)pStruct, objectID );
+	theStack.Init( true, false );
 
-	theStack.Init( false, false );
+	pDecoder->ForEachLengthsFirst( pDecoder->GetNumProps(),
+		[]( int iProp ) { return iProp; },
+		[&]( int iProp )
+		{
+			theStack.SeekToProp( iProp );
+			unsigned char *pBase = theStack.UpdateRoutesExplicit();
+			const RecvProp *pProp = pDecoder->GetProp( iProp );
 
-	for ( int iProp=0; iProp < pDecoder->GetNumProps(); iProp++ )
-	{	
-		theStack.SeekToProp( iProp );
-	
-		const RecvProp *pProp = pDecoder->GetProp( iProp );
+			DecodeInfo decodeInfo;
+			decodeInfo.m_pStruct = pBase;
+			decodeInfo.m_pData = pBase && pProp ? pBase + pProp->GetOffset() : nullptr;
+			decodeInfo.m_pRecvProp = pBase ? pProp : nullptr;
+			decodeInfo.m_pProp = pDecoder->GetSendProp( iProp );
+			decodeInfo.m_pIn = nullptr;
+			decodeInfo.m_ObjectID = objectID;
 
-		DecodeInfo decodeInfo;
-		decodeInfo.m_pStruct = theStack.GetCurStructBase();
-		decodeInfo.m_pData = theStack.GetCurStructBase() + pProp->GetOffset();
-		decodeInfo.m_pRecvProp = theStack.IsCurProxyValid() ? pProp : nullptr; // Just skip the data if the proxies are screwed.
-		decodeInfo.m_pProp = pDecoder->GetSendProp( iProp );
-		decodeInfo.m_pIn = nullptr;
-		decodeInfo.m_ObjectID = objectID;
-
-		g_PropTypeFns[pProp->GetType()].DecodeZero( &decodeInfo );
-	}
+			g_PropTypeFns[decodeInfo.m_pProp->GetType()].DecodeZero( &decodeInfo );
+		} );
 }
 
 
@@ -752,7 +740,7 @@ bool RecvTable_MergeDeltas(
 	SerializedEntityHandle_t mergedState,
 
 	int objectID,
-	CUtlVector< int > *pVecChanges 
+	std::vector< int > *pVecChanges 
 	)
 {
 	Assert( SERIALIZED_ENTITY_HANDLE_INVALID != newState );
@@ -823,7 +811,7 @@ bool RecvTable_MergeDeltas(
 
 		if ( pVecChanges )
 		{
-			pVecChanges->AddToTail( *newFieldPath );
+			pVecChanges->push_back( *newFieldPath );
 		}
 
 		newFieldPath = newIterator.NextPtr();
@@ -850,7 +838,7 @@ bool RecvTable_ReadFieldList_Guts(
 
 	pEntity->Clear();
 
-	CUtlVector< int > fieldBits;
+	std::vector< int > fieldBits;
 	pEntity->ReadFieldPaths( &buf, bDTIEnabled ? &fieldBits : nullptr );
 
 	ErrorIfNot( pTable, ("RecvTable_ReadFieldListt: Missing RecvTable for class\n" ) );

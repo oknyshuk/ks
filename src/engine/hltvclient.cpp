@@ -20,9 +20,6 @@
 #include "sv_steamauth.h"
 #include "fmtstr.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static ConVar tv_maxrate( "tv_maxrate", STRINGIFY( DEFAULT_RATE ), FCVAR_RELEASE, "Max GOTV spectator bandwidth rate allowed, 0 == unlimited" );
 static ConVar tv_relaypassword( "tv_relaypassword", "", FCVAR_NOTIFY | FCVAR_PROTECTED | FCVAR_DONTRECORD | FCVAR_RELEASE, "GOTV password for relay proxies" );
 static ConVar tv_chattimelimit( "tv_chattimelimit", "8", FCVAR_RELEASE, "Limits spectators to chat only every n seconds" );
@@ -91,9 +88,9 @@ bool CHLTVClient::ProcessSignonStateMsg(int state, int spawncount)
 		// Send all the delayed avatar data to the fully connected client
 		if ( INetChannel *pMyNetChannel = GetNetChannel() )
 		{
-			FOR_EACH_MAP_FAST( m_pHLTV->m_mapPlayerAvatarData, iData )
+			for ( auto &[accountid, pData] : m_pHLTV->m_mapPlayerAvatarData )
 			{
-				pMyNetChannel->EnqueueVeryLargeAsyncTransfer( *m_pHLTV->m_mapPlayerAvatarData.Element( iData ) );
+				pMyNetChannel->EnqueueVeryLargeAsyncTransfer( *pData );
 			}
 		}
 	}

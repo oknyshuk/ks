@@ -12,6 +12,7 @@
 
 
 #include <malloc.h>
+#include <mutex>
 
 #include "tier0/dbg.h"
 #include "tier0/memalloc.h"
@@ -30,11 +31,11 @@
 IMemoryInfo* s_MemoryInfoCallbacks[100];
 static size_t s_nMemoryInfoCallbacks;
 // Don't modify the MemoryInfoCallbacks without acquiring this mutex
-static CThreadMutex s_callbackMutex;
+static std::recursive_mutex s_callbackMutex;
 
 void AddMemoryInfoCallback( IMemoryInfo* pMemoryInfo )
 {
-	CAutoLock locker( s_callbackMutex );
+	std::scoped_lock lock( s_callbackMutex );
 	// This is O(n^2) but that's okay because n is just 10-20
 	for ( size_t i = 0; i < s_nMemoryInfoCallbacks; ++i )
 	{
@@ -53,7 +54,7 @@ void AddMemoryInfoCallback( IMemoryInfo* pMemoryInfo )
 
 void RemoveMemoryInfoCallback( IMemoryInfo* pMemoryInfo )
 {
-	CAutoLock locker( s_callbackMutex );
+	std::scoped_lock lock( s_callbackMutex );
 	for ( size_t i = 0; i < s_nMemoryInfoCallbacks; ++i )
 	{
 		if ( s_MemoryInfoCallbacks[ i ] == pMemoryInfo )
@@ -72,7 +73,7 @@ void RemoveMemoryInfoCallback( IMemoryInfo* pMemoryInfo )
 // registered with AddMemoryInfoCallback.
 void DumpMemoryInfoStats()
 {
-	CAutoLock locker( s_callbackMutex );
+	std::scoped_lock lock( s_callbackMutex );
 	size_t nTotalAllocatedBytes = 0;
 	size_t nTotalPeakBytes = 0;
 	size_t nTotalCommittedBytes = 0;
@@ -123,8 +124,6 @@ void DumpMemoryInfoStats()
 //-----------------------------------------------------------------------------
 // Singleton...
 //-----------------------------------------------------------------------------
-#pragma warning( disable:4074 ) // warning C4074: initializers put in compiler reserved initialization area
-#pragma init_seg( compiler )
 
 
 static CStdMemAlloc s_StdMemAlloc CONSTRUCT_EARLY;

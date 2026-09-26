@@ -13,16 +13,14 @@
 #include "net.h"
 #include "client.h"
 #include "utlvector.h"
-#include "utllinkedlist.h"
+#include "tier1/byte_writer.h"
+#include <vector>
 #include "netadr.h"
 #include "sv_remoteaccess.h"
 #include "sv_rcon.h"
 #include "tier2/socketcreator.h"
 #include "igameserverdata.h"
 #include "ivprofexport.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 abstract_class IVProfData
 {
@@ -60,8 +58,8 @@ public:
 private:
 	void CleanupGroupData();
 
-	CUtlVector< CExportedBudgetGroupInfo > m_Info;
-	CUtlVector<float> m_Times;	// Times from the most recent snapshot.
+	std::vector< CExportedBudgetGroupInfo > m_Info;
+	std::vector< float > m_Times;	// Times from the most recent snapshot.
 };
 
 
@@ -110,8 +108,8 @@ private:
 	void Authenticate();
 	void ParseReceivedData();
 	void SendQueuedData();
-	void SendResponse( CUtlBuffer &response, bool bAutoAuthenticate = true );
-	void BuildResponse( CUtlBuffer &response, ServerDataRequestType_t msg, const char *pString1, const char *pString2 );
+	void SendResponse( ks::byte_writer &response, bool bAutoAuthenticate = true );
+	void BuildResponse( ks::byte_writer &response, ServerDataRequestType_t msg, const char *pString1, const char *pString2 );
 	void SaveRemoteScreenshot( const void* pBuffer, int nBufLen );
 	void SaveRemoteConsoleLog( const void* pBuffer, int nBufLen );
 
@@ -121,10 +119,10 @@ private:
 	int				m_iAuthRequestID;
 	int				m_iReqID;
 	bool			m_bAuthenticated;
-	CUtlBuffer		m_RecvBuffer;
-	CUtlBuffer		m_SendBuffer;
-	CUtlString		m_Password;
-	CUtlString		m_RemoteFileDir;
+	std::vector< std::byte >	m_RecvBuffer;
+	std::vector< std::byte >	m_SendBuffer;
+	std::string		m_Password;
+	std::string		m_RemoteFileDir;
 	int				m_nScreenShotIndex;
 	int				m_nConsoleLogIndex;
 };

@@ -16,9 +16,6 @@
 #include "tier2/tier2.h"
 #include "filesystem.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // Sprites are clipped to this rectangle (x,y,width,height) if ScissorTest is enabled
 static int scissor_x = 0;
 static int scissor_y = 0;
@@ -98,13 +95,13 @@ static int IntersectWRect(const wrect_t *prc1, const wrect_t *prc2, wrect_t *prc
 	if (!prc)
 		prc = &rc;
 
-	prc->left = MAX(prc1->left, prc2->left);
-	prc->right = MIN(prc1->right, prc2->right);
+	prc->left = std::max(prc1->left, prc2->left);
+	prc->right = std::min(prc1->right, prc2->right);
 
 	if (prc->left < prc->right)
 	{
-		prc->top = MAX(prc1->top, prc2->top);
-		prc->bottom = MIN(prc1->bottom, prc2->bottom);
+		prc->top = std::max(prc1->top, prc2->top);
+		prc->bottom = std::min(prc1->bottom, prc2->bottom);
 
 		if (prc->top < prc->bottom)
 			return 1;

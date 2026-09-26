@@ -10,9 +10,6 @@
 #include "sos_op_convar.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar snd_op_test_convar("snd_op_test_convar", "1.0", FCVAR_CHEAT );
 
 

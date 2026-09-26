@@ -10,9 +10,6 @@
 #include "sys.h"
 #include "net.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 // These are the server cvars that control our cvars.
 extern int ClampClientRate( int nRate );

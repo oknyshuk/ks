@@ -17,9 +17,6 @@
 #include "tier0/vprof.h"
 #include "debugoverlay.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
@@ -51,7 +48,7 @@ struct LightVecState_t
 	float*	m_pLightmapT;
 	SurfaceHandle_t m_nSkySurfID;
 	bool	m_bUseLightStyles;
-	CUtlVector<IDispInfo *>	m_LightTestDisps;
+	std::vector< IDispInfo * >	m_LightTestDisps;
 };
 
 
@@ -561,7 +558,7 @@ static SurfaceHandle_t R_LightVecDisplacementChain( LightVecState_t& state, bool
 	// test the ray against displacements
 	SurfaceHandle_t surfID = SURFACE_HANDLE_INVALID;
 
-	for ( int i = 0; i < state.m_LightTestDisps.Count(); i++ )
+	for ( int i = 0; i < std::ssize( state.m_LightTestDisps ); i++ )
 	{
 		float dist;
 		Vector2D luv, tuv;
@@ -610,7 +607,7 @@ static void AddDisplacementsInLeafToTestList( mleaf_t* pLeaf, LightVecState_t& s
 		if (MSurf_VisFrame( parentSurfID ) != r_surfacevisframe)
 		{
 			MSurf_VisFrame( parentSurfID ) = r_surfacevisframe;
-			state.m_LightTestDisps.AddToTail( pDispInfo );
+			state.m_LightTestDisps.push_back( pDispInfo );
 		}
 	}
 }

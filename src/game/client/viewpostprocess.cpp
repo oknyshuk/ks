@@ -27,9 +27,7 @@
 #include "weapon_csbase.h"
 #include "c_cs_player.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 
 //-----------------------------------------------------------------------------
 // Globals
@@ -828,7 +826,7 @@ float CTonemapSystem::FindLocationOfPercentBrightPixels( float flPercentBrightPi
 
 				float flPercentOfThesePixelsNeeded = flPixelPercentNeeded / flThisBinPercentOfTotalPixels;
 				float flPercentLocationOfBorder = 1.0f - ( flTotalPercentRangeTested + ( flThisBinLuminanceRange * flPercentOfThesePixelsNeeded ) );
-				flPercentLocationOfBorder = MAX( m_histogramBucketArray[i].m_flMinLuminance, MIN( m_histogramBucketArray[i].m_flMaxLuminance, flPercentLocationOfBorder ) ); // Clamp to this bin just in case
+				flPercentLocationOfBorder = std::max( m_histogramBucketArray[i].m_flMinLuminance, std::min( m_histogramBucketArray[i].m_flMaxLuminance, flPercentLocationOfBorder ) ); // Clamp to this bin just in case
 				return flPercentLocationOfBorder;
 			}
 
@@ -863,7 +861,7 @@ float CTonemapSystem::ComputeTargetTonemapScalar( bool bGetIdealTargetForDebugMo
 		}
 
 		// Make sure this is > 0.0f
-		flPercentLocationOfTarget = MAX( 0.0001f, flPercentLocationOfTarget );
+		flPercentLocationOfTarget = std::max( 0.0001f, flPercentLocationOfTarget );
 
 		// Compute target scalar
 		float flTargetScalar = ( flTonemapPercentTarget / 100.0f ) / flPercentLocationOfTarget;
@@ -886,7 +884,7 @@ float CTonemapSystem::ComputeTargetTonemapScalar( bool bGetIdealTargetForDebugMo
 		float flLastScale = m_flCurrentTonemapScale;
 		flTargetScalar *= flLastScale;
 
-		flTargetScalar = MAX( 0.001f, flTargetScalar );
+		flTargetScalar = std::max( 0.001f, flTargetScalar );
 		return flTargetScalar;
 	}
 	else // Original tonemapping algorithm
@@ -920,7 +918,7 @@ float CTonemapSystem::ComputeTargetTonemapScalar( bool bGetIdealTargetForDebugMo
 			flAverageLuminance = 0.5f;
 
 		// Make sure this is > 0.0f
-		flAverageLuminance = MAX( 0.0001f, flAverageLuminance );
+		flAverageLuminance = std::max( 0.0001f, flAverageLuminance );
 
 		// Compute target scalar
 		float flTargetScalar = 0.005f / flAverageLuminance;
@@ -1105,7 +1103,7 @@ void CTonemapSystem::DisplayHistogram()
 			}
 		}
 
-		int nWidth = MAX( 1, 500 * ( pBucket->m_flMaxLuminance - pBucket->m_flMinLuminance ) );
+		int nWidth = std::max<std::common_type_t<int, float>>( 1, 500 * ( pBucket->m_flMaxLuminance - pBucket->m_flMinLuminance ) );
 		nTotalGraphPixelsWide += nWidth + 2;
 	}
 
@@ -1122,7 +1120,7 @@ void CTonemapSystem::DisplayHistogram()
 		engine->Con_NPrintf( 23 + ( nViewportY / 10 ), "(Histogram luminance is in linear space)" );
 
 		engine->Con_NPrintf( 27 + ( nViewportY / 10 ), "AvgLum @ %4.2f%%  flTonemapMinAvgLum = %4.2f%%  Using %d pixels  Override(%s): %4.2f", 
-			MAX( 0.0f, FindLocationOfPercentBrightPixels( 50.0f ) ) * 100.0f, flTonemapMinAvgLum, nTotalValidPixels, m_bOverrideTonemapScaleEnabled ? "On" : "Off", m_flOverrideTonemapScale );
+			std::max( 0.0f, FindLocationOfPercentBrightPixels( 50.0f ) ) * 100.0f, flTonemapMinAvgLum, nTotalValidPixels, m_bOverrideTonemapScaleEnabled ? "On" : "Off", m_flOverrideTonemapScale );
 		engine->Con_NPrintf( 29 + ( nViewportY / 10 ), "BloomScale = %4.2f  flTonemapRate = %4.2f  mat_accelerate_adjust_exposure_down = %4.2f", 
 			GetCurrentBloomScale(), g_flTonemapRate, mat_accelerate_adjust_exposure_down.GetFloat() );
 	}
@@ -1140,13 +1138,13 @@ void CTonemapSystem::DisplayHistogram()
 			CHistogramBucket &e = m_histogramBucketArray[ nBucket ];
 			if ( e.ContainsValidData() )
 				np += e.m_nPixelsInRange;
-			int width = MAX( 1, 500 * ( e.m_flMaxLuminance - e.m_flMinLuminance ) );
+			int width = std::max<std::common_type_t<int, float>>( 1, 500 * ( e.m_flMaxLuminance - e.m_flMinLuminance ) );
 	
 			//Warning( "Bucket %d: min/max %f / %f.  m_nPixelsInRange=%d   m_nPixels=%d\n", nBucket, e.m_flMinLuminance, e.m_flMaxLuminance, e.m_nPixelsInRange, e.m_nPixels );
 	
 			if ( np )
 			{
-				int height = MAX( 1, MIN( HISTOGRAM_BAR_SIZE, ( (float)np / (float)nMaxValidPixels ) * HISTOGRAM_BAR_SIZE ) );
+				int height = std::max<std::common_type_t<int, float>>( 1, std::min<std::common_type_t<int, float>>( HISTOGRAM_BAR_SIZE, ( (float)np / (float)nMaxValidPixels ) * HISTOGRAM_BAR_SIZE ) );
 	
 				pRenderContext->ClearColor3ub( 255, 0, 0 );
 				pRenderContext->Viewport( xp, yOffset + HISTOGRAM_BAR_SIZE - height, width, height );
@@ -1425,7 +1423,7 @@ void CTonemapSystem::SetTonemapScale( IMatRenderContext *pRenderContext, float f
 	//=======================================//
 	// Smoothly lerp to the target over time //
 	//=======================================//
-	float flElapsedTime = MAX( gpGlobals->frametime, 0.0f ); // Clamp to positive
+	float flElapsedTime = std::max( gpGlobals->frametime, 0.0f ); // Clamp to positive
 	float flRate = g_flTonemapRate;
 
 	if ( mat_tonemap_algorithm.GetInt() == 1 )
@@ -1444,7 +1442,7 @@ void CTonemapSystem::SetTonemapScale( IMatRenderContext *pRenderContext, float f
 			float acc_exposure_adjust = mat_accelerate_adjust_exposure_down.GetFloat();
 
 			// Adjust at up to 4x rate when over-exposed.
-			flRate = MIN( ( acc_exposure_adjust * flRate ), FLerp( flRate, ( acc_exposure_adjust * flRate ), 0.0f, 1.5f, ( m_flCurrentTonemapScale - m_flTargetTonemapScale ) ) );
+			flRate = std::min( ( acc_exposure_adjust * flRate ), FLerp( flRate, ( acc_exposure_adjust * flRate ), 0.0f, 1.5f, ( m_flCurrentTonemapScale - m_flTargetTonemapScale ) ) );
 		}
 
 		float flRateTimesTime = flRate * flElapsedTime;
@@ -1454,7 +1452,7 @@ void CTonemapSystem::SetTonemapScale( IMatRenderContext *pRenderContext, float f
 			// help reduce the tone map scalar "riding the wave" of the histogram re-building
 
 			//Warning( "flRateTimesTime = %.4f", flRateTimesTime );
-			flRateTimesTime = MIN( flRateTimesTime, ( 1.0f / ( float )( NUM_HISTOGRAM_BUCKETS_NEW - 1 ) ) * 0.25f );
+			flRateTimesTime = std::min( flRateTimesTime, ( 1.0f / ( float )( NUM_HISTOGRAM_BUCKETS_NEW - 1 ) ) * 0.25f );
 			//Warning( " --> %.4f\n", flRateTimesTime );
 		}
 
@@ -2002,32 +2000,32 @@ static void DumpTGAofRenderTarget( const int width, const int height, const char
 	CMatRenderContextPtr pRenderContext( materials );
 
 	// Get the data from the render target and save to disk bitmap bits
-	unsigned char *pImage = ( unsigned char * )malloc( width * 4 * height );
+	unsigned char *pImage = ( unsigned char * )MemAlloc_Alloc( width * 4 * height );
 
 	// Get Bits from the material system
 	pRenderContext->ReadPixels( 0, 0, width, height, pImage, IMAGE_FORMAT_RGBA8888 );
 
 	// allocate a buffer to write the tga into
 	int iMaxTGASize = 1024 + (width * height * 4);
-	void *pTGA = malloc( iMaxTGASize );
-	CUtlBuffer buffer( pTGA, iMaxTGASize );
+	void *pTGA = MemAlloc_Alloc( iMaxTGASize );
+	ks::byte_writer buffer( pTGA, iMaxTGASize );
 
 	if( !TGAWriter::WriteToBuffer( pImage, buffer, width, height, IMAGE_FORMAT_RGBA8888, IMAGE_FORMAT_RGBA8888 ) )
 	{
 		Error( "Couldn't write bitmap data snapshot.\n" );
 	}
 
-	free( pImage );
+	g_pMemAlloc->Free( pImage );
 
 	// async write to disk (this will take ownership of the memory)
 	char szPathedFileName[_MAX_PATH];
 	Q_snprintf( szPathedFileName, sizeof(szPathedFileName), "//MOD/%d_%s_%s.tga", s_nRTIndex++, pFilename, "PC" );
 
 	FileHandle_t fileTGA = filesystem->Open( szPathedFileName, "wb" );
-	filesystem->Write( buffer.Base(), buffer.TellPut(), fileTGA );
+	filesystem->Write( buffer.data(), buffer.size(), fileTGA );
 	filesystem->Close( fileTGA );
 
-	free( pTGA );
+	g_pMemAlloc->Free( pTGA );
 }
 
 static bool s_bScreenEffectTextureIsUpdated = false;
@@ -2174,8 +2172,8 @@ static void DoTonemapping( IMatRenderContext *pRenderContext, int nX, int nY, in
 		GetCurrentTonemappingSystem()->IssueAndReceiveBucketQueries();
 
 		float flTargetScalar = GetCurrentTonemappingSystem()->ComputeTargetTonemapScalar();
-		float flTargetScalarClamped = MAX( flAutoExposureMin, MIN( flAutoExposureMax, flTargetScalar ) );
-		flTargetScalarClamped = MAX( 0.001f, flTargetScalarClamped ); // Don't let this go to 0!
+		float flTargetScalarClamped = std::max( flAutoExposureMin, std::min( flAutoExposureMax, flTargetScalar ) );
+		flTargetScalarClamped = std::max( 0.001f, flTargetScalarClamped ); // Don't let this go to 0!
 		GetCurrentTonemappingSystem()->SetTonemapScale( pRenderContext, flTargetScalarClamped, flAutoExposureMin, flAutoExposureMax );
 
 		if ( mat_show_histogram.GetInt() )

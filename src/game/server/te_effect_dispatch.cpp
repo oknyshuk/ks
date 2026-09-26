@@ -17,15 +17,11 @@
 #include "te_effect_dispatch.h"
 #include "networkstringtable_gamedll.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: This TE provides a simple interface to dispatch effects by name using DispatchEffect().
 //-----------------------------------------------------------------------------
 class [[= ks::reflect::NetTable{ .name = "DT_TEEffectDispatch" } ]]
-      [[= ks::reflect::From<"m_EffectData", ks::reflect::Net{}, nullptr,
-                            &REFERENCE_SEND_TABLE( DT_EffectData )>{} ]]
+      [[= ks::reflect::FromTable<"m_EffectData", &REFERENCE_SEND_TABLE( DT_EffectData )>{} ]]
       CTEEffectDispatch : public CBaseTempEntity
 {
 public:

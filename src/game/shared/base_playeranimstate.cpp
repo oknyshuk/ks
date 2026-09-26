@@ -10,7 +10,7 @@
 #include "animation.h"
 #include "studio.h"
 #include "apparent_velocity_helper.h"
-#include "utldict.h"
+#include "tier1/map_ops.h"
 #include "filesystem.h"
 
 
@@ -27,9 +27,6 @@
 	ConVar showanimstate_log( "sv_showanimstate_log", "0", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "1 to output sv_showanimstate to Msg(). 2 to store in AnimStateServer.log. 3 for both." );
 	ConVar showanimstate_activities( "sv_showanimstate_activities", "0", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "Show activities in the (server) animation state display." );
 #endif
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 
 
@@ -377,7 +374,7 @@ void CBasePlayerAnimState::OptimizeLayerWeights( int iFirstLayer, int nLayers )
 	if ( pLayer->IsActive() && pLayer->GetWeight() > 0.0f )
 	{
 		float flWeight = 1.0f - totalWeight;
-		flWeight = MAX( flWeight, 0.0f );
+		flWeight = std::max( flWeight, 0.0f );
 		pLayer->SetWeight( flWeight );
 	}
 
@@ -458,10 +455,9 @@ int CBasePlayerAnimState::CalcSequenceIndex( PRINTF_FORMAT_STRING const char *pB
 	// Show warnings if we can't find anything here.
 	if ( iSequence == -1 )
 	{
-		static CUtlDict<int,int> dict;
-		if ( dict.Find( szFullName ) == dict.InvalidIndex() )
+		static std::set< std::string, ks::iless > warned;
+		if ( warned.emplace( szFullName ).second )
 		{
-			dict.Insert( szFullName, 0 );
 			Warning( "CalcSequenceIndex: can't find '%s'.\n", szFullName );
 		}
 
@@ -835,7 +831,7 @@ int CBasePlayerAnimState::ConvergeAngles( float goal,float maxrate, float maxgap
 	{
 		// gap is too big, jump
 		//maxmove = (anglediffabs - maxgap);
-		float flTooFar = MIN( anglediffabs - maxgap, maxmove * 5 );
+		float flTooFar = std::min( anglediffabs - maxgap, maxmove * 5 );
 		if ( anglediff > 0 )
 		{
 			current += flTooFar;

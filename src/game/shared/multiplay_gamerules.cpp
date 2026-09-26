@@ -41,9 +41,6 @@
 	#include "basemultiplayerplayer.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern ConVar mp_verbose_changelevel_spew;
 extern ConVar sv_kick_ban_duration;
 extern ConVar mp_autokick;
@@ -133,7 +130,7 @@ ConVar nextlevel( "nextlevel",
 #ifndef CLIENT_DLL
 int CMultiplayRules::m_nMapCycleTimeStamp = 0;
 int CMultiplayRules::m_nMapCycleindex = 0;
-CUtlStringList CMultiplayRules::m_MapList;
+std::vector< std::string > CMultiplayRules::m_MapList;
 #endif
 
 //=========================================================
@@ -1111,12 +1108,12 @@ CMultiplayRules::CMultiplayRules()
 				if ( engine->GetEngineHltvInfo( engineHltv ) &&
 					 engineHltv.m_bBroadcastActive && ( engineHltv.m_numClients > 0 ) )
 				{
-					flWaitTime = MAX ( flWaitTime, HLTVDirector()->GetDelay() + 5.0f );
+					flWaitTime = std::max( flWaitTime, HLTVDirector()->GetDelay() + 5.0f );
 				}
 			}
 #if defined( REPLAY_ENABLED )
 			else if ( ReplayDirector()->IsActive() )
-				flWaitTime = MAX ( flWaitTime, ReplayDirector()->GetDelay() + 5.0f );
+				flWaitTime = std::max( flWaitTime, ReplayDirector()->GetDelay() + 5.0f );
 #endif
 		}
 
@@ -1221,7 +1218,7 @@ CMultiplayRules::CMultiplayRules()
 			// Map cycle file does not exist, make a list containing only the current map
 			char *szCurrentMapName = new char[MAX_PATH];
 			V_strncpy( szCurrentMapName, STRING(gpGlobals->mapname), MAX_PATH );
-			m_MapList.AddToTail( szCurrentMapName );
+			m_MapList.push_back( szCurrentMapName );
 
 			if ( mp_verbose_changelevel_spew.GetBool() && szCurrentMapName )
 			{
@@ -1237,13 +1234,8 @@ CMultiplayRules::CMultiplayRules()
 				m_nMapCycleTimeStamp = nMapCycleTimeStamp;
 				m_nMapCycleindex = 0;
 
-				// Clear out existing map list. Not using Purge() because I don't think that it will do a 'delete []'
-				for ( int i = 0; i < m_MapList.Count(); i++ )
-				{
-					delete [] m_MapList[i];
-				}
 
-				m_MapList.RemoveAll();
+				m_MapList.clear();
 
 				// Repopulate map list from mapcycle file
 				int nFileLength;
@@ -1252,30 +1244,29 @@ CMultiplayRules::CMultiplayRules()
 				{
 					V_SplitString( aFileList, "\n", m_MapList );
 
-					for ( int i = 0; i < m_MapList.Count(); i++ )
+					for ( int i = 0; i < std::ssize( m_MapList ); i++ )
 					{
 						bool bIgnore = false;
 
 						// Strip out the spaces in the name
-						StripChar( m_MapList[i] , '\r');
-						StripChar( m_MapList[i] , ' ');
+						StripChar( m_MapList[i].data() , '\r');
+						StripChar( m_MapList[i].data() , ' ');
 						
-						if ( !engine->IsMapValid( m_MapList[i] ) )
+						if ( !engine->IsMapValid( m_MapList[i].c_str() ) )
 						{
 							bIgnore = true;
 
 							// If the engine doesn't consider it a valid map remove it from the lists
-							Warning( "Invalid map '%s' included in map cycle file. Ignored.\n", m_MapList[i] );
+							Warning( "Invalid map '%s' included in map cycle file. Ignored.\n", m_MapList[i].c_str() );
 						}
-						else if ( StringHasPrefixCaseSensitive( m_MapList[i], "//" ) )
+						else if ( StringHasPrefixCaseSensitive( m_MapList[i].c_str(), "//" ) )
 						{
 							bIgnore = true;
 						}
 
 						if ( bIgnore )
 						{
-							delete [] m_MapList[i];
-							m_MapList.Remove( i );
+							m_MapList.erase( m_MapList.begin() + i );
 							--i;
 						}
 					}
@@ -1284,9 +1275,9 @@ CMultiplayRules::CMultiplayRules()
 				}
 
 				// If the current map selection is in the list, set m_nMapCycleindex to the map that follows it.
-				for ( int i = 0; i < m_MapList.Count(); i++ )
+				for ( int i = 0; i < std::ssize( m_MapList ); i++ )
 				{
-					if ( V_strcmp( STRING( gpGlobals->mapname ), m_MapList[i] ) == 0 )
+					if ( V_strcmp( STRING( gpGlobals->mapname ), m_MapList[i].c_str() ) == 0 )
 					{
 						m_nMapCycleindex = i;
 						IncrementMapCycleIndex();
@@ -1297,11 +1288,11 @@ CMultiplayRules::CMultiplayRules()
 		}
 
 		// If somehow we have no maps in the list then add the current one
-		if ( 0 == m_MapList.Count() )
+		if ( m_MapList.empty() )
 		{
 			char *szDefaultMapName = new char[MAX_PATH];
 			V_strncpy( szDefaultMapName, STRING(gpGlobals->mapname), MAX_PATH );
-			m_MapList.AddToTail( szDefaultMapName );
+			m_MapList.push_back( szDefaultMapName );
 			if ( mp_verbose_changelevel_spew.GetBool() && szDefaultMapName )
 			{
 				Msg( "CHANGELEVEL: Map list empty or failed to parse, using current map '%s'\n", szDefaultMapName );
@@ -1310,11 +1301,11 @@ CMultiplayRules::CMultiplayRules()
 
 		if ( bRandom )
 		{
-			m_nMapCycleindex = RandomInt( 0, m_MapList.Count() - 1 );
+			m_nMapCycleindex = RandomInt( 0, std::ssize( m_MapList ) - 1 );
 		}
 
 		// Here's the return value
-		Q_strncpy( pszNextMap, m_MapList[m_nMapCycleindex], bufsize);
+		Q_strncpy( pszNextMap, m_MapList[m_nMapCycleindex].c_str(), bufsize);
 	}
 
 	void CMultiplayRules::ChangeLevel( void )
@@ -1350,7 +1341,7 @@ CMultiplayRules::CMultiplayRules()
 		{
 			for ( KeyValues *menu = pKV->GetFirstSubKey(); menu != nullptr; menu = menu->GetNextKey() )
 			{
-				int iMenuIndex = m_VoiceCommandMenus.AddToTail();
+				int iMenuIndex = std::ssize( m_VoiceCommandMenus ); m_VoiceCommandMenus.emplace_back();
 
 				int iNumItems = 0;
 
@@ -1384,7 +1375,7 @@ CMultiplayRules::CMultiplayRules()
 					Q_strncpy( item.m_szMenuLabel, menuitem->GetString( "menu_label", "" ), MAX_VOICE_COMMAND_SUBTITLE );
 
 #endif
-					m_VoiceCommandMenus.Element( iMenuIndex ).AddToTail( item );
+					m_VoiceCommandMenus[ iMenuIndex ].push_back( item );
 				}
 			}
 		}
@@ -1414,7 +1405,7 @@ CMultiplayRules::CMultiplayRules()
 	void CMultiplayRules::IncrementMapCycleIndex()
 	{
 		// Reset index if we've passed the end of the map list
-		if ( ++m_nMapCycleindex >= m_MapList.Count() )
+		if ( ++m_nMapCycleindex >= std::ssize( m_MapList ) )
 		{
 			m_nMapCycleindex = 0;
 		}
@@ -1453,13 +1444,13 @@ CMultiplayRules::CMultiplayRules()
 		if ( !pPlayer )
 			return nullptr;
 
-		if ( iMenu < 0 || iMenu >= m_VoiceCommandMenus.Count() )
+		if ( iMenu < 0 || iMenu >= std::ssize( m_VoiceCommandMenus ) )
 			return nullptr;
 
-		if ( iItem < 0 || iItem >= m_VoiceCommandMenus.Element( iMenu ).Count() )
+		if ( iItem < 0 || iItem >= std::ssize( m_VoiceCommandMenus[ iMenu ] ) )
 			return nullptr;
 
-		VoiceCommandMenuItem_t *pItem = &m_VoiceCommandMenus.Element( iMenu ).Element( iItem );
+		VoiceCommandMenuItem_t *pItem = &m_VoiceCommandMenus[ iMenu ][ iItem ];
 
 		Assert( pItem );
 
@@ -1565,15 +1556,15 @@ CMultiplayRules::CMultiplayRules()
 
 	const char *CMultiplayRules::GetVoiceCommandSubtitle( int iMenu, int iItem )
 	{
-		Assert( iMenu >= 0 && iMenu < m_VoiceCommandMenus.Count() );
-		if ( iMenu < 0 || iMenu >= m_VoiceCommandMenus.Count() )
+		Assert( iMenu >= 0 && iMenu < std::ssize( m_VoiceCommandMenus ) );
+		if ( iMenu < 0 || iMenu >= std::ssize( m_VoiceCommandMenus ) )
 			return "";
 
-		Assert( iItem >= 0 && iItem < m_VoiceCommandMenus.Element( iMenu ).Count() );
-		if ( iItem < 0 || iItem >= m_VoiceCommandMenus.Element( iMenu ).Count() )
+		Assert( iItem >= 0 && iItem < std::ssize( m_VoiceCommandMenus[ iMenu ] ) );
+		if ( iItem < 0 || iItem >= std::ssize( m_VoiceCommandMenus[ iMenu ] ) )
 			return "";
 
-		VoiceCommandMenuItem_t *pItem = &m_VoiceCommandMenus.Element( iMenu ).Element( iItem );
+		VoiceCommandMenuItem_t *pItem = &m_VoiceCommandMenus[ iMenu ][ iItem ];
 
 		Assert( pItem );
 
@@ -1583,15 +1574,15 @@ CMultiplayRules::CMultiplayRules()
 	// Returns false if no such menu is declared or if it's an empty menu
 	bool CMultiplayRules::GetVoiceMenuLabels( int iMenu, KeyValues *pKV )
 	{
-		Assert( iMenu >= 0 && iMenu < m_VoiceCommandMenus.Count() );
-		if ( iMenu < 0 || iMenu >= m_VoiceCommandMenus.Count() )
+		Assert( iMenu >= 0 && iMenu < std::ssize( m_VoiceCommandMenus ) );
+		if ( iMenu < 0 || iMenu >= std::ssize( m_VoiceCommandMenus ) )
 			return false;
 
-		int iNumItems = m_VoiceCommandMenus.Element( iMenu ).Count();
+		int iNumItems = std::ssize( m_VoiceCommandMenus[ iMenu ] );
 
 		for ( int i=0; i<iNumItems; i++ )
 		{
-			VoiceCommandMenuItem_t *pItem = &m_VoiceCommandMenus.Element( iMenu ).Element( i );
+			VoiceCommandMenuItem_t *pItem = &m_VoiceCommandMenus[ iMenu ][ i ];
 
 			KeyValues *pLabelKV = new KeyValues( pItem->m_szMenuLabel );
 
@@ -1635,5 +1626,5 @@ CBasePlayer *CSameTeamGroup::GetPlayer( int idx )
 
 int CSameTeamGroup::Count() const
 {
-	return m_Players.Count();
+	return std::ssize( m_Players );
 }

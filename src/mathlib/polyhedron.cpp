@@ -69,9 +69,6 @@ static int g_iPolyhedronDumpCounter = 0;
 
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #if defined( DBGFLAG_ASSERT ) && defined( ENABLE_DEBUG_POLYHEDRON_DUMPS )
 
 void CreateDumpDirectory( const char *szDirectoryName )
@@ -100,9 +97,7 @@ CPolyhedron_AllocByNew *CPolyhedron_AllocByNew::Allocate( unsigned short iVertic
 										(iIndices * sizeof( Polyhedron_IndexedLineReference_t )) + 
 										(iPolygons * sizeof( Polyhedron_IndexedPolygon_t ))];
 
-#include "tier0/memdbgoff.h" //the following placement new doesn't compile with memory debugging
 	CPolyhedron_AllocByNew *pAllocated = new ( pMemory ) CPolyhedron_AllocByNew;
-#include "tier0/memdbgon.h"
 
 	pAllocated->iVertexCount = iVertices;
 	pAllocated->iLineCount = iLines;
@@ -139,7 +134,7 @@ public:
 };
 
 
-static CUtlVector<unsigned char> s_TempMemoryPolyhedron_Buffer;
+static std::vector< unsigned char > s_TempMemoryPolyhedron_Buffer;
 static CPolyhedron_TempMemory s_TempMemoryPolyhedron;
 
 CPolyhedron *GetTempPolyhedron( unsigned short iVertices, unsigned short iLines, unsigned short iIndices, unsigned short iPolygons ) //grab the temporary polyhedron. Avoids new/delete for quick work. Can only be in use by one chunk of code at a time
@@ -148,17 +143,17 @@ CPolyhedron *GetTempPolyhedron( unsigned short iVertices, unsigned short iLines,
     AssertMsg( s_TempMemoryPolyhedron.iReferenceCount == 0, "Temporary polyhedron memory being rewritten before released" );
 	++s_TempMemoryPolyhedron.iReferenceCount;
 #endif
-	s_TempMemoryPolyhedron_Buffer.SetCount( (sizeof( Vector ) * iVertices) +
+	s_TempMemoryPolyhedron_Buffer.assign( (sizeof( Vector ) * iVertices) +
 											(sizeof( Polyhedron_IndexedLine_t ) * iLines) +
 											(sizeof( Polyhedron_IndexedLineReference_t ) * iIndices) +
-											(sizeof( Polyhedron_IndexedPolygon_t ) * iPolygons) );
+											(sizeof( Polyhedron_IndexedPolygon_t ) * iPolygons), {} );
 
 	s_TempMemoryPolyhedron.iVertexCount = iVertices;
 	s_TempMemoryPolyhedron.iLineCount = iLines;
 	s_TempMemoryPolyhedron.iIndexCount = iIndices;
 	s_TempMemoryPolyhedron.iPolygonCount = iPolygons;
 
-	s_TempMemoryPolyhedron.pVertices = (Vector *)s_TempMemoryPolyhedron_Buffer.Base();
+	s_TempMemoryPolyhedron.pVertices = (Vector *)s_TempMemoryPolyhedron_Buffer.data();
 	s_TempMemoryPolyhedron.pLines = (Polyhedron_IndexedLine_t *)(&s_TempMemoryPolyhedron.pVertices[s_TempMemoryPolyhedron.iVertexCount]);
 	s_TempMemoryPolyhedron.pIndices = (Polyhedron_IndexedLineReference_t *)(&s_TempMemoryPolyhedron.pLines[s_TempMemoryPolyhedron.iLineCount]);
 	s_TempMemoryPolyhedron.pPolygons = (Polyhedron_IndexedPolygon_t *)(&s_TempMemoryPolyhedron.pIndices[s_TempMemoryPolyhedron.iIndexCount]);
@@ -948,7 +943,7 @@ void DumpPointListToGLView( GeneratePolyhedronFromPlanes_UnorderedPointLL *pHead
 #endif
 }
 
-const char * DumpPolyhedronCutHistory( const CUtlVector<CPolyhedron *> &DumpedHistory, const CUtlVector<const float *> &CutHistory, const VMatrix *pTransform )
+const char * DumpPolyhedronCutHistory( const std::vector< CPolyhedron * > &DumpedHistory, const std::vector< const float * > &CutHistory, const VMatrix *pTransform )
 {
 #ifdef ENABLE_DEBUG_POLYHEDRON_DUMPS
 	if( pTransform == nullptr )
@@ -1039,7 +1034,7 @@ public:
 		if( iSize > m_iDispenserSizeLeft )
 		{
 			//allocate a new buffer
-			size_t iNewBufferSize = MAX( 128 * 1024, (iSize + iAlignTo) * 2 ); //either allocate 128k or enough to hold 2x the allocation.
+			size_t iNewBufferSize = std::max<std::common_type_t<int, size_t>>( 128 * 1024, (iSize + iAlignTo) * 2 ); //either allocate 128k or enough to hold 2x the allocation.
 			unsigned char *pNewBuffer = new unsigned char [iNewBufferSize]; //allocate 128k at a time
 			*(void **)pNewBuffer = nullptr;
 
@@ -1187,14 +1182,14 @@ public:
 
 #if defined( DBGFLAG_ASSERT )
 	//let some generic debug data hitch a ride on this structure since it goes pretty much everywhere
-	CUtlVector<CPolyhedron *> DebugCutHistory;
-	CUtlVector<const float *> PlaneCutHistory;
-	CUtlVector<int> DebugCutPlaneIndex;
+	std::vector< CPolyhedron * > DebugCutHistory;
+	std::vector< const float * > PlaneCutHistory;
+	std::vector< int > DebugCutPlaneIndex;
 	bool bDebugTrigger;
 
 	~CClipLinkedGeometryDestructors( void )
 	{
-		for( int i = 0; i != DebugCutHistory.Count(); ++i )
+		for( int i = 0; i != std::ssize( DebugCutHistory ); ++i )
 		{
 			if( DebugCutHistory[i] != nullptr )
 			{
@@ -2127,8 +2122,8 @@ CPolyhedron *ClipLinkedGeometry( GeneratePolyhedronFromPlanes_UnorderedPolygonLL
 	CClipLinkedGeometryDestructors destructors( iPointCount, pAllPolygons, polygonAllocator, pAllLines, lineAllocator, pAllPoints, pDeadPointCollection );
 #endif
 
-	DBG_ONLY( destructors.DebugCutHistory.AddToTail( ConvertLinkedGeometryToPolyhedron( pAllPolygons, pAllLines, pAllPoints, false, vShiftResultPositions ) ) );
-	DBG_ONLY( destructors.DebugCutPlaneIndex.AddToTail( -1 ) );
+	DBG_ONLY( destructors.DebugCutHistory.push_back( ConvertLinkedGeometryToPolyhedron( pAllPolygons, pAllLines, pAllPoints, false, vShiftResultPositions ) ) );
+	DBG_ONLY( destructors.DebugCutPlaneIndex.push_back( -1 ) );
 
 	for( int iCurrentPlane = 0; iCurrentPlane != iPlaneCount; ++iCurrentPlane )
 	{
@@ -2409,7 +2404,7 @@ CPolyhedron *ClipLinkedGeometry( GeneratePolyhedronFromPlanes_UnorderedPolygonLL
 
 
 #ifdef DBGFLAG_ASSERT
-		destructors.PlaneCutHistory.AddToTail( (float *)&pOutwardFacingPlanes[iCurrentPlane] );
+		destructors.PlaneCutHistory.push_back( (float *)&pOutwardFacingPlanes[iCurrentPlane] );
 #endif
 
 		//remove dead lines
@@ -2956,8 +2951,8 @@ CPolyhedron *ClipLinkedGeometry( GeneratePolyhedronFromPlanes_UnorderedPolygonLL
 #endif
 
 		//maintain the cut history
-		destructors.DebugCutHistory.AddToTail( pHistoryPolyhedron );
-		destructors.DebugCutPlaneIndex.AddToTail( iCurrentPlane );
+		destructors.DebugCutHistory.push_back( pHistoryPolyhedron );
+		destructors.DebugCutPlaneIndex.push_back( iCurrentPlane );
 #endif
 	}
 

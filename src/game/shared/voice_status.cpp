@@ -6,6 +6,7 @@
 //=============================================================================//
 #include "cbase.h"
 #include "basetypes.h"
+#include "tier1/bit_ops.h"
 #include "hud.h"
 #include <string.h>
 #include <stdio.h>
@@ -30,9 +31,6 @@
 #include "matchmaking/iplayer.h"
 #include "matchmaking/mm_helpers.h"
 #include "matchmaking/imatchframework.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 
@@ -599,14 +597,14 @@ bool CVoiceStatus::HandleVoiceMaskMsg(const ks::net::CCSUsrMsg_VoiceMask &msg)
 	unsigned long dw;
 	for(dw=0; dw < VOICE_MAX_PLAYERS_DW; dw++)
 	{
-		m_AudiblePlayers.SetDWord(dw, (unsigned long)msg.player_masks[ dw ].game_rules_mask);
-		m_ServerBannedPlayers.SetDWord(dw, (unsigned long)msg.player_masks[ dw ].ban_masks);
+		ks::set_word( m_AudiblePlayers, dw, msg.player_masks[ dw ].game_rules_mask );
+		ks::set_word( m_ServerBannedPlayers, dw, msg.player_masks[ dw ].ban_masks );
 
 		if( voice_clientdebug.GetInt() == 1 )
 		{
 			Msg("CVoiceStatus::HandleVoiceMaskMsg\n");
-			Msg("    - m_AudiblePlayers[%lu] = %u\n", dw, m_AudiblePlayers.GetDWord(dw));
-			Msg("    - m_ServerBannedPlayers[%lu] = %u\n", dw, m_ServerBannedPlayers.GetDWord(dw));
+			Msg("    - m_AudiblePlayers[%lu] = %u\n", dw, ks::get_word( m_AudiblePlayers, dw ));
+			Msg("    - m_ServerBannedPlayers[%lu] = %u\n", dw, ks::get_word( m_ServerBannedPlayers, dw ));
 		}
 	}
 

@@ -24,9 +24,6 @@
 #include "steamworks_gamestats.h"
 #include "achievementmgr.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 // This is used to replicate our server id to the client so that client data can be associated with the server's.
 ConVar	steamworks_sessionid_server( "steamworks_sessionid_server", "0", FCVAR_REPLICATED | FCVAR_HIDDEN, "The server session ID for the new steamworks gamestats." );
 
@@ -59,7 +56,7 @@ time_t CSteamWorksGameStatsUploader::GetTimeSinceEpoch( void )
 //-----------------------------------------------------------------------------
 CSteamWorksGameStatsUploader::CSteamWorksGameStatsUploader( const char *pszSystemName, const char *pszSessionConVarName ) : CAutoGameSystemPerFrame( pszSystemName )
 {
-	m_sSessionConVarName = pszSessionConVarName;
+	m_sSessionConVarName = ks::nz( pszSessionConVarName );
 	m_pSessionConVar = nullptr;
 }
 
@@ -99,12 +96,12 @@ void CSteamWorksGameStatsUploader::Reset()
 	m_ActiveSession.Reset();
 	m_iServerConnectCount = 0;	 
 
-	for ( int i=0; i<m_StatsToSend.Count(); ++i )
+	for ( int i=0; i<std::ssize( m_StatsToSend ); ++i )
 	{
 		m_StatsToSend[i]->deleteThis();
 	}
 
-	m_StatsToSend.RemoveAll();
+	m_StatsToSend.clear();
 }
 
 //------------------------------------------------------------------------------------------
@@ -125,9 +122,9 @@ void CSteamWorksGameStatsUploader::ResetServerState()
 //-----------------------------------------------------------------------------
 bool CSteamWorksGameStatsUploader::Init()
 {
-	if ( !m_sSessionConVarName.IsEmpty() )
+	if ( !m_sSessionConVarName.empty() )
 	{
-		m_pSessionConVar = new ConVarRef( m_sSessionConVarName.Get() );
+		m_pSessionConVar = new ConVarRef( m_sSessionConVarName.data() );
 		if ( !m_pSessionConVar->IsValid() )
 		{
 			delete m_pSessionConVar;
@@ -420,13 +417,13 @@ void CSteamWorksGameStatsUploader::EndSession()
 //-----------------------------------------------------------------------------
 void CSteamWorksGameStatsUploader::FlushStats()
 {
-	for ( int i=0; i<m_StatsToSend.Count(); ++i )
+	for ( int i=0; i<std::ssize( m_StatsToSend ); ++i )
 	{
 		ParseKeyValuesAndSendStats( m_StatsToSend[i] );
 		m_StatsToSend[i]->deleteThis();
 	}
 
-	m_StatsToSend.RemoveAll();
+	m_StatsToSend.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -600,7 +597,7 @@ EResult CSteamWorksGameStatsUploader::AddStatsForUpload( KeyValues *pKV, bool bS
 		}
 		else
 		{
-			m_StatsToSend.AddToTail( pKV );
+			m_StatsToSend.push_back( pKV );
 		}
 		return k_EResultOK;
 	}
@@ -699,10 +696,10 @@ EResult CSteamWorksGameStatsUploader::ParseKeyValuesAndSendStats( KeyValues *pKV
 
 void CSteamWorksGameStatsUploader::ServerAddressToInt()
 {
-	CUtlStringList IPs;
+	std::vector< std::string > IPs;
 	V_SplitString( m_pzServerIP, ".", IPs );
 
-	if ( IPs.Count() < 4 )
+	if ( std::ssize( IPs ) < 4 )
 	{
 		// Not an actual IP.
 		m_iServerIP = 0;
@@ -711,9 +708,9 @@ void CSteamWorksGameStatsUploader::ServerAddressToInt()
 
 	byte ip[4];
 	m_iServerIP = 0;
-	for ( int i=0; i<IPs.Count() && i<4; ++i )
+	for ( int i=0; i<std::ssize( IPs ) && i<4; ++i )
 	{
-		ip[i] = (byte) Q_atoi( IPs[i] );
+		ip[i] = (byte) Q_atoi( IPs[i].c_str() );
 	}
 	m_iServerIP = (ip[0]<<24) + (ip[1]<<16) + (ip[2]<<8) + ip[3];
 }
@@ -799,7 +796,7 @@ void IGameStatTracker::PrintGamestatMemoryUsage( void )
 	if( !pStatList )
 		return;
 
-	int iListSize = pStatList->Count();
+	int iListSize = std::ssize( *pStatList );
 
 	// For every stat list being tracked, print out its memory usage
 	for( int i=0; i < iListSize; ++i )

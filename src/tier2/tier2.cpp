@@ -9,9 +9,6 @@
 #include "tier2/resourceprecacher.h"
 #include "resourcesystem/iresourcesystem.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // These tier2 libraries must be set by any users of this library.

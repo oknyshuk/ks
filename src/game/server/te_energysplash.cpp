@@ -15,9 +15,6 @@
 #include "reflect_annotations.h"
 #include "te_particlesystem.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: Dispatches energy splashes
 //-----------------------------------------------------------------------------

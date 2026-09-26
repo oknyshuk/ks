@@ -14,14 +14,11 @@
 #include "cmodel_engine.h"
 #include "con_nprint.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar r_ClipAreaPortals( "r_ClipAreaPortals", "1", FCVAR_CHEAT );
 ConVar r_DrawPortals( "r_DrawPortals", "0", FCVAR_CHEAT );
 ConVar r_ClipAreaFrustums( "r_ClipAreaFrustums", "1", FCVAR_CHEAT );
 
-CUtlVector<CPortalRect> g_PortalRects;
+std::vector< CPortalRect > g_PortalRects;
 bool g_bViewerInSolidSpace = false;		  
 
 // ------------------------------------------------------------------------------------ //
@@ -44,7 +41,7 @@ static uint32 g_AreaCounter[MAX_MAP_AREAS];
 static CPortalRect g_AreaRect[MAX_MAP_AREAS];
 
 // Frustums for each area for the current frame. Used to cull out leaves.
-CUtlVector< Frustum_t, CUtlMemoryAligned< Frustum_t,16 > > g_AreaFrustum;
+std::vector< Frustum_t > g_AreaFrustum;
 
 // List of areas marked visible this frame.
 static unsigned short g_VisibleAreas[MAX_MAP_AREAS];
@@ -58,15 +55,15 @@ static uint32 g_GlobalCounter = 1;
 // ------------------------------------------------------------------------------------ //
 void R_Areaportal_LevelInit()
 {
-	g_AreaFrustum.SetCount( host_state.worldbrush->m_nAreas );
+	g_AreaFrustum.assign( host_state.worldbrush->m_nAreas, {} );
 	V_memset( g_AreaCounter, 0, sizeof(g_AreaCounter) );
 	g_GlobalCounter = 1;
 }
 
 void R_Areaportal_LevelShutdown()
 {
-	g_AreaFrustum.Purge();
-	g_PortalRects.Purge();
+	g_AreaFrustum.clear(); g_AreaFrustum.shrink_to_fit();
+	g_PortalRects.clear(); g_PortalRects.shrink_to_fit();
 }
 
 static inline void R_SetBit( unsigned char *pBits, int bit )
@@ -106,7 +103,7 @@ static inline bool GetPortalScreenExtents( dareaportal_t *pPortal,
 	bool bValidExtents = false;
 	worldbrushdata_t *pBrushData = host_state.worldbrush;
 	
-	int nStartVerts = MIN( pPortal->m_nClipPortalVerts, MAX_PORTAL_VERTS );
+	int nStartVerts = std::min<std::common_type_t<short unsigned int, int>>( pPortal->m_nClipPortalVerts, MAX_PORTAL_VERTS );
 
 	// NOTE: We need two passes to deal with reflection. We need to compute
 	// the screen extents for both the reflected + non-reflected area portals
@@ -310,7 +307,7 @@ static void R_FlowThroughArea( int area, const Vector &vecVisOrigin, const CPort
 #ifdef USE_CONVARS
 				if( r_DrawPortals.GetInt() )
 				{
-					g_PortalRects.AddToTail( intersection );
+					g_PortalRects.push_back( intersection );
 				}
 #endif
 
@@ -330,7 +327,7 @@ static void IncrementGlobalCounter()
 {
 	if( g_GlobalCounter == 0xFFFFFFFF )
 	{
-		for( int i=0; i < g_AreaFrustum.Count(); i++ )
+		for( int i=0; i < std::ssize( g_AreaFrustum ); i++ )
 			g_AreaCounter[i] = 0;
 	
 		g_GlobalCounter = 1;
@@ -602,8 +599,8 @@ const Frustum_t* GetAreaFrustum( int area )
 
 int GetAllAreaFrustums( Frustum_t **pFrustumList, int listMax )
 {
-	int count = g_AreaFrustum.Count();
-	count = MIN(listMax,count);
+	int count = std::ssize( g_AreaFrustum );
+	count = std::min(listMax,count);
 	for ( int i = 0; i < count; i++ )
 	{
 		if ( g_AreaCounter[i] == g_GlobalCounter )

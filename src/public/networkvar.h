@@ -18,7 +18,6 @@
 #endif
 
 
-#pragma warning( disable : 4284 ) // warning C4284: return type for 'CNetworkVarT<int>::operator ->' is 'int *' (ie; not a UDT or reference to a UDT.  Will produce errors if applied using infix notation)
 
 #define MyOffsetOf( type, var ) ( (int)(intp)&((type*)0)->var )
 
@@ -218,7 +217,7 @@ public:
 	// $$$REI TODO: Why doesn't this implementation work as an assignment operator?
 	template< typename U >
 	void CopyFrom( U&& src ) {
-		Data() = Forward<U>( src );
+		Data() = std::forward<U>( src );
 		NetworkStateChanged();
 	}
 

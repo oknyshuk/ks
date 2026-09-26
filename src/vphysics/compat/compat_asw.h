@@ -1,7 +1,12 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2022 Joshua Ashton and Josh Dowell (Slartibarty)
+
 
 #pragma once
 
 #include "memalloc.h"
+
+#include <algorithm>
 
 #define DevAssert( ... )
 #define DevAssertMsg( ... )
@@ -10,7 +15,7 @@
 template< typename A, typename B, typename C >
 [[nodiscard]] constexpr A clamp( const A val, const B minVal, const C maxVal )
 {
-	return MIN( MAX( val, minVal ), maxVal );
+	return std::min( std::max( val, minVal ), maxVal );
 }
 
 template< typename T >

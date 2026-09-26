@@ -69,7 +69,7 @@ private:
 
 	IScratchPad3D *m_pPad;
 
-	CUtlVector<CLineInfo> m_LineInfos;
+	std::vector< CLineInfo > m_LineInfos;
 
 	Vector m_vTimeAxis;
 	float m_flInchesPerSecond;

@@ -10,9 +10,6 @@
 #include "eventlist.h"
 #include "scriptevent.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 extern ISoundEmitterSystemBase *soundemitterbase;
 
@@ -48,46 +45,43 @@ CModelSoundsCache::CModelSoundsCache( const CModelSoundsCache& src )
 
 char const *CModelSoundsCache::GetSoundName( int index )
 {
-	return soundemitterbase->GetSoundName( sounds[ index ] );
+	return soundemitterbase->GetSoundName( sounds.begin()[ index ] );
 }
 
-void CModelSoundsCache::Save( CUtlBuffer& buf  )
+void CModelSoundsCache::Save( ks::byte_writer& buf )
 {
-	buf.PutShort( sounds.Count() );
+	buf.write< short >( std::ssize( sounds ) );
 	
-	for ( int i = 0; i < sounds.Count(); ++i )
+	for ( int i = 0; i < std::ssize( sounds ); ++i )
 	{
-		buf.PutString( GetSoundName( i ) );
+		buf.write_cstring( GetSoundName( i ) );
 	}
 }
 
-void CModelSoundsCache::Restore( CUtlBuffer& buf  )
+void CModelSoundsCache::Restore( ks::byte_reader& buf )
 {
 	MEM_ALLOC_CREDIT();
 	unsigned short c;
 
-	c = (unsigned short)buf.GetShort();
+	c = (unsigned short)buf.read< short >();
 
 	for ( int i = 0; i < c; ++i )
 	{
 		char soundname[ 512 ];
 
-		buf.GetString( soundname, sizeof( soundname ) );
+		buf.read_cstring( soundname, sizeof( soundname ) );
 
 		int idx = soundemitterbase->GetSoundIndex( soundname );
 		if ( soundemitterbase->IsValidIndex( idx ) )
 		{
-			if ( sounds.Find( idx ) == sounds.InvalidIndex() )
-			{
-				sounds.Insert( idx );
-			}
+			sounds.insert( idx );
 		}
 	}
 }
 
 void CModelSoundsCache::Rebuild( char const *filename )
 {
-	sounds.RemoveAll();
+	sounds.clear();
 
 	CStudioHdr *hdr = ModelSoundsCache_LoadModel( filename );
 
@@ -101,7 +95,7 @@ void CModelSoundsCache::Rebuild( char const *filename )
 
 void CModelSoundsCache::PrecacheSoundList()
 {
-	for ( int i = 0; i < sounds.Count(); ++i )
+	for ( int i = 0; i < std::ssize( sounds ); ++i )
 	{
 		ModelSoundsCache_PrecacheScriptSound( GetSoundName( i ) );
 	}
@@ -112,17 +106,14 @@ void CModelSoundsCache::PrecacheSoundList()
 // Input  : sounds - 
 //			*soundname - 
 //-----------------------------------------------------------------------------
-void CModelSoundsCache::FindOrAddScriptSound( CUtlSortVector< int, CModelSoundsCacheListLess >& sounds, char const *soundname )
+void CModelSoundsCache::FindOrAddScriptSound( std::flat_set< int >& sounds, char const *soundname )
 {
 	int soundindex = soundemitterbase->GetSoundIndex( soundname );
 	if ( soundemitterbase->IsValidIndex( soundindex ) )
 	{
 		// Only add it once per model...
-		if ( sounds.Find( soundindex ) == sounds.InvalidIndex() )
-		{
-			MEM_ALLOC_CREDIT();
-			sounds.Insert( soundindex );
-		}
+		MEM_ALLOC_CREDIT();
+		sounds.insert( soundindex );
 	}
 }
 
@@ -131,7 +122,7 @@ void CModelSoundsCache::FindOrAddScriptSound( CUtlSortVector< int, CModelSoundsC
 // Input  : *hdr - 
 //			sounds - 
 //-----------------------------------------------------------------------------
-void CModelSoundsCache::BuildAnimationEventSoundList( CStudioHdr *hdr, CUtlSortVector< int, CModelSoundsCacheListLess >& sounds )
+void CModelSoundsCache::BuildAnimationEventSoundList( CStudioHdr *hdr, std::flat_set< int >& sounds )
 {
 	Assert( hdr );
 	

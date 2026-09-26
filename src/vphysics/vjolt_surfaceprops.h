@@ -1,7 +1,14 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2022 Joshua Ashton and Josh Dowell (Slartibarty)
+
 
 #pragma once
 
 #include "isaverestore.h"
+
+#include <map>
+#include <string>
+#include <vector>
 
 struct JoltSurfaceProp
 {
@@ -54,10 +61,16 @@ public:
 private:
 	static JoltPhysicsSurfaceProps s_PhysicsSurfaceProps;
 
-	CUtlStringMap< JoltSurfaceProp >	m_SurfaceProps;
-	CUtlSymbolTable						m_SoundStrings;
+	// Indices are dense, in first-parse order, and escape as surfaceprop ids; deque keeps
+	// GetSurfaceData pointers valid across later parses.
+	std::deque< JoltSurfaceProp >		m_SurfaceProps;
+	std::vector< std::string >			m_SurfacePropNames;
+	ks::idict< int >					m_SurfacePropIndex;
+	// Sound names; dense indices escape through surfacedata_t::sounds.
+	std::vector< std::string >			m_SoundStrings;
+	std::map< std::string, unsigned short, std::less<> > m_SoundStringIndex;
 	
-	static constexpr UtlSymId_t BaseMaterialIdx = UtlSymId_t( 0 );
+	static constexpr int BaseMaterialIdx = 0;
 
 	KeyValues *SurfacePropsToKeyValues( const char *pszBuffer );
 };

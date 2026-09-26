@@ -109,7 +109,7 @@ void CResourceStreamVM::ReserveVirtualMemory( uint nAddressSize )
 	Assert ( m_pData == nullptr );
 
 	nAddressSize = ( nAddressSize + COMMIT_STEP - 1 ) & ~( COMMIT_STEP - 1 );
-	m_nReserved = MAX( nAddressSize, COMMIT_STEP );
+	m_nReserved = std::max<int>( nAddressSize, COMMIT_STEP );
 	for ( ;; )
 	{
 		int nFlags = MAP_ANONYMOUS | MAP_PRIVATE;
@@ -211,7 +211,7 @@ void CResourceStreamVM::Commit( uint nNewCommit )
 
 void CResourceStream::Align( uint nAlignment, int nOffset )
 {
-	m_nMaxAlignment = MAX( m_nMaxAlignment, nAlignment );
+	m_nMaxAlignment = std::max( m_nMaxAlignment, nAlignment );
 	if ( uintp( m_pData ) & ( nAlignment - 1 ) )
 	{
 		Plat_FatalError( "You can't align data in resource stream more than its memory buffer. Please allocate the memory aligned." );

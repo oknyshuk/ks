@@ -13,9 +13,6 @@
 #include "world.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //==============================================================================================
 // PLAYER PHYSICS DAMAGE TABLE
 //==============================================================================================
@@ -499,16 +496,16 @@ static bool IsPhysicallyControlled( CBaseEntity *pEntity, IPhysicsObject *pPhysi
 }
 float CalculateObjectStress( IPhysicsObject *pObject, CBaseEntity *pInputOwnerEntity, vphysics_objectstress_t *pOutput )
 {
-	CUtlVector< CBaseEntity * > pObjectList;
-	CUtlVector< Vector >		objectForce;
+	std::vector< CBaseEntity * > pObjectList;
+	std::vector< Vector >		objectForce;
 	bool hasLargeObject = false;
 
 	// add a slot for static objects
-	pObjectList.AddToTail( nullptr );
-	objectForce.AddToTail( vec3_origin );
+	pObjectList.push_back( nullptr );
+	objectForce.push_back( vec3_origin );
 	// add a slot for friendly objects
-	pObjectList.AddToTail( nullptr );
-	objectForce.AddToTail( vec3_origin );
+	pObjectList.push_back( nullptr );
+	objectForce.push_back( vec3_origin );
 
 	CBaseCombatCharacter *pBCC = pInputOwnerEntity->MyCombatCharacterPointer();
 
@@ -561,8 +558,8 @@ float CalculateObjectStress( IPhysicsObject *pObject, CBaseEntity *pInputOwnerEn
 				
 				// aggregate contacts over each object to avoid greater stress in multiple contact cases
 				// NOTE: Contacts should be in order, so this shouldn't ever search, but just in case
-				outIndex = pObjectList.Count();
-				for ( int i = pObjectList.Count()-1; i >= 2; --i )
+				outIndex = std::ssize( pObjectList );
+				for ( int i = std::ssize( pObjectList )-1; i >= 2; --i )
 				{
 					if ( pObjectList[i] == pOtherOwner )
 					{
@@ -570,10 +567,10 @@ float CalculateObjectStress( IPhysicsObject *pObject, CBaseEntity *pInputOwnerEn
 						break;
 					}
 				}
-				if ( outIndex == pObjectList.Count() )
+				if ( outIndex == std::ssize( pObjectList ) )
 				{
-					pObjectList.AddToTail( pOtherOwner );
-					objectForce.AddToTail( vec3_origin );
+					pObjectList.push_back( pOtherOwner );
+					objectForce.push_back( vec3_origin );
 				}
 			}
 
@@ -599,8 +596,8 @@ float CalculateObjectStress( IPhysicsObject *pObject, CBaseEntity *pInputOwnerEn
 	Vector negativeForce = vec3_origin;
 	Vector positiveForce = vec3_origin;
 
-	Assert( pObjectList.Count() == objectForce.Count() );
-	for ( int objectIndex = pObjectList.Count()-1; objectIndex >= 0; --objectIndex )
+	Assert( std::ssize( pObjectList ) == std::ssize( objectForce ) );
+	for ( int objectIndex = std::ssize( pObjectList )-1; objectIndex >= 0; --objectIndex )
 	{
 		sum += objectForce[objectIndex].Length();
 		for ( int i = 0; i < 3; i++ )
@@ -729,7 +726,7 @@ float CalculateObjectStress( IPhysicsObject *pObject, CBaseEntity *pInputOwnerEn
 	{
 		pOutput->exertedStress = internalForce.Length();
 		pOutput->receivedStress = externalForce.Length();
-		pOutput->hasNonStaticStress = pObjectList.Count() > 2 ? true : false;
+		pOutput->hasNonStaticStress = std::ssize( pObjectList ) > 2 ? true : false;
 		pOutput->hasLargeObjectContact = hasLargeObject;
 	}
 

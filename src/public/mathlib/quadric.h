@@ -105,7 +105,7 @@ public:
 	{
 		Vector vNormal = CrossProduct( v2 - v0, v1 - v0 );
 		float flArea = 0.5f * vNormal.NormalizeInPlace();
-		flArea = MAX(flMinArea, flArea);
+		flArea = std::max(flMinArea, flArea);
 		float flDist = -DotProduct(vNormal, v0);
 		InitFromPlane( vNormal, flDist, flArea );
 	}

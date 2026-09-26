@@ -2,7 +2,8 @@
 #define CLIENTSTEAMCONTEXT_H
 
 #include "steam/steam_api.h"
-#include "utldelegate.h"
+#include <functional>
+#include <vector>
 
 struct SteamLoggedOnChange_t
 {
@@ -29,8 +30,10 @@ public:
 	const CSteamID & GetLocalPlayerSteamID() { return m_SteamIDLocalPlayer; }
 
 	// Allow others to register for a callback when the Steam logged on status changes	
-	void InstallCallback( CUtlDelegate< void ( const SteamLoggedOnChange_t & ) > delegate );
-	void RemoveCallback( CUtlDelegate< void ( const SteamLoggedOnChange_t & ) > delegate );
+	// InstallCallback returns a token for RemoveCallback.
+	using LoggedOnCallback_t = std::function< void ( const SteamLoggedOnChange_t & ) >;
+	int InstallCallback( LoggedOnCallback_t callback );
+	void RemoveCallback( int nToken );
 	
 private:
 	void UpdateLoggedOnState();
@@ -42,7 +45,13 @@ private:
 	EUniverse m_nUniverse;
 	uint32 m_nAppID;
 
-	CUtlVector< CUtlDelegate< void ( const SteamLoggedOnChange_t & ) > > m_LoggedOnCallbacks;
+	struct LoggedOnCallbackEntry_t
+	{
+		int nToken;
+		LoggedOnCallback_t fn;
+	};
+	std::vector< LoggedOnCallbackEntry_t > m_LoggedOnCallbacks;
+	int m_nNextCallbackToken = 1;
 };
 
 CClientSteamContext &ClientSteamContext();			// singleton accessor

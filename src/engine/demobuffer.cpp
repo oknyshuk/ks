@@ -10,10 +10,17 @@
 //===============================================================================
 
 #include "demobuffer.h"
+#include "filesystem.h"
+#include "tier1/byte_writer.h"
+#include <algorithm>
+#include <atomic>
+#include <cstring>
+#include <vector>
 #include "edict.h"
 #include "host.h"
-#include "tier1/mempool.h"
 #include "vstdlib/jobthread.h"
+#include <deque>
+#include <memory>
 
 #include "replayserver.h"	// TODO: Remove
 #include "sv_client.h"
@@ -21,8 +28,6 @@
 #include "cdll_int.h"
 #include "client.h"
 #endif
-
-#include "tier0/memdbgon.h"		// NOTE: Must go last!
 
 #ifndef DEDICATED
 #if !defined( _DEBUG )
@@ -44,21 +49,16 @@
 #endif
 
 //-----------------------------------------------------------------------------
-// Specialty class with overrides for stream buffer
+// Disk-backed demo buffer. While recording, output is collected in memory and
+// committed to the file in chunks; while playing back, the file is read through
+// a sliding window.
 //-----------------------------------------------------------------------------
 class CDiskDemoBuffer : public IDemoBuffer
 {
 public:
-	CDiskDemoBuffer()
-	:	m_pBuffer( nullptr )
-	{
-		m_nDecodedOffset = -1;
-	}
-
 	~CDiskDemoBuffer()
 	{
-		m_pBuffer->Close();
-		delete m_pBuffer;
+		Close();
 	}
 
 	virtual bool Init( DemoBufferInitParams_t const& params )
@@ -66,22 +66,28 @@ public:
 		// Convert to proper type
 		StreamDemoBufferInitParams_t const* pParams = dynamic_cast< StreamDemoBufferInitParams_t const* >( &params );		Assert( pParams );
 
-		// Allocate buffer
-		m_pBuffer = new CUtlStreamBuffer();
-		if ( !m_pBuffer )
-			return false;
+		Close();
+
+		m_bReadOnly = pParams->bReadOnly;
+		m_nGet = 0;
+		m_nPut = 0;
+		m_nOffset = 0;
+		m_nMaxPut = 0;
+		m_bGetFailed = false;
+		m_bPutFailed = false;
+		m_nDecodedOffset = -1;
+
+		// Demo files are always little endian, which is the platform-native byte order.
+		m_hFile = g_pFullFileSystem->OpenEx( pParams->pFilename, m_bReadOnly ? "rb" : "wb", 0, pParams->pszPath );
+		if ( m_hFile != FILESYSTEM_INVALID_HANDLE && m_bReadOnly )
+		{
+			m_nMaxPut = g_pFullFileSystem->Size( m_hFile );
+		}
 
 #ifndef DEDICATED
 		// Force a very large memory buffer on the clients, this prevents peeking into the demo stream
-		m_pBuffer->EnsureCapacity( DISK_DEMO_BUFFER_TOTAL_SIZE );
+		m_nPendingCapacity = DISK_DEMO_BUFFER_TOTAL_SIZE;
 #endif
-
-		// Demo files are always little endian, which is the platform-native byte order.
-
-		// Open the file
-//		m_pBuffer->Open( pParams->pFilename, pParams->pszPath, pParams->nFlags, pParams->nOpenFileFlags );	// For main integration...
-		m_pBuffer->Open( pParams->pFilename, pParams->pszPath, pParams->nFlags );
-		m_nDecodedOffset = -1;
 
 		m_pPlaybackParams = nullptr;
 #ifndef DEDICATED
@@ -110,139 +116,243 @@ public:
 	virtual void				NotifyBeginFrame() {}
 	virtual void				NotifyEndFrame() {}
 
-	virtual void				PutChar( char c )						{ m_pBuffer->PutChar( c ); }
-	virtual void				PutUnsignedChar( unsigned char uc )		{ m_pBuffer->PutUnsignedChar( uc ); }
-	virtual void				PutInt( int i )							{ m_pBuffer->PutInt( i ); }
+	virtual void				PutChar( char c )						{ Put( &c, sizeof( c ) ); }
+	virtual void				PutUnsignedChar( unsigned char uc )		{ Put( &uc, sizeof( uc ) ); }
+	virtual void				PutInt( int i )							{ Put( &i, sizeof( i ) ); }
 
-	virtual void				WriteTick( int nTick )					{ m_pBuffer->PutInt( nTick ); }
+	virtual void				WriteTick( int nTick )					{ Put( &nTick, sizeof( nTick ) ); }
 
 	virtual char				GetChar() OVERRIDE
 	{
-		COnTheFlyDemoBufferReadInfo readRequest( m_pPlaybackParams, m_pBuffer, &m_bufDecoded, &m_nDecodedOffset, sizeof( char ) );
-		return readRequest.GetReadBuffer()->GetChar();
+		char c = 0;
+		Get( &c, sizeof( c ) );
+		return c;
 	}
 	virtual unsigned char		GetUnsignedChar() OVERRIDE
 	{
-		COnTheFlyDemoBufferReadInfo readRequest( m_pPlaybackParams, m_pBuffer, &m_bufDecoded, &m_nDecodedOffset, sizeof( unsigned char ) );
-		return readRequest.GetReadBuffer()->GetUnsignedChar();
+		unsigned char uc = 0;
+		Get( &uc, sizeof( uc ) );
+		return uc;
 	}
 	virtual int					GetInt() OVERRIDE
 	{
-		COnTheFlyDemoBufferReadInfo readRequest( m_pPlaybackParams, m_pBuffer, &m_bufDecoded, &m_nDecodedOffset, sizeof( int ) );
-		return readRequest.GetReadBuffer()->GetInt();
+		int i = 0;
+		Get( &i, sizeof( i ) );
+		return i;
 	}
 
 	virtual void				Get( void* pMem, int size )	OVERRIDE
 	{
-		COnTheFlyDemoBufferReadInfo readRequest( m_pPlaybackParams, m_pBuffer, &m_bufDecoded, &m_nDecodedOffset, size );
-		readRequest.GetReadBuffer()->Get( pMem, size );
+#ifndef DEDICATED
+		if ( m_pPlaybackParams )
+		{
+			GetDecoded( pMem, size );
+			return;
+		}
+#endif
+		GetRaw( pMem, size );
 	}
+
 	virtual void				Put( const void* pMem, int size )
 	{
-		m_pBuffer->Put( pMem, size );
+		if ( size <= 0 || !IsWritable() )
+			return;
+
+		if ( int( m_pending.tell() ) + size > m_nPendingCapacity && !FlushPending( int( m_pending.tell() ) ) )
+			return;
+
+		m_pending.write_bytes( pMem, size );
+		m_nPut += size;
+		m_nMaxPut = std::max( m_nMaxPut, m_nPut );
 
 #ifndef DEDICATED
-		if ( ( size > 0 ) && ( m_pBuffer->TellPut() > 0 ) &&
-			( ( ( ( char* ) m_pBuffer->PeekPut() ) - ( ( char * ) m_pBuffer->Base() ) ) > (
+		if ( int( m_pending.tell() ) > (
 				( GetBaseLocalClient().IsActive() && GetBaseLocalClient().ishltv ) ? 2048 : DISK_DEMO_BUFFER_FLUSH_CONSIDER_SIZE
-				) ) )
+				) )
 		{	// Periodically try to flush the demo buffer to disk
-			m_pBuffer->TryFlushToFile( DISK_DEMO_BUFFER_FLUSH_TODISK_SIZE );
+			FlushPending( DISK_DEMO_BUFFER_FLUSH_TODISK_SIZE );
 		}
 #endif
 	}
 
-	virtual bool				IsValid() const							{ return m_pBuffer && m_pBuffer->IsValid(); }
-	virtual bool				IsInitialized() const					{ return IsValid() && m_pBuffer->IsOpen(); }
-
-	inline CUtlBuffer::SeekType_t GetSeekType( bool bAbsolute )			{ return bAbsolute ? CUtlBuffer::SEEK_HEAD : CUtlBuffer::SEEK_CURRENT; }
+	virtual bool				IsValid() const							{ return !m_bGetFailed && !m_bPutFailed; }
+	virtual bool				IsInitialized() const					{ return IsValid() && m_hFile != FILESYSTEM_INVALID_HANDLE; }
 
 	// Change where I'm writing (put)/reading (get)
-	virtual void				SeekPut( bool bAbsolute, int offset )	{ m_pBuffer->SeekPut( GetSeekType( bAbsolute ), offset ); }
-	virtual void				SeekGet( bool bAbsolute, int offset )	{ m_pBuffer->SeekGet( GetSeekType( bAbsolute ), offset ); }
+	virtual void				SeekPut( bool bAbsolute, int offset )
+	{
+		if ( m_bReadOnly )
+			return;
+
+		const int nNextPut = bAbsolute ? offset : m_nPut + offset;
+		if ( m_bPutFailed || !FlushPending( int( m_pending.tell() ) ) )
+			return;
+
+		m_nPut = nNextPut;
+		m_nOffset = nNextPut;
+		if ( m_hFile != FILESYSTEM_INVALID_HANDLE )
+			g_pFullFileSystem->Seek( m_hFile, m_nOffset, FILESYSTEM_SEEK_HEAD );
+		m_nMaxPut = std::max( m_nMaxPut, m_nPut );
+	}
+
+	virtual void				SeekGet( bool bAbsolute, int offset )
+	{
+		m_nGet = bAbsolute ? offset : m_nGet + offset;
+		m_bGetFailed = m_nGet < 0 || m_nGet > m_nMaxPut;
+	}
 
 	// Where am I writing (put)/reading (get)?
-	virtual int					TellPut( ) const						{ return m_pBuffer->TellPut(); }
-	virtual int					TellGet( ) const						{ return m_pBuffer->TellGet(); }
+	virtual int					TellPut( ) const						{ return m_nPut; }
+	virtual int					TellGet( ) const						{ return m_nGet; }
 
-	virtual int					TellMaxPut( ) const						{ return m_pBuffer->TellMaxPut(); }
+	virtual int					TellMaxPut( ) const						{ return m_nMaxPut; }
 
 	virtual void				UpdateStartTick( int& nStartTick ) const {}
 	virtual void				DumpToFile( char const* pFilename, const demoheader_t &header ) const {}
 
 private:
-	CUtlStreamBuffer *m_pBuffer;
-	CUtlBuffer m_bufDecoded;
-	int m_nDecodedOffset;
-	CDemoPlaybackParameters_t const *m_pPlaybackParams;
+	static constexpr int		READ_CHUNK_SIZE = 1024 * 1024;
 
-	class COnTheFlyDemoBufferReadInfo
+	bool IsWritable() const	{ return !m_bReadOnly && !m_bPutFailed && m_hFile != FILESYSTEM_INVALID_HANDLE; }
+
+	void Close()
 	{
-	public:
-		COnTheFlyDemoBufferReadInfo( CDemoPlaybackParameters_t const *pPlaybackParams, CUtlBuffer *pRawData, CUtlBuffer *pDecodeCache, int *pDecodedOffset, int numBytesRequired )
+		if ( m_hFile == FILESYSTEM_INVALID_HANDLE )
+			return;
+
+		if ( !m_bReadOnly )
+			FlushPending( int( m_pending.tell() ) );
+
+		g_pFullFileSystem->Close( m_hFile );
+		m_hFile = FILESYSTEM_INVALID_HANDLE;
+		m_pending.clear();
+		m_window.clear();
+		m_decoded.clear();
+	}
+
+	bool FlushPending( int nBytes )
+	{
+		nBytes = std::min< int >( nBytes, m_pending.tell() );
+		if ( nBytes <= 0 || m_hFile == FILESYSTEM_INVALID_HANDLE )
+			return true;
+
+		if ( g_pFullFileSystem->Write( m_pending.data(), nBytes, m_hFile ) != nBytes )
 		{
-			m_nReadFromBufferOriginalSeekPos = 0;
-#ifndef DEDICATED
-			if ( pPlaybackParams )
+			m_bPutFailed = true;
+			return false;
+		}
+
+		m_nOffset += nBytes;
+		if ( nBytes == int( m_pending.tell() ) )
+		{
+			m_pending.clear();
+		}
+		else
+		{
+			auto remaining = m_pending.release();
+			remaining.erase( remaining.begin(), remaining.begin() + nBytes );
+			m_pending = ks::byte_writer::adopt( std::move( remaining ) );
+		}
+		return true;
+	}
+
+	bool GetRaw( void *pMem, int size )
+	{
+		if ( size <= 0 || m_bGetFailed || m_hFile == FILESYSTEM_INVALID_HANDLE || !m_bReadOnly )
+			return false;
+
+		if ( m_nGet + size > m_nMaxPut )
+		{
+			m_bGetFailed = true;
+			return false;
+		}
+
+		if ( m_nGet < m_nWindowStart || m_nGet + size > m_nWindowStart + int( m_window.size() ) )
+		{
+			const int nToRead = std::min( std::max( size, READ_CHUNK_SIZE ), m_nMaxPut - m_nGet );
+			g_pFullFileSystem->Seek( m_hFile, m_nGet, FILESYSTEM_SEEK_HEAD );
+			m_window.resize( nToRead );
+			const int nRead = g_pFullFileSystem->Read( m_window.data(), nToRead, m_hFile );
+			m_window.resize( std::max( nRead, 0 ) );
+			m_nWindowStart = m_nGet;
+			if ( nRead != nToRead )
 			{
-				// Read from the nearest 16-byte aligned location
-				int nOriginalGet = pRawData->TellGet();
-				if ( ( (*pDecodedOffset) < 0 ) || // nothing decoded
-					( nOriginalGet < (*pDecodedOffset) ) || // reading earlier
-					( nOriginalGet + numBytesRequired > (*pDecodedOffset) + pDecodeCache->TellPut() ) ) // could read beyond decoded buffer
-				{
-					int nNearestAlignedLocation = nOriginalGet &~0xF;
-					int blockRead = ( nOriginalGet + numBytesRequired - nNearestAlignedLocation + 0xF )&~0xF;
-					blockRead = MAX( 1024, blockRead ); // decrypt chunks of 1K bytes at a time
-
-					*pDecodedOffset = nNearestAlignedLocation;
-					pDecodeCache->EnsureCapacity( blockRead );
-					int numBytesSeekBack = nOriginalGet - nNearestAlignedLocation;
-					if ( numBytesSeekBack )
-						pRawData->SeekGet( pRawData->SEEK_CURRENT, - numBytesSeekBack ); // seek back
-
-					int numBytes = MIN( blockRead, pRawData->TellMaxPut() - nNearestAlignedLocation );
-					pRawData->Get( pDecodeCache->Base(), numBytes );
-					m_nReadFromBufferOriginalSeekPos += -numBytes+numBytesSeekBack;
-					pDecodeCache->SeekPut( pDecodeCache->SEEK_HEAD, numBytes );
-
-					// Decode the chunk
-					extern IBaseClientDLL *g_ClientDLL;
-					g_ClientDLL->PrepareSignedEvidenceData( pDecodeCache->Base(), numBytes, pPlaybackParams );
-				}
-
-				int nSeekInDecodedBuffer = nOriginalGet - *pDecodedOffset;
-				pDecodeCache->SeekGet( pDecodeCache->SEEK_HEAD, nSeekInDecodedBuffer );
-
-				//
-				// Set the read state
-				//
-				m_pReadFromBuffer = pDecodeCache;
-				m_pSeekSyncBuffer = pRawData;
-				m_nReadFromBufferOriginalSeekPos += -nSeekInDecodedBuffer;
-
-				return;
+				// The size was only a guess based on the file length
+				m_nMaxPut = std::min( m_nMaxPut, m_nGet + std::max( nRead, 0 ) );
 			}
+			if ( m_nGet + size > m_nWindowStart + int( m_window.size() ) )
+			{
+				m_bGetFailed = true;
+				return false;
+			}
+		}
+
+		std::memcpy( pMem, m_window.data() + ( m_nGet - m_nWindowStart ), size );
+		m_nGet += size;
+		return true;
+	}
+
+#ifndef DEDICATED
+	void GetDecoded( void *pMem, int size )
+	{
+		// Read from the nearest 16-byte aligned location
+		const int nOriginalGet = m_nGet;
+		if ( ( m_nDecodedOffset < 0 ) || // nothing decoded
+			( nOriginalGet < m_nDecodedOffset ) || // reading earlier
+			( nOriginalGet + size > m_nDecodedOffset + int( m_decoded.size() ) ) ) // could read beyond decoded buffer
+		{
+			int nNearestAlignedLocation = nOriginalGet &~0xF;
+			int blockRead = ( nOriginalGet + size - nNearestAlignedLocation + 0xF )&~0xF;
+			blockRead = std::max( 1024, blockRead ); // decrypt chunks of 1K bytes at a time
+
+			m_nDecodedOffset = nNearestAlignedLocation;
+			const int numBytes = std::max( 0, std::min( blockRead, m_nMaxPut - nNearestAlignedLocation ) );
+			m_decoded.resize( numBytes );
+
+			m_bGetFailed = false;
+			m_nGet = nNearestAlignedLocation;
+			if ( numBytes > 0 && !GetRaw( m_decoded.data(), numBytes ) )
+				m_decoded.clear();
+
+			// Decode the chunk
+			extern IBaseClientDLL *g_ClientDLL;
+			g_ClientDLL->PrepareSignedEvidenceData( m_decoded.data(), int( m_decoded.size() ), m_pPlaybackParams );
+		}
+
+		const int nSeekInDecodedBuffer = nOriginalGet - m_nDecodedOffset;
+		if ( size > 0 && nSeekInDecodedBuffer >= 0 && nSeekInDecodedBuffer + size <= int( m_decoded.size() ) )
+		{
+			std::memcpy( pMem, m_decoded.data() + nSeekInDecodedBuffer, size );
+			m_nGet = nOriginalGet + size;
+		}
+		else
+		{
+			m_nGet = nOriginalGet;
+		}
+		m_bGetFailed = m_nGet < 0 || m_nGet > m_nMaxPut;
+	}
 #endif
 
-			//
-			// Read raw state
-			//
-			m_pReadFromBuffer = pRawData;
-			m_pSeekSyncBuffer = nullptr;
-		}
-		~COnTheFlyDemoBufferReadInfo()
-		{
-			if ( m_pSeekSyncBuffer && m_pReadFromBuffer )
-				m_pSeekSyncBuffer->SeekGet( m_pSeekSyncBuffer->SEEK_CURRENT, m_pReadFromBuffer->TellGet() + m_nReadFromBufferOriginalSeekPos );
-		}
+	FileHandle_t m_hFile = FILESYSTEM_INVALID_HANDLE;
+	bool m_bReadOnly = false;
+	bool m_bGetFailed = false;
+	bool m_bPutFailed = false;
 
-		CUtlBuffer * GetReadBuffer() const { return m_pReadFromBuffer; }
-	private:
-		CUtlBuffer *m_pReadFromBuffer;
-		CUtlBuffer *m_pSeekSyncBuffer;
-		int m_nReadFromBufferOriginalSeekPos;
-	};
+	// playback: file window
+	int m_nGet = 0;
+	int m_nMaxPut = 0;
+	int m_nWindowStart = 0;
+	std::vector< std::byte > m_window;
+
+	// recording: bytes not yet committed; m_nOffset is the file position of the first of them
+	ks::byte_writer m_pending;
+	int m_nPut = 0;
+	int m_nOffset = 0;
+	int m_nPendingCapacity = 16 * 1024;
+
+	std::vector< std::byte > m_decoded;
+	int m_nDecodedOffset = -1;
+	CDemoPlaybackParameters_t const *m_pPlaybackParams = nullptr;
 };
 
 
@@ -287,12 +397,17 @@ private:
 		return pNewFrame;
 	}
 
+	// Chunks are allocated as uint8 arrays.
+	struct DataChunkDeleter
+	{
+		void operator()( DataChunk_t *p ) const { delete [] reinterpret_cast< uint8 * >( p ); }
+	};
+
 	bool m_bSignonComplete;
 
 	DataChunk_t* m_pSignonData;
 
-	typedef unsigned short Iterator_t;
-	CUtlLinkedList< DataChunk_t*, Iterator_t > m_lstFrames;	// Represents a list of demo frames
+	std::deque< std::unique_ptr< DataChunk_t, DataChunkDeleter > > m_lstFrames;	// Represents a list of demo frames
 
 	inline int GetTickCount()
 	{
@@ -313,14 +428,12 @@ private:
 #endif
 
 		// Here we remove any frames that are beyond the length of the movie.
-		Iterator_t i = m_lstFrames.Head();
-		while ( i != m_lstFrames.InvalidIndex() )
+		while ( !m_lstFrames.empty() )
 		{
-			if ( m_lstFrames[ i ]->nTickcount >= GetTickCount() - TIME_TO_TICKS( replay_movielength.GetInt() ) )
+			if ( m_lstFrames.front()->nTickcount >= GetTickCount() - TIME_TO_TICKS( replay_movielength.GetInt() ) )
 				break;
 
-			m_lstFrames.Remove( i );
-			i = m_lstFrames.Head();
+			m_lstFrames.pop_front();
 #ifdef _DEBUG
 			++nNumFramesRemoved;
 #endif
@@ -349,10 +462,7 @@ public:
 	~CMemoryDemoBuffer()
 	{
 		delete [] m_pDataCache;
-		delete m_pSignonData;
-
-		// Free all list entries
-		m_lstFrames.PurgeAndDeleteElements();
+		DataChunkDeleter()( m_pSignonData );
 	}
 
 	virtual bool Init( DemoBufferInitParams_t const& params )
@@ -432,7 +542,7 @@ public:
 		V_memcpy( pNewFrame->pData, m_pDataCache, nSize );
 
 		// Add new frame to list
-		m_lstFrames.AddToTail( pNewFrame );
+		m_lstFrames.emplace_back( pNewFrame );
 
 #ifdef _DEBUG
 		m_pWrite = nullptr;
@@ -474,7 +584,7 @@ public:
 		V_memcpy( m_pWrite, pMem, nSize );
 		m_pWrite += nSize;
 		m_nBufferSize += nSize;
-		m_nMaxPut = MAX( m_nMaxPut, nSize );
+		m_nMaxPut = std::max( m_nMaxPut, nSize );
 	}
 
 	virtual void WriteTick( int nTick )
@@ -493,7 +603,7 @@ public:
 	// pass an iterator as an argument into the job's constructor so we know where to stop iterating
 	// across the frame list.
 	//
-	mutable CInterlockedIntT<int> m_nWriteCount;
+	mutable std::atomic<int> m_nWriteCount;
 
 	//
 	// Threaded .dem file write
@@ -501,8 +611,8 @@ public:
 	class CDemWriteJob : public CJob
 	{
 	public:
-		CDemWriteJob( const CMemoryDemoBuffer *pDemobuffer, const char *pFilename, Iterator_t itTail, const demoheader_t &header )
-			: m_pDemobuffer( pDemobuffer ), m_pFilename( pFilename ), m_itTail( itTail ), m_Header( header )
+		CDemWriteJob( const CMemoryDemoBuffer *pDemobuffer, const char *pFilename, const demoheader_t &header )
+			: m_pDemobuffer( pDemobuffer ), m_pFilename( pFilename ), m_Header( header )
 		{
 			Assert( pFilename && pFilename[0] );
 		}
@@ -514,13 +624,7 @@ public:
 
 			if ( m_pFilename && m_pFilename[0] != '\0' )
 			{
-				// Open the file
-				CUtlStreamBuffer buf( m_pFilename, nullptr );
-				if ( !buf.IsOpen() )
-				{
-					Warning( "demobuffer: Failed to open file for writing, %s\n", m_pFilename );
-				}
-				else
+				ks::byte_writer buf;
 				{
 					// NOTE: We include the sync tick frame as part of our signon data, which makes the header signon length vary by 6 bytes
 					// (2 chars and 1 int) from our own signon data size. 
@@ -528,45 +632,39 @@ public:
 					Assert( m_pDemobuffer->m_pSignonData->nSize == m_Header.signonlength + nTickSyncFrameSize );
 
 					// Compute adjusted time/ticks/frames, since we may have removed stale frames
-					const CUtlLinkedList< CMemoryDemoBuffer::DataChunk_t*, CMemoryDemoBuffer::Iterator_t > &lstFrames = m_pDemobuffer->m_lstFrames;
-					Iterator_t itHead = lstFrames.Head();
-					Iterator_t itTail = lstFrames.Tail();
+					const auto &lstFrames = m_pDemobuffer->m_lstFrames;
+					Assert( !lstFrames.empty() );
 
-					Assert( itHead != lstFrames.InvalidIndex() );
-					Assert( itTail != lstFrames.InvalidIndex() );
-
-					const DataChunk_t *pHead = lstFrames.Element( itHead );
-					const DataChunk_t *pTail = lstFrames.Element( itTail );
+					const DataChunk_t *pHead = lstFrames.front().get();
+					const DataChunk_t *pTail = lstFrames.back().get();
 
 					demoheader_t header = m_Header;
 					header.playback_time = TICKS_TO_TIME( pTail->nTickcount - pHead->nTickcount );
 					header.playback_ticks = pTail->nTickcount - pHead->nTickcount;
-					header.playback_frames = lstFrames.Count();
+					header.playback_frames = std::ssize( lstFrames );
 
 					// Write header
-					buf.Put( &header, sizeof( header ) );
+					buf.write( header );
 
 					// Write signon data
 					AssertValidReadPtr( m_pDemobuffer->m_pSignonData );
-					buf.Put( m_pDemobuffer->m_pSignonData->pData, m_pDemobuffer->m_pSignonData->nSize );
-
-					Iterator_t itStart = m_pDemobuffer->m_lstFrames.Head();
+					buf.write_bytes( m_pDemobuffer->m_pSignonData->pData, m_pDemobuffer->m_pSignonData->nSize );
 
 					// Get first recording tick (NOTE: not start global tick).  Recording ticks start at 0 but
 					// when we remove stale frames the first recording tick becomes greater than zero.  We use
 					// nStartTick here to shift all frame recording ticks down nStartTick ticks.
 					int nStartTick;
-					if ( itHead != m_pDemobuffer->m_lstFrames.InvalidIndex() )
+					if ( !lstFrames.empty() )
 					{
-						DataChunk_t *pFrame = m_pDemobuffer->m_lstFrames[ itHead ];
+						DataChunk_t *pFrame = lstFrames.front().get();
 						int *pTickData = reinterpret_cast< int * >( pFrame->pData + pFrame->nCurrentTickOffset );
 						V_memcpy( &nStartTick, pTickData, sizeof( int ) );
 					}
 
 					// Write frames
-					for ( Iterator_t i = itStart; i != m_pDemobuffer->m_lstFrames.InvalidIndex(); i = m_pDemobuffer->m_lstFrames.Next( i ) )
+					for ( const auto &frame : lstFrames )
 					{
-						DataChunk_t *pFrame = m_pDemobuffer->m_lstFrames[ i ];			Assert( pFrame->nSize >= 0 );
+						DataChunk_t *pFrame = frame.get();			Assert( pFrame->nSize >= 0 );
 
 						// Overwrite the tick for the given frame if one exists
 						if ( nStartTick > 0 && pFrame->nCurrentTickOffset >= 0 )
@@ -584,15 +682,18 @@ public:
 							V_memcpy( pTickData, &nNewTick, sizeof( int ) );
 						}
 
-						buf.Put( pFrame->pData, pFrame->nSize );
+						buf.write_bytes( pFrame->pData, pFrame->nSize );
 					}
 
 					// Write dem_stop cmd
-					buf.PutUnsignedChar( dem_stop );
-					buf.PutInt( m_pDemobuffer->m_lstFrames.Element( m_pDemobuffer->m_lstFrames.Tail() )->nTickcount );
-					buf.PutChar( 0 );
+					buf.write< unsigned char >( dem_stop );
+					buf.write< int >( lstFrames.back()->nTickcount );
+					buf.write< char >( 0 );
 
-					buf.Close();
+					if ( !g_pFullFileSystem->WriteFile( m_pFilename, nullptr, buf.bytes() ) )
+					{
+						Warning( "demobuffer: Failed to open file for writing, %s\n", m_pFilename );
+					}
 				}
 			}
 
@@ -605,17 +706,15 @@ public:
 	private:
 		const CMemoryDemoBuffer	*m_pDemobuffer;
 		const char				*m_pFilename;
-		Iterator_t				m_itTail;
 		const demoheader_t		&m_Header;
 	};
 
 	virtual void UpdateStartTick( int& nStartTick ) const
 	{
-		Iterator_t itHead = m_lstFrames.Head();
-		if ( itHead == m_lstFrames.InvalidIndex() )
+		if ( m_lstFrames.empty() )
 			return;
 
-		nStartTick = m_lstFrames[ itHead ]->nTickcount;
+		nStartTick = m_lstFrames.front()->nTickcount;
 	}
 
 	virtual void DumpToFile( const char *pFilename, const demoheader_t &header ) const
@@ -629,7 +728,7 @@ public:
 		m_nWriteCount++;
 
 		// Start a new thread
-		CDemWriteJob* pJob = new CDemWriteJob( this, pFilename, m_lstFrames.Tail(), header );
+		CDemWriteJob* pJob = new CDemWriteJob( this, pFilename, header );
 		g_pThreadPool->AddJob( pJob );
 
 		while ( m_nWriteCount > n )

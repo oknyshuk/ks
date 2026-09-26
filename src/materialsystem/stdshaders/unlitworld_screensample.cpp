@@ -16,9 +16,6 @@
 
 #include "shaderlib/commandbuilder.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 BEGIN_VS_SHADER( UnLitWorld_ScreenSample, "Help for UnLitWorld_ScreenSample" )
 
@@ -144,8 +141,8 @@ BEGIN_VS_SHADER( UnLitWorld_ScreenSample, "Help for UnLitWorld_ScreenSample" )
 			c18[3] = 0;				
 			pShaderAPI->SetPixelShaderConstant( 18, c18, 1 );
 
-			float c0[4] = {		1.0f / (float)MAX(nViewportWidth, 1.0f) ,	// one X pixel in normalized 0..1 screenspace
-								1.0f / (float)MAX(nViewportHeight, 1.0f) ,	// one Y pixel in normalized 0..1 screenspace
+			float c0[4] = {		1.0f / (float)std::max<std::common_type_t<int, float>>(nViewportWidth, 1.0f) ,	// one X pixel in normalized 0..1 screenspace
+								1.0f / (float)std::max<std::common_type_t<int, float>>(nViewportHeight, 1.0f) ,	// one Y pixel in normalized 0..1 screenspace
 								0,
 								0 };
 				

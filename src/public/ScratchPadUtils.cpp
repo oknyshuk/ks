@@ -11,9 +11,6 @@
 #include "mathlib/mathlib.h"
 #include "ScratchPadUtils.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 // --------------------------------------------------------------------------------------------------------------------- //
 // CScratchPadGraph implementation.
@@ -72,7 +69,7 @@ CScratchPadGraph::LineID CScratchPadGraph::AddLine( Vector vColor )
 	CScratchPadGraph::CLineInfo info;
 	info.m_bFirst = true;
 	info.m_vColor = vColor;
-	return m_LineInfos.AddToTail( info );
+	m_LineInfos.push_back( info ); return (int)std::ssize( m_LineInfos ) - 1;
 }
 
 
@@ -216,8 +213,8 @@ void ScratchPad_DrawLitCone(
 
 	// Setup the top and bottom caps.
 	CSPVertList bottomCap, tri;
-	bottomCap.m_Verts.SetSize( nSegments );
-	tri.m_Verts.SetSize( 3 );
+	bottomCap.m_Verts.assign( nSegments, {} );
+	tri.m_Verts.assign( 3, {} );
 
 	float flDot = -vLightDir.Dot( vDir );
 	Vector topColor, bottomColor;
@@ -279,9 +276,9 @@ void ScratchPad_DrawLitCylinder(
 	// Setup the top and bottom caps.
 	CSPVertList topCap, bottomCap, quad;
 	
-	topCap.m_Verts.SetSize( nSegments );
-	bottomCap.m_Verts.SetSize( nSegments );
-	quad.m_Verts.SetSize( 4 );
+	topCap.m_Verts.assign( nSegments, {} );
+	bottomCap.m_Verts.assign( nSegments, {} );
+	quad.m_Verts.assign( 4, {} );
 
 	float flDot = -vLightDir.Dot( vDir );
 	Vector topColor, bottomColor;
@@ -380,8 +377,8 @@ void ScratchPad_DrawSphere(
 	const Vector &vColor,
 	int nSubDivs )
 {
-	CUtlVector<Vector> prevPoints;
-	prevPoints.SetSize( nSubDivs );
+	std::vector< Vector > prevPoints;
+	prevPoints.assign( nSubDivs, {} );
 	
 	// For each vertical slice.. (the top and bottom ones are just a single point).
 	for ( int iSlice=0; iSlice < nSubDivs; iSlice++ )
@@ -391,7 +388,7 @@ void ScratchPad_DrawSphere(
 		if ( iSlice == 0 )
 		{
 			prevPoints[0] = vCenter + Vector( 0, 0, flRadius );
-			for ( int z=1; z < prevPoints.Count(); z++ )
+			for ( int z=1; z < std::ssize( prevPoints ); z++ )
 				prevPoints[z] = prevPoints[0];
 		}
 		else

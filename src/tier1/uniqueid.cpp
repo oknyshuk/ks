@@ -11,10 +11,10 @@
 
 #include "checksum_crc.h"
 #include "tier1/uniqueid.h"
-#include "tier1/utlbuffer.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
+#include "tier1/text_reader.h"
+#include "tier1/text_writer.h"
 
 
 
@@ -100,26 +100,29 @@ void CopyUniqueId( const UniqueId_t &src, UniqueId_t *pDest )
 	memcpy( pDest, &src, sizeof( UniqueId_t ) );
 }
 
-bool Serialize( CUtlBuffer &buf, const UniqueId_t &src )
+bool Serialize( ks::byte_writer &buf, const UniqueId_t &src )
 {
 // X360TBD: Need a real UUID Implementation
 	return false;
 }
 
-bool Unserialize( CUtlBuffer &buf, UniqueId_t &dest )
+bool Serialize( ks::text_writer &buf, const UniqueId_t &src )
 {
-	if ( buf.IsText() )
-	{
-		int nTextLen = buf.PeekStringLength();
-		char *pBuf = (char*)stackalloc( nTextLen );
-		buf.GetString( pBuf, nTextLen );
-		UniqueIdFromString( &dest, pBuf, nTextLen );
-	}
-	else
-	{
-		buf.Get( &dest, sizeof(UniqueId_t) );
-	}
-	return buf.IsValid();
+// X360TBD: Need a real UUID Implementation
+	return false;
+}
+
+bool Unserialize( ks::byte_reader &buf, UniqueId_t &dest )
+{
+	buf.read_bytes( &dest, sizeof(UniqueId_t) );
+	return buf.ok();
+}
+
+bool Unserialize( ks::text_reader &buf, UniqueId_t &dest )
+{
+	const std::string text( buf.read_word() );
+	UniqueIdFromString( &dest, text.c_str(), (int)text.size() + 1 );
+	return buf.ok();
 }
 
 

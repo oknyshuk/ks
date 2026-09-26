@@ -9,9 +9,6 @@
 #include "net.h"
 #include "sv_rcon.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static redirect_t	sv_redirected;
 static netadr_t		sv_redirectto;
 static char			sv_redirect_buffer[ 4096 ]; // can't be any bigger because then we hit other static limits in the engine print funcs

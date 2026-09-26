@@ -10,15 +10,12 @@
 #include "matchmaking/imatchframework.h"
 #include "engine/inetsupport.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 class CServerLogDestination
 {
 public:
 	CServerLogDestination( const char* szDestAddress )
 	{
-		m_sURI.Set( szDestAddress );
+		m_sURI.assign( ks::nz( szDestAddress ) );
 		m_flTimeout = 10.0f;
 		m_hHTTPRequestHandle = INVALID_HTTPREQUEST_HANDLE;
 		m_bIsFinished = false;
@@ -43,12 +40,12 @@ public:
 	
 	bool BRequestPending( void ) const { return m_hHTTPRequestHandle != INVALID_HTTPREQUEST_HANDLE; }
 	bool BIsFinished( void ) const { return m_bIsFinished;  }
-	bool SendUpdate( int32 iFromTIck, int32 iToTick, CServerLogHTTPDispatcher::LogLinesList_t::IndexType_t idxEndOfUpdate, const char* pLogLines, size_t unUpdateStrLenBytes );
-	CServerLogHTTPDispatcher::LogLinesList_t::IndexType_t LastUpdateIndex() const { return m_idxLastAcknowledgedUpdate; }
+	bool SendUpdate( int32 iFromTIck, int32 iToTick, CServerLogHTTPDispatcher::LogLineIndex_t idxEndOfUpdate, const char* pLogLines, size_t unUpdateStrLenBytes );
+	CServerLogHTTPDispatcher::LogLineIndex_t LastUpdateIndex() const { return m_idxLastAcknowledgedUpdate; }
 	void Reset( void ) // Called during cleanup between maps or at shutdown
 	{
-		m_idxPendingUpdate = CServerLogHTTPDispatcher::LogLinesList_t::InvalidIndex();
-		m_idxLastAcknowledgedUpdate = CServerLogHTTPDispatcher::LogLinesList_t::InvalidIndex();
+		m_idxPendingUpdate = CServerLogHTTPDispatcher::kInvalidLogLine;
+		m_idxLastAcknowledgedUpdate = CServerLogHTTPDispatcher::kInvalidLogLine;
 
 		if ( m_hHTTPRequestHandle )
 			steamgameserverapicontext->SteamHTTP()->ReleaseHTTPRequest( m_hHTTPRequestHandle );
@@ -60,11 +57,11 @@ public:
 private:
 	void Steam_OnHTTPRequestCompleted( HTTPRequestCompleted_t *p, bool bError );
 
-	CUtlString m_sURI; // Base url for this destination
+	std::string m_sURI; // Base url for this destination
 
 	// Keep track of the linked list node from the last successful update so we can continue where we left off
-	CServerLogHTTPDispatcher::LogLinesList_t::IndexType_t m_idxLastAcknowledgedUpdate;
-	CServerLogHTTPDispatcher::LogLinesList_t::IndexType_t m_idxPendingUpdate; 
+	CServerLogHTTPDispatcher::LogLineIndex_t m_idxLastAcknowledgedUpdate;
+	CServerLogHTTPDispatcher::LogLineIndex_t m_idxPendingUpdate; 
 
 	HTTPRequestHandle m_hHTTPRequestHandle; // Pending request if any
 	float m_flTimeout; // Timeout passed to steamhttp callbacks
@@ -99,6 +96,8 @@ CON_COMMAND( logaddress_list_http, "List all URIs currently receiving server log
 	GetServerLogHTTPDispatcher()->DumpListenersToConsole();
 }
 
+CServerLogHTTPDispatcher::~CServerLogHTTPDispatcher() = default;
+
 CServerLogHTTPDispatcher::CServerLogHTTPDispatcher():
 	CAutoGameSystemPerFrame( "ServerLogHTTPDispatcher" )
 { 
@@ -111,7 +110,7 @@ void CServerLogHTTPDispatcher::BuildTimestampString( void )
 	tm now;
 	Plat_ConvertToLocalTime( ( m_localTimeLoggingStart + (uint32)flTimeSpentLogging ), &now );
 	uint32 msecs = ( flTimeSpentLogging - ( uint32 )flTimeSpentLogging ) * 1000;
-	m_strTimeStampPrefix.Format( "%02u/%02u/%04u - %02u:%02u:%02u.%03u",
+	m_strTimeStampPrefix = ks::format_printf( "%02u/%02u/%04u - %02u:%02u:%02u.%03u",
 										now.tm_mon + 1, now.tm_mday, 1900 + now.tm_year,
 										now.tm_hour, now.tm_min, now.tm_sec, msecs );
 }
@@ -121,34 +120,35 @@ bool CServerLogHTTPDispatcher::LogForHTTPListeners( const char* szLogLine )
 	if ( !szLogLine || StringIsEmpty( szLogLine ) )
 		return false;
 
-	if ( m_strLogLinesThisTick.IsEmpty() )
+	if ( m_strLogLinesThisTick.empty() )
 	{
 		BuildTimestampString();
 	}
 
-	m_strLogLinesThisTick.AppendFormat( "%s - %s", m_strTimeStampPrefix.Get(), szLogLine );
+	m_strLogLinesThisTick += ks::format_printf( "%s - %s", m_strTimeStampPrefix.data(), szLogLine );
 	return true;
 }
 
 void CServerLogHTTPDispatcher::AddListener( const char* szURI )
 {
-	m_vecListeners.AddToTail( new CServerLogDestination( szURI ) );
+	m_vecListeners.push_back( std::make_unique< CServerLogDestination >( szURI ) );
 }
 
 void CServerLogHTTPDispatcher::RemoveAllListeners( void )
 {
-	m_vecListeners.PurgeAndDeleteElements();
+	m_vecListeners.clear();
 }
 
 void CServerLogHTTPDispatcher::DumpListenersToConsole( void ) const
 {
-	FOR_EACH_VEC( m_vecListeners, i )
+	for ( const auto &pListener : m_vecListeners )
 	{
-		CServerLogDestination *pDest = m_vecListeners[ i ];
+		CServerLogDestination *pDest = pListener.get();
 		if ( pDest )
 		{
 			pDest->DumpStatusToConsole();
-			ConMsg( "\tlast acknowledged tick %d\n", m_llLogPerTick[ pDest->LastUpdateIndex() ].iTick );
+			LogLineIndex_t idx = pDest->LastUpdateIndex();
+			ConMsg( "\tlast acknowledged tick %d\n", idx != kInvalidLogLine ? m_llLogPerTick[ idx ].iTick : 0 );
 		}
 	}
 }
@@ -156,7 +156,7 @@ void CServerLogHTTPDispatcher::DumpListenersToConsole( void ) const
 void CServerLogHTTPDispatcher::Shutdown()
 {
 	Reset();
-	m_vecListeners.PurgeAndDeleteElements();
+	m_vecListeners.clear();
 }
 
 void CServerLogHTTPDispatcher::LevelInitPreEntity()
@@ -172,22 +172,22 @@ void CServerLogHTTPDispatcher::LevelShutdownPreEntity()
 
 void CServerLogHTTPDispatcher::Reset( void )
 {
-	m_strServerLog.Clear();
-	m_llLogPerTick.Purge();
-	m_strLogLinesThisTick.Clear();
+	m_strServerLog.clear();
+	m_llLogPerTick = {};
+	m_strLogLinesThisTick.clear();
 
-	FOR_EACH_VEC( m_vecListeners, i )
+	for ( auto &pListener : m_vecListeners )
 	{
-		m_vecListeners[i]->Reset();
+		pListener->Reset();
 	}
 #if defined DBGFLAG_ASSERT
-	m_dbgLastAllocedHandle = LogLinesList_t::InvalidIndex();
+	m_dbgLastAllocedHandle = kInvalidLogLine;
 #endif 
 }
 
 void CServerLogHTTPDispatcher::PreClientUpdate()
 {
-	if ( m_vecListeners.Count() == 0 )
+	if ( m_vecListeners.empty() )
 		return;
 
 	// Can't do any work before we have steamhttp
@@ -204,75 +204,76 @@ void CServerLogHTTPDispatcher::PreClientUpdate()
 	}
 
 	// If we've crossed a tick boundary, add the spew for that period to the in-memory log
-	int32 iTickLastLogged = m_llLogPerTick.Tail() != LogLinesList_t::InvalidIndex() ? m_llLogPerTick [ m_llLogPerTick.Tail() ].iTick : 0;
-	if ( gpGlobals->tickcount > iTickLastLogged && !m_strLogLinesThisTick.IsEmpty() )
+	int32 iTickLastLogged = !m_llLogPerTick.empty() ? m_llLogPerTick.back().iTick : 0;
+	if ( gpGlobals->tickcount > iTickLastLogged && !m_strLogLinesThisTick.empty() )
 	{
 		// Record offset from start of our log string for this tick's lines and its length. 
-		LogLinesList_t::IndexType_t newIdx = m_llLogPerTick.AddToTail( LogLineStartForTick_t ( gpGlobals->tickcount, m_strServerLog.Length(), m_strLogLinesThisTick.Length() ) );
+		LogLineIndex_t newIdx = (LogLineIndex_t)m_llLogPerTick.size();
+		m_llLogPerTick.emplace_back( gpGlobals->tickcount, (int)m_strServerLog.size(), (int)m_strLogLinesThisTick.size() );
 
-		// Never reuse handles in this LL unless we tear down the log between levels or otherwise know there are no listeners holding on to them
+		// Never reuse handles in this list unless we tear down the log between levels or otherwise know there are no listeners holding on to them
 		NOTE_UNUSED( newIdx );
 #if defined DBGFLAG_ASSERT
-		Assert( newIdx > m_dbgLastAllocedHandle || m_dbgLastAllocedHandle == LogLinesList_t::InvalidIndex() );
+		Assert( newIdx > m_dbgLastAllocedHandle || m_dbgLastAllocedHandle == kInvalidLogLine );
 		m_dbgLastAllocedHandle = newIdx;
 #endif
 
 		// Append this tick's lines to the log and clear
-		m_strServerLog.Append( m_strLogLinesThisTick.Get() );
+		m_strServerLog += m_strLogLinesThisTick;
 		// Don't free memory for this as it's a frequently used bucket. Keep alloc at whatever high water mark its reached until level transition
-		m_strLogLinesThisTick.SetLength( 0 ); 
+		m_strLogLinesThisTick.clear(); 
 	
 		// Mark this as the most recent tick for any updates being sent below
 		iTickLastLogged = gpGlobals->tickcount;
 	}
 
-	if ( m_llLogPerTick.Tail() != LogLinesList_t::InvalidIndex() )
+	if ( !m_llLogPerTick.empty() )
 	{
-		FOR_EACH_VEC_BACK( m_vecListeners, i )
+		const LogLineIndex_t idxTail = (LogLineIndex_t)m_llLogPerTick.size() - 1;
+		for ( int i = (int)std::ssize( m_vecListeners ) - 1; i >= 0; i-- )
 		{
-			CServerLogDestination* pDest = m_vecListeners[ i ];
+			CServerLogDestination* pDest = m_vecListeners[ i ].get();
 			if ( pDest->BRequestPending() ) // Skip requests still waiting to hear back or time out
 				continue;
 
 			if ( pDest->BIsFinished() ) // Clean up listeners no longer needing updates
 			{
-				delete m_vecListeners[ i ];
-				m_vecListeners.Remove( i );
+				m_vecListeners.erase( m_vecListeners.begin() + i );
 				continue;
 			}
 
 			// If we have new lines for this listener, send an update
-			LogLinesList_t::IndexType_t idxLast = pDest->LastUpdateIndex();
-			if ( idxLast == m_llLogPerTick.Tail() )
+			LogLineIndex_t idxLast = pDest->LastUpdateIndex();
+			if ( idxLast == idxTail )
 				continue; // they have the latest
 
-			LogLinesList_t::IndexType_t idxFrom = LogLinesList_t::InvalidIndex();
-			if ( idxLast == LogLinesList_t::InvalidIndex() )
-				idxFrom = m_llLogPerTick.Head(); // never acknowledged an update
+			LogLineIndex_t idxFrom = kInvalidLogLine;
+			if ( idxLast == kInvalidLogLine )
+				idxFrom = 0; // never acknowledged an update
 			else
-				idxFrom = m_llLogPerTick.Next( idxLast ); // start with the next entry after their last acknowledgment 
-			Assert( idxFrom != LogLinesList_t::InvalidIndex() );
+				idxFrom = idxLast + 1; // start with the next entry after their last acknowledgment 
+			Assert( idxFrom <= idxTail );
 
 			LogLineStartForTick_t &updateStart = m_llLogPerTick[ idxFrom ];
 			Assert( updateStart.iTick <= iTickLastLogged ); 
 
-			LogLinesList_t::IndexType_t idxTo = idxFrom;
+			LogLineIndex_t idxTo = idxFrom;
 			size_t unUpdateStringSize = updateStart.unLength;
-			while ( unUpdateStringSize < pDest->MaxUpdateStringSizeBytes() && m_llLogPerTick.Next( idxTo ) != LogLinesList_t::InvalidIndex() )
+			while ( unUpdateStringSize < pDest->MaxUpdateStringSizeBytes() && idxTo < idxTail )
 			{
-				idxTo = m_llLogPerTick.Next( idxTo );
+				++idxTo;
 				unUpdateStringSize += m_llLogPerTick[ idxTo ].unLength;
 			}
 			
-			Assert( idxFrom != LogLinesList_t::InvalidIndex() && idxTo != LogLinesList_t::InvalidIndex() );
-			pDest->SendUpdate( updateStart.iTick, m_llLogPerTick[idxTo].iTick, idxTo , m_strServerLog.Get() + updateStart.unOffsetStart, unUpdateStringSize );
+			Assert( idxFrom != kInvalidLogLine && idxTo != kInvalidLogLine );
+			pDest->SendUpdate( updateStart.iTick, m_llLogPerTick[idxTo].iTick, idxTo , m_strServerLog.c_str() + updateStart.unOffsetStart, unUpdateStringSize );
 		}
 	}
 }
 
-bool CServerLogDestination::SendUpdate( int32 iFromTick, int32 iToTick, CServerLogHTTPDispatcher::LogLinesList_t::IndexType_t idxEndOfUpdate, const char* pLogLines, size_t unUpdateStrLenBytes )
+bool CServerLogDestination::SendUpdate( int32 iFromTick, int32 iToTick, CServerLogHTTPDispatcher::LogLineIndex_t idxEndOfUpdate, const char* pLogLines, size_t unUpdateStrLenBytes )
 {
-	m_hHTTPRequestHandle = steamgameserverapicontext->SteamHTTP()->CreateHTTPRequest( k_EHTTPMethodPOST, m_sURI.Get() );
+	m_hHTTPRequestHandle = steamgameserverapicontext->SteamHTTP()->CreateHTTPRequest( k_EHTTPMethodPOST, m_sURI.data() );
 	steamgameserverapicontext->SteamHTTP()->SetHTTPRequestNetworkActivityTimeout( m_hHTTPRequestHandle, m_flTimeout );
 	steamgameserverapicontext->SteamHTTP()->SetHTTPRequestHeaderValue( m_hHTTPRequestHandle, "X-Tick-Start", CNumStr( iFromTick ).String() );
 	steamgameserverapicontext->SteamHTTP()->SetHTTPRequestHeaderValue( m_hHTTPRequestHandle, "X-Tick-End", CNumStr( iToTick ).String() );
@@ -308,7 +309,7 @@ bool CServerLogDestination::SendUpdate( int32 iFromTick, int32 iToTick, CServerL
 
 void CServerLogDestination::DumpStatusToConsole( void ) const
 {
-	ConMsg( "%s - %s pending request\n", m_sURI.Get(), BRequestPending() ? "has" : "no" );
+	ConMsg( "%s - %s pending request\n", m_sURI.c_str(), BRequestPending() ? "has" : "no" );
 }
 
 void CServerLogDestination::Steam_OnHTTPRequestCompleted( HTTPRequestCompleted_t *p, bool bError )
@@ -327,29 +328,29 @@ void CServerLogDestination::Steam_OnHTTPRequestCompleted( HTTPRequestCompleted_t
 		{
 			case k_EHTTPStatusCodeInvalid:
 			{
-				Msg( "Internal HTTP error posting to url %s\n", m_sURI.Get() );
+				Msg( "Internal HTTP error posting to url %s\n", m_sURI.data() );
 			}
 			break;
 			case k_EHTTPStatusCode410Gone:
 			{
-				Msg( "Listener %s sent code 410, removing from update list.\n", m_sURI.Get() );
+				Msg( "Listener %s sent code 410, removing from update list.\n", m_sURI.data() );
 				m_bIsFinished = true;
 			}
 			break;
 
 			case k_EHTTPStatusCode205ResetContent:
-				m_idxLastAcknowledgedUpdate = CServerLogHTTPDispatcher::LogLinesList_t::InvalidIndex(); // Destination is requesting entire log again
+				m_idxLastAcknowledgedUpdate = CServerLogHTTPDispatcher::kInvalidLogLine; // Destination is requesting entire log again
 			break;
 
 			default:
 			{
-				Msg( "Error posting to url %s, error code %d\n", m_sURI.Get(), p->m_eStatusCode );
+				Msg( "Error posting to url %s, error code %d\n", m_sURI.data(), p->m_eStatusCode );
 			}
 			break;
 		}
 	}
 
-	m_idxPendingUpdate = CServerLogHTTPDispatcher::LogLinesList_t::InvalidIndex();
+	m_idxPendingUpdate = CServerLogHTTPDispatcher::kInvalidLogLine;
 	steamgameserverapicontext->SteamHTTP()->ReleaseHTTPRequest( p->m_hRequest );
 	m_hHTTPRequestHandle = 0;
 }

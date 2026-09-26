@@ -34,7 +34,7 @@ private:
 
 	virtual void Update( float frametime );
 
-	CUtlVector<CustomMaterialGenerationData_t> m_materials;
+	std::vector< CustomMaterialGenerationData_t > m_materials;
 
 	bool m_bHasJob;
 

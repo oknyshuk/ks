@@ -305,7 +305,7 @@ public:
 
 //--------------------------------------------------------------------------------------------------------------
 // All the hostage entities.
-extern CUtlVector< CHostage * > g_Hostages;
+extern std::vector< CHostage * > g_Hostages;
 
 
 //--------------------------------------------------------------------------------------------------------------
@@ -316,7 +316,7 @@ extern CUtlVector< CHostage * > g_Hostages;
 template < typename Functor >
 bool ForEachHostage( Functor &func )
 {
-	for( int i=0; i<g_Hostages.Count(); ++i )
+	for( int i=0; i<std::ssize( g_Hostages ); ++i )
 	{
 		CHostage *hostage = g_Hostages[i];
 

@@ -12,9 +12,6 @@
 #include "game.h"
 #include "world.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Some enumerations needed by CSoundEnt
 //-----------------------------------------------------------------------------
@@ -548,7 +545,7 @@ void CSoundEnt::Initialize ( void )
 	// In MP, have one for each player and 32 extras.
 	int nTotalSoundsInPool = MAX_WORLD_SOUNDS_SP;
 	if ( gpGlobals->maxClients > 1 )
-		nTotalSoundsInPool = MIN( ( int ) MAX_WORLD_SOUNDS_MP, gpGlobals->maxClients + 32 );
+		nTotalSoundsInPool = std::min( ( int ) MAX_WORLD_SOUNDS_MP, gpGlobals->maxClients + 32 );
 
 	if ( gpGlobals->maxClients+16 > nTotalSoundsInPool )
 	{

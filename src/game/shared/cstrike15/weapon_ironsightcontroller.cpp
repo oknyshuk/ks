@@ -22,9 +22,6 @@
 	#include "cs_player.h"
 #endif
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 #define IRONSIGHT_VIEWMODEL_BOB_MULT_X 0.05
 #define IRONSIGHT_VIEWMODEL_BOB_PERIOD_X 6
 #define IRONSIGHT_VIEWMODEL_BOB_MULT_Y 0.1

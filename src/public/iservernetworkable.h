@@ -11,7 +11,7 @@
 
 #include "ihandleentity.h"
 #include "basetypes.h"
-#include "bitvec.h"
+#include <bitset>
 #include "const.h"
 #include "bspfile.h"
 
@@ -38,8 +38,8 @@ public:
 	byte	m_PVS[PAD_NUMBER( MAX_MAP_CLUSTERS,8 ) / 8];
 	int		m_nPVSSize;		// PVS size in bytes
 
-	CBitVec<MAX_EDICTS>	*m_pTransmitEdict;	// entity n is already marked for transmission
-	CBitVec<MAX_EDICTS>	*m_pTransmitAlways; // entity n is always sent even if not in PVS (HLTV and Replay only)
+	std::bitset<MAX_EDICTS>	*m_pTransmitEdict;	// entity n is already marked for transmission
+	std::bitset<MAX_EDICTS>	*m_pTransmitAlways; // entity n is always sent even if not in PVS (HLTV and Replay only)
 	
 	int 	m_AreasNetworked; // number of networked areas 
 	int		m_Areas[MAX_WORLD_AREAS]; // the areas

@@ -12,9 +12,6 @@
 #include "basecsgrenade_projectile.h"
 #include "../../../shared/cstrike15/cs_gamerules.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Fire our active weapon towards our current enemy
@@ -278,8 +275,8 @@ void CCSBot::PickNewAimSpot()
 		float deltaYaw = AngleDistance(viewAngles.y, aimGoal.y);
 		float deltaPitch = AngleDistance(viewAngles.x, aimGoal.x);
 		float fAngleOffset = sqrtf(deltaYaw * deltaYaw + deltaPitch * deltaPitch);
-		float fNewMaxFocus = MIN(60.0f, fAngleOffset) * GetProfile()->GetAimFocusOffsetScale();
-		m_aimFocus = MAX(m_aimFocus, fNewMaxFocus);
+		float fNewMaxFocus = std::min(60.0f, fAngleOffset) * GetProfile()->GetAimFocusOffsetScale();
+		m_aimFocus = std::max(m_aimFocus, fNewMaxFocus);
 
 		float fTheta = RandomFloat(0.0f, 2.0f * M_PI);
 		float fRadius = RandomFloat(0.0f, m_aimFocus);

@@ -23,12 +23,10 @@
 #include "point_template.h"
 #include "eventqueue.h"
 #include "TemplateEntities.h"
-#include "utldict.h"
+#include "tier1/map_ops.h"
 #include "entitydefs.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 ConVar template_debug( "template_debug", "0" );
 
 // This is appended to key's values that will need to be unique in template instances
@@ -60,20 +58,20 @@ struct grouptemplate_t
 	bool			bChangeTargetname;
 };
 
-static CUtlVector<TemplateEntityData_t *> g_Templates;
+static std::vector< TemplateEntityData_t * > g_Templates;
 
 int	g_iCurrentTemplateInstance;
 
 void Templates_FreeTemplate( TemplateEntityData_t *pTemplate )
 {
-	free((void *)pTemplate->pszName);
-	free(pTemplate->pszMapData);
+	g_pMemAlloc->Free((void *)pTemplate->pszName);
+	g_pMemAlloc->Free(pTemplate->pszMapData);
 	if ( pTemplate->pszFixedMapData )
 	{
-		free(pTemplate->pszFixedMapData);
+		g_pMemAlloc->Free(pTemplate->pszFixedMapData);
 	}
 
-	free(pTemplate);
+	g_pMemAlloc->Free(pTemplate);
 }
 
 //-----------------------------------------------------------------------------
@@ -89,9 +87,9 @@ int Templates_Add(CBaseEntity *pEntity, const char *pszMapData, int nLen, int nH
 		return -1;
 	}
 
-	TemplateEntityData_t *pEntData = (TemplateEntityData_t *)malloc(sizeof(TemplateEntityData_t));
+	TemplateEntityData_t *pEntData = (TemplateEntityData_t *)MemAlloc_Alloc(sizeof(TemplateEntityData_t));
 	pEntData->m_nHammerID = nHammerID;
-	pEntData->pszName = strdup( pszName );
+	pEntData->pszName = MemAlloc_StrDup( pszName );
 
 	// We may modify the values of the keys in this mapdata chunk later on to fix Entity I/O
 	// connections. For this reason, we need to ensure we have enough memory to do that.
@@ -100,7 +98,7 @@ int Templates_Add(CBaseEntity *pEntity, const char *pszMapData, int nLen, int nH
 
 	// Extra 1 because the mapdata passed in isn't null terminated
 	pEntData->iMapDataLength = nLen + iExtraSpace + 1;
-	pEntData->pszMapData = (char *)malloc( pEntData->iMapDataLength );
+	pEntData->pszMapData = (char *)MemAlloc_Alloc( pEntData->iMapDataLength );
 	memcpy(pEntData->pszMapData, pszMapData, nLen + 1);
 	pEntData->pszMapData[nLen] = '\0';
 
@@ -110,18 +108,18 @@ int Templates_Add(CBaseEntity *pEntity, const char *pszMapData, int nLen, int nH
 	pEntData->bNeedsEntityIOFixup = false;
 	pEntData->pszFixedMapData = nullptr;
 
-	return g_Templates.AddToTail(pEntData);
+	g_Templates.push_back( pEntData ); return (int)std::ssize( g_Templates ) - 1;
 }
 
 
 void Templates_RemoveByHammerID( int nHammerID )
 {
-	for ( int i=g_Templates.Count()-1; i >= 0; i-- )
+	for ( int i=std::ssize( g_Templates )-1; i >= 0; i-- )
 	{
 		if ( g_Templates[i]->m_nHammerID == nHammerID )
 		{
 			Templates_FreeTemplate( g_Templates[i] );
-			g_Templates.Remove( i );
+			g_Templates.erase( g_Templates.begin() + i );
 		}
 	}
 }
@@ -133,7 +131,7 @@ void Templates_RemoveByHammerID( int nHammerID )
 //-----------------------------------------------------------------------------
 bool Templates_IndexRequiresEntityIOFixup( int iIndex )
 {
-	Assert( iIndex < g_Templates.Count() );
+	Assert( iIndex < std::ssize( g_Templates ) );
 	return g_Templates[iIndex]->bNeedsEntityIOFixup;
 }
 
@@ -143,7 +141,7 @@ bool Templates_IndexRequiresEntityIOFixup( int iIndex )
 //-----------------------------------------------------------------------------
 string_t Templates_FindByIndex( int iIndex )
 {
-	Assert( iIndex < g_Templates.Count() );
+	Assert( iIndex < std::ssize( g_Templates ) );
 
 	// First time through we alloc the mapdata onto the pool.
 	// It's safe to do it now because this isn't called until post Entity I/O cleanup.
@@ -160,7 +158,7 @@ string_t Templates_FindByIndex( int iIndex )
 //-----------------------------------------------------------------------------
 int Templates_GetStringSize( int iIndex )
 {
-	Assert( iIndex < g_Templates.Count() );
+	Assert( iIndex < std::ssize( g_Templates ) );
 	return g_Templates[iIndex]->iMapDataLength;
 }
 
@@ -171,10 +169,10 @@ int Templates_GetStringSize( int iIndex )
 //-----------------------------------------------------------------------------
 string_t Templates_FindByTargetName(const char *pszName)
 {
-	int nCount = g_Templates.Count();
+	int nCount = std::ssize( g_Templates );
 	for (int i = 0; i < nCount; i++)
 	{
-		TemplateEntityData_t *pTemplate = g_Templates.Element(i);
+		TemplateEntityData_t *pTemplate = g_Templates[ i ];
 		if ( !stricmp(pTemplate->pszName, pszName) )
 			return Templates_FindByIndex( i );
 	}
@@ -198,7 +196,7 @@ void Templates_ReconnectIOForGroup( CPointTemplate *pGroup )
 	// First assemble a list of the targetnames of all the templates in the group.
 	// We need to store off the original names here, because we're going to change
 	// them as we go along.
-	CUtlVector< grouptemplate_t > GroupTemplates;
+	std::vector< grouptemplate_t > GroupTemplates;
 	int i;
 	for ( i = 0; i < iCount; i++ )
 	{
@@ -209,7 +207,7 @@ void Templates_ReconnectIOForGroup( CPointTemplate *pGroup )
 		newGroupTemplate.pMapDataParser->ExtractValue( "targetname", newGroupTemplate.pszName );
 		newGroupTemplate.bChangeTargetname = false;
 
-		GroupTemplates.AddToTail( newGroupTemplate );
+		GroupTemplates.push_back( newGroupTemplate );
 	}
 
 	if (pGroup->AllowNameFixup())
@@ -224,7 +222,7 @@ void Templates_ReconnectIOForGroup( CPointTemplate *pGroup )
 		{
 			// We need to know what instance of each key we're changing.
 			// Store a table of the count of the keys we've run into.
-			CUtlDict< int, int > KeyInstanceCount;
+			ks::idict< int > KeyInstanceCount;
 			CEntityMapData *mapData = GroupTemplates[i].pMapDataParser;
 
 			// Loop through our keys
@@ -238,12 +236,8 @@ void Templates_ReconnectIOForGroup( CPointTemplate *pGroup )
 					continue;
 
 				// Add to the count for this 
-				int idx = KeyInstanceCount.Find( keyName );
-				if ( idx == KeyInstanceCount.InvalidIndex() )
-				{
-					idx = KeyInstanceCount.Insert( keyName, 0 );
-				}
-				KeyInstanceCount[idx]++;
+				int &nKeyCount = KeyInstanceCount[ keyName ];
+				nKeyCount++;
 
 				// Entity I/O values are stored as "Targetname,<data>", so we need to see if there's a ',' in the string
 				char *sValue = value;
@@ -278,7 +272,7 @@ void Templates_ReconnectIOForGroup( CPointTemplate *pGroup )
 					char newvalue[MAPKEY_MAXLENGTH];
 
 					// Get the current key instance. (-1 because it's this one we're changing)
-					int nKeyInstance = KeyInstanceCount[idx] - 1;
+					int nKeyInstance = nKeyCount - 1;
 
 					// Add our IO value to the targetname
 					// We need to append it if this isn't an Entity I/O value, or prepend it to the ',' if it is
@@ -327,7 +321,7 @@ void Templates_ReconnectIOForGroup( CPointTemplate *pGroup )
 	{
 		delete GroupTemplates[i].pMapDataParser;
 	}
-	GroupTemplates.Purge();
+	GroupTemplates.clear(); GroupTemplates.shrink_to_fit();
 }
 
 //-----------------------------------------------------------------------------
@@ -361,7 +355,7 @@ char *Templates_GetEntityIOFixedMapData( int iIndex )
 	// First time through?
 	if ( !g_Templates[iIndex]->pszFixedMapData )
 	{
-		g_Templates[iIndex]->pszFixedMapData = new char[g_Templates[iIndex]->iMapDataLength];
+		g_Templates[iIndex]->pszFixedMapData = (char *)MemAlloc_Alloc( g_Templates[iIndex]->iMapDataLength );
 		Q_strncpy( g_Templates[iIndex]->pszFixedMapData, g_Templates[iIndex]->pszMapData, g_Templates[iIndex]->iMapDataLength );
 	}
 
@@ -407,14 +401,14 @@ char *Templates_GetEntityIOFixedMapData( int iIndex )
 //-----------------------------------------------------------------------------
 void Templates_RemoveAll(void)
 {
-	int nCount = g_Templates.Count();
+	int nCount = std::ssize( g_Templates );
 	for (int i = 0; i < nCount; i++)
 	{
-		TemplateEntityData_t *pTemplate = g_Templates.Element(i);
+		TemplateEntityData_t *pTemplate = g_Templates[ i ];
 		Templates_FreeTemplate( pTemplate );
 	}
 
-	g_Templates.RemoveAll();
+	g_Templates.clear();
 }
 
 

@@ -7,8 +7,7 @@
 #ifndef __UIGAMEDATA_H__
 #define __UIGAMEDATA_H__
 
-#include "tier1/utllinkedlist.h"
-#include "tier1/utlmap.h"
+#include <map>
 #include "tier1/keyvalues.h"
 #include "tier1/fmtstr.h"
 
@@ -225,8 +224,8 @@ namespace BaseModUI {
 		float m_flTimeLastFrame;
 		bool  m_bShowConnectionProblemActive;
 
-		CUtlMap< XUID, CAvatarImage * > m_mapUserXuidToAvatar;
-		CUtlMap< XUID, CUtlString > m_mapUserXuidToName;
+		std::map< XUID, CAvatarImage * > m_mapUserXuidToAvatar;
+		std::map< XUID, std::string > m_mapUserXuidToName;
 
 		//XUI info
 		bool m_bXUIOpen;

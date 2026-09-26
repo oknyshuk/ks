@@ -57,6 +57,9 @@ public:
 	int			hitbox;					// box hit by trace in studio
 
 	CGameTrace() : m_pEnt(nullptr) {}
+	CGameTrace( CGameTrace && ) = default;	// std::vector relocation; copies stay private
+	CGameTrace &operator=( CGameTrace && ) = default;
+	CGameTrace &operator=( const CGameTrace & ) = default;
 
 private:
 	// No copy constructors allowed

@@ -8,8 +8,6 @@
 
 
 #include "tier1/utlvector.h"
-#include "tier1/utlbuffer.h"
-#include "tier1/utllinkedlist.h"
 #include "tier1/netadr.h"
 #include "igameserverdata.h"
 
@@ -81,7 +79,7 @@ public:
 	};
 
 	ISocketCreatorListener *m_pListener;
-	CUtlVector< AcceptedSocket_t > m_hAcceptedSockets;
+	std::vector< AcceptedSocket_t > m_hAcceptedSockets;
 	SocketHandle_t	m_hListenSocket;	// Used to accept connections
 	netadr_t		m_ListenAddress;	// Address used to listen on
 };

@@ -9,18 +9,21 @@
 #define SOUNDEMITTERSYSTEMBASE_H
 
 #include "SoundEmitterSystem/isoundemittersystembase.h"
-#include "tier1/utldict.h"
+#include "tier1/map_ops.h"
+#include "tier1/intern_pool.h"
+#include <string>
+#include <string_view>
+#include <unordered_map>
 #include "soundflags.h"
 #include "tier2/interval.h"
-#include "tier1/utlsortvector.h"
-#include "tier1/mempool.h"
+#include "tier1/fixed_pool.h"
 #include "tier2/tier2.h"
 
 soundlevel_t TextToSoundLevel( const char *key );
 
 struct CSoundEntry
 {
-	CUtlSymbol					m_Name;
+	std::string_view			m_Name;		// in ks::global_symbols()
 	CSoundParametersInternal	m_SoundParams;
 	uint16						m_nScriptFileIndex;
 	bool						m_bRemoved : 1;
@@ -31,7 +34,7 @@ struct CSoundEntry
 	public:
 		bool Less( CSoundEntry * const & lhs, CSoundEntry *const & rhs, void *pCtx )
 		{
-			return ( Q_stricmp( lhs->m_Name.String(), rhs->m_Name.String() ) < 0 ) ? true : false;
+			return ( Q_stricmp( lhs->m_Name.data(), rhs->m_Name.data() ) < 0 ) ? true : false;
 		}
 	};
 
@@ -63,9 +66,9 @@ public:
 
 	virtual const char *GetSoundName( int index );
 	virtual bool GetParametersForSound( const char *soundname, CSoundParameters& params, gender_t gender, bool isbeingemitted = false );
-	virtual const char *GetWaveName( CUtlSymbol& sym );
+	virtual const char *GetWaveName( WaveNameId_t sym );
 
-	virtual CUtlSymbol AddWaveName( const char *name );
+	virtual WaveNameId_t AddWaveName( const char *name );
 
 	virtual soundlevel_t LookupSoundLevel( const char *soundname );
 	virtual const char *GetWavFileForSound( const char *soundname, char const *actormodel );
@@ -141,11 +144,11 @@ private:
 	void	AddHash( char const *pchSoundName, int nIndex );
 	void	RemoveHash( char const *pchSoundName );
 
-	CUtlDict< gender_t, uint8 >					m_ActorGenders;
-	CUtlVector< CSoundEntry * >	m_Sounds;
+	ks::idict< gender_t >						m_ActorGenders;
+	std::vector< CSoundEntry * >	m_Sounds;
 
-    CUtlVector< CSoundEntry * >			m_SavedOverrides; 
-	CUtlVector< FileNameHandle_t >				m_OverrideFiles;
+    std::vector< CSoundEntry * >			m_SavedOverrides; 
+	std::vector< FileNameHandle_t >				m_OverrideFiles;
 
 	struct CSoundScriptFile
 	{
@@ -153,11 +156,18 @@ private:
 		bool		dirty;
 	};
 
-	CUtlVector< CSoundScriptFile >	m_SoundKeyValues;
+	std::vector< CSoundScriptFile >	m_SoundKeyValues;
 	int					m_nInitCount;
 	unsigned int		m_uManifestPlusScriptChecksum;
 
-	CUtlSymbolTable		m_Waves;
+	// Wave names by WaveNameId_t (dense, in insertion order; case-sensitive), pointing at the keys of m_WaveIds.
+	struct CWaveNameHash
+	{
+		using is_transparent = void;
+		size_t operator()( std::string_view s ) const { return std::hash< std::string_view >()( s ); }
+	};
+	std::vector< const char * >	m_Waves;
+	std::unordered_map< std::string, WaveNameId_t, CWaveNameHash, std::equal_to<> > m_WaveIds;
 	// This is a reverse mapping from crc of the soundname to the sound entry
 	struct soundEntryHash_t
 	{
@@ -165,7 +175,7 @@ private:
 		CSoundEntry *pEntry;
 	};
 
-	CUtlMap< HSOUNDSCRIPTHASH, soundEntryHash_t >	m_HashToSoundEntry;
+	std::map< HSOUNDSCRIPTHASH, soundEntryHash_t >	m_HashToSoundEntry;
 
 };
 

@@ -39,9 +39,6 @@
 #include "steam/steam_api.h"
 #include "appframework/ilaunchermgr.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Forward declarations

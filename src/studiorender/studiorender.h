@@ -7,15 +7,16 @@
 #ifndef CSTUDIORENDER_H
 #define CSTUDIORENDER_H
 
+#include <mutex>
 #include "istudiorender.h"
 #include "studio.h"
 #include "materialsystem/imaterialsystem.h" // for LightDesc_t
 // wouldn't have to include these if it weren't for inlines.
 #include "materialsystem/imaterial.h"
 #include "mathlib/mathlib.h"
-#include "utllinkedlist.h"
 #include "utlvector.h"
-#include "tier1/utllinkedlist.h"
+#include <deque>
+#include <list>
 #include "flexrenderdata.h"
 #include "mathlib/compressed_vector.h"
 #include "r_studiolight.h"
@@ -284,32 +285,35 @@ private:
 		float m_FadeDuration;
 	};
 
-	struct DecalHistory_t
-	{
-		unsigned short m_Material;
-		unsigned short m_Decal;
-		DecalId_t m_nId;
-		unsigned short m_nPad;
-	};
+	// Vertices of the material's decals, oldest decal first
+	typedef std::vector<DecalVertex_t> DecalVertexList_t;
 
-	typedef CUtlLinkedList<DecalVertex_t, unsigned short> DecalVertexList_t;
-
-	typedef CUtlVector<unsigned short> DecalIndexList_t;
-	typedef CUtlLinkedList<Decal_t, unsigned short> DecalList_t;
-	typedef CUtlLinkedList<DecalHistory_t, unsigned short> DecalHistoryList_t;
+	typedef std::vector< unsigned short > DecalIndexList_t;
+	// History entries point at their decal, so it must not move
+	typedef std::list<Decal_t> DecalList_t;
 
 	struct DecalMaterial_t
 	{
-		IMaterial*			m_pMaterial;
+		IMaterial*			m_pMaterial = nullptr;
 		DecalIndexList_t	m_Indices;
 		DecalVertexList_t	m_Vertices;
 		DecalList_t			m_Decals;
-		void *m_pvProxyUserData;
+		void *m_pvProxyUserData = nullptr;
 	};
+
+	struct DecalHistory_t
+	{
+		DecalMaterial_t *m_pMaterial;
+		DecalList_t::iterator m_Decal;
+		DecalId_t m_nId;
+	};
+
+	typedef std::vector<DecalHistory_t> DecalHistoryList_t;
 
 	struct DecalLod_t
 	{
-		unsigned short m_FirstMaterial;
+		// Newest first; history entries point into it, so it must not move
+		std::list<DecalMaterial_t> m_Materials;
 		DecalHistoryList_t	m_DecalHistory;
 	};
 
@@ -319,6 +323,9 @@ private:
 		DecalLod_t* m_pLod;
 		int m_nLods; // need to retain because hardware data could be flushed
 	};
+
+	// StudioDecalHandle_t is the address of a DecalModelList_t slot in m_DecalList
+	static DecalModelList_t &DecalListFromHandle( StudioDecalHandle_t h ) { return *(DecalModelList_t *)h; }
 
 	// Render data for decals
 	struct DecalRenderData_t
@@ -368,7 +375,7 @@ private:
 		int								m_Model;
 		int								m_Mesh;
 		int								m_Group;
-		DecalVertexList_t::IndexType_t	m_FirstVertex;
+		int								m_FirstVertex;		// first vertex of the decal being built
 		unsigned short					m_VertexCount;
 		bool							m_UseClipVert;
 		bool							m_NoPokeThru;
@@ -405,7 +412,8 @@ private:
 		int	m_nFlags;
 	};
 
-	typedef CUtlFixedLinkedList< DecalLRU_t >::IndexType_t DecalLRUListIndex_t;
+	typedef std::list< DecalLRU_t > DecalLRUList_t;
+	typedef DecalLRUList_t::iterator DecalLRUListIndex_t;
 
 private:
 	void SetLightingRenderState();
@@ -541,8 +549,8 @@ private:
 	bool			ClipDecal( DecalBuildInfo_t& build, int i1, int i2, int i3, int *pClipFlags );
 	void			AddTriangleToDecal( DecalBuildInfo_t& build, int i1, int i2, int i3, int gi1, int gi2, int gi3 );
 	void			AddDecalToMesh( DecalBuildInfo_t& build );
-	int				GetDecalMaterial( DecalLod_t& decalLod, IMaterial* pDecalMaterial, void *pvProxyUserData );
-	int				AddDecalToMaterialList( DecalMaterial_t* pMaterial );
+	DecalMaterial_t	*GetDecalMaterial( DecalLod_t& decalLod, IMaterial* pDecalMaterial, void *pvProxyUserData );
+	DecalList_t::iterator AddDecalToMaterialList( DecalMaterial_t* pMaterial );
 
 	// Total number of meshes we have to deal with
 	int ComputeTotalMeshCount( int iRootLOD, int iMaxLOD, int body ) const;
@@ -658,15 +666,13 @@ public:
 	StudioRenderContext_t *m_pRC;
 
 private:
-	// Stores all decals for a particular material and lod
-	CUtlLinkedList< DecalMaterial_t, unsigned short, true >	m_DecalMaterial;
-
-	// Stores all decal lists that have been made
-	CUtlFixedLinkedList< DecalModelList_t >	m_DecalList;
-	CThreadFastMutex m_DecalMutex;
+	// Stores all decal lists that have been made; handles point into it, so slots never move
+	std::deque< DecalModelList_t >	m_DecalList;
+	std::vector< DecalModelList_t * >	m_FreeDecalLists;
+	std::recursive_mutex m_DecalMutex;
 
 	// Stores all shadows to be cast on the current object
-	CUtlVector<ShadowState_t>	m_ShadowState;
+	std::vector< ShadowState_t >	m_ShadowState;
 
 	matrix3x4_t m_StaticPropRootToWorld;
 	matrix3x4_t	*m_pBoneToWorld;	// bone transformation matrix( comes from queue )
@@ -716,12 +722,12 @@ private:
 	bool m_bDrawTranslucentSubModels : 1;
 
 	DecalId_t	m_nDecalId;
-	CUtlFixedLinkedList< DecalLRU_t > m_DecalLRU;
+	DecalLRUList_t m_DecalLRU;
 
 	FlashlightState_t *m_pCurrentFlashlight;
 
 	// Each model counts how many rendered faces it accounts for each frame:
-	CUtlHash< studiohwdata_t * > m_ModelFaceCountHash;
+	std::unordered_set< studiohwdata_t * > m_ModelFaceCountHash;
 
 	friend class CGlintTextureRegenerator;
 	friend struct mstudiomodel_t;

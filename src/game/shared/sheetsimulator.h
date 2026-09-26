@@ -138,8 +138,8 @@ protected:
 	Vector* m_pFixedPoint;
 	Vector* m_ControlPoints;
 	
-	CUtlVector<Spring_t>	m_Springs;
-	CUtlVector<int>			m_Gravity;
+	std::vector< Spring_t >	m_Springs;
+	std::vector< int >			m_Gravity;
 
 	// raycasting methods
 	TraceLineFunc_t		m_TraceLine;

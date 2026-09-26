@@ -47,7 +47,7 @@ public:
 	~CMatchVoice();
 
 protected:
-	CUtlVector< XUID > m_arrMutedTalkers;
+	std::vector< XUID > m_arrMutedTalkers;
 };
 
 // Match events subscription singleton

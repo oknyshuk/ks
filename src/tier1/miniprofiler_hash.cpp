@@ -3,22 +3,19 @@
 #include "tier1/miniprofiler_hash.h"
 
 #if ENABLE_HARDWARE_PROFILER
-#include "tier1/UtlStringMap.h"
-CUtlStringMap<CLinkedMiniProfiler*> g_mapMiniProfilers;
+#include "tier1/map_ops.h"
+#include "tier1/strtools.h"
+ks::idict<CLinkedMiniProfiler*> g_mapMiniProfilers;
 DLL_IMPORT CLinkedMiniProfiler *g_pOtherMiniProfilers;
 CLinkedMiniProfiler *HashMiniProfiler( const char *pString )
 {
-	UtlSymId_t nString = g_mapMiniProfilers.Find( pString );
-	if( nString == g_mapMiniProfilers.InvalidIndex() )
+	auto [it, bInserted] = g_mapMiniProfilers.try_emplace( pString, nullptr );
+	if( bInserted )
 	{
-		nString = g_mapMiniProfilers.AddString( pString );
-		
-		// this profiler does not exist yet
-		CLinkedMiniProfiler ** ppProfiler = &g_mapMiniProfilers[nString];
-		*ppProfiler = new CLinkedMiniProfiler( g_mapMiniProfilers.String( nString ), &g_pOtherMiniProfilers );
-		return *ppProfiler;
+		// this profiler does not exist yet; it lives as long as the process and names itself by the map key
+		it->second = new CLinkedMiniProfiler( it->first.c_str(), &g_pOtherMiniProfilers );
 	}
-	return g_mapMiniProfilers[nString];
+	return it->second;
 }
 CLinkedMiniProfiler *HashMiniProfilerF( const char *pFormat, ... )
 {

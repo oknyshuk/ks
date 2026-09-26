@@ -12,9 +12,6 @@
 
 #include "cpp_shader_constant_register_map.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #include "cs_grass_vs20.inc"
 #include "cs_grass_ps20.inc"
 #include "cs_grass_ps20b.inc"

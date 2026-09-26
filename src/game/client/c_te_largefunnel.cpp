@@ -10,9 +10,6 @@
 #include "reflect_annotations.h"
 #include "c_te_particlesystem.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: Large Funnel TE
 //-----------------------------------------------------------------------------
@@ -55,7 +52,7 @@ C_TELargeFunnel::~C_TELargeFunnel( void )
 
 void C_TELargeFunnel::CreateFunnel( void )
 {
-	CSmartPtr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "TELargeFunnel" );
+	ks::intrusive_ptr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "TELargeFunnel" );
 	pSimple->SetSortOrigin( m_vecOrigin );
 
 	int			i, j;

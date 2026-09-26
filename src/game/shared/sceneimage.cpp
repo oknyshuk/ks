@@ -12,27 +12,26 @@
 
 #include "lzma/lzma.h"
 
-#include "tier1/utlbuffer.h"
-#include "tier1/UtlStringMap.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
+#include "tier1/intern_pool.h"
+#include "tier1/map_ops.h"
 #include "tier1/utlvector.h"
-#include "tier1/utlsortvector.h"
 
 #include "scriplib.h"
 #include "cmdlib.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 class CSceneImage : public ISceneImage
 {
 public:
-	virtual bool CreateSceneImageFile( CUtlBuffer &targetBuffer, char const *pchModPath, bool bLittleEndian, bool bQuiet, ISceneCompileStatus *Status );
+	virtual bool CreateSceneImageFile( ks::byte_writer &targetBuffer, char const *pchModPath, bool bLittleEndian, bool bQuiet, ISceneCompileStatus *Status );
 	// This will update the scenes.image file, or create a new one if it doesn't exist
-	virtual bool UpdateSceneImageFile( CUtlBuffer &targetBuffer, char const *pchModPath, bool bLittleEndian, bool bQuiet, ISceneCompileStatus *Status, CUtlString *pFilesToUpdate, int nUpdateCount );
+	virtual bool UpdateSceneImageFile( ks::byte_writer &targetBuffer, char const *pchModPath, bool bLittleEndian, bool bQuiet, ISceneCompileStatus *Status, std::string *pFilesToUpdate, int nUpdateCount );
 
 private:
 
-	bool WriteSceneImageFile( CUtlBuffer &targetBuffer, bool bLittleEndian, bool bQuiet, ISceneCompileStatus *pStatus );
+	bool WriteSceneImageFile( ks::byte_writer &targetBuffer, bool bLittleEndian, bool bQuiet, ISceneCompileStatus *pStatus );
 };
 
 static CSceneImage g_SceneImage;
@@ -50,14 +49,14 @@ struct SceneFile_t
 	// This gets used when we load back in from disk
 	CRC32_t		crcFileName;
 	// Otherwise, it's this
-	CUtlString	fileName;
-	CUtlBuffer	compiledBuffer;
+	std::string	fileName;
+	std::vector< std::byte >	compiledBuffer;
 
 	unsigned int		msecs;
 	unsigned int		lastspeak_msecs;
-	CUtlVector< short >	soundList;
+	std::vector< short >	soundList;
 };
-CUtlVector< SceneFile_t > g_SceneFiles;
+std::vector< SceneFile_t > g_SceneFiles;
 
 //-----------------------------------------------------------------------------
 // Helper for parsing scene data file
@@ -82,7 +81,7 @@ public:
 
 	void SetFilename( const char *pFilename )
 	{
-		m_Filename = pFilename;
+		m_Filename = ks::nz( pFilename );
 	}
 
 	void Error( const char *fmt, ... )
@@ -93,12 +92,12 @@ public:
 		Q_vsnprintf( string, sizeof(string), fmt, argptr );
 		va_end( argptr );
 
-		Warning( "%s: %s", m_Filename.Get(), string );
+		Warning( "%s: %s", m_Filename.data(), string );
 		Assert( 0 );
 	}
 
 private:
-	CUtlString	m_Filename;
+	std::string	m_Filename;
 };
 static CSceneTokenProcessor g_SceneTokenProcessor;
 ISceneTokenProcessor *tokenprocessor = &g_SceneTokenProcessor;
@@ -108,7 +107,7 @@ ISceneTokenProcessor *tokenprocessor = &g_SceneTokenProcessor;
 class CChoreoStringPool : public IChoreoStringPool
 {
 public:
-	CChoreoStringPool() : m_StringMap( true )
+	CChoreoStringPool()
 	{
 		m_nOffset = 0;
 	}
@@ -116,19 +115,18 @@ public:
 	// Returns a valid id into the string table
 	virtual short FindOrAddString( const char *pString )
 	{
-		int stringId = m_StringMap.Find( pString );
-		if ( stringId != m_StringMap.InvalidIndex() )
+		auto [it, bAdded] = m_StringIds.try_emplace( pString, (int)m_Strings.size() );
+		if ( !bAdded )
 		{
 			// found in pool
-			return stringId;
+			return it->second;
 		}
 
-		int &nOffset = m_StringMap[pString];
-		nOffset = m_nOffset;
+		m_Strings.push_back( pString );
 		// advance by string and null
 		m_nOffset += strlen( pString ) + 1;
 
-		stringId = m_StringMap.Find( pString );
+		int stringId = it->second;
 		Assert( stringId >= 0 && stringId <= 32767 );
 
 		return stringId;
@@ -136,18 +134,18 @@ public:
 
 	virtual bool GetString( short stringId, char *buff, int buffSize )
 	{
-		if ( stringId < 0 || stringId >= m_StringMap.GetNumStrings() )
+		if ( stringId < 0 || stringId >= (int)m_Strings.size() )
 		{
 			V_strncpy( buff, "", buffSize );
 			return false;
 		}
-		V_strncpy( buff, m_StringMap.String( stringId ), buffSize );
+		V_strncpy( buff, m_Strings[stringId].c_str(), buffSize );
 		return true;
 	}
 
 	int GetNumStrings()
 	{
-		return m_StringMap.GetNumStrings();
+		return (int)m_Strings.size();
 	}
 
 	unsigned int GetPoolSize()
@@ -156,52 +154,55 @@ public:
 	}
 
 	// build the final pool
-	void GetTableAndPool( CUtlVector< unsigned int > &offsets, CUtlBuffer &buffer )
+	void GetTableAndPool( std::vector< unsigned int > &offsets, ks::byte_writer &buffer )
 	{
-		offsets.Purge();
-		buffer.Purge();
+		offsets.clear(); offsets.shrink_to_fit();
+		buffer.clear();
 
-		offsets.EnsureCapacity( m_StringMap.GetNumStrings() );
-		buffer.EnsureCapacity( m_nOffset );
+		offsets.reserve( m_Strings.size() );
+		buffer.reserve( m_nOffset );
 
 		unsigned int currentOffset = 0;
-		for ( int i = 0; i < m_StringMap.GetNumStrings(); i++ )
+		for ( int i = 0; i < (int)m_Strings.size(); i++ )
 		{
-			offsets.AddToTail( currentOffset );
+			offsets.push_back( currentOffset );
 
-			const char *pString = m_StringMap.String( i );
-			buffer.Put( pString, strlen( pString ) + 1 ); 
+			const char *pString = m_Strings[i].c_str();
+			buffer.write_cstring( pString );
 
 			currentOffset += strlen( pString ) + 1;
 		}
 		Assert( currentOffset == m_nOffset );
 
 		// align string pool to end on dword boundary
-		while ( buffer.TellPut() & 0x03 )
+		while ( buffer.tell() & 0x03 )
 		{
-			buffer.PutChar( '\0' );
+			buffer.write< char >( '\0' );
 			m_nOffset++;
 		}
 	}
 
 	void DumpPool()
 	{
-		for ( int i = 0; i < m_StringMap.GetNumStrings(); i++ )
+		for ( int i = 0; i < (int)m_Strings.size(); i++ )
 		{
 			const char *pString;
-			pString = m_StringMap.String( i );
+			pString = m_Strings[i].c_str();
 			Msg( "%s\n", pString );
 		}
 	}
 
 	void Reset()
 	{
-		m_StringMap.Purge();
+		m_Strings.clear();
+		m_StringIds.clear();
 		m_nOffset = 0;
 	}
 
 private:
-	CUtlStringMap< int >	m_StringMap;
+	// ids are insertion-order indices, persisted in the compiled scenes
+	std::vector< std::string >	m_Strings;
+	ks::idict< int >			m_StringIds;
 	unsigned int			m_nOffset;
 };
 CChoreoStringPool g_ChoreoStringPool;
@@ -209,15 +210,15 @@ CChoreoStringPool g_ChoreoStringPool;
 //-----------------------------------------------------------------------------
 // Helper for crawling events to determine sounds
 //-----------------------------------------------------------------------------
-void FindSoundsInEvent( CChoreoEvent *pEvent, CUtlVector< short >& soundList )
+void FindSoundsInEvent( CChoreoEvent *pEvent, std::vector< short >& soundList )
 {
 	if ( !pEvent || pEvent->GetType() != CChoreoEvent::SPEAK )
 		return;
 
 	unsigned short stringId = g_ChoreoStringPool.FindOrAddString( pEvent->GetParameters() );
-	if ( soundList.Find( stringId ) == soundList.InvalidIndex() )
+	if ( ks::find_index( soundList, stringId ) == -1 )
 	{
-		soundList.AddToTail( stringId );
+		soundList.push_back( stringId );
 	}
 
 	if ( pEvent->GetCloseCaptionType() == CChoreoEvent::CC_MASTER )
@@ -226,9 +227,9 @@ void FindSoundsInEvent( CChoreoEvent *pEvent, CUtlVector< short >& soundList )
 		if ( pEvent->GetPlaybackCloseCaptionToken( tok, sizeof( tok ) ) )
 		{
 			stringId = g_ChoreoStringPool.FindOrAddString( tok );
-			if ( soundList.Find( stringId ) == soundList.InvalidIndex() )
+			if ( ks::find_index( soundList, stringId ) == -1 )
 			{
-				soundList.AddToTail( stringId );
+				soundList.push_back( stringId );
 			}
 		}
 	}
@@ -241,20 +242,20 @@ static void ChoreScene_MsgDummy( const char *fmt, ... )
 bool UpdateTargetFile_VCD( SceneFile_t *pEntry, const char *pSourceName, const char *pTargetName, bool bWriteToZip, bool bLittleEndian )
 {
 	pEntry->crcFileName = (CRC32_t)0u;
-	pEntry->fileName.Set( pSourceName );
+	pEntry->fileName.assign( ks::nz( pSourceName ) );
 
-	CUtlBuffer sourceBuf;
-	if ( !scriptlib->ReadFileToBuffer( pSourceName, sourceBuf ) )
+	auto sourceBuf = scriptlib->ReadFileToBuffer( pSourceName );
+	if ( !sourceBuf )
 	{
 		return false;
 	}
 
 	CRC32_t crcSource;
 	CRC32_Init( &crcSource );
-	CRC32_ProcessBuffer( &crcSource, sourceBuf.Base(), sourceBuf.TellPut() );
+	CRC32_ProcessBuffer( &crcSource, sourceBuf->data(), sourceBuf->size() );
 	CRC32_Final( &crcSource );
 
-	ParseFromMemory( (char *)sourceBuf.Base(), sourceBuf.TellPut() );
+	ParseFromMemory( (char *)sourceBuf->data(), sourceBuf->size() );
 
 	g_SceneTokenProcessor.SetFilename( pSourceName );
 
@@ -280,19 +281,21 @@ bool UpdateTargetFile_VCD( SceneFile_t *pEntry, const char *pSourceName, const c
 	pEntry->msecs = (unsigned int)( pChoreoScene->FindStopTime() * 1000.0f + 0.5f );
 	pEntry->lastspeak_msecs = (unsigned int)( pChoreoScene->FindLastSpeakTime() * 1000.0f + 0.5f );
 
-	pEntry->compiledBuffer.Clear();
 	// compile to binary buffer in the platform-native byte order
-	pChoreoScene->SaveToBinaryBuffer( pEntry->compiledBuffer, crcSource, &g_ChoreoStringPool );
+	ks::byte_writer compiled;
+	pChoreoScene->SaveToBinaryBuffer( compiled, crcSource, &g_ChoreoStringPool );
 
 	unsigned int compressedSize;
-	unsigned char *pCompressedBuffer = LZMA_Compress( (unsigned char *)pEntry->compiledBuffer.Base(), pEntry->compiledBuffer.TellPut(), &compressedSize );
+	unsigned char *pCompressedBuffer = LZMA_Compress( (unsigned char *)compiled.data(), compiled.size(), &compressedSize );
 	if ( pCompressedBuffer )
 	{
 		// replace the compiled buffer with the compressed version
-		pEntry->compiledBuffer.Purge();
-		pEntry->compiledBuffer.EnsureCapacity( compressedSize );
-		pEntry->compiledBuffer.Put( pCompressedBuffer, compressedSize );
-		free( pCompressedBuffer );
+		pEntry->compiledBuffer.assign( (const std::byte *)pCompressedBuffer, (const std::byte *)pCompressedBuffer + compressedSize );
+		g_pMemAlloc->Free( pCompressedBuffer );
+	}
+	else
+	{
+		pEntry->compiledBuffer = compiled.release();
 	}
 
 	delete pChoreoScene;
@@ -307,21 +310,20 @@ bool UpdateTargetFile_VCD( SceneFile_t *pEntry, const char *pSourceName, const c
 //-----------------------------------------------------------------------------
 bool CreateTargetFile_VCD( const char *pSourceName, const char *pTargetName, bool bWriteToZip, bool bLittleEndian )
 {
-	int iScene = g_SceneFiles.AddToTail();
+	int iScene = std::ssize( g_SceneFiles ); g_SceneFiles.emplace_back();
 
 	bool bRet = UpdateTargetFile_VCD( &g_SceneFiles[ iScene ], pSourceName, pTargetName, bWriteToZip, bLittleEndian );
 	if ( !bRet )
 	{
-		g_SceneFiles.Remove( iScene );
+		g_SceneFiles.erase( g_SceneFiles.begin() + iScene );
 	}
 	return bRet;
 }
 
 
-class CSceneImageEntryLessFunc
+struct CSceneImageEntryLessFunc
 {
-public:
-	bool Less( const SceneImageEntry_t &entryLHS, const SceneImageEntry_t &entryRHS, void *pCtx )
+	bool operator()( const SceneImageEntry_t &entryLHS, const SceneImageEntry_t &entryRHS ) const
 	{
 		return entryLHS.crcFilename < entryRHS.crcFilename;
 	}
@@ -332,10 +334,10 @@ public:
 //-----------------------------------------------------------------------------
 // A Scene image file contains all the compiled .XCD
 //-----------------------------------------------------------------------------
-bool CSceneImage::CreateSceneImageFile( CUtlBuffer &targetBuffer, char const *pchModPath, bool bLittleEndian, bool bQuiet, ISceneCompileStatus *pStatus )
+bool CSceneImage::CreateSceneImageFile( ks::byte_writer &targetBuffer, char const *pchModPath, bool bLittleEndian, bool bQuiet, ISceneCompileStatus *pStatus )
 {
-	CUtlVector<fileList_t>	vcdFileList;
-	CUtlSymbolTable			vcdSymbolTable( 0, 32, true );
+	std::vector< fileList_t >	vcdFileList;
+	ks::intern_pool			vcdSymbolTable( true );
 
 	Msg( "\n" );
 
@@ -351,13 +353,13 @@ bool CSceneImage::CreateSceneImageFile( CUtlBuffer &targetBuffer, char const *pc
 
 		scriptlib->FindFiles( szPath, true, vcdFileList );
 
-		currentCount = vcdFileList.Count();
-		Msg( "Scenes: Searching '%s' - Found %d scenes.\n", szPath, vcdFileList.Count() - currentCount );
+		currentCount = std::ssize( vcdFileList );
+		Msg( "Scenes: Searching '%s' - Found %d scenes.\n", szPath, (int)std::ssize( vcdFileList ) - currentCount );
 
 		pPath = strtok( nullptr, ";" );
 	}
 
-	if ( !vcdFileList.Count() )
+	if ( vcdFileList.empty() )
 	{
 		Msg( "Scenes: No Scene Files found!\n" );
 		return false;
@@ -365,9 +367,9 @@ bool CSceneImage::CreateSceneImageFile( CUtlBuffer &targetBuffer, char const *pc
 
 	// iterate and convert all the VCD files
 	bool bGameIsTF = V_stristr( pchModPath, "\\tf" ) != nullptr;
-	for ( int i=0; i<vcdFileList.Count(); i++ )
+	for ( int i=0; i<std::ssize( vcdFileList ); i++ )
 	{
-		const char *pFilename = vcdFileList[i].fileName.String();
+		const char *pFilename = vcdFileList[i].fileName.c_str();
 		const char *pSceneName = V_stristr( pFilename, "scenes\\" );
 		if ( !pSceneName )
 		{
@@ -381,12 +383,11 @@ bool CSceneImage::CreateSceneImageFile( CUtlBuffer &targetBuffer, char const *pc
 
 		// process files in order they would be found in search paths
 		// i.e. skipping later processed files that match an earlier conversion
-		UtlSymId_t symbol = vcdSymbolTable.Find( pSceneName );
-		if ( symbol == UTL_INVAL_SYMBOL )
+		if ( !vcdSymbolTable.contains( pSceneName ) )
 		{
-			vcdSymbolTable.AddString( pSceneName );
+			vcdSymbolTable.intern( pSceneName );
 
-			pStatus->UpdateStatus( pFilename, bQuiet, i, vcdFileList.Count() );
+			pStatus->UpdateStatus( pFilename, bQuiet, i, std::ssize( vcdFileList ) );
 
 			if ( !CreateTargetFile_VCD( pFilename, "", false, bLittleEndian ) )
 			{
@@ -395,7 +396,7 @@ bool CSceneImage::CreateSceneImageFile( CUtlBuffer &targetBuffer, char const *pc
 		}
 	}
 
-	if ( !g_SceneFiles.Count() )
+	if ( g_SceneFiles.empty() )
 	{
 		// nothing to do
 		return true;
@@ -404,27 +405,27 @@ bool CSceneImage::CreateSceneImageFile( CUtlBuffer &targetBuffer, char const *pc
 	return WriteSceneImageFile( targetBuffer, bLittleEndian, bQuiet, pStatus );
 }
 
-bool CSceneImage::WriteSceneImageFile( CUtlBuffer &targetBuffer, bool bLittleEndian, bool bQuiet, ISceneCompileStatus *pStatus )
+bool CSceneImage::WriteSceneImageFile( ks::byte_writer &targetBuffer, bool bLittleEndian, bool bQuiet, ISceneCompileStatus *pStatus )
 {
-	Msg( "Scenes: Finalizing %d unique scenes.\n", g_SceneFiles.Count() );
+	Msg( "Scenes: Finalizing %d unique scenes.\n", (int)std::ssize( g_SceneFiles ) );
 
 	// get the string pool
-	CUtlVector< unsigned int > stringOffsets;
-	CUtlBuffer stringPool;
+	std::vector< unsigned int > stringOffsets;
+	ks::byte_writer stringPool;
 	g_ChoreoStringPool.GetTableAndPool( stringOffsets, stringPool );
 
 	if ( !bQuiet )
 	{
-		Msg( "Scenes: String Table: %d bytes\n", stringOffsets.Count() * sizeof( int ) );
-		Msg( "Scenes: String Pool: %d bytes\n", stringPool.TellPut() );
+		Msg( "Scenes: String Table: %d bytes\n", (int)( stringOffsets.size() * sizeof( int ) ) );
+		Msg( "Scenes: String Pool: %d bytes\n", (int)stringPool.size() );
 	}
 
 	// first header, then lookup table, then string pool blob
-	int stringPoolStart = sizeof( SceneImageHeader_t ) + stringOffsets.Count() * sizeof( int );
+	int stringPoolStart = sizeof( SceneImageHeader_t ) + std::ssize( stringOffsets ) * sizeof( int );
 	// then directory
-	int sceneEntryStart = stringPoolStart + stringPool.TellPut();
+	int sceneEntryStart = stringPoolStart + stringPool.size();
 	// then variable sized summaries
-	int sceneSummaryStart = sceneEntryStart + g_SceneFiles.Count() * sizeof( SceneImageEntry_t );
+	int sceneSummaryStart = sceneEntryStart + std::ssize( g_SceneFiles ) * sizeof( SceneImageEntry_t );
 	// then variable sized compiled binary scene data
 	int sceneDataStart = 0;
 
@@ -432,8 +433,8 @@ bool CSceneImage::WriteSceneImageFile( CUtlBuffer &targetBuffer, bool bLittleEnd
 	SceneImageHeader_t imageHeader = { 0 };
 	imageHeader.nId = SCENE_IMAGE_ID;
 	imageHeader.nVersion = SCENE_IMAGE_VERSION;
-	imageHeader.nNumScenes = g_SceneFiles.Count();
-	imageHeader.nNumStrings = stringOffsets.Count();
+	imageHeader.nNumScenes = std::ssize( g_SceneFiles );
+	imageHeader.nNumStrings = std::ssize( stringOffsets );
 	imageHeader.nSceneEntryOffset = sceneEntryStart;
 	if ( !bLittleEndian )
 	{
@@ -443,47 +444,48 @@ bool CSceneImage::WriteSceneImageFile( CUtlBuffer &targetBuffer, bool bLittleEnd
 		imageHeader.nNumStrings = BigLong( imageHeader.nNumStrings );
 		imageHeader.nSceneEntryOffset = BigLong( imageHeader.nSceneEntryOffset );
 	}
-	targetBuffer.Put( &imageHeader, sizeof( imageHeader ) );
+	targetBuffer.write_bytes( &imageHeader, sizeof( imageHeader ) );
 
 	// header is immediately followed by string table and pool
-	for ( int i = 0; i < stringOffsets.Count(); i++ )
+	for ( int i = 0; i < std::ssize( stringOffsets ); i++ )
 	{
 		unsigned int offset = stringPoolStart + stringOffsets[i];
 		if ( !bLittleEndian )
 		{
 			offset = BigLong( offset );
 		}
-		targetBuffer.PutInt( offset );
+		targetBuffer.write< int >( offset );
 	}
-	Assert( stringPoolStart == targetBuffer.TellPut() );
-	targetBuffer.Put( stringPool.Base(), stringPool.TellPut() );
+	Assert( stringPoolStart == (int)targetBuffer.tell() );
+	targetBuffer.write_bytes( stringPool.bytes() );
 
 	// construct directory
-	CUtlSortVector< SceneImageEntry_t, CSceneImageEntryLessFunc > imageDirectory;
-	imageDirectory.EnsureCapacity( g_SceneFiles.Count() );
+	// sorted by CSceneImageEntryLessFunc; entries are fixed up in place below
+	std::vector< SceneImageEntry_t > imageDirectory;
+	imageDirectory.reserve( std::ssize( g_SceneFiles ) );
 
 	// build directory
 	// directory is linear sorted by filename checksum for later binary search
-	for ( int i = 0; i < g_SceneFiles.Count(); i++ )
+	for ( int i = 0; i < std::ssize( g_SceneFiles ); i++ )
 	{
 		SceneImageEntry_t imageEntry = { 0 };
 
 		CRC32_t crcFilename = g_SceneFiles[ i ].crcFileName;
 		if ( crcFilename == 0 )
 		{
-			Assert( Q_strlen( g_SceneFiles[i].fileName.String() ) > 0 );
+			Assert( !g_SceneFiles[i].fileName.empty() );
 
 			// name needs to be normalized for determinstic later CRC name calc
 			// calc crc based on scenes\anydir\anyscene.vcd
 			char szCleanName[MAX_PATH];
-			V_strncpy( szCleanName, g_SceneFiles[i].fileName.String(), sizeof( szCleanName ) );
+			V_strncpy( szCleanName, g_SceneFiles[i].fileName.c_str(), sizeof( szCleanName ) );
 			V_strlower( szCleanName );
 			V_FixSlashes( szCleanName );
 			char *pName = V_stristr( szCleanName, "scenes\\" );
 			if ( !pName )
 			{
 				// must have scenes\ in filename
-				Error( "CreateSceneImageFile: Unexpected lack of scenes prefix on %s\n", g_SceneFiles[i].fileName.String() );
+				Error( "CreateSceneImageFile: Unexpected lack of scenes prefix on %s\n", g_SceneFiles[i].fileName.c_str() );
 			}
 
 			crcFilename = CRC32_ProcessSingleBuffer( pName, strlen( pName ) );
@@ -493,40 +495,40 @@ bool CSceneImage::WriteSceneImageFile( CUtlBuffer &targetBuffer, bool bLittleEnd
 
 		// temp store an index to its file, fixup later, necessary to access post sort
 		imageEntry.nDataOffset = i;
-		if ( imageDirectory.Find( imageEntry ) != imageDirectory.InvalidIndex() )
+		if ( std::ranges::binary_search( imageDirectory, imageEntry, CSceneImageEntryLessFunc() ) )
 		{
 			// filename checksums must be unique or runtime binary search would be bogus
 			Error( "CreateSceneImageFile: Unexpected filename checksum collision!\n" );
 		}		
 
-		imageDirectory.Insert( imageEntry );
+		imageDirectory.insert( std::ranges::upper_bound( imageDirectory, imageEntry, CSceneImageEntryLessFunc() ), imageEntry );
 	}
 
 	// determine sort order and start of data after dynamic summaries
-	CUtlVector< int > writeOrder;
-	writeOrder.EnsureCapacity( g_SceneFiles.Count() );
+	std::vector< int > writeOrder;
+	writeOrder.reserve( std::ssize( g_SceneFiles ) );
 	sceneDataStart = sceneSummaryStart;
-	for ( int i = 0; i < imageDirectory.Count(); i++ )
+	for ( int i = 0; i < std::ssize( imageDirectory ); i++ )
 	{
 		// reclaim offset, indicates write order of scene file
 		int iScene = imageDirectory[i].nDataOffset;
-		writeOrder.AddToTail( iScene );
+		writeOrder.push_back( iScene );
 
 		// march past each variable sized summary to determine start of scene data
-		int numSounds = g_SceneFiles[iScene].soundList.Count();
+		int numSounds = std::ssize( g_SceneFiles[iScene].soundList );
 		sceneDataStart += sizeof( SceneImageSummary_t ) + ( numSounds - 1 ) * sizeof( int );
 	}
 
 	// finalize and write directory
-	Assert( sceneEntryStart == targetBuffer.TellPut() );
+	Assert( sceneEntryStart == (int)targetBuffer.tell() );
 	int nSummaryOffset = sceneSummaryStart;
 	int nDataOffset = sceneDataStart;
-	for ( int i = 0; i < imageDirectory.Count(); i++ )
+	for ( int i = 0; i < std::ssize( imageDirectory ); i++ )
 	{
 		int iScene = writeOrder[i];
 
 		imageDirectory[i].nDataOffset = nDataOffset;
-		imageDirectory[i].nDataLength = g_SceneFiles[iScene].compiledBuffer.TellPut();
+		imageDirectory[i].nDataLength = g_SceneFiles[iScene].compiledBuffer.size();
 		imageDirectory[i].nSceneSummaryOffset = nSummaryOffset;
 		if ( !bLittleEndian )
 		{
@@ -535,21 +537,21 @@ bool CSceneImage::WriteSceneImageFile( CUtlBuffer &targetBuffer, bool bLittleEnd
 			imageDirectory[i].nDataLength = BigLong( imageDirectory[i].nDataLength );
 			imageDirectory[i].nSceneSummaryOffset = BigLong( imageDirectory[i].nSceneSummaryOffset );
 		}
-		targetBuffer.Put( &imageDirectory[i], sizeof( SceneImageEntry_t ) );
+		targetBuffer.write_bytes( &imageDirectory[i], sizeof( SceneImageEntry_t ) );
 
-		int numSounds = g_SceneFiles[iScene].soundList.Count();
+		int numSounds = std::ssize( g_SceneFiles[iScene].soundList );
 		nSummaryOffset += sizeof( SceneImageSummary_t ) + (numSounds - 1) * sizeof( int );
 
-		nDataOffset += g_SceneFiles[iScene].compiledBuffer.TellPut();
+		nDataOffset += g_SceneFiles[iScene].compiledBuffer.size();
 	}
 
 	// finalize and write summaries
-	Assert( sceneSummaryStart == targetBuffer.TellPut() );
-	for ( int i = 0; i < imageDirectory.Count(); i++ )
+	Assert( sceneSummaryStart == (int)targetBuffer.tell() );
+	for ( int i = 0; i < std::ssize( imageDirectory ); i++ )
 	{
 		int iScene = writeOrder[i];
 		int msecs = g_SceneFiles[iScene].msecs;
-		int soundCount = g_SceneFiles[iScene].soundList.Count();
+		int soundCount = std::ssize( g_SceneFiles[iScene].soundList );
 		unsigned int lastspeak = g_SceneFiles[iScene].lastspeak_msecs;
 		Assert( lastspeak < msecs );
 		if ( !bLittleEndian )
@@ -558,35 +560,35 @@ bool CSceneImage::WriteSceneImageFile( CUtlBuffer &targetBuffer, bool bLittleEnd
 			soundCount = BigLong( soundCount );
 			lastspeak = BigLong( lastspeak );
 		}
-		targetBuffer.PutInt( msecs );
-		targetBuffer.PutInt( lastspeak );
-		targetBuffer.PutInt( soundCount );
-		for ( int j = 0; j < g_SceneFiles[iScene].soundList.Count(); j++ )
+		targetBuffer.write< int >( msecs );
+		targetBuffer.write< int >( lastspeak );
+		targetBuffer.write< int >( soundCount );
+		for ( int j = 0; j < std::ssize( g_SceneFiles[iScene].soundList ); j++ )
 		{
 			int soundId = g_SceneFiles[iScene].soundList[j];
 			if ( !bLittleEndian )
 			{
 				soundId = BigLong( soundId );
 			}
-			targetBuffer.PutInt( soundId );
+			targetBuffer.write< int >( soundId );
 		}
 	}
 
 	// finalize and write data
-	Assert( sceneDataStart == targetBuffer.TellPut() );
-	for ( int i = 0; i < imageDirectory.Count(); i++ )
+	Assert( sceneDataStart == (int)targetBuffer.tell() );
+	for ( int i = 0; i < std::ssize( imageDirectory ); i++ )
 	{	
 		int iScene = writeOrder[i];
-		targetBuffer.Put( g_SceneFiles[iScene].compiledBuffer.Base(), g_SceneFiles[iScene].compiledBuffer.TellPut() );
+		targetBuffer.write_bytes( g_SceneFiles[iScene].compiledBuffer );
 	}
 
 	if ( !bQuiet )
 	{
-		Msg( "Scenes: Final size: %.2f MB\n", targetBuffer.TellPut() / (1024.0f * 1024.0f ) );
+		Msg( "Scenes: Final size: %.2f MB\n", targetBuffer.tell() / (1024.0f * 1024.0f ) );
 	}
 
 	// cleanup
-	g_SceneFiles.Purge();
+	g_SceneFiles.clear(); g_SceneFiles.shrink_to_fit();
 
 	return true;
 }
@@ -595,7 +597,7 @@ static int FindSceneByCRC( CRC32_t crcFilename )
 {
 	// use binary search, entries are sorted by ascending crc
 	int nLowerIdx = 1;
-	int nUpperIdx = g_SceneFiles.Count();
+	int nUpperIdx = std::ssize( g_SceneFiles );
 	for ( ;; )
 	{
 		if ( nUpperIdx < nLowerIdx )
@@ -629,25 +631,24 @@ static int FindSceneByCRC( CRC32_t crcFilename )
 
 // This will update the scenes.image file, or create a new one if it doesn't exist
 // The caller should pass in the existing .image file in targetBuffer!!!
-bool CSceneImage::UpdateSceneImageFile( CUtlBuffer &targetBuffer, char const *pchModPath, bool bLittleEndian, bool bQuiet, ISceneCompileStatus *pStatus, CUtlString *pFilesToUpdate, int nUpdateCount )
+bool CSceneImage::UpdateSceneImageFile( ks::byte_writer &targetBuffer, char const *pchModPath, bool bLittleEndian, bool bQuiet, ISceneCompileStatus *pStatus, std::string *pFilesToUpdate, int nUpdateCount )
 {
 	// Prime everything using existing data file
-	if ( targetBuffer.TellPut() <= 0 )
+	if ( targetBuffer.size() == 0 )
 	{
 		return CreateSceneImageFile( targetBuffer, pchModPath, bLittleEndian, bQuiet, pStatus );
 	}
 
 	bool bSuccess = true;
 
-	g_SceneFiles.Purge();
+	g_SceneFiles.clear(); g_SceneFiles.shrink_to_fit();
 	g_ChoreoStringPool.Reset();
 
-	// Rewind to start
-	targetBuffer.SeekGet( CUtlBuffer::SEEK_HEAD, 0 );
+	ks::byte_reader existing = targetBuffer.reader();
 
 	// Load stuff
 	SceneImageHeader_t imageHeader;
-	targetBuffer.Get( &imageHeader, sizeof( imageHeader ) );
+	existing.read_bytes( &imageHeader, sizeof( imageHeader ) );
 	if ( !bLittleEndian )
 	{
 		imageHeader.nId = BigLong( imageHeader.nId );
@@ -675,27 +676,22 @@ bool CSceneImage::UpdateSceneImageFile( CUtlBuffer &targetBuffer, char const *pc
 		// then directory
 		int sceneEntryStart = imageHeader.nSceneEntryOffset;
 
-		// unsigned int *pOffset = (unsigned int *)( (byte *)targetBuffer.Base() + targetBuffer.TellGet() );
-
-		targetBuffer.SeekGet( CUtlBuffer::SEEK_HEAD, stringPoolStart );
+		existing.seek( stringPoolStart );
 
 		char str[ 4096 ];
 		for ( int i = 0; i < imageHeader.nNumStrings; ++i )
 		{
-			targetBuffer.GetString( str, sizeof( str ) );
+			existing.read_cstring( str, sizeof( str ) );
 			g_ChoreoStringPool.FindOrAddString( str );
 		}
 
 		// Now read in the file data
 
-		targetBuffer.SeekGet( CUtlBuffer::SEEK_HEAD, sceneEntryStart );
-
-		// get scene summary
-		SceneImageEntry_t *pEntries = (SceneImageEntry_t *)( (byte *)targetBuffer.Base() + sceneEntryStart );
-
 		for ( int i = 0; i < imageHeader.nNumScenes; ++i )
 		{
-			SceneImageEntry_t *pEntry = &pEntries[ i ];
+			existing.seek( sceneEntryStart + i * sizeof( SceneImageEntry_t ) );
+			SceneImageEntry_t entry = existing.read< SceneImageEntry_t >();
+			SceneImageEntry_t *pEntry = &entry;
 			if ( !bLittleEndian )
 			{
 				pEntry->crcFilename = BigLong( pEntry->crcFilename );
@@ -704,32 +700,36 @@ bool CSceneImage::UpdateSceneImageFile( CUtlBuffer &targetBuffer, char const *pc
 				pEntry->nSceneSummaryOffset = BigLong( pEntry->nSceneSummaryOffset );
 			}
 
-			SceneImageSummary_t * RESTRICT pSummary = (SceneImageSummary_t *)( (byte *)targetBuffer.Base() + pEntry->nSceneSummaryOffset );
-
-			unsigned char *pData = (unsigned char *)targetBuffer.Base() + pEntry->nDataOffset;
+			existing.seek( pEntry->nSceneSummaryOffset );
+			unsigned int summaryMsecs = existing.read< unsigned int >();
+			unsigned int summaryLastSpeech = existing.read< unsigned int >();
+			int summaryNumSounds = existing.read< int >();
 
 			// Now read in the data
-			int idx = g_SceneFiles.AddToTail();
+			int idx = std::ssize( g_SceneFiles ); g_SceneFiles.emplace_back();
 			SceneFile_t &scene = g_SceneFiles[ idx ];
 
 			// We only load the crc based filenames for appending/replacing
 			scene.crcFileName = pEntry->crcFilename;
-			scene.compiledBuffer.Put( pData, pEntry->nDataLength );
-			scene.msecs = pSummary->msecs;
-			scene.lastspeak_msecs = pSummary->lastspeech_msecs;
+			existing.seek( pEntry->nDataOffset );
+			const auto data = existing.read_span( pEntry->nDataLength );
+			scene.compiledBuffer.assign( data.begin(), data.end() );
+			scene.msecs = summaryMsecs;
+			scene.lastspeak_msecs = summaryLastSpeech;
 			// Load sounds
-			for ( int j = 0 ; j < pSummary->numSounds; ++j )
+			existing.seek( pEntry->nSceneSummaryOffset + offsetof( SceneImageSummary_t, soundStrings ) );
+			for ( int j = 0 ; j < summaryNumSounds; ++j )
 			{
-				scene.soundList.AddToTail( pSummary->soundStrings[ j ] );
+				scene.soundList.push_back( existing.read< int >() );
 			}
 		}
 	}
 
-	Assert( g_SceneFiles.Count() == imageHeader.nNumScenes );
+	Assert( std::ssize( g_SceneFiles ) == imageHeader.nNumScenes );
 
 	// Now validate that the scenes list is sorted correctly
 	CRC32_t current = (CRC32_t)0;
-	for ( int i = 0 ; i < g_SceneFiles.Count(); ++i )
+	for ( int i = 0 ; i < std::ssize( g_SceneFiles ); ++i )
 	{
 		CRC32_t crc = g_SceneFiles[ i ].crcFileName;
 		Assert( crc != (CRC32_t)0 );
@@ -744,7 +744,7 @@ bool CSceneImage::UpdateSceneImageFile( CUtlBuffer &targetBuffer, char const *pc
 	bool bGameIsTF = V_stristr( pchModPath, "\\tf" ) != nullptr;
 	for ( int i = 0; i < nUpdateCount; ++i )
 	{
-		const char *pFilename = pFilesToUpdate[i].String();
+		const char *pFilename = pFilesToUpdate[i].c_str();
 		const char *pSceneName = V_stristr( pFilename, "scenes\\" );
 		if ( !pSceneName )
 		{
@@ -793,7 +793,7 @@ bool CSceneImage::UpdateSceneImageFile( CUtlBuffer &targetBuffer, char const *pc
 	}
 
 	// Now write the final data out
-	targetBuffer.SeekPut( CUtlBuffer::SEEK_HEAD, 0 );
+	targetBuffer.clear();
 	return WriteSceneImageFile( targetBuffer, bLittleEndian, bQuiet, pStatus );
 }
 

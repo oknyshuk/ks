@@ -5,8 +5,7 @@
 //===========================================================================//
 
 #include "bitmap/psheet.h"
-#include "tier1/UtlStringMap.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/byte_reader.h"
 #include "tier2/fileutils.h"
 
 // MOC_TODO: These probably shouldn't be here - maybe we should put CSheetExtended somewhere else, like materialsystem?
@@ -15,21 +14,18 @@
 #include "materialsystem/imaterialvar.h"
 #include "materialsystem/itexture.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 CSheet::CSheet( void )
 {
 }
 
-CSheet::CSheet( CUtlBuffer &buf )
+CSheet::CSheet( ks::byte_reader &buf )
 {
 	// lets read a sheet
-	int nVersion = buf.GetInt();								// version#
+	int nVersion = buf.read<int>();								// version#
 	int nNumCoordsPerFrame = (nVersion)?MAX_IMAGES_PER_FRAME_ON_DISK:1;
 
-	int nNumSequences = buf.GetInt();
+	int nNumSequences = buf.read<int>();
 	int nNumToAllocate = nNumSequences;
 	// The old hardcoded arrays were 64.
 	// We will allocate 64 for now to handle content issues with 
@@ -37,10 +33,10 @@ CSheet::CSheet( CUtlBuffer &buf )
 	if ( nNumToAllocate < 64 )
 		 nNumToAllocate = 64;
 
-	m_SheetInfo.EnsureCapacity( nNumSequences );
+	m_SheetInfo.reserve( nNumSequences );
 	for ( int i = 0; i < nNumToAllocate; ++i )
 	{
-		m_SheetInfo.AddToTail();
+		m_SheetInfo.emplace_back();
 		m_SheetInfo[i].m_pSamples = nullptr;
 		m_SheetInfo[i].m_SeqFlags = 0;
 		m_SheetInfo[i].m_bSequenceIsCopyOfAnotherSequence = 0;
@@ -50,13 +46,13 @@ CSheet::CSheet( CUtlBuffer &buf )
 
 	while ( nNumSequences-- )
 	{
-		int nSequenceIndex = buf.GetInt();
+		int nSequenceIndex = buf.read<int>();
 		if ( nSequenceIndex < 0 )
 		{
 			Warning( "Invalid sequence number (%d)!!!\n", nSequenceIndex );
 			return;
 		}
-		else if ( nSequenceIndex >= m_SheetInfo.Count() )
+		else if ( nSequenceIndex >= std::ssize( m_SheetInfo ) )
 		{
 			// This can happen if users delete intermediate sequences.
 			// For example you can wind up with n sequences if you delete a sequence between 0 and n
@@ -64,7 +60,7 @@ CSheet::CSheet( CUtlBuffer &buf )
 			int i = -1;
 			while ( i < nSequenceIndex )
 			{
-				i = m_SheetInfo.AddToTail();
+				i = std::ssize( m_SheetInfo ); m_SheetInfo.emplace_back();
 				m_SheetInfo[i].m_pSamples = nullptr;
 				m_SheetInfo[i].m_SeqFlags = 0;
 				m_SheetInfo[i].m_bSequenceIsCopyOfAnotherSequence = 0;
@@ -73,8 +69,8 @@ CSheet::CSheet( CUtlBuffer &buf )
 			}
 		}
 
-		m_SheetInfo[nSequenceIndex].m_SeqFlags = (uint8)(0xFF & buf.GetInt()); // reading an int, but not worth storing it all
-		int nFrameCount = buf.GetInt();
+		m_SheetInfo[nSequenceIndex].m_SeqFlags = (uint8)(0xFF & buf.read<int>()); // reading an int, but not worth storing it all
+		int nFrameCount = buf.read<int>();
 		// Save off how many frames we have for this sequence
 		m_SheetInfo[nSequenceIndex].m_nNumFrames = nFrameCount;
 		Assert( nFrameCount >= 0 );
@@ -89,25 +85,32 @@ CSheet::CSheet( CUtlBuffer &buf )
 		}
 		m_SheetInfo[nSequenceIndex].m_pSamples = new SheetSequenceSample_t[ nTimeSamples ];
 
-		int fTotalSequenceTime = ( int )buf.GetFloat();
+		int fTotalSequenceTime = ( int )buf.read<float>();
 		float InterpKnot[SEQUENCE_SAMPLE_COUNT];
 		float InterpValue[SEQUENCE_SAMPLE_COUNT];
 		SheetSequenceSample_t Samples[SEQUENCE_SAMPLE_COUNT];
 		float fCurTime = 0.;
 		for( int nFrm = 0 ; nFrm < nFrameCount; nFrm++ )
 		{
-			float fThisDuration = buf.GetFloat();
+			float fThisDuration = buf.read<float>();
 			InterpValue[ nFrm ] = nFrm;
 			InterpKnot [ nFrm ] = SEQUENCE_SAMPLE_COUNT*( fCurTime/ fTotalSequenceTime );
 			SheetSequenceSample_t &seq = Samples[ nFrm ];
 			seq.m_fBlendFactor = 0.0f;
 			for(int nImage = 0 ; nImage< nNumCoordsPerFrame; nImage++ )
 			{
-				SequenceSampleTextureCoords_t &s=seq.m_TextureCoordData[nImage];
-				s.m_fLeft_U0	= buf.GetFloat();
-				s.m_fTop_V0		= buf.GetFloat();
-				s.m_fRight_U0	= buf.GetFloat();
-				s.m_fBottom_V0	= buf.GetFloat();
+				float flLeftU0 = buf.read<float>();
+				float flTopV0 = buf.read<float>();
+				float flRightU0 = buf.read<float>();
+				float flBottomV0 = buf.read<float>();
+				if ( nImage < MAX_IMAGES_PER_FRAME_IN_MEMORY )
+				{
+					SequenceSampleTextureCoords_t &s=seq.m_TextureCoordData[nImage];
+					s.m_fLeft_U0	= flLeftU0;
+					s.m_fTop_V0		= flTopV0;
+					s.m_fRight_U0	= flRightU0;
+					s.m_fBottom_V0	= flBottomV0;
+				}
 			}
 			if ( nNumCoordsPerFrame == 1 )
 				seq.CopyFirstFrameToOthers();
@@ -147,7 +150,7 @@ CSheet::CSheet( CUtlBuffer &buf )
 	// now, fill in all unseen sequences with copies of the first seen sequence to prevent crashes
 	// while editing
 	int nFirstSequence = -1;
-	for(int i= 0 ; i < m_SheetInfo.Count(); i++)
+	for(int i= 0 ; i < std::ssize( m_SheetInfo ); i++)
 	{
 		if ( m_SheetInfo[i].m_pSamples )
 		{
@@ -158,7 +161,7 @@ CSheet::CSheet( CUtlBuffer &buf )
 
 	if ( nFirstSequence != -1 )
 	{
-		for(int i=0 ; i < m_SheetInfo.Count(); i++)
+		for(int i=0 ; i < std::ssize( m_SheetInfo ); i++)
 		{
 			if ( m_SheetInfo[i].m_pSamples == nullptr )
 			{
@@ -174,7 +177,7 @@ CSheet::CSheet( CUtlBuffer &buf )
 
 CSheet::~CSheet( void )
 {
-	for( int i = 0; i < m_SheetInfo.Count(); i++ )
+	for( int i = 0; i < std::ssize( m_SheetInfo ); i++ )
 	{
 		if ( m_SheetInfo[i].m_pSamples && ( !m_SheetInfo[i].m_bSequenceIsCopyOfAnotherSequence ) )
 		{
@@ -193,7 +196,7 @@ const SheetSequenceSample_t *CSheet::GetSampleForSequence( float flAge, float fl
 
 	if ( ( m_SheetInfo[nSequence].m_SeqFlags & SEQ_FLAG_CLAMP ) && !bForceLoop )
 	{
-		nFrame = MIN( nFrame, SEQUENCE_SAMPLE_COUNT-1 );
+		nFrame = std::min<std::common_type_t<unsigned int, int>>( nFrame, SEQUENCE_SAMPLE_COUNT-1 );
 	}
 	else
 	{
@@ -237,12 +240,12 @@ void CSheetExtended::LoadFromMaterial( IMaterial* pMaterial )
 
 	if ( pSheetData )
 	{
-		CUtlBuffer bufLoad( pSheetData, nBytes, CUtlBuffer::READ_ONLY );
+		ks::byte_reader bufLoad( pSheetData, nBytes );
 		LoadFromBuffer( bufLoad );
 	}
 }
 
-void CSheetExtended::LoadFromBuffer( CUtlBuffer& buf )
+void CSheetExtended::LoadFromBuffer( ks::byte_reader &buf )
 {
 	m_pSheetData = new CSheet(buf);
 }
@@ -256,7 +259,7 @@ int CSheetExtended::GetSheetSequenceCount()
 
 	int nUniqueSequences = 0;
 
-	for ( int i = 0; i < m_pSheetData->m_SheetInfo.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_pSheetData->m_SheetInfo ); ++i )
 	{
 		if ( !m_pSheetData->m_SheetInfo[i].m_bSequenceIsCopyOfAnotherSequence )
 		{
@@ -275,7 +278,7 @@ int CSheetExtended::GetNthSequenceIndex( int nSequenceNumber )
 	}
 
 	int nCountValidSequences = 0;
-	for ( int i = 0; i < m_pSheetData->m_SheetInfo.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_pSheetData->m_SheetInfo ); ++i )
 	{
 		if ( !m_pSheetData->m_SheetInfo[i].m_bSequenceIsCopyOfAnotherSequence )
 		{

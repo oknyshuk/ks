@@ -9,7 +9,12 @@
 #ifndef RESPONSE_SYSTEM_H
 #define RESPONSE_SYSTEM_H
 
-#include "utldict.h"
+#include "tier1/map_ops.h"
+
+#include <map>
+#include <set>
+#include <string>
+#include <vector>
 
 namespace ResponseRules
 {
@@ -33,15 +38,15 @@ namespace ResponseRules
 		typedef void (CResponseSystem::*pfnParseResponseDispatch)( ParserResponse &, ResponseGroup&, AI_ResponseParams * );
 		typedef void (CResponseSystem::*pfnParseResponseGroupDispatch) ( char const *responseGroupName, ResponseGroup &newGroup, AI_ResponseParams &groupResponseParams );
 
-		typedef CUtlMap< unsigned,pfnResponseDispatch > DispatchMap_t;  
-		typedef CUtlMap< unsigned,pfnParseRuleDispatch > ParseRuleDispatchMap_t;  
-		typedef CUtlMap< unsigned,pfnParseResponseDispatch > ParseResponseDispatchMap_t;  
-		typedef CUtlMap< unsigned,pfnParseResponseGroupDispatch > ParseResponseGroupDispatchMap_t;  
+		typedef std::map< unsigned,pfnResponseDispatch > DispatchMap_t;  
+		typedef std::map< unsigned,pfnParseRuleDispatch > ParseRuleDispatchMap_t;  
+		typedef std::map< unsigned,pfnParseResponseDispatch > ParseResponseDispatchMap_t;  
+		typedef std::map< unsigned,pfnParseResponseGroupDispatch > ParseResponseGroupDispatchMap_t;  
 
 #pragma region IResponseSystem
 		// IResponseSystem
 		virtual bool FindBestResponse( const CriteriaSet& set, CRR_Response& response, IResponseFilter *pFilter = nullptr );
-		virtual void GetAllResponses( CUtlVector<CRR_Response> *pResponses );
+		virtual void GetAllResponses( std::vector< CRR_Response > *pResponses );
 #pragma endregion Implement interface from IResponseSystem
 
 		virtual void Release() = 0;
@@ -67,7 +72,7 @@ namespace ResponseRules
 
 		void		ResetResponseGroups();
 
-		float		LookForCriteria( const CriteriaSet &criteriaSet, int iCriteria );
+		float		LookForCriteria( const CriteriaSet &criteriaSet, CriteriaEntry_t *pCriteria );
 		float		RecursiveLookForCriteria( const CriteriaSet &criteriaSet, Criteria *pParent );
 
 	public:
@@ -103,7 +108,7 @@ namespace ResponseRules
 				m_bUnget = false;
 				return true;
 			}
-			if ( m_ScriptStack.Count() <= 0 )
+			if ( std::ssize( m_ScriptStack ) <= 0 )
 			{
 				Assert( 0 );
 				return false;
@@ -121,7 +126,7 @@ namespace ResponseRules
 
 		inline bool TokenWaiting( void )
 		{
-			if ( m_ScriptStack.Count() <= 0 )
+			if ( std::ssize( m_ScriptStack ) <= 0 )
 			{
 				Assert( 0 );
 				return false;
@@ -200,7 +205,7 @@ namespace ResponseRules
 		void		ParseResponseGroup_Soundlevel( char const *responseGroupName, ResponseGroup &newGroup, AI_ResponseParams &groupResponseParams );
 
 public:
-		int			ParseOneCriterion( const char *criterionName );
+		CriteriaEntry_t *ParseOneCriterion( const char *criterionName );
 
 		bool		Compare( const char *setValue, Criteria *c, bool verbose = false );
 		bool		CompareUsingMatcher( const char *setValue, Matcher& m, bool verbose = false );
@@ -212,7 +217,7 @@ public:
 		
 		float		ScoreCriteriaAgainstRule( const CriteriaSet& set, ResponseRulePartition::tRuleDict &dict, int irule, bool verbose = false );
 		float		RecursiveScoreSubcriteriaAgainstRule( const CriteriaSet& set, Criteria *parent, bool& exclude, bool verbose /*=false*/ );
-		float		ScoreCriteriaAgainstRuleCriteria( const CriteriaSet& set, int icriterion, bool& exclude, bool verbose = false );
+		float		ScoreCriteriaAgainstRuleCriteria( const CriteriaSet& set, CriteriaEntry_t *pCriterion, bool& exclude, bool verbose = false );
 		void		FakeDepletes( ResponseGroup *g, IResponseFilter *pFilter );
 		void		RevertFakedDepletes( ResponseGroup *g );
 		bool		GetBestResponse( ResponseSearchResult& result, Rule *rule, bool verbose = false, IResponseFilter *pFilter = nullptr );
@@ -229,8 +234,7 @@ public:
 		
 		inline bool IsRootCommand( unsigned int hash ) const
 		{
-			int slot = m_RootCommandHashes.Find( hash );
-			return slot != m_RootCommandHashes.InvalidIndex();
+			return m_RootCommandHashes.contains( hash );
 		}
 
 		inline bool IsRootCommand() const
@@ -243,13 +247,13 @@ public:
 
 		void		ResponseWarning( PRINTF_FORMAT_STRING const char *fmt, ... ) FMTFUNCTION( 2, 3 );
 
-		CUtlDict< ResponseGroup, short >	m_Responses;
-		CUtlDict< Criteria, short >	m_Criteria;
-		// CUtlDict< Rule, short >	m_Rules;
+		// Names repeat: custom systems copy a group for each rule that uses it.
+		std::multimap< std::string, ResponseGroup, ks::iless >	m_Responses;
+		ks::idict< Criteria >	m_Criteria;
 		ResponseRulePartition m_RulePartitions;
-		CUtlDict< Enumeration, short > m_Enumerations;
+		ks::idict< Enumeration > m_Enumerations;
 
-		CUtlVector<int> m_FakedDepletes;
+		std::vector< int > m_FakedDepletes;
 
 		char		token[ 1204 ];
 
@@ -265,17 +269,20 @@ public:
 			int				tokencount;
 		};
 
-		CUtlVector< ScriptEntry >		m_ScriptStack;
-		CStringPool						m_IncludedFiles;
+		std::vector< ScriptEntry >		m_ScriptStack;
+
+		// Replaces the CStringPool this used to be. The pool existed to intern the strings;
+		// only membership was ever used, so a set of owned strings is enough.
+		std::set< std::string >			m_IncludedFiles;
 
 		DispatchMap_t					m_FileDispatch;
 		ParseRuleDispatchMap_t			m_RuleDispatch;
 		ParseResponseDispatchMap_t		m_ResponseDispatch;
 		ParseResponseGroupDispatchMap_t m_ResponseGroupDispatch;
-		CUtlRBTree< unsigned int >		m_RootCommandHashes;
+		std::set< unsigned int >		m_RootCommandHashes;
 
         // for debugging purposes only: concepts to be emitted from rr_debugresponses 2
-        typedef CUtlLinkedList< CRR_Concept, unsigned short, false, unsigned int > ExcludeList_t;
+        typedef std::vector< CRR_Concept > ExcludeList_t;
         static ExcludeList_t m_DebugExcludeList;
 
 		friend class CDefaultResponseSystemSaveRestoreBlockHandler;

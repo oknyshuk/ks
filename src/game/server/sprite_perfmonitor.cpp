@@ -12,8 +12,6 @@
 #include "baseentity.h"
 #include "entityoutput.h"
 #include "convar.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: Entity that particle performance measuring

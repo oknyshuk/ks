@@ -23,9 +23,6 @@
 #include "tier1/keyvalues.h"
 #include "tier0/vprof.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define sign( a ) (((a) < 0) ? -1 : (((a) > 0) ? 1 : 0 ))
 
 void CStudioRender::R_StudioEyeballPosition( const mstudioeyeball_t *peyeball, eyeballstate_t *pstate )

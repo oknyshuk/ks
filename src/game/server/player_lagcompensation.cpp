@@ -11,13 +11,10 @@
 #include "player_lagcompensation.h"
 #include "usercmd.h"
 #include "inetchannelinfo.h"
-#include "utllinkedlist.h"
 #include "BaseAnimatingOverlay.h"
 #include "tier0/vprof.h"
 #include "collisionutils.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include <bitset>
 
 #define LC_NONE				0
 #define LC_ALIVE			(1<<0)
@@ -122,17 +119,14 @@ void CLagCompensationManager::AddAdditionalEntity( CBaseEntity *pEntity )
 {
 	EHANDLE eh;
 	eh = pEntity;
-	if ( m_AdditionalEntities.Find( eh ) == m_AdditionalEntities.InvalidIndex() )
-	{
-		m_AdditionalEntities.Insert( eh );
-	}
+	m_AdditionalEntities.insert( eh );
 }
 
 void CLagCompensationManager::RemoveAdditionalEntity( CBaseEntity *pEntity )
 {
 	EHANDLE eh;
 	eh = pEntity;
-	m_AdditionalEntities.Remove( eh );
+	m_AdditionalEntities.erase( eh );
 }
 
 //-----------------------------------------------------------------------------
@@ -148,7 +142,7 @@ void CLagCompensationManager::FrameUpdatePostEntityThink()
 	
 	VPROF_BUDGET( "FrameUpdatePostEntityThink", "CLagCompensationManager" );
 
-	CUtlRBTree< CBaseEntity * > rbEntityList( 0, 0, DefLessFunc( CBaseEntity * ) );
+	std::set< CBaseEntity * > rbEntityList;
 
 	// Add active players
 	for ( int i = 1; i <= gpGlobals->maxClients; i++ )
@@ -159,41 +153,31 @@ void CLagCompensationManager::FrameUpdatePostEntityThink()
 			continue;
 		}
 
-		if ( rbEntityList.Find( pPlayer ) == rbEntityList.InvalidIndex() )
-		{
-			rbEntityList.Insert( pPlayer );
-		}
+		rbEntityList.insert( pPlayer );
 	}
 
 	// Add any additional entities
-	for ( int i = m_AdditionalEntities.FirstInorder(); i != m_AdditionalEntities.InvalidIndex(); i = m_AdditionalEntities.NextInorder( i ) )
+	for ( const EHANDLE &hAdd : m_AdditionalEntities )
 	{
-		CBaseEntity *pAddEntity = m_AdditionalEntities[ i ].Get();
+		CBaseEntity *pAddEntity = hAdd.Get();
 		if ( !pAddEntity )
 			continue;
 
-		if ( rbEntityList.Find( pAddEntity ) == rbEntityList.InvalidIndex() )
-		{
-			rbEntityList.Insert( pAddEntity );
-		}
+		rbEntityList.insert( pAddEntity );
 	}
 
 	// Now record the actual history information
-	for ( int i = rbEntityList.FirstInorder(); i != rbEntityList.InvalidIndex(); i = rbEntityList.NextInorder( i  ) )
+	for ( CBaseEntity *pEntity : rbEntityList )
 	{
-		CBaseEntity *pEntity = rbEntityList[ i ];
 
 		EHANDLE eh;
 		eh = pEntity;
 
-		int slot = m_CompensatedEntities.Find( eh );
-		if ( slot == m_CompensatedEntities.InvalidIndex() )
-		{
-			EntityLagData *pNewEntry = new EntityLagData();
-			slot = m_CompensatedEntities.Insert( eh, pNewEntry );
-		}
+		std::unique_ptr< EntityLagData > &entry = m_CompensatedEntities[ eh ];
+		if ( !entry )
+			entry = std::make_unique< EntityLagData >();
 
-		EntityLagData *ld = m_CompensatedEntities[ slot ];
+		EntityLagData *ld = entry.get();
 
 		RecordDataIntoTrack( pEntity, &ld->m_LagRecords, true );
 	}
@@ -207,36 +191,21 @@ void CLagCompensationManager::StartLagCompensation( CBasePlayer *player, LagComp
 	Assert(!m_isCurrentlyDoingCompensation);
 
 	// Assume no entities need to be restored
-	CUtlVector< EHANDLE > invalidList;
-	FOR_EACH_MAP( m_CompensatedEntities, i )
+	for ( auto it = m_CompensatedEntities.begin(); it != m_CompensatedEntities.end(); )
 	{
-		EntityLagData *ld = m_CompensatedEntities[ i ];
-		EHANDLE key;
-		key = m_CompensatedEntities.Key( i );
-		if ( !key.Get() )
+		// Wipe any deleted entities from the list
+		if ( !it->first.Get() )
 		{
-			// Note that the EHANDLE is NULL now
-			invalidList.AddToTail( key );
+			it = m_CompensatedEntities.erase( it );
 			continue;
 		}
 
 		// Clear state
+		EntityLagData *ld = it->second.get();
 		ld->m_bRestoreEntity = false;
 		ld->m_RestoreData = {};
 		ld->m_ChangeData = {};
-	}
-
-	// Wipe any deleted entities from the list
-	for ( int i = 0; i < invalidList.Count(); ++i )
-	{
-		int slot = m_CompensatedEntities.Find( invalidList[ i ] );
-		Assert( slot != m_CompensatedEntities.InvalidIndex() );
-		if ( slot == m_CompensatedEntities.InvalidIndex() )
-			continue;
-
-		EntityLagData *ld = m_CompensatedEntities[ slot ];
-		delete ld;
-		m_CompensatedEntities.RemoveAt( slot );
+		++it;
 	}
 
 	m_bNeedToRestore = false;
@@ -320,12 +289,11 @@ void CLagCompensationManager::StartLagCompensation( CBasePlayer *player, LagComp
 	}
 
 	// Iterate all lag compensatable entities
-	const CBitVec<MAX_EDICTS> *pEntityTransmitBits = engine->GetEntityTransmitBitsForClient( player->entindex() - 1 );
+	const std::bitset<MAX_EDICTS> *pEntityTransmitBits = engine->GetEntityTransmitBitsForClient( player->entindex() - 1 );
 
-	FOR_EACH_MAP( m_CompensatedEntities, i )
+	for ( auto &[key, entry] : m_CompensatedEntities )
 	{
-		EntityLagData *ld = m_CompensatedEntities[ i ];
-		EHANDLE key = m_CompensatedEntities.Key( i );
+		EntityLagData *ld = entry.get();
 		CBaseEntity *pEntity = key.Get();
 		if ( !pEntity )
 		{
@@ -356,10 +324,8 @@ bool CLagCompensationManager::BacktrackEntity( CBaseEntity *entity, float flTarg
 	VPROF_BUDGET( "BacktrackEntity", "CLagCompensationManager" );
 
 	// check if we have at least one entry
-	if ( track->Count() <= 0 )
+	if ( track->empty() )
 		return false;
-
-	intp curr = track->Head();
 
 	LagRecord *prevRecord = nullptr;
 	LagRecord *record = nullptr;
@@ -367,13 +333,13 @@ bool CLagCompensationManager::BacktrackEntity( CBaseEntity *entity, float flTarg
 	Vector prevOrg = entity->GetAbsOrigin();
 	
 	// Walk context looking for any invalidating event
-	while( track->IsValidIndex(curr) )
+	for ( LagRecord &curr : *track )
 	{
 		// remember last record
 		prevRecord = record;
 
 		// get next record
-		record = &track->Element( curr );
+		record = &curr;
 
 		if ( !(record->m_fFlags & LC_ALIVE) )
 		{
@@ -393,9 +359,6 @@ bool CLagCompensationManager::BacktrackEntity( CBaseEntity *entity, float flTarg
 			break; // hurra, stop
 
 		prevOrg = record->m_vecOrigin;
-
-		// go one step back
-		curr = track->Next( curr );
 	}
 
 	Assert( record );
@@ -460,10 +423,10 @@ bool CLagCompensationManager::BacktrackEntity( CBaseEntity *entity, float flTarg
 				EHANDLE eh;
 				eh = pHitEntity;
 
-				int slot = m_CompensatedEntities.Find( eh );
-				if ( slot != m_CompensatedEntities.InvalidIndex() )
+				auto it = m_CompensatedEntities.find( eh );
+				if ( it != m_CompensatedEntities.end() )
 				{
-					EntityLagData *ld = m_CompensatedEntities[ slot ];
+					EntityLagData *ld = it->second.get();
 
 					// If we haven't backtracked this player, do it now
 					// this deliberately ignores WantsLagCompensationOnEntity.
@@ -674,14 +637,14 @@ void CLagCompensationManager::FinishLagCompensation( CBasePlayer *player )
 		return; // no entity was changed at all
 
 	// Iterate all active entities
-	FOR_EACH_MAP( m_CompensatedEntities, i )
+	for ( auto &[key, entry] : m_CompensatedEntities )
 	{
-		EntityLagData *ld = m_CompensatedEntities[ i ];
+		EntityLagData *ld = entry.get();
 		// entity wasn't changed by lag compensation
 		if ( !ld->m_bRestoreEntity )
 			continue;
 
-		CBaseEntity *pEntity = m_CompensatedEntities.Key( i ).Get();
+		CBaseEntity *pEntity = key.Get();
 		if ( !pEntity )
 			continue;
 
@@ -694,30 +657,26 @@ void CLagCompensationManager::FinishLagCompensation( CBasePlayer *player )
 
 void CLagCompensationManager::RecordDataIntoTrack( CBaseEntity *entity, LagRecordList *track, bool wantsAnims )
 {
-	Assert( track->Count() < 1000 ); // insanity check
+	Assert( track->size() < 1000 ); // insanity check
 
 	// remove all records before that time:
 	int flDeadtime = gpGlobals->curtime - sv_maxunlag.GetFloat();
 
 	// remove tail records that are too old
-	intp tailIndex = track->Tail();
-	while ( track->IsValidIndex( tailIndex ) )
+	while ( !track->empty() )
 	{
-		LagRecord &tail = track->Element( tailIndex );
-
 		// if tail is within limits, stop
-		if ( tail.m_flSimulationTime >= flDeadtime )
+		if ( track->back().m_flSimulationTime >= flDeadtime )
 			break;
 
 		// remove tail, get new tail
-		track->Remove( tailIndex );
-		tailIndex = track->Tail();
+		track->pop_back();
 	}
 
 	// check if head has same simulation time
-	if ( track->Count() > 0 )
+	if ( !track->empty() )
 	{
-		LagRecord &head = track->Element( track->Head() );
+		LagRecord &head = track->front();
 
 		// check if player changed simulation time since last time updated
 		if ( head.m_flSimulationTime >= entity->GetSimulationTime() )
@@ -725,7 +684,7 @@ void CLagCompensationManager::RecordDataIntoTrack( CBaseEntity *entity, LagRecor
 	}
 
 	// add new record to entity track
-	LagRecord &record = track->Element( track->AddToHead() );
+	LagRecord &record = track->emplace_front();
 
 	record.m_fFlags = 0;
 	if ( entity->IsAlive() )

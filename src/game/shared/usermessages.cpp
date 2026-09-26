@@ -8,8 +8,6 @@
 #include "usermessages.h"
 #include <bitbuf.h>
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 #include "tier0/microprofiler.h"
 
 static ConVar cl_show_usermessage( "cl_show_usermessage", "0", 0, "Shows the incoming user messages for this client and dumps them out the type and size of the messages to the console. Setting this to 2 will display message contents as well" ); // filter incoming voice data
@@ -23,13 +21,12 @@ IUserMessageBinder::~IUserMessageBinder()
 //-----------------------------------------------------------------------------
 CUserMessages::CUserMessages()
 {
-	SetDefLessFunc( m_UserMessageBinderMap );
 }
 
 //-----------------------------------------------------------------------------
 CUserMessages::~CUserMessages()
 {
-	m_UserMessageBinderMap.Purge();
+	m_UserMessageBinderMap.clear();
 }
 
 // we might wanna move this definition here::
@@ -39,8 +36,8 @@ CUserMessages::~CUserMessages()
 //-----------------------------------------------------------------------------
 bool CUserMessages::DispatchUserMessage( int msg_type, int32 nPassthroughFlags, int size, const void *msg )
 {
-	UserMessageHandlerMap_t::IndexType_t index = m_UserMessageBinderMap.Find( msg_type );
-	if ( index == UserMessageHandlerMap_t::InvalidIndex() )
+	auto index = m_UserMessageBinderMap.find( msg_type );
+	if ( index == m_UserMessageBinderMap.end() )
 	{
 		DevMsg( "CUserMessages::DispatchUserMessage:  Unknown msg type %i\n", msg_type );
 		return true;
@@ -48,13 +45,15 @@ bool CUserMessages::DispatchUserMessage( int msg_type, int32 nPassthroughFlags, 
 		
 	int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
 
-	if ( m_UserMessageBinderMap.Element( index )[ nSlot ].Count() == 0 )
+	// Handlers may bind/unbind while invoked; map nodes are stable, so the reference stays valid.
+	UserMessageBinderVec_t &binders = index->second[ nSlot ];
+	if ( std::ssize( binders ) == 0 )
 	{
 		// not hooking a usermessage is acceptable, pretend we parsed it
 		return true;
 	}
 
-	IUserMessageBinder *pHandler = m_UserMessageBinderMap.Element( index )[ nSlot ][0];
+	IUserMessageBinder *pHandler = binders[0];
 	if ( !pHandler )
 	{
 		// not hooking a usermessage is acceptable, pretend we parsed it
@@ -89,9 +88,9 @@ bool CUserMessages::DispatchUserMessage( int msg_type, int32 nPassthroughFlags, 
 	}
 
 	bool result = true;
-	FOR_EACH_VEC( m_UserMessageBinderMap.Element( index )[ nSlot ], i )
+	for ( int i = 0; i < std::ssize( binders ); i++ )
 	{
-		IUserMessageBinder *h = m_UserMessageBinderMap.Element( index )[ nSlot ][i];
+		IUserMessageBinder *h = binders[i];
 		if ( h )
 		{
 			result = h->Invoke( pMsg );
@@ -118,26 +117,15 @@ void CUserMessages::BindMessage( IUserMessageBinder *pMessageBinder )
 
 	int message = pMessageBinder->GetType();
 
-	UserMessageHandlerMap_t::IndexType_t index = m_UserMessageBinderMap.Find( message );
-	if ( index == UserMessageHandlerMap_t::InvalidIndex() )
+	auto [index, bInserted] = m_UserMessageBinderMap.try_emplace( message );
+	if ( bInserted )
 	{
-		index = m_UserMessageBinderMap.Insert( message );
-		m_UserMessageBinderMap.Element( index ).SetCount( MAX_SPLITSCREEN_PLAYERS );
+		index->second.assign( MAX_SPLITSCREEN_PLAYERS, {} );
 	}
 
 	ASSERT_LOCAL_PLAYER_RESOLVABLE();
 
-#ifdef DEBUG
-	FOR_EACH_VEC( m_UserMessageBinderMap.Element( index )[ GET_ACTIVE_SPLITSCREEN_SLOT() ], j )
-	{
-		if( m_UserMessageBinderMap.Element( index )[ GET_ACTIVE_SPLITSCREEN_SLOT() ][ j ]->GetAbstractDelegate().IsEqual( pMessageBinder->GetAbstractDelegate() ) )
-		{
-			DevMsg( "CUserMessages::BindMessage called duplicate %d!!!\n", pMessageBinder->GetType() );
-		}
-	}
-#endif
-
-	m_UserMessageBinderMap.Element( index )[ GET_ACTIVE_SPLITSCREEN_SLOT() ].AddToTail( pMessageBinder );
+	index->second[ GET_ACTIVE_SPLITSCREEN_SLOT() ].push_back( pMessageBinder );
 }
 
 //-----------------------------------------------------------------------------
@@ -150,20 +138,21 @@ bool CUserMessages::UnbindMessage( IUserMessageBinder *pMessageBinder )
 
 	int message = pMessageBinder->GetType();
 
-	UserMessageHandlerMap_t::IndexType_t index = m_UserMessageBinderMap.Find( message );
+	auto index = m_UserMessageBinderMap.find( message );
 	
-	if ( index == UserMessageHandlerMap_t::InvalidIndex() )
+	if ( index == m_UserMessageBinderMap.end() )
 	{
 		return false;
 	}
 
 	for ( int split = 0; split < MAX_SPLITSCREEN_PLAYERS; ++split )
 	{
-		FOR_EACH_VEC( m_UserMessageBinderMap.Element( index )[ split ], i )
+		auto &binders = index->second[ split ];
+		for ( int i = 0; i < std::ssize( binders ); i++ )
 		{
-			if ( m_UserMessageBinderMap.Element( index )[ split ][i] == pMessageBinder )
+			if ( binders[i] == pMessageBinder )
 			{
-				m_UserMessageBinderMap.Element( index )[ split ].Remove(i);
+				binders.erase( binders.begin() + i );
 				return true;
 			}
 		}

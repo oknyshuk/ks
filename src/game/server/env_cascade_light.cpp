@@ -12,9 +12,6 @@
 #include "lights.h"
 #include "env_cascade_light.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //#define CsmDbgMsg Msg
 #define CsmDbgMsg(x)
 

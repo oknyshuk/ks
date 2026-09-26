@@ -20,9 +20,6 @@
 #include "mathlib/vector.h"
 #include <assert.h>
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // z is coming out of the face.
 
 void GetBumpNormals( const Vector& sVect, const Vector& tVect, const Vector& flatNormal, 

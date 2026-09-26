@@ -19,9 +19,6 @@
 #include "te_effect_dispatch.h"
 #include "particle_parse.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define STICK_EXTENTS	400.0f
 
 
@@ -1120,7 +1117,7 @@ void CFourWheelVehiclePhysics::UpdateDriverControls( CUserCmd *cmd, float flFram
 			m_controls.throttle = 0;
 		}
 
-		float flMaxThrottle = MAX( 0.1, m_maxThrottle );
+		float flMaxThrottle = std::max<std::common_type_t<double, float>>( 0.1, m_maxThrottle );
 		if ( m_controls.steering != 0 )
 		{
 			float flThrottleReduce = 0;
@@ -1140,7 +1137,7 @@ void CFourWheelVehiclePhysics::UpdateDriverControls( CUserCmd *cmd, float flFram
 			float limit = 1.0f - (flThrottleReduce * fabs(m_controls.steering));
 			if ( limit < 0 )
 				limit = 0;
-			flMaxThrottle = MIN( flMaxThrottle, limit );
+			flMaxThrottle = std::min( flMaxThrottle, limit );
 		}
 
 		m_controls.throttle = Approach( flMaxThrottle * flAnalogThrottle, m_controls.throttle, flFrameTime * m_throttleRate );
@@ -1170,7 +1167,7 @@ void CFourWheelVehiclePhysics::UpdateDriverControls( CUserCmd *cmd, float flFram
 			m_controls.throttle = 0;
 		}
 
-		float flMaxThrottle = MIN( -0.1, m_flMaxRevThrottle  );
+		float flMaxThrottle = std::min<std::common_type_t<double, float>>( -0.1, m_flMaxRevThrottle  );
 		m_controls.throttle = Approach( flMaxThrottle * flAnalogBrake, m_controls.throttle, flFrameTime * m_throttleRate );
 
 		// Apply the brake.
@@ -1195,7 +1192,7 @@ void CFourWheelVehiclePhysics::UpdateDriverControls( CUserCmd *cmd, float flFram
 			m_controls.throttle = 0;
 		}
 
-		float flMaxThrottle = MAX( 0.1, m_maxThrottle );
+		float flMaxThrottle = std::max<std::common_type_t<double, float>>( 0.1, m_maxThrottle );
 
 		if ( m_controls.steering != 0 )
 		{
@@ -1216,7 +1213,7 @@ void CFourWheelVehiclePhysics::UpdateDriverControls( CUserCmd *cmd, float flFram
 			float limit = 1.0f - (flThrottleReduce * fabs(m_controls.steering));
 			if ( limit < 0 )
 				limit = 0;
-			flMaxThrottle = MIN( flMaxThrottle, limit );
+			flMaxThrottle = std::min( flMaxThrottle, limit );
 		}
 
 		m_controls.throttle = Approach( flMaxThrottle, m_controls.throttle, flFrameTime * m_throttleRate );
@@ -1242,7 +1239,7 @@ void CFourWheelVehiclePhysics::UpdateDriverControls( CUserCmd *cmd, float flFram
 			m_controls.throttle = 0;
 		}
 
-		float flMaxThrottle = MIN( -0.1, m_flMaxRevThrottle );
+		float flMaxThrottle = std::min<std::common_type_t<double, float>>( -0.1, m_flMaxRevThrottle );
 		m_controls.throttle = Approach( flMaxThrottle, m_controls.throttle, flFrameTime * m_throttleRate );
 
 		// Apply the brake.

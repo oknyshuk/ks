@@ -12,7 +12,6 @@
 //=============================================================================
 
 
-#pragma warning(disable: 4514)
 
 // First include standard libraries
 #include <stdio.h>
@@ -32,20 +31,10 @@
 #include "tier1/strtools.h"
 #include "vstdlib/random.h"
 #include "tier1/keyvalues.h"
-#include "tier1/utlmemory.h"
-#include "tier1/utlrbtree.h"
 #include "tier1/utlvector.h"
-#include "tier1/utllinkedlist.h"
-#include "tier1/utlmultilist.h"
-#include "tier1/utlsymbol.h"
 #include "tier0/icommandline.h"
 #include "tier1/netadr.h"
-#include "tier1/mempool.h"
-#include "tier1/utlbuffer.h"
 #include "tier1/utlstring.h"
-#include "tier1/utlmap.h"
-
-#include "tier0/memdbgon.h"
 
 
 

@@ -9,9 +9,6 @@
 #include "particle_simple3d.h"
 #include "view.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // Defined in pm_math.c
 float anglemod( float a );
 
@@ -20,7 +17,7 @@ float anglemod( float a );
 // Input   :
 // Output  :
 //------------------------------------------------------------------------------
-CSmartPtr<CSimple3DEmitter> CSimple3DEmitter::Create( const char *pDebugName )	
+ks::intrusive_ptr<CSimple3DEmitter> CSimple3DEmitter::Create( const char *pDebugName )	
 {
 	CSimple3DEmitter* pSimple3DEmitter = new CSimple3DEmitter( pDebugName );
 

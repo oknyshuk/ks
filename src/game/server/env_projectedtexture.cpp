@@ -12,9 +12,6 @@
 #include "env_projectedtexture.h"
 #include "world.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 LINK_ENTITY_TO_CLASS( env_projectedtexture, CEnvProjectedTexture );
 
 IMPLEMENT_REFLECT_DATAMAP( CEnvProjectedTexture )

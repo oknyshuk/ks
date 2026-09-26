@@ -60,9 +60,6 @@
 #include "demo_polish/demo_polish.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // Don't alias here
 #if defined( CBasePlayer )
 #undef CBasePlayer	
@@ -303,7 +300,7 @@ bool MsgFunc_SendLastKillerDamageToClient( const ks::net::CCSUsrMsg_SendLastKill
 void C_BasePlayer::Spawn( void )
 {
 	m_UMCMsg_SendLastKillerDamageToClient.Bind< ks::net::CS_UM_SendLastKillerDamageToClient, ks::net::CCSUsrMsg_SendLastKillerDamageToClient >
-		( UtlMakeDelegate( MsgFunc_SendLastKillerDamageToClient ));
+		( MsgFunc_SendLastKillerDamageToClient);
 
 	// Clear all flags except for FL_FULLEDICT
 	ClearFlags();
@@ -1723,7 +1720,7 @@ void C_BasePlayer::CalcChaseCamView(Vector& eyeOrigin, QAngle& eyeAngles, float&
 #ifdef CSTRIKE_DLL
 	else if ( pGrenade )
 	{
-		m_flObserverChaseDistance = MAX( 64, m_flObserverChaseDistance );
+		m_flObserverChaseDistance = std::max<std::common_type_t<int, float>>( 64, m_flObserverChaseDistance );
 	}
 #endif
 
@@ -3143,7 +3140,7 @@ void C_BasePlayer::UpdateFogBlend( void )
 	float flDefaultFov = GetDefaultFOV( );
 	if ( flFov < flDefaultFov )
 	{
-		float frac = (1.0 - MAX( 0.1, flFov / flDefaultFov )) * m_PlayerFog.m_flZoomFogScale;
+		float frac = (1.0 - std::max<std::common_type_t<double, float>>( 0.1, flFov / flDefaultFov )) * m_PlayerFog.m_flZoomFogScale;
 		flNewEnd = flNewEnd + (800 * frac);
 		flNewStart = flNewStart + (200 * frac);
 

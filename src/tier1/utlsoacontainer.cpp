@@ -7,6 +7,7 @@
 //===========================================================================//
 
 #include "utlsoacontainer.h"
+#include "tier0/memalloc.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <ctype.h>
@@ -16,9 +17,6 @@
 #include "vstdlib/jobthread.h"
 #include "tier1/callqueue.h"
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Globals
@@ -279,11 +277,11 @@ void CSOAContainer::SetThreadMode( SOAThreadMode_t eThreadMode )
 	else																\
 	{																	\
 		CCallQueue workList;											\
-		int nStep = MAX( 1, ( NumRows() / THREAD_NJOBS ) );				\
+		int nStep = std::max( 1, ( NumRows() / THREAD_NJOBS ) );				\
 		int nY = 0;														\
 		while( nY < NumRows() )											\
 		{																\
-			nStep = MIN( nStep, NumRows() - nY );						\
+			nStep = std::min( nStep, NumRows() - nY );						\
 			workList.QueueCall( this, &CSOAContainer::method, nY, nStep, 0, NumSlices(), __VA_ARGS__ ); \
 			nY += nStep;												\
 		}																\
@@ -946,7 +944,7 @@ void CSOAContainer:: KMeansQuantization( int const *pFieldIndices, int nNumField
 					}
 				}
 				// re-adjust quantized values
-				float flOOWeight = 1.0 / MAX( FLT_EPSILON, pOutValues[n].m_flWeightAccumulators[0] );
+				float flOOWeight = 1.0 / std::max( FLT_EPSILON, pOutValues[n].m_flWeightAccumulators[0] );
 				for( int c = 0; c < nNumFields; c++ )
 				{
 					pOutValues[n].m_fl4Values[c] = ReplicateX4( pOutValues[n].m_flValueAccumulators[0][c] * flOOWeight );
@@ -966,11 +964,11 @@ void CSOAContainer::UpdateDistanceRow( int nSearchRadius, int nMinX, int nMaxX, 
 	float const *pDataIn = RowPtr<float>( nSrcField, nY, nZ ) + nMinX;
 	float *pDataOut = RowPtr<float>( nDestField, nY, nZ ) + nMinX;
 
-	int nStartY = MAX( 0, nY - nSearchRadius );
-	int nEndY = MIN( NumRows() - 1, nY + nSearchRadius );
+	int nStartY = std::max( 0, nY - nSearchRadius );
+	int nEndY = std::min( NumRows() - 1, nY + nSearchRadius );
 
-	int nStartZ = MAX( 0, nZ - nSearchRadius );
-	int nEndZ = MIN( NumSlices() - 1, nZ + nSearchRadius );
+	int nStartZ = std::max( 0, nZ - nSearchRadius );
+	int nEndZ = std::min( NumSlices() - 1, nZ + nSearchRadius );
 
 	fltx4 fl4Thresh = ReplicateX4( THRESH );
 	for( int x = nMinX; x <= nMaxX; x++ )
@@ -980,8 +978,8 @@ void CSOAContainer::UpdateDistanceRow( int nSearchRadius, int nMinX, int nMaxX, 
 		fltx4 fl4ReferenceValue = ( flReferenceValue > THRESH ) ? Four_Ones: Four_Zeros;
 		fltx4 fl4ClosestDistance = ReplicateX4( nSearchRadius );
 		// now, we need to walk over a (3d) window around the sample
-		int nStartX = MAX( 0, x - nSearchRadius );
-		int nEndX = MIN( NumCols() - 1, x + nSearchRadius );
+		int nStartX = std::max( 0, x - nSearchRadius );
+		int nEndX = std::min( NumCols() - 1, x + nSearchRadius );
 		// pad to simd values
 		nStartX = nStartX & ~3;
 		nEndX = nEndX & ~3;
@@ -1007,9 +1005,9 @@ void CSOAContainer::UpdateDistanceRow( int nSearchRadius, int nMinX, int nMaxX, 
 			}
 		}
 		// we have found the closest different voxel. store it
-		float flClosestDistance = MIN( MIN( SubFloat( fl4ClosestDistance, 0 ), SubFloat( fl4ClosestDistance, 1 ) ),
-									   MIN( SubFloat( fl4ClosestDistance, 2 ), SubFloat( fl4ClosestDistance, 3 ) ) );
-		flClosestDistance = MIN( flClosestDistance, nSearchRadius );
+		float flClosestDistance = std::min( std::min( SubFloat( fl4ClosestDistance, 0 ), SubFloat( fl4ClosestDistance, 1 ) ),
+									   std::min( SubFloat( fl4ClosestDistance, 2 ), SubFloat( fl4ClosestDistance, 3 ) ) );
+		flClosestDistance = std::min<std::common_type_t<float, int>>( flClosestDistance, nSearchRadius );
 		if ( flReferenceValue <= THRESH )
 		{
 			flClosestDistance = -flClosestDistance;
@@ -1045,16 +1043,16 @@ void CSOAContainer::GenerateDistanceField( int nSrcField, int nDestField,
 	nMinX -= nMaxDistance;
 	nMinZ -= nMaxDistance;
 	nMinY -= nMaxDistance;
-	nMinX = MAX( 0, nMinX );
-	nMinY = MAX( 0, nMinY );
-	nMinZ = MAX( 0, nMinZ );
+	nMinX = std::max( 0, nMinX );
+	nMinY = std::max( 0, nMinY );
+	nMinZ = std::max( 0, nMinZ );
 
 	nMaxX += nMaxDistance;
 	nMaxY += nMaxDistance;
 	nMaxZ += nMaxDistance;
-	nMaxX = MIN( NumCols() - 1, nMaxX );
-	nMaxY = MIN( NumRows() - 1, nMaxY );
-	nMaxZ = MIN( NumSlices() - 1, nMaxZ );
+	nMaxX = std::min( NumCols() - 1, nMaxX );
+	nMaxY = std::min( NumRows() - 1, nMaxY );
+	nMaxZ = std::min( NumSlices() - 1, nMaxZ );
 
 	if ( pRect )											// update rect?
 	{

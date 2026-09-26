@@ -8,9 +8,6 @@
 #include "cbase.h"
 #include "mapentities_shared.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 static const char *s_BraceChars = "{}()\'";
 static bool s_BraceCharacters[256];

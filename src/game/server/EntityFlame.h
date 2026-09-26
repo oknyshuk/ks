@@ -76,7 +76,7 @@ protected:
 
 	int m_iDangerSound;
 	bool m_bPlayingSound;
-	CUtlVector< CAI_Link * > m_DangerLinks;
+	std::vector< CAI_Link * > m_DangerLinks;
 	Obstacle_t m_hObstacle;
 };
 

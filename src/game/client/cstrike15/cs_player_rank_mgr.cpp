@@ -124,17 +124,17 @@ void CPlayerRankManager::SendRankDataToServer( void )
 void CPlayerRankManager::BuildMedalCategories( void )
 {
 	// Note: we cut splitscreen, so achievements should all be at idx 0.
-	CUtlMap<int, CBaseAchievement *> &achievements = g_AchievementMgrCS.GetAchievements( 0 );
+	CAchievementMgr::AchievementMap_t &achievements = g_AchievementMgrCS.GetAchievements( 0 );
 
 	// clear these out before we rebuild them
 	for ( int i=0; i<MEDAL_CATEGORY_COUNT; i++)
 	{
-		m_medalCategoryList[i].RemoveAll();
+		m_medalCategoryList[i].clear();
 	}
 
-	m_StatBasedAchievements.RemoveAll();
+	m_StatBasedAchievements.clear();
 
-	if ( achievements.Count() == 0  )
+	if ( achievements.empty() )
 	{
 		//TODO: need disable this whole system when this happens.
 		Warning( "PlayerRankManager: No achievements loaded!\n" );
@@ -144,14 +144,14 @@ void CPlayerRankManager::BuildMedalCategories( void )
 
 	int count[MEDAL_CATEGORY_COUNT];
 	memset( count, 0, sizeof( count ) );
-	FOR_EACH_MAP( achievements, idx )
+	for ( const auto &[nID, pEntry] : achievements )
 	{
-		CBaseAchievement *pAchievement = achievements[idx];
+		CBaseAchievement *pAchievement = pEntry.get();
 		MedalCategory_t c = GetAchievementCategory( pAchievement->GetAchievementID() );
 		if ( c != MEDAL_CATEGORY_NONE )
 		{
 			count[c]++;
-			m_medalCategoryList[c].AddToTail( pAchievement );
+			m_medalCategoryList[c].push_back( pAchievement );
 
 			// Keep a separate list of achievements withs stat goals so we can 
 			// check for relevant stat changes then report those for display.
@@ -161,7 +161,7 @@ void CPlayerRankManager::BuildMedalCategories( void )
 				Assert( pStatGoal );
 				if ( pStatGoal )
 				{
-					m_StatBasedAchievements.AddToTail( pStatGoal );	
+					m_StatBasedAchievements.push_back( pStatGoal );	
 				}
 			}
 		}
@@ -180,9 +180,9 @@ void CPlayerRankManager::BuildMedalCategories( void )
 
 #if defined ( DEBUG )
 	int dbgCatCount = 0;
-	FOR_EACH_MAP( achievements, idx )
+	for ( const auto &[nID, pEntry] : achievements )
 	{
-		CBaseAchievement *pAchievement = achievements[idx];
+		CBaseAchievement *pAchievement = pEntry.get();
 		if (  MEDAL_CATEGORY_NONE != GetAchievementCategory( pAchievement->GetAchievementID() ) )
 		{
 			dbgCatCount++;
@@ -235,9 +235,8 @@ int CPlayerRankManager::CountAchievedInCategory( MedalCategory_t category ) cons
 		return 0;
 
 	int achievedCount = 0;
-	FOR_EACH_VEC( m_medalCategoryList[category], iter )
+	for ( CBaseAchievement *pAchievement : m_medalCategoryList[category] )
 	{
-		CBaseAchievement *pAchievement = m_medalCategoryList[category][iter];
 		if ( pAchievement->IsAchieved() )
 			achievedCount++;
 	}
@@ -250,8 +249,8 @@ void CPlayerRankManager::OnRoundStart()
 	if ( cl_player_rank_debug.GetBool() )
 		Msg( "PlayerRankManager: clearing all rank progress events at round start\n" );
 
-	m_RankIncreases.RemoveAll();
-	m_MedalsEarned.RemoveAll();
+	m_RankIncreases.clear();
+	m_MedalsEarned.clear();
 }
 
 void CPlayerRankManager::OnAchievementEarned( int achievementId )
@@ -265,7 +264,7 @@ void CPlayerRankManager::OnAchievementEarned( int achievementId )
 		Msg( "PlayerRankManager: Adding achievement event '%s'\n", pAchievement->GetName() );
 
 	MedalEarnedEvent_t event( pAchievement, category );
-	m_MedalsEarned.AddToTail( event );
+	m_MedalsEarned.push_back( event );
 
 	MedalRank_t oldRank = m_rank[category];
 	MedalRank_t newRank = CalculateRankForCategory( category );
@@ -274,7 +273,7 @@ void CPlayerRankManager::OnAchievementEarned( int achievementId )
 		if ( engine->IsConnected() )
 		{
 			RankIncreasedEvent_t event( pAchievement, category );	
-			m_RankIncreases.AddToTail( event );
+			m_RankIncreases.push_back( event );
 		}
 
 		m_rank[category] = newRank;
@@ -318,7 +317,7 @@ bool CPlayerRankManager::CheckCategoryRankLevelUp( int iCategory, int iRank )
 		if ( engine->IsConnected() && oldRank > MEDAL_RANK_NONE )
 		{
 			RankIncreasedEvent_t event( nullptr, category );	
-			m_RankIncreases.AddToTail( event );
+			m_RankIncreases.push_back( event );
 		}
 
 		m_rank[category] = newRank;
@@ -356,13 +355,12 @@ int CPlayerRankManager::GetMinMedalsForRank( MedalCategory_t category, MedalRank
 	return m_categoryInfo[category].m_minCountForRank[rank];
 }
 
-void CPlayerRankManager::GetMedalStatsEarnedThisRound( CUtlVector<MedalStatEvent_t>& outVec ) const
+void CPlayerRankManager::GetMedalStatsEarnedThisRound( std::vector< MedalStatEvent_t >& outVec ) const
 {
 	const StatsCollection_t &roundStats = g_CSClientGameStats.GetRoundStats(0);
 
-	FOR_EACH_VEC( m_StatBasedAchievements, iter )
+	for ( CAchievement_StatGoal *pStatGoal : m_StatBasedAchievements )
 	{
-		CAchievement_StatGoal *pStatGoal = m_StatBasedAchievements[iter];
 		if ( roundStats[pStatGoal->GetStatId()] > 0 && !pStatGoal->IsAchieved() )
 		{
 			MedalCategory_t cat = GetAchievementCategory( pStatGoal->GetAchievementID() );
@@ -375,7 +373,7 @@ void CPlayerRankManager::GetMedalStatsEarnedThisRound( CUtlVector<MedalStatEvent
 			// Hackish: Logic for culling which stat goal achievements is going here.
 			// Current idea is any achievemnt that just reached or crossed a 20% border of the total
 			// gets sent to UI code for possible display.
-			int showProgresCount = MAX( 1, pStatGoal->GetGoal() / cl_medal_progress_shown_fraction.GetInt() ); // Show a progress notification in the win panel every X stats.
+			int showProgresCount = std::max( 1, pStatGoal->GetGoal() / cl_medal_progress_shown_fraction.GetInt() ); // Show a progress notification in the win panel every X stats.
 			int cur = pStatGoal->GetCount();
 			int prev = cur - roundStats[pStatGoal->GetStatId()];
 			
@@ -396,7 +394,7 @@ void CPlayerRankManager::GetMedalStatsEarnedThisRound( CUtlVector<MedalStatEvent
 			if ( bCrossedBorder )
 			{
 				MedalStatEvent_t event( pStatGoal, cat, pStatGoal->GetStatId() );
-				outVec.AddToTail( event );
+				outVec.push_back( event );
 
 				if ( cl_player_rank_debug.GetBool() )
 					Msg( "PlayerRankManager: Adding stat progress for achievement '%s' in stat %d\n", pStatGoal->GetName(), pStatGoal->GetStatId() );
@@ -405,12 +403,12 @@ void CPlayerRankManager::GetMedalStatsEarnedThisRound( CUtlVector<MedalStatEvent
 	}
 }
 
-const CUtlVector<RankIncreasedEvent_t>& CPlayerRankManager::GetRankIncreasesThisRound( void ) const
+const std::vector< RankIncreasedEvent_t >& CPlayerRankManager::GetRankIncreasesThisRound( void ) const
 {
 	return m_RankIncreases;
 }
 
-const CUtlVector<MedalEarnedEvent_t>& CPlayerRankManager::GetMedalsEarnedThisRound( void ) const
+const std::vector< MedalEarnedEvent_t >& CPlayerRankManager::GetMedalsEarnedThisRound( void ) const
 {
 	return m_MedalsEarned;
 }
@@ -432,9 +430,9 @@ const char *CPlayerRankManager::GetMedalCatagoryRankName( int nRank )
 void CPlayerRankManager::PrintRankProgressThisRound() const
 {
 	Msg( "Rank Increases:\n" );
-	FOR_EACH_VEC( m_RankIncreases, iter )
+	for ( const RankIncreasedEvent_t &rankIncrease : m_RankIncreases )
 	{
-		Msg( "PlayerRankManager: Rank increase because of medal '%s' in category %d\n", m_RankIncreases[iter].m_pAchievement->GetName(), m_RankIncreases[iter].m_category );
+		Msg( "PlayerRankManager: Rank increase because of medal '%s' in category %d\n", rankIncrease.m_pAchievement->GetName(), rankIncrease.m_category );
 	}
 	Msg( "Current Ranks: " );
 	for ( int i = MEDAL_CATEGORY_START; i < MEDAL_CATEGORY_COUNT; ++i )
@@ -445,19 +443,19 @@ void CPlayerRankManager::PrintRankProgressThisRound() const
 	Msg( "\n\n" );
 
 	Msg( "Medals Earned:\n" );
-	FOR_EACH_VEC( m_MedalsEarned, iter )
+	for ( const MedalEarnedEvent_t &medalEarned : m_MedalsEarned )
 	{
-		Msg( "PlayerRankManager: Earned medal '%s' in category %d\n", m_MedalsEarned[iter].m_pAchievement->GetName(), m_MedalsEarned[iter].m_category );
+		Msg( "PlayerRankManager: Earned medal '%s' in category %d\n", medalEarned.m_pAchievement->GetName(), medalEarned.m_category );
 	}
 
 	Msg( "\n\n" );
 
 	Msg( "Medal Progress made:\n" );
-	CUtlVector<MedalStatEvent_t> outVec;
+	std::vector< MedalStatEvent_t > outVec;
 	GetMedalStatsEarnedThisRound( outVec );
-	FOR_EACH_VEC( outVec, iter )
+	for ( const MedalStatEvent_t &statEvent : outVec )
 	{
-		Msg( "PlayerRankManager: Earned statid %d towards achievement '%s' in category %d\n", outVec[iter].m_StatType, outVec[iter].m_pAchievement->GetName(), outVec[iter].m_category );
+		Msg( "PlayerRankManager: Earned statid %d towards achievement '%s' in category %d\n", statEvent.m_StatType, statEvent.m_pAchievement->GetName(), statEvent.m_category );
 	}
 }
 
@@ -498,15 +496,15 @@ CON_COMMAND_F( cl_player_rank_events_spew, "Spews the contents of all events thi
 
 CON_COMMAND_F( print_achievement_categories, "Spews achievements for each category", FCVAR_DEVELOPMENTONLY )
 {
-	CUtlMap<int, CBaseAchievement *> &achievements = g_AchievementMgrCS.GetAchievements( 0 );
+	CAchievementMgr::AchievementMap_t &achievements = g_AchievementMgrCS.GetAchievements( 0 );
 	for( int i = MEDAL_CATEGORY_START; i < MEDAL_CATEGORY_COUNT; ++i )
 	{
 		Msg( "Category %d:\n", i );
 		int count = 0;
 		int countAchieved = 0;
-		FOR_EACH_MAP( achievements, idx )
+		for ( const auto &[nID, pEntry] : achievements )
 		{
-			CBaseAchievement *pAchievement = achievements[idx];
+			CBaseAchievement *pAchievement = pEntry.get();
 			if ( i == GetAchievementCategory( pAchievement->GetAchievementID() ) )
 			{
 				Msg( "%s %s\n", pAchievement->GetName(), pAchievement->IsAchieved() ? "*achieved*" : " " );

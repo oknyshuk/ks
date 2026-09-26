@@ -111,7 +111,7 @@ public:
 	// locals
 	bool GetInflictorVelocity( IPhysicsObject *pInflictor, Vector &velocity, AngularImpulse &angVelocity );
 
-	void GetListOfPenetratingEntities( CBaseEntity *pSearch, CUtlVector<CBaseEntity *> &list );
+	void GetListOfPenetratingEntities( CBaseEntity *pSearch, std::vector< CBaseEntity * > &list );
 	bool IsInCallback() { return m_inCallback > 0 ? true : false; }
 
 	void RemovePenetrationEvents( CBaseEntity *pEntity );
@@ -159,14 +159,14 @@ private:
 	
 	friction_t					m_current[4];
 	gamevcollisionevent_t		m_gameEvent;
-	CUtlVector<triggerevent_t>	m_triggerEvents;
+	std::vector< triggerevent_t >	m_triggerEvents;
 	triggerevent_t				m_currentTriggerEvent;
-	CUtlVector<touchevent_t>	m_touchEvents;
-	CUtlVector<damageevent_t>	m_damageEvents;
-	CUtlVector<inflictorstate_t>	m_damageInflictors;
-	CUtlVector<penetrateevent_t> m_penetrateEvents;
-	CUtlVector<fluidevent_t>	m_fluidEvents;
-	CUtlVector<IServerNetworkable *> m_removeObjects;
+	std::vector< touchevent_t >	m_touchEvents;
+	std::vector< damageevent_t >	m_damageEvents;
+	std::vector< inflictorstate_t >	m_damageInflictors;
+	std::vector< penetrateevent_t > m_penetrateEvents;
+	std::vector< fluidevent_t >	m_fluidEvents;
+	std::vector< IServerNetworkable * > m_removeObjects;
 	int							m_inCallback;
 	int							m_lastTickFrictionError;	// counter to control printing of the dev warning for large contact systems
 	bool						m_bBufferTouchEvents;

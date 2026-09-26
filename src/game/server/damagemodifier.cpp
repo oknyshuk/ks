@@ -7,9 +7,8 @@
 
 #include "cbase.h"
 #include "damagemodifier.h"
+#include "tier1/vector_ops.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 #if defined(ENABLE_DAMAGE_MODIFIERS)
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -27,7 +26,7 @@ void CDamageModifier::AddModifierToEntity( CBaseEntity *pEntity )
 {
 	RemoveModifier();
 
-	pEntity->m_DamageModifiers.AddToTail( this );
+	pEntity->m_DamageModifiers.push_back( this );
 	m_hEnt = pEntity;
 }
 
@@ -38,7 +37,7 @@ void CDamageModifier::RemoveModifier()
 {
 	if ( m_hEnt.Get() )
 	{
-		m_hEnt->m_DamageModifiers.FindAndRemove( this );
+		ks::erase_first( m_hEnt->m_DamageModifiers, this );
 		m_hEnt = 0;
 	}
 }

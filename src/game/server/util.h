@@ -47,8 +47,6 @@ class IEntityFactory;
 	#define SETUP_EXTERNC(mapClassName)
 
 
-#include "tier0/memdbgon.h"
-
 
 // entity creation
 // creates an entity that has not been linked to a classname
@@ -60,8 +58,6 @@ T *_CreateEntityTemplate( T *newEnt, const char *className )
 	newEnt->PostConstructor( className );
 	return newEnt;
 }
-
-#include "tier0/memdbgoff.h"
 
 
 enum EUtilSayTextMessageType_t
@@ -311,7 +307,7 @@ bool		UTIL_CheckBottom( CBaseEntity *pEntity, ITraceFilter *pTraceFilter, float 
 void		UTIL_SetOrigin			( CBaseEntity *entity, const Vector &vecOrigin, bool bFireTriggers = false );
 void		UTIL_EmitAmbientSound	( int entindex, const Vector &vecOrigin, const char *samp, float vol, soundlevel_t soundlevel, int fFlags, int pitch, float soundtime = 0.0f, float *duration = nullptr );
 void		UTIL_ParticleEffect		( const Vector &vecOrigin, const Vector &vecDirection, uint32 ulColor, int ulCount );
-void		UTIL_ScreenShake		( const Vector &center, float amplitude, float frequency, float duration, float radius, ShakeCommand_t eCommand, bool bAirShake = false, CUtlVector<CBasePlayer *> *ignore = nullptr );
+void		UTIL_ScreenShake		( const Vector &center, float amplitude, float frequency, float duration, float radius, ShakeCommand_t eCommand, bool bAirShake = false, std::vector< CBasePlayer * > *ignore = nullptr );
 void		UTIL_ScreenShakeObject	( CBaseEntity *pEnt, const Vector &center, float amplitude, float frequency, float duration, float radius, ShakeCommand_t eCommand, bool bAirShake=false );
 void		UTIL_ScreenTilt			( const Vector &center, const QAngle &tiltAngle, float duration, float radius, float tiltTime, ShakeCommand_t eCommand, bool bEaseInOut );
 void		UTIL_ViewPunch			( const Vector &center, QAngle angPunch, float radius, bool bInAir );
@@ -608,7 +604,7 @@ void UTIL_WorldToParentSpace( CBaseEntity *pEntity, Vector &vecPosition, Quatern
 void UTIL_ParentToWorldSpace( CBaseEntity *pEntity, Vector &vecPosition, QAngle &vecAngles );
 void UTIL_ParentToWorldSpace( CBaseEntity *pEntity, Vector &vecPosition, Quaternion &quat );
 
-bool UTIL_LoadAndSpawnEntitiesFromScript( CUtlVector <CBaseEntity*> &entities, const char *pScriptFile, const char *pBlock, bool bActivate = true );
+bool UTIL_LoadAndSpawnEntitiesFromScript( std::vector< CBaseEntity* > &entities, const char *pScriptFile, const char *pBlock, bool bActivate = true );
 
 // HudMessagePanel helpers
 void UTIL_MessageTextAll( const char *text, Color color = Color( 0, 0, 0, 0 ) );	// Send a HudMessagePanel string to clients

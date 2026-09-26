@@ -23,9 +23,6 @@
 
 #include "bone_utils.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //=============================================================================
 //=============================================================================
 //
@@ -60,7 +57,7 @@ float CConstraintBones::ComputeTargetPosition(
 		vTargetPosition *= 1.0f / flWeightSum;
 	}
 
-	return MIN( 1.0f, flWeightSum );
+	return std::min( 1.0f, flWeightSum );
 }
 
 
@@ -81,7 +78,7 @@ float CConstraintBones::ComputeTargetOrientation(
 	{
 		QuaternionMult( pqTargetOrientations[0], pqTargetOffsets[0], qTargetOrientation );
 
-		return MIN( 1.0f, pflTargetWeights[0] );
+		return std::min( 1.0f, pflTargetWeights[0] );
 	}
 
 	qTargetOrientation = quat_identity;
@@ -102,7 +99,7 @@ float CConstraintBones::ComputeTargetOrientation(
 
 	QuaternionAverageExponential( qTargetOrientation, nTargetCount, pQuats, pflTargetWeights );
 
-	return MIN( 1.0f, flWeightSum );
+	return std::min( 1.0f, flWeightSum );
 }
 
 
@@ -157,7 +154,7 @@ float CConstraintBones::ComputeTargetPositionOrientation(
 
 	QuaternionAverageExponential( qTargetOrientation, nTargetCount, pQuats, pflTargetWeights );
 
-	return MIN( 1.0f, flWeightSum );
+	return std::min( 1.0f, flWeightSum );
 }
 
 
@@ -205,7 +202,7 @@ float CConstraintBones::ComputeTargetPositionOrientation(
 
 	QuaternionAverageExponential( qTargetOrientation, nTargetCount, pQuats, pflTargetWeights );
 
-	return MIN( 1.0f, flWeightSum );
+	return std::min( 1.0f, flWeightSum );
 }
 
 

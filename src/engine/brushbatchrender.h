@@ -9,6 +9,10 @@
 #ifndef BRUSHBATCHRENDER_H
 #define BRUSHBATCHRENDER_H
 
+#include <memory>
+#include <mutex>
+#include <vector>
+
 
 
 
@@ -172,24 +176,24 @@ private:
 	void AddTransNode( transrender_t &render );
 	void AddTransBatch( transrender_t &render, SurfaceHandle_t surfID );
 	void BuildBatchListToDraw( int nCount, const BrushArrayInstanceData_t *pInstanceData, 
-		CUtlVectorFixedGrowable< BrushBatchRenderData_t, 1024 > &batchesToRender, brushrender_t **ppBrushRender );
+		ks::small_vector< BrushBatchRenderData_t, 1024 > &batchesToRender, brushrender_t **ppBrushRender );
 	bool DrawSortedBatchList( IMatRenderContext* pRenderContext, int nCount, BrushInstanceGroup_t *pInstanceGroup, int nMaxInstanceCount );
 	void DrawPaintForBatches( IMatRenderContext* pRenderContext, int nCount, const BrushInstanceGroup_t *pInstanceGroup, int nMaxInstanceCount );
 	void ComputeLightmapPages( int nCount, BrushBatchRenderData_t *pRenderData );
 	void ClearRenderHandles();
-	int ComputeInstanceGroups( IMatRenderContext *pRenderContext, int nCount, BrushBatchRenderData_t *pRenderData, CUtlVectorFixedGrowable< BrushInstanceGroup_t, 512 > &instanceGroups );
+	int ComputeInstanceGroups( IMatRenderContext *pRenderContext, int nCount, BrushBatchRenderData_t *pRenderData, ks::small_vector< BrushInstanceGroup_t, 512 > &instanceGroups );
 	void DrawArrayDebugInformation( IMatRenderContext *pRenderContext, int nCount, const BrushBatchRenderData_t *pRenderData );
 	void DrawDecalsForBatches( IMatRenderContext *pRenderContext, int nCount, const BrushArrayInstanceData_t *pInstanceData, brushrender_t **ppBrushRender );
 	void BuildShadowBatchListToDraw( int nCount, const BrushArrayInstanceData_t *pInstanceData, 
-		CUtlVectorFixedGrowable< BrushBatchRenderData_t, 1024 > &batchesToRender, int nModelTypeFlags );
+		ks::small_vector< BrushBatchRenderData_t, 1024 > &batchesToRender, int nModelTypeFlags );
 	void DrawShadowBatchList( IMatRenderContext* pRenderContext, int nCount, BrushInstanceGroup_t *pInstanceGroup, int nMaxInstanceCount );
 
-	static int __cdecl SurfaceCmp(const surfacelist_t *s0, const surfacelist_t *s1 );
-	static bool __cdecl BatchSortLessFunc( const BrushBatchRenderData_t &left, const BrushBatchRenderData_t &right );
-	static bool __cdecl ShadowSortLessFunc( const BrushBatchRenderData_t &left, const BrushBatchRenderData_t &right );
+	static int SurfaceCmp(const surfacelist_t *s0, const surfacelist_t *s1 );
+	static bool BatchSortLessFunc( const BrushBatchRenderData_t &left, const BrushBatchRenderData_t &right );
+	static bool ShadowSortLessFunc( const BrushBatchRenderData_t &left, const BrushBatchRenderData_t &right );
 
-	CThreadFastMutex m_Mutex;
-	CUtlLinkedList<brushrender_t*> m_renderList;
+	std::recursive_mutex m_Mutex;
+	std::vector< std::unique_ptr< brushrender_t > > m_renderList;	// model_t::brush.renderHandle - 1 indexes this
 };
 
 #if !defined( DEDICATED )

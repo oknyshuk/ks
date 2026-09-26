@@ -11,9 +11,9 @@
 
 
 #include "tier1/interface.h"
+#include "tier1/byte_reader.h"
 #include "appframework/iappsystem.h"
 #include "bitmap/imageformat.h"
-#include "tier1/utlbuffer.h"
 #include "materialsystem/imaterial.h"
 #include "shaderapi/ishaderdynamic.h"
 
@@ -267,14 +267,13 @@ public:
 	virtual void DestroyPixelShader( PixelShaderHandle_t hShader ) = 0;
 
 	// Utility methods to make shader creation simpler
-	// NOTE: For the utlbuffer version, use a binary buffer for a compiled shader
-	// and a text buffer for a source-code (.fxc) shader
+	// NOTE: The span versions take a compiled shader
 	VertexShaderHandle_t CreateVertexShader( const char *pProgram, size_t nBufLen, const char *pShaderVersion );
-	VertexShaderHandle_t CreateVertexShader( CUtlBuffer &buf, const char *pShaderVersion = nullptr );
+	VertexShaderHandle_t CreateVertexShader( std::span< const std::byte > compiled );
 	GeometryShaderHandle_t CreateGeometryShader( const char *pProgram, size_t nBufLen, const char *pShaderVersion );
-	GeometryShaderHandle_t CreateGeometryShader( CUtlBuffer &buf, const char *pShaderVersion = nullptr );
+	GeometryShaderHandle_t CreateGeometryShader( std::span< const std::byte > compiled );
 	PixelShaderHandle_t CreatePixelShader( const char *pProgram, size_t nBufLen, const char *pShaderVersion );
-	PixelShaderHandle_t CreatePixelShader( CUtlBuffer &buf, const char *pShaderVersion = nullptr );
+	PixelShaderHandle_t CreatePixelShader( std::span< const std::byte > compiled );
 
 	// NOTE: Deprecated!! Use CreateVertexBuffer/CreateIndexBuffer instead
 	// Creates/destroys Mesh
@@ -307,19 +306,19 @@ public:
 // Helper wrapper for IShaderBuffer for reading precompiled shader files
 // NOTE: This is meant to be instanced on the stack; so don't call Release!
 //-----------------------------------------------------------------------------
-class CUtlShaderBuffer : public IShaderBuffer
+class ShaderByteBuffer : public IShaderBuffer
 {
 public:
-	CUtlShaderBuffer( CUtlBuffer &buf ) : m_pBuf( &buf ) {}
+	ShaderByteBuffer( std::span< const std::byte > bytes ) : m_bytes( bytes ) {}
 
 	virtual size_t GetSize() const
 	{
-		return m_pBuf->TellMaxPut();
+		return m_bytes.size();
 	}
 
 	virtual const void* GetBits() const
 	{
-		return m_pBuf->Base();
+		return m_bytes.data();
 	}
 
 	virtual void Release()
@@ -328,24 +327,16 @@ public:
 	}
 
 private:
-	CUtlBuffer *m_pBuf;
+	std::span< const std::byte > m_bytes;
 };
 
 
 //-----------------------------------------------------------------------------
 // Inline methods of IShaderDevice
 //-----------------------------------------------------------------------------
-inline VertexShaderHandle_t IShaderDevice::CreateVertexShader( CUtlBuffer &buf, const char *pShaderVersion )
+inline VertexShaderHandle_t IShaderDevice::CreateVertexShader( std::span< const std::byte > compiled )
 {
-	// NOTE: Text buffers are assumed to have source-code shader files
-	// Binary buffers are assumed to have compiled shader files
-	if ( buf.IsText() )
-	{
-		Assert( pShaderVersion );
-		return CreateVertexShader( (const char *)buf.Base(), buf.TellMaxPut(), pShaderVersion );
-	}
-
-	CUtlShaderBuffer shaderBuffer( buf );
+	ShaderByteBuffer shaderBuffer( compiled );
 	return CreateVertexShader( &shaderBuffer );
 }
 
@@ -361,17 +352,9 @@ inline VertexShaderHandle_t IShaderDevice::CreateVertexShader( const char *pProg
 	return hVertexShader;
 }
 
-inline GeometryShaderHandle_t IShaderDevice::CreateGeometryShader( CUtlBuffer &buf, const char *pShaderVersion )
+inline GeometryShaderHandle_t IShaderDevice::CreateGeometryShader( std::span< const std::byte > compiled )
 {
-	// NOTE: Text buffers are assumed to have source-code shader files
-	// Binary buffers are assumed to have compiled shader files
-	if ( buf.IsText() )
-	{
-		Assert( pShaderVersion );
-		return CreateGeometryShader( (const char *)buf.Base(), buf.TellMaxPut(), pShaderVersion );
-	}
-
-	CUtlShaderBuffer shaderBuffer( buf );
+	ShaderByteBuffer shaderBuffer( compiled );
 	return CreateGeometryShader( &shaderBuffer );
 }
 
@@ -387,17 +370,9 @@ inline GeometryShaderHandle_t IShaderDevice::CreateGeometryShader( const char *p
 	return hGeometryShader;
 }
 
-inline PixelShaderHandle_t IShaderDevice::CreatePixelShader( CUtlBuffer &buf, const char *pShaderVersion )
+inline PixelShaderHandle_t IShaderDevice::CreatePixelShader( std::span< const std::byte > compiled )
 {
-	// NOTE: Text buffers are assumed to have source-code shader files
-	// Binary buffers are assumed to have compiled shader files
-	if ( buf.IsText() )
-	{
-		Assert( pShaderVersion );
-		return CreatePixelShader( (const char *)buf.Base(), buf.TellMaxPut(), pShaderVersion );
-	}
-
-	CUtlShaderBuffer shaderBuffer( buf );
+	ShaderByteBuffer shaderBuffer( compiled );
 	return CreatePixelShader( &shaderBuffer );
 }
 

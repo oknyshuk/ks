@@ -8,8 +8,6 @@
 
 #include "fmtstr.h"
 #include "netmessages_signon.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //
 // CMatchSessionOfflineCustom
@@ -121,14 +119,14 @@ void CMatchSessionOfflineCustom::Command( KeyValues *pCommand )
 	//
 	// Let the title-specific matchmaking handle the command
 	//
-	CUtlVector< KeyValues * > arrPlayersUpdated;
-	arrPlayersUpdated.SetCount( m_pSettings->GetInt( "members/numPlayers", 0 ) );
-	memset( arrPlayersUpdated.Base(), 0, arrPlayersUpdated.Count() * sizeof( KeyValues * ) );
+	std::vector< KeyValues * > arrPlayersUpdated;
+	arrPlayersUpdated.assign( m_pSettings->GetInt( "members/numPlayers", 0 ), {} );
+	memset( arrPlayersUpdated.data(), 0, std::ssize( arrPlayersUpdated ) * sizeof( KeyValues * ) );
 
-	g_pMMF->GetMatchTitleGameSettingsMgr()->ExecuteCommand( pCommand, GetSessionSystemData(), m_pSettings, arrPlayersUpdated.Base() );
+	g_pMMF->GetMatchTitleGameSettingsMgr()->ExecuteCommand( pCommand, GetSessionSystemData(), m_pSettings, arrPlayersUpdated.data() );
 
 	// Now notify the framework about player updated
-	for ( int k = 0; k < arrPlayersUpdated.Count(); ++ k )
+	for ( int k = 0; k < std::ssize( arrPlayersUpdated ); ++ k )
 	{
 		if ( !arrPlayersUpdated[k] )
 			break;
@@ -304,14 +302,14 @@ void CMatchSessionOfflineCustom::InitializeGameSettings()
 void CMatchSessionOfflineCustom::OnGamePrepareLobbyForGame()
 {
 	// Remember which players will get updated
-	CUtlVector< KeyValues * > arrPlayersUpdated;
-	arrPlayersUpdated.SetCount( m_pSettings->GetInt( "members/numPlayers", 0 ) );
-	memset( arrPlayersUpdated.Base(), 0, arrPlayersUpdated.Count() * sizeof( KeyValues * ) );
+	std::vector< KeyValues * > arrPlayersUpdated;
+	arrPlayersUpdated.assign( m_pSettings->GetInt( "members/numPlayers", 0 ), {} );
+	memset( arrPlayersUpdated.data(), 0, std::ssize( arrPlayersUpdated ) * sizeof( KeyValues * ) );
 
-	g_pMMF->GetMatchTitleGameSettingsMgr()->PrepareLobbyForGame( m_pSettings, arrPlayersUpdated.Base() );
+	g_pMMF->GetMatchTitleGameSettingsMgr()->PrepareLobbyForGame( m_pSettings, arrPlayersUpdated.data() );
 
 	// Notify the framework of the updates
-	for ( int k = 0; k < arrPlayersUpdated.Count(); ++ k )
+	for ( int k = 0; k < std::ssize( arrPlayersUpdated ); ++ k )
 	{
 		if ( !arrPlayersUpdated[k] )
 			break;

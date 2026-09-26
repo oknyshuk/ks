@@ -13,9 +13,6 @@
 
 #include "death_pose.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define PING_MAX_TIME	2.0
 
 //

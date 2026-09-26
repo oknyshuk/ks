@@ -11,16 +11,14 @@
 #include "vallocator.h"
 #include "basetypes.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 VStdAllocator g_StdAllocator;
 
 void* VStdAllocator::Alloc(unsigned long size)
 {
 	if(size)
 	{
-		void *ret = malloc(size);
+		void *ret = MemAlloc_Alloc(size);
 		return ret;
 	}
 	else
@@ -29,6 +27,6 @@ void* VStdAllocator::Alloc(unsigned long size)
 
 void VStdAllocator::Free(void *ptr)
 {
-	free(ptr);
+	g_pMemAlloc->Free(ptr);
 }
 

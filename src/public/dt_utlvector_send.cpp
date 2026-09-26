@@ -8,8 +8,6 @@
 
 #include "dt_utlvector_send.h"
 
-#include "tier0/memdbgon.h"
-
 
 extern char const *s_ElementNames[MAX_ARRAY_ELEMENTS];
 
@@ -17,22 +15,12 @@ extern char const *s_ElementNames[MAX_ARRAY_ELEMENTS];
 class CSendPropExtra_UtlVector
 {
 public:
-	CSendPropExtra_UtlVector() :
-		m_DataTableProxyFn( nullptr ),
-		m_ProxyFn( nullptr ),
-		m_EnsureCapacityFn( nullptr ),
-		m_ElementStride( 0 ),
-		m_Offset( 0 ),
-		m_nMaxElements( 0 )	
-	{
-	}
-
-	SendTableProxyFn m_DataTableProxyFn;	// If it's a datatable, then this is the proxy they specified.
-	SendVarProxyFn m_ProxyFn;				// If it's a non-datatable, then this is the proxy they specified.
-	EnsureCapacityFn m_EnsureCapacityFn;
-	int m_ElementStride;					// Distance between each element in the array.
-	int m_Offset;							// # bytes from the parent structure to its utlvector.
-	int m_nMaxElements;						// For debugging...
+	SendTableProxyFn m_DataTableProxyFn = nullptr;	// If it's a datatable, then this is the proxy they specified.
+	SendVarProxyFn m_ProxyFn = nullptr;				// If it's a non-datatable, then this is the proxy they specified.
+	WireVecOps m_Ops;
+	int m_ElementStride = 0;						// Distance between each element in the array.
+	int m_Offset = 0;								// # bytes from the parent structure to its vector.
+	int m_nMaxElements = 0;
 };
 
 
@@ -51,17 +39,15 @@ void SendProxy_UtlVectorElement(
 	// but we can easily move it into its SetExtraData stuff if we need to.
 	iElement = pProp->GetElementStride();
 
-	// NOTE: this is cheesy, but it does the trick.
-	CUtlVector<int> *pUtlVec = (CUtlVector<int>*)((char*)pStruct + pExtra->m_Offset);
-	if ( iElement >= pUtlVec->Count() )
+	// Shares the vector table's base, so it can't be absent; zero past the end.
+	if ( iElement >= pExtra->m_Ops.count( pStruct, pExtra->m_Offset ) )
 	{
-		// Pass in zero value.
 		memset( pOut, 0, sizeof( *pOut ) );
 	}
 	else
 	{
-		// Call through to the proxy they passed in, making pStruct=the CUtlVector and forcing iElement to 0.
-		pExtra->m_ProxyFn( pProp, pData, (char*)pUtlVec->Base() + iElement*pExtra->m_ElementStride, pOut, 0, objectID );
+		// Call through to the proxy they passed in, making pStruct=the vector and forcing iElement to 0.
+		pExtra->m_ProxyFn( pProp, pData, (char*)pExtra->m_Ops.base( pStruct, pExtra->m_Offset ) + iElement*pExtra->m_ElementStride, pOut, 0, objectID );
 	}
 }
 
@@ -77,17 +63,12 @@ void* SendProxy_UtlVectorElement_DataTable(
 	int iElement = pProp->m_ElementStride;
 	Assert( iElement < pExtra->m_nMaxElements );
 
-	// This should have gotten called in SendProxy_LengthTable before we get here, so 
-	// the capacity should be correct.
-#ifdef _DEBUG
-	pExtra->m_EnsureCapacityFn( (void*)pStructBase, pExtra->m_Offset, pExtra->m_nMaxElements );
-#endif
+	// Null past the end: the encoder omits the slot.
+	if ( iElement >= pExtra->m_Ops.count( pStructBase, pExtra->m_Offset ) )
+		return nullptr;
 
-	// NOTE: this is cheesy because we're assuming the type of the template class, but it does the trick.
-	CUtlVector<int> *pUtlVec = (CUtlVector<int>*)((char*)pStructBase + pExtra->m_Offset);
-
-	// Call through to the proxy they passed in, making pStruct=the CUtlVector and forcing iElement to 0.
-	return pExtra->m_DataTableProxyFn( pProp, pData, (char*)pUtlVec->Base() + iElement*pExtra->m_ElementStride, pRecipients, objectID );
+	// Call through to the proxy they passed in, making pStruct=the vector and forcing iElement to 0.
+	return pExtra->m_DataTableProxyFn( pProp, pData, (char*)pExtra->m_Ops.base( pStructBase, pExtra->m_Offset ) + iElement*pExtra->m_ElementStride, pRecipients, objectID );
 }
 
 void SendProxy_UtlVectorLength( 
@@ -100,11 +81,8 @@ void SendProxy_UtlVectorLength(
 {
 	CSendPropExtra_UtlVector *pExtra = (CSendPropExtra_UtlVector*)pProp->GetExtraData();
 	
-	// NOTE: this is cheesy because we're assuming the type of the template class, but it does the trick.
-	CUtlVector<int> *pUtlVec = (CUtlVector<int>*)((char*)pStruct + pExtra->m_Offset);
-	
 	// Don't let them overflow the buffer because they might expect that to get transmitted to the client.
-	pOut->m_Int = pUtlVec->Count();
+	pOut->m_Int = pExtra->m_Ops.count( pStruct, pExtra->m_Offset );
 	if ( pOut->m_Int > pExtra->m_nMaxElements )
 	{
 		Assert( false );
@@ -113,31 +91,24 @@ void SendProxy_UtlVectorLength(
 }
 
 
+// Not SendProxy_DataTableToDataTable: that would put the (storage-less) length into the
+// listen-server change-offset map (BuildPropOffsetToIndexMap).
 void* SendProxy_LengthTable( const SendProp *pProp, const void *pStructBase, const void *pData, CSendProxyRecipients *pRecipients, int objectID )
 {
-	// Make sure the array has space to hold all the elements.
-	CSendPropExtra_UtlVector *pExtra = (CSendPropExtra_UtlVector*)pProp->GetExtraData();
-	pExtra->m_EnsureCapacityFn( (void*)pStructBase, pExtra->m_Offset, pExtra->m_nMaxElements );
 	return (void*)pData;
 }
 
 
 // Note: your pArrayProp will NOT get iElement set to anything other than 0, because this function installs its
-// own proxy in front of yours. pStruct will point at the CUtlVector and pData will point at the element in the CUtlVector.It will pass you the direct pointer to the element inside the CUtlVector.
+// own proxy in front of yours. pStruct will point at the vector and pData will point at the element in it.
 //
-// You can skip the first 3 parameters in pArrayProp because they're ignored. So your array specification
-// could look like this:
-//   	 SendPropUtlVector( 
-//	    	SENDINFO_UTLVECTOR( m_FloatArray ),
-//			SendPropFloat( NULL, 0, 0, 0 [# bits], SPROP_NOSCALE [flags] ) );
-//
-// Note: you have to be DILIGENT about calling NetworkStateChanged whenever an element in your CUtlVector changes
-// since CUtlVector doesn't do this automatically.
+// Note: you have to be DILIGENT about calling NetworkStateChanged whenever an element in your vector changes
+// since the vector doesn't do this automatically.
 SendProp SendPropUtlVector(
-	const char *pVarName,		// Use SENDINFO_UTLVECTOR to generate these 4.
+	const char *pVarName,
 	int offset,			// Used to generate pData in the function specified in varProxy.
-	int sizeofVar,		// The size of each element in the utlvector.
-	EnsureCapacityFn ensureFn,	// This is the value returned for elements out of the array's current range.
+	int sizeofVar,		// The size of each element in the vector.
+	const WireVecOps &ops,
 	int nMaxElements,			// Max # of elements in the array. Keep this as low as possible.
 	SendProp pArrayProp,		// Describe the data inside of each element in the array.
 	SendTableProxyFn varProxy	// This can be overridden to control who the array is sent to.
@@ -146,6 +117,7 @@ SendProp SendPropUtlVector(
 	SendProp ret;
 
 	Assert( nMaxElements <= MAX_ARRAY_ELEMENTS );
+	Assert( ops.base && ops.count );
 
 	ret.m_Type = DPT_DataTable;
 	ret.m_pVarName = pVarName;
@@ -164,7 +136,7 @@ SendProp SendPropUtlVector(
 	
 	pExtraData->m_nMaxElements = nMaxElements;
 	pExtraData->m_ElementStride = sizeofVar;
-	pExtraData->m_EnsureCapacityFn = ensureFn;
+	pExtraData->m_Ops = ops;
 	pExtraData->m_Offset = offset;
 
 	if ( pArrayProp.m_Type == DPT_DataTable )
@@ -175,8 +147,7 @@ SendProp SendPropUtlVector(
 
 	SendProp *pProps = new SendProp[nMaxElements+1]; // TODO free that again
 
-	// The first property is datatable with an int that tells the length of the array.
-	// It has to go in a datatable, otherwise if this array holds datatable properties, it will be received last.
+	// Length subtable. Layout and names are wire/demo format; keep them.
 	SendProp *pLengthProp = new SendProp;
 	*pLengthProp = SendPropInt( AllocateStringHelper( "lengthprop%d", nMaxElements ), 0, 0, NumBitsForCount( nMaxElements ), SPROP_UNSIGNED, SendProxy_UtlVectorLength );
 	pLengthProp->SetExtraData( pExtraData );
@@ -191,7 +162,7 @@ SendProp SendPropUtlVector(
 	for ( int i = 1; i < nMaxElements+1; i++ )
 	{
 		pProps[i] = pArrayProp;	// copy array element property setting
-		pProps[i].SetOffset( 0 ); // leave offset at 0 so pStructBase is always a pointer to the CUtlVector
+		pProps[i].SetOffset( 0 ); // leave offset at 0 so pStructBase is always a pointer to the vector's owner
 		pProps[i].m_pVarName = s_ElementNames[i-1];	// give unique name
 		pProps[i].SetExtraData( pExtraData );
 		pProps[i].m_ElementStride = i-1;	// Kind of lame overloading element stride to hold the element index,

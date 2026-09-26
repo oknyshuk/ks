@@ -17,9 +17,6 @@
 #include "buttons.h"
 #include "eventqueue.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 void PlayLockSounds( CBaseEntity *pEdict, locksound_t *pls, int flocked, int fbutton );
 string_t MakeButtonSound( int sound );				// get string of button sound number
 

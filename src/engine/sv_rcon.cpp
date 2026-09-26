@@ -15,16 +15,14 @@
 #define WSAGetLastError() errno
 #define ioctlsocket ioctl
 #include <tier0/dbg.h>
-#include "utlbuffer.h"
+#include "tier1/byte_writer.h"
+#include "tier1/string_ops.h"
 #include "server.h"
 #include "sv_rcon.h"
 #include "proto_oob.h" // PORT_RCON define
 #include "sv_remoteaccess.h"
 #include "cl_rcon.h"
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 #ifdef ENABLE_RPT
 class CRPTServer : public CRConServer
@@ -76,7 +74,6 @@ ConVar  rcon_password	( "rcon_password", "", FCVAR_SERVER_CANNOT_QUERY|FCVAR_DON
 //-----------------------------------------------------------------------------
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
-#pragma warning ( disable : 4355 )
 
 CRConServer::CRConServer() : m_Socket( this )
 {
@@ -87,7 +84,6 @@ CRConServer::CRConServer( const char *pNetAddress ) : m_Socket( this )
 	SetAddress( pNetAddress );
 }
 
-#pragma warning ( default : 4355 )
 
 
 //-----------------------------------------------------------------------------
@@ -125,12 +121,12 @@ bool CRConServer::IsConnected()
 void CRConServer::SetPassword( const char *pPassword )
 {
 	m_Socket.CloseAllAcceptedSockets();
-	m_Password = pPassword;
+	m_Password = ks::nz( pPassword );
 }
 
 bool CRConServer::HasPassword() const
 {
-	return !m_Password.IsEmpty();
+	return !m_Password.empty();
 }
 
 bool CRConServer::IsPassword( const char *pPassword ) const
@@ -140,7 +136,7 @@ bool CRConServer::IsPassword( const char *pPassword ) const
 		return false;
 
 	// If the pw does not match, then not authed
-	return ( Q_strcmp( pPassword, m_Password.Get() ) == 0 );
+	return ( Q_strcmp( pPassword, m_Password.c_str() ) == 0 );
 }
 
 
@@ -205,13 +201,13 @@ void CRConServer::RunFrame()
 		ConnectedRConSocket_t *pData = GetSocketData( i );
 		SocketHandle_t hSocket = m_Socket.GetAcceptedSocketHandle( i );
 		const netadr_t& socketAdr = m_Socket.GetAcceptedSocketAddress( i );
-		while ( pData->m_OutstandingSends.Count() > 0 )
+		while ( !pData->m_OutstandingSends.empty() )
 		{
-			CUtlBuffer &packet = pData->m_OutstandingSends[ pData->m_OutstandingSends.Head()];
-			bool bSent = SendRCONResponse( i, packet.PeekGet(), packet.TellPut() - packet.TellGet(), true );
+			const auto packet = pData->m_OutstandingSends.front().Remaining();
+			bool bSent = SendRCONResponse( i, packet.data(), int( packet.size() ), true );
 			if ( bSent ) // all this packet was sent, remove it
 			{
-				pData->m_OutstandingSends.Remove( pData->m_OutstandingSends.Head() ); // delete this entry no matter what, SendRCONResponse() will re-queue if needed
+				pData->m_OutstandingSends.pop_front(); // delete this entry no matter what, SendRCONResponse() will re-queue if needed
 			}
 			else // must have blocked part way through, SendRCONResponse
 			    // fixed up the queued entry
@@ -264,16 +260,18 @@ void CRConServer::RunFrame()
 		ioctlsocket( hSocket, FIONREAD, &readLen );
 		if ( readLen > sizeof(int) ) // we have a command to process
 		{
-			CUtlBuffer & response = pData->packetbuffer;
-			response.EnsureCapacity( response.TellPut() + readLen );
-			char *recvBuf = (char *)stackalloc( MIN( 1024, readLen ) ); // a buffer used for recv()
+			std::vector< std::byte > &response = pData->packetbuffer;
+			response.reserve( response.size() + readLen );
+			bool bClosed = false;
+			char *recvBuf = (char *)stackalloc( ( std::min<std::common_type_t<int, long unsigned int>>( 1024, readLen ) ) ); // a buffer used for recv()
 			unsigned int len = 0;
 			while ( len < readLen )
 			{
-				int recvLen = recv( hSocket, recvBuf , MIN(1024, readLen - len) , 0 );
+				int recvLen = recv( hSocket, recvBuf , std::min<std::common_type_t<int, long unsigned int>>(1024, readLen - len) , 0 );
 				if ( recvLen == 0 ) // socket was closed
 				{
 					m_Socket.CloseAcceptedSocket( i );
+					bClosed = true;
 					break;
 				}
 				
@@ -283,13 +281,20 @@ void CRConServer::RunFrame()
 					break;
 				}
 
-				response.Put( recvBuf, recvLen );
+				if ( recvLen > 0 )
+				{
+					const auto received = ks::byte_view( recvBuf, recvLen );
+					response.insert( response.end(), received.begin(), received.end() );
+				}
 				len += recvLen;
 			}
-			
-			response.SeekGet( CUtlBuffer::SEEK_HEAD, 0 );
 
-			int size = response.GetInt();
+			if ( bClosed )
+				continue;
+
+			ks::byte_reader reader( response );
+
+			int size = reader.read<int>();
 		
 			if ( size > RCON_MAX_RCON_COMMAND_LEN )
 			{
@@ -298,18 +303,18 @@ void CRConServer::RunFrame()
 				continue;
 			}
 			
-			while ( size > 0 && size <= response.TellPut() - response.TellGet() )
+			while ( size > 0 && size_t( size ) <= reader.remaining() )
 			{
 				SV_RedirectStart( RD_SOCKET, &socketAdr );
-				g_ServerRemoteAccess.WriteDataRequest( this, pData->listenerID, response.PeekGet(), size );
+				g_ServerRemoteAccess.WriteDataRequest( this, pData->listenerID, reader.rest().data(), size );
 				SV_RedirectEnd();
 				if ( m_bSocketDeleted )
 					return;
-				response.SeekGet( CUtlBuffer::SEEK_CURRENT, size ); // eat up the buffer we just sent
+				reader.skip( size ); // eat up the buffer we just sent
 
-				if ( response.TellPut() - response.TellGet() >= sizeof(int) )
+				if ( reader.remaining() >= sizeof(int) )
 				{
-					size = response.GetInt(); // read how much is in this packet
+					size = reader.read<int>(); // read how much is in this packet
 				}
 				else
 				{
@@ -321,30 +326,22 @@ void CRConServer::RunFrame()
 			int nNewCount = m_Socket.GetAcceptedSocketCount();
 			if ( 0 == nNewCount || i > nNewCount || pData != GetSocketData( i )  ) 
 			{
-				response.Purge();
 				break;
 			}
 
-			if ( size > 0 || (response.TellPut() - response.TellGet() > 0))
+			if ( size > 0 || reader.remaining() > 0 )
 			{
-				CUtlBuffer tmpBuf;
-				if ( response.TellPut() - response.TellGet() > 0 )
-				{
-					tmpBuf.Put( response.PeekGet(), response.TellPut() - response.TellGet() );
-				}
-				response.Purge();
+				ks::byte_writer leftover;
 				if ( size > 0 )
 				{
-					response.Put( &size, sizeof(size));
+					leftover.write<int>( size );
 				}
-				if ( tmpBuf.TellPut() > 0 )
-				{
-					response.Put( tmpBuf.Base(), tmpBuf.TellPut() );
-				}
+				leftover.write_bytes( reader.rest() );
+				response = leftover.release();
 			}
 			else
 			{
-				response.Purge();
+				response = {};
 			}
 		}
 	} // for each socket
@@ -364,25 +361,24 @@ void CRConServer::FinishRedirect( const char *msg, const netadr_t &adr )
 		if ( !adr.CompareAdr( socketAdr ) )
 			continue;
 
-		CUtlBuffer response;
+		ks::byte_writer response;
 
 		// build the response
 		ConnectedRConSocket_t *pSocketData = GetSocketData( i );
-		response.PutInt(0); // the size, this gets set once we make the packet
-		response.PutInt(pSocketData->lastRequestID);
-		response.PutInt(SERVERDATA_RESPONSE_VALUE);
-		response.PutString(msg);
-		response.PutString("");
-		int size = response.TellPut() - sizeof(int); 
-		response.SeekPut( CUtlBuffer::SEEK_HEAD, 0 );
-		response.PutInt(size); // the size
-		response.SeekPut( CUtlBuffer::SEEK_CURRENT, size );
+		response.write<int>(0); // the size, this gets set once we make the packet
+		response.write<int>(pSocketData->lastRequestID);
+		response.write<int>(SERVERDATA_RESPONSE_VALUE);
+		response.write_cstring(ks::nz(msg));
+		response.write_cstring("");
+		int size = response.size() - sizeof(int); 
+		response.seek( 0 );
+		response.write<int>(size); // the size
 
 		
 //		OutputDebugString( va("RCON: String is %i long\n", Q_strlen(msg)) ); // can't use DevMsg(), we are potentially inside the RedirectFlush() function
 //		printf("RCON: String is %i long, packet size %i\n", Q_strlen(msg), size );
 
-		SendRCONResponse( i, response.Base(), response.TellPut() );
+		SendRCONResponse( i, response.data(), response.size() );
 	}
 }
 
@@ -416,20 +412,19 @@ bool CRConServer::SendRCONResponse( int nIndex, const void *data, int len, bool 
 
 	// if we already have queued data pending then just add this to the end
 	// of the queue
-	if ( !fromQueue && pSocketData->m_OutstandingSends.Count() > 0 )
+	if ( !fromQueue && !pSocketData->m_OutstandingSends.empty() )
 	{
-		if ( pSocketData->m_OutstandingSends.Count() > RCON_MAX_OUTSTANDING_SENDS )
+		if ( std::ssize( pSocketData->m_OutstandingSends ) > RCON_MAX_OUTSTANDING_SENDS )
 		{
 			m_Socket.CloseAcceptedSocket( nIndex );
 			return false;
 		}
 
-		int index = pSocketData->m_OutstandingSends.AddToTail();
-		pSocketData->m_OutstandingSends[index].Put( data, len );
+		pSocketData->m_OutstandingSends.emplace_back( ks::byte_view( data, len ) );
 		return true;
 	}
 
-	Assert( !( fromQueue && data != (pSocketData->m_OutstandingSends[pSocketData->m_OutstandingSends.Head()].Base())));
+	Assert( !( fromQueue && data != (pSocketData->m_OutstandingSends.front().Remaining().data())));
 
 	int sendLen = 0;
 	while ( sendLen < len )
@@ -448,13 +443,12 @@ bool CRConServer::SendRCONResponse( int nIndex, const void *data, int len, bool 
 			if ( !fromQueue ) // we don't have an entry for this
 					// yet, add a new one
 			{
-				int index = pSocketData->m_OutstandingSends.AddToHead();
-				pSocketData->m_OutstandingSends[index].Put( (void *)((char *)data + sendLen), len - sendLen );
+				pSocketData->m_OutstandingSends.emplace_front( ks::byte_view( (const char *)data + sendLen, len - sendLen ) );
 			}
 			else // update the existing queued item to show we 
 			     // sent some of it (we only ever send the head of the list)
 			{
-				pSocketData->m_OutstandingSends[pSocketData->m_OutstandingSends.Head()].SeekGet( CUtlBuffer::SEEK_CURRENT, sendLen );
+				pSocketData->m_OutstandingSends.front().nSent += sendLen;
 			}
 			return false;
 		}
@@ -482,11 +476,11 @@ bool CRConServer::FailedRCon_t::operator<(const struct CRConServer::FailedRCon_t
 	int myTime = 0;
 	int rhsTime = 0;
 
-	if ( badPasswordTimes.Count() )
-		myTime = badPasswordTimes[ badPasswordTimes.Count() - 1 ];
+	if ( !badPasswordTimes.empty() )
+		myTime = badPasswordTimes.back();
 
-	if ( rhs.badPasswordTimes.Count() )
-		rhsTime = rhs.badPasswordTimes[ rhs.badPasswordTimes.Count() - 1 ];
+	if ( !rhs.badPasswordTimes.empty() )
+		rhsTime = rhs.badPasswordTimes.back();
 
 	return myTime < rhsTime;
 }
@@ -507,7 +501,7 @@ bool CRConServer::HandleFailedRconAuth( const netadr_t & adr )
 
 	int i;
 	FailedRCon_t *failedRcon = nullptr;
-	int nCount = m_failedRcons.Count();
+	int nCount = std::ssize( m_failedRcons );
 	for ( i=0; i < nCount; ++i )
 	{
 		if ( adr.CompareAdr( m_failedRcons[i].adr, true ) )
@@ -533,26 +527,26 @@ bool CRConServer::HandleFailedRconAuth( const netadr_t & adr )
 			}
 			if ( indexToRemove >= 0 )
 			{
-				m_failedRcons.Remove( indexToRemove );
+				m_failedRcons.erase( m_failedRcons.begin() + indexToRemove );
 			}
 		}
 
 		// add the new rcon
-		int index = m_failedRcons.AddToTail();
+		int index = std::ssize( m_failedRcons ); m_failedRcons.emplace_back();
 		failedRcon = &m_failedRcons[index];
 		failedRcon->adr = adr;
 		failedRcon->badPasswordCount = 0;
-		failedRcon->badPasswordTimes.RemoveAll();
+		failedRcon->badPasswordTimes.clear();
 	}
 
 	// update this failed rcon
 	++failedRcon->badPasswordCount;
-	failedRcon->badPasswordTimes.AddToTail( sv.GetTime() );
+	failedRcon->badPasswordTimes.push_back( sv.GetTime() );
 
 	// remove old failure times (sv_rcon_maxfailures is limited to 20, so we won't be hurting anything by pruning)
-	while ( failedRcon->badPasswordTimes.Count() > 20 )
+	while ( failedRcon->badPasswordTimes.size() > 20 )
 	{
-		failedRcon->badPasswordTimes.Remove( 0 );
+		failedRcon->badPasswordTimes.pop_front();
 	}
 
 	// sanity-check the rcon banning cvars
@@ -563,7 +557,7 @@ bool CRConServer::HandleFailedRconAuth( const netadr_t & adr )
 		sv_rcon_minfailures.SetValue( temp );
 	}
 
-//	ConMsg( "%d of %d bad password times tracked\n", failedRcon->badPasswordTimes.Count(), failedRcon->badPasswordCount );
+//	ConMsg( "%d of %d bad password times tracked\n", (int)failedRcon->badPasswordTimes.size(), failedRcon->badPasswordCount );
 //	ConMsg( "min=%d, max=%d, time=%.2f\n", sv_rcon_minfailures.GetInt(), sv_rcon_maxfailures.GetInt(), sv_rcon_minfailuretime.GetFloat() );
 
 	// check if the user should be banned based on total failed attempts
@@ -577,7 +571,7 @@ bool CRConServer::HandleFailedRconAuth( const netadr_t & adr )
 
 	// check if the user should be banned based on recent failed attempts
 	int recentFailures = 0;
-	for ( i=failedRcon->badPasswordTimes.Count()-1; i>=0; --i )
+	for ( i=std::ssize( failedRcon->badPasswordTimes )-1; i>=0; --i )
 	{
 		if ( failedRcon->badPasswordTimes[i] + sv_rcon_minfailuretime.GetFloat() >= sv.GetTime() )
 		{

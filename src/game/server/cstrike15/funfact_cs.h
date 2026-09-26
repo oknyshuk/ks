@@ -25,7 +25,7 @@ struct FunFact
 	float fMagnitude;
 };
 
-typedef CUtlVector<FunFact> FunFactVector;
+typedef std::vector< FunFact > FunFactVector;
 
 class FunFactEvaluator
 {

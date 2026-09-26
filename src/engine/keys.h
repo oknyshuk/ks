@@ -13,7 +13,7 @@
 #include "inputsystem/ButtonCode.h"
 #include "cdll_int.h"
 
-class CUtlBuffer;
+namespace ks { class text_writer; }
 struct InputEvent_t;
 
 
@@ -21,7 +21,7 @@ void		Key_Event( const InputEvent_t &event );
 
 void		Key_Init( void );
 void		Key_Shutdown( void );
-void		Key_WriteBindings( CUtlBuffer &buf, const int iSplitscreenSlot = -1 );
+void		Key_WriteBindings( ks::text_writer &buf, const int iSplitscreenSlot = -1 );
 int			Key_CountBindings( void );
 void		Key_SetBinding( ButtonCode_t code, const char *pBinding );
 const char	*Key_BindingForKey( ButtonCode_t code );

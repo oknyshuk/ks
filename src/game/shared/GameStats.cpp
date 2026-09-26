@@ -10,7 +10,9 @@
 #include "GameStats.h"
 #include "tier1/utlstring.h"
 #include "filesystem.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
+#include "tier1/text_writer.h"
 #include "fmtstr.h"
 #include "tier2/tier2.h"
 #include "tier0/cpumonitoring.h"
@@ -20,7 +22,7 @@
 #include "iregistry.h"
 #endif
 
-#include "tier1/utldict.h"
+#include "tier1/map_ops.h"
 #include "tier0/icommandline.h"
 #include "tier0/perfstats.h"
 #include <time.h>
@@ -40,9 +42,7 @@ extern const ConVar *sv_cheats;
 #endif
 
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 
 
 #define GAMESTATS_LOG_FILE "gamestats.log"
@@ -177,7 +177,7 @@ public:
 		T maxsofar = -16000000;
 		int iMax = m_bBufferFull ? ARRAYSIZE( m_StatsBuffer ) : m_nWriteIndex;
 		for( int i = 0; i < iMax; i++ )
-			maxsofar = MAX( maxsofar, m_StatsBuffer[i].*field );
+			maxsofar = std::max( maxsofar, m_StatsBuffer[i].*field );
 		return maxsofar;
 	}
 
@@ -186,7 +186,7 @@ public:
 		T minsofar = 16000000;
 		int iMax = m_bBufferFull ? ARRAYSIZE( m_StatsBuffer ) : m_nWriteIndex;
 		for( int i = 0; i < iMax; i++ )
-			minsofar = MIN( minsofar, m_StatsBuffer[i].*field );
+			minsofar = std::min( minsofar, m_StatsBuffer[i].*field );
 		return minsofar;
 	}
 
@@ -343,7 +343,7 @@ public:
 		m_FpsHistogramGame[ nEvent ].Fire( nLookAhead, nLookBack, m_FpsHistory );
 	}
 
-	CUtlString		m_PrevMapName; //used to track "OnMapChange" events
+	std::string		m_PrevMapName; //used to track "OnMapChange" events
 	int				m_iLoadedVersion;
 	char			m_szLoadedUserID[ 17 ];	// GUID
 
@@ -615,9 +615,9 @@ void CBaseGameStats::Event_MapChange( const char *szOldMapName, const char *szNe
 void CBaseGameStats::Event_LevelInit( void )
 {
 #ifdef GAME_DLL
-	StatsLog( "CBaseGameStats::Event_LevelInit [%s]\n", CBGSDriver.m_PrevMapName.String() );
+	StatsLog( "CBaseGameStats::Event_LevelInit [%s]\n", CBGSDriver.m_PrevMapName.c_str() );
 
-	BasicGameStatsRecord_t *map = gamestats->m_BasicStats.FindOrAddRecordForMap( CBGSDriver.m_PrevMapName.String() );
+	BasicGameStatsRecord_t *map = gamestats->m_BasicStats.FindOrAddRecordForMap( CBGSDriver.m_PrevMapName.c_str() );
 	++map->m_nCount;
 
 	// HACK HACK:  Punching this hole through only works in single player!!!
@@ -639,25 +639,25 @@ void CBaseGameStats::Event_LevelInit( void )
 void CBaseGameStats::Event_LevelShutdown( float flElapsed )
 {
 #ifdef GAME_DLL
-	BasicGameStatsRecord_t *map = m_BasicStats.FindOrAddRecordForMap( CBGSDriver.m_PrevMapName.String() );
+	BasicGameStatsRecord_t *map = m_BasicStats.FindOrAddRecordForMap( CBGSDriver.m_PrevMapName.c_str() );
 	Assert( map );
 	map->m_nSeconds += (int)flElapsed;
 	gamestats->m_BasicStats.m_Summary.m_nSeconds += (int)flElapsed;
 
-	StatsLog( "CBaseGameStats::Event_LevelShutdown [%s] %.2f elapsed %d total\n", CBGSDriver.m_PrevMapName.String(), flElapsed, gamestats->m_BasicStats.m_Summary.m_nSeconds );
+	StatsLog( "CBaseGameStats::Event_LevelShutdown [%s] %.2f elapsed %d total\n", CBGSDriver.m_PrevMapName.c_str(), flElapsed, gamestats->m_BasicStats.m_Summary.m_nSeconds );
 #endif // GAME_DLL
 }
 
 void CBaseGameStats::Event_SaveGame( void )
 {
-	StatsLog( "CBaseGameStats::Event_SaveGame [%s]\n", CBGSDriver.m_PrevMapName.String() );
+	StatsLog( "CBaseGameStats::Event_SaveGame [%s]\n", CBGSDriver.m_PrevMapName.c_str() );
 }
 
 void CBaseGameStats::Event_LoadGame( void )
 {
 #ifdef GAME_DLL
 	char const *pchSaveFile = engine->GetMostRecentlyLoadedFileName();
-	StatsLog( "CBaseGameStats::Event_LoadGame [%s] from %s\n", CBGSDriver.m_PrevMapName.String(), pchSaveFile );
+	StatsLog( "CBaseGameStats::Event_LoadGame [%s] from %s\n", CBGSDriver.m_PrevMapName.c_str(), pchSaveFile );
 #endif
 }
 
@@ -669,9 +669,9 @@ void CBaseGameStats::Event_PlayerKilled( CBasePlayer *pPlayer, const CTakeDamage
 
 	if( CBGSDriver.m_bInLevel )
 	{
-		BasicGameStatsRecord_t *map = m_BasicStats.FindOrAddRecordForMap( CBGSDriver.m_PrevMapName.String() );
+		BasicGameStatsRecord_t *map = m_BasicStats.FindOrAddRecordForMap( CBGSDriver.m_PrevMapName.c_str() );
 		++map->m_nDeaths;
-		StatsLog( "  Player died %dth time in level [%s]!!!\n", map->m_nDeaths, CBGSDriver.m_PrevMapName.String() );
+		StatsLog( "  Player died %dth time in level [%s]!!!\n", map->m_nDeaths, CBGSDriver.m_PrevMapName.c_str() );
 	}
 	else
 	{
@@ -686,7 +686,7 @@ void CBaseGameStats::Event_Commentary()
 {
 	if( CBGSDriver.m_bInLevel )
 	{
-		BasicGameStatsRecord_t *map = m_BasicStats.FindOrAddRecordForMap( CBGSDriver.m_PrevMapName.String() );
+		BasicGameStatsRecord_t *map = m_BasicStats.FindOrAddRecordForMap( CBGSDriver.m_PrevMapName.c_str() );
 		++map->m_nCommentary;
 	}
 
@@ -757,14 +757,14 @@ bool CBaseGameStats::SaveToFileNOW( bool bForceSyncWrite /* = false */ )
 	if ( !gamestats->UseOldFormat() )
 		return false;
 
-	CUtlBuffer buf;
-	buf.PutShort( GAMESTATS_FILE_VERSION );
-	buf.Put( s_szPseudoUniqueID, 16 );
+	ks::byte_writer buf;
+	buf.write< short >( GAMESTATS_FILE_VERSION );
+	buf.write_bytes( s_szPseudoUniqueID, 16 );
 
 	if( ShouldTrackStandardStats() )
 		m_BasicStats.SaveToBuffer( buf ); 
 	else
-		buf.PutInt( GAMESTATS_STANDARD_NOT_SAVED );
+		buf.write< int >( GAMESTATS_STANDARD_NOT_SAVED );
 
 	gamestats->AppendCustomDataToSaveBuffer( buf );
 
@@ -788,20 +788,18 @@ bool CBaseGameStats::SaveToFileNOW( bool bForceSyncWrite /* = false */ )
 
 	if( CBGSDriver.m_bShuttingDown || bForceSyncWrite ) //write synchronously
 	{
-		filesystem->WriteFile( fullpath, GAMESTATS_PATHID, buf );
+		filesystem->WriteFile( fullpath, GAMESTATS_PATHID, buf.bytes() );
 
 		StatsLog( "Shut down wrote to '%s'\n", fullpath );
 	}
 	else
 	{
-		// Allocate memory for async system to use (and free afterward!!!)
-		size_t nBufferSize = buf.TellPut();
-		void *pMem = malloc(nBufferSize);
-		CUtlBuffer statsBuffer( pMem, nBufferSize );
-		statsBuffer.Put( buf.Base(), nBufferSize );
+		size_t nBufferSize = buf.size();
+		void *pMem = new char[nBufferSize];
+		memcpy( pMem, buf.data(), nBufferSize );
 
 		// Write data async
-		filesystem->AsyncWrite( fullpath, statsBuffer.Base(), statsBuffer.TellPut(), true, false );
+		filesystem->AsyncWrite( fullpath, pMem, nBufferSize, true, false );
 	}
 
 	return true;
@@ -885,15 +883,14 @@ bool CBaseGameStats::UploadStatsFileNOW( void )
 	ReleaseInstancedRegistry( reg );
 #endif
 
-	CUtlBuffer buf;
-	filesystem->ReadFile( GetStatSaveFileName(), GAMESTATS_PATHID, buf );
-	unsigned int uBlobSize = buf.TellPut();
+	auto blob = filesystem->ReadFile( GetStatSaveFileName(), GAMESTATS_PATHID );
+	unsigned int uBlobSize = blob ? blob->size() : 0;
 	if ( uBlobSize == 0 )
 	{
 		return false;
 	}
 
-	const void *pvBlobData = ( const void * )buf.Base();
+	const void *pvBlobData = ( const void * )blob->data();
 
 	if( gamestatsuploader )
 	{
@@ -922,19 +919,19 @@ bool CBaseGameStats::LoadFromFile( void )
 		StatsLog( "Loading stats from '%s'\n", fullpath );
 	}
 	
-	CUtlBuffer buf; 
-	if ( filesystem->ReadFile( gamestats->GetStatSaveFileName(), GAMESTATS_PATHID, buf ) )
+	if ( auto fileData = filesystem->ReadFile( gamestats->GetStatSaveFileName(), GAMESTATS_PATHID ) )
 	{
+		ks::byte_reader buf( *fileData );
 		bool bRetVal = true;
 
-		int version = buf.GetShort();
+		int version = buf.read< short >();
 		if ( version > GAMESTATS_FILE_VERSION )
 			return false; //file is beyond our comprehension
 
 		// Set global parse version
 		CBGSDriver.m_iLoadedVersion = version;
 
-		buf.Get( CBGSDriver.m_szLoadedUserID, 16 );
+		buf.read_bytes( CBGSDriver.m_szLoadedUserID, 16 );
 		CBGSDriver.m_szLoadedUserID[ sizeof( CBGSDriver.m_szLoadedUserID ) - 1 ] = 0;
 
 		if ( s_szPseudoUniqueID[ 0 ] != 0 )
@@ -960,7 +957,7 @@ bool CBaseGameStats::LoadFromFile( void )
 			else
 			{
 				// Peek ahead in buffer to see if we have the "no default stats" secret flag set.
-				int iCheckForStandardStatsInFile = *( int * )buf.PeekGet();
+				int iCheckForStandardStatsInFile = buf.peek< int >();
 				bool bValid = true;
 
 				if ( iCheckForStandardStatsInFile != GAMESTATS_STANDARD_NOT_SAVED )
@@ -971,7 +968,7 @@ bool CBaseGameStats::LoadFromFile( void )
 				else
 				{
 					// skip over the flag
-					buf.GetInt();
+					buf.read< int >();
 				}
 
 				if( !bValid )
@@ -979,7 +976,7 @@ bool CBaseGameStats::LoadFromFile( void )
 					m_BasicStats.Clear();
 				}
 
-				if( ( buf.TellPut() - buf.TellGet() ) != 0 ) //more data left, must be custom data
+				if( buf.remaining() != 0 ) //more data left, must be custom data
 				{
 					gamestats->LoadCustomDataFromBuffer( buf );
 				}
@@ -1113,15 +1110,15 @@ void CBaseGameStats_Driver::PossibleMapChange( void )
 {
 #ifdef GAME_DLL
 	//detect and copy map changes
-	if ( Q_stricmp( m_PrevMapName.String(), STRING( gpGlobals->mapname ) ) )
+	if ( Q_stricmp( m_PrevMapName.c_str(), STRING( gpGlobals->mapname ) ) )
 	{
 		MEM_ALLOC_CREDIT();
 
-		CUtlString PrevMapBackup = m_PrevMapName;
+		std::string PrevMapBackup = m_PrevMapName;
 
 		m_PrevMapName = STRING( gpGlobals->mapname );
 
-		gamestats->Event_MapChange( PrevMapBackup.String(), STRING( gpGlobals->mapname ) );
+		gamestats->Event_MapChange( PrevMapBackup.c_str(), STRING( gpGlobals->mapname ) );
 
 		if ( gamestats->UseOldFormat() )
 		{
@@ -1349,7 +1346,7 @@ void CBaseGameStats_Driver::SendData()
 		return;
 
 	// save the data to a buffer
-	CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
+	ks::text_writer buf;
 	m_pGamestatsData->m_pKVData->RecursiveSaveToFile( buf, 0 );
 
 #ifdef CLIENT_DLL
@@ -1365,7 +1362,7 @@ void CBaseGameStats_Driver::SendData()
 		if ( !bOutDirOverriden ) // if there isn't an override path, put it in the game dir.
 		{
 			const char szFileName[] = "gamestats.dat";
-			filesystem->WriteFile( szFileName, GAMESTATS_PATHID, buf );
+			filesystem->WriteFile( szFileName, GAMESTATS_PATHID, buf.bytes() );
 		}
 		else
 		{
@@ -1384,14 +1381,14 @@ void CBaseGameStats_Driver::SendData()
 
 			V_strncat( szPathName + pathLen, szFileName, MAX_PATH - pathLen );
 
-			filesystem->WriteFile( szPathName, nullptr, buf );
+			filesystem->WriteFile( szPathName, nullptr, buf.bytes() );
 		}
 	}
 	else
 	{
 		// upload the file to Steam
 		if ( gamestatsuploader )
-			gamestatsuploader->UploadGameStats( "", 1, buf.TellPut(), buf.Base() );
+			gamestatsuploader->UploadGameStats( "", 1, buf.size(), buf.c_str() );
 	}	
 
 	ResetData();
@@ -1714,7 +1711,7 @@ void CBaseGameStats::SetSteamStatistic( bool bUsingSteam )
 
 	if( CBGSDriver.m_bInLevel )
 	{
-		BasicGameStatsRecord_t *map = m_BasicStats.FindOrAddRecordForMap( CBGSDriver.m_PrevMapName.String() );
+		BasicGameStatsRecord_t *map = m_BasicStats.FindOrAddRecordForMap( CBGSDriver.m_PrevMapName.c_str() );
 		map->m_bSteam = bUsingSteam;
 	}
 
@@ -1730,7 +1727,7 @@ void CBaseGameStats::SetCyberCafeStatistic( bool bIsCyberCafeUser )
 
 	if( CBGSDriver.m_bInLevel )
 	{
-		BasicGameStatsRecord_t *map = m_BasicStats.FindOrAddRecordForMap( CBGSDriver.m_PrevMapName.String() );
+		BasicGameStatsRecord_t *map = m_BasicStats.FindOrAddRecordForMap( CBGSDriver.m_PrevMapName.c_str() );
 		map->m_bCyberCafe = bIsCyberCafeUser;
 	}
 
@@ -1743,7 +1740,7 @@ void CBaseGameStats::SetHDRStatistic( bool bHDREnabled )
 	{
 		if( CBGSDriver.m_bInLevel )
 		{
-			BasicGameStatsRecord_t *map = m_BasicStats.FindOrAddRecordForMap( CBGSDriver.m_PrevMapName.String() );
+			BasicGameStatsRecord_t *map = m_BasicStats.FindOrAddRecordForMap( CBGSDriver.m_PrevMapName.c_str() );
 			++map->m_nHDR;
 		}
 
@@ -1758,7 +1755,7 @@ void CBaseGameStats::SetCaptionsStatistic( bool bClosedCaptionsEnabled )
 {
 	if( CBGSDriver.m_bInLevel )
 	{
-		BasicGameStatsRecord_t *map = m_BasicStats.FindOrAddRecordForMap( CBGSDriver.m_PrevMapName.String() );
+		BasicGameStatsRecord_t *map = m_BasicStats.FindOrAddRecordForMap( CBGSDriver.m_PrevMapName.c_str() );
 		++map->m_nCaptions;
 	}
 
@@ -1774,7 +1771,7 @@ void CBaseGameStats::SetSkillStatistic( int iSkillSetting )
 
 	if( CBGSDriver.m_bInLevel )
 	{
-		BasicGameStatsRecord_t *map = m_BasicStats.FindOrAddRecordForMap( CBGSDriver.m_PrevMapName.String() );
+		BasicGameStatsRecord_t *map = m_BasicStats.FindOrAddRecordForMap( CBGSDriver.m_PrevMapName.c_str() );
 		++map->m_nSkill[ skill ];
 	}
 

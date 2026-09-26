@@ -26,9 +26,6 @@
 #include "tier2/tier2.h"
 #include "tier0/dbg.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 void BuildTagData( CCoreDispInfo *pCoreDisp, CDispInfo *pDisp );
 void SmoothDispSurfNormals( CCoreDispInfo **ppListBase, int nListSize );
 
@@ -78,24 +75,23 @@ static bool FindExtraDependency( unsigned short *pDependencies, int nDependencie
 }
 
 
-static CDispGroup* FindCombo( CUtlVector<CDispGroup*> &combos, int idLMPage, IMaterial *pMaterial )
+static CDispGroup* FindCombo( std::vector< std::unique_ptr< CDispGroup > > &combos, int idLMPage, IMaterial *pMaterial )
 {
-	for( int i=0; i < combos.Count(); i++ )
+	for ( auto &pCombo : combos )
 	{
-		if( combos[i]->m_LightmapPageID == idLMPage && combos[i]->m_pMaterial == pMaterial )
-			return combos[i];
+		if( pCombo->m_LightmapPageID == idLMPage && pCombo->m_pMaterial == pMaterial )
+			return pCombo.get();
 	}
 	return nullptr;
 }
 
 
-static CDispGroup* AddCombo( CUtlVector<CDispGroup*> &combos, int idLMPage, IMaterial *pMaterial )
+static CDispGroup* AddCombo( std::vector< std::unique_ptr< CDispGroup > > &combos, int idLMPage, IMaterial *pMaterial )
 {
-	CDispGroup *pCombo = new CDispGroup;
+	CDispGroup *pCombo = combos.emplace_back( std::make_unique< CDispGroup >() ).get();
 	pCombo->m_LightmapPageID = idLMPage;
 	pCombo->m_pMaterial = pMaterial;
 	pCombo->m_nVisible = 0;
-	combos.AddToTail( pCombo );
 	return pCombo;
 }
 
@@ -218,8 +214,7 @@ void AddEmptyMesh(
 {
 	CMatRenderContextPtr pRenderContext( materials );
 
-	CGroupMesh *pMesh = new CGroupMesh;
-	pCombo->m_Meshes.AddToTail( pMesh );
+	CGroupMesh *pMesh = pCombo->m_Meshes.emplace_back( std::make_unique< CGroupMesh >() ).get();
 
 	VertexFormat_t vertexFormat = ComputeDisplacementStaticMeshVertexFormat( pCombo->m_pMaterial, pCombo, pMapDisps );
 	pMesh->m_pMesh = pRenderContext->CreateStaticMesh( vertexFormat, TEXTURE_GROUP_STATIC_VERTEX_BUFFER_DISP );
@@ -236,9 +231,9 @@ void AddEmptyMesh(
 	builder.End();
 
 
-	pMesh->m_DispInfos.SetSize( nDisps );
-	pMesh->m_Visible.SetSize( nDisps );
-	pMesh->m_VisibleDisps.SetSize( nDisps );
+	pMesh->m_DispInfos.assign( nDisps, {} );
+	pMesh->m_Visible.assign( nDisps, {} );
+	pMesh->m_VisibleDisps.assign( nDisps, {} );
 
 	int iVertOffset = 0;
 	int iIndexOffset = 0;
@@ -357,7 +352,7 @@ void CDispInfo::CopyMapDispData( const ddispinfo_t *pBuildDisp )
 	// and multiply by 3!
 	// These can be non-null in the case of task switch restore
 	int size = GetSideLength();
-	m_Indices.SetSize( 6 * (size-1) * (size-1) );
+	m_Indices.assign( 6 * (size-1) * (size-1), {} );
 
 	// Per-node information
 	if (m_pNodeInfo)
@@ -380,7 +375,7 @@ void DispInfo_CreateMaterialGroups( model_t *pWorld, const MaterialSystem_SortIn
 			pCombo = AddCombo( g_DispGroups, idLMPage, MSurf_TexInfo( pDisp->m_ParentSurfID )->material );
 
 		MEM_ALLOC_CREDIT();
-		pCombo->m_DispInfos.AddToTail( iDisp );
+		pCombo->m_DispInfos.push_back( iDisp );
 	}
 }
 
@@ -405,13 +400,13 @@ void DispInfo_LinkToParentFaces( model_t *pWorld, const ddispinfo_t *pMapDisps, 
 void DispInfo_CreateEmptyStaticBuffers( model_t *pWorld, const ddispinfo_t *pMapDisps )
 {
 	// For each combo, create empty buffers.
-	for( int i=0; i < g_DispGroups.Count(); i++ )
+	for( int i=0; i < std::ssize( g_DispGroups ); i++ )
 	{
-		CDispGroup *pCombo = g_DispGroups[i];
+		CDispGroup *pCombo = g_DispGroups[i].get();
 
 		int nTotalVerts=0, nTotalIndices=0;
 		int iStart = 0;
-		for( int iDisp=0; iDisp < pCombo->m_DispInfos.Count(); iDisp++ )
+		for( int iDisp=0; iDisp < std::ssize( pCombo->m_DispInfos ); iDisp++ )
 		{
 			const ddispinfo_t *pMapDisp = &pMapDisps[pCombo->m_DispInfos[iDisp]];
 
@@ -430,7 +425,7 @@ void DispInfo_CreateEmptyStaticBuffers( model_t *pWorld, const ddispinfo_t *pMap
 				iStart = iDisp;
 				--iDisp;
 			}
-			else if( iDisp == pCombo->m_DispInfos.Count()-1 )
+			else if( iDisp == std::ssize( pCombo->m_DispInfos )-1 )
 			{
 				AddEmptyMesh( pWorld, pCombo, pMapDisps, &pCombo->m_DispInfos[iStart], iDisp-iStart+1, nTotalVerts+nVerts, nTotalIndices+nIndices );
 				break;
@@ -470,10 +465,10 @@ bool DispInfo_CreateFromMapDisp( model_t *pWorld, int iDisp, const ddispinfo_t *
 	pCoreDisp->SetNeighborData( pMapDisp->m_EdgeNeighbors, pMapDisp->m_CornerNeighbors );
 
 	// Copy the allowed verts list.
-	ErrorIfNot( pCoreDisp->GetAllowedVerts().GetNumDWords() == sizeof( pMapDisp->m_AllowedVerts ) / 4, ( "DispInfo_StoreMapData: size mismatch in 'allowed verts' list" ) );
-	for ( int iVert = 0; iVert < pCoreDisp->GetAllowedVerts().GetNumDWords(); ++iVert )
+	ErrorIfNot( pCoreDisp->AllowedVerts_GetNumDWords() == sizeof( pMapDisp->m_AllowedVerts ) / 4, ( "DispInfo_StoreMapData: size mismatch in 'allowed verts' list" ) );
+	for ( int iVert = 0; iVert < pCoreDisp->AllowedVerts_GetNumDWords(); ++iVert )
 	{
-		pCoreDisp->GetAllowedVerts().SetDWord( iVert, pMapDisp->m_AllowedVerts[iVert] );
+		ks::set_word( pCoreDisp->GetAllowedVerts(), iVert, pMapDisp->m_AllowedVerts[iVert] );
 	}
 
 	// Build the reset of the intermediate data from the initial map displacement data.
@@ -538,7 +533,7 @@ void SetupMeshReaders( model_t *pWorld, int nDisplacements )
 		desc.m_VertexSize_TangentS = sizeof( CDispRenderVert );
 		desc.m_VertexSize_TangentT = sizeof( CDispRenderVert );
 
-		CDispRenderVert *pBaseVert = pDisp->m_Verts.Base();
+		CDispRenderVert *pBaseVert = pDisp->m_Verts.data();
 		desc.m_pPosition = (float*)&pBaseVert->m_vPos;
 		desc.m_pTexCoord[0] = (float*)&pBaseVert->m_vTexCoord;
 		desc.m_pTexCoord[DISP_LMCOORDS_STAGE] = (float*)&pBaseVert->m_LMCoords;
@@ -547,7 +542,7 @@ void SetupMeshReaders( model_t *pWorld, int nDisplacements )
 		desc.m_pTangentT = (float*)&pBaseVert->m_vTVector;
 
 		desc.m_nIndexSize = 1;
-		desc.m_pIndices = pDisp->m_Indices.Base();
+		desc.m_pIndices = pDisp->m_Indices.data();
 		
 		pDisp->m_MeshReader.BeginRead_Direct( desc, pDisp->NumVerts(), pDisp->m_nIndices );
 	}		
@@ -563,7 +558,6 @@ void UpdateDispBBoxes( model_t *pWorld, int nDisplacements )
 }		
 
 
-#include "tier0/memdbgoff.h"
 bool DispInfo_LoadDisplacements( model_t *pWorld, bool bRestoring )
 {
 	MEM_ALLOC_CREDIT_( "DispInfo_LoadDisplacements" );
@@ -603,10 +597,10 @@ bool DispInfo_LoadDisplacements( model_t *pWorld, bool bRestoring )
 		if ( r_dlightsenable.GetBool() )
 		{
 			// Load lightmap sample positions (only needed to support dlights).
-			HUNK_ALLOC_CREDIT_( "g_DispLightmapSamplePositions" );
-			g_DispLightmapSamplePositions.SetSize( nSamplePositionBytes );
+			MEM_ALLOC_CREDIT_( "g_DispLightmapSamplePositions" );
+			g_DispLightmapSamplePositions.assign( nSamplePositionBytes, {} );
 			CMapLoadHelper lhDispLMPositions( LUMP_DISP_LIGHTMAP_SAMPLE_POSITIONS );
-			lhDispLMPositions.LoadLumpData( 0, nSamplePositionBytes, g_DispLightmapSamplePositions.Base() );
+			lhDispLMPositions.LoadLumpData( 0, nSamplePositionBytes, g_DispLightmapSamplePositions.data() );
 		}
 	}
 
@@ -615,8 +609,8 @@ bool DispInfo_LoadDisplacements( model_t *pWorld, bool bRestoring )
 	
 	// load the displacement info structures into temporary space
 	// using temporary storage that is not the stack for compatibility with console stack
-	CUtlMemory< ddispinfo_t > m_DispInfoBuf( 0, MAX_MAP_DISPINFO );
-	ddispinfo_t *tempDisps = m_DispInfoBuf.Base();
+	std::vector< ddispinfo_t > m_DispInfoBuf( MAX_MAP_DISPINFO );
+	ddispinfo_t *tempDisps = m_DispInfoBuf.data();
 	ErrorIfNot( 
 		nDisplacements <= MAX_MAP_DISPINFO,
 		("DispInfo_LoadDisplacements: nDisplacements (%d) > MAX_MAP_DISPINFO (%d)", nDisplacements, MAX_MAP_DISPINFO)
@@ -650,13 +644,14 @@ bool DispInfo_LoadDisplacements( model_t *pWorld, bool bRestoring )
 	int iCurTri = 0;
 	int iCurMultiBlend = 0;
 
-	// Core displacement list.
-	CUtlVector<CCoreDispInfo*> aCoreDisps;
+	// Core displacement list. aCoreDisps is the list CCoreDispInfo's neighbour lookups index
+	// (SetDispUtilsHelperInfo keeps a pointer to it); coreDispStorage owns the elements.
+	std::vector< std::unique_ptr< CCoreDispInfo > > coreDispStorage;
+	std::vector< CCoreDispInfo* > aCoreDisps;
 	int iDisp = 0;
 	for ( iDisp = 0; iDisp < nDisplacements; ++iDisp )
 	{
-		CCoreDispInfo *pCoreDisp = new CCoreDispInfo;
-		aCoreDisps.AddToTail( pCoreDisp );
+		aCoreDisps.push_back( coreDispStorage.emplace_back( std::make_unique< CCoreDispInfo >() ).get() );
 	}
 	
 	CMapLoadHelper lhDispVerts( LUMP_DISP_VERTS );
@@ -695,7 +690,7 @@ bool DispInfo_LoadDisplacements( model_t *pWorld, bool bRestoring )
 	}	
 
 	// Smooth Normals.
-	SmoothDispSurfNormals( aCoreDisps.Base(), nDisplacements );
+	SmoothDispSurfNormals( aCoreDisps.data(), nDisplacements );
 
 	// Fill in the static buffers.
 	for ( iDisp = 0; iDisp < nDisplacements; ++iDisp )
@@ -709,7 +704,8 @@ bool DispInfo_LoadDisplacements( model_t *pWorld, bool bRestoring )
 	}
 
 	// Destroy core displacement list.
-	aCoreDisps.PurgeAndDeleteElements();
+	aCoreDisps.clear();
+	coreDispStorage.clear();
 
 	// If we're not using LOD, then maximally tesselate all the displacements and
 	// make sure they never change.
@@ -732,7 +728,6 @@ bool DispInfo_LoadDisplacements( model_t *pWorld, bool bRestoring )
 
 	return true;
 }
-#include "tier0/memdbgon.h"
 
 
 void DispInfo_ReleaseMaterialSystemObjects( model_t *pWorld )
@@ -740,21 +735,13 @@ void DispInfo_ReleaseMaterialSystemObjects( model_t *pWorld )
 	CMatRenderContextPtr pRenderContext( materials );
 
 	// Free all the static meshes.
-	for( int iGroup=0; iGroup < g_DispGroups.Count(); iGroup++ )
+	for( int iGroup=0; iGroup < std::ssize( g_DispGroups ); iGroup++ )
 	{
-		CDispGroup *pGroup = g_DispGroups[iGroup];
-	
-		for( int iMesh=0; iMesh < pGroup->m_Meshes.Count(); iMesh++ )
-		{
-			CGroupMesh *pMesh = pGroup->m_Meshes[iMesh];
-
+		for ( auto &pMesh : g_DispGroups[iGroup]->m_Meshes )
 			pRenderContext->DestroyStaticMesh( pMesh->m_pMesh );
-		}
-
-		pGroup->m_Meshes.PurgeAndDeleteElements();
 	}
 
-	g_DispGroups.PurgeAndDeleteElements();
+	g_DispGroups.clear();
 
 
 	// Clear pointers in the dispinfos.
@@ -842,8 +829,8 @@ void CDispInfo::CopyCoreDispVertData( const CCoreDispInfo *pCoreDisp, float bump
 		bumpSTexCoordOffset = 0.0f;
 	}
 	// Copy vertex positions (for backfacing tests).
-	HUNK_ALLOC_CREDIT_( "CopyCoreDispVertData" );
-	m_Verts.SetSize( m_pPowerInfo->m_MaxVerts );
+	MEM_ALLOC_CREDIT_( "CopyCoreDispVertData" );
+	m_Verts.assign( m_pPowerInfo->m_MaxVerts, {} );
 	m_BumpSTexCoordOffset = bumpSTexCoordOffset;
 	for( int i=0; i < NumVerts(); i++ )
 	{

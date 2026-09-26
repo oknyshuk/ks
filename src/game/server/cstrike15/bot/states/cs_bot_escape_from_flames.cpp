@@ -9,9 +9,6 @@
 #include "cbase.h"
 #include "cs_bot.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //--------------------------------------------------------------------------------------------------------------
 /**
  * Escape from flames we're standing in!

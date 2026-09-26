@@ -10,9 +10,6 @@
 
 #include "tier0/fasttimer.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 uint64 Plat_SteadyNanos()
 {
 	return (uint64)std::chrono::duration_cast<std::chrono::nanoseconds>(

@@ -7,9 +7,6 @@
 #include "BaseVSShader.h"
 #include "vertexlitgeneric_dx9_helper.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 DEFINE_FALLBACK_SHADER( Wireframe, Wireframe_DX9 )
 
 BEGIN_VS_SHADER( Wireframe_DX9,

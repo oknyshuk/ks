@@ -14,9 +14,6 @@
 #include "particle_util.h"
 #include "particles_simple.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Entity particle trail, client-side implementation
 //-----------------------------------------------------------------------------

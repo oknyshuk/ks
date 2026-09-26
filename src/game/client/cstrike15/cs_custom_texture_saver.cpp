@@ -9,14 +9,14 @@
 
 bool CCSCustomTextureSaver::Init()
 {
-	m_materials.RemoveAll();
+	m_materials.clear();
 	m_bHasJob = false;
 	return true;
 }
 
 void CCSCustomTextureSaver::AddMaterialToWatch( CustomMaterialGenerationData_t embroiderMaterial )
 {
-	m_materials.AddToTail( embroiderMaterial );
+	m_materials.push_back( embroiderMaterial );
 	m_bHasJob = true;
 }
 
@@ -25,7 +25,7 @@ void CCSCustomTextureSaver::Update( float frameTime )
 	if ( m_bHasJob == false )
 		return;
 
-	int count = m_materials.Count();
+	int count = std::ssize( m_materials );
 	
 	if ( count == 0 )
 	{
@@ -33,7 +33,7 @@ void CCSCustomTextureSaver::Update( float frameTime )
 		return;
 	}
 	
-	CUtlVector<CustomMaterialGenerationData_t> completedMaterials;
+	std::vector< CustomMaterialGenerationData_t > completedMaterials;
 
 	for ( int i = 0; i < count; ++i )
 	{
@@ -46,13 +46,13 @@ void CCSCustomTextureSaver::Update( float frameTime )
 		if ( completionCount == 3 )
 		{
 			count--;
-			completedMaterials.AddToTail( m_materials[i] );
-			m_materials.Remove( i );
+			completedMaterials.push_back( m_materials[i] );
+			m_materials.erase( m_materials.begin() + i );
 			i--;
 		}
 	}
 
-	for ( int i = 0; i < completedMaterials.Count(); i++ )
+	for ( int i = 0; i < std::ssize( completedMaterials ); i++ )
 	{
 		for ( int j = 0; j < completedMaterials[i].nTex; j++ )
 		{
@@ -64,14 +64,14 @@ void CCSCustomTextureSaver::Update( float frameTime )
 
 			IVTFTexture *pVTFTexture = completedMaterials[i].pCustomMaterial->GetTexture( j )->GetResultVTF();
 
-			CUtlBuffer buf;
+			ks::byte_writer buf;
 			pVTFTexture->Serialize(buf);
 					
 			FileHandle_t f = g_pFullFileSystem->Open( completedMaterials[i].fileNames[j], "wb", nullptr );
 
 			if ( f != FILESYSTEM_INVALID_HANDLE )
 			{
-				g_pFullFileSystem->Write( buf.Base(), buf.TellMaxPut(), f );
+				g_pFullFileSystem->Write( buf.data(), buf.size(), f );
 				g_pFullFileSystem->Close(f);
 			}
 			DevMsg( "Saved VTF %s\n", completedMaterials[i].fileNames[j] );

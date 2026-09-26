@@ -5,25 +5,24 @@
 // $NoKeywords: $
 //=============================================================================//
 
+#include <mutex>
 #include "cmodel.h"
 #include "dispcoll_common.h"
 #include "collisionutils.h"
 #include "tier1/strtools.h"
 #include "tier0/vprof.h"
 #include "tier1/fmtstr.h"
-#include "tier1/utlhash.h"
 #include "tier1/generichash.h"
 #include "tier0/fasttimer.h"
 #include "vphysics/virtualmesh.h"
 #include "tier1/datamanager.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include <unordered_set>
 
 //=============================================================================
 //	Cache
 
 #ifdef ENGINE_DLL
-CDataManager<CDispCollTree, CDispCollTree *, bool, CThreadFastMutex> g_DispCollTriCache( 2048*1024 );
+CDataManager<CDispCollTree, CDispCollTree *, bool, std::recursive_mutex> g_DispCollTriCache( 2048*1024 );
 #endif
 
 
@@ -33,27 +32,21 @@ struct DispCollPlaneIndex_t
 	int index;
 };
 
-class CPlaneIndexHashFuncs
+// A plane and its negation are the same entry.
+struct CPlaneIndexHashFuncs
 {
-public:
-
-	// cppcheck-suppress noExplicitConstructor
-	CPlaneIndexHashFuncs( int ) {}
-
-	// Compare
 	bool operator()( const DispCollPlaneIndex_t &lhs, const DispCollPlaneIndex_t &rhs ) const
 	{
 		return ( lhs.vecPlane == rhs.vecPlane || lhs.vecPlane == -rhs.vecPlane );
 	}
 
-	// Hash
-	unsigned int operator()( const DispCollPlaneIndex_t &item ) const
+	size_t operator()( const DispCollPlaneIndex_t &item ) const
 	{
 		return HashItem( item.vecPlane ) ^ HashItem( -item.vecPlane );
 	}
 };
 
-CUtlHash<DispCollPlaneIndex_t, CPlaneIndexHashFuncs, CPlaneIndexHashFuncs> g_DispCollPlaneIndexHash( 512 );
+std::unordered_set<DispCollPlaneIndex_t, CPlaneIndexHashFuncs, CPlaneIndexHashFuncs> g_DispCollPlaneIndexHash( 512 );
 
 
 //=============================================================================
@@ -330,14 +323,14 @@ void CDispCollTree::AABBTree_CopyDispData( CCoreDispInfo *pDisp )
 	}
 
 	// Allocate collision tree data.
-	HUNK_ALLOC_CREDIT_( "AABBTree_CopyDispData" );
-	m_aVerts.SetSize( GetSize() );
-	m_aTris.SetSize( GetTriSize() );
+	MEM_ALLOC_CREDIT_( "AABBTree_CopyDispData" );
+	m_aVerts.assign( GetSize(), {} );
+	m_aTris.assign( GetTriSize(), {} );
 	int numLeaves = (GetWidth()-1) * (GetHeight()-1);
-	m_leaves.SetCount(numLeaves);
+	m_leaves.assign( numLeaves, {} );
 	int numNodes = Nodes_CalcCount( m_nPower );
 	numNodes -= numLeaves;
-	m_nodes.SetCount(numNodes);
+	m_nodes.assign( numNodes, {} );
 
 	// Setup size.
 	m_nSize = sizeof( this );
@@ -346,19 +339,19 @@ void CDispCollTree::AABBTree_CopyDispData( CCoreDispInfo *pDisp )
 #if OLD_DISP_AABB
 	m_nSize += sizeof( CDispCollAABBNode ) * Nodes_CalcCount( m_nPower );
 #endif
-	m_nSize += sizeof(m_nodes[0]) * m_nodes.Count();
-	m_nSize += sizeof(m_leaves[0]) * m_leaves.Count();
+	m_nSize += sizeof(m_nodes[0]) * std::ssize( m_nodes );
+	m_nSize += sizeof(m_leaves[0]) * std::ssize( m_leaves );
 	m_nSize += sizeof( CDispCollTri* ) * DISPCOLL_TREETRI_SIZE;
 
 	// Copy vertex data.
-	for ( int iVert = 0; iVert < m_aVerts.Count(); iVert++ )
+	for ( int iVert = 0; iVert < std::ssize( m_aVerts ); iVert++ )
 	{
 		pDisp->GetVert( iVert, m_aVerts[iVert] );
 	}
 
 	// Copy and setup triangle data.
 	unsigned short iVerts[3];
-	for ( int iTri = 0; iTri < m_aTris.Count(); ++iTri )
+	for ( int iTri = 0; iTri < std::ssize( m_aTris ); ++iTri )
 	{
 		pDisp->GetTriIndices( iTri, iVerts[0], iVerts[1], iVerts[2] );
 		m_aTris[iTri].SetVert( 0, iVerts[0] );
@@ -429,10 +422,10 @@ void CDispCollTree::AABBTree_CopyDispData( CCoreDispInfo *pDisp )
 void CDispCollTree::AABBTree_CreateLeafs( void )
 {
 	int numLeaves = (GetWidth()-1) * (GetHeight()-1);
-	m_leaves.SetCount(numLeaves);
+	m_leaves.assign( numLeaves, {} );
 	int numNodes = Nodes_CalcCount( m_nPower );
 	numNodes -= numLeaves;
-	m_nodes.SetCount(numNodes);
+	m_nodes.assign( numNodes, {} );
 
 	// Get the width and height of the displacement.
 	int nWidth = GetWidth() - 1;
@@ -456,9 +449,9 @@ void CDispCollTree::AABBTree_GenerateBoxes_r( int nodeIndex, Vector *pMins, Vect
 {
 	// leaf
 	ClearBounds( *pMins, *pMaxs );
-	if ( nodeIndex >= m_nodes.Count() )
+	if ( nodeIndex >= std::ssize( m_nodes ) )
 	{
-		int iLeaf = nodeIndex - m_nodes.Count();
+		int iLeaf = nodeIndex - std::ssize( m_nodes );
 
 		for ( int iTri = 0; iTri < 2; ++iTri )
 		{
@@ -471,7 +464,8 @@ void CDispCollTree::AABBTree_GenerateBoxes_r( int nodeIndex, Vector *pMins, Vect
 	}
 	else // node
 	{
-		Vector childMins[4], childMaxs[4];
+		// VectorAligned so the 128-bit LoadAndSwizzle loads don't read past the last Vector.
+		VectorAligned childMins[4], childMaxs[4];
 		for ( int i = 0; i < 4; i++ )
 		{
 			int child = Nodes_GetChild( nodeIndex, i );
@@ -491,7 +485,7 @@ void CDispCollTree::AABBTree_GenerateBoxes_r( int nodeIndex, Vector *pMins, Vect
 void CDispCollTree::AABBTree_CalcBounds( void )
 {
 	// Check data.
-	if ( ( m_aVerts.Count() == 0 ) || ( m_nodes.Count() == 0 ) )
+	if ( ( std::ssize( m_aVerts ) == 0 ) || ( std::ssize( m_nodes ) == 0 ) )
 		return;
 
 	AABBTree_GenerateBoxes_r( 0, &m_mins, &m_maxs );
@@ -513,7 +507,7 @@ void CDispCollTree::AABBTree_CalcBounds( void )
 	}
 }
 
-static CThreadFastMutex s_CacheMutex;
+static std::recursive_mutex s_CacheMutex;
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -522,7 +516,7 @@ inline void CDispCollTree::LockCache()
 #ifdef ENGINE_DLL
 	if ( !g_DispCollTriCache.LockResource( m_hCache ) )
 	{
-		AUTO_LOCK_FM( s_CacheMutex );
+		std::scoped_lock lock( s_CacheMutex );
 
 		// Cache may have just been created, so check once more
 		if ( !g_DispCollTriCache.LockResource( m_hCache ) )
@@ -549,7 +543,7 @@ inline void CDispCollTree::UnlockCache()
 //-----------------------------------------------------------------------------
 void CDispCollTree::Cache( void )
 {
-	if ( m_aTrisCache.Count() == GetTriSize() )
+	if ( std::ssize( m_aTrisCache ) == GetTriSize() )
 	{
 		return;
 	}
@@ -561,7 +555,7 @@ void CDispCollTree::Cache( void )
 	int nTriCount = GetTriSize();
 	{
 	MEM_ALLOC_CREDIT();
-	m_aTrisCache.SetSize( nTriCount );
+	m_aTrisCache.assign( nTriCount, {} );
 	}
 
 	for ( int iTri = 0; iTri < nTriCount; ++iTri )
@@ -569,7 +563,7 @@ void CDispCollTree::Cache( void )
 		Cache_Create( &m_aTris[iTri], iTri );
 	}
 
-	g_DispCollPlaneIndexHash.Purge();
+	g_DispCollPlaneIndexHash.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -631,7 +625,7 @@ void CDispCollTree::AABBTree_TreeTrisRayBarycentricTest( const Ray_t &ray, const
 	float flU, flV, flT;
 	for ( ; listIndex <= list.maxIndex; listIndex++ )
 	{
-		int leafIndex = list.nodeList[listIndex] - m_nodes.Count();
+		int leafIndex = list.nodeList[listIndex] - std::ssize( m_nodes );
 		CDispCollTri *pTri0 = &m_aTris[m_leaves[leafIndex].m_tris[0]];
 		CDispCollTri *pTri1 = &m_aTris[m_leaves[leafIndex].m_tris[1]];
 
@@ -716,7 +710,7 @@ void CDispCollTree::AABBTree_TreeTrisRayTest( const Ray_t &ray, const Vector &ve
 
 	for ( ;listIndex <= list.maxIndex; listIndex++ )
 	{
-		int leafIndex = list.nodeList[listIndex] - m_nodes.Count();
+		int leafIndex = list.nodeList[listIndex] - std::ssize( m_nodes );
 		CDispCollTri *pTri0 = &m_aTris[m_leaves[leafIndex].m_tris[0]];
 		CDispCollTri *pTri1 = &m_aTris[m_leaves[leafIndex].m_tris[1]];
 		float flFrac = IntersectRayWithTriangle( ray, m_aVerts[pTri0->GetVert( 0 )], m_aVerts[pTri0->GetVert( 2 )], m_aVerts[pTri0->GetVert( 1 )], bSide );
@@ -767,7 +761,7 @@ int CDispCollTree::AABBTree_BuildTreeTrisInSphere_r( const Vector &center, float
 			{
 				if ( (nTriCount+2) <= indexMax )
 				{
-					int leafIndex = nodeList[listIndex] - m_nodes.Count();
+					int leafIndex = nodeList[listIndex] - std::ssize( m_nodes );
 					pIndexOut[nTriCount] = m_leaves[leafIndex].m_tris[0];
 					pIndexOut[nTriCount+1] = m_leaves[leafIndex].m_tris[1];
 					nTriCount += 2;
@@ -843,7 +837,7 @@ bool CDispCollTree::AABBTree_IntersectAABB( const Vector &absMins, const Vector 
 			VPROF("Tris");
 			for ( --listIndex; listIndex <= maxIndex; listIndex++ )
 			{
-				int leafIndex = nodeList[listIndex] - m_nodes.Count();
+				int leafIndex = nodeList[listIndex] - std::ssize( m_nodes );
 				CDispCollTri *pTri0 = &m_aTris[m_leaves[leafIndex].m_tris[0]];
 				CDispCollTri *pTri1 = &m_aTris[m_leaves[leafIndex].m_tris[1]];
 
@@ -941,7 +935,7 @@ bool CDispCollTree::AABBTree_SweepAABB( const Ray_t &ray, const Vector &vecInvDe
 		LockCache();
 		for ( ; listIndex <= list.maxIndex; listIndex++ )
 		{
-			int leafIndex = list.nodeList[listIndex] - m_nodes.Count();
+			int leafIndex = list.nodeList[listIndex] - std::ssize( m_nodes );
 			int iTri0 = m_leaves[leafIndex].m_tris[0];
 			int iTri1 = m_leaves[leafIndex].m_tris[1];
 			CDispCollTri *pTri0 = &m_aTris[iTri0];
@@ -1105,18 +1099,16 @@ void CDispCollTree::Cache_Create( CDispCollTri *pTri, int iTri )
 //-----------------------------------------------------------------------------
 int CDispCollTree::AddPlane( const Vector &vecNormal )
 {
-	UtlHashHandle_t handle;
 	DispCollPlaneIndex_t planeIndex;
-	bool bDidInsert;
 
 	planeIndex.vecPlane = vecNormal;
-	planeIndex.index = m_aEdgePlanes.Count();
+	planeIndex.index = std::ssize( m_aEdgePlanes );
 
-	handle = g_DispCollPlaneIndexHash.Insert( planeIndex, &bDidInsert );
+	auto [it, bDidInsert] = g_DispCollPlaneIndexHash.insert( planeIndex );
 
 	if ( !bDidInsert )
 	{
-		DispCollPlaneIndex_t &existingEntry = g_DispCollPlaneIndexHash[handle];
+		const DispCollPlaneIndex_t &existingEntry = *it;
 		if ( existingEntry.vecPlane == vecNormal )
 		{
 			return existingEntry.index;
@@ -1127,7 +1119,7 @@ int CDispCollTree::AddPlane( const Vector &vecNormal )
 		}
 	}
 
-	return m_aEdgePlanes.AddToTail( vecNormal );
+	m_aEdgePlanes.push_back( vecNormal ); return (int)std::ssize( m_aEdgePlanes ) - 1;
 }
 
 //-----------------------------------------------------------------------------
@@ -1442,9 +1434,9 @@ CDispCollTree::CDispCollTree()
 
 	m_iCounter = 0;
 
-	m_aVerts.Purge();
-	m_aTris.Purge();
-	m_aEdgePlanes.Purge();
+	m_aVerts.clear(); m_aVerts.shrink_to_fit();
+	m_aTris.clear(); m_aTris.shrink_to_fit();
+	m_aEdgePlanes.clear(); m_aEdgePlanes.shrink_to_fit();
 #ifdef ENGINE_DLL
 	m_hCache = INVALID_MEMHANDLE;
 #endif
@@ -1459,9 +1451,9 @@ CDispCollTree::~CDispCollTree()
 	if ( m_hCache != INVALID_MEMHANDLE )
 		g_DispCollTriCache.DestroyResource( m_hCache );
 #endif
-	m_aVerts.Purge();
-	m_aTris.Purge();
-	m_aEdgePlanes.Purge();
+	m_aVerts.clear(); m_aVerts.shrink_to_fit();
+	m_aTris.clear(); m_aTris.shrink_to_fit();
+	m_aEdgePlanes.clear(); m_aEdgePlanes.shrink_to_fit();
 }
 
 //-----------------------------------------------------------------------------
@@ -1503,8 +1495,8 @@ void CDispCollTree::GetVirtualMeshList( virtualmeshlist_t *pList )
 	int triangleCount = GetTriSize();
 	pList->indexCount = triangleCount * 3;
 	pList->triangleCount = triangleCount;
-	pList->vertexCount = m_aVerts.Count();
-	pList->pVerts = m_aVerts.Base();
+	pList->vertexCount = std::ssize( m_aVerts );
+	pList->pVerts = m_aVerts.data();
 	pList->pHull = nullptr;
 	pList->surfacePropsIndex = GetSurfaceProps(0);
 	int index = 0;

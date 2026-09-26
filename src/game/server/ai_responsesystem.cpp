@@ -14,22 +14,17 @@
 #include "ai_criteria.h"
 #include <keyvalues.h>
 #include "filesystem.h"
-#include "utldict.h"
+#include "tier1/map_ops.h"
 #include "ai_speech.h"
 #include "tier0/icommandline.h"
 #include <ctype.h>
 #include "sceneentity.h"
 #include "isaverestore.h"
-#include "utlbuffer.h"
-#include "stringpool.h"
 #include "fmtstr.h"
 #include "multiplay_gamerules.h"
 #include "characterset.h"
 #include "responserules/response_host_interface.h"
 #include "responserules/response_types_internal.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 using namespace ResponseRules;
 
@@ -229,11 +224,9 @@ void CGameResponseSystem::Precache()
 	bool bTouchFiles = CommandLine()->FindParm( "-makereslists" ) != 0;
 
 	// enumerate and mark all the scripts so we know they're referenced
-	for ( int i = 0; i < (int)m_Responses.Count(); i++ )
+	for ( auto &[name, group] : m_Responses )
 	{
-		ResponseGroup &group = m_Responses[i];
-
-		for ( int j = 0; j < group.group.Count(); j++)
+		for ( int j = 0; j < std::ssize( group.group ); j++)
 		{
 			ParserResponse &response = group.group[j];
 
@@ -375,15 +368,15 @@ public:
 
 	void AddInstancedResponseSystem( const char *scriptfile, CInstancedResponseSystem *sys )
 	{
-		m_InstancedSystems.Insert( scriptfile, sys );
+		m_InstancedSystems.emplace( scriptfile, sys );
 	}
 
 	CInstancedResponseSystem *FindResponseSystem( const char *scriptfile )
 	{
-		int idx = m_InstancedSystems.Find( scriptfile );
-		if ( idx == m_InstancedSystems.InvalidIndex() )
+		auto it = m_InstancedSystems.find( scriptfile );
+		if ( it == m_InstancedSystems.end() )
 			return nullptr;
-		return m_InstancedSystems[ idx ];
+		return it->second;
 	}
 
 	IResponseSystem *PrecacheCustomResponseSystem( const char *scriptfile )
@@ -435,19 +428,19 @@ public:
 		Clear();
 		Init();
 
-		int c = m_InstancedSystems.Count();
-		for ( int i = c - 1 ; i >= 0; i-- )
+		for ( auto it = m_InstancedSystems.begin(); it != m_InstancedSystems.end(); )
 		{
-			CInstancedResponseSystem *sys = m_InstancedSystems[ i ];
+			CInstancedResponseSystem *sys = it->second;
 			if ( !IsCustomManagable() )
 			{
 				sys->Clear();
 				sys->Init();
+				++it;
 			}
 			else
 			{
 				// Custom reponse rules will manage/reload themselves - remove them.
-				m_InstancedSystems.RemoveAt( i );
+				it = m_InstancedSystems.erase( it );
 			}
 		}
 
@@ -460,16 +453,14 @@ private:
 
 	void ClearInstanced()
 	{
-		int c = m_InstancedSystems.Count();
-		for ( int i = c - 1 ; i >= 0; i-- )
+		for ( auto &[name, sys] : m_InstancedSystems )
 		{
-			CInstancedResponseSystem *sys = m_InstancedSystems[ i ];
 			sys->Release();
 		}
-		m_InstancedSystems.RemoveAll();
+		m_InstancedSystems.clear();
 	}
 
-	CUtlDict< CInstancedResponseSystem *, int > m_InstancedSystems;
+	ks::idict< CInstancedResponseSystem * > m_InstancedSystems;
 	friend void CC_RR_DumpHashInfo( const CCommand &args );
 };
 
@@ -498,12 +489,12 @@ IResponseSystem *CDefaultResponseSystem::BuildCustomResponseSystemGivenCriteria(
 		{
 			float flScore = 0.0f;
 
-			int nCriteriaCount = pRule->m_Criteria.Count();
+			int nCriteriaCount = std::ssize( pRule->m_Criteria );
 			for ( int iCriteria = 0; iCriteria < nCriteriaCount; ++iCriteria )
 			{
-				int iRuleCriteria = pRule->m_Criteria[iCriteria];
+				CriteriaEntry_t *pRuleCriteria = pRule->m_Criteria[iCriteria];
 
-				flScore += LookForCriteria( criteriaSet, iRuleCriteria );
+				flScore += LookForCriteria( criteriaSet, pRuleCriteria );
 				if ( flScore >= flCriteriaScore )
 				{
 					CopyRuleFrom( pRule, iIdx, pCustomSystem );

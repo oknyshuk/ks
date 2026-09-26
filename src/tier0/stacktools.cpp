@@ -8,6 +8,7 @@
 
 #include "pch_tier0.h"
 #include "tier0/stacktools.h"
+#include <mutex>
 #include "tier0/threadtools.h"
 #include "tier0/icommandline.h"
 
@@ -16,8 +17,6 @@
 
 
 #include "tier0/valve_on.h"
-
-#include "tier0/memdbgon.h"
 
 
 #if !defined( ENABLE_RUNTIME_STACK_TRANSLATION ) //disable the whole toolset
@@ -112,7 +111,7 @@ inline int AppendParentStackTrace( void **pReturnAddressesOut, int iArrayCount, 
 
 		if( pTop->m_iParentStackTraceLength != 0 )
 		{
-			int iCopy = MIN( iArrayCount - iAlreadyFilled, pTop->m_iParentStackTraceLength );
+			int iCopy = std::min( iArrayCount - iAlreadyFilled, pTop->m_iParentStackTraceLength );
 			memcpy( pReturnAddressesOut + iAlreadyFilled, pTop->m_pParentStackTrace, iCopy * sizeof( void * ) );
 			iAlreadyFilled += iCopy;
 		}
@@ -134,89 +133,14 @@ inline bool ValidStackAddress( void *pAddress, const void *pNoLessThan, const vo
 	return true;
 }
 
-#pragma auto_inline( off )
 int GetCallStack_Fast( void **pReturnAddressesOut, int iArrayCount, int iSkipCount )
 {
-	//Only tested in windows. This function won't work with frame pointer omission enabled. "vpc /nofpo" all projects
-#if (defined( TIER0_FPO_DISABLED ) || defined( _DEBUG )) &&\
-	(defined( WIN32 ) && !defined( _X360 ) && !defined(_M_X64))
-	void *pStackCrawlEBP;
-	__asm
-	{
-		mov [pStackCrawlEBP], ebp;
-	}
-
-	/*
-	With frame pointer omission disabled, this should be the pattern all the way up the stack
-	[ebp+00]   Old ebp value
-	[ebp+04]   Return address
-	*/
-
-	void *pNoLessThan = pStackCrawlEBP; //impossible for a valid stack to traverse before this address
-	int i;
-
-	CStackTop_FriendFuncs *pTop = (CStackTop_FriendFuncs *)(CStackTop_Base *)g_StackTop;
-	if( pTop != nullptr ) //we can do fewer error checks if we have a valid reference point for the top of the stack
-	{		
-		void *pNoGreaterThan = pTop->m_pStackBase;
-
-		//skips
-		for( i = 0; i != iSkipCount; ++i )
-		{
-			if( (pStackCrawlEBP < pNoLessThan) || (pStackCrawlEBP > pNoGreaterThan) )
-				return AppendParentStackTrace( pReturnAddressesOut, iArrayCount, 0 );
-
-			pNoLessThan = pStackCrawlEBP;
-			pStackCrawlEBP = *(void **)pStackCrawlEBP; //should be pointing at old ebp value
-		}
-
-		//store
-		for( i = 0; i != iArrayCount; ++i )
-		{
-			if( (pStackCrawlEBP < pNoLessThan) || (pStackCrawlEBP > pNoGreaterThan) )
-				break;
-
-			pReturnAddressesOut[i] = *((void **)pStackCrawlEBP + 1);
-
-			pNoLessThan = pStackCrawlEBP;
-			pStackCrawlEBP = *(void **)pStackCrawlEBP; //should be pointing at old ebp value
-		}
-
-		return AppendParentStackTrace( pReturnAddressesOut, iArrayCount, i );
-	}
-	else
-	{
-		void *pNoGreaterThan = ((unsigned char *)pNoLessThan) + (1024 * 1024); //standard stack is 1MB. TODO: Get actual stack end address if available since this check isn't foolproof	
-
-		//skips
-		for( i = 0; i != iSkipCount; ++i )
-		{
-			if( !ValidStackAddress( pStackCrawlEBP, pNoLessThan, pNoGreaterThan ) )
-				return AppendParentStackTrace( pReturnAddressesOut, iArrayCount, 0 );
-
-			pNoLessThan = pStackCrawlEBP;
-			pStackCrawlEBP = *(void **)pStackCrawlEBP; //should be pointing at old ebp value
-		}
-
-		//store
-		for( i = 0; i != iArrayCount; ++i )
-		{
-			if( !ValidStackAddress( pStackCrawlEBP, pNoLessThan, pNoGreaterThan ) )
-				break;
-
-			pReturnAddressesOut[i] = *((void **)pStackCrawlEBP + 1);
-
-			pNoLessThan = pStackCrawlEBP;
-			pStackCrawlEBP = *(void **)pStackCrawlEBP; //should be pointing at old ebp value
-		}
-
-		return AppendParentStackTrace( pReturnAddressesOut, iArrayCount, i );
-	}
-#endif
-
+	// The only implementation this ever had hand-walked EBP frames via MSVC
+	// x86-32 inline asm, and lived inside a branch that's unreachable anyway
+	// (see the ENABLE_RUNTIME_STACK_TRANSLATION guard further up in this
+	// file). No portable fast path exists here.
 	return 0;
 }
-#pragma auto_inline( on )
 
 
 
@@ -516,7 +440,7 @@ public:
 	}
 
 
-	CThreadFastMutex m_hMutex;
+	std::recursive_mutex m_hMutex;
 
 private:
 
@@ -648,25 +572,25 @@ int TranslateStackInfo( const void * const *pCallStack, int iCallStackCount, tch
 
 void PreloadStackInformation( void * const *pAddresses, int iAddressCount )
 {
-	AUTO_LOCK_FM( s_360StackTranslator.m_hMutex );
+	std::scoped_lock lock( s_360StackTranslator.m_hMutex );
 	s_360StackTranslator.LoadStackInformation( pAddresses, iAddressCount );
 }
 
 bool GetFileAndLineFromAddress( const void *pAddress, tchar *pFileNameOut, int iMaxFileNameLength, uint32 &iLineNumberOut, uint32 *pDisplacementOut )
 {
-	AUTO_LOCK_FM( s_360StackTranslator.m_hMutex );
+	std::scoped_lock lock( s_360StackTranslator.m_hMutex );
 	return s_360StackTranslator.GetFileAndLineFromAddress( pAddress, pFileNameOut, iMaxFileNameLength, iLineNumberOut, pDisplacementOut );
 }
 
 bool GetSymbolNameFromAddress( const void *pAddress, tchar *pSymbolNameOut, int iMaxSymbolNameLength, uint64 *pDisplacementOut )
 {
-	AUTO_LOCK_FM( s_360StackTranslator.m_hMutex );
+	std::scoped_lock lock( s_360StackTranslator.m_hMutex );
 	return s_360StackTranslator.GetSymbolNameFromAddress( pAddress, pSymbolNameOut, iMaxSymbolNameLength, pDisplacementOut );
 }
 
 bool GetModuleNameFromAddress( const void *pAddress, tchar *pModuleNameOut, int iMaxModuleNameLength )
 {
-	AUTO_LOCK_FM( s_360StackTranslator.m_hMutex );
+	std::scoped_lock lock( s_360StackTranslator.m_hMutex );
 	return s_360StackTranslator.GetModuleNameFromAddress( pAddress, pModuleNameOut, iMaxModuleNameLength );
 }
 
@@ -686,21 +610,10 @@ CCallStackStorage::CCallStackStorage( FN_GetCallStack GetStackFunction, uint32 i
 CStackTop_CopyParentStack::CStackTop_CopyParentStack( void * const *pParentStackTrace, int iParentStackTraceLength )
 {
 #if defined( ENABLE_RUNTIME_STACK_TRANSLATION )
-	//miniature version of GetCallStack_Fast()
-#if (defined( TIER0_FPO_DISABLED ) || defined( _DEBUG )) &&\
-	(defined( WIN32 ) && !defined( _X360 ) && !defined(_M_X64))
-	void *pStackCrawlEBP;
-	__asm
-	{
-		mov [pStackCrawlEBP], ebp;
-	}
-	pStackCrawlEBP = *(void **)pStackCrawlEBP;
-	m_pReplaceAddress = *((void **)pStackCrawlEBP + 1);
-	m_pStackBase = (void *)((void **)pStackCrawlEBP + 1);
-#else
+	// The MSVC x86-32 inline-asm fast path this once had is gone; nothing
+	// portable replaced it, so this always takes the plain fallback below.
 	m_pReplaceAddress = nullptr;
 	m_pStackBase = this;
-#endif
 
 	m_pParentStackTrace = nullptr;
 
@@ -744,21 +657,10 @@ CStackTop_CopyParentStack::~CStackTop_CopyParentStack( void )
 CStackTop_ReferenceParentStack::CStackTop_ReferenceParentStack( void * const *pParentStackTrace, int iParentStackTraceLength )
 {
 #if defined( ENABLE_RUNTIME_STACK_TRANSLATION )
-	//miniature version of GetCallStack_Fast()
-#if (defined( TIER0_FPO_DISABLED ) || defined( _DEBUG )) &&\
-	(defined( WIN32 ) && !defined( _X360 ) && !defined(_M_X64))
-	void *pStackCrawlEBP;
-	__asm
-	{
-		mov [pStackCrawlEBP], ebp;
-	}
-	pStackCrawlEBP = *(void **)pStackCrawlEBP;
-	m_pReplaceAddress = *((void **)pStackCrawlEBP + 1);
-	m_pStackBase = (void *)((void **)pStackCrawlEBP + 1);
-#else
+	// The MSVC x86-32 inline-asm fast path this once had is gone; nothing
+	// portable replaced it, so this always takes the plain fallback below.
 	m_pReplaceAddress = nullptr;
 	m_pStackBase = this;
-#endif
 
 	m_pParentStackTrace = pParentStackTrace;
 

@@ -7,6 +7,7 @@
 #ifndef HLTVSERVER_H
 #define HLTVSERVER_H
 
+#include <mutex>
 #include "baseserver.h"
 #include "hltvclient.h"
 #include "hltvdemo.h"
@@ -110,10 +111,10 @@ public: // CBaseServer interface:
 	const char *GetHltvRelayPassword() const;
 	IClient *ConnectClient ( const ns_address &adr, int protocol, int challenge, int authProtocol, 
 		const char *name, const char *password, const char *hashedCDkey, int cdKeyLen,
-		CUtlVector< CCLCMsg_SplitPlayerConnect_t * > & splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform,
+		const SplitPlayerConnects_t &splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform,
 		const byte *pbEncryptionKey, int nEncryptionKeyIndex ) OVERRIDE;
 
-	virtual bool GetRedirectAddressForConnectClient( const ns_address &adr, CUtlVector< CCLCMsg_SplitPlayerConnect_t* > & splitScreenClients, ns_address *pNetAdrRedirect ) OVERRIDE;
+	virtual bool GetRedirectAddressForConnectClient( const ns_address &adr, const SplitPlayerConnects_t &splitScreenClients, ns_address *pNetAdrRedirect ) OVERRIDE;
 
 	bool	CheckHltvPasswordMatch( const char *szPasswordProvidedByClient, const char *szServerRequiredPassword, CSteamID steamidClient );
 
@@ -367,10 +368,10 @@ public:
 	CNetworkStringTableContainer m_NetworkStringTables;
 
 	CDeltaEntityCache				m_DeltaCache;
-	CUtlVector<CFrameCacheEntry_s>	m_FrameCache;
-	CThreadFastMutex				m_FrameCacheMutex; // locks frame cache
+	std::vector< CFrameCacheEntry_s >	m_FrameCache;
+	std::recursive_mutex				m_FrameCacheMutex; // locks frame cache
 
-	typedef CUtlMap< uint32, CNETMsg_PlayerAvatarData_t *, int, CDefLess< uint32 > > PlayerAvatarDataMap_t;
+	typedef std::map< uint32, std::unique_ptr< CNETMsg_PlayerAvatarData_t > > PlayerAvatarDataMap_t;
 	PlayerAvatarDataMap_t m_mapPlayerAvatarData;
 
 	// demoplayer stuff:

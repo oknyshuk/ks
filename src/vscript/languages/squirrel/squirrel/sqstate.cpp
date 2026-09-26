@@ -13,11 +13,11 @@
 #include "sqclass.h"
 
 #ifdef DEBUG_SQSTRING_LEAKS
-#include "tier1/utldict.h"
+#include <vector>
+#include "tier1/map_ops.h"
 #endif
 
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#include "memdbgon.h"
 #undef new // allow placement new
 #endif
 
@@ -651,29 +651,22 @@ SQString *StringTable::Add(const SQChar *news,SQInteger len)
 	if ( g_bDumpSQStrings )
 	{
 		g_bDumpSQStrings = false;
-		CUtlDict< CCopyableUtlVector<SQString *>, int > sorter;
+		ks::idict< std::vector<SQString *> > sorter;
 		Msg( "{\n");
 		for (SQInteger i=0; i<(int)_numofslots; i++){
 			SQString *p = _strings[i];
 			while(p){
-				int i = sorter.Find( p->_val );
-				if ( i == -1 )
-				{
-					i = sorter.Insert( p->_val );
-				}
-				sorter[i].AddToTail( p );
+				sorter[p->_val].push_back( p );
 				SQString *next = p->_next;
 				p = next;
 			}
 		}
-		int ii = sorter.First();
-		while ( ii != -1 )
+		for ( auto &[name, strings] : sorter )
 		{
-			for ( int j = 0; j < sorter[ii].Count(); j++ )
+			for ( SQString *str : strings )
 			{
-				Msg( "0x%x/%2d: %s\n", sorter[ii][j], sorter[ii][j]->_uiRef, sorter[ii][j]->_val );
+				Msg( "%p/%2d: %s\n", str, (int)str->_uiRef, str->_val );
 			}
-			ii = sorter.Next( ii );
 		}
 		Msg( "}\n");
 	}

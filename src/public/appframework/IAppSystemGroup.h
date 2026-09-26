@@ -19,8 +19,11 @@
 
 #include "tier1/interface.h"
 #include "tier1/utlvector.h"
-#include "tier1/utldict.h"
-#include "tier1/UtlStringMap.h"
+#include "tier1/map_ops.h"
+#include <algorithm>
+#include <string>
+#include <string_view>
+#include <vector>
 #include "iappsystem.h"
 
 //-----------------------------------------------------------------------------
@@ -172,7 +175,41 @@ private:
 		char *m_pModuleName;
 	};
 
-	typedef CUtlStringMap< CUtlSymbolTable > LibraryDependencies_t;
+	// Dense in insertion order: entry i describes m_Systems[i].
+	struct LibraryDependencies_t
+	{
+		std::vector< std::string > m_Names;
+		std::vector< std::vector< std::string > > m_Deps;	// per library, in insertion order
+		ks::idict< int > m_Index;
+
+		// Index of pName, added if new.
+		int AddString( const char *pName )
+		{
+			auto [it, bNew] = m_Index.try_emplace( pName, (int)m_Names.size() );
+			if ( bNew )
+			{
+				m_Names.emplace_back( pName );
+				m_Deps.emplace_back();
+			}
+			return it->second;
+		}
+		int Find( const char *pName ) const
+		{
+			auto it = m_Index.find( pName );
+			return it == m_Index.end() ? -1 : it->second;
+		}
+		int Count() const { return (int)m_Names.size(); }
+
+		bool DependsOn( int i, const char *pName ) const
+		{
+			return std::ranges::find( m_Deps[i], std::string_view( pName ) ) != m_Deps[i].end();
+		}
+		void AddDependency( int i, const char *pName )
+		{
+			if ( !DependsOn( i, pName ) )
+				m_Deps[i].emplace_back( pName );
+		}
+	};
 
 	int OnStartup();
 	void OnShutdown();
@@ -204,10 +241,10 @@ private:
 
 	void	ReportStartupFailure( int nErrorStage, int nSysIndex );
 
-	CUtlVector<Module_t> m_Modules;
-	CUtlVector<IAppSystem*> m_Systems;
-	CUtlVector<CreateInterfaceFn> m_NonAppSystemFactories;
-	CUtlDict<int, unsigned short> m_SystemDict;
+	std::vector< Module_t > m_Modules;
+	std::vector< IAppSystem* > m_Systems;
+	std::vector< CreateInterfaceFn > m_NonAppSystemFactories;
+	std::map<std::string, int> m_SystemDict;
 	CAppSystemGroup *m_pParentAppSystem;
 	AppSystemGroupStage_t m_nCurrentStage;
 

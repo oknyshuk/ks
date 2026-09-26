@@ -9,9 +9,6 @@
 #include <mathlib/vector.h>
 #include "mathlib/spherical_geometry.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 static Vector face_xvector[6]={								// direction of x pixels on face
 	Vector( - 1, 0, 0 ),											// back

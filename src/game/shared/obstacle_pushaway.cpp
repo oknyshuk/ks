@@ -13,8 +13,6 @@
 #else
 #include "vehicle_base.h"
 #endif
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 
 //-----------------------------------------------------------------------------------------------------
@@ -245,7 +243,7 @@ void AvoidPushawayProps( CBaseCombatCharacter *pPlayer, CUserCmd *pCmd )
 		}
 		mass = clamp( mass, minMass, maxMass );
 		
-		mass = MAX( mass, 0 );
+		mass = std::max<std::common_type_t<float, int>>( mass, 0 );
 		mass /= maxMass; // bring into a 0..1 range
 
 		// Push away from the collision point. The closer our center is to the collision point,
@@ -275,10 +273,10 @@ void AvoidPushawayProps( CBaseCombatCharacter *pPlayer, CUserCmd *pCmd )
 			flDist = VectorNormalize( vPushAway );
 		}
 
-		flDist = MAX( flDist, 1 );
+		flDist = std::max<std::common_type_t<float, int>>( flDist, 1 );
 
 		float flForce = sv_pushaway_player_force.GetFloat() / flDist * mass;
-		flForce = MIN( flForce, sv_pushaway_max_player_force.GetFloat() );
+		flForce = std::min( flForce, sv_pushaway_max_player_force.GetFloat() );
 
 #ifndef CLIENT_DLL
 		pPlayer->PushawayTouch( props[i] );
@@ -342,10 +340,10 @@ void PerformObstaclePushaway( CBaseCombatCharacter *pPushingEntity )
 			vPushAway.z = 0;
 			
 			float flDist = VectorNormalize( vPushAway );
-			flDist = MAX( flDist, 1 );
+			flDist = std::max<std::common_type_t<float, int>>( flDist, 1 );
 			
 			float flForce = sv_pushaway_force.GetFloat() / flDist;
-			flForce = MIN( flForce, sv_pushaway_max_force.GetFloat() );
+			flForce = std::min( flForce, sv_pushaway_max_force.GetFloat() );
 
 			pObj->ApplyForceOffset( vPushAway * flForce, pPushingEntity->WorldSpaceCenter() );
 		}

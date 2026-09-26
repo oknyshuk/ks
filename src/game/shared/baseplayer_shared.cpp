@@ -64,9 +64,6 @@
 #include "obstacle_pushaway.h"
 #include "igamemovement.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //----------------------------------------------------
 // Player Physics Shadow
 //----------------------------------------------------
@@ -1133,12 +1130,12 @@ void CBasePlayer::AddToPlayerSimulationList( CBaseEntity *other )
 	CHandle< CBaseEntity > h;
 	h = other;
 	// Already in list
-	if ( m_SimulatedByThisPlayer.Find( h ) != m_SimulatedByThisPlayer.InvalidIndex() )
+	if ( ks::find_index( m_SimulatedByThisPlayer, h ) != -1 )
 		return;
 
 	Assert( other->IsPlayerSimulated() );
 
-	m_SimulatedByThisPlayer.AddToTail( h );
+	m_SimulatedByThisPlayer.push_back( h );
 }
 
 //-----------------------------------------------------------------------------
@@ -1158,12 +1155,12 @@ void CBasePlayer::RemoveFromPlayerSimulationList( CBaseEntity *other )
 	CHandle< CBaseEntity > h;
 	h = other;
 
-	m_SimulatedByThisPlayer.FindAndRemove( h );
+	ks::erase_first( m_SimulatedByThisPlayer, h );
 }
 
 void CBasePlayer::SimulatePlayerSimulatedEntities( void )
 {
-	int c = m_SimulatedByThisPlayer.Count();
+	int c = std::ssize( m_SimulatedByThisPlayer );
 	int i;
 
 	for ( i = c - 1; i >= 0; i-- )
@@ -1175,7 +1172,7 @@ void CBasePlayer::SimulatePlayerSimulatedEntities( void )
 
 		if ( !e || !e->IsPlayerSimulated() )
 		{
-			m_SimulatedByThisPlayer.Remove( i );
+			m_SimulatedByThisPlayer.erase( m_SimulatedByThisPlayer.begin() + i );
 			continue;
 		}
 
@@ -1186,7 +1183,7 @@ void CBasePlayer::SimulatePlayerSimulatedEntities( void )
 	}
 
 	// Loop through all entities again, checking their untouch if flagged to do so
-	c = m_SimulatedByThisPlayer.Count();
+	c = std::ssize( m_SimulatedByThisPlayer );
 
 	for ( i = c - 1; i >= 0; i-- )
 	{
@@ -1197,7 +1194,7 @@ void CBasePlayer::SimulatePlayerSimulatedEntities( void )
 		CBaseEntity *e = h;
 		if ( !e || !e->IsPlayerSimulated() )
 		{
-			m_SimulatedByThisPlayer.Remove( i );
+			m_SimulatedByThisPlayer.erase( m_SimulatedByThisPlayer.begin() + i );
 			continue;
 		}
 
@@ -1216,7 +1213,7 @@ void CBasePlayer::SimulatePlayerSimulatedEntities( void )
 //-----------------------------------------------------------------------------
 void CBasePlayer::ClearPlayerSimulationList( void )
 {
-	int c = m_SimulatedByThisPlayer.Count();
+	int c = std::ssize( m_SimulatedByThisPlayer );
 	int i;
 
 	for ( i = c - 1; i >= 0; i-- )
@@ -1231,7 +1228,7 @@ void CBasePlayer::ClearPlayerSimulationList( void )
 		}
 	}
 
-	m_SimulatedByThisPlayer.RemoveAll();
+	m_SimulatedByThisPlayer.clear();
 }
 #endif
 
@@ -1574,10 +1571,10 @@ void CBasePlayer::PlayerUse ( void )
 				vPushAway.z = 0;
 
 				float flDist = VectorNormalize( vPushAway );
-				flDist = MAX( flDist, 1 );
+				flDist = std::max<std::common_type_t<float, int>>( flDist, 1 );
 
 				float flForce = sv_pushaway_force.GetFloat() / flDist;
-				flForce = MIN( flForce, sv_pushaway_max_force.GetFloat() );
+				flForce = std::min( flForce, sv_pushaway_max_force.GetFloat() );
 
 				pObj->ApplyForceOffset( vPushAway * flForce, WorldSpaceCenter() );
 			}
@@ -2274,7 +2271,7 @@ void CBasePlayer::CalcViewBob( Vector& eyeOrigin )
 
 		if ( m_Local.m_bInLanding == true )
 		{
-			float landseconds = MAX(gpGlobals->curtime - m_Local.m_flLandingTime, 0.0f);
+			float landseconds = std::max(gpGlobals->curtime - m_Local.m_flLandingTime, 0.0f);
 			float landFraction = SimpleSpline( landseconds / 0.25f );
 			clamp( landFraction, 0.0f, 1.0f );
 
@@ -2652,9 +2649,9 @@ void CBasePlayer::AddSplitScreenPlayer( CBasePlayer *pOther )
 {
 	CHandle< CBasePlayer > h;
 	h = pOther;
-	if ( m_hSplitScreenPlayers.Find( h ) == m_hSplitScreenPlayers.InvalidIndex() )
+	if ( ks::find_index( m_hSplitScreenPlayers, h ) == -1 )
 	{
-		m_hSplitScreenPlayers.AddToTail( h );
+		m_hSplitScreenPlayers.push_back( h );
 	}
 
 	UpdateSplitScreenAndPictureInPicturePlayerList();
@@ -2664,28 +2661,28 @@ void CBasePlayer::RemoveSplitScreenPlayer( CBasePlayer *pOther )
 {
 	CHandle< CBasePlayer > h;
 	h = pOther;
-	m_hSplitScreenPlayers.FindAndRemove( h );
+	ks::erase_first( m_hSplitScreenPlayers, h );
 
 	UpdateSplitScreenAndPictureInPicturePlayerList();
 }
 
-CUtlVector< CHandle< CBasePlayer > > &CBasePlayer::GetSplitScreenPlayers()
+std::vector< CHandle< CBasePlayer > > &CBasePlayer::GetSplitScreenPlayers()
 {
 	return m_hSplitScreenPlayers;
 }
 
 bool CBasePlayer::HasAttachedSplitScreenPlayers() const
 {
-	return ( m_hSplitScreenPlayers.Count() > 0 );
+	return ( !m_hSplitScreenPlayers.empty() );
 }
 
 void CBasePlayer::AddPictureInPicturePlayer( CBasePlayer *pOther )
 {
 	CHandle< CBasePlayer > h;
 	h = pOther;
-	if ( m_hPipPlayers.Find( h ) == m_hPipPlayers.InvalidIndex() )
+	if ( ks::find_index( m_hPipPlayers, h ) == -1 )
 	{
-		m_hPipPlayers.AddToTail( h );
+		m_hPipPlayers.push_back( h );
 	}
 
 	UpdateSplitScreenAndPictureInPicturePlayerList();
@@ -2695,17 +2692,17 @@ void CBasePlayer::RemovePictureInPicturePlayer( CBasePlayer *pOther )
 {
 	CHandle< CBasePlayer > h;
 	h = pOther;
-	m_hPipPlayers.FindAndRemove( h );
+	ks::erase_first( m_hPipPlayers, h );
 
 	UpdateSplitScreenAndPictureInPicturePlayerList();
 }
 
-CUtlVector< CHandle< CBasePlayer > > &CBasePlayer::GetSplitScreenAndPictureInPicturePlayers()
+std::vector< CHandle< CBasePlayer > > &CBasePlayer::GetSplitScreenAndPictureInPicturePlayers()
 {
 	return m_hSplitScreenAndPipPlayers;
 }
 
-CUtlVector< CHandle< CBasePlayer > >& CBasePlayer::GetPictureInPicturePlayers( void )
+std::vector< CHandle< CBasePlayer > >& CBasePlayer::GetPictureInPicturePlayers( void )
 {
 	return m_hPipPlayers;
 }
@@ -2713,15 +2710,15 @@ CUtlVector< CHandle< CBasePlayer > >& CBasePlayer::GetPictureInPicturePlayers( v
 void CBasePlayer::UpdateSplitScreenAndPictureInPicturePlayerList()
 {
 	// Make m_hSplitScreenAndPipPlayers the union of m_hSplitScreenPlayers and m_hPipPlayers
-	m_hSplitScreenAndPipPlayers.RemoveAll();
-	m_hSplitScreenAndPipPlayers.AddVectorToTail( m_hSplitScreenPlayers );
+	m_hSplitScreenAndPipPlayers.clear();
+	m_hSplitScreenAndPipPlayers.append_range( m_hSplitScreenPlayers );
 
-	for ( int i = 0; i < m_hPipPlayers.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_hPipPlayers ); i++ )
 	{
 		CHandle< CBasePlayer > h = m_hPipPlayers[i];
-		if ( m_hSplitScreenAndPipPlayers.Find( h ) == m_hSplitScreenAndPipPlayers.InvalidIndex() )
+		if ( ks::find_index( m_hSplitScreenAndPipPlayers, h ) == -1 )
 		{
-			m_hSplitScreenAndPipPlayers.AddToTail( h );
+			m_hSplitScreenAndPipPlayers.push_back( h );
 		}
 	}
 }
@@ -2812,9 +2809,9 @@ void CBasePlayer::VPhysicsShadowUpdate( IPhysicsObject *pPhysics )
 	// UNDONE: If the player is penetrating, but the player's game collisions are not stuck, teleport the physics shadow to the game position
 	if ( pPhysics->GetGameFlags() & FVPHYSICS_PENETRATING )
 	{
-		CUtlVector<CBaseEntity *> list;
+		std::vector< CBaseEntity * > list;
 		PhysGetListOfPenetratingEntities( this, list );
-		for ( int i = list.Count()-1; i >= 0; --i )
+		for ( int i = std::ssize( list )-1; i >= 0; --i )
 		{
 			// filter out anything that isn't simulated by vphysics
 			// UNDONE: Filter out motion disabled objects?

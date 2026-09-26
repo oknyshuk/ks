@@ -436,7 +436,8 @@ void CTextureCombine::Init( TCombinedStudioData *pCombinedStudioData )
 		m_AtlasGroups[ nGroup ].m_nNumMaterials = 0;
 		memset( m_AtlasGroups[ nGroup ].m_nMaterialIndices, 0xFF, sizeof( m_AtlasGroups[ nGroup ].m_nMaterialIndices ) ); // all set to -1
 		
-		memset( m_AtlasGroups[ nGroup ].m_pVTFData, 0, sizeof( m_AtlasGroups[ nGroup ].m_pVTFData ) );
+		for ( auto &vtfData : m_AtlasGroups[ nGroup ].m_pVTFData )
+			vtfData.clear();
 		memset( m_AtlasGroups[ nGroup ].m_pVTFFileHeader, 0, sizeof( m_AtlasGroups[ nGroup ].m_pVTFFileHeader ) );
 		memset( m_AtlasGroups[ nGroup ].m_pResources, 0, sizeof( m_AtlasGroups[ nGroup ].m_pResources ) );
 		memset( m_AtlasGroups[ nGroup ].m_bIsFlat, 0, sizeof( m_AtlasGroups[ nGroup ].m_bIsFlat ) );
@@ -473,8 +474,7 @@ void CTextureCombine::Cleanup( )
 	{
 		for( int nMaterial = 0; nMaterial < m_nNumMaterials; nMaterial++ )
 		{
-			delete m_AtlasGroups[ nGroup ].m_pVTFData[ nMaterial ];
-			m_AtlasGroups[ nGroup ].m_pVTFData[ nMaterial ] = nullptr;
+			std::vector< std::byte >().swap( m_AtlasGroups[ nGroup ].m_pVTFData[ nMaterial ] );
 		}
 	}
 }
@@ -701,15 +701,17 @@ bool CTextureCombine::LoadVTFs( int nAtlasGroup, const char *pszTextureField, co
 		V_ComposeFileName( "materials/", pszTexture, szFinalPath, sizeof( szFinalPath ) );
 		V_DefaultExtension( szFinalPath, ".vtf", sizeof( szFinalPath ) );
 
-		m_AtlasGroups[ nAtlasGroup ].m_pVTFData[ nMaterial ] = new CUtlBuffer();
-		if ( g_pFullFileSystem->ReadFile( szFinalPath, "GAME", *m_AtlasGroups[ nAtlasGroup ].m_pVTFData[ nMaterial ], 0 ) == false )
+		auto vtfFile = g_pFullFileSystem->ReadFile( szFinalPath, "GAME" );
+		if ( !vtfFile )
 		{
 			Assert( 0 );
 			V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "could not read texture %s", szFinalPath );
 			throw( COMBINE_RESULT_FLAG_MISSING_ASSET_FILE );
 		}
 
-		VTFFileBaseHeader_t	*pVTFFileBaseHeader = ( VTFFileBaseHeader_t * )m_AtlasGroups[ nAtlasGroup ].m_pVTFData[ nMaterial ]->PeekGet();
+		m_AtlasGroups[ nAtlasGroup ].m_pVTFData[ nMaterial ] = std::move( *vtfFile );
+
+		VTFFileBaseHeader_t	*pVTFFileBaseHeader = ( VTFFileBaseHeader_t * )m_AtlasGroups[ nAtlasGroup ].m_pVTFData[ nMaterial ].data();
 		if ( pVTFFileBaseHeader->version[ 0 ] != VTF_MAJOR_VERSION || pVTFFileBaseHeader->version[ 1 ] != VTF_MINOR_VERSION )
 		{
 			Assert( 0 );
@@ -825,7 +827,7 @@ bool CTextureCombine::CombineTexture( int nAtlasGroup, int nTexture, const char 
 		}
 
 		byte *pPtr = ( ( byte * )m_AtlasGroups[ nAtlasGroup ].m_pVTFFileHeader[ nMaterial ] ) + ( pImageResource->resData );
-		DebugCombineMsg( "Material %d: Size = %d\n", nMaterial, m_pVTFData[ nMaterial ]->TellMaxPut() );
+		DebugCombineMsg( "Material %d: Size = %d\n", nMaterial, m_pVTFData[ nMaterial ].size() );
 
 		char		szCheckFileName[ MAX_PATH ];
 		V_FixupPathName( szCheckFileName, sizeof( szCheckFileName ), szTextureNames[ nMaterial ] );
@@ -1140,8 +1142,7 @@ bool CTextureCombine::CombineTexture( int nAtlasGroup, int nTexture, const char 
 
 	for( int nMaterial = 0; nMaterial < m_AtlasGroups[ nAtlasGroup ].m_nNumMaterials; nMaterial++ )
 	{
-		delete m_AtlasGroups[ nAtlasGroup ].m_pVTFData[ nMaterial ];
-		m_AtlasGroups[ nAtlasGroup ].m_pVTFData[ nMaterial ] = nullptr;
+		std::vector< std::byte >().swap( m_AtlasGroups[ nAtlasGroup ].m_pVTFData[ nMaterial ] );
 
 		m_AtlasGroups[ nAtlasGroup ].m_pVTFFileHeader[ nMaterial ] = nullptr;
 	}

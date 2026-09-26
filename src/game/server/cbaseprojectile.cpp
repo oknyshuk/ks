@@ -24,9 +24,6 @@
 #include "cbase.h"
 #include "cbaseprojectile.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 LINK_ENTITY_TO_CLASS( baseprojectile, CBaseProjectile );
 
 //---------------------------------------------------------

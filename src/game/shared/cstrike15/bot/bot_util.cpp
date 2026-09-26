@@ -18,8 +18,6 @@
 
 #include "cs_bot.h"
 #include <ctype.h>
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 static int s_iBeamSprite = 0;
 

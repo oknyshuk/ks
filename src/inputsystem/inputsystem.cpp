@@ -14,9 +14,6 @@
 #include "platforminputdevice.h"
 
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 #include <SDL3/SDL.h>
 #include "appframework/sdlwindow.h"
 static void initKeymap(void);
@@ -51,7 +48,7 @@ CInputSystem::CInputSystem()
 	m_bPumpEnabled = true;
 	m_bIsPolling = false;
 	m_bIsInGame = false;
-	m_JoysticksEnabled.ClearAllFlags();
+	m_JoysticksEnabled = 0;
 	m_nJoystickCount = 0;
 	m_nJoystickBaseline = 0;
 	m_nPollCount = 0;
@@ -284,14 +281,14 @@ void CInputSystem::ClearInputState( bool bPurgeState )
 	for ( int i = 0; i < INPUT_STATE_COUNT; ++i )
 	{
 		InputState_t& state = m_InputState[i];
-		state.m_ButtonState.ClearAll();
+		state.m_ButtonState.reset();
 		memset( state.m_pAnalogDelta, 0, ANALOG_CODE_LAST * sizeof(int) );
 		memset( state.m_pAnalogValue, 0, ANALOG_CODE_LAST * sizeof(int) );
 		memset( state.m_ButtonPressedTick, 0, BUTTON_CODE_LAST * sizeof(int) );
 		memset( state.m_ButtonReleasedTick, 0, BUTTON_CODE_LAST * sizeof(int) );
 		if ( bPurgeState )
 		{
-			state.m_Events.Purge();
+			state.m_Events.clear(); state.m_Events.shrink_to_fit();
 			state.m_bDirty = false;
 		}
 	}
@@ -375,7 +372,7 @@ ButtonCode_t CInputSystem::SKeyToButtonCode( int nPort, int nXKey ) const
 void CInputSystem::PostEvent( int nType, int nTick, int nData, int nData2, int nData3 )
 {
 	InputState_t &state = m_InputState[ m_bIsPolling ];
-	int i = state.m_Events.AddToTail();
+	int i = std::ssize( state.m_Events ); state.m_Events.emplace_back();
 	InputEvent_t &event = state.m_Events[i];
 	event.m_nType = nType;
 	event.m_nTick = nTick;
@@ -392,10 +389,10 @@ void CInputSystem::PostEvent( int nType, int nTick, int nData, int nData2, int n
 void CInputSystem::PostButtonPressedEvent( InputEventType_t nType, int nTick, ButtonCode_t scanCode, ButtonCode_t virtualCode )
 {
 	InputState_t &state = m_InputState[ m_bIsPolling ];
-	if ( !state.m_ButtonState.IsBitSet( scanCode ) )
+	if ( !state.m_ButtonState[scanCode] )
 	{
 		// Update button state
-		state.m_ButtonState.Set( scanCode ); 
+		state.m_ButtonState.set( scanCode ); 
 		state.m_ButtonPressedTick[ scanCode ] = nTick;
 
 		// Add this event to the app-visible event queue
@@ -411,10 +408,10 @@ void CInputSystem::PostButtonPressedEvent( InputEventType_t nType, int nTick, Bu
 void CInputSystem::PostButtonReleasedEvent( InputEventType_t nType, int nTick, ButtonCode_t scanCode, ButtonCode_t virtualCode )
 {
 	InputState_t &state = m_InputState[ m_bIsPolling ];
-	if ( state.m_ButtonState.IsBitSet( scanCode ) )
+	if ( state.m_ButtonState[scanCode] )
 	{
 		// Update button state
-		state.m_ButtonState.Clear( scanCode ); 
+		state.m_ButtonState.reset( scanCode ); 
 		state.m_ButtonReleasedTick[ scanCode ] = nTick;
 
 		// Add this event to the app-visible event queue
@@ -436,7 +433,7 @@ void CInputSystem::ProcessEvent( UINT uMsg, WPARAM wParam, LPARAM lParam )
 //-----------------------------------------------------------------------------
 void CInputSystem::CopyInputState( InputState_t *pDest, const InputState_t &src, bool bCopyEvents )
 {
-	pDest->m_Events.RemoveAll();
+	pDest->m_Events.clear();
 	pDest->m_bDirty = false;
 	if ( src.m_bDirty )
 	{
@@ -447,10 +444,10 @@ void CInputSystem::CopyInputState( InputState_t *pDest, const InputState_t &src,
 		memcpy( &pDest->m_pAnalogValue, &src.m_pAnalogValue, sizeof( pDest->m_pAnalogValue ) );
 		if ( bCopyEvents )
 		{
-			if ( src.m_Events.Count() > 0 )
+			if ( !src.m_Events.empty() )
 			{
-				pDest->m_Events.EnsureCount( src.m_Events.Count() );
-				memcpy( pDest->m_Events.Base(), src.m_Events.Base(), src.m_Events.Count() * sizeof(InputEvent_t) );
+				ks::ensure_size( pDest->m_Events, std::ssize( src.m_Events ) );
+				memcpy( pDest->m_Events.data(), src.m_Events.data(), std::ssize( src.m_Events ) * sizeof(InputEvent_t) );
 			}
 		}
 	}
@@ -842,7 +839,9 @@ int CInputSystem::GetJoystickCount() const
 
 void CInputSystem::EnableJoystickInput( int nJoystick, bool bEnable )
 {
-	m_JoysticksEnabled.SetFlag( 1 << nJoystick, bEnable ); 
+	unsigned short nMask = 1 << nJoystick;
+	Assert( nMask == ( 1 << nJoystick ) );
+	m_JoysticksEnabled = bEnable ? ( m_JoysticksEnabled | nMask ) : ( m_JoysticksEnabled & ~nMask );
 }
 
 void CInputSystem::EnableJoystickDiagonalPOV( int nJoystick, bool bEnable )
@@ -860,7 +859,7 @@ int CInputSystem::GetPollTick() const
 	
 bool CInputSystem::IsButtonDown( ButtonCode_t code ) const
 {
-	return m_InputState[INPUT_STATE_CURRENT].m_ButtonState.IsBitSet( code );
+	return m_InputState[INPUT_STATE_CURRENT].m_ButtonState[code];
 }
 
 int CInputSystem::GetAnalogValue( AnalogCode_t code ) const
@@ -946,12 +945,12 @@ void CInputSystem::ResetMotionControllerScreenCalibration( void )
 //-----------------------------------------------------------------------------
 int CInputSystem::GetEventCount() const
 {
-	return m_InputState[INPUT_STATE_CURRENT].m_Events.Count();
+	return std::ssize( m_InputState[INPUT_STATE_CURRENT].m_Events );
 }
 
 const InputEvent_t* CInputSystem::GetEventData( ) const
 {
-	return m_InputState[INPUT_STATE_CURRENT].m_Events.Base();
+	return m_InputState[INPUT_STATE_CURRENT].m_Events.data();
 }
 
 
@@ -962,7 +961,7 @@ const InputEvent_t* CInputSystem::GetEventData( ) const
 void CInputSystem::PostUserEvent( const InputEvent_t &event )
 {
 	InputState_t &state = m_InputState[ m_bIsPolling ];
-	state.m_Events.AddToTail( event );
+	state.m_Events.push_back( event );
 	state.m_bDirty = true;
 }
 
@@ -1157,9 +1156,8 @@ InputCursorHandle_t CInputSystem::LoadCursorFromFile( const char *pFileName, con
 	Q_strlower( fn );
 	Q_FixSlashes( fn );
 
-	UtlSymId_t nCursorIndex = m_UserCursors.Find( fn );
-	if ( nCursorIndex != m_UserCursors.InvalidIndex() )
-		return m_UserCursors[ nCursorIndex ];
+	if ( InputCursorHandle_t *pCursor = ks::find_ptr( m_UserCursors, fn ) )
+		return *pCursor;
 
 	g_pFullFileSystem->GetLocalCopy( fn );
 

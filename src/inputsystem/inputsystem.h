@@ -22,12 +22,11 @@ typedef char xKey_t;
 #include "inputsystem/iinputsystem.h"
 #include "tier2/tier2.h"
 
-#include "tier1/UtlStringMap.h"
+#include "tier1/map_ops.h"
 #include "inputsystem/ButtonCode.h"
 #include "inputsystem/AnalogCode.h"
-#include "bitvec.h"
+#include <bitset>
 #include "tier1/utlvector.h"
-#include "tier1/utlflags.h"
 #include "input_device.h"
 
 #include "steam/steam_api.h"
@@ -203,12 +202,12 @@ private:
 	struct InputState_t
 	{
 		// Analog states
-		CBitVec<BUTTON_CODE_LAST> m_ButtonState;
+		std::bitset<BUTTON_CODE_LAST> m_ButtonState;
 		int m_ButtonPressedTick[ BUTTON_CODE_LAST ];
 		int m_ButtonReleasedTick[ BUTTON_CODE_LAST ];
 		int m_pAnalogDelta[ ANALOG_CODE_LAST ];
 		int m_pAnalogValue[ ANALOG_CODE_LAST ];
-		CUtlVector< InputEvent_t > m_Events;
+		std::vector< InputEvent_t > m_Events;
 		bool m_bDirty;
 	};
 
@@ -409,7 +408,7 @@ private:
 	UINT m_uiMouseWheel;
 
 	// Joystick info
-	CUtlFlags<unsigned short> m_JoysticksEnabled;
+	unsigned short m_JoysticksEnabled;	// bit per joystick
 	int m_nJoystickCount;
 	bool m_bXController;
 	bool m_bSteamController;
@@ -440,7 +439,7 @@ private:
 
 	// Cursors, foiled again!
 	InputCursorHandle_t m_pDefaultCursors[ INPUT_CURSOR_COUNT ];
-	CUtlStringMap< InputCursorHandle_t >	m_UserCursors;
+	ks::idict< InputCursorHandle_t >	m_UserCursors;
 
 	CSysModule   *m_pXInputDLL;
 	CSysModule   *m_pRawInputDLL;

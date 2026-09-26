@@ -8,8 +8,7 @@
 
 #include <quantize.h>
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
+#include <algorithm>
 
 
 #define N_EXTRAVALUES 1
@@ -50,7 +49,7 @@ void ColorQuantize(uint8 const *Image,
 					val1+=PIXEL(x,y,c)*ExtraValueXForms[i*3+c];
 				val1>>=8;
 				NthSample(s,y*Width+x,N_DIMENSIONS)->Value[c]=(uint8)
-					(MIN(255,MAX(0,val1)));
+					(std::clamp(val1, 0, 255));
 			}
 		}
 	struct QuantizedValue *q=Quantize(s,Width*Height,N_DIMENSIONS,
@@ -80,7 +79,7 @@ void ColorQuantize(uint8 const *Image,
 					tryc+=Error[x][c][ErrorUse];
 					Error[x][c][ErrorUse]=0;
 				}
-				samp[c]=(uint8) MIN(255,MAX(0,tryc));
+				samp[c]=(uint8) std::clamp(tryc, 0, 255);
 			}
 			struct QuantizedValue *f=FindMatch(samp,3,Weights,q);
 			out_pixels[Width*y+x]=(uint8) (f->value);

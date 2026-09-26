@@ -16,9 +16,6 @@
 ISoundServices *g_pSoundServices = nullptr;
 Vector		listener_origin;
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define	MAXPRINTMSG	4096
 
 CEngineStats g_EngineStats;

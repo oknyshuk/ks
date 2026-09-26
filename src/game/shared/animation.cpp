@@ -22,10 +22,6 @@
 #include "enginecallback.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
-#pragma warning( disable : 4244 )
 #define iabs(i) (( (i) >= 0 ) ? (i) : -(i) )
 
 int ExtractBbox( CStudioHdr *pstudiohdr, int sequence, Vector& mins, Vector& maxs )
@@ -364,13 +360,11 @@ int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequence( CStudioHdr *
 		return ACTIVITY_NOT_AVAILABLE;
 
 	// get the data for the given activity
-	HashValueType dummy( activity, 0, 0, 0 );
-	UtlHashHandle_t handle = m_ActToSeqHash.Find(dummy);
-	if (!m_ActToSeqHash.IsValidHandle(handle))
+	const HashValueType * __restrict actData = ks::find_ptr( m_ActToSeqHash, activity );
+	if (!actData)
 	{
 		return ACTIVITY_NOT_AVAILABLE;
 	}
-	const HashValueType * __restrict actData = &m_ActToSeqHash[handle];
 
 	AssertMsg2( actData->totalWeight > 0, "Activity %d has total weight of %d!",
 		activity, actData->totalWeight );
@@ -421,7 +415,7 @@ int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequence( CStudioHdr *
 
 }
 
-int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequenceFromModifiers( CStudioHdr *pstudiohdr, int activity, CUtlSymbol *pActivityModifiers, int iModifierCount )
+int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequenceFromModifiers( CStudioHdr *pstudiohdr, int activity, const ActivityModifierSym_t *pActivityModifiers, int iModifierCount )
 {
 	if ( !pstudiohdr->SequencesAvailable() )
 	{
@@ -447,17 +441,15 @@ int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequenceFromModifiers(
 		return ACTIVITY_NOT_AVAILABLE;
 
 	// get the data for the given activity
-	HashValueType dummy( activity, 0, 0, 0 );
-	UtlHashHandle_t handle = m_ActToSeqHash.Find(dummy);
-	if (!m_ActToSeqHash.IsValidHandle(handle))
+	const HashValueType * __restrict actData = ks::find_ptr( m_ActToSeqHash, activity );
+	if (!actData)
 	{
 		return ACTIVITY_NOT_AVAILABLE;
 	}
-	const HashValueType * __restrict actData = &m_ActToSeqHash[handle];
 	
 	// go through each sequence and give actmod matches preference. LACK of an actmod is a detriment
 	int top_score = -1;
-	CUtlVector<int> topScoring( actData->count, actData->count );	
+	std::vector< int > topScoring; topScoring.reserve( actData->count );
 	for ( int i = 0; i < actData->count; i++ )
 	{
 		SequenceTuple * __restrict sequenceInfo = m_pSequenceTuples + actData->startingIdx + i;
@@ -491,12 +483,12 @@ int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequenceFromModifiers(
 		{
 			if ( score > top_score )
 			{
-				topScoring.RemoveAll();
+				topScoring.clear();
 			}
 		
 			for ( int n=0; n<sequenceInfo->weight; n++ )
 			{
-				topScoring.AddToTail( sequenceInfo->seqnum );
+				topScoring.push_back( sequenceInfo->seqnum );
 			}
 		
 			top_score = score;
@@ -508,9 +500,9 @@ int CStudioHdr::CActivityToSequenceMapping::SelectWeightedSequenceFromModifiers(
 	//{
 	//	return topScoring[ SharedRandomInt( "SelectWeightedSequence", 0, topScoring.Count() - 1 ) ];
 	//}
-	if ( topScoring.Count() )
+	if ( !topScoring.empty() )
 	{
-		return topScoring[ RandomInt( 0, topScoring.Count() - 1 ) ];
+		return topScoring[ RandomInt( 0, std::ssize( topScoring ) - 1 ) ];
 	}
 	else
 	{

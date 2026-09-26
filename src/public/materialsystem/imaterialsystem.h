@@ -17,6 +17,7 @@
 
 #include "tier1/interface.h"
 #include "tier1/refcount.h"
+#include "tier1/intrusive_ptr.h"
 #include "mathlib/vector.h"
 #include "mathlib/vector4d.h"
 #include "mathlib/vmatrix.h"
@@ -1922,19 +1923,22 @@ inline const E& CMatRenderData<E>::operator[]( int i ) const
 
 //-----------------------------------------------------------------------------
 
-class CMatRenderContextPtr : public CRefPtr<IMatRenderContext>
+class CMatRenderContextPtr
 {
-	typedef CRefPtr<IMatRenderContext> BaseClass;
 public:
 	CMatRenderContextPtr()																					{}
-	CMatRenderContextPtr( IMatRenderContext *pInit )			: BaseClass( pInit )						{ if ( BaseClass::m_pObject ) BaseClass::m_pObject->BeginRender(); }
-	CMatRenderContextPtr( IMaterialSystem *pFrom )				: BaseClass( pFrom->GetRenderContext() )	{ if ( BaseClass::m_pObject ) BaseClass::m_pObject->BeginRender(); }
-	~CMatRenderContextPtr()																					{ if ( BaseClass::m_pObject ) BaseClass::m_pObject->EndRender(); }
+	CMatRenderContextPtr( IMatRenderContext *pInit )			: m_pContext( pInit, ks::adopt_ref )		{ if ( m_pContext ) m_pContext->BeginRender(); }
+	CMatRenderContextPtr( IMaterialSystem *pFrom )				: m_pContext( pFrom->GetRenderContext(), ks::adopt_ref )	{ if ( m_pContext ) m_pContext->BeginRender(); }
+	~CMatRenderContextPtr()																					{ if ( m_pContext ) m_pContext->EndRender(); }
 
-	IMatRenderContext *operator=( IMatRenderContext *p )		{ if ( p ) p->BeginRender(); return BaseClass::operator=( p ); }
+	IMatRenderContext *operator=( IMatRenderContext *p )		{ if ( p ) p->BeginRender(); if ( m_pContext ) m_pContext->EndRender(); m_pContext.reset( p, ks::adopt_ref ); return p; }
 
-	void SafeRelease()											{ if ( BaseClass::m_pObject ) BaseClass::m_pObject->EndRender(); BaseClass::SafeRelease(); }
-	void AssignAddRef( IMatRenderContext *pFrom )				{ if ( BaseClass::m_pObject ) BaseClass::m_pObject->EndRender(); BaseClass::AssignAddRef( pFrom ); BaseClass::m_pObject->BeginRender(); }
+	operator IMatRenderContext *() const						{ return m_pContext.get(); }
+	IMatRenderContext *operator->() const						{ return m_pContext.get(); }
+	IMatRenderContext &operator*() const						{ return *m_pContext; }
+
+	void SafeRelease()											{ if ( m_pContext ) m_pContext->EndRender(); m_pContext.reset(); }
+	void AssignAddRef( IMatRenderContext *pFrom )				{ if ( m_pContext ) m_pContext->EndRender(); m_pContext = pFrom; m_pContext->BeginRender(); }
 
 	void GetFrom( IMaterialSystem *pFrom )						{ AssignAddRef( pFrom->GetRenderContext() ); }
 
@@ -1943,6 +1947,7 @@ private:
 	CMatRenderContextPtr( const CMatRenderContextPtr &from );
 	void operator=( const CMatRenderContextPtr &from );
 
+	ks::intrusive_ptr<IMatRenderContext> m_pContext;
 };
 
 //-----------------------------------------------------------------------------
@@ -1988,7 +1993,7 @@ static void DoMatSysQueueMark( IMaterialSystem *pMaterialSystem, const char *psz
 {
 	CMatRenderContextPtr pRenderContext( pMaterialSystem );
 	if ( pRenderContext->GetCallQueue() ) 
-		pRenderContext->GetCallQueue()->QueueCall( Plat_DebugString, CUtlEnvelope<const char *>( psz ) );
+		pRenderContext->GetCallQueue()->QueueCall( Plat_DebugString, ks::envelope<const char *>( psz ) );
 }
 
 #define MatSysQueueMark( pMaterialSystem, ...) DoMatSysQueueMark( pMaterialSystem, CFmtStr( __VA_ARGS__ ) )

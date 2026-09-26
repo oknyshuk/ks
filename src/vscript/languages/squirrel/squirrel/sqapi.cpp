@@ -13,7 +13,6 @@
 #include "sqfuncstate.h"
 #include "sqclass.h"
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#include "memdbgon.h"
 #undef new // allow placement new
 #endif
 

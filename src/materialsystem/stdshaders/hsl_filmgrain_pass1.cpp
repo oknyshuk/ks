@@ -11,9 +11,6 @@
 #include "hsl_filmgrain_pass1_ps20.inc"
 #include "hsl_filmgrain_pass1_ps20b.inc"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 //
 // First pass converts from RGB to HSL and tweaks with noise similar to After Effects

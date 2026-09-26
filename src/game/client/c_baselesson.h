@@ -10,6 +10,7 @@
 
 #include "GameEventListener.h"
 #include "hud_locator_target.h"
+#include "tier1/map_ops.h"
 
 
 #define DECLARE_LESSON( _lessonClassName, _baseLessonClassName ) \
@@ -66,7 +67,7 @@ public:
 
 	CBaseLesson* GetRoot( void ) const { return m_pRoot; }
 	void SetRoot( CBaseLesson *pRoot );
-	const CUtlVector < CBaseLesson * >* GetChildren( void ) const { return &m_OpenOpportunities; }
+	const std::vector< CBaseLesson * >* GetChildren( void ) const { return &m_OpenOpportunities; }
 
 	float GetInitTime( void ) { return m_fInitTime; }
 	void SetStartTime( void ) { m_fStartTime = gpGlobals->curtime; }
@@ -131,8 +132,8 @@ protected:
 private:
 
 	CBaseLesson							*m_pRoot;
-	CUtlVector < CBaseLesson * >		m_OpenOpportunities;
-	CUtlVector < const CBaseLesson * >	m_Prerequisites;
+	std::vector< CBaseLesson * >		m_OpenOpportunities;
+	std::vector< const CBaseLesson * >	m_Prerequisites;
 
 	CGameInstructorSymbol		m_stringCloseReason;
 
@@ -369,7 +370,7 @@ struct LessonElement_t
 
 struct LessonEvent_t
 {
-	CUtlVector< LessonElement_t >	elements;
+	std::vector< LessonElement_t >	elements;
 	CGameInstructorSymbol			szEventName;
 };
 
@@ -396,17 +397,17 @@ public:
 	virtual void ProcessCloseGameEvents( const CScriptedIconLesson *pRootLesson, const char *name, IGameEvent *event );
 	virtual void ProcessSuccessGameEvents( const CScriptedIconLesson *pRootLesson, const char *name, IGameEvent *event );
 
-	CUtlVector< LessonEvent_t >& GetOpenEvents( void ) { return m_OpenEvents; }
-	CUtlVector< LessonEvent_t >& GetCloseEvents( void ) { return m_CloseEvents; }
-	CUtlVector< LessonEvent_t >& GetSuccessEvents( void ) { return m_SuccessEvents; }
-	CUtlVector< LessonEvent_t >& GetOnOpenEvents( void ) { return m_OnOpenEvents; }
-	CUtlVector< LessonEvent_t >& GetUpdateEvents( void ) { return m_UpdateEvents; }
+	std::vector< LessonEvent_t >& GetOpenEvents( void ) { return m_OpenEvents; }
+	std::vector< LessonEvent_t >& GetCloseEvents( void ) { return m_CloseEvents; }
+	std::vector< LessonEvent_t >& GetSuccessEvents( void ) { return m_SuccessEvents; }
+	std::vector< LessonEvent_t >& GetOnOpenEvents( void ) { return m_OnOpenEvents; }
+	std::vector< LessonEvent_t >& GetUpdateEvents( void ) { return m_UpdateEvents; }
 
-	bool ProcessElements( IGameEvent *event, const CUtlVector< LessonElement_t > *pElements );
+	bool ProcessElements( IGameEvent *event, const std::vector< LessonElement_t > *pElements );
 
 private:
-	void InitElementsFromKeys( CUtlVector< LessonElement_t > *pLessonElements, KeyValues *pKey );
-	void InitElementsFromElements( CUtlVector< LessonElement_t > *pLessonElements, const CUtlVector< LessonElement_t > *pLessonElements2 );
+	void InitElementsFromKeys( std::vector< LessonElement_t > *pLessonElements, KeyValues *pKey );
+	void InitElementsFromElements( std::vector< LessonElement_t > *pLessonElements, const std::vector< LessonElement_t > *pLessonElements2 );
 
 	void InitFromKeys( KeyValues *pKey );
 
@@ -428,7 +429,7 @@ private:
 	LessonEvent_t * AddUpdateEvent( void );
 
 private:
-	static CUtlDict< int, int > LessonActionMap;
+	static ks::idict< int > LessonActionMap;
 
 	EHANDLE					m_hLocalPlayer;
 	float					m_fOutput;
@@ -441,12 +442,12 @@ private:
 	float					m_fFloat1;
 	float					m_fFloat2;
 
-	CUtlVector< CGameInstructorSymbol >	m_PrerequisiteNames;
-	CUtlVector< LessonEvent_t >	m_OpenEvents;
-	CUtlVector< LessonEvent_t >	m_CloseEvents;
-	CUtlVector< LessonEvent_t >	m_SuccessEvents;
-	CUtlVector< LessonEvent_t >	m_OnOpenEvents;
-	CUtlVector< LessonEvent_t >	m_UpdateEvents;
+	std::vector< CGameInstructorSymbol >	m_PrerequisiteNames;
+	std::vector< LessonEvent_t >	m_OpenEvents;
+	std::vector< LessonEvent_t >	m_CloseEvents;
+	std::vector< LessonEvent_t >	m_SuccessEvents;
+	std::vector< LessonEvent_t >	m_OnOpenEvents;
+	std::vector< LessonEvent_t >	m_UpdateEvents;
 
 	float					m_fUpdateEventTime;
 	CScriptedIconLesson		*m_pDefaultHolder;

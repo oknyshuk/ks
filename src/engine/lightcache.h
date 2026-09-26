@@ -83,7 +83,7 @@ struct LightingState_t
 
 		// Prevent the total number of local lights from exceeding the max we can deal with
 		extern ConVar r_worldlights;
-		int nWorldLights = MIN( g_pMaterialSystemHardwareConfig->MaxNumLights(), r_worldlights.GetInt() );
+		int nWorldLights = std::min( g_pMaterialSystemHardwareConfig->MaxNumLights(), r_worldlights.GetInt() );
 		if ( numlights < nWorldLights )
 		{
 			locallight[numlights] = pLocalLight;

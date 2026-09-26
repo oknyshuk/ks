@@ -12,7 +12,6 @@
 #pragma once
 
 #include "const.h"
-#include "utlsymbol.h"
 #include "materialsystem/imesh.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialvar.h"

@@ -10,9 +10,6 @@
 #include "cs_bot.h"
 #include "sensorgrenade_projectile.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define ENTITY_SPOT_FREQUENCY 0.5f
 
 static CCSEntitySpotting s_EntitySpotting("CCSEntitySpotting");
@@ -53,9 +50,9 @@ bool ForEachEntitySpotter( SpotFunctor &func )
 	}
 
 	//ActiveGrenadeList activeGrenadeList = TheBots->m_activeGrenadeList;
-	FOR_EACH_LL( TheCSBots()->m_activeGrenadeList, it )
+	for ( const auto &pGrenade : TheCSBots()->m_activeGrenadeList )
 	{
-		ActiveGrenade *ag = TheCSBots()->m_activeGrenadeList[it];
+		ActiveGrenade *ag = pGrenade.get();
 		if ( ag->IsSensor() == false )
 			continue;
 
@@ -261,7 +258,7 @@ public:
 				if ( !csPlayer || (csPlayer && csPlayer->GetFogObscuredRatio( m_targetEntity ) < 0.9) )
 				{
 					m_spotted = true;
-					m_spottedBy.AddToTail( csPlayerSpotter->entindex() );
+					m_spottedBy.push_back( csPlayerSpotter->entindex() );
 					//return false; // spotted already, so no reason to check for other players spotting the same thing.
 				}
 			}
@@ -277,7 +274,7 @@ public:
 
 	int GetIsSpottedBy( int nUtlIndex ) const
 	{
-		if ( nUtlIndex < m_spottedBy.Count() )
+		if ( nUtlIndex < std::ssize( m_spottedBy ) )
 			return m_spottedBy[nUtlIndex];
 
 		return 0;
@@ -285,7 +282,7 @@ public:
 
 	int GetSpottedByCount( void ) const
 	{
-		return m_spottedBy.Count();
+		return std::ssize( m_spottedBy );
 	}
 
 private:
@@ -293,7 +290,7 @@ private:
 	Vector m_target;
 	int m_team;
 	bool m_spotted;
-	CUtlVector < int > m_spottedBy;
+	std::vector< int > m_spottedBy;
 };
 
 
@@ -376,7 +373,7 @@ bool GatherNonPVSSpottedEntitiesFunctor::operator()( CBaseEntity * pEntity )
 			}
 		}
 
-		m_EntitySpotted.Set( pEntity->entindex(), ( m_bForceSpot || pEntity->IsSpotted() || bForceSpotted ) );
+		m_EntitySpotted.set( pEntity->entindex(), ( m_bForceSpot || pEntity->IsSpotted() || bForceSpotted ) );
 	}
 
 	return true;

@@ -12,7 +12,6 @@
 
 
 #include "utlvector.h"
-#include "utlrbtree.h"
 
 #define MAX_MAX_LIGHTMAP_WIDTH 2048
 

@@ -5,12 +5,10 @@
 //=============================================================================//
 
 #include "dt_utlvector_common.h"
-#include "utldict.h"
+#include "tier1/map_ops.h"
 
-#include "tier0/memdbgon.h"
-
-static CUtlDict<int,int> *g_STDict = 0;
-static CUtlDict<int,int> *g_RTDict = 0;
+static ks::idict<int> *g_STDict = 0;
+static ks::idict<int> *g_RTDict = 0;
 
 
 char* AllocateStringHelper2( const char *pFormat, va_list marker )
@@ -52,18 +50,17 @@ char* AllocateUniqueDataTableName( bool bSendTable, const char *pFormat, ... )
 	// their constructors won't have been called yet by the time we get in here.
 	if ( !g_STDict )
 	{
-		g_STDict = new CUtlDict<int,int>;
-		g_RTDict = new CUtlDict<int,int>;
+		g_STDict = new ks::idict<int>;
+		g_RTDict = new ks::idict<int>;
 	}
 
-	CUtlDict<int,int> *pDict = bSendTable ? g_STDict : g_RTDict;
-	if ( pDict->Find( pRet ) != pDict->InvalidIndex() )
+	ks::idict<int> *pDict = bSendTable ? g_STDict : g_RTDict;
+	if ( !pDict->emplace( pRet, 0 ).second )
 	{
 		// If it hits this, then they have 2 utlvectors in different data tables with the same name and the
 		// same size limit. The names of 
 		Assert( false );
 	}
-	pDict->Insert( pRet, 0 );
 #endif
 
 	return pRet;

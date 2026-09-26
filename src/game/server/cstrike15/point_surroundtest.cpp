@@ -8,9 +8,6 @@
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 class CSurroundTest : public CPointEntity
 {

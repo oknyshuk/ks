@@ -291,7 +291,7 @@ void CDynamicTree::AdjustAncestors( int32 nNode )
 		int32 nChild2 = m_NodePool[ nNode ].m_nChild2;
 		AssertDbg( nChild2 != NULL_NODE );
 
-		m_NodePool[ nNode ].m_nHeight = 1 + MAX( m_NodePool[ nChild1 ].m_nHeight, m_NodePool[ nChild2 ].m_nHeight );
+		m_NodePool[ nNode ].m_nHeight = 1 + std::max( m_NodePool[ nChild1 ].m_nHeight, m_NodePool[ nChild2 ].m_nHeight );
 		m_NodePool[ nNode ].m_Bounds = Merge( m_NodePool[ nChild1 ].m_Bounds, m_NodePool[ nChild2 ].m_Bounds );
 
 		nNode = m_NodePool[ nNode ].m_nParent;
@@ -356,8 +356,8 @@ int32 CDynamicTree::Balance( int32 nNode )
 			A.m_nChild2 = nIndexG;
 			A.m_Bounds = Merge( B.m_Bounds, G.m_Bounds );
 			C.m_Bounds = Merge( A.m_Bounds, F.m_Bounds );
-			A.m_nHeight = 1 + MAX( B.m_nHeight, G.m_nHeight );
-			C.m_nHeight = 1 + MAX( A.m_nHeight, F.m_nHeight );
+			A.m_nHeight = 1 + std::max( B.m_nHeight, G.m_nHeight );
+			C.m_nHeight = 1 + std::max( A.m_nHeight, F.m_nHeight );
 		}
 		else
 		{
@@ -366,8 +366,8 @@ int32 CDynamicTree::Balance( int32 nNode )
 			A.m_nChild2 = nIndexF;
 			A.m_Bounds = Merge( B.m_Bounds, F.m_Bounds );
 			C.m_Bounds = Merge( A.m_Bounds, G.m_Bounds );
-			A.m_nHeight = 1 + MAX( B.m_nHeight, F.m_nHeight );
-			C.m_nHeight = 1 + MAX( A.m_nHeight, G.m_nHeight );
+			A.m_nHeight = 1 + std::max( B.m_nHeight, F.m_nHeight );
+			C.m_nHeight = 1 + std::max( A.m_nHeight, G.m_nHeight );
 		}
 
 		return nIndexC;
@@ -412,8 +412,8 @@ int32 CDynamicTree::Balance( int32 nNode )
 			B.m_nChild2 = nIndexD;
 			A.m_Bounds = Merge( C.m_Bounds, E.m_Bounds );
 			B.m_Bounds = Merge( A.m_Bounds, D.m_Bounds );
-			A.m_nHeight = 1 + MAX( C.m_nHeight, E.m_nHeight );
-			B.m_nHeight = 1 + MAX( A.m_nHeight, D.m_nHeight );
+			A.m_nHeight = 1 + std::max( C.m_nHeight, E.m_nHeight );
+			B.m_nHeight = 1 + std::max( A.m_nHeight, D.m_nHeight );
 		}
 		else
 		{
@@ -422,8 +422,8 @@ int32 CDynamicTree::Balance( int32 nNode )
 			B.m_nChild2 = nIndexE;
 			A.m_Bounds = Merge( C.m_Bounds, D.m_Bounds );
 			B.m_Bounds = Merge( A.m_Bounds, E.m_Bounds );
-			A.m_nHeight = 1 + MAX( C.m_nHeight, D.m_nHeight );
-			B.m_nHeight = 1 + MAX( A.m_nHeight, E.m_nHeight );
+			A.m_nHeight = 1 + std::max( C.m_nHeight, D.m_nHeight );
+			B.m_nHeight = 1 + std::max( A.m_nHeight, E.m_nHeight );
 		}
 
 		return nIndexB;
@@ -460,7 +460,7 @@ void CDynamicTree::Query( CProxyVector& proxies, const AABB_t& bounds ) const
 			}
 			else
 			{
-				proxies.AddToTail( nNode );
+				proxies.push_back( nNode );
 			}
 		}
 	}
@@ -494,7 +494,7 @@ void CDynamicTree::Query( CProxyVector& proxies, const Vector& vCenter, float fl
 			}
 			else
 			{
-				proxies.AddToTail( nNode );
+				proxies.push_back( nNode );
 			}
 		}
 	}
@@ -532,7 +532,7 @@ float CDynamicTree::ClosestProxies( CProxyVector& proxies, const Vector &vQuery 
 			else
 			{
                 bestDistance = dist;
-				proxies.AddToTail( nNode );
+				proxies.push_back( nNode );
 			}
 		}
 	}
@@ -543,10 +543,10 @@ float CDynamicTree::ClosestProxies( CProxyVector& proxies, const Vector &vQuery 
     // be true. So we do one last scan of all the "best" proxies to
     // find the true closest ones
     CProxyVector closestProxies;
-    const uint32 numCandidates = proxies.Count();
+    const uint32 numCandidates = std::ssize( proxies );
     for (uint32 ii=0; ii<numCandidates; ++ii)
         if ( m_NodePool[ proxies[ii] ].m_Bounds.GetMinDistToPoint( vQuery ) <= bestDistance )
-            closestProxies.AddToTail( proxies[ii] );
+            closestProxies.push_back( proxies[ii] );
     
     proxies = closestProxies;
     return bestDistance;
@@ -568,14 +568,14 @@ CDynamicTree::CNodePool::CNodePool()
 //--------------------------------------------------------------------------------------------------
 CDynamicTree::CNodePool::~CNodePool()
 {
-	delete m_pObjects;
+	delete[] m_pObjects;
 }
 
 
 //--------------------------------------------------------------------------------------------------
 void CDynamicTree::CNodePool::Clear()
 {
-	delete m_pObjects;
+	delete[] m_pObjects;
 
 	m_nCapacity = 0;
 	m_pObjects = nullptr;
@@ -591,7 +591,7 @@ void CDynamicTree::CNodePool::Reserve( int nCapacity )
 		Node_t* pObjects = m_pObjects;
 		m_pObjects = new Node_t[ nCapacity ];
 		V_memcpy( m_pObjects, pObjects, m_nCapacity * sizeof( Node_t ) );
-		delete pObjects;
+		delete[] pObjects;
 		pObjects = nullptr;
 
 		for ( int32 i = m_nCapacity; i < nCapacity - 1; ++i )
@@ -614,7 +614,7 @@ int32 CDynamicTree::CNodePool::Alloc()
 	// Grow the pool if the free list is empty
 	if ( m_nNext < 0 )
 	{
-		Reserve( MAX( 2, 2 * m_nCapacity ) );
+		Reserve( std::max( 2, 2 * m_nCapacity ) );
 	}
 
 	// Peel of a node from the free list

@@ -62,8 +62,8 @@ public:
 	// VTFBufferHeaderSize() method below to only read that much from the file
 	// NOTE: If you skip mip levels, the height + width of the texture will
 	// change to reflect the size of the largest read in mip level
-	virtual bool Unserialize( CUtlBuffer &buf, bool bHeaderOnly = false, int nSkipMipLevels = 0 ) = 0;
-	virtual bool Serialize( CUtlBuffer &buf ) = 0;
+	virtual bool Unserialize( ks::byte_reader &buf, bool bHeaderOnly = false, int nSkipMipLevels = 0 ) = 0;
+	virtual bool Serialize( ks::byte_writer &buf ) = 0;
 
 	// These are methods to help with optimization:
 	// Once the header is read in, they indicate where to start reading
@@ -202,7 +202,7 @@ void DestroyVTFTexture( IVTFTexture *pTexture );
 
 //-----------------------------------------------------------------------------
 // Allows us to only load in the first little bit of the VTF file to get info
-// Clients should read this much into a UtlBuffer and then pass it in to
+// Clients should read this much into a byte_reader and then pass it in to
 // Unserialize
 //-----------------------------------------------------------------------------
 int VTFFileHeaderSize( int nMajorVersion = -1, int nMinorVersion = -1 );
@@ -210,16 +210,16 @@ int VTFFileHeaderSize( int nMajorVersion = -1, int nMinorVersion = -1 );
 //-----------------------------------------------------------------------------
 // 360 Conversion
 //-----------------------------------------------------------------------------
-typedef bool (*CompressFunc_t)( CUtlBuffer &inputBuffer, CUtlBuffer &outputBuffer );
-bool ConvertVTFTo360Format( const char *pDebugName, CUtlBuffer &sourceBuf, CUtlBuffer &targetBuf, CompressFunc_t pCompressFunc, int nMaxMip = 0 );
-bool ConvertVTFToPS3Format( const char *pDebugName, CUtlBuffer &sourceBuf, CUtlBuffer &targetBuf, CompressFunc_t pCompressFunc, int nMaxMip = 0 );
+typedef bool (*CompressFunc_t)( ks::byte_reader &inputBuffer, ks::byte_writer &outputBuffer );
+bool ConvertVTFTo360Format( const char *pDebugName, ks::byte_reader &sourceBuf, ks::byte_writer &targetBuf, CompressFunc_t pCompressFunc, int nMaxMip = 0 );
+bool ConvertVTFToPS3Format( const char *pDebugName, ks::byte_reader &sourceBuf, ks::byte_writer &targetBuf, CompressFunc_t pCompressFunc, int nMaxMip = 0 );
 bool SRGBCorrectImage( uint8 *pImage,int imageSize, ImageFormat	imageFormat);
 
 //-----------------------------------------------------------------------------
 // 360 Preload
 //-----------------------------------------------------------------------------
-bool GetVTFPreload360Data( const char *pDebugName, CUtlBuffer &fileBufferIn, CUtlBuffer &preloadBufferOut );
-bool GetVTFPreloadPS3Data( const char *pDebugName, CUtlBuffer &fileBufferIn, CUtlBuffer &preloadBufferOut );
+bool GetVTFPreload360Data( const char *pDebugName, ks::byte_reader &fileBufferIn, ks::byte_writer &preloadBufferOut );
+bool GetVTFPreloadPS3Data( const char *pDebugName, ks::byte_reader &fileBufferIn, ks::byte_writer &preloadBufferOut );
 
 #include "mathlib/vector.h"
 

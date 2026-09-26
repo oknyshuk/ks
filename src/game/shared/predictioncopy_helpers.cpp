@@ -21,9 +21,6 @@
 #include "tier1/fmtstr.h"
 #include "utlvector.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 CValueChangeTracker::CValueChangeTracker() :
 	m_bActive( false ),
 	m_bTracking( false ),
@@ -126,7 +123,7 @@ void CValueChangeTracker::StartTrack( char const *pchContext )
 	if ( !IsActive() )
 		return;
 
-	m_strContext = pchContext;
+	m_strContext = ks::nz( pchContext );
 
 	// Grab current value into scratch buffer
 	GetValue( m_OrigValueBuf, sizeof( m_OrigValueBuf ) );
@@ -146,17 +143,17 @@ void CValueChangeTracker::EndTrack()
 	char final[ eChangeTrackerBufSize ];
 	GetValue( final, sizeof( final ) );
 
-	CUtlString *history = &m_History[ m_History.AddToTail() ];
+	std::string *history = &m_History.emplace_back();
 	if ( Q_stricmp( final, m_OrigValueBuf ) )
 	{
-		history->Set( CFmtStr( "+++ %-20.20s:  %s (was %s)", m_strContext.String(), final, m_OrigValueBuf ) );
+		history->assign( ks::nz( CFmtStr( "+++ %-20.20s:  %s (was %s)", m_strContext.c_str(), final, m_OrigValueBuf ) ) );
 	}
 	else
 	{
-		history->Set( CFmtStr( "    %-20.20s:  %s", m_strContext.String(), final ) );
+		history->assign( ks::nz( CFmtStr( "    %-20.20s:  %s", m_strContext.c_str(), final ) ) );
 	}
 
-	Msg( ":%s\n", history->String() );
+	Msg( ":%s\n", history->c_str() );
 }
 
 void CValueChangeTracker::ClearTracking()
@@ -165,7 +162,7 @@ void CValueChangeTracker::ClearTracking()
 	m_bTracking = false;
 	m_hEntityToTrack = nullptr;
 	m_strFieldName = "";
-	m_History.RemoveAll();
+	m_History.clear();
 	m_pTrackField = nullptr;
 }
 
@@ -191,13 +188,13 @@ void CValueChangeTracker::SetupTracking( C_BaseEntity *ent, char const *pchField
 	}
 
 	m_hEntityToTrack = ent;
-	m_strFieldName = pchFieldName;
+	m_strFieldName = ks::nz( pchFieldName );
 	m_bActive = true;
 }
 
 void CValueChangeTracker::Reset()
 {
-	m_History.RemoveAll();
+	m_History.clear();
 }
 
 bool CValueChangeTracker::IsActive() const
@@ -209,9 +206,9 @@ void CValueChangeTracker::Spew()
 {
 	if ( IsActive() )
 	{
-		for ( int i = 0 ; i < m_History.Count(); ++i )
+		for ( int i = 0 ; i < std::ssize( m_History ); ++i )
 		{
-			Msg( "%s\n", m_History[ i ].String() );
+			Msg( "%s\n", m_History[ i ].c_str() );
 		}
 	}
 

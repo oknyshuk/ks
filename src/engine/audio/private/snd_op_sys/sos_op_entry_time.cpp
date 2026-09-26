@@ -11,9 +11,6 @@
 #include "sos_op_entry_time.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 
 

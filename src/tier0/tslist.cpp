@@ -8,9 +8,9 @@
 #include "tier0/tslist.h"
 
 #include <stdlib.h>
+#include <atomic>
+#include <mutex>
 #include "tier0/threadtools.h"											// for rand()
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 extern ThreadHandle_t * CreateTestThreads( ThreadFunc_t fnThread, int numThreads, int nProcessorsToDistribute );
 extern void JoinTestThreads( ThreadHandle_t *pHandles );
@@ -22,12 +22,12 @@ int NUM_THREADS;
 int MAX_THREADS = 8;
 int NUM_PROCESSORS = 1;
 
-CInterlockedInt g_nTested;
-CInterlockedInt g_nThreads;
-CInterlockedInt g_nPushThreads;
-CInterlockedInt g_nPopThreads;
-CInterlockedInt g_nPushes;
-CInterlockedInt g_nPops;
+std::atomic<int> g_nTested;
+std::atomic<int> g_nThreads;
+std::atomic<int> g_nPushThreads;
+std::atomic<int> g_nPopThreads;
+std::atomic<int> g_nPushes;
+std::atomic<int> g_nPops;
 CTSQueue<int, true> g_TestQueue;
 CTSList<int> g_TestList;
 volatile bool g_bStart;
@@ -50,27 +50,37 @@ public:
 };
 
 bool g_bUseMutex = false;
-CThreadConditionalMutex< CThreadFastMutex, &g_bUseMutex > g_TestLock;
+
+class CConditionalMutex
+{
+public:
+	void lock()			{ if ( g_bUseMutex ) m_mutex.lock(); }
+	void unlock()		{ if ( g_bUseMutex ) m_mutex.unlock(); }
+	bool try_lock()		{ return g_bUseMutex ? m_mutex.try_lock() : true; }
+
+private:
+	std::recursive_mutex m_mutex;
+} g_TestLock;
 
 class CQueueOps : public CTestOps
 {
 	void Push( int item )
 	{
-		g_TestLock.Lock();
+		g_TestLock.lock();
 		g_TestQueue.PushItem( item );
-		g_TestLock.Unlock();
+		g_TestLock.unlock();
 		g_nPushes++;
 	}
 	bool Pop( int *pResult )
 	{
-		g_TestLock.Lock();
+		g_TestLock.lock();
 		if ( g_TestQueue.PopItem( pResult ) )
 		{
-			g_TestLock.Unlock();
+			g_TestLock.unlock();
 			g_nPops++;
 			return true;
 		}
-		g_TestLock.Unlock();
+		g_TestLock.unlock();
 		return false;
 	}
 	bool Validate()
@@ -87,20 +97,20 @@ class CListOps : public CTestOps
 {
 	void Push( int item )
 	{
-		g_TestLock.Lock();
+		g_TestLock.lock();
 		g_TestList.PushItem( item );
 		g_nPushes++;
 	}
 	bool Pop( int *pResult )
 	{
-		g_TestLock.Lock();
+		g_TestLock.lock();
 		if ( g_TestList.PopItem( pResult ) )
 		{
-			g_TestLock.Unlock();
+			g_TestLock.unlock();
 			g_nPops++;
 			return true;
 		}
-		g_TestLock.Unlock();
+		g_TestLock.unlock();
 		return false;
 	}
 	bool Validate()
@@ -124,7 +134,7 @@ void IncBucket( int i )
 {
 	if ( i < NUM_TEST ) // tests can slop over a bit
 	{
-		ThreadInterlockedIncrement( &g_pTestBuckets[i] );
+		std::atomic_ref<int>( g_pTestBuckets[i] )++;
 	}
 }
 
@@ -132,7 +142,7 @@ void DecBucket( int i )
 {
 	if ( i < NUM_TEST ) // tests can slop over a bit
 	{
-		ThreadInterlockedDecrement( &g_pTestBuckets[i] );
+		std::atomic_ref<int>( g_pTestBuckets[i] )--;
 	}
 }
 

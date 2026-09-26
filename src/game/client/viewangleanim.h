@@ -65,7 +65,7 @@ private:
 	float m_flAnimStartTime;	// time this animation started
 	bool m_bFinished;
 
-	CUtlVector<CViewAngleKeyFrame *> m_KeyFrames;
+	std::vector< CViewAngleKeyFrame * > m_KeyFrames;
 
 	QAngle m_vecBaseAngles;
 

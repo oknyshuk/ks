@@ -74,15 +74,12 @@ OUTPUTS:
 #include "entitydefs.h"
 #include "entityinput.h"
 #include "entityoutput.h"
-#include "mempool.h"
+#include "tier1/fixed_pool.h"
 #include "tier1/strtools.h"
 #include "datacache/imdlcache.h"
 #include "env_debughistory.h"
 
 #include "tier0/vprof.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CEventAction )
 
@@ -185,26 +182,22 @@ CEventAction::CEventAction( const CEventAction &p_EventAction )
 
 // this memory pool stores blocks around the size of CEventAction/inputitem_t structs
 // can be used for other blocks; will error if to big a block is tried to be allocated
-CUtlMemoryPool g_EntityListPool( MAX(sizeof(CEventAction),sizeof(CMultiInputVar::inputitem_t)), 512, CUtlMemoryPool::GROW_FAST, "g_EntityListPool" );
-
-#include "tier0/memdbgoff.h"
+ks::fixed_pool g_EntityListPool( std::max(sizeof(CEventAction),sizeof(CMultiInputVar::inputitem_t)), 512, ks::fixed_pool::grow::fast, "g_EntityListPool", std::max(alignof(CEventAction),alignof(CMultiInputVar::inputitem_t)) );
 
 void *CEventAction::operator new( size_t stAllocateBlock )
 {
-	return g_EntityListPool.Alloc( stAllocateBlock );
+	return g_EntityListPool.alloc( stAllocateBlock );
 }
 
 void *CEventAction::operator new( size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine )
 {
-	return g_EntityListPool.Alloc( stAllocateBlock );
+	return g_EntityListPool.alloc( stAllocateBlock );
 }
 
 void CEventAction::operator delete( void *pMem )
 {
-	g_EntityListPool.Free( pMem );
+	g_EntityListPool.free( pMem );
 }
-
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: Returns the highest-valued delay in our list of event actions.
@@ -504,19 +497,17 @@ void CMultiInputVar::AddValue( variant_t newVal, int outputID )
 }
 
 
-#include "tier0/memdbgoff.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: allocates memory from the entitylist pool
 //-----------------------------------------------------------------------------
 void *CMultiInputVar::inputitem_t::operator new( size_t stAllocateBlock )
 {
-	return g_EntityListPool.Alloc( stAllocateBlock );
+	return g_EntityListPool.alloc( stAllocateBlock );
 }
 
 void *CMultiInputVar::inputitem_t::operator new( size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine )
 {
-	return g_EntityListPool.Alloc( stAllocateBlock );
+	return g_EntityListPool.alloc( stAllocateBlock );
 }
 
 //-----------------------------------------------------------------------------
@@ -524,10 +515,8 @@ void *CMultiInputVar::inputitem_t::operator new( size_t stAllocateBlock, int nBl
 //-----------------------------------------------------------------------------
 void CMultiInputVar::inputitem_t::operator delete( void *pMem )
 {
-	g_EntityListPool.Free( pMem );
+	g_EntityListPool.free( pMem );
 }
-
-#include "tier0/memdbgon.h"
 
 
 //-----------------------------------------------------------------------------
@@ -535,7 +524,7 @@ void CMultiInputVar::inputitem_t::operator delete( void *pMem )
 //
 // Purpose: holds and executes a global prioritized queue of entity actions
 //-----------------------------------------------------------------------------
-DEFINE_FIXEDSIZE_ALLOCATOR( EventQueuePrioritizedEvent_t, 128, CUtlMemoryPool::GROW_SLOW );
+DEFINE_FIXEDSIZE_ALLOCATOR( EventQueuePrioritizedEvent_t, 128, ks::fixed_pool::grow::slow );
 
 CEventQueue g_EventQueue;
 
@@ -1263,26 +1252,22 @@ const char *variant_t::ToString( void ) const
 
 /////////////////////// entitylist /////////////////////
 
-CUtlMemoryPool g_EntListMemPool( sizeof(entitem_t), 256, CUtlMemoryPool::GROW_NONE, "g_EntListMemPool" );
-
-#include "tier0/memdbgoff.h"
+ks::fixed_pool g_EntListMemPool( sizeof(entitem_t), 256, ks::fixed_pool::grow::none, "g_EntListMemPool", alignof(entitem_t) );
 
 void *entitem_t::operator new( size_t stAllocateBlock )
 {
-	return g_EntListMemPool.Alloc( stAllocateBlock );
+	return g_EntListMemPool.alloc( stAllocateBlock );
 }
 
 void *entitem_t::operator new( size_t stAllocateBlock, int nBlockUse, const char *pFileName, int nLine )
 {
-	return g_EntListMemPool.Alloc( stAllocateBlock );
+	return g_EntListMemPool.alloc( stAllocateBlock );
 }
 
 void entitem_t::operator delete( void *pMem )
 {
-	g_EntListMemPool.Free( pMem );
+	g_EntListMemPool.free( pMem );
 }
-
-#include "tier0/memdbgon.h"
 
 
 CEntityList::CEntityList()

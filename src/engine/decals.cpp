@@ -14,10 +14,7 @@
 #include "filesystem.h"
 #include "filesystem_engine.h"
 #include "materialsystem/imaterial.h"
-#include "utldict.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include <map>
 
 struct DecalEntry
 {
@@ -29,11 +26,10 @@ struct DecalEntry
 };
 
 // This stores the list of all decals
-CUtlMap< FileNameHandle_t, DecalEntry >	g_DecalDictionary( 0, 0, DefLessFunc( FileNameHandle_t ) );
+std::map< FileNameHandle_t, DecalEntry >	g_DecalDictionary;
 
-// This is a list of indices into the dictionary.
-// This list is indexed by network id, so it maps network ids to decal dictionary entries
-CUtlVector< int > g_DecalLookup;
+// This list is indexed by network id, so it maps network ids to decal dictionary entries (null if unset)
+std::vector< DecalEntry * > g_DecalLookup;
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -63,14 +59,10 @@ IMaterial *Draw_DecalMaterial( int index )
 	if ( BIsPlayerLogoDecal( index ) )
 		return materials->FindMaterial( "decals/playerlogo01", TEXTURE_GROUP_DECAL, true );
 
-	if ( index < 0 || index >= g_DecalLookup.Count() )
+	if ( index < 0 || index >= std::ssize( g_DecalLookup ) )
 		return nullptr;
 
-	int slot = g_DecalLookup[index];
-	if ( slot < 0 || slot >= (int)g_DecalDictionary.MaxElement() )
-		return nullptr;
-
-	DecalEntry * entry = &g_DecalDictionary[slot];
+	DecalEntry * entry = g_DecalLookup[index];
 	
 	if ( entry )
 	{
@@ -85,16 +77,15 @@ IMaterial *Draw_DecalMaterial( int index )
 #ifndef DEDICATED
 void Draw_DecalSetName( int decal, char *name )
 {
-	while ( decal >= g_DecalLookup.Count() )
+	while ( decal >= std::ssize( g_DecalLookup ) )
 	{
 		MEM_ALLOC_CREDIT();
-		int idx = g_DecalLookup.AddToTail();
-		g_DecalLookup[idx] = g_DecalDictionary.InvalidIndex();
+		g_DecalLookup.push_back( nullptr );
 	}
 
 	FileNameHandle_t fnHandle = g_pFileSystem->FindOrAddFileName( name );
-	int lookup = g_DecalDictionary.Find( fnHandle );
-	if ( lookup == g_DecalDictionary.InvalidIndex() )
+	auto lookup = g_DecalDictionary.find( fnHandle );
+	if ( lookup == g_DecalDictionary.end() )
 	{
 		DecalEntry entry;
 #ifdef _DEBUG
@@ -106,14 +97,14 @@ void Draw_DecalSetName( int decal, char *name )
 		entry.material = GL_LoadMaterial( name, TEXTURE_GROUP_DECAL, true );
 		entry.index = decal;
 
-		lookup = g_DecalDictionary.Insert( fnHandle, entry );
+		lookup = g_DecalDictionary.emplace( fnHandle, entry ).first;
 	}
 	else
 	{
-		g_DecalDictionary[lookup].index = decal;
+		lookup->second.index = decal;
 	}
 
-	g_DecalLookup[decal] = lookup;
+	g_DecalLookup[decal] = &lookup->second;
 }
 
 
@@ -126,8 +117,8 @@ int Draw_DecalIndexFromName( char *name, bool *found )
 	Assert( found );
 
 	FileNameHandle_t fnHandle = g_pFileSystem->FindOrAddFileName( name );
-	int lookup = g_DecalDictionary.Find( fnHandle );
-	if ( lookup == g_DecalDictionary.InvalidIndex() )
+	auto lookup = g_DecalDictionary.find( fnHandle );
+	if ( lookup == g_DecalDictionary.end() )
 	{
 		if ( found )
 		{
@@ -140,7 +131,7 @@ int Draw_DecalIndexFromName( char *name, bool *found )
 	{
 		*found = true;
 	}
-	return g_DecalDictionary[lookup].index;
+	return lookup->second.index;
 }
 #endif
 
@@ -148,7 +139,11 @@ int Draw_DecalIndexFromName( char *name, bool *found )
 const char *Draw_DecalNameFromIndex( int index )
 {
 #if !defined(DEDICATED)
-	return g_DecalDictionary[index].material ? g_DecalDictionary[index].material->GetName() : "";
+	// Callers pass the network id, which g_DecalLookup maps to the entry.
+	if ( index < 0 || index >= std::ssize( g_DecalLookup ) || !g_DecalLookup[index] )
+		return "";
+	IMaterial *mat = g_DecalLookup[index]->material;
+	return mat ? mat->GetName() : "";
 #else
 	return "";
 #endif
@@ -166,18 +161,18 @@ void Decal_Init( void )
 //-----------------------------------------------------------------------------
 void Decal_Shutdown( void )
 {
-	for ( int index = g_DecalDictionary.FirstInorder(); index != g_DecalDictionary.InvalidIndex(); index = g_DecalDictionary.NextInorder(index) )
+	for ( auto &[fnHandle, entry] : g_DecalDictionary )
 	{
-		IMaterial *mat = g_DecalDictionary[index].material;
+		IMaterial *mat = entry.material;
 		if ( mat )
 		{
 			GL_UnloadMaterial( mat );
 		}
 #ifdef _DEBUG
-		delete[] g_DecalDictionary[index].m_pDebugName;
+		delete[] entry.m_pDebugName;
 #endif
 	}
-	g_DecalLookup.Purge();
-	g_DecalDictionary.RemoveAll();
+	g_DecalLookup.clear(); g_DecalLookup.shrink_to_fit();
+	g_DecalDictionary.clear();
 }
 

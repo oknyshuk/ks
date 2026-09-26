@@ -7,7 +7,6 @@ see copyright notice in squirrel.h
 #include "sqfuncproto.h"
 #include "sqclosure.h"
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#include "memdbgon.h"
 #undef new // allow placement new
 #endif
 

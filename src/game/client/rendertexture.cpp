@@ -12,9 +12,6 @@
 #include "tier1/strtools.h"
 #include "rendertexture.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 void ReleaseRenderTargets( int nChangeFlags );
 
 void AddReleaseFunc( void )

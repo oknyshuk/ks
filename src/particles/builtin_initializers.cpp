@@ -10,16 +10,12 @@
 #include "tier2/tier2.h"
 #include "tier2/fileutils.h"
 #include "tier2/renderutils.h"
-#include "tier1/UtlStringMap.h"
 #include "tier1/strtools.h"
 #include "dmxloader/dmxelement.h"
 #include "bitmap/psheet.h"
 #include "bspflags.h"
 #include "const.h"
 #include "particles_internal.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 void CParticleOperatorInstance::InitScalarAttributeRandomRangeExpScalar( 
@@ -235,11 +231,11 @@ class C_INIT_RingWave : public CParticleInitializerOperatorInstance
 
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nControlPointNumber = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
-		m_nOverrideCP = MAX( -1, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nOverrideCP ) );
-		m_nOverrideCP2 = MAX( -1, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nOverrideCP2 ) );
-		m_flInitialSpeedMax = MAX( m_flInitialSpeedMin, m_flInitialSpeedMax );
-		m_flInitialRadius = MAX(0, m_flInitialRadius);
+		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
+		m_nOverrideCP = std::max( -1, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nOverrideCP ) );
+		m_nOverrideCP2 = std::max( -1, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nOverrideCP2 ) );
+		m_flInitialSpeedMax = std::max( m_flInitialSpeedMin, m_flInitialSpeedMax );
+		m_flInitialRadius = std::max<std::common_type_t<int, float>>(0, m_flInitialRadius);
 	}
 
 	void InitNewParticlesScalar( CParticleCollection *pParticles, int start_p,
@@ -404,11 +400,11 @@ class C_INIT_CreateInEpitrochoid : public CParticleInitializerOperatorInstance
 
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nControlPointNumber = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
-		m_nScaleCP = MAX( -1, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nScaleCP ) );
-		m_flParticleDensity = MAX( FLT_EPSILON, MIN ( FLT_MAX, m_flParticleDensity ) );
-		m_nComponent1 = MAX( -1, MIN ( 2, m_nComponent1 ) );
-		m_nComponent2 = MAX( -1, MIN ( 2, m_nComponent2 ) );
+		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
+		m_nScaleCP = std::max( -1, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nScaleCP ) );
+		m_flParticleDensity = std::max( FLT_EPSILON, std::min( FLT_MAX, m_flParticleDensity ) );
+		m_nComponent1 = std::max( -1, std::min( 2, m_nComponent1 ) );
+		m_nComponent2 = std::max( -1, std::min( 2, m_nComponent2 ) );
 	}
 
 	void InitNewParticlesScalar( CParticleCollection *pParticles, int start_p,
@@ -572,7 +568,7 @@ void C_INIT_CreateOnModel::InitNewParticlesScalar(
 		Vector vecPnts[100];								// minimize stack usage
 		Vector vecUVW[100];
 		int nHitBoxIndex[100];
-		int nToDo = MIN( ARRAYSIZE( vecPnts ), nParticleCount );
+		int nToDo = std::min<std::common_type_t<long unsigned int, int>>( ARRAYSIZE( vecPnts ), nParticleCount );
 
 		Assert( m_nControlPointNumber <= pParticles->GetHighestControlPoint() );
 
@@ -671,7 +667,7 @@ void C_INIT_SetHitboxToClosest::InitNewParticlesScalar(
 		Vector vecPnts[100];								// minimize stack usage
 		Vector vecUVW[100];
 		int nHitBoxIndex[100];
-		int nToDo = MIN( ARRAYSIZE( vecPnts ), nParticleCount );
+		int nToDo = std::min<std::common_type_t<long unsigned int, int>>( ARRAYSIZE( vecPnts ), nParticleCount );
 
 		for( int i=0; i<nToDo; i++)
 		{
@@ -766,7 +762,7 @@ void C_INIT_SetHitboxToModel::InitNewParticlesScalar(
 		Vector vecPnts[100];								// minimize stack usage
 		Vector vecUVW[100];
 		int nHitBoxIndex[100];
-		int nToDo = MIN( ARRAYSIZE( vecPnts ), nParticleCount );
+		int nToDo = std::min<std::common_type_t<long unsigned int, int>>( ARRAYSIZE( vecPnts ), nParticleCount );
 		int nDesiredHitbox = m_nDesiredHitbox;
 		
 		Assert( m_nControlPointNumber <= pParticles->GetHighestControlPoint() );
@@ -906,8 +902,8 @@ class C_INIT_CreateWithinSphere : public CParticleInitializerOperatorInstance
 
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nControlPointNumber = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
-		m_nScaleCP = MAX( -1, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nScaleCP ) );
+		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
+		m_nScaleCP = std::max( -1, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nScaleCP ) );
 		m_bDistanceBias = ( m_vecDistanceBias.x != 1.0f ) || ( m_vecDistanceBias.y != 1.0f ) || ( m_vecDistanceBias.z != 1.0f );
 		m_bDistanceBiasAbs = ( m_vecDistanceBiasAbs.x != 0.0f ) || ( m_vecDistanceBiasAbs.y != 0.0f ) || ( m_vecDistanceBiasAbs.z != 0.0f );
 	}
@@ -951,14 +947,14 @@ void C_INIT_CreateWithinSphere::InitNewParticlesScalar(
 		flScaleSpeed = vecScale.y;
 		flScaleLocalSpeed = vecScale.z;
 	}
-	CUtlVector< int > nValidControlPoints;
+	std::vector< int > nValidControlPoints;
 	if ( m_bUseHighestEndCP )
 	{
 		for ( int i = m_nControlPointNumber; i <= pParticles->GetHighestControlPoint(); i++ )
 		{
 			if ( pParticles->GetControlPointAtCurrentTime( i ) == vec3_invalid || pParticles->IsNonPositionalControlPoint( i ) )
 				continue;
-			nValidControlPoints.AddToTail( i );
+			nValidControlPoints.push_back( i );
 		}
 	}
 	for( ; nParticleCount--; start_p++ )
@@ -966,7 +962,7 @@ void C_INIT_CreateWithinSphere::InitNewParticlesScalar(
 		float *xyz = pParticles->GetFloatAttributePtrForWrite( PARTICLE_ATTRIBUTE_XYZ, start_p );
 		float ct = *( pParticles->GetFloatAttributePtr( PARTICLE_ATTRIBUTE_CREATION_TIME, start_p ) );
 
-		ct = MAX( ct, pParticles->m_flCurTime - pParticles->m_flDt );	// don't ask for times too far in the past. This can happen in systems that don't use creation_time.
+		ct = std::max( ct, pParticles->m_flCurTime - pParticles->m_flDt );	// don't ask for times too far in the past. This can happen in systems that don't use creation_time.
 
 
 		float *pxyz = pParticles->GetFloatAttributePtrForWrite( PARTICLE_ATTRIBUTE_PREV_XYZ, start_p );
@@ -977,23 +973,23 @@ void C_INIT_CreateWithinSphere::InitNewParticlesScalar(
 			//hack for growth time instead of using strength as currently initializers don't support it.
 			if ( m_flEndCPGrowthTime != 0.0f )
 			{
-				flStrength = MIN( pParticles->m_flCurTime, m_flEndCPGrowthTime ) / m_flEndCPGrowthTime;
+				flStrength = std::min( pParticles->m_flCurTime, m_flEndCPGrowthTime ) / m_flEndCPGrowthTime;
 			}
-			if ( nValidControlPoints.Count() > 0 )
+			if ( !nValidControlPoints.empty() )
 			{
 				if ( flStrength < 1.0 )
 				{
-					int nHighestControlPoint = floor( RemapValClamped( flStrength, 0.0f, 1.0f, m_nControlPointNumber, MAX( m_nControlPointNumber, pParticles->GetHighestControlPoint() ) ) );
-					int nIndex = nValidControlPoints.Find( pParticles->RandomInt( m_nControlPointNumber, nHighestControlPoint ) );
-					if ( nIndex < 0 || nIndex >= nValidControlPoints.Count() )
+					int nHighestControlPoint = floor( RemapValClamped( flStrength, 0.0f, 1.0f, m_nControlPointNumber, std::max( m_nControlPointNumber, pParticles->GetHighestControlPoint() ) ) );
+					int nIndex = ks::find_index( nValidControlPoints, pParticles->RandomInt( m_nControlPointNumber, nHighestControlPoint ) );
+					if ( nIndex < 0 || nIndex >= std::ssize( nValidControlPoints ) )
 					{
-						nIndex = pParticles->RandomInt( 0, nValidControlPoints.Count() - 1 );
+						nIndex = pParticles->RandomInt( 0, std::ssize( nValidControlPoints ) - 1 );
 					}
 					nCurrentControlPoint = nValidControlPoints[nIndex];
 				}
 				else
 				{
-					nCurrentControlPoint = nValidControlPoints[pParticles->RandomInt( 0, nValidControlPoints.Count() - 1 )];
+					nCurrentControlPoint = nValidControlPoints[pParticles->RandomInt( 0, std::ssize( nValidControlPoints ) - 1 )];
 				}
 			}
 			else
@@ -1298,7 +1294,7 @@ void C_INIT_CreateWithinBox::InitNewParticlesScalar(
 	CParticleCollection *pParticles, int start_p,
 	int nParticleCount, int nAttributeWriteMask, void *pContext ) const
 {
-	int nControlPointNumber = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
+	int nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
 	for( ; nParticleCount--; start_p++ )
 	{
 		float *xyz = pParticles->GetFloatAttributePtrForWrite( PARTICLE_ATTRIBUTE_XYZ, start_p );
@@ -1383,7 +1379,7 @@ class C_INIT_PositionOffset : public CParticleInitializerOperatorInstance
 
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nControlPointNumber = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
+		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
 	}
 
 	bool InitMultipleOverride ( void ) { return true; }
@@ -1602,7 +1598,7 @@ class C_INIT_VelocityRandom : public CParticleInitializerOperatorInstance
 
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nControlPointNumber = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
+		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
 		m_bHasLocalSpeed = ( m_LocalCoordinateSystemSpeedMin != vec3_origin ) || ( m_LocalCoordinateSystemSpeedMax != vec3_origin );  
 		if ( m_fSpeedMax < m_fSpeedMin )
 		{
@@ -1697,7 +1693,7 @@ class C_INIT_InitialVelocityNoise : public CParticleInitializerOperatorInstance
 
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nControlPointNumber = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
+		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
 	}
 
 	virtual bool InitMultipleOverride() { return true; }
@@ -2483,17 +2479,17 @@ static void ComputeLitParticleColor( float *pColorToWrite, const float flBaseCol
 
 	case PARTICLEBLEND_DARKEN:
 		{
-			vLightingTint.x = MIN( pColorToWrite[0], vLightingColor.x );
-			vLightingTint.y = MIN( pColorToWrite[4], vLightingColor.y );
-			vLightingTint.z = MIN( pColorToWrite[8], vLightingColor.z );
+			vLightingTint.x = std::min( pColorToWrite[0], vLightingColor.x );
+			vLightingTint.y = std::min( pColorToWrite[4], vLightingColor.y );
+			vLightingTint.z = std::min( pColorToWrite[8], vLightingColor.z );
 		}
 		break;
 
 	case PARTICLEBLEND_LIGHTEN:
 		{
-			vLightingTint.x = MAX( pColorToWrite[0], vLightingColor.x );
-			vLightingTint.y = MAX( pColorToWrite[4], vLightingColor.y );
-			vLightingTint.z = MAX( pColorToWrite[8], vLightingColor.z );
+			vLightingTint.x = std::max( pColorToWrite[0], vLightingColor.x );
+			vLightingTint.y = std::max( pColorToWrite[4], vLightingColor.y );
+			vLightingTint.z = std::max( pColorToWrite[8], vLightingColor.z );
 		}
 		break;
 
@@ -2511,9 +2507,9 @@ static void ComputeLitParticleColor( float *pColorToWrite, const float flBaseCol
 	pColorToWrite[4] = Lerp( flTintFraction, pColorToWrite[4], vLightingTint.y );
 	pColorToWrite[8] = Lerp( flTintFraction, pColorToWrite[8], vLightingTint.z );
 
-	pColorToWrite[0] = MIN( pColorToWrite[0], 1.0f );
-	pColorToWrite[4] = MIN( pColorToWrite[4], 1.0f );
-	pColorToWrite[8] = MIN( pColorToWrite[8], 1.0f );
+	pColorToWrite[0] = std::min( pColorToWrite[0], 1.0f );
+	pColorToWrite[4] = std::min( pColorToWrite[4], 1.0f );
+	pColorToWrite[8] = std::min( pColorToWrite[8], 1.0f );
 }
 
 //-----------------------------------------------------------------------------
@@ -2593,9 +2589,9 @@ class C_INIT_RandomColor : public CParticleInitializerOperatorInstance
 					tint = pParticles->m_LocalLighting;
 
 			}
-			tint[0] = MAX( m_TintMin[0], MIN( tint[0], m_TintMax[0] ) );
-			tint[1] = MAX( m_TintMin[1], MIN( tint[1], m_TintMax[1] ) );
-			tint[2] = MAX( m_TintMin[2], MIN( tint[2], m_TintMax[2] ) );
+			tint[0] = std::max( m_TintMin[0], std::min( tint[0], m_TintMax[0] ) );
+			tint[1] = std::max( m_TintMin[1], std::min( tint[1], m_TintMax[1] ) );
+			tint[2] = std::max( m_TintMin[2], std::min( tint[2], m_TintMax[2] ) );
 
 			Vector vecLightingColor = Vector ( tint[0], tint[1], tint[2] );
 			vecLightingColor *= m_flLightAmplification / 255.0f;
@@ -2671,9 +2667,9 @@ class C_INIT_RandomColor : public CParticleInitializerOperatorInstance
 					tint = pParticles->m_LocalLighting;
 			}
 
-			tint[0] = MAX( m_TintMin[0], MIN( tint[0], m_TintMax[0] ) );
-			tint[1] = MAX( m_TintMin[1], MIN( tint[1], m_TintMax[1] ) );
-			tint[2] = MAX( m_TintMin[2], MIN( tint[2], m_TintMax[2] ) );
+			tint[0] = std::max( m_TintMin[0], std::min( tint[0], m_TintMax[0] ) );
+			tint[1] = std::max( m_TintMin[1], std::min( tint[1], m_TintMax[1] ) );
+			tint[2] = std::max( m_TintMin[2], std::min( tint[2], m_TintMax[2] ) );
 
 			FourVectors fvTint;
 			fvTint.DuplicateVector( Vector ( tint[0], tint[1], tint[2] ) );
@@ -2917,9 +2913,9 @@ class C_INIT_ColorLitPerParticle : public CParticleInitializerOperatorInstance
 			SetVectorFromAttribute( vecOrigin, pXYZ );
 			g_pParticleSystemMgr->Query()->GetLightingAtPoint( vecOrigin, tint );
 
-			tint[0] = MAX( m_TintMin[0], MIN( tint[0], m_TintMax[0] ) );
-			tint[1] = MAX( m_TintMin[1], MIN( tint[1], m_TintMax[1] ) );
-			tint[2] = MAX( m_TintMin[2], MIN( tint[2], m_TintMax[2] ) );
+			tint[0] = std::max( m_TintMin[0], std::min( tint[0], m_TintMax[0] ) );
+			tint[1] = std::max( m_TintMin[1], std::min( tint[1], m_TintMax[1] ) );
+			tint[2] = std::max( m_TintMin[2], std::min( tint[2], m_TintMax[2] ) );
 
 			Vector vecLightingColor = Vector ( tint[0], tint[1], tint[2] );
 			vecLightingColor *= m_flLightAmplification / 255.0f;
@@ -3182,10 +3178,10 @@ void C_INIT_SequenceFromCP::InitNewParticlesScalar( CParticleCollection *pPartic
 	float *pSequence;
 	Vector vecCP = pParticles->GetControlPointAtCurrentTime( m_nCP );
 	int nComponent = 2;
-	int nDesiredCount = MAX ( 0, int ( log10( vecCP.x * 10 ) ) );
-	nDesiredCount += MAX ( 0, int ( log10( vecCP.y * 10 ) ) );
-	nDesiredCount += MAX ( 0, int ( log10( vecCP.z * 10 ) ) );
-	nDesiredCount = MIN( nDesiredCount, nParticleCount ) - 1;
+	int nDesiredCount = std::max( 0, int ( log10( vecCP.x * 10 ) ) );
+	nDesiredCount += std::max( 0, int ( log10( vecCP.y * 10 ) ) );
+	nDesiredCount += std::max( 0, int ( log10( vecCP.z * 10 ) ) );
+	nDesiredCount = std::min( nDesiredCount, nParticleCount ) - 1;
 	Vector vecOffsetPos = ( m_vecOffset * nDesiredCount ) / 2;
 
 	for( ; nParticleCount--; start_p++ )
@@ -3197,7 +3193,7 @@ void C_INIT_SequenceFromCP::InitNewParticlesScalar( CParticleCollection *pPartic
 			pSequence = pParticles->GetFloatAttributePtrForWrite( PARTICLE_ATTRIBUTE_SEQUENCE_NUMBER, start_p );
 			*pSequence = fmod( vecCP[nComponent], 10 ) + ( 10 * nComponent );
 			vecCP[nComponent] = floor( vecCP[nComponent] / 10 );
-			MAX ( vecCP[nComponent], 0 );
+			std::max<std::common_type_t<vec_t, int>>( vecCP[nComponent], 0 );
 
 			if ( m_vecOffset != vec3_origin )
 			{	
@@ -3295,7 +3291,7 @@ class C_INIT_PositionWarp : public CParticleInitializerOperatorInstance
 
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nControlPointNumber = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
+		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
 	}
 
 	bool InitMultipleOverride ( void ) { return true; }
@@ -4120,7 +4116,7 @@ class C_INIT_InheritVelocity : public CParticleInitializerOperatorInstance
 
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nControlPointNumber = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
+		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
 	}
 
 	bool InitMultipleOverride ( void ) { return true; }
@@ -4526,8 +4522,8 @@ void C_INIT_CreateInHierarchy::InitNewParticlesScalar(
 
 		if ( ( pParticles->m_flCurTime <= m_flGrowthTime ) && ( nRealEndPoint > 0 ) )
 		{
-			float nCurrentEndCP = RemapValClamped( *ct, 0.0f, m_flGrowthTime, MIN( m_nDesiredStartPoint + 1, nRealEndPoint ), nRealEndPoint );
-			nEndCP =  pParticles->RandomInt( MIN( m_nDesiredStartPoint + 1, nCurrentEndCP ), nCurrentEndCP );
+			float nCurrentEndCP = RemapValClamped( *ct, 0.0f, m_flGrowthTime, std::min( m_nDesiredStartPoint + 1, nRealEndPoint ), nRealEndPoint );
+			nEndCP =  pParticles->RandomInt( std::min<std::common_type_t<int, float>>( m_nDesiredStartPoint + 1, nCurrentEndCP ), nCurrentEndCP );
 
 			// clamp growth to the appropriate values...
 			float flEndTime = float(nCurrentEndCP) / float(nRealEndPoint) ;
@@ -4535,7 +4531,7 @@ void C_INIT_CreateInHierarchy::InitNewParticlesScalar(
 		}
 		else
 		{
-			int nLowestStartPoint =  MIN( m_nDesiredStartPoint + 1, nRealEndPoint );
+			int nLowestStartPoint =  std::min( m_nDesiredStartPoint + 1, nRealEndPoint );
 			nEndCP =  pParticles->RandomInt( nLowestStartPoint, nRealEndPoint );
 			flGrowth = 1.0;
 		}
@@ -5110,7 +5106,7 @@ class C_INIT_InitialRepulsionVelocity : public CParticleInitializerOperatorInsta
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
 		m_nCollisionGroupNumber = g_pParticleSystemMgr->Query()->GetCollisionGroupFromName( m_CollisionGroupName );
-		m_nControlPointNumber = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
+		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
 	}
 
 	bool InitMultipleOverride ( void ) { return true; }
@@ -5310,7 +5306,7 @@ void C_INIT_InitialRepulsionVelocity::InitNewParticlesScalar(
 
 			if ( m_nChildCP != -1 )
 			{
-				for( CParticleCollection *pChild = pParticles->m_Children.m_pHead; pChild; pChild = pChild->m_pNext )
+				for( CParticleCollection *pChild = pParticles->m_Children.head(); pChild; pChild = pChild->m_pNext )
 				{
 					if ( pChild->GetGroupID() == m_nChildGroupID )
 					{
@@ -5681,9 +5677,9 @@ void C_INIT_RemapCPtoVector::InitNewParticlesScalar(
 		}
 		if ( m_nFieldOutput == ATTRIBUTES_WHICH_ARE_COLOR_AND_OPACITY )
 		{
-			pOutput[0] = MAX( 0.0f, MIN( vOutput.x, 1.0f) );
-			pOutput[4] = MAX( 0.0f, MIN( vOutput.y, 1.0f) );
-			pOutput[8] = MAX( 0.0f, MIN( vOutput.z, 1.0f) );
+			pOutput[0] = std::max( 0.0f, std::min( vOutput.x, 1.0f) );
+			pOutput[4] = std::max( 0.0f, std::min( vOutput.y, 1.0f) );
+			pOutput[8] = std::max( 0.0f, std::min( vOutput.z, 1.0f) );
 		}
 		else
 		{
@@ -5914,7 +5910,7 @@ void C_INIT_CreateFromParentParticles::InitNewParticlesScalar(
 		return;
 	}		
 
-	nActiveParticles = MAX( 0, nActiveParticles - 1 );
+	nActiveParticles = std::max( 0, nActiveParticles - 1 );
 
 	for( ; nParticleCount--; start_p++ )
 	{
@@ -6034,7 +6030,7 @@ void C_INIT_InheritFromParentParticles::InitNewParticlesScalar(
 		return;
 	}		
 
-	nActiveParticles = MAX( 0, nActiveParticles - 1 );
+	nActiveParticles = std::max( 0, nActiveParticles - 1 );
 
 	for( ; nParticleCount--; start_p++ )
 	{
@@ -6110,7 +6106,7 @@ class C_INIT_DistanceToCPInit : public CParticleInitializerOperatorInstance
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
 		m_nCollisionGroupNumber = g_pParticleSystemMgr->Query()->GetCollisionGroupFromName( m_CollisionGroupName );
-		m_nStartCP = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nStartCP ) );
+		m_nStartCP = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nStartCP ) );
 
 		// clamp the result to 0 and 1 if it's alpha
 		if ( ATTRIBUTES_WHICH_ARE_0_TO_1 & ( 1 << m_nFieldOutput ) )
@@ -6246,7 +6242,7 @@ class C_INIT_LifespanFromVelocity : public CParticleInitializerOperatorInstance
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
 		m_nCollisionGroupNumber = g_pParticleSystemMgr->Query()->GetCollisionGroupFromName( m_CollisionGroupName );
-		m_nAllowedPlanes = ( MIN( MAX_WORLD_PLANAR_CONSTRAINTS, m_nMaxPlanes ) - 1 );
+		m_nAllowedPlanes = ( std::min( MAX_WORLD_PLANAR_CONSTRAINTS, m_nMaxPlanes ) - 1 );
 		if ( m_bIncludeWater )
 			m_CollisionMask = MASK_SHOT_HULL|MASK_SPLITAREAPORTAL;
 		else
@@ -6396,7 +6392,7 @@ void C_INIT_LifespanFromVelocity::InitNewParticlesScalar(
 				pCtx->m_nNumFixedPlanes = pCtx->m_nNumFixedPlanes + 1;
 				if ( pCtx->m_nNumFixedPlanes > m_nAllowedPlanes )
 					pCtx->m_nNumFixedPlanes = 0;
-				pCtx->m_nActivePlanes = MIN( m_nAllowedPlanes, pCtx->m_nActivePlanes + 1 );
+				pCtx->m_nActivePlanes = std::min( m_nAllowedPlanes, pCtx->m_nActivePlanes + 1 );
 			}
 			
 			// If we have an invalid trace, kill us, otherwise do the math.
@@ -6564,7 +6560,7 @@ void C_INIT_LifespanFromVelocity::InitNewParticlesBlock( CParticleCollection *pP
 						pCtx->m_nNumFixedPlanes = pCtx->m_nNumFixedPlanes + 1;
 						if ( pCtx->m_nNumFixedPlanes > m_nAllowedPlanes )
 							pCtx->m_nNumFixedPlanes = 0;
-						pCtx->m_nActivePlanes = MIN( m_nAllowedPlanes, pCtx->m_nActivePlanes + 1 );
+						pCtx->m_nActivePlanes = std::min( m_nAllowedPlanes, pCtx->m_nActivePlanes + 1 );
 					}
 				}
 			}
@@ -6755,7 +6751,7 @@ class C_INIT_ModelCull : public CParticleInitializerOperatorInstance
 
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nControlPointNumber = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
+		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
 	}
 
 	bool InitMultipleOverride ( void ) { return true; }
@@ -6905,7 +6901,7 @@ void C_INIT_RtEnvCull::InitNewParticlesScalar(
 				//	Vector vecEnd = frTr.origin.Vec( 0 ) + ( frTr.direction.Vec( 0 ) * ( SubFloat( fl4Lifespan, 0 ) * SubFloat( fl4Velocity, 0 ) ) ) ;
 				//	g_pParticleSystemMgr->Query()->DebugDrawLine( frTr.origin.Vec( 0 ), vecEnd, 0, 255, 0, true, -1 );
 				//}
-				*pLifespan = MIN( SubFloat( fl4Lifespan, 0), *pLifespan );
+				*pLifespan = std::min( SubFloat( fl4Lifespan, 0), *pLifespan );
 				continue;
 			}
 			if ( ( bHit && m_bCullOnMiss ) || ( !bHit && !m_bCullOnMiss ) )
@@ -7163,7 +7159,7 @@ class C_INIT_NormalAlignToCP : public CParticleInitializerOperatorInstance
 
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nControlPointNumber = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
+		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
 	}
 
 private:
@@ -7235,7 +7231,7 @@ class C_INIT_NormalOffset : public CParticleInitializerOperatorInstance
 
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nControlPointNumber = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
+		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
 	}
 
 	bool InitMultipleOverride ( void ) { return true; }
@@ -7307,8 +7303,8 @@ class C_INIT_RemapSpeedToScalar : public CParticleInitializerOperatorInstance
 
 	void InitParams(CParticleSystemDefinition *pDef )
 	{
-		m_flInputMin = MAX(MIN_PARTICLE_SPEED, m_flInputMin);
-		m_flInputMax = MAX(MIN_PARTICLE_SPEED, m_flInputMax);
+		m_flInputMin = std::max<std::common_type_t<double, float>>(MIN_PARTICLE_SPEED, m_flInputMin);
+		m_flInputMax = std::max<std::common_type_t<double, float>>(MIN_PARTICLE_SPEED, m_flInputMax);
 		// clamp the result to 0 and 1 if it's alpha
 		if ( ATTRIBUTES_WHICH_ARE_0_TO_1 & ( 1 << m_nFieldOutput ) )
 		{
@@ -7509,8 +7505,8 @@ class C_INIT_InitFromCPSnapshot : public CParticleInitializerOperatorInstance
 
 	virtual void InitParams( CParticleSystemDefinition *pDef, CDmxElement *pElement )
 	{
-		m_nControlPointNumber = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber    ) );
-		m_nLocalSpaceCP       = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nLocalSpaceCP          ) );
+		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber    ) );
+		m_nLocalSpaceCP       = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nLocalSpaceCP          ) );
 		// If m_nAttributeToRead is not specified, just ask the snapshot for the written attribute
 		if ( m_nAttributeToRead == -1 )
 			m_nAttributeToRead = m_nAttributeToWrite;
@@ -7811,7 +7807,7 @@ void C_INIT_RemapInitialDirectionToCPToVector::InitNewParticlesBlock( CParticleC
 	}
 	else
 	{
-		fltx4 fl4Scale = ReplicateX4( m_flScale * 1.0 / ( MAX( 1.0e-20, pParticles->m_flPreviousDt ) ) );
+		fltx4 fl4Scale = ReplicateX4( m_flScale * 1.0 / ( std::max<std::common_type_t<double, float>>( 1.0e-20, pParticles->m_flPreviousDt ) ) );
 		do
 		{
 			FourVectors v4Vel = *xyz;
@@ -7847,7 +7843,7 @@ class C_INIT_RemapInitialCPDirectionToRotation : public CParticleInitializerOper
 
 	virtual void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nAxis = MAX( 0, MIN( 2, m_nAxis ) );
+		m_nAxis = std::max( 0, std::min( 2, m_nAxis ) );
 		if ( m_nAxis == 0 )
 		{
 			m_nComponent1 = 1;

@@ -16,6 +16,8 @@
 #include "../engine/dt.h"
 #include "mathlib/IceKey.H"
 #include "tier0/vprof.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
 
 
 static char s_text[1024];
@@ -114,10 +116,9 @@ const char *CCLCMsg_FileCRCCheck_t::GetFileName( const ks::net::CCLCMsg_FileCRCC
 
 void CmdKeyValuesHelper::CLCMsg_SetKeyValues( ks::net::CCLCMsg_CmdKeyValues& msg, const KeyValues *keyValues )
 {
-	CUtlBuffer bufData;
+	ks::byte_writer bufData;
 	keyValues->WriteAsBinary( bufData );
-	int numBytes = bufData.TellPut();
-	msg.keyvalues = std::string( ( const char * ) bufData.Base(), numBytes );
+	msg.keyvalues = std::string( ks::text_view( bufData.bytes() ) );
 }
 
 KeyValues *CmdKeyValuesHelper::CLCMsg_GetKeyValues ( const ks::net::CCLCMsg_CmdKeyValues& msg )
@@ -125,9 +126,8 @@ KeyValues *CmdKeyValuesHelper::CLCMsg_GetKeyValues ( const ks::net::CCLCMsg_CmdK
 	KeyValues *pKeyValues = new KeyValues( "" );
 
 	const std::string& msgStr = msg.keyvalues;
-	int numBytes = msgStr.size();
 
-	CUtlBuffer bufRead( msgStr.data(), numBytes, CUtlBuffer::READ_ONLY );
+	ks::byte_reader bufRead( msgStr.data(), msgStr.size() );
 	if ( !pKeyValues->ReadAsBinary( bufRead, 90 ) )	// we are expecting very few nest levels of keyvalues here!
 	{
 		Assert( false );
@@ -138,10 +138,9 @@ KeyValues *CmdKeyValuesHelper::CLCMsg_GetKeyValues ( const ks::net::CCLCMsg_CmdK
 
 void CmdKeyValuesHelper::SVCMsg_SetKeyValues( ks::net::CSVCMsg_CmdKeyValues& msg, const KeyValues *keyValues )
 {
-	CUtlBuffer bufData;
+	ks::byte_writer bufData;
 	keyValues->WriteAsBinary( bufData );
-	int numBytes = bufData.TellPut();
-	msg.keyvalues = std::string( ( const char * ) bufData.Base(), numBytes );
+	msg.keyvalues = std::string( ks::text_view( bufData.bytes() ) );
 }
 
 KeyValues *CmdKeyValuesHelper::SVCMsg_GetKeyValues ( const ks::net::CSVCMsg_CmdKeyValues& msg )
@@ -149,9 +148,8 @@ KeyValues *CmdKeyValuesHelper::SVCMsg_GetKeyValues ( const ks::net::CSVCMsg_CmdK
 	KeyValues *pKeyValues = new KeyValues( "" );
 
 	const std::string& msgStr = msg.keyvalues;
-	int numBytes = msgStr.size();
 
-	CUtlBuffer bufRead( msgStr.data(), numBytes, CUtlBuffer::READ_ONLY );
+	ks::byte_reader bufRead( msgStr.data(), msgStr.size() );
 	if ( !pKeyValues->ReadAsBinary( bufRead ) )
 	{
 		Assert( false );

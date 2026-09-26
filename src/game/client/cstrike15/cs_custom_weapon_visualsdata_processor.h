@@ -78,21 +78,21 @@ class CCSWeaponVisualsDataCompare : public CBaseVisualsDataCompare
 public:
 	CCSWeaponVisualsDataCompare() = default;
 	CCSWeaponVisualsDataCompare( CCSWeaponVisualsDataCompare&& moveFrom )
-		: CBaseVisualsDataCompare( Move( moveFrom ) )
-		, m_flWeaponLength( Move( moveFrom.m_flWeaponLength ) )
-		, m_flUVScale( Move( moveFrom.m_flUVScale ) )
+		: CBaseVisualsDataCompare( std::move( moveFrom ) )
+		, m_flWeaponLength( std::move( moveFrom.m_flWeaponLength ) )
+		, m_flUVScale( std::move( moveFrom.m_flUVScale ) )
 	{
 	}
 
 	CCSWeaponVisualsDataCompare& operator= (CCSWeaponVisualsDataCompare&& moveFrom)
 	{
-		*( CBaseVisualsDataCompare* )this = Move( moveFrom );
-		m_flWeaponLength = Move( moveFrom.m_flWeaponLength );
-		m_flUVScale = Move( moveFrom.m_flUVScale );
+		*( CBaseVisualsDataCompare* )this = std::move( moveFrom );
+		m_flWeaponLength = std::move( moveFrom.m_flWeaponLength );
+		m_flUVScale = std::move( moveFrom.m_flUVScale );
 		return *this;
 	}
 
-	virtual void SerializeToBuffer( CUtlBuffer &buf );
+	virtual void SerializeToBuffer( ks::byte_writer &buf );
 
 	float m_flWeaponLength;
 	float m_flUVScale;

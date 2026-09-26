@@ -16,9 +16,6 @@
 #include "h_cycler.h"
 #include "Sprite.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define FCYCLER_NOTSOLID		0x0001
 
 extern int		g_sModelIndexSmoke; // (in combatweapon.cpp) holds the index for the smoke cloud

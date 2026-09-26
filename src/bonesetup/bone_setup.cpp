@@ -16,7 +16,6 @@
 #include "tier0/vprof.h"
 #include "bone_accessor.h"
 #include "mathlib/ssequaternion.h"
-#include "bitvec.h"
 #include "datamanager.h"
 #include "convar.h"
 #include "tier0/tslist.h"
@@ -31,9 +30,6 @@
 #endif
 
 #include "bone_utils.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: calculate a pose for a single sequence
@@ -1184,7 +1180,7 @@ void DoQuatInterpBone(
 			// FIXME: a fast acos should be acceptable
 			dot = clamp( dot, -1, 1 );
 			weight[i] = 1 - (2 * acos( dot ) * pProc->pTrigger( i )->inv_tolerance );
-			weight[i] = MAX( 0, weight[i] );
+			weight[i] = std::max<std::common_type_t<int, float>>( 0, weight[i] );
 			scale += weight[i];
 		}
 

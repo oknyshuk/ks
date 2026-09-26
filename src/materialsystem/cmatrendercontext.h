@@ -9,8 +9,7 @@
 
 
 #include "tier1/delegates.h"
-#include "tier1/utlstack.h"
-#include "bitvec.h"
+#include <vector>
 #include "materialsystem_global.h"
 #include "materialsystem/imaterialsystem.h"
 #include "materialsystem/ishaderapi.h"
@@ -226,14 +225,14 @@ protected:
 	IMorphMgrRenderContext				*m_pMorphRenderContext;
 
 	// Intially a stack of 32 elements allocated, growing by 16 on overflows
-	CUtlStack< RenderTargetStackElement_t >	m_RenderTargetStack;
+	std::vector< RenderTargetStackElement_t >	m_RenderTargetStack;
 
 	// Intially a stack of 32 elements allocated, growing by 16 on overflows
-	CUtlStack< ScissorRectStackElement_t >	m_ScissorRectStack;
+	std::vector< ScissorRectStackElement_t >	m_ScissorRectStack;
 
 	MaterialMatrixMode_t				m_MatrixMode;
 	MatrixStackItem_t *					m_pCurMatrixItem;
-	CUtlStack<MatrixStackItem_t>		m_MatrixStacks[NUM_MATRIX_MODES];
+	std::vector<MatrixStackItem_t>		m_MatrixStacks[NUM_MATRIX_MODES];
 
 	// View state
 	VMatrix								m_viewProjMatrix;
@@ -674,7 +673,7 @@ protected:
 	const CMatPaintmaps *GetPaintmaps() const;
 	CMatPaintmaps *GetPaintmaps();
 
-	CUtlVector<PlaneStackElement>		m_CustomClipPlanes; //implemented as a vector so we can remove in special ways
+	std::vector< PlaneStackElement >		m_CustomClipPlanes; //implemented as a vector so we can remove in special ways
 
 	IMesh *m_pBatchIndices;
 	IMesh *m_pBatchMesh;

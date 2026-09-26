@@ -19,9 +19,6 @@
 
 #include "shaderapifast.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static ConVar mat_displacementmap( "mat_displacementmap", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 static ConVar r_lightwarpidentity( "r_lightwarpidentity", "0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 static ConVar r_rimlight( "r_rimlight", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
@@ -795,7 +792,7 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 			if ( phongInfo.m_bHasRimLight && (info.m_nRimLightPower != -1) && params[info.m_nRimLightPower]->IsDefined() )
 			{
 				vSpecularTint[3] = params[info.m_nRimLightPower]->GetFloatValue();
-				vSpecularTint[3] = MAX(vSpecularTint[3], 1.0f);	// Make sure this is at least 1
+				vSpecularTint[3] = std::max(vSpecularTint[3], 1.0f);	// Make sure this is at least 1
 			}
 
 			// Get the rim boost (goes in w of flashlight position)
@@ -1034,13 +1031,13 @@ void DrawPhong_DX9( CBaseVSShader *pShader, IMaterialVar** params, IShaderDynami
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( SKINNING, numBones > 0 );
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( COMPRESSED_VERTS, (int)vertexCompression );
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( TESSELLATION, 0 );
-			SET_DYNAMIC_VERTEX_SHADER_COMBO( NUM_LIGHTS, bUseStaticControlFlow ? 0 : ( false ) ? MIN(2, lightState.m_nNumLights) : lightState.m_nNumLights );
+			SET_DYNAMIC_VERTEX_SHADER_COMBO( NUM_LIGHTS, bUseStaticControlFlow ? 0 : ( false ) ? std::min(2, lightState.m_nNumLights) : lightState.m_nNumLights );
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( CSM_VIEWMODELQUALITY, bIsRenderingViewModels ? 1 : 0 );
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( STATICLIGHT3, lightState.m_bStaticLight && bStaticLight3Streams );
 			SET_DYNAMIC_VERTEX_SHADER( phong_vs20 );
 
 			DECLARE_DYNAMIC_PIXEL_SHADER( phong_ps20b );
-			SET_DYNAMIC_PIXEL_SHADER_COMBO( NUM_LIGHTS, ( false ) ? MIN(2, lightState.m_nNumLights) : lightState.m_nNumLights );
+			SET_DYNAMIC_PIXEL_SHADER_COMBO( NUM_LIGHTS, ( false ) ? std::min(2, lightState.m_nNumLights) : lightState.m_nNumLights );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( WRITEWATERFOGTODESTALPHA, bWriteWaterFogToAlpha );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( WRITE_DEPTH_TO_DESTALPHA, bWriteDepthToAlpha );
 			SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, bFlashlightShadows );

@@ -61,6 +61,9 @@ public:
 	bool			startsolid;				// if true, the initial point was in a solid area
 
 	CBaseTrace() {}
+	CBaseTrace( CBaseTrace && ) = default;	// std::vector relocation; copies stay private
+	CBaseTrace &operator=( CBaseTrace && ) = default;
+	CBaseTrace &operator=( const CBaseTrace & ) = default;
 
 private:
 	// No copy constructors allowed

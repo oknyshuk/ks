@@ -16,6 +16,11 @@
 //
 // What stays with the panel is what differs: which controls to populate, and
 // whether it is allowed to open at all.
+//
+// A panel must not close its own document from one of its data-event callbacks:
+// that callback is a data controller, and the close destroys it while the data
+// interpreter is still running its expression. So dismissal only hides, and the
+// transient panels (play, options) are rebuilt on the next load.
 
 // Loads the document if needed. Returns it, or nullptr if the load failed; the
 // caller's pointer is updated either way. onLoad/onUnload are the hot-reload pair

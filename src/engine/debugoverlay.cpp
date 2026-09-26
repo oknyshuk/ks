@@ -8,6 +8,7 @@
 //===========================================================================//
 
 #include "render_pch.h"
+#include <mutex>
 #include "edict.h"
 #include "client.h"
 #include "debugoverlay.h"
@@ -26,9 +27,6 @@
 #include "vphysics_interface.h"
 #include "materialsystem/imaterial.h"
 #include "tier2/renderutils.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 extern edict_t *EDICT_NUM(int n);
 
@@ -267,7 +265,7 @@ OverlayText_t*	s_pOverlayText = nullptr;	// text is handled differently; for bac
 OverlayBase_t*	s_pOverlays = nullptr; 
 Vector			s_vGridPosition(0,0,0);
 bool			s_bDrawGrid = false;
-CThreadFastMutex s_OverlayMutex;
+std::recursive_mutex s_OverlayMutex;
 
 
 //-----------------------------------------------------------------------------
@@ -281,7 +279,7 @@ CThreadFastMutex s_OverlayMutex;
 //-----------------------------------------------------------------------------
 static bool GetEntityOriginClientOrServer( int ent_num, Vector& origin )
 {
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	// Assume failure
 	origin.Init();
 
@@ -320,7 +318,7 @@ static bool GetEntityOriginClientOrServer( int ent_num, Vector& origin )
 //-----------------------------------------------------------------------------
 int ScreenPosition(const Vector& point, Vector& screen)
 {
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	CMatRenderContextPtr pRenderContext( materials );
 
 	int retval = g_EngineRenderer->ClipTransform(point,&screen);
@@ -345,7 +343,7 @@ int ScreenPosition(float flXPos, float flYPos, Vector& screen)
 	if (flXPos > 1.0 || flYPos > 1.0 || flXPos < 0.0 || flYPos < 0.0 )
 		return 1; // Fail
 
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	CMatRenderContextPtr pRenderContext( materials );
 
 	int x, y, w, h;
@@ -370,7 +368,7 @@ void AddEntityTextOverlay(int ent_index, int line_offset, float duration, int r,
 		return;
 
 
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	OverlayText_t *new_overlay = new OverlayText_t;
 
 	Vector myPos, myMins, myMaxs;
@@ -401,7 +399,7 @@ void AddGridOverlay(const Vector& vPos)
 	if ( GetBaseLocalClient().IsPaused() )
 		return;
 
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	s_vGridPosition[0]		= vPos[0];
 	s_vGridPosition[1]		= vPos[1];
 	s_vGridPosition[2]		= vPos[2];
@@ -417,7 +415,7 @@ void AddCoordFrameOverlay(const matrix3x4_t& frame, float flScale, int vColorTab
 		{ 0  ,   0, 255 }
 	};
 
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	if ( vColorTable == nullptr )
 		vColorTable = s_defaultColorTable;
 
@@ -451,7 +449,7 @@ void AddTextOverlay(const Vector& textPos, float duration, const char *text)
 		return;
 
 
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	OverlayText_t *new_overlay = new OverlayText_t;
 
 	VectorCopy(textPos,new_overlay->origin);
@@ -479,7 +477,7 @@ void AddTextOverlay(const Vector& textPos, float duration, float alpha, const ch
 		return;
 
 
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	OverlayText_t *new_overlay = new OverlayText_t;
 
 	VectorCopy(textPos,new_overlay->origin);
@@ -507,7 +505,7 @@ void AddScreenTextOverlay(float flXPos, float flYPos, int line_offset, float dur
 		return;
 
 
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	OverlayText_t *new_overlay = new OverlayText_t;
 
 	Q_strncpy(new_overlay->text,text, sizeof( new_overlay->text ) );
@@ -543,7 +541,7 @@ void AddTextOverlay(const Vector& textPos, int line_offset, float duration, cons
 		return;
 
 
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	OverlayText_t *new_overlay = new OverlayText_t;
 
 	VectorCopy(textPos,new_overlay->origin);
@@ -567,7 +565,7 @@ void AddTextOverlay(const Vector& textPos, int line_offset, float duration, floa
 		return;
 
 
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	OverlayText_t *new_overlay = new OverlayText_t;
 
 	VectorCopy(textPos,new_overlay->origin);
@@ -591,7 +589,7 @@ void AddTextOverlay(const Vector& textPos, int line_offset, float duration, floa
 		return;
 
 
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	OverlayText_t *new_overlay = new OverlayText_t;
 
 	VectorCopy(textPos,new_overlay->origin);
@@ -623,7 +621,7 @@ void AddBoxOverlay(const Vector& origin, const Vector& mins, const Vector& maxs,
 	if ( GetBaseLocalClient().IsPaused() )
 		return;
 
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	OverlayBox_t *new_overlay = new OverlayBox_t;
 
 	new_overlay->origin = origin;
@@ -654,7 +652,7 @@ void AddBoxOverlay2( const Vector& origin, const Vector& mins, const Vector& max
 	if ( GetBaseLocalClient().IsPaused() )
 		return;
 
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	OverlayBox2_t *new_overlay = new OverlayBox2_t;
 
 	new_overlay->origin = origin;
@@ -683,7 +681,7 @@ void AddCapsuleOverlay( const Vector &vStart, const Vector &vEnd, const float &f
 	if ( GetBaseLocalClient().IsPaused() )
 		return;
 
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	OverlayCapsule_t *new_overlay = new OverlayCapsule_t;
 
 	new_overlay->start = vStart;
@@ -715,7 +713,7 @@ void AddSphereOverlay(const Vector& vOrigin, float flRadius, int nTheta, int nPh
 	if ( GetBaseLocalClient().IsPaused() )
 		return;
 
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	OverlaySphere_t *new_overlay = new OverlaySphere_t;
 
 	new_overlay->vOrigin = vOrigin;
@@ -743,7 +741,7 @@ void AddSweptBoxOverlay(const Vector& start, const Vector& end,
 	if ( GetBaseLocalClient().IsPaused() )
 		return;
 
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	OverlaySweptBox_t *new_overlay = new OverlaySweptBox_t;
 
 	new_overlay->start = start;
@@ -783,7 +781,7 @@ void AddLineOverlay(const Vector& origin, const Vector& dest, int r, int g, int 
 	if ( GetBaseLocalClient().IsPaused() )
 		return;
 
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	OverlayLine_t *new_loverlay = new OverlayLine_t;
 
 	new_loverlay->origin[0] = origin[0];
@@ -817,7 +815,7 @@ void AddTriangleOverlay(const Vector& p1, const Vector& p2, const Vector &p3,
 	if ( GetBaseLocalClient().IsPaused() )
 		return;
 
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	OverlayTriangle_t *pTriangle = new OverlayTriangle_t;
 	pTriangle->p1 = p1;
 	pTriangle->p2 = p2;
@@ -843,7 +841,7 @@ void AddTriangleOverlay(const Vector& p1, const Vector& p2, const Vector &p3,
 //------------------------------------------------------------------------------
 void DrawGridOverlay(void)
 {
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	static int gridSpacing		= 100;
 	static int numHorzSpaces	= 16;
 	static int numVertSpaces	= 3;
@@ -906,7 +904,7 @@ void DrawGridOverlay(void)
 //------------------------------------------------------------------------------
 void DrawOverlay( OverlayBase_t *pOverlay )
 {
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	switch( pOverlay->m_Type)
 	{
 	case OVERLAY_LINE:
@@ -987,7 +985,7 @@ void DrawOverlay( OverlayBase_t *pOverlay )
 
 void DestroyOverlay( OverlayBase_t *pOverlay )
 {
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	switch( pOverlay->m_Type)
 	{
 	case OVERLAY_LINE:
@@ -1056,7 +1054,7 @@ void DrawAllOverlays(void)
 	if ( !enable_debug_overlays.GetBool() )
 		return;
 
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	OverlayBase_t* pCurrOverlay = s_pOverlays;
 	OverlayBase_t* pPrevOverlay = nullptr;
 	OverlayBase_t* pNextOverlay;
@@ -1099,7 +1097,7 @@ void DrawAllOverlays(void)
 //0.01234f 
 void PurgeServerOverlays( void )
 {
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	OverlayBase_t* pCurrOverlay = s_pOverlays;
 
 	while (pCurrOverlay)
@@ -1126,7 +1124,7 @@ void PurgeServerOverlays( void )
 
 void PurgeTextOverlays( void )
 {
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	OverlayText_t* pCurrOverlay = s_pOverlayText;
 	while ( pCurrOverlay ) 
 	{
@@ -1147,7 +1145,7 @@ void PurgeTextOverlays( void )
 void Draw3DOverlays(void)
 {
 	// Clear overlays every frame
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	static int previous_servercount = 0;
 	if ( previous_servercount != GetBaseLocalClient().m_nServerCount )
 	{
@@ -1171,7 +1169,7 @@ void Draw3DOverlays(void)
 //------------------------------------------------------------------------------
 void ClearAllOverlays(void)
 {
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	while (s_pOverlays) 
 	{
 		OverlayBase_t *pOldOverlay = s_pOverlays;
@@ -1191,7 +1189,7 @@ void ClearAllOverlays(void)
 
 void ClearDeadOverlays( void )
 {
-	AUTO_LOCK( s_OverlayMutex );
+	std::scoped_lock lock( s_OverlayMutex );
 	OverlayText_t* pCurrText = s_pOverlayText;
 	OverlayText_t* pLastText = nullptr;
 	OverlayText_t* pNextText = nullptr;

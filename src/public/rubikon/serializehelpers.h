@@ -15,9 +15,9 @@ class CRnUnserializer;
 class CRnSerializer;
 
 #define AUTO_SERIALIZE_(RET,ATTR) public: RET Serialize( CRnSerializer* pOut ) const ATTR; RET Unserialize( CRnUnserializer* pIn ) ATTR; RET Serialize( CRnObjectStats* pOut ) const ATTR; RET Snoop( CRnSnooper* pIn, const void *pLocalCopy ) ;
-#define AUTO_SERIALIZE_BASE AUTO_SERIALIZE_( virtual bool, CLANG_ATTR( "auto_serialize base" ) ); virtual CUtlStringToken GetClassName() const = 0
+#define AUTO_SERIALIZE_BASE AUTO_SERIALIZE_( virtual bool, CLANG_ATTR( "auto_serialize base" ) ); virtual uint32 GetClassName() const = 0
 #define AUTO_SERIALIZE AUTO_SERIALIZE_( bool, CLANG_ATTR( "auto_serialize" ) )
-#define AUTO_SERIALIZE_LEAF AUTO_SERIALIZE_( virtual bool, CLANG_ATTR( "auto_serialize leaf" ) ); virtual CUtlStringToken GetClassName() const OVERRIDE;
+#define AUTO_SERIALIZE_LEAF AUTO_SERIALIZE_( virtual bool, CLANG_ATTR( "auto_serialize leaf" ) ); virtual uint32 GetClassName() const OVERRIDE;
 #define AUTO_SERIALIZE_POSTINIT() CLANG_ATTR( "auto_serialize_postinit" )
 #define AUTO_SERIALIZE_STRUCT(NAME) bool Serialize( CRnSerializer *pOut, const NAME &ref ) CLANG_ATTR("auto_serialize"); bool Unserialize( CRnUnserializer* pIn, NAME &ref ) CLANG_ATTR("auto_serialize"); bool Serialize( CRnObjectStats *pOut, const NAME &ref ) CLANG_ATTR("auto_serialize"); bool Snoop( CRnSnooper *pIn, const NAME *pLocalCopy, NAME &ref );
 #define DECL_SERIALIZE_STRUCT(NAME) bool Serialize( CRnSerializer *pOut, const NAME &ref ); bool Unserialize( CRnUnserializer* pIn, NAME &ref ); bool Serialize( CRnObjectStats *pOut, const NAME &ref ) ; bool Snoop( CRnSnooper *pIn, const NAME *pLocalCopy, NAME &ref );
@@ -27,7 +27,7 @@ class CRnSerializer;
 
 
 
-#include "tier1/utlbufferstrider.h"
+#include "tier1/buffer_strider.h"
 #include "serializehelpers.inl"
 
 #endif

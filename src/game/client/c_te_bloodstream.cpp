@@ -12,9 +12,6 @@
 #include "tier1/keyvalues.h"
 #include "toolframework_client.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Blood Stream TE
@@ -105,7 +102,7 @@ void TE_BloodStream( IRecipientFilter& filter, float delay,
 {
 	RecordBloodStream( *org, *direction, r, g, b, a, amount );
 
-	CSmartPtr<CTEParticleRenderer> pRen = CTEParticleRenderer::Create( "TEBloodStream", *org );
+	ks::intrusive_ptr<CTEParticleRenderer> pRen = CTEParticleRenderer::Create( "TEBloodStream", *org );
 	if( !pRen )
 		return;
 

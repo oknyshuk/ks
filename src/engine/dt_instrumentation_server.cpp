@@ -9,11 +9,9 @@
 #include "dt_instrumentation_server.h"
 #include "dt_send.h"
 #include "tier1/utlstring.h"
-#include "utllinkedlist.h"
+#include <memory>
+#include <vector>
 #include "dt.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 #define DELTA_DISTANCE_BAND			200
 #define NUM_DELTA_DISTANCE_BANDS	(8000/DELTA_DISTANCE_BAND)
@@ -24,7 +22,7 @@ class CDTISendTable
 {
 public:
 	// Which SendTable we're interested in.
-	CUtlString		m_NetTableName;
+	std::string		m_NetTableName;
 
 	// How many cycles we've spent in certain calls.
 	CCycleCount		m_nCalcDeltaCycles;
@@ -52,7 +50,7 @@ public:
 
 static CCycleCount g_TotalServerDTICycles;
 
-static CUtlLinkedList<CDTISendTable*, unsigned short> g_DTISendTables;
+static std::vector< std::unique_ptr< CDTISendTable > > g_DTISendTables;
 
 bool g_bServerDTIEnabled = false;
 static char const *g_pServerDTIFilename = 0;
@@ -76,7 +74,7 @@ void ServerDTI_Term()
 	if ( !g_pServerDTIFilename )
 		return;
 	ServerDTI_Flush();
-	g_DTISendTables.PurgeAndDeleteElements();
+	g_DTISendTables.clear();
 	g_pServerDTIFilename = 0;
 	g_bServerDTIEnabled = false;
 }
@@ -126,9 +124,8 @@ void ServerDTI_Flush()
 		totalEncode.Init();
 		totalShouldTransmit.Init();
 		
-		FOR_EACH_LL( g_DTISendTables, i )
+		for ( const auto &pTable : g_DTISendTables )
 		{
-			CDTISendTable *pTable = g_DTISendTables[i];
 			
 			CCycleCount::Add( pTable->m_nCalcDeltaCycles, totalCalcDelta, totalCalcDelta );
 			CCycleCount::Add( pTable->m_nEncodeCycles, totalEncode, totalEncode );
@@ -137,9 +134,8 @@ void ServerDTI_Flush()
 		}
 	
 
-		FOR_EACH_LL( g_DTISendTables, j )
+		for ( const auto &pTable : g_DTISendTables )
 		{
-			CDTISendTable *pTable = g_DTISendTables[j];
 
 			if ( !pTable->HadAnyAction() )
 				continue;
@@ -167,7 +163,7 @@ void ServerDTI_Flush()
 				"\t%.3f"
 				"\t%.3f"
 				"\n",
-				pTable->m_NetTableName.String(),
+				pTable->m_NetTableName.c_str(),
 				
 				pTable->m_nCalcDeltaCalls,
 				pTable->m_nCalcDeltaCycles.GetMillisecondsF(),
@@ -251,14 +247,13 @@ void ServerDTI_Flush()
 		g_pFileSystem->FPrintf( fp, "\n" );
 		
 		// Now write the data.
-		FOR_EACH_LL( g_DTISendTables, j )
+		for ( const auto &pTable : g_DTISendTables )
 		{
-			CDTISendTable *pTable = g_DTISendTables[j];
 
 			if ( !pTable->HadAnyAction() )
 				continue;
 
-			g_pFileSystem->FPrintf( fp, "%s", pTable->m_NetTableName.String() );
+			g_pFileSystem->FPrintf( fp, "%s", pTable->m_NetTableName.c_str() );
 			for ( int i=0; i < NUM_DELTA_DISTANCE_BANDS; i++ )
 			{
 				g_pFileSystem->FPrintf( fp, "\t%d", pTable->m_DistanceDeltaCounts[i] );
@@ -278,12 +273,10 @@ CDTISendTable* ServerDTI_HookTable( SendTable *pTable )
 	if ( !g_bServerDTIEnabled )
 		return nullptr;
 
-	CDTISendTable *pRet = new CDTISendTable;
-	memset( pRet, 0, sizeof( *pRet ) );
+	CDTISendTable *pRet = g_DTISendTables.emplace_back( std::make_unique< CDTISendTable >() ).get();	// value-init zeroes the counters
 
-	pRet->m_NetTableName.Set( pTable->m_pNetTableName );
+	pRet->m_NetTableName.assign( ks::nz( pTable->m_pNetTableName ) );
 
-	g_DTISendTables.AddToTail( pRet );
 	return pRet;
 }
 

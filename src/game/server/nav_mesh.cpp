@@ -12,15 +12,12 @@
 #include "cbase.h"
 #include "filesystem.h"
 #include "nav_mesh.h"
+#include "tier1/text_reader.h"
 #include "nav_node.h"
 #include "fmtstr.h"
-#include "utlbuffer.h"
 #include "tier0/vprof.h"
 //#include "shared_util.h"
 #include "functorutils.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 
 #define DrawLine( from, to, duration, red, green, blue )		NDebugOverlay::Line( from, to, red, green, blue, true, 0.1f )
@@ -128,7 +125,7 @@ void CNavMesh::Reset( void )
 
 	m_spawnName = nullptr;
 
-	m_walkableSeeds.RemoveAll();
+	m_walkableSeeds.clear();
 }
 
 
@@ -140,7 +137,7 @@ CNavArea *CNavMesh::GetMarkedArea( void ) const
 		return m_markedArea;
 	}
 
-	if ( m_selectedSet.Count() == 1 )
+	if ( std::ssize( m_selectedSet ) == 1 )
 	{
 		return m_selectedSet[0];
 	}
@@ -155,9 +152,9 @@ CNavArea *CNavMesh::GetMarkedArea( void ) const
  */
 void CNavMesh::DestroyNavigationMesh( bool incremental )
 {
-	m_blockedAreas.RemoveAll();
-	m_avoidanceObstacleAreas.RemoveAll();
-	m_transientAreas.RemoveAll();
+	m_blockedAreas.clear();
+	m_avoidanceObstacleAreas.clear();
+	m_transientAreas.clear();
 
 	if ( !incremental )
 	{
@@ -165,19 +162,19 @@ void CNavMesh::DestroyNavigationMesh( bool incremental )
 		CNavArea::m_isReset = true;
 
 		// tell players to forget about the areas
-		FOR_EACH_VEC( TheNavAreas, it )
+		for ( CNavArea *area : TheNavAreas )
 		{
-			EditDestroyNotification notification( TheNavAreas[it] );
+			EditDestroyNotification notification( area );
 			ForEachActor( notification );
 		}
 
 		// remove each element of the list and delete them
-		FOR_EACH_VEC( TheNavAreas, it )
+		for ( CNavArea *area : TheNavAreas )
 		{
-			DestroyArea( TheNavAreas[ it ] );
+			DestroyArea( area );
 		}
 
-		TheNavAreas.RemoveAll();
+		TheNavAreas.clear();
 
 		CNavArea::m_isReset = false;
 
@@ -187,9 +184,9 @@ void CNavMesh::DestroyNavigationMesh( bool incremental )
 	}
 	else
 	{
-		FOR_EACH_VEC( TheNavAreas, it )
+		for ( CNavArea *area : TheNavAreas )
 		{
-			TheNavAreas[ it ]->ResetNodes();
+			area->ResetNodes();
 		}
 	}
 
@@ -202,7 +199,7 @@ void CNavMesh::DestroyNavigationMesh( bool incremental )
 	if ( !incremental )
 	{
 		// destroy the grid
-		m_grid.RemoveAll();
+		m_grid.clear();
 		m_gridSizeX = 0;
 		m_gridSizeY = 0;
 	}
@@ -302,10 +299,8 @@ void CNavMesh::Update( void )
 			CNavArea *eyepointArea = player->GetLastKnownArea();
 			if ( eyepointArea )
 			{
-				FOR_EACH_VEC( TheNavAreas, it )
+				for ( CNavArea *area : TheNavAreas )
 				{
-					CNavArea *area = TheNavAreas[it];
-
 					if ( eyepointArea->IsCompletelyVisible( area ) )
 					{
 						area->DrawFilled( 100, 100, 200, 255 );
@@ -320,7 +315,7 @@ void CNavMesh::Update( void )
 	}
 
 	// draw any walkable seeds that have been marked
-	for ( int it=0; it < m_walkableSeeds.Count(); ++it )
+	for ( int it=0; it < std::ssize( m_walkableSeeds ); ++it )
 	{
 		WalkableSeedSpot spot = m_walkableSeeds[ it ];
 
@@ -414,9 +409,8 @@ void CNavMesh::FireGameEvent( IGameEvent *gameEvent )
 	{
 		OnRoundRestartPreEntity();
 
-		FOR_EACH_VEC( TheNavAreas, it )
+		for ( CNavArea *area : TheNavAreas )
 		{
-			CNavArea *area = TheNavAreas[ it ];
 			area->OnRoundRestartPreEntity();
 		}
 	}
@@ -429,7 +423,7 @@ void CNavMesh::FireGameEvent( IGameEvent *gameEvent )
  */
 void CNavMesh::AllocateGrid( float minX, float maxX, float minY, float maxY )
 {
-	m_grid.RemoveAll();
+	m_grid.clear();
 
 	m_minX = minX;
 	m_minY = minY;
@@ -437,7 +431,7 @@ void CNavMesh::AllocateGrid( float minX, float maxX, float minY, float maxY )
 	m_gridSizeX = (int)((maxX - minX) / m_gridCellSize) + 1;
 	m_gridSizeY = (int)((maxY - minY) / m_gridCellSize) + 1;
 
-	m_grid.SetCount( m_gridSizeX * m_gridSizeY );
+	m_grid.assign( m_gridSizeX * m_gridSizeY, {} );
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -446,7 +440,7 @@ void CNavMesh::AllocateGrid( float minX, float maxX, float minY, float maxY )
  */
 void CNavMesh::AddNavArea( CNavArea *area )
 {
-	if ( !m_grid.Count() )
+	if ( m_grid.empty() )
 	{
 		// If we somehow have no grid (manually creating a nav area without loading or generating a mesh), don't crash
 		AllocateGrid( 0, 0, 0, 0 );
@@ -462,7 +456,7 @@ void CNavMesh::AddNavArea( CNavArea *area )
 	{
 		for( int x = loX; x <= hiX; ++x )
 		{
-			m_grid[ x + y*m_gridSizeX ].AddToTail( const_cast<CNavArea *>( area ) );
+			m_grid[ x + y*m_gridSizeX ].push_back( const_cast<CNavArea *>( area ) );
 		}
 	}
 
@@ -487,7 +481,7 @@ void CNavMesh::AddNavArea( CNavArea *area )
 
 	if ( area->GetAttributes() & NAV_MESH_TRANSIENT )
 	{
-		m_transientAreas.AddToTail( area );
+		m_transientAreas.push_back( area );
 	}
 
 	++m_areaCount;
@@ -509,7 +503,7 @@ void CNavMesh::RemoveNavArea( CNavArea *area )
 	{
 		for( int x = loX; x <= hiX; ++x )
 		{
-			m_grid[ x + y*m_gridSizeX ].FindAndRemove( area );
+			ks::erase_first( m_grid[ x + y*m_gridSizeX ], area );
 		}
 	}
 
@@ -541,8 +535,8 @@ void CNavMesh::RemoveNavArea( CNavArea *area )
 		BuildTransientAreaList();
 	}
 
-	m_avoidanceObstacleAreas.FindAndRemove( area );
-	m_blockedAreas.FindAndRemove( area );
+	ks::erase_first( m_avoidanceObstacleAreas, area );
+	ks::erase_first( m_blockedAreas, area );
 
 	--m_areaCount;
 }
@@ -554,9 +548,8 @@ void CNavMesh::RemoveNavArea( CNavArea *area )
  */
 void CNavMesh::OnServerActivate( void )
 {
-	FOR_EACH_VEC( TheNavAreas, pit )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ pit ];
 		area->OnServerActivate();
 	}
 }
@@ -569,9 +562,8 @@ void CNavMesh::OnServerActivate( void )
 */
 void CNavMesh::TestAllAreasForBlockedStatus( void )
 {
-	FOR_EACH_VEC( TheNavAreas, pit )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ pit ];
 		area->UpdateBlocked( true );
 	}
 }
@@ -584,9 +576,8 @@ void CNavMesh::OnRoundRestart( void )
 {
 	m_updateBlockedAreasTimer.Start( 0.1 );
 
-	FOR_EACH_VEC( TheNavAreas, pit )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ pit ];
 		area->UpdateBlocked( true );
 	}
 }
@@ -604,15 +595,13 @@ void CNavMesh::OnRoundRestartPreEntity( void )
 //--------------------------------------------------------------------------------------------------------------
 void CNavMesh::BuildTransientAreaList( void )
 {
-	m_transientAreas.RemoveAll();
+	m_transientAreas.clear();
 
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ it ];
-
 		if ( area->GetAttributes() & NAV_MESH_TRANSIENT )
 		{
-			m_transientAreas.AddToTail( area );
+			m_transientAreas.push_back( area );
 		}
 	}
 }
@@ -636,7 +625,7 @@ CNavArea *CNavMesh::GetNavArea( const Vector &pos, float beneathLimit, bool chec
 {
 	VPROF_BUDGET( "CNavMesh::GetNavArea", "NextBot"  );
 
-	if ( !m_grid.Count() )
+	if ( m_grid.empty() )
 		return nullptr;
 
 	// get list in cell that contains position
@@ -649,10 +638,8 @@ CNavArea *CNavMesh::GetNavArea( const Vector &pos, float beneathLimit, bool chec
 	float useZ = -99999999.9f;
 	Vector testPos = pos + Vector( 0, 0, 5 );
 
-	FOR_EACH_VEC( (*areaVector), it )
+	for ( CNavArea *area : *areaVector )
 	{
-		CNavArea *area = (*areaVector)[ it ];
-
 		// check if position is within 2D boundaries of this area
 		if (area->IsOverlapping( testPos ))
 		{
@@ -705,7 +692,7 @@ CNavArea *CNavMesh::GetNavArea( CBaseEntity *pEntity, int nFlags, float flBeneat
 {
 	VPROF( "CNavMesh::GetNavArea [ent]" );
 
-	if ( !m_grid.Count() )
+	if ( m_grid.empty() )
 		return nullptr;
 
 	Vector testPos = pEntity->GetAbsOrigin();
@@ -735,10 +722,8 @@ CNavArea *CNavMesh::GetNavArea( CBaseEntity *pEntity, int nFlags, float flBeneat
 	float useZ = -99999999.9f;
 
 	bool bSkipBlockedAreas = ( ( nFlags & GETNAVAREA_ALLOW_BLOCKED_AREAS ) == 0 );
-	FOR_EACH_VEC( (*areaVector), it )
+	for ( CNavArea *pArea : *areaVector )
 	{
-		CNavArea *pArea = (*areaVector)[ it ];
-
 		// check if position is within 2D boundaries of this area
 		if ( !pArea->IsOverlapping( testPos ) )
 			continue;
@@ -792,7 +777,7 @@ CNavArea *CNavMesh::GetNearestNavArea( const Vector &pos, bool anyZ, float maxDi
 	
 	VPROF_BUDGET( "CNavMesh::GetNearestNavArea", "NextBot" );
 
-	if ( !m_grid.Count() )
+	if ( m_grid.empty() )
 		return nullptr;	
 
 	CNavArea *close = nullptr;
@@ -874,10 +859,8 @@ CNavArea *CNavMesh::GetNearestNavArea( const Vector &pos, bool anyZ, float maxDi
 				NavAreaVector *areaVector = &m_grid[ x + y*m_gridSizeX ];
 
 				// find closest area in this cell
-				FOR_EACH_VEC( (*areaVector), it )
+				for ( CNavArea *area : *areaVector )
 				{
-					CNavArea *area = (*areaVector)[ it ];
-
 					// skip if we've already visited this area
 					if ( area->m_nearNavSearchMarker == searchMarker )
 						continue;
@@ -970,7 +953,7 @@ CNavArea *CNavMesh::GetNearestNavArea( CBaseEntity *pEntity, int nFlags, float m
 
 	SNPROF("CNavMesh::GetNearestNavArea [ent]");
 
-	if ( !m_grid.Count() )
+	if ( m_grid.empty() )
 		return nullptr;
 
 	// quick check
@@ -1015,7 +998,7 @@ CNavLadder *CNavMesh::GetLadderByID( unsigned int id ) const
 	if (id == 0)
 		return nullptr;
 
-	for ( int i=0; i<m_ladders.Count(); ++i )
+	for ( int i=0; i<std::ssize( m_ladders ); ++i )
 	{
 		CNavLadder *ladder = m_ladders[i];
 		if ( ladder->GetID() == id )
@@ -1052,24 +1035,28 @@ void CNavMesh::LoadPlaceDatabase( void )
 	m_placeCount = 0;
 
 
-	CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
-	filesystem->ReadFile("NavPlace.db", "GAME", buf);
-
-	if (!buf.Size())
+	auto fileData = filesystem->ReadFile( "NavPlace.db", "GAME" );
+	if ( !fileData || fileData->empty() )
 		return;
+
+	ks::text_reader buf( ks::text_view( *fileData ) );
 
 	const int maxNameLength = 128;
 	char buffer[ maxNameLength ];
 
-	CUtlVector<char*> placeNames;
+	std::vector< char* > placeNames;
 
 	// count the number of places
 	while( true )
 	{
-		buf.GetLine( buffer, maxNameLength );
+		const std::string_view line = buf.read_line();
 
-		if ( !buf.IsValid() )
+		if ( !buf.ok() )
 			break;
+
+		const size_t lineChars = std::min< size_t >( line.size(), maxNameLength - 1 );
+		memcpy( buffer, line.data(), lineChars );
+		buffer[ lineChars ] = 0;
 
 		int len = V_strlen( buffer );
 		if ( len >= 2 )
@@ -1082,12 +1069,12 @@ void CNavMesh::LoadPlaceDatabase( void )
 
 			char *pName = new char[ len + 1 ];
 			V_strncpy( pName, buffer, len+1 );
-			placeNames.AddToTail( pName );
+			placeNames.push_back( pName );
 		}
 	}
 
 	// allocate place name array
-	m_placeCount = placeNames.Count();
+	m_placeCount = std::ssize( placeNames );
 	m_placeName = new char * [ m_placeCount ];
 	
 	for ( unsigned int i=0; i < m_placeCount; i++ )
@@ -1214,14 +1201,14 @@ void CNavMesh::PrintAllPlaces( void ) const
 
 	unsigned int i;
 
-	CUtlVector< SortStringType > placeNames;
+	std::vector< SortStringType > placeNames;
 	for ( i=0; i<m_placeCount; ++i )
 	{
-		placeNames.AddToTail( m_placeName[i] );
+		placeNames.push_back( m_placeName[i] );
 	}
-	placeNames.Sort( StringSort );
+	ks::qsort( placeNames, StringSort );
 
-	for( i=0; i<(unsigned int)placeNames.Count(); ++i )
+	for( i=0; i<(unsigned int)std::ssize( placeNames ); ++i )
 	{
 		if (NameToPlace( placeNames[i] ) == GetNavPlace())
 			Msg( "--> %-26s", placeNames[i] );
@@ -1300,10 +1287,8 @@ bool CNavMesh::GetSimpleGroundHeight( const Vector &pos, float *height, Vector *
  */
 void CNavMesh::DrawDanger( void ) const
 {
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ it ];
-
 		Vector center = area->GetCenter();
 		Vector top;
 		center.z = area->GetZ( center );
@@ -1338,10 +1323,8 @@ void CNavMesh::DrawPlayerCounts( void ) const
 {
 	CFmtStr msg;
 
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ it ];
-
 		if (area->GetPlayerCount() > 0)
 		{
 			NDebugOverlay::Text( area->GetCenter(), msg.sprintf( "%d (%d/%d)", area->GetPlayerCount(), area->GetPlayerCount(1), area->GetPlayerCount(2) ), false, 0.1f );
@@ -2130,9 +2113,8 @@ void CommandNavPlaceReplace( const CCommand &args )
 		}
 		else
 		{
-			FOR_EACH_VEC( TheNavAreas, it )
+			for ( CNavArea *area : TheNavAreas )
 			{
-				CNavArea *area = TheNavAreas[it];
 				if ( area->GetPlace() == oldPlace )
 				{
 					area->SetPlace( newPlace );
@@ -2150,25 +2132,23 @@ void CommandNavPlaceList( void )
 	if ( !UTIL_IsCommandIssuedByServerAdmin() )
 		return;
 
-	CUtlVector< Place > placeDirectory;
+	std::vector< Place > placeDirectory;
 
-	FOR_EACH_VEC( TheNavAreas, nit )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ nit ];
-
 		Place place = area->GetPlace();
 
 		if ( place )
 		{
-			if ( !placeDirectory.HasElement( place ) )
+			if ( !ks::contains( placeDirectory, place ) )
 			{
-				placeDirectory.AddToTail( place );
+				placeDirectory.push_back( place );
 			}
 		}
 	}
 
-	Msg( "Map uses %d place names:\n", placeDirectory.Count() );
-	for ( int i=0; i<placeDirectory.Count(); ++i )
+	Msg( "Map uses %d place names:\n", (int)std::ssize( placeDirectory ) );
+	for ( int i=0; i<std::ssize( placeDirectory ); ++i )
 	{
 		Msg( "    %s\n", TheNavMesh->PlaceToName( placeDirectory[i] ) );
 	}
@@ -2683,13 +2663,13 @@ static ConCommand nav_resize_end( "nav_resize_end", CommandNavResizeEnd, "TODO",
  */
 void CNavMesh::DestroyLadders( void )
 {
-	for ( int i=0; i<m_ladders.Count(); ++i )
+	for ( int i=0; i<std::ssize( m_ladders ); ++i )
 	{
 		OnEditDestroyNotify( m_ladders[i] );
 		delete m_ladders[i];
 	}
 
-	m_ladders.RemoveAll();
+	m_ladders.clear();
 
 	m_markedLadder = nullptr;
 	m_selectedLadder = nullptr;
@@ -2701,10 +2681,8 @@ void CNavMesh::DestroyLadders( void )
  */
 void CNavMesh::StripNavigationAreas( void )
 {
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ it ];
-
 		area->Strip();
 	}
 
@@ -2713,7 +2691,12 @@ void CNavMesh::StripNavigationAreas( void )
 
 //--------------------------------------------------------------------------------------------------------------
 
-HidingSpotVector TheHidingSpots;
+std::vector< std::unique_ptr< HidingSpot > > TheHidingSpots;
+
+bool DestroyHidingSpot( HidingSpot *spot )
+{
+	return std::erase_if( TheHidingSpots, [spot]( const std::unique_ptr< HidingSpot > &p ) { return p.get() == spot; } ) != 0;
+}
 unsigned int HidingSpot::m_nextID = 1;
 unsigned int HidingSpot::m_masterMarker = 0;
 
@@ -2732,22 +2715,15 @@ HidingSpot *CNavMesh::CreateHidingSpot( void ) const
 void CNavMesh::DestroyHidingSpots( void )
 {
 	// remove all hiding spot references from the nav areas
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ it ];
-
-		area->m_hidingSpots.RemoveAll();
+		area->m_hidingSpots.clear();
 	}
 
 	HidingSpot::m_nextID = 0;
 
 	// free all the HidingSpots
-	FOR_EACH_VEC( TheHidingSpots, hit )
-	{
-		delete TheHidingSpots[ hit ];
-	}
-
-	TheHidingSpots.RemoveAll();
+	TheHidingSpots.clear();
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -2763,31 +2739,31 @@ HidingSpot::HidingSpot( void )
 	m_area = nullptr;
 	m_bIsSaved = true;
 
-	TheHidingSpots.AddToTail( this );
+	TheHidingSpots.emplace_back( this );	// CreateHidingSpot is the only creator
 }
 
 //--------------------------------------------------------------------------------------------------------------
-void HidingSpot::Save( CUtlBuffer &fileBuffer, unsigned int version ) const
+void HidingSpot::Save( ks::byte_writer &fileBuffer, unsigned int version ) const
 {
 	if ( !m_bIsSaved )
 		return;
 
-	fileBuffer.PutUnsignedInt( m_id );
-	fileBuffer.PutFloat( m_pos.x );
-	fileBuffer.PutFloat( m_pos.y );
-	fileBuffer.PutFloat( m_pos.z );
-	fileBuffer.PutUnsignedChar( m_flags );
+	fileBuffer.write< unsigned int >( m_id );
+	fileBuffer.write< float >( m_pos.x );
+	fileBuffer.write< float >( m_pos.y );
+	fileBuffer.write< float >( m_pos.z );
+	fileBuffer.write< unsigned char >( m_flags );
 }
 
 
 //--------------------------------------------------------------------------------------------------------------
-void HidingSpot::Load( CUtlBuffer &fileBuffer, unsigned int version )
+void HidingSpot::Load( ks::byte_reader &fileBuffer, unsigned int version )
 {
-	m_id = fileBuffer.GetUnsignedInt();
-	m_pos.x = fileBuffer.GetFloat();
-	m_pos.y = fileBuffer.GetFloat();
-	m_pos.z = fileBuffer.GetFloat();
-	m_flags = fileBuffer.GetUnsignedChar();
+	m_id = fileBuffer.read< unsigned int >();
+	m_pos.x = fileBuffer.read< float >();
+	m_pos.y = fileBuffer.read< float >();
+	m_pos.z = fileBuffer.read< float >();
+	m_flags = fileBuffer.read< unsigned char >();
 
 	// update next ID to avoid ID collisions by later spots
 	if (m_id >= m_nextID)
@@ -2820,9 +2796,9 @@ NavErrorType HidingSpot::PostLoad( void )
  */
 HidingSpot *GetHidingSpotByID( unsigned int id )
 {
-	FOR_EACH_VEC( TheHidingSpots, it )
+	for ( const auto &pHidingSpot : TheHidingSpots )
 	{
-		HidingSpot *spot = TheHidingSpots[ it ];
+		HidingSpot *spot = pHidingSpot.get();
 
 		if (spot->GetID() == id)
 			return spot;
@@ -2836,9 +2812,9 @@ HidingSpot *GetHidingSpotByID( unsigned int id )
 // invoked when the area becomes blocked
 void CNavMesh::OnAreaBlocked( CNavArea *area )
 {
-	if ( !m_blockedAreas.HasElement( area ) )
+	if ( !ks::contains( m_blockedAreas, area ) )
 	{
-		m_blockedAreas.AddToTail( area );
+		m_blockedAreas.push_back( area );
 	}
 }
 
@@ -2847,7 +2823,7 @@ void CNavMesh::OnAreaBlocked( CNavArea *area )
 // invoked when the area becomes un-blocked
 void CNavMesh::OnAreaUnblocked( CNavArea *area )
 {
-	m_blockedAreas.FindAndRemove( area );
+	ks::erase_first( m_blockedAreas, area );
 }
 
 
@@ -2855,7 +2831,7 @@ void CNavMesh::OnAreaUnblocked( CNavArea *area )
 void CNavMesh::UpdateBlockedAreas( void )
 {
 	VPROF( "CNavMesh::UpdateBlockedAreas" );
-	for ( int i=0; i<m_blockedAreas.Count(); ++i )
+	for ( int i=0; i<std::ssize( m_blockedAreas ); ++i )
 	{
 		CNavArea *area = m_blockedAreas[i];
 		area->UpdateBlocked();
@@ -2866,15 +2842,15 @@ void CNavMesh::UpdateBlockedAreas( void )
 //--------------------------------------------------------------------------------------------------------
 void CNavMesh::RegisterAvoidanceObstacle( INavAvoidanceObstacle *obstruction )
 {
-	m_avoidanceObstacles.FindAndFastRemove( obstruction );
-	m_avoidanceObstacles.AddToTail( obstruction );
+	ks::swap_erase_first( m_avoidanceObstacles, obstruction );
+	m_avoidanceObstacles.push_back( obstruction );
 }
 
 
 //--------------------------------------------------------------------------------------------------------
 void CNavMesh::UnregisterAvoidanceObstacle( INavAvoidanceObstacle *obstruction )
 {
-	m_avoidanceObstacles.FindAndFastRemove( obstruction );
+	ks::swap_erase_first( m_avoidanceObstacles, obstruction );
 }
 
 
@@ -2882,9 +2858,9 @@ void CNavMesh::UnregisterAvoidanceObstacle( INavAvoidanceObstacle *obstruction )
 // invoked when the area becomes blocked
 void CNavMesh::OnAvoidanceObstacleEnteredArea( CNavArea *area )
 {
-	if ( !m_avoidanceObstacleAreas.HasElement( area ) )
+	if ( !ks::contains( m_avoidanceObstacleAreas, area ) )
 	{
-		m_avoidanceObstacleAreas.AddToTail( area );
+		m_avoidanceObstacleAreas.push_back( area );
 	}
 }
 
@@ -2893,7 +2869,7 @@ void CNavMesh::OnAvoidanceObstacleEnteredArea( CNavArea *area )
 // invoked when the area becomes un-blocked
 void CNavMesh::OnAvoidanceObstacleLeftArea( CNavArea *area )
 {
-	m_avoidanceObstacleAreas.FindAndRemove( area );
+	ks::erase_first( m_avoidanceObstacleAreas, area );
 }
 
 
@@ -2901,7 +2877,7 @@ void CNavMesh::OnAvoidanceObstacleLeftArea( CNavArea *area )
 void CNavMesh::UpdateAvoidanceObstacleAreas( void )
 {
 	VPROF( "CNavMesh::UpdateAvoidanceObstacleAreas" );
-	for ( int i=0; i<m_avoidanceObstacleAreas.Count(); ++i )
+	for ( int i=0; i<std::ssize( m_avoidanceObstacleAreas ); ++i )
 	{
 		CNavArea *area = m_avoidanceObstacleAreas[i];
 		area->UpdateAvoidanceObstacles();
@@ -2910,23 +2886,16 @@ void CNavMesh::UpdateAvoidanceObstacleAreas( void )
 
 
 
-extern CUtlHash< NavVisPair_t, CVisPairHashFuncs, CVisPairHashFuncs > *g_pNavVisPairHash;
+extern NavVisPairSet g_NavVisPairHash;
 
 //--------------------------------------------------------------------------------------------------------
 void CNavMesh::BeginVisibilityComputations( void )
 {
-	if ( !g_pNavVisPairHash )
-	{
-		g_pNavVisPairHash = new CUtlHash< NavVisPair_t, CVisPairHashFuncs, CVisPairHashFuncs >( 16*1024 );
-	}
-	else
-	{
-		g_pNavVisPairHash->RemoveAll();
-	}
+	g_NavVisPairHash.clear();
+	g_NavVisPairHash.reserve( 16*1024 );
 
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ it ];
 		area->ResetPotentiallyVisibleAreas();
 	}
 }
@@ -2938,7 +2907,7 @@ void CNavMesh::BeginVisibilityComputations( void )
  */
 void CNavMesh::EndVisibilityComputations( void )
 {
-	g_pNavVisPairHash->RemoveAll();
+	g_NavVisPairHash.clear();
 
 	int avgVisLength = 0;
 	int maxVisLength = 0;
@@ -2947,11 +2916,9 @@ void CNavMesh::EndVisibilityComputations( void )
 	// Optimize visibility storage of nav mesh by doing a kind of run-length encoding.
 	// Pick an "anchor" area and compare adjacent areas visibility lists to it. If the delta is
 	// small, point back to the anchor and just store the delta.
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = (CNavArea *)TheNavAreas[ it ];
-
-		int visLength = area->m_potentiallyVisibleAreas.Count();
+		int visLength = std::ssize( area->m_potentiallyVisibleAreas );
 		avgVisLength += visLength;
 		if ( visLength < minVisLength )
 		{
@@ -2990,7 +2957,7 @@ void CNavMesh::EndVisibilityComputations( void )
 				const CNavArea::CAreaBindInfoArray &delta = area->ComputeVisibilityDelta( adjArea );
 
 				// keep the smallest delta
-				if ( !anchor || ( anchor && delta.Count() < bestDelta.Count() ) )
+				if ( !anchor || ( anchor && std::ssize( delta ) < std::ssize( bestDelta ) ) )
 				{
 					bestDelta = delta;
 					anchor = adjArea;
@@ -3000,7 +2967,7 @@ void CNavMesh::EndVisibilityComputations( void )
 		}
 
 		// if best delta is small enough, inherit our data from this anchor
-		if ( anchor && bestDelta.Count() <= nav_max_vis_delta_list_length.GetInt() && anchor != area )
+		if ( anchor && std::ssize( bestDelta ) <= nav_max_vis_delta_list_length.GetInt() && anchor != area )
 		{
 			// inherit from anchor area's visibility list
 			area->m_inheritVisibilityFrom.area = anchor;
@@ -3016,9 +2983,9 @@ void CNavMesh::EndVisibilityComputations( void )
 		}
 	}
 
-	if ( TheNavAreas.Count() )
+	if ( !TheNavAreas.empty() )
 	{
-		avgVisLength /= TheNavAreas.Count();
+		avgVisLength /= std::ssize( TheNavAreas );
 	}
 
 	Msg( "NavMesh Visibility List Lengths:  min = %d, avg = %d, max = %d\n", minVisLength, avgVisLength, maxVisLength );

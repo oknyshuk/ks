@@ -10,5 +10,4 @@ src/build*/
 src/.lock-waf*
 src/.cache/
 src/ccache.conf
-
-/.pi
+__pycache__/

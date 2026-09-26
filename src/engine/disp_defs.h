@@ -10,14 +10,14 @@
 
 
 #include "utlvector.h"
+#include <memory>
 #include "materialsystem/imesh.h"
 #include "convar.h"
 #include "bspfile.h"
 #include "filesystem.h"
 #include "decal_private.h"
-#include "mempool.h"
 #include "decal_clip.h"
-#include "bitvec.h"
+#include <bitset>
 #include "Overlay.h"
 #include "zone.h"
 
@@ -63,11 +63,11 @@ class CGroupMesh
 {
 public:
 	IMesh					*m_pMesh;
-	CUtlVector<CDispInfo*>	m_DispInfos;
+	std::vector< CDispInfo* >	m_DispInfos;
 
 	// This list is updated each frame to point at the visible LODs.
-	CUtlVector<CDispInfo*>	m_VisibleDisps;
-	CUtlVector<CPrimList>	m_Visible;
+	std::vector< CDispInfo* >	m_VisibleDisps;
+	std::vector< CPrimList >	m_Visible;
 	int						m_nVisible;
 
 	CDispGroup				*m_pGroup;
@@ -80,8 +80,8 @@ public:
 
 	int						m_LightmapPageID;
 	IMaterial				*m_pMaterial;
-	CUtlVector<CGroupMesh*>	m_Meshes;
-	CUtlVector<int>			m_DispInfos;
+	std::vector< std::unique_ptr< CGroupMesh > >	m_Meshes;
+	std::vector< int >			m_DispInfos;
 	int						m_nVisible;
 };
 
@@ -111,7 +111,7 @@ public:
 	// Precalculated flags on the nodes telling which nodes this decal can intersect.
 	// See CPowerInfo::m_NodeIndexIncrements for a description of how the node tree is
 	// walked using this bit vector.
-	CBitVec<85>	m_NodeIntersect;	// The number of nodes on a 17x17 is 85.
+	std::bitset<85>	m_NodeIntersect;	// The number of nodes on a 17x17 is 85.
 									// Note: this must be larger if MAX_MAP_DISP_POWER gets larger.
 
 	// Number of triangles + verts that got generated for this decal.
@@ -229,9 +229,9 @@ extern int					g_CoreDispNeighborOrientationMap[4][4];
 // --------------------------------------------------------------------------------- //
 // Global variables.
 // --------------------------------------------------------------------------------- //
-extern CUtlVector<unsigned char>	g_DispLMAlpha;
-extern CUtlVector<unsigned char, CHunkMemory<unsigned char> >	g_DispLightmapSamplePositions;
-extern CUtlVector<CDispGroup*>		g_DispGroups;
+extern std::vector< unsigned char >	g_DispLMAlpha;
+extern std::vector< unsigned char >	g_DispLightmapSamplePositions;
+extern std::vector< std::unique_ptr< CDispGroup > >	g_DispGroups;
 
 
 // CVars.

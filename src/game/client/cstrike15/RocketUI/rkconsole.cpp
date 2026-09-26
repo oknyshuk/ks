@@ -112,9 +112,9 @@ void RocketConsole::Shutdown() {
   if (g_pCVar)
     g_pCVar->RemoveConsoleDisplayFunc(this);
 
-  m_CommandHistory.Purge();
-  m_CompletionList.Purge();
-  m_OutputBuffer.Purge();
+  m_CommandHistory.clear(); m_CommandHistory.shrink_to_fit();
+  m_CompletionList.clear(); m_CompletionList.shrink_to_fit();
+  m_OutputBuffer.clear(); m_OutputBuffer.shrink_to_fit();
 
   m_bInitialized = false;
 }
@@ -145,10 +145,10 @@ void RocketConsole::LoadDocument() {
   }
 
   // Replay buffered output to the textarea
-  if (m_elemOutput && m_OutputBuffer.Count() > 0) {
+  if (m_elemOutput && std::ssize( m_OutputBuffer ) > 0) {
     Rml::String allText;
-    for (int i = 0; i < m_OutputBuffer.Count(); i++) {
-      allText += m_OutputBuffer[i].text.Get();
+    for (int i = 0; i < std::ssize( m_OutputBuffer ); i++) {
+      allText += m_OutputBuffer[i].text.data();
     }
 
     // Apply same truncation as FlushOutput to ensure consistency
@@ -227,7 +227,7 @@ void RocketConsole::Toggle() {
 }
 
 void RocketConsole::Clear() {
-  m_OutputBuffer.Purge();
+  m_OutputBuffer.clear(); m_OutputBuffer.shrink_to_fit();
   m_szPendingOutput.clear();
 
   if (m_elemOutput) {
@@ -235,12 +235,12 @@ void RocketConsole::Clear() {
   }
 }
 
-CUtlString RocketConsole::GetInputValue() const {
+std::string RocketConsole::GetInputValue() const {
   if (m_elemInput) {
     Rml::String val = m_elemInput->GetValue();
-    return CUtlString(val.c_str());
+    return std::string(val.c_str());
   }
-  return CUtlString("");
+  return std::string("");
 }
 
 void RocketConsole::SetInputValue(const char *text) {
@@ -316,7 +316,7 @@ bool RocketConsole::HandleKeyInput(int buttonCode, bool down) {
         NextCompletion();
       else {
         RebuildCompletionList();
-        if (m_CompletionList.Count() > 0) {
+        if (!m_CompletionList.empty()) {
           m_iCompletionIndex = 0;
           ShowCompletionList();
         }
@@ -361,19 +361,19 @@ bool RocketConsole::HandleCharInput(wchar_t ch) {
 }
 
 void RocketConsole::Submit() {
-  CUtlString cmd = GetInputValue();
-  if (cmd.Length() == 0)
+  std::string cmd = GetInputValue();
+  if (std::ssize( cmd ) == 0)
     return;
 
-  AddToHistory(cmd.Get());
+  AddToHistory(cmd.data());
 
   // Echo
   char echo[1024];
-  V_snprintf(echo, sizeof(echo), "] %s\n", cmd.Get());
+  V_snprintf(echo, sizeof(echo), "] %s\n", cmd.data());
   ColorPrint(Color(255, 255, 200, 255), echo);
 
   // Execute
-  engine->ClientCmd_Unrestricted(cmd.Get());
+  engine->ClientCmd_Unrestricted(cmd.data());
 
   // Clear input
   SetInputValue("");
@@ -385,29 +385,29 @@ void RocketConsole::AddToHistory(const char *command) {
     return;
 
   // Don't add duplicates
-  if (m_CommandHistory.Count() > 0 &&
-      V_strcmp(m_CommandHistory[m_CommandHistory.Count() - 1].Get(), command) ==
+  if (!m_CommandHistory.empty() &&
+      V_strcmp(m_CommandHistory[std::ssize( m_CommandHistory ) - 1].data(), command) ==
           0)
     return;
 
-  m_CommandHistory.AddToTail(CUtlString(command));
+  m_CommandHistory.push_back( std::string(ks::nz( command )) );
 
-  while (m_CommandHistory.Count() > 100)
-    m_CommandHistory.Remove(0);
+  while (std::ssize( m_CommandHistory ) > 100)
+    m_CommandHistory.erase( m_CommandHistory.begin() + 0 );
 }
 
 void RocketConsole::HistoryUp() {
-  if (m_CommandHistory.Count() == 0)
+  if (m_CommandHistory.empty())
     return;
 
   if (m_iHistoryPos == -1) {
     m_szSavedInput = GetInputValue();
-    m_iHistoryPos = m_CommandHistory.Count() - 1;
+    m_iHistoryPos = std::ssize( m_CommandHistory ) - 1;
   } else if (m_iHistoryPos > 0) {
     m_iHistoryPos--;
   }
 
-  SetInputValueAndMoveCursorToEnd(m_CommandHistory[m_iHistoryPos].Get());
+  SetInputValueAndMoveCursorToEnd(m_CommandHistory[m_iHistoryPos].data());
 }
 
 void RocketConsole::HistoryDown() {
@@ -416,43 +416,43 @@ void RocketConsole::HistoryDown() {
 
   m_iHistoryPos++;
 
-  if (m_iHistoryPos >= m_CommandHistory.Count()) {
+  if (m_iHistoryPos >= std::ssize( m_CommandHistory )) {
     m_iHistoryPos = -1;
-    SetInputValueAndMoveCursorToEnd(m_szSavedInput.Get());
+    SetInputValueAndMoveCursorToEnd(m_szSavedInput.data());
   } else {
-    SetInputValueAndMoveCursorToEnd(m_CommandHistory[m_iHistoryPos].Get());
+    SetInputValueAndMoveCursorToEnd(m_CommandHistory[m_iHistoryPos].data());
   }
 }
 
 void RocketConsole::RebuildCompletionList() {
   ClearCompletionList();
 
-  CUtlString partial = GetInputValue();
-  if (partial.Length() == 0)
+  std::string partial = GetInputValue();
+  if (std::ssize( partial ) == 0)
     return;
 
-  int partialLen = partial.Length();
+  int partialLen = std::ssize( partial );
 
   // Check for command-specific completion
-  const char *space = V_strstr(partial.Get(), " ");
+  const char *space = V_strstr(partial.data(), " ");
   if (space) {
     char cmdName[256];
-    int cmdLen = space - partial.Get();
+    int cmdLen = space - partial.data();
     if (cmdLen >= (int)sizeof(cmdName))
       cmdLen = sizeof(cmdName) - 1;
-    V_strncpy(cmdName, partial.Get(), cmdLen + 1);
+    V_strncpy(cmdName, partial.data(), cmdLen + 1);
 
     ConCommand *cmd = g_pCVar->FindCommand(cmdName);
     if (cmd && cmd->CanAutoComplete()) {
-      CUtlVector<CUtlString> suggestions;
-      cmd->AutoCompleteSuggest(partial.Get(), suggestions);
+      std::vector< std::string > suggestions;
+      cmd->AutoCompleteSuggest(partial.data(), suggestions);
 
-      for (int i = 0; i < suggestions.Count() && m_CompletionList.Count() < 20;
+      for (int i = 0; i < std::ssize( suggestions ) && std::ssize( m_CompletionList ) < 20;
            i++) {
         CompletionItem item;
         item.name = suggestions[i];
         item.isCommand = true;
-        m_CompletionList.AddToTail(item);
+        m_CompletionList.push_back( item );
       }
       return;
     }
@@ -467,11 +467,11 @@ void RocketConsole::RebuildCompletionList() {
       continue;
 
     const char *name = cmd->GetName();
-    if (V_strnicmp(name, partial.Get(), partialLen) != 0)
+    if (V_strnicmp(name, partial.data(), partialLen) != 0)
       continue;
 
     CompletionItem item;
-    item.name = name;
+    item.name = ks::nz( name );
     item.isCommand = cmd->IsCommand();
 
     if (!item.isCommand) {
@@ -479,15 +479,15 @@ void RocketConsole::RebuildCompletionList() {
       item.value = var->GetString();
     }
 
-    m_CompletionList.AddToTail(item);
+    m_CompletionList.push_back( item );
 
-    if (m_CompletionList.Count() >= 20)
+    if (std::ssize( m_CompletionList ) >= 20)
       break;
   }
 }
 
 void RocketConsole::ClearCompletionList() {
-  m_CompletionList.Purge();
+  m_CompletionList.clear(); m_CompletionList.shrink_to_fit();
   m_iCompletionIndex = -1;
 }
 
@@ -500,7 +500,7 @@ void RocketConsole::ShowCompletionList() {
   while (m_elemCompletionList->GetNumChildren() > 0)
     m_elemCompletionList->RemoveChild(m_elemCompletionList->GetFirstChild());
 
-  for (int i = 0; i < m_CompletionList.Count(); i++) {
+  for (int i = 0; i < std::ssize( m_CompletionList ); i++) {
     Rml::ElementPtr item = m_pDocument->CreateElement("div");
     if (!item)
       continue;
@@ -511,10 +511,10 @@ void RocketConsole::ShowCompletionList() {
 
     char text[512];
     if (m_CompletionList[i].isCommand)
-      V_snprintf(text, sizeof(text), "%s", m_CompletionList[i].name.Get());
+      V_snprintf(text, sizeof(text), "%s", m_CompletionList[i].name.data());
     else
-      V_snprintf(text, sizeof(text), "%s = %s", m_CompletionList[i].name.Get(),
-                 m_CompletionList[i].value.Get());
+      V_snprintf(text, sizeof(text), "%s = %s", m_CompletionList[i].name.data(),
+                 m_CompletionList[i].value.data());
 
     item->SetInnerRML(text);
     m_elemCompletionList->AppendChild(std::move(item));
@@ -535,36 +535,36 @@ void RocketConsole::HideCompletionList() {
 }
 
 void RocketConsole::NextCompletion() {
-  if (m_CompletionList.Count() == 0)
+  if (m_CompletionList.empty())
     return;
 
   m_iCompletionIndex++;
-  if (m_iCompletionIndex >= m_CompletionList.Count())
+  if (m_iCompletionIndex >= std::ssize( m_CompletionList ))
     m_iCompletionIndex = 0;
 
   ShowCompletionList();
 }
 
 void RocketConsole::PrevCompletion() {
-  if (m_CompletionList.Count() == 0)
+  if (m_CompletionList.empty())
     return;
 
   m_iCompletionIndex--;
   if (m_iCompletionIndex < 0)
-    m_iCompletionIndex = m_CompletionList.Count() - 1;
+    m_iCompletionIndex = std::ssize( m_CompletionList ) - 1;
 
   ShowCompletionList();
 }
 
 void RocketConsole::ApplyCompletion() {
-  if (m_iCompletionIndex < 0 || m_iCompletionIndex >= m_CompletionList.Count())
+  if (m_iCompletionIndex < 0 || m_iCompletionIndex >= std::ssize( m_CompletionList ))
     return;
 
-  CUtlString newVal = m_CompletionList[m_iCompletionIndex].name;
+  std::string newVal = m_CompletionList[m_iCompletionIndex].name;
   if (!m_CompletionList[m_iCompletionIndex].isCommand)
     newVal += " ";
 
-  SetInputValueAndMoveCursorToEnd(newVal.Get());
+  SetInputValueAndMoveCursorToEnd(newVal.data());
   HideCompletionList();
 }
 
@@ -574,7 +574,7 @@ void RocketConsole::OnInputChange() {
     return;
 
   RebuildCompletionList();
-  if (m_CompletionList.Count() > 0) {
+  if (!m_CompletionList.empty()) {
     m_iCompletionIndex = 0;
     ShowCompletionList();
   } else {
@@ -587,13 +587,13 @@ void RocketConsole::ColorPrint(const Color &clr, const char *pMessage) {
     return;
 
   // Keep buffer for replay on document load (limited size)
-  while (m_OutputBuffer.Count() >= MAX_OUTPUT_LINES)
-    m_OutputBuffer.Remove(0);
+  while (std::ssize( m_OutputBuffer ) >= MAX_OUTPUT_LINES)
+    m_OutputBuffer.erase( m_OutputBuffer.begin() + 0 );
 
   OutputLine line;
-  line.text = pMessage;
+  line.text = ks::nz( pMessage );
   line.color = clr;
-  m_OutputBuffer.AddToTail(line);
+  m_OutputBuffer.push_back( line );
 
   AddOutputLine(pMessage, clr);
 }
@@ -618,8 +618,8 @@ void RocketConsole::GetConsoleText(char *pchText, size_t bufSize) const {
   } else {
     // Fallback to buffer if document not loaded
     size_t offset = 0;
-    for (int i = 0; i < m_OutputBuffer.Count() && offset < bufSize - 1; i++) {
-      const char *text = m_OutputBuffer[i].text.Get();
+    for (int i = 0; i < std::ssize( m_OutputBuffer ) && offset < bufSize - 1; i++) {
+      const char *text = m_OutputBuffer[i].text.c_str();
       size_t len = V_strlen(text);
       if (offset + len >= bufSize - 1)
         len = bufSize - 1 - offset;

@@ -7,9 +7,6 @@
 #include "tier2/meshutils.h"
 #include "tier0/platform.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Helper methods to create various standard index buffer types

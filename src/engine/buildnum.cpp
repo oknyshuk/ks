@@ -9,9 +9,6 @@
 #include "quakedef.h"
 #include "tier1/strtools.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //char *date = "Nov 07 1998"; // "Oct 24 1996";
 const char *date = __DATE__ ;
 

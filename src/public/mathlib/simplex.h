@@ -40,7 +40,7 @@ public:
 	int *m_pNonBasis; // indices of non-basis primal variables (labels on the top of the classic Tucker(?) tableau)
 	enum StateEnum{kInfeasible, kUnbound, kOptimal, kUnknown, kCannotPivot};
 	StateEnum m_state;
-	//CVarBitVec m_isBasis;
+	//std::vector< bool > m_isBasis;
 public:
 	CSimplex();
 	CSimplex(int numVariables, int numConstraints);

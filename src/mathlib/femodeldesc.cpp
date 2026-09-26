@@ -278,9 +278,9 @@ void Clone( const PhysFeModelDesc_t *pFeDesc, intp nOffsetBytes, char **pCtrlNam
 	pFeModel->m_pInitPose = ConstCastOffsetPointer( pFeDesc->m_InitPose.Base(), nOffsetBytes );
 }
 
-void SetIdentityPerm( CUtlVector< uint > &perm, uint nCount )
+void SetIdentityPerm( std::vector< uint > &perm, uint nCount )
 {
-	perm.SetCount( nCount );
+	perm.assign( nCount, {} );
 	for ( uint i = 0; i < nCount; ++i )
 		perm[ i ] = i;
 }
@@ -301,12 +301,12 @@ CFeModelReplaceContext::CFeModelReplaceContext( const CFeModel *pOld, const CFeM
 {
 	m_pOld = pOld;
 	m_pNew = pNew;
-	m_OldToNewNode.SetCount( pOld->m_nNodeCount ); m_OldToNewNode.FillWithValue( -1 );
-	m_OldToNewCtrl.SetCount( pOld->m_nCtrlCount ); m_OldToNewCtrl.FillWithValue( -1 );
-	m_NewToOldNode.SetCount( pNew->m_nNodeCount ); m_NewToOldNode.FillWithValue( -1 );
-	m_NewToOldCtrl.SetCount( pNew->m_nCtrlCount ); m_NewToOldCtrl.FillWithValue( -1 );
+	m_OldToNewNode.assign( pOld->m_nNodeCount, {} ); std::ranges::fill( m_OldToNewNode, -1 );
+	m_OldToNewCtrl.assign( pOld->m_nCtrlCount, {} ); std::ranges::fill( m_OldToNewCtrl, -1 );
+	m_NewToOldNode.assign( pNew->m_nNodeCount, {} ); std::ranges::fill( m_NewToOldNode, -1 );
+	m_NewToOldCtrl.assign( pNew->m_nCtrlCount, {} ); std::ranges::fill( m_NewToOldCtrl, -1 );
 
-	CUtlVector< uint > oldCtrlIndex, newCtrlIndex;
+	std::vector< uint > oldCtrlIndex, newCtrlIndex;
 	SetIdentityPerm( oldCtrlIndex, pOld->m_nCtrlCount );
 	SetIdentityPerm( newCtrlIndex, pNew->m_nCtrlCount );
 	HeapSort( oldCtrlIndex, CtrlHashFunctor_t( pOld ) );

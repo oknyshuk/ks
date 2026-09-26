@@ -16,9 +16,6 @@
 #include "c_breakableprop.h"
 #include "view.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 void RecvProxy_UnmodifiedQAngles( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	const float *v = pData->m_Value.m_Vector;

@@ -16,7 +16,7 @@
 #include "engine/IClientLeafSystem.h"
 #include "cdll_int.h"
 #include "ivrenderview.h"
-#include "tier1/mempool.h"
+#include "tier1/fixed_pool.h"
 #include "tier1/refcount.h"
 
 
@@ -130,7 +130,7 @@ public:
 		ViewmodelRenderableInstance_t m_InstanceData;
 	};
 
-	typedef CUtlVectorFixedGrowable< CEntry, 32 > RenderGroups_t;
+	typedef ks::small_vector< CEntry, 32 > RenderGroups_t;
 
 	// The leaves for the entries are in the order of the leaves you call CollateRenderablesInLeaf in.
 	RenderGroups_t	m_RenderGroups[VM_GROUP_COUNT];

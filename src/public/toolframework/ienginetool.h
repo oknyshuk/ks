@@ -99,7 +99,7 @@ public:
 	virtual bool		IsLoopingSound( int guid ) = 0;
 	virtual void		ReloadSound( const char *pSample ) = 0;
 	virtual void		StopAllSounds( ) = 0;
-	virtual float		GetMono16Samples( const char *pszName, CUtlVector< short >& sampleList ) = 0;
+	virtual float		GetMono16Samples( const char *pszName, std::vector< short >& sampleList ) = 0;
 	virtual void		SetAudioState( const AudioState_t &audioState ) = 0;
 
 	// Issue a console command

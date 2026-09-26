@@ -68,7 +68,7 @@ protected:
 	void AddRequirement( int nAchievementId );
 
 private:
-	CUtlVector<int> m_requirements;
+	std::vector< int > m_requirements;
 };
 
 //Base class for all achievements to kill x players with a given weapon

@@ -18,7 +18,7 @@
 #include "iserverentity.h"
 #include "engine/ivmodelinfo.h"
 #include "soundflags.h"
-#include "bitvec.h"
+#include <bitset>
 #include "engine/iserverplugin.h"
 #include "tier1/bitbuf.h"
 #include "iclient.h"
@@ -339,7 +339,7 @@ public:
 	// Also, this will return NULL if the client doesn't exist or if this client hasn't acked any frames yet.
 	// 
 	// iClientIndex is the CLIENT index, so if you use pPlayer->entindex(), subtract 1.
-	virtual const CBitVec<MAX_EDICTS>* GetEntityTransmitBitsForClient( int iClientIndex ) = 0;
+	virtual const std::bitset<MAX_EDICTS>* GetEntityTransmitBitsForClient( int iClientIndex ) = 0;
 	
 	// Is the game paused?
 	virtual bool		IsPaused() = 0;
@@ -471,7 +471,7 @@ public:
 	// Returns true if the surface paint colors changed
 	virtual bool SpherePaintSurface( const model_t *pModel, const Vector& vPosition, BYTE color, float flSphereRadius, float flPaintCoatPercent ) = 0;
 
-	virtual void SphereTracePaintSurface( const model_t *pModel, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, CUtlVector<BYTE>& surfColor ) = 0;
+	virtual void SphereTracePaintSurface( const model_t *pModel, const Vector& vPosition, const Vector& vContactNormal, float flSphereRadius, std::vector< BYTE >& surfColor ) = 0;
 	virtual void RemoveAllPaint() = 0;
 	virtual void PaintAllSurfaces( BYTE color ) = 0;
 	virtual void RemovePaint( const model_t* pModel ) = 0;
@@ -486,8 +486,8 @@ public:
 
 	virtual void SetNoClipEnabled( bool bEnabled ) = 0;
 
-	virtual void GetPaintmapDataRLE( CUtlVector<uint32> &data ) = 0;
-	virtual void LoadPaintmapDataRLE( const CUtlVector< uint32 > &data ) = 0;
+	virtual void GetPaintmapDataRLE( std::vector< uint32 > &data ) = 0;
+	virtual void LoadPaintmapDataRLE( const std::vector< uint32 > &data ) = 0;
 	virtual void SendPaintmapDataToClient( edict_t *pPlayerEdict ) = 0;
 
 	// Gets the accumulated latency for the sounds related to choreos.

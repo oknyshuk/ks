@@ -12,6 +12,7 @@
 #include "matchmaking/imatchframework.h"
 #include "c_cs_player.h"
 #include "usermessages.h"
+#include <map>
 
 enum PostProcessEffect_t
 {
@@ -179,7 +180,7 @@ private:
 	PostProcessParameters_t m_postProcessLerpEndParams;
 	PostProcessParameters_t m_postProcessCurrentParams;
 
-	CUtlVector< SpecCameraPosition_t >	m_SpecCameraPositions;
+	std::vector< SpecCameraPosition_t >	m_SpecCameraPositions;
 	int m_nRoundMVP;
 
 public:
@@ -190,7 +191,7 @@ public:
 		uint32 m_numNormalPointsProgressBaseline;
 		bool m_bIsEventQuest;
 	};
-	static CUtlMap< uint32, CQuestUncommittedProgress_t, uint32, CDefLess< uint32 > > sm_mapQuestProgressUncommitted;
+	static std::map< uint32, CQuestUncommittedProgress_t > sm_mapQuestProgressUncommitted;
 	static ks::net::ScoreLeaderboardData s_ScoreLeaderboardData;
 	static uint32 s_numLevelTransitions;
 };

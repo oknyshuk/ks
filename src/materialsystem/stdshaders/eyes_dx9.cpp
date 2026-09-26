@@ -9,9 +9,6 @@
 #include "BaseVSShader.h"
 #include "eyes_dx8_dx9_helper.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 DEFINE_FALLBACK_SHADER( eyes, Eyes_dx9 )
 
 BEGIN_VS_SHADER( Eyes_dx9, "Help for Eyes" )

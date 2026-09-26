@@ -15,9 +15,6 @@
 #include "eventqueue.h"
 #include "mathlib/mathlib.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 enum
 {
 	AVELOCITY_SENSOR_NO_LAST_RESULT = -2
@@ -202,9 +199,9 @@ float CPointAngularVelocitySensor::SampleAngularVelocity(CBaseEntity *pEntity)
 	else
 	{
 		QAngle vecAngVel = pEntity->GetLocalAngularVelocity();
-		float flMax = MAX(fabs(vecAngVel[PITCH]), fabs(vecAngVel[YAW]));
+		float flMax = std::max(fabs(vecAngVel[PITCH]), fabs(vecAngVel[YAW]));
 
-		return MAX(flMax, fabs(vecAngVel[ROLL]));
+		return std::max(flMax, fabs(vecAngVel[ROLL]));
 	}
 
 	return 0;

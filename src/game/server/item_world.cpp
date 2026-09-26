@@ -14,9 +14,6 @@
 #include "engine/IEngineSound.h"
 #include "iservervehicle.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define ITEM_PICKUP_BOX_BLOAT		24
 
 class CWorldItem : public CBaseAnimating

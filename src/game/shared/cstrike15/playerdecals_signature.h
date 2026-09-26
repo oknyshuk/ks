@@ -7,6 +7,8 @@
 #ifndef PLAYERDECALS_SIGNATURE_H
 #define PLAYERDECALS_SIGNATURE_H
 
+#include "tier1/byte_writer.h"
+
 //
 // We will be using RSA 1024-bit private signing key
 // PKCS1 signature length is guaranteed to be 128 bytes
@@ -36,35 +38,34 @@
 // Private key must be used only on GC.
 //
 
-inline bool BClientPlayerDecalSignatureComposeSignBuffer( ks::net::PlayerDecalDigitalSignature const &data, CUtlBuffer &buf )
+inline bool BClientPlayerDecalSignatureComposeSignBuffer( ks::net::PlayerDecalDigitalSignature const &data, ks::byte_writer &buf )
 {
 	if ( data.endpos.size() != 3 ) return false;
-	for ( int k = 0; k < 3; ++ k ) buf.PutFloat( data.endpos[ k ] );
+	for ( int k = 0; k < 3; ++ k ) buf.write< float >( data.endpos[ k ] );
 	if ( data.startpos.size() != 3 ) return false;
-	for ( int k = 0; k < 3; ++k ) buf.PutFloat( data.startpos[ k ] );
+	for ( int k = 0; k < 3; ++k ) buf.write< float >( data.startpos[ k ] );
 	if ( data.right.size() != 3 ) return false;
-	for ( int k = 0; k < 3; ++k ) buf.PutFloat( data.right[ k ] );
+	for ( int k = 0; k < 3; ++k ) buf.write< float >( data.right[ k ] );
 	if ( data.normal.size() != 3 ) return false;
-	for ( int k = 0; k < 3; ++k ) buf.PutFloat( data.normal[ k ] );
+	for ( int k = 0; k < 3; ++k ) buf.write< float >( data.normal[ k ] );
 	
-	buf.PutInt( data.tx_defidx );
-	buf.PutInt( data.tint_id );
-	buf.PutInt( data.entindex );
-	buf.PutInt( data.hitbox );
+	buf.write< int >( data.tx_defidx );
+	buf.write< int >( data.tint_id );
+	buf.write< int >( data.entindex );
+	buf.write< int >( data.hitbox );
 	
-	buf.PutFloat( data.creationtime );
+	buf.write< float >( data.creationtime );
 
-	buf.PutUnsignedInt( data.accountid );
-	buf.PutUnsignedInt( data.rtime );
-	buf.PutUnsignedInt( data.trace_id );
+	buf.write< unsigned int >( data.accountid );
+	buf.write< unsigned int >( data.rtime );
+	buf.write< unsigned int >( data.trace_id );
 
 	return true;
 }
 
 inline bool BValidateClientPlayerDecalSignature( ks::net::PlayerDecalDigitalSignature const &data )
 {
-	CUtlBuffer bufData;
-	bufData.EnsureCapacity( PLAYERDECALS_SIGNATURE_BYTELEN );
+	ks::byte_writer bufData( PLAYERDECALS_SIGNATURE_BYTELEN );
 	if ( !BClientPlayerDecalSignatureComposeSignBuffer( data, bufData ) )
 		return false;
 

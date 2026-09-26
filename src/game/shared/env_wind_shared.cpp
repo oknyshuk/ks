@@ -71,12 +71,11 @@
 #include "engine/IEngineSound.h"
 #include "sharedInterface.h"
 #include "renderparm.h"
+#include "tier1/vector_ops.h"
 
 #ifdef CLIENT_DLL 
 #include "physics_softbody.h"
 #endif
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 #ifdef CLIENT_DLL
 // Test concommand for wind/tree sway. Couldn't think of a better way to put it.
@@ -99,12 +98,12 @@ CON_COMMAND( cl_tree_sway_dir, "sets tree sway wind direction and strength" )
 // globals
 //-----------------------------------------------------------------------------
 
-static CUtlLinkedList< CEnvWindShared * > s_windControllers;
+static std::vector< CEnvWindShared * > s_windControllers;
 
-CEnvWindShared::CEnvWindShared() : m_WindAveQueue(10), m_WindVariationQueue(10)
+CEnvWindShared::CEnvWindShared()
 {
 	m_pWindSound = nullptr;
-	s_windControllers.AddToTail( this );
+	s_windControllers.push_back( this );
 }
 
 CEnvWindShared::~CEnvWindShared()
@@ -113,7 +112,7 @@ CEnvWindShared::~CEnvWindShared()
 	{
 		CSoundEnvelopeController::GetController().Shutdown( m_pWindSound );
 	}
-	s_windControllers.FindAndRemove( this );
+	ks::erase_first( s_windControllers, this );
 }
 
 void CEnvWindShared::Init( int nEntIndex, int iRandomSeed, float flTime, 
@@ -334,9 +333,9 @@ float CEnvWindShared::WindThink( float flTime )
 //-----------------------------------------------------------------------------
 void ResetWindspeed()
 {
-	FOR_EACH_LL( s_windControllers, it )
+	for ( CEnvWindShared *pController : s_windControllers )
 	{
-		s_windControllers[it]->m_currentWindVector.Init( 0, 0, 0 );
+		pController->m_currentWindVector.Init( 0, 0, 0 );
 	}
 
 #ifdef CLIENT_DLL
@@ -351,9 +350,8 @@ void ResetWindspeed()
 //-----------------------------------------------------------------------------
 Vector GetWindspeedAtLocation( const Vector &location )
 {
-	FOR_EACH_LL( s_windControllers, it )
+	for ( CEnvWindShared *thisWindController : s_windControllers )
 	{
-		CEnvWindShared *thisWindController = s_windControllers[it];
 		float distance = (thisWindController->m_location - location).Length();
 
 		if( distance < thisWindController->m_windRadius )
@@ -363,9 +361,8 @@ Vector GetWindspeedAtLocation( const Vector &location )
 		}
 	}
 
-	FOR_EACH_LL( s_windControllers, it )
+	for ( CEnvWindShared *thisWindController : s_windControllers )
 	{
-		CEnvWindShared *thisWindController = s_windControllers[it];
 
 		if( thisWindController->m_windRadius == -1.0f )
 		{
@@ -384,12 +381,12 @@ void GetWindspeedAtTime( float flTime, Vector &vecVelocity )
 {
 	// For now, ignore history and time.. fix later when we use wind to affect
 	// client-side prediction
-	if ( s_windControllers.Count() == 0 )
+	if ( s_windControllers.empty() )
 	{
 		vecVelocity.Init( 0, 0, 0 );
 	}
 	else
 	{
-		VectorCopy( s_windControllers[ s_windControllers.Head() ]->m_currentWindVector, vecVelocity );
+		VectorCopy( s_windControllers.front()->m_currentWindVector, vecVelocity );
 	}
 }

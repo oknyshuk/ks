@@ -45,9 +45,7 @@
 
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 static netadr_t	net_local_adr;
 static unsigned short NET_HostToNetShort( unsigned short us_in )
 {
@@ -192,7 +190,7 @@ public:
 	void OnSocketClosed( SocketHandle_t hSocket, const netadr_t &netAdr, void* pData )
 	{
 		if ( pData )
-			free( pData );
+			g_pMemAlloc->Free( pData );
 	}
 
 	void RunFrame( void );
@@ -306,7 +304,7 @@ void CParentProcessNetConsoleMgr::RunFrame( void )
 		while( readLen > 0  )
 		{
 			char recvBuf[256];
-			int recvLen = recv( hSocket, recvBuf , MIN( sizeof( recvBuf ) , readLen ), 0 );
+			int recvLen = recv( hSocket, recvBuf , std::min( sizeof( recvBuf ) , readLen ), 0 );
 			if ( recvLen == 0 ) // socket was closed
 			{
 				m_Socket.CloseAcceptedSocket( i );
@@ -796,11 +794,11 @@ void CServerInstance::ProcessInputFromChild( void )
 		}
 		if ( !strcmp( m_pszInputBuffer, "status" ) )
 		{
-			CUtlStringList statusRecords;
+			std::vector< std::string > statusRecords;
 			V_SplitString( pSpace, ";", statusRecords );
-			for( int i = 0; i < statusRecords.Count(); i++ )
+			for( int i = 0; i < std::ssize( statusRecords ); i++ )
 			{
-				char const *pRecord = statusRecords[i];
+				char const *pRecord = statusRecords[i].c_str();
 				char const *pParm;
 				if ( DecodeParam( "map=", pRecord, &pParm ) )
 				{

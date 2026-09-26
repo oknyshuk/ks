@@ -9,9 +9,6 @@
 #include "reflect_annotations.h"
 #include "info_view_parameters.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 IMPLEMENT_REFLECT_DATAMAP( CInfoViewParameters )
 

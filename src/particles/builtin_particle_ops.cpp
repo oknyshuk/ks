@@ -10,13 +10,10 @@
 #include "tier2/tier2.h"
 #include "tier2/fileutils.h"
 #include "tier2/renderutils.h"
-#include "tier1/UtlStringMap.h"
 #include "tier1/strtools.h"
 #include "studio.h"
 #include "bspflags.h"
 #include "tier0/vprof.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 #if MEASURE_PARTICLE_PERF
 
@@ -107,7 +104,7 @@ void C_OP_BasicMovement::Operate( CParticleCollection *pParticles, float flStren
 	fltx4 accFactorY = ReplicateX4( acc.y );
 	fltx4 accFactorZ = ReplicateX4( acc.z );
 
-	int nAccumulators = pParticles->m_pDef->m_ForceGenerators.Count();
+	int nAccumulators = std::ssize( pParticles->m_pDef->m_ForceGenerators );
 
 	FourVectors PerParticleForceAccumulator[MAX_PARTICLES_IN_A_SYSTEM / 4];	// xbox fixme - memory
 
@@ -128,7 +125,7 @@ void C_OP_BasicMovement::Operate( CParticleCollection *pParticles, float flStren
 		for(int i=0;i < nAccumulators ; i++ )
 		{
 			float flStrength;
-			CParticleOperatorInstance *pOp = pParticles->m_pDef->m_ForceGenerators[i];
+			CParticleOperatorInstance *pOp = pParticles->m_pDef->m_ForceGenerators[i].get();
 			if ( pParticles->CheckIfOperatorShouldRun( pOp, &flStrength ))
 			{
 				START_OP;
@@ -177,7 +174,7 @@ void C_OP_BasicMovement::Operate( CParticleCollection *pParticles, float flStren
 	CHECKSYSTEM( pParticles );
 	pParticles->SwapPosAndPrevPos();
 	// now, enforce constraints
-	int nConstraints = pParticles->m_pDef->m_Constraints.Count();
+	int nConstraints = std::ssize( pParticles->m_pDef->m_Constraints );
 	if ( nConstraints && pParticles->m_nPaddedActiveParticles )
 	{
 		bool bConstraintSatisfied[ MAXIMUM_NUMBER_OF_CONSTRAINTS ];
@@ -201,7 +198,7 @@ void C_OP_BasicMovement::Operate( CParticleCollection *pParticles, float flStren
 //				pParticles->m_nOperatorRandomSampleOffset += 23;
 				if ( ! bConstraintSatisfied[i] )
 				{
-					CParticleOperatorInstance *pOp = pParticles->m_pDef->m_Constraints[i];
+					CParticleOperatorInstance *pOp = pParticles->m_pDef->m_Constraints[i].get();
 					bConstraintSatisfied[i] = true;
 					float flStrength;
 					if ( ( !bFinalConstraint[i] ) && ( pParticles->CheckIfOperatorShouldRun( pOp, &flStrength ) ) )
@@ -233,7 +230,7 @@ void C_OP_BasicMovement::Operate( CParticleCollection *pParticles, float flStren
 		// now, run final constraints
 		for(int i=0;i<nConstraints; i++)
 		{
-			CParticleOperatorInstance *pOp = pParticles->m_pDef->m_Constraints[i];
+			CParticleOperatorInstance *pOp = pParticles->m_pDef->m_Constraints[i].get();
 			float flStrength;
 			if ( ( bFinalConstraint[i] ) &&
 				 ( pParticles->CheckIfOperatorShouldRun( pOp, &flStrength ) ) )
@@ -2236,8 +2233,8 @@ class C_OP_RemapSpeed : public CParticleOperatorInstance
 
 	virtual void InitParams(CParticleSystemDefinition *pDef )
 	{
-		m_flInputMin = MAX(MIN_PARTICLE_SPEED, m_flInputMin);
-		m_flInputMax = MAX(MIN_PARTICLE_SPEED, m_flInputMax);
+		m_flInputMin = std::max<std::common_type_t<double, float>>(MIN_PARTICLE_SPEED, m_flInputMin);
+		m_flInputMax = std::max<std::common_type_t<double, float>>(MIN_PARTICLE_SPEED, m_flInputMax);
 	}
 
 	virtual void Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const;
@@ -3397,7 +3394,7 @@ class C_OP_VelocityDecay : public CParticleOperatorInstance
 
 	virtual void InitParams(CParticleSystemDefinition *pDef )
 	{
-		m_flMinVelocity = MAX( MIN_PARTICLE_SPEED, m_flMinVelocity );
+		m_flMinVelocity = std::max<std::common_type_t<double, float>>( MIN_PARTICLE_SPEED, m_flMinVelocity );
 	}
 
 	virtual void Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const;
@@ -3474,7 +3471,7 @@ class C_OP_AlphaDecay : public CParticleOperatorInstance
 
 	virtual void InitParams(CParticleSystemDefinition *pDef )
 	{
-		m_flMinAlpha = MAX( 0, m_flMinAlpha );
+		m_flMinAlpha = std::max<std::common_type_t<int, float>>( 0, m_flMinAlpha );
 	}
 
 	virtual void Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const;
@@ -3656,7 +3653,7 @@ void C_OP_DecayMaintainCount::Operate( CParticleCollection *pParticles, float fl
 	int nActualParticlesToMaintain = m_nParticlesToMaintain;
 	if ( ( m_nScaleControlPoint >= 0 ) )
 	{
-		nActualParticlesToMaintain = MIN( pParticles->m_pDef->m_nMaxParticles, m_nParticlesToMaintain * pParticles->GetControlPointAtCurrentTime(m_nScaleControlPoint)[m_nScaleControlPointField] );
+		nActualParticlesToMaintain = std::min<std::common_type_t<int, vec_t>>( pParticles->m_pDef->m_nMaxParticles, m_nParticlesToMaintain * pParticles->GetControlPointAtCurrentTime(m_nScaleControlPoint)[m_nScaleControlPointField] );
 	}
 
 	int nParticleKillQueue = 0;
@@ -3685,7 +3682,7 @@ void C_OP_DecayMaintainCount::Operate( CParticleCollection *pParticles, float fl
 		{
 			pParticles->KillParticle( i );
 			nParticleKillQueue--;
-			pCtx->m_nPendingDecay = MAX( 0, pCtx->m_nPendingDecay - 1 );
+			pCtx->m_nPendingDecay = std::max( 0, pCtx->m_nPendingDecay - 1 );
 		}
 		else if ( nParticleKillQueue > 0 && ( *pLifeDuration > pParticles->m_flCurTime + m_flDecayDelay ) )
 		{
@@ -4303,7 +4300,7 @@ class C_OP_PositionLock : public CParticleOperatorInstance
 
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nControlPointNumber = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
+		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
 	}
 
 	size_t GetRequiredContextBytes( void ) const
@@ -5094,12 +5091,12 @@ BEGIN_PARTICLE_OPERATOR_UNPACK( C_OP_SetChildControlPoints )
 
 void C_OP_SetChildControlPoints::Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const
 {
-	int nFirst=MAX(0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nFirstControlPoint ) );
-	int nToSet=MIN( pParticles->m_nActiveParticles-m_nFirstSourcePoint, m_nNumControlPoints );
-	nToSet=MIN( nToSet, MAX_PARTICLE_CONTROL_POINTS-nFirst );
+	int nFirst=std::max(0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nFirstControlPoint ) );
+	int nToSet=std::min( pParticles->m_nActiveParticles-m_nFirstSourcePoint, m_nNumControlPoints );
+	nToSet=std::min( nToSet, MAX_PARTICLE_CONTROL_POINTS-nFirst );
 	if ( nToSet )
 	{
-		for( CParticleCollection *pChild = pParticles->m_Children.m_pHead; pChild; pChild = pChild->m_pNext )
+		for( CParticleCollection *pChild = pParticles->m_Children.head(); pChild; pChild = pChild->m_pNext )
 		{
 			if ( pChild->GetGroupID() == m_nChildGroupID )
 			{
@@ -5173,9 +5170,9 @@ END_PARTICLE_OPERATOR_UNPACK( C_OP_SetControlPointsToParticle )
 
 void C_OP_SetControlPointsToParticle::Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const
 {
-	int nFirst=MAX(0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nFirstControlPoint ) );
-	int nToSet=MIN( pParticles->m_nActiveParticles-m_nFirstSourcePoint, m_nNumControlPoints );
-	nToSet=MIN( nToSet, MAX_PARTICLE_CONTROL_POINTS-nFirst );
+	int nFirst=std::max(0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nFirstControlPoint ) );
+	int nToSet=std::min( pParticles->m_nActiveParticles-m_nFirstSourcePoint, m_nNumControlPoints );
+	nToSet=std::min( nToSet, MAX_PARTICLE_CONTROL_POINTS-nFirst );
 	if ( nToSet )
 	{
 		for( int p=0; p < nToSet; p++ )
@@ -5250,12 +5247,12 @@ END_PARTICLE_OPERATOR_UNPACK( C_OP_SetPerChildControlPoint )
 
 void C_OP_SetPerChildControlPoint::Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const
 {
-	int nToSet=MIN ( m_nNumControlPoints, MIN( pParticles->m_nActiveParticles-m_nFirstSourcePoint, pParticles->m_Children.Count() ) );
+	int nToSet=std::min( m_nNumControlPoints, std::min( pParticles->m_nActiveParticles-m_nFirstSourcePoint, (int)pParticles->m_Children.size() ) );
 	if ( nToSet )
 	{
 		int nCurrentPoint = m_nFirstSourcePoint;
 
-		for( CParticleCollection *pChild = pParticles->m_Children.m_pHead; pChild; pChild = pChild->m_pNext )
+		for( CParticleCollection *pChild = pParticles->m_Children.head(); pChild; pChild = pChild->m_pNext )
 		{
 			if ( pChild->GetGroupID() == m_nChildGroupID && nToSet )
 			{
@@ -5425,7 +5422,7 @@ class C_OP_DampenToCP : public CParticleOperatorInstance
 
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nControlPointNumber = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
+		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
 	}
 
 	virtual void Operate( CParticleCollection *pParticles, float flStrength, void *pContext ) const;
@@ -5518,8 +5515,8 @@ class C_OP_DistanceBetweenCPs : public CParticleOperatorInstance
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
 		m_nCollisionGroupNumber = g_pParticleSystemMgr->Query()->GetCollisionGroupFromName( m_CollisionGroupName );
-		m_nStartCP = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nStartCP ) );
-		m_nEndCP = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nEndCP ) );
+		m_nStartCP = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nStartCP ) );
+		m_nEndCP = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nEndCP ) );
 	}
 
 	virtual void Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const;
@@ -5645,10 +5642,10 @@ class C_OP_DistanceBetweenCPsToCP : public CParticleOperatorInstance
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
 		m_nCollisionGroupNumber = g_pParticleSystemMgr->Query()->GetCollisionGroupFromName( m_CollisionGroupName );
-		m_nStartCP = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nStartCP ) );
-		m_nEndCP = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nEndCP ) );
-		m_nOutputCP = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nOutputCP ) );
-		m_nOutputCPField = MAX( 0, MIN( 2, m_nOutputCPField ) );
+		m_nStartCP = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nStartCP ) );
+		m_nEndCP = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nEndCP ) );
+		m_nOutputCP = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nOutputCP ) );
+		m_nOutputCPField = std::max( 0, std::min( 2, m_nOutputCPField ) );
 	}
 
 	bool ShouldRunBeforeEmitters( void ) const
@@ -5755,8 +5752,8 @@ class C_OP_PercentageBetweenCPs : public CParticleOperatorInstance
 
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nStartCP = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nStartCP ) );
-		m_nEndCP = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nEndCP ) );
+		m_nStartCP = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nStartCP ) );
+		m_nEndCP = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nEndCP ) );
 		if ( ATTRIBUTES_WHICH_ARE_0_TO_1 & ( 1 << m_nFieldOutput ) )
 		{
 			m_flOutputMin = clamp(m_flOutputMin, 0.0f, 1.0f );
@@ -5902,8 +5899,8 @@ class C_OP_PercentageBetweenCPsVector : public CParticleOperatorInstance
 
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nStartCP = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nStartCP ) );
-		m_nEndCP = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nEndCP ) );
+		m_nStartCP = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nStartCP ) );
+		m_nEndCP = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nEndCP ) );
 	}
 
 	virtual void Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const;
@@ -6048,7 +6045,7 @@ class C_OP_DistanceToCP : public CParticleOperatorInstance
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
 		m_nCollisionGroupNumber = g_pParticleSystemMgr->Query()->GetCollisionGroupFromName( m_CollisionGroupName );
-		m_nStartCP = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nStartCP ) );
+		m_nStartCP = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nStartCP ) );
 	}
 
 	virtual void Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const;
@@ -6174,7 +6171,7 @@ class C_OP_SetControlPointToPlayer : public CParticleOperatorInstance
 
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nCP1 = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nCP1 ) );
+		m_nCP1 = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nCP1 ) );
 	}
 
 	bool ShouldRunBeforeEmitters( void ) const
@@ -6249,7 +6246,7 @@ class C_OP_MoveToHitbox : public CParticleOperatorInstance
 
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nControlPointNumber = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
+		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
 	}
 
 	virtual void Operate( CParticleCollection *pParticles, float flStrength, void *pContext ) const;
@@ -6358,7 +6355,7 @@ class C_OP_LockToBone : public CParticleOperatorInstance
 
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nControlPointNumber = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
+		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
 	}
 
 	virtual void Operate( CParticleCollection *pParticles, float flStrength, void *pContext ) const;
@@ -6396,7 +6393,7 @@ void C_OP_LockToBone::Operate( CParticleCollection *pParticles, float flStrength
 			
 			float flAge = pParticles->m_flCurTime -*pCreationTime;
 
-			float flCreationFrameBias = MIN( flAge, pParticles->m_flDt );
+			float flCreationFrameBias = std::min( flAge, pParticles->m_flDt );
 			flCreationFrameBias *= ( 1 / pParticles->m_flDt );
 
 			if ( flAge < flAgeThreshold )
@@ -6481,10 +6478,10 @@ class C_OP_CPOffsetToPercentageBetweenCPs : public CParticleOperatorInstance
 
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nStartCP = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nStartCP ) );
-		m_nEndCP = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nEndCP ) );
-		m_nOffsetCP = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nOffsetCP ) );
-		m_nOuputCP = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nOuputCP ) );
+		m_nStartCP = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nStartCP ) );
+		m_nEndCP = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nEndCP ) );
+		m_nOffsetCP = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nOffsetCP ) );
+		m_nOuputCP = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nOuputCP ) );
 	}
 
 	virtual void Operate( CParticleCollection *pParticles, float flStrength,  void *pContext ) const;
@@ -6771,7 +6768,7 @@ class C_OP_ModelCull : public CParticleOperatorInstance
 
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nControlPointNumber = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
+		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
 	}
 
 	virtual void Operate( CParticleCollection *pParticles, float flStrength, void *pContext ) const;
@@ -6840,7 +6837,7 @@ class C_OP_SetControlPointToCenter : public CParticleOperatorInstance
 
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nCP1 = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nCP1 ) );
+		m_nCP1 = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nCP1 ) );
 	}
 
 	bool ShouldRunBeforeEmitters( void ) const
@@ -7382,7 +7379,7 @@ void C_OP_InheritFromParentParticles::Operate( CParticleCollection *pParticles, 
 		return;
 	}		
 
-	nActiveParticles = MAX( 0, nActiveParticles - 1 );
+	nActiveParticles = std::max( 0, nActiveParticles - 1 );
 
 	for ( int i = 0; i < pParticles->m_nActiveParticles; ++i )
 	{
@@ -7581,7 +7578,7 @@ void C_OP_RestartAfterDuration::Operate( CParticleCollection *pParticles, float 
 		{
 			if ( m_bOnlyChildren )
 			{
-				for( CParticleCollection *pChild = pParticles->m_Children.m_pHead; pChild; pChild = pChild->m_pNext )
+				for( CParticleCollection *pChild = pParticles->m_Children.head(); pChild; pChild = pChild->m_pNext )
 				{
 					if ( pChild->GetGroupID() == m_nChildGroupID )
 						pChild->Restart();
@@ -8073,7 +8070,7 @@ void C_OP_MaxVelocity::Operate( CParticleCollection *pParticles, float flStrengt
 		float flSpeed = vecVelocityCur.Length();
 		VectorNormalizeFast( vecVelocityCur );
 		float flMaxVelocityNormalized = flMaxVelocity * pParticles->m_flDt;
-		vecVelocityCur *= MIN( flSpeed, flMaxVelocityNormalized);
+		vecVelocityCur *= std::min( flSpeed, flMaxVelocityNormalized);
 		vecXYZ = vecPXYZ + vecVelocityCur;
 		SetVectorAttribute( xyz, vecXYZ );
 	}
@@ -8310,8 +8307,8 @@ void C_OP_MaintainSequentialPath::Operate( CParticleCollection *pParticles, floa
 			else
 			{
 				pCtx->m_nCountAmount *= -1;
-				pCtx->m_nParticleCount = MIN( pCtx->m_nParticleCount, ( flNumToAssign - 1) );
-				pCtx->m_nParticleCount = MAX( pCtx->m_nParticleCount, 1 );
+				pCtx->m_nParticleCount = std::min<std::common_type_t<int, float>>( pCtx->m_nParticleCount, ( flNumToAssign - 1) );
+				pCtx->m_nParticleCount = std::max( pCtx->m_nParticleCount, 1 );
 			}
 		}
 
@@ -8337,8 +8334,8 @@ void C_OP_MaintainSequentialPath::Operate( CParticleCollection *pParticles, floa
 		vecXYZ -= Pnt;
 		vecPXYZ -= Pnt;
 
-		float flXYZOffset = MIN(vecXYZ.Length(), m_fMaxDistance );
-		float flPXYZOffset = MIN(vecPXYZ.Length(), m_fMaxDistance ); 
+		float flXYZOffset = std::min(vecXYZ.Length(), m_fMaxDistance );
+		float flPXYZOffset = std::min(vecPXYZ.Length(), m_fMaxDistance ); 
 
 		VectorNormalizeFast( vecXYZ );
 		vecXYZ *= flXYZOffset * fl_Cohesion;
@@ -8399,7 +8396,7 @@ class C_OP_LockToSavedSequentialPath : public CParticleOperatorInstance
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
 		m_PathParams.ClampControlPointIndices();
-		m_nPathCount = MAX( 1, m_bCPPairs ? m_PathParams.m_nEndControlPointNumber - m_PathParams.m_nStartControlPointNumber : 1 );
+		m_nPathCount = std::max( 1, m_bCPPairs ? m_PathParams.m_nEndControlPointNumber - m_PathParams.m_nStartControlPointNumber : 1 );
 	}
 
 	size_t GetRequiredContextBytes( void ) const
@@ -8483,11 +8480,11 @@ void C_OP_LockToSavedSequentialPath::Operate( CParticleCollection *pParticles, f
 
 		float flParticleAge = pParticles->m_flCurTime - *pCt;
 
-		float flCreationFrameBias = MIN( flParticleAge, pParticles->m_flDt );
+		float flCreationFrameBias = std::min( flParticleAge, pParticles->m_flDt );
 		flCreationFrameBias *=  ( 1 / pParticles->m_flDt );
 
 		float t= vecSavedPos.x;
-		int nStartCP = int ( MAX( 0, vecSavedPos.y - m_PathParams.m_nStartControlPointNumber ) );
+		int nStartCP = int ( std::max<std::common_type_t<int, vec_t>>( 0, vecSavedPos.y - m_PathParams.m_nStartControlPointNumber ) );
 		
 		Vector PrevL0 = pCtx->m_vecPrevStartPnt[nStartCP]+t*PrevDelta0[nStartCP];
 		Vector PrevL1 = pCtx->m_vecPrevMidP[nStartCP]+t*PrevDelta1[nStartCP];
@@ -8828,7 +8825,7 @@ class C_OP_NormalLock : public CParticleOperatorInstance
 
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
-		m_nControlPointNumber = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
+		m_nControlPointNumber = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nControlPointNumber ) );
 	}
 
 	size_t GetRequiredContextBytes( void ) const
@@ -8872,7 +8869,7 @@ void C_OP_NormalLock::Operate( CParticleCollection *pParticles, float flStrength
 
 		float flParticleAge = pParticles->m_flCurTime - *pCreationTime;
 
-		float flCreationFrameBias = MIN( flParticleAge, pParticles->m_flDt );
+		float flCreationFrameBias = std::min( flParticleAge, pParticles->m_flDt );
 		flCreationFrameBias *=  ( 1 / pParticles->m_flDt );
 
 		float *normal = pParticles->GetFloatAttributePtrForWrite( PARTICLE_ATTRIBUTE_NORMAL, i );
@@ -8932,8 +8929,8 @@ class C_OP_SetControlPointToImpactPoint : public CParticleOperatorInstance
 	void InitParams( CParticleSystemDefinition *pDef )
 	{
 		m_nCollisionGroupNumber = g_pParticleSystemMgr->Query()->GetCollisionGroupFromName( m_CollisionGroupName );
-		m_nCPIn = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nCPIn ) );
-		m_nCPOut = MAX( 0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nCPOut ) );
+		m_nCPIn = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nCPIn ) );
+		m_nCPOut = std::max( 0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nCPOut ) );
 	}
 
 	size_t GetRequiredContextBytes( void ) const
@@ -9114,9 +9111,9 @@ void C_OP_RemapCPtoVector::Operate( CParticleCollection *pParticles, float flStr
 		}
 		if (  ATTRIBUTES_WHICH_ARE_COLOR_AND_OPACITY & ( 1 << m_nFieldOutput ) )
 		{
-			pOutput[0] = MAX( 0.0f, MIN( vOutput.x, 1.0f) );
-			pOutput[4] = MAX( 0.0f, MIN( vOutput.y, 1.0f) );
-			pOutput[8] = MAX( 0.0f, MIN( vOutput.z, 1.0f) );
+			pOutput[0] = std::max( 0.0f, std::min( vOutput.x, 1.0f) );
+			pOutput[4] = std::max( 0.0f, std::min( vOutput.y, 1.0f) );
+			pOutput[8] = std::max( 0.0f, std::min( vOutput.z, 1.0f) );
 		}
 		else
 		{
@@ -9213,7 +9210,7 @@ void C_OP_RemapVelocityToVector::Operate( CParticleCollection *pParticles, float
 	}
 	else
 	{
-		fltx4 fl4Scale = ReplicateX4( m_flScale * 1.0 / ( MAX( 1.0e-20, pParticles->m_flPreviousDt ) ) );
+		fltx4 fl4Scale = ReplicateX4( m_flScale * 1.0 / ( std::max<std::common_type_t<double, float>>( 1.0e-20, pParticles->m_flPreviousDt ) ) );
 		do
 		{
 			FourVectors v4Vel = *xyz;
@@ -9281,7 +9278,7 @@ void C_OP_RemapCPVelocityToVector::Operate( CParticleCollection *pParticles, flo
 	}
 	else
 	{
-		vecDelta *= m_flScale * 1.0 / ( MAX( 1.0e-20, pParticles->m_flPreviousDt ) );
+		vecDelta *= m_flScale * 1.0 / ( std::max<std::common_type_t<double, float>>( 1.0e-20, pParticles->m_flPreviousDt ) );
 	}
 
 	FourVectors v4Vel;
@@ -9415,7 +9412,7 @@ void C_OP_RemapDirectionToCPToVector::Operate( CParticleCollection *pParticles, 
 	}
 	else
 	{
-		fltx4 fl4Scale = ReplicateX4( m_flScale * 1.0 / ( MAX( 1.0e-20, pParticles->m_flPreviousDt ) ) );
+		fltx4 fl4Scale = ReplicateX4( m_flScale * 1.0 / ( std::max<std::common_type_t<double, float>>( 1.0e-20, pParticles->m_flPreviousDt ) ) );
 		do
 		{
 			FourVectors v4Vel = *xyz;

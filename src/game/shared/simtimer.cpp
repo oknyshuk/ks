@@ -9,9 +9,6 @@
 #include "reflect_datamap.h"
 #include "simtimer.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 
 IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CSimpleSimTimer )

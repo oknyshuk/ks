@@ -8,9 +8,6 @@
 #include "rrbase.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include <tier0/memdbgon.h>
-
 #if RR_CONCEPTS_ARE_STRINGS
 #pragma error("RR_CONCEPTS_ARE_STRINGS no longer supported")
 #else
@@ -26,7 +23,7 @@ static void InitializeRRConceptTable()
 {
 	if (g_pRRConceptTable == nullptr)
 	{
-		g_pRRConceptTable = new CRR_ConceptSymbolTable( 64, 64, true );
+		g_pRRConceptTable = new CRR_ConceptSymbolTable( true );
 	}
 }
 
@@ -34,40 +31,33 @@ static void InitializeRRConceptTable()
 CRR_Concept::CRR_Concept(const char *fromString)
 {
 	InitializeRRConceptTable();
-	m_iConcept = g_pRRConceptTable->AddString(fromString);
+	m_iConcept = g_pRRConceptTable->intern(fromString);
 }
 
 CRR_Concept &CRR_Concept::operator=(const char *fromString)
 {
 	InitializeRRConceptTable();
-	m_iConcept = g_pRRConceptTable->AddString(fromString);
+	m_iConcept = g_pRRConceptTable->intern(fromString);
 	return *this;
 }
 
 bool CRR_Concept::operator==(const char *pszConcept)
 {
-	int otherConcept = g_pRRConceptTable->Find(pszConcept);
-	return ( otherConcept != UTL_INVAL_SYMBOL && otherConcept == m_iConcept );
+	tGenericId otherConcept = g_pRRConceptTable->find(pszConcept);
+	return ( otherConcept.data() && otherConcept.data() == m_iConcept.data() );
 }
 
 const char *CRR_Concept::GetStringConcept() const
 {
 	InitializeRRConceptTable();
-	AssertMsg( m_iConcept.IsValid(), "AI Concept has invalid string symbol.\n" );
-	const char * retval = g_pRRConceptTable->String(m_iConcept);
-	AssertMsg( retval, "An RR_Concept couldn't find its string in the symbol table!\n" );
-	if (retval == nullptr)
-	{
-		Warning( "An RR_Concept couldn't find its string in the symbol table!\n" );
-		retval = "";
-	}
-	return retval;
+	AssertMsg( m_iConcept.data(), "AI Concept has invalid string symbol.\n" );
+	return ks::nz( m_iConcept.data() );
 }
 
 const char *CRR_Concept::GetStringForGenericId(tGenericId genericId)
 {
 	InitializeRRConceptTable();
-	return g_pRRConceptTable->String(genericId);
+	return ks::nz( genericId.data() );
 }
 
 #endif

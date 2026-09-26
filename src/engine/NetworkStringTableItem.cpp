@@ -7,9 +7,6 @@
 #include "quakedef.h"
 #include "networkstringtableitem.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
@@ -35,9 +32,9 @@ CNetworkStringTableItem::~CNetworkStringTableItem( void )
 	{
 		// free changelist and elements
 
-		for ( int i=0; i < m_pChangeList->Count(); i++ )
+		for ( int i=0; i < std::ssize( *m_pChangeList ); i++ )
 		{
-			itemchange_s item = m_pChangeList->Element( i );
+			itemchange_s item = (*m_pChangeList)[ i ];
 
 			if ( item.data )
 				delete[] item.data;
@@ -61,20 +58,20 @@ void CNetworkStringTableItem::EnableChangeHistory( void )
 	if ( m_pChangeList )
 		return; // already enabled
 
-	m_pChangeList = new CUtlVector<itemchange_s>;
+	m_pChangeList = new std::vector< itemchange_s >;
 
 	Assert ( m_pChangeList );
 }
 
 void CNetworkStringTableItem::UpdateChangeList( int tick, int length, const void *userData )
 {
-	int count = m_pChangeList->Count();
+	int count = std::ssize( *m_pChangeList );
 	itemchange_s item;
 
 	if ( count > 0 )
 	{	
 		// check if different from last change in list
-		item = m_pChangeList->Element( count-1 );
+		item = (*m_pChangeList)[ count-1 ];
 
 		if ( !item.data && !userData )
 			return; // both NULL data
@@ -98,7 +95,7 @@ void CNetworkStringTableItem::UpdateChangeList( int tick, int length, const void
 				delete[] item.data;
 			}
 
-			m_pChangeList->Remove( count-1 );
+			m_pChangeList->erase( m_pChangeList->begin() + ( count-1 ) );
 		}
 				
 	}
@@ -119,20 +116,20 @@ void CNetworkStringTableItem::UpdateChangeList( int tick, int length, const void
 		item.length = 0;
 	}
 
-	m_pChangeList->AddToTail( item );
+	m_pChangeList->push_back( item );
 }
 
 int CNetworkStringTableItem::RestoreTick( int tick )
 {
-	Assert( m_pChangeList->Count()>0 );
+	Assert( std::ssize( *m_pChangeList )>0 );
 
 	int index = 1;
 
-	itemchange_s *item = &m_pChangeList->Element( 0 );
+	itemchange_s *item = &(*m_pChangeList)[ 0 ];
 
-	while ( index < m_pChangeList->Count() )
+	while ( index < std::ssize( *m_pChangeList ) )
 	{
-		itemchange_s *nextitem = &m_pChangeList->Element( index );
+		itemchange_s *nextitem = &(*m_pChangeList)[ index ];
 
 		if ( nextitem->tick > tick )
 		{

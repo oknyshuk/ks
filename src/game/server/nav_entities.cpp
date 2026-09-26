@@ -27,9 +27,7 @@
 #include "functorutils.h"
 #include "team.h"
 #include "nav_entities.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier1/vector_ops.h"
 
 
 //--------------------------------------------------------------------------------------------------------
@@ -39,7 +37,7 @@ IMPLEMENT_REFLECT_DATAMAP( CFuncNavBlocker )
 LINK_ENTITY_TO_CLASS( func_nav_blocker, CFuncNavBlocker );
 
 
-CUtlLinkedList<CFuncNavBlocker *> CFuncNavBlocker::gm_NavBlockers;
+std::vector<CFuncNavBlocker *> CFuncNavBlocker::gm_NavBlockers;
 
 //-----------------------------------------------------------------------------------------------------
 int CFuncNavBlocker::DrawDebugTextOverlays( void )
@@ -73,7 +71,7 @@ int CFuncNavBlocker::DrawDebugTextOverlays( void )
 		extent.Init( this );
 		TheNavMesh->ForAllAreasOverlappingExtent( collector, extent );
 
-		for ( int i=0; i<collector.m_area.Count(); ++i )
+		for ( int i=0; i<std::ssize( collector.m_area ); ++i )
 		{
 			CNavArea *area = collector.m_area[i];
 			Extent areaExtent;
@@ -94,7 +92,7 @@ void CFuncNavBlocker::UpdateBlocked()
 	extent.Init( this );
 	TheNavMesh->ForAllAreasOverlappingExtent( collector, extent );
 
-	for ( int i=0; i<collector.m_area.Count(); ++i )
+	for ( int i=0; i<std::ssize( collector.m_area ); ++i )
 	{
 		CNavArea *area = collector.m_area[i];
 		area->UpdateBlocked( true );
@@ -109,7 +107,7 @@ void CFuncNavBlocker::UpdateOnRemove( void )
 {
 	UnblockNav();
 
-	gm_NavBlockers.FindAndRemove( this );
+	ks::erase_first( gm_NavBlockers, this );
 
 	BaseClass::UpdateOnRemove();
 }
@@ -118,7 +116,7 @@ void CFuncNavBlocker::UpdateOnRemove( void )
 //--------------------------------------------------------------------------------------------------------
 void CFuncNavBlocker::Spawn( void )
 {
-	gm_NavBlockers.AddToTail( this );
+	gm_NavBlockers.push_back( this );
 
 	if ( !m_blockedTeamNumber )
 		m_blockedTeamNumber = TEAM_ANY;
@@ -219,9 +217,8 @@ bool CFuncNavBlocker::CalculateBlocked( bool *pResultByTeam, const Vector &vecMi
 		pResultByTeam[i] = false;
 	}
 
-	FOR_EACH_LL( gm_NavBlockers, iBlocker )
+	for ( CFuncNavBlocker *pBlocker : gm_NavBlockers )
 	{
-		CFuncNavBlocker *pBlocker = gm_NavBlockers[iBlocker];
 		bool bIsIntersecting = false;
 
 		for ( i=0; i<MAX_NAV_TEAMS; ++i )

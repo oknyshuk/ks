@@ -143,7 +143,7 @@ public:
 		NextBotDebugType debugType;
 		char data[ MAX_NEXTBOT_DEBUG_LINE_LENGTH ];
 	};
-	void GetDebugHistory( unsigned int type, CUtlVector< const NextBotDebugLineType * > *lines ) const;	// build a vector of debug history of the given types
+	void GetDebugHistory( unsigned int type, std::vector< const NextBotDebugLineType * > *lines ) const;	// build a vector of debug history of the given types
 	//------------------------------------------------------------------------------
 
 
@@ -174,7 +174,7 @@ private:
 
 	// Debugging info
 	void ResetDebugHistory( void );
-	CUtlVector< NextBotDebugLineType * > m_debugHistory;
+	std::vector< NextBotDebugLineType * > m_debugHistory;
 };
 
 

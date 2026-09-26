@@ -63,7 +63,7 @@ private:
 		bool bExclusive;
 	};
 
-	CUtlVector< SetWeightParams_t > m_colorCorrectionWeights;
+	std::vector< SetWeightParams_t > m_colorCorrectionWeights;
 
 	void CommitColorCorrectionWeights();
 };

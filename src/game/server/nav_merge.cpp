@@ -5,12 +5,9 @@
 #include "cbase.h"
 #include "fmtstr.h"
 #include "tier0/vprof.h"
-#include "utldict.h"
+#include "tier1/map_ops.h"
 
 #include "nav_mesh.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 //--------------------------------------------------------------------------------------------------------
@@ -186,16 +183,16 @@ Vector ReadCorner( KeyValues *areaKey, const char *cornerName )
 
 
 //--------------------------------------------------------------------------------------------------------
-void ReconnectMergedArea( CUtlDict< CNavArea *, int > &newAreas, KeyValues *areaKey, NavDirType dir, const char *dirName )
+void ReconnectMergedArea( ks::idict< CNavArea * > &newAreas, KeyValues *areaKey, NavDirType dir, const char *dirName )
 {
-	int index = newAreas.Find( areaKey->GetName() );
-	if ( index == newAreas.InvalidIndex() )
+	CNavArea **ppArea = ks::find_ptr( newAreas, areaKey->GetName() );
+	if ( !ppArea )
 	{
 		Assert( false );
 		return;
 	}
 
-	CNavArea *area = newAreas[index];
+	CNavArea *area = *ppArea;
 
 	KeyValues *dirKey = areaKey->FindKey( dirName, true );
 	if ( dirKey )
@@ -204,11 +201,11 @@ void ReconnectMergedArea( CUtlDict< CNavArea *, int > &newAreas, KeyValues *area
 		while ( connection )
 		{
 			const char *otherID = connection->GetString();
-			int otherIndex = newAreas.Find( otherID );
-			Assert( otherIndex != newAreas.InvalidIndex() );
-			if ( otherIndex != newAreas.InvalidIndex() )
+			CNavArea **ppOther = ks::find_ptr( newAreas, otherID );
+			Assert( ppOther );
+			if ( ppOther )
 			{
-				CNavArea *other = newAreas[otherIndex];
+				CNavArea *other = *ppOther;
 
 				area->ConnectTo( other, dir );	// only a 1-way connection.  the other area will connect back to us.
 			}
@@ -244,8 +241,8 @@ void CNavMesh::CommandNavMergeMesh( const CCommand &args )
 
 		// First add the areas, and put them in the correct places.  We can save off the new area ID
 		// at the same time.
-		CUtlDict< CNavArea *, int > newAreas;
-		CUtlVector< CNavArea * > areaVector;
+		ks::idict< CNavArea * > newAreas;
+		std::vector< CNavArea * > areaVector;
 		KeyValues *areaKey = data->GetFirstSubKey();
 		while ( areaKey )
 		{
@@ -262,17 +259,13 @@ void CNavMesh::CommandNavMergeMesh( const CCommand &args )
 			}
 
 			newArea->Build( northWest, northEast, southEast, southWest );
-			TheNavAreas.AddToTail( newArea );
+			TheNavAreas.push_back( newArea );
 			TheNavMesh->AddNavArea( newArea );
-			areaVector.AddToTail( newArea );
+			areaVector.push_back( newArea );
 
 			// save the new ID for connections
-			int index = newAreas.Find( areaKey->GetName() );
-			Assert( index == newAreas.InvalidIndex() );
-			if ( index == newAreas.InvalidIndex() )
-			{
-				newAreas.Insert( areaKey->GetName(), newArea );
-			}
+			[[maybe_unused]] bool bInserted = newAreas.emplace( areaKey->GetName(), newArea ).second;
+			Assert( bInserted );
 
 			// Restore additional data
 			newArea->RestoreFromSelectedSet( areaKey );

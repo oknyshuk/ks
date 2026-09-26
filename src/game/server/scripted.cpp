@@ -27,9 +27,6 @@
 #include "scripted.h"
 #include "entitylist.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 ConVar ai_task_pre_script(  "ai_task_pre_script", "0", FCVAR_NONE );
 

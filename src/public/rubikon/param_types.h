@@ -671,7 +671,7 @@ struct CRnContactStats
 };
 
 struct RnPlane_t;
-typedef CUtlVectorFixedGrowable< RnPlane_t, 32 > PlaneBuffer;
+typedef ks::small_vector< RnPlane_t, 32 > PlaneBuffer;
 
 struct RnDebugDrawOptions_t
 {

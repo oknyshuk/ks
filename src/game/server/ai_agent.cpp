@@ -16,9 +16,6 @@
 
 #include "IEffects.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 //
 // Crude frame timings
@@ -59,7 +56,7 @@ void CAI_Agent::SetCondition( int iCondition )
 		return;
 	}
 	
-	m_Conditions.Set( interrupt );
+	m_Conditions.set( interrupt );
 }
 
 //---------------------------------------------------------
@@ -74,7 +71,7 @@ bool CAI_Agent::HasCondition( int iCondition )
 		return false;
 	}
 	
-	bool bReturn = m_Conditions.IsBitSet(interrupt);
+	bool bReturn = m_Conditions[interrupt];
 	return (bReturn);
 }
 
@@ -93,7 +90,7 @@ bool CAI_Agent::HasCondition( int iCondition, bool bUseIgnoreConditions )
 		return false;
 	}
 	
-	bool bReturn = m_ConditionsPreIgnore.IsBitSet(interrupt);
+	bool bReturn = m_ConditionsPreIgnore[interrupt];
 	return (bReturn);
 }
 
@@ -109,7 +106,7 @@ void CAI_Agent::ClearCondition( int iCondition )
 		return;
 	}
 	
-	m_Conditions.Clear(interrupt);
+	m_Conditions.reset( interrupt );
 }
 
 //---------------------------------------------------------
@@ -127,7 +124,7 @@ void CAI_Agent::ClearConditions( int *pConditions, int nConditions )
 			continue;
 		}
 		
-		m_Conditions.Clear( interrupt );
+		m_Conditions.reset( interrupt );
 	}
 }
 
@@ -146,7 +143,7 @@ void CAI_Agent::SetIgnoreConditions( int *pConditions, int nConditions )
 			continue;
 		}
 		
-		m_InverseIgnoreConditions.Clear( interrupt ); // clear means ignore
+		m_InverseIgnoreConditions.reset( interrupt ); // clear means ignore
 	}
 }
 
@@ -163,7 +160,7 @@ void CAI_Agent::ClearIgnoreConditions( int *pConditions, int nConditions )
 			continue;
 		}
 		
-		m_InverseIgnoreConditions.Set( interrupt ); // set means don't ignore
+		m_InverseIgnoreConditions.set( interrupt ); // set means don't ignore
 	}
 }
 
@@ -183,7 +180,7 @@ bool CAI_Agent::HasInterruptCondition( int iCondition )
 		Assert(0);
 		return false;
 	}
-	return ( m_Conditions.IsBitSet( interrupt ) && GetCurSchedule()->HasInterrupt( interrupt ) );
+	return ( m_Conditions[interrupt] && GetCurSchedule()->HasInterrupt( interrupt ) );
 }
 
 //---------------------------------------------------------
@@ -238,9 +235,9 @@ bool CAI_Agent::HasConditionsToInterruptSchedule( int nLocalScheduleID )
 	pSchedule->GetInterruptMask( &bitsMask );
 
 	CAI_ScheduleBits bitsOut;
-	AccessConditionBits().And( bitsMask, &bitsOut );
+	bitsOut = AccessConditionBits() & bitsMask;
 	
-	return !bitsOut.IsAllClear();
+	return bitsOut.any();
 }
 
 
@@ -256,7 +253,7 @@ bool CAI_Agent::IsCustomInterruptConditionSet( int nCondition )
 		return false;
 	}
 	
-	return m_CustomInterruptConditions.IsBitSet( interrupt );
+	return m_CustomInterruptConditions[interrupt];
 }
 
 //-----------------------------------------------------------------------------
@@ -273,7 +270,7 @@ void CAI_Agent::SetCustomInterruptCondition( int nCondition )
 		return;
 	}
 	
-	m_CustomInterruptConditions.Set( interrupt );
+	m_CustomInterruptConditions.set( interrupt );
 }
 
 //-----------------------------------------------------------------------------
@@ -290,7 +287,7 @@ void CAI_Agent::ClearCustomInterruptCondition( int nCondition )
 		return;
 	}
 	
-	m_CustomInterruptConditions.Clear( interrupt );
+	m_CustomInterruptConditions.reset( interrupt );
 }
 
 
@@ -299,7 +296,7 @@ void CAI_Agent::ClearCustomInterruptCondition( int nCondition )
 //-----------------------------------------------------------------------------
 void CAI_Agent::ClearCustomInterruptConditions()
 {
-	m_CustomInterruptConditions.ClearAll();
+	m_CustomInterruptConditions.reset();
 }
 
 //-----------------------------------------------------------------------------
@@ -330,7 +327,7 @@ void CAI_Agent::Think( void )
 void CAI_Agent::RemoveIgnoredConditions( void )
 {
 	m_ConditionsPreIgnore = m_Conditions;
-	m_Conditions.And( m_InverseIgnoreConditions, &m_Conditions );
+	m_Conditions &= m_InverseIgnoreConditions;
 }
 
 //-----------------------------------------------------------------------------
@@ -401,7 +398,7 @@ void CAI_Agent::ClearTransientConditions()
 void CAI_Agent::Init( void )
 {
 	// Clear conditions
-	m_Conditions.ClearAll();
+	m_Conditions.reset();
 
 	// NOTE: Can't call NPC Init Think directly... logic changed about
 	// what time it is when worldspawn happens..
@@ -569,7 +566,7 @@ int CAI_Agent::DrawDebugTextOverlays( int text_offset )
 			bool bHasConditions = false;
 			for (int i = 0; i < MAX_CONDITIONS; i++)
 			{
-				if (m_Conditions.IsBitSet(i))
+				if (m_Conditions[i])
 				{
 					Q_snprintf(tempstr, sizeof(tempstr), "Cond: %s\n", ConditionName(AI_RemapToGlobal(i)));
 					EntityText(text_offset, tempstr, 0);
@@ -700,7 +697,7 @@ void CAI_Agent::DiscardScheduleState()
 	// We don't save/restore schedules yet
 	ClearSchedule( "Restoring NPC" );
 
-	m_Conditions.ClearAll();
+	m_Conditions.reset();
 }
 
 //-----------------------------------------------------------------------------
@@ -934,7 +931,7 @@ void CAI_Agent::ClearSchedule( const char *szReason )
 	m_IdealSchedule = SCHED_NONE;
 	m_pSchedule =  nullptr;
 	ResetScheduleCurTaskIndex();
-	m_InverseIgnoreConditions.SetAll();
+	m_InverseIgnoreConditions.set();
 }
 
 //=========================================================
@@ -985,9 +982,9 @@ void CAI_Agent::SetSchedule( CAI_Schedule *pNewSchedule )
 	ResetScheduleCurTaskIndex();
 	SetTaskStatus( TASKSTATUS_NEW );
 	m_failSchedule = SCHED_NONE;
-	m_Conditions.ClearAll();
+	m_Conditions.reset();
 	m_bConditionsGathered = false;
-	m_InverseIgnoreConditions.SetAll();
+	m_InverseIgnoreConditions.set();
 
 	// this is very useful code if you can isolate a test case in a level with a single NPC. It will notify
 	// you of every schedule selection the NPC makes.
@@ -1058,16 +1055,16 @@ bool CAI_Agent::IsScheduleValid()
 	//Start out with the base schedule's set interrupt conditions
 	GetCurSchedule()->GetInterruptMask( &m_CustomInterruptConditions );
 
-	if ( !m_CustomInterruptConditions.IsBitSet( COND_NO_CUSTOM_INTERRUPTS ) )
+	if ( !m_CustomInterruptConditions[COND_NO_CUSTOM_INTERRUPTS] )
 	{
 		BuildScheduleTestBits();
 	}
 
 	// This is like: m_CustomInterruptConditions &= m_Conditions;
 	CAI_ScheduleBits testBits;
-	m_CustomInterruptConditions.And( m_Conditions, &testBits  );
+	testBits = m_CustomInterruptConditions & m_Conditions;
 
-	if (!testBits.IsAllClear()) 
+	if (testBits.any()) 
 	{
 		// If in developer mode save the interrupt text for debug output
 		if (g_pDeveloper->GetInt()) 
@@ -1079,7 +1076,7 @@ bool CAI_Agent::IsScheduleValid()
 			// Find the first non-zero bit
 			for (int i=0;i<MAX_CONDITIONS;i++)
 			{
-				if (testBits.IsBitSet(i))
+				if (testBits[i])
 				{
 					m_interruptText = ConditionName( AI_RemapToGlobal( i ) );
 					if (!m_interruptText)
@@ -1236,7 +1233,7 @@ void CAI_Agent::MaintainSchedule ( void )
 				m_Conditions = m_ConditionsPreIgnore;
 				SetCondition( COND_SCHEDULE_DONE );
 
-				m_InverseIgnoreConditions.SetAll();
+				m_InverseIgnoreConditions.set();
 			}
 		}
 

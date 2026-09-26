@@ -8,8 +8,6 @@
 #include "particles_simple.h"
 #include "particles_localspace.h"
 
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Constructor
 //-----------------------------------------------------------------------------
@@ -28,7 +26,7 @@ inline const matrix3x4_t& CLocalSpaceEmitter::GetTransformMatrix() const
 //-----------------------------------------------------------------------------
 // Purpose: Creates a local space emitter
 //-----------------------------------------------------------------------------
-CSmartPtr<CLocalSpaceEmitter> CLocalSpaceEmitter::Create( const char *pDebugName, 
+ks::intrusive_ptr<CLocalSpaceEmitter> CLocalSpaceEmitter::Create( const char *pDebugName, 
 	ClientEntityHandle_t hEntity, int nAttachment, int fFlags )
 {
 	CLocalSpaceEmitter *pRet = new CLocalSpaceEmitter( pDebugName );

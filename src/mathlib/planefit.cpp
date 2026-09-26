@@ -315,8 +315,8 @@ bool ComputeLeastSquaresOrthogonalPlaneFit( const Vector *pPoints, int nNumPoint
 	flSolutions[1] = ( complexA + ( omega2 * cubeA ) + ( omega1 * cubeB ) ) * -1.0f / 3.0f;
 	flSolutions[2] = ( complexA + ( omega1 * cubeA ) + ( omega2 * cubeB ) ) * -1.0f / 3.0f;
 
-	float flMinEigenvalue = MIN( flSolutions[0].r, flSolutions[1].r );
-	flMinEigenvalue = MIN( flMinEigenvalue, flSolutions[2].r );
+	float flMinEigenvalue = std::min( flSolutions[0].r, flSolutions[1].r );
+	flMinEigenvalue = std::min( flMinEigenvalue, flSolutions[2].r );
 
 	// Subtract eigenvalue from the diagonal of the matrix to get a 3x3, real-symmetric, non-invertible matrix.
 	// Pick 2 non-zero rows from this matrix and construct a system of 2 equations.

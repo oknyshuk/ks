@@ -28,9 +28,6 @@
 	#include "sensorgrenade_projectile.h"
 #endif
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 IMPLEMENT_NETWORKCLASS_ALIASED( SensorGrenade, DT_SensorGrenade )
 
 IMPLEMENT_REFLECT_TABLE( CSensorGrenade, DT_SensorGrenade );

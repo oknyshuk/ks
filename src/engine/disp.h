@@ -14,6 +14,7 @@
 //=============================================================================
 
 #include <assert.h>
+#include <bitset>
 #include "idispinfo.h"
 #include "bspfile.h"
 #include "mathlib/vmatrix.h"
@@ -23,7 +24,6 @@
 #include "disp_helpers.h"
 #include "tier0/fasttimer.h"
 #include "dlight.h"
-#include "utllinkedlist.h"
 #include "zone.h"
 
 struct model_t;
@@ -260,20 +260,20 @@ public:
 	// List of all indices in the displacement in the current tesselation.
 	// These indices are straight into the static buffer (ie: they're not relative
 	// to m_iVertOffset).
-	CUtlVector<unsigned short>	m_Indices;
+	std::vector< unsigned short >	m_Indices;
 
-	CUtlVector<CDispRenderVert, CHunkMemory<CDispRenderVert> > m_Verts;	// vectors that define the surface (size is NumVerts()).
+	std::vector< CDispRenderVert > m_Verts;	// vectors that define the surface (size is NumVerts()).
 
 public:
 
 	// These bits tell which vertices and nodes are currently active.
 	// These start out the same as m_ErrorVerts but have verts added if 
 	// a neighbor needs to activate some verts.
-	CBitVec<CCoreDispInfo::MAX_VERT_COUNT>	m_ActiveVerts;
+	std::bitset<CCoreDispInfo::MAX_VERT_COUNT>	m_ActiveVerts;
 
 	// These are set to 1 if the vert is allowed to become active.
 	// This is what takes care of different-sized neighbors.
-	CBitVec<CCoreDispInfo::MAX_VERT_COUNT>	m_AllowedVerts;
+	std::bitset<CCoreDispInfo::MAX_VERT_COUNT>	m_AllowedVerts;
 
 	int				m_idLMPage;						// lightmap page id
 
@@ -355,7 +355,7 @@ inline int CDispInfo::GetSideLength() const
 
 inline int CDispInfo::NumVerts() const
 {
-	Assert( m_Verts.Count() == m_pPowerInfo->m_MaxVerts );
+	Assert( std::ssize( m_Verts ) == m_pPowerInfo->m_MaxVerts );
 	return m_pPowerInfo->m_MaxVerts;
 }
 

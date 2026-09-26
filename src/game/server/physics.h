@@ -120,7 +120,7 @@ void PhysForceEntityToSleep( CBaseEntity *pEntity, IPhysicsObject *pObject );
 // teleport an entity to it's position relative to an object it's constrained to
 void PhysTeleportConstrainedEntity( CBaseEntity *pTeleportSource, IPhysicsObject *pObject0, IPhysicsObject *pObject1, const Vector &prevPosition, const QAngle &prevAngles, bool physicsRotate );
 
-void PhysGetListOfPenetratingEntities( CBaseEntity *pSearch, CUtlVector<CBaseEntity *> &list );
+void PhysGetListOfPenetratingEntities( CBaseEntity *pSearch, std::vector< CBaseEntity * > &list );
 bool PhysShouldCollide( IPhysicsObject *pObj0, IPhysicsObject *pObj1 );
 
 // returns true when processing a callback - so we can defer things that can't be done inside a callback

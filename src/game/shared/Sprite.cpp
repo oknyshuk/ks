@@ -29,9 +29,6 @@
 	#include "baseviewmodel.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #if !defined( CLIENT_DLL )
 LINK_ENTITY_TO_CLASS( env_glow, CSprite ); // For backwards compatibility, remove when no longer needed.
 LINK_ENTITY_TO_CLASS( env_sprite_clientside, CSprite );
@@ -63,7 +60,7 @@ IMPLEMENT_REFLECT_TABLE( CSprite, DT_Sprite );
 LINK_ENTITY_TO_CLASS_ALIASED( env_sprite, Sprite );
 
 #ifdef CLIENT_DLL
-extern CUtlVector< CSprite * > g_ClientsideSprites;
+extern std::vector< CSprite * > g_ClientsideSprites;
 #endif // CLIENT_DLL
 
 CSprite::CSprite()
@@ -80,7 +77,7 @@ CSprite::~CSprite()
 #ifdef CLIENT_DLL
 	if ( m_bClientOnly )
 	{
-		g_ClientsideSprites.FindAndFastRemove( this );
+		ks::swap_erase_first( g_ClientsideSprites, this );
 	}
 #endif // CLIENT_DLL
 }
@@ -181,7 +178,7 @@ void CSprite::ComputeWorldSpaceSurroundingBox( Vector *pVecWorldMins, Vector *pV
 		// Find the height and width of the source of the sprite
 		float width = modelinfo->GetModelSpriteWidth( GetModel() );
 		float height = modelinfo->GetModelSpriteHeight( GetModel() );
-		flScale *= MAX( width, height );
+		flScale *= std::max( width, height );
 	}
 
 	pVecWorldMins->Init( -flScale, -flScale, -flScale );
@@ -573,7 +570,7 @@ float CSprite::GetMaxRenderScale( void )
 		return m_flSpriteScale;
 
 	// return the max scale over the interval
-	return MAX(m_flStartScale, m_flDestScale);
+	return std::max(m_flStartScale, m_flDestScale);
 }
 
 //-----------------------------------------------------------------------------
@@ -593,7 +590,7 @@ void CSprite::GetRenderBounds( Vector &vecMins, Vector &vecMaxs )
 		CEngineSprite *psprite = (CEngineSprite *) modelinfo->GetModelExtraData( GetModel() );
 		if ( psprite )
 		{
-			float flSize = MAX( psprite->GetWidth(), psprite->GetHeight() );
+			float flSize = std::max( psprite->GetWidth(), psprite->GetHeight() );
 			flScale *= flSize;
 		}
 	}
@@ -716,7 +713,7 @@ int CSprite::DrawModel( int flags, const RenderableInstance_t &instance )
 	if ( m_bWorldSpaceScale )
 	{
 		CEngineSprite *psprite = ( CEngineSprite * )modelinfo->GetModelExtraData( GetModel() );
-		float flMinSize = MIN( psprite->GetWidth(), psprite->GetHeight() );
+		float flMinSize = std::min( psprite->GetWidth(), psprite->GetHeight() );
 		renderscale /= flMinSize;
 	}
 

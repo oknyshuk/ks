@@ -142,9 +142,6 @@
 #include "cloak_blended_pass_vs30.inc"
 #include "cloak_blended_pass_ps30.inc"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 void InitParamsCloakBlendedPass( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, CloakBlendedPassVars_t &info )
 {

@@ -13,9 +13,6 @@
 #include "bot.h"
 #include "cs_nav_pathfind.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //--------------------------------------------------------------------------------------------------------------
 /**
  * If a player is at the given spot, return true
@@ -73,10 +70,8 @@ public:
 		// collect all the hiding spots in this area
 		const HidingSpotVector *pSpots = area->GetHidingSpots();
 		
-		FOR_EACH_VEC( (*pSpots), it )
+		for ( const HidingSpot *spot : *pSpots )
 		{
-			const HidingSpot *spot = (*pSpots)[ it ];
-
 			// if we've filled up, stop searching
 			if (m_count == MAX_SPOTS)
 			{
@@ -383,10 +378,8 @@ public:
 	{
 		const HidingSpotVector *pSpots = area->GetHidingSpots();
 		
-		FOR_EACH_VEC( (*pSpots), it )
+		for ( const HidingSpot *spot : *pSpots )
 		{
-			const HidingSpot *spot = (*pSpots)[ it ];
-
 			// make sure hiding spot is in range
 			if (m_range > 0.0f)
 			{

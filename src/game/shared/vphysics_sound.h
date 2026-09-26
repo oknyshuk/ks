@@ -27,11 +27,11 @@ namespace physicssound
 	// UNDONE: Use a sorted container and sort by volume/distance?
 	struct soundlist_t
 	{
-		CUtlVector<impactsound_t>	elements;
+		std::vector< impactsound_t >	elements;
 		impactsound_t	&GetElement(int index) { return elements[index]; }
-		impactsound_t	&AddElement() { return elements[elements.AddToTail()]; }
-		int Count() { return elements.Count(); }
-		void RemoveAll() { elements.RemoveAll(); }
+		impactsound_t	&AddElement() { return elements.emplace_back(); }
+		int Count() { return std::ssize( elements ); }
+		void RemoveAll() { elements.clear(); }
 	};
 
 	void PlayImpactSounds( soundlist_t &list )
@@ -100,7 +100,7 @@ namespace physicssound
 					sound.surfacePropsHit = surfacePropsHit;
 				}
 				sound.volume += volume;
-				sound.impactSpeed = MAX(impactSpeed,sound.impactSpeed);
+				sound.impactSpeed = std::max(impactSpeed,sound.impactSpeed);
 				return;
 			}
 		}
@@ -122,17 +122,17 @@ namespace physicssound
 		int				surfacePropsBreak;
 	};
 
-	void AddBreakSound( CUtlVector<breaksound_t> &list, const Vector &origin, unsigned short surfaceProps )
+	void AddBreakSound( std::vector< breaksound_t > &list, const Vector &origin, unsigned short surfaceProps )
 	{
 		const surfacedata_t *psurf = physprops->GetSurfaceData( surfaceProps );
 		if ( !psurf->sounds.breakSound )
 			return;
 
-		for ( int i = list.Count()-1; i >= 0; --i )
+		for ( int i = std::ssize( list )-1; i >= 0; --i )
 		{
-			breaksound_t &sound = list.Element(i);
+			breaksound_t &sound = list[ i ];
 			// Allow 3 break sounds before you start merging anything.
-			if ( list.Count() > 2 && surfaceProps == sound.surfacePropsBreak )
+			if ( std::ssize( list ) > 2 && surfaceProps == sound.surfacePropsBreak )
 			{
 				sound.origin = (sound.origin + origin) * 0.5f;
 				return;
@@ -141,15 +141,15 @@ namespace physicssound
 		breaksound_t sound;
 		sound.origin = origin;
 		sound.surfacePropsBreak = surfaceProps;
-		list.AddToTail(sound);
+		list.push_back( sound );
 
 	}
 
-	void PlayBreakSounds( CUtlVector<breaksound_t> &list )
+	void PlayBreakSounds( std::vector< breaksound_t > &list )
 	{
-		for ( int i = list.Count()-1; i >= 0; --i )
+		for ( int i = std::ssize( list )-1; i >= 0; --i )
 		{
-			breaksound_t &sound = list.Element(i);
+			breaksound_t &sound = list[ i ];
 
 			const surfacedata_t *psurf = physprops->GetSurfaceData( sound.surfacePropsBreak );
 			const char *pSound = physprops->GetString( psurf->sounds.breakSound );
@@ -171,7 +171,7 @@ namespace physicssound
 
 			CBaseEntity::EmitSound( filter, 0 /*sound.entityIndex*/, ep );
 		}
-		list.RemoveAll();
+		list.clear();
 	}
 };
 

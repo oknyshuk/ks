@@ -13,9 +13,6 @@
 #include "shake.h"
 #include "rope.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 class CPhysicsShake : public IMotionEvent
 {
 	DECLARE_SIMPLE_DATADESC();
@@ -207,7 +204,7 @@ void CEnvShake::ApplyShake( ShakeCommand_t command )
 					radius = 512;
 				}
 				Vector extents = Vector(radius, radius, radius);
-				extents.z = MAX(extents.z, 100);
+				extents.z = std::max<std::common_type_t<vec_t, int>>(extents.z, 100);
 				Vector mins = GetAbsOrigin() - extents;
 				Vector maxs = GetAbsOrigin() + extents;
 				int count = UTIL_EntitiesInBox( list, 1024, mins, maxs, 0 );

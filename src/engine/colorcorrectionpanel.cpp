@@ -9,9 +9,6 @@
 #include "materialsystem/imaterialsystem.h"
 #include "materialsystem/IColorCorrection.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 const int g_nPreviewImageWidth  = 128;
 const int g_nPreviewImageHeight =  96;
 

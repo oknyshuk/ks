@@ -14,7 +14,7 @@
 #define CLIENT_H
 
 #include <qlimits.h>
-#include <utllinkedlist.h>
+#include <list>
 #include <convar.h>
 #include <checksum_crc.h>
 #include <protocol.h>
@@ -188,7 +188,7 @@ public:
 	
 // refresh related state
 	QAngle		viewangles;
-	CUtlVector< AddAngle >	addangle;
+	std::vector< AddAngle >	addangle;
 	float		addangletotal;
 	float		prevaddangletotal;
 	int			cdtrack;			// cd audio
@@ -199,13 +199,13 @@ public:
 	char		m_FriendsName[MAX_PLAYER_NAME_LENGTH];
 
 
-	CUtlFixedLinkedList< CEventInfo > events;	// list of received events
+	std::list< CEventInfo > events;	// list of received events
 
 // demo loop control
 	int			demonum;		                  // -1 = don't play demos
 	char		demos[MAX_DEMOS][MAX_DEMONAME];	  // when not playing
 
-	CUtlVector< CQueuedEntityMessage >	queuedmessage;
+	std::vector< CQueuedEntityMessage >	queuedmessage;
 public:
 
 	// If 'insimulation', returns the time (in seconds) at the client's current tick.

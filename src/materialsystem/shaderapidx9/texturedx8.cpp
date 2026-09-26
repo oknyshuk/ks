@@ -18,12 +18,9 @@
 #include "filesystem.h"
 #include "locald3dtypes.h"
 #include "textureheap.h"
-#include "tier1/utlbuffer.h"
 #include "tier1/callqueue.h"
 
 #include "tier0/vprof.h"
-
-#include "tier0/memdbgon.h"
 
 
 static int s_TextureCount = 0;
@@ -448,7 +445,7 @@ void UnlockTexture( ShaderAPITextureHandle_t bindId, int copy, IDirect3DBaseText
 	Assert( imageFormatSize != 0 );
 	int validDataBytesPerRow = imageFormatSize * width;
 	int storeSize = validDataBytesPerRow * height;
-	static CUtlVector< unsigned char > tmpMem;
+	static std::vector< unsigned char > tmpMem;
 	if( tmpMem.Size() < storeSize )
 	{
 		tmpMem.AddMultipleToTail( storeSize - tmpMem.Size() );
@@ -760,7 +757,7 @@ int ComputeTextureMemorySize( const GUID &nDeviceGUID, D3DDEVTYPE deviceType )
 	int textureSize = ShaderUtil()->GetMemRequired( 256, 256, 1, fmt, false );
 
 	int totalSize = 0;
-	CUtlVector< IDirect3DBaseTexture* > textures;
+	std::vector< IDirect3DBaseTexture* > textures;
 
 #ifndef DONT_CHECK_MEM
 	while (true)

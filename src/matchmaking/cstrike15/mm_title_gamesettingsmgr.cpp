@@ -28,9 +28,6 @@ extern CSteamAPIContext *steamapicontext;
 #include "csgo_limits.h"
 #include "csgo_limits.inl"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern IGameTypes *g_pGameTypes;
 
 struct AggregateSkillProperty
@@ -188,28 +185,28 @@ protected:
 		
 	KeyValues *m_pMatchSystemData;
 
-	CUtlVector< CUtlString > m_FormulaAverage;
+	std::vector< std::string > m_FormulaAverage;
 
-	CUtlVector< CUtlString > m_FormulaExperience;
+	std::vector< std::string > m_FormulaExperience;
 	int m_nFormulaExperienceRangeMin;
 	int m_nFormulaExperienceRangeMax;
 
 	struct SkillFormulas
 	{
-		CUtlVector< CUtlString > formulas;
+		std::vector< std::string > formulas;
 		int rangeMin;
 		int rangeMax;
 	};
-	CUtlVector< SkillFormulas* > m_FormulaSkill;
+	std::vector< SkillFormulas* > m_FormulaSkill;
 
 	struct SearchPass
 	{
 		bool checkExperience;
 		int experienceRange;
-		CUtlVector< bool > checkSkill;
-		CUtlVector< int > skillRange;
+		std::vector< bool > checkSkill;
+		std::vector< int > skillRange;
 	};
-	CUtlVector< SearchPass* > m_SearchPass;
+	std::vector< SearchPass* > m_SearchPass;
 };
 
 CMatchTitleGameSettingsMgr g_MatchTitleGameSettingsMgr;
@@ -337,7 +334,7 @@ KeyValues * CMatchTitleGameSettingsMgr::DefineDedicatedSearchKeys( KeyValues *pS
 					// servers that are willing to host public players
 					if ( 0 == ( nSearchPass % 2 ) )
 					{	// First search pass: request map ID tag
-						fmtExtraGameData.AppendFormat( "%.*s,", szWorkshop - szMapGroup, szMapGroup );
+						fmtExtraGameData.AppendFormat( "%.*s,", (int)( szWorkshop - szMapGroup ), szMapGroup );
 					}
 					else
 					{	// Second search pass: request any map support
@@ -759,7 +756,7 @@ void UpdateAggregateMembersSettings( KeyValues *pFullGameSettings, KeyValues *pU
 
 	char const *szBestCountry = "";
 	float flBestCountryWeight = 0.0f;
-	CUtlStringMap< float > mapPlayerCountries;
+	ks::idict< float > mapPlayerCountries;
 	static CSteamID s_mysteamid = steamapicontext->SteamUser()->GetSteamID();
 	for ( int iMachine = 0, numMachines = pFullGameSettings->GetInt( "members/numMachines" ); iMachine < numMachines; ++iMachine )
 	{
@@ -785,11 +782,8 @@ void UpdateAggregateMembersSettings( KeyValues *pFullGameSettings, KeyValues *pU
 			if ( !*szLocation )
 				continue;
 
-			UtlSymId_t symid = mapPlayerCountries.Find( szLocation );
-			if ( symid == UTL_INVAL_SYMBOL )
-				symid = mapPlayerCountries.Insert( szLocation, 0.0f );
 			float flNewWeightOfThisCountry = (
-				mapPlayerCountries[symid] += ( 1.0f + ( ( CSteamID( pPlayer->GetUint64( "xuid" ) ).GetAccountID() == s_mysteamid.GetAccountID() ) ? 0.5f : 0.0f ) )
+				mapPlayerCountries[szLocation] += ( 1.0f + ( ( CSteamID( pPlayer->GetUint64( "xuid" ) ).GetAccountID() == s_mysteamid.GetAccountID() ) ? 0.5f : 0.0f ) )
 				);
 			if ( flNewWeightOfThisCountry > flBestCountryWeight )
 			{
@@ -931,7 +925,7 @@ void CMatchTitleGameSettingsMgr::LoadMatchSettings( void )
 		mm_title_debug_version.SetValue( version );
 
 	// Remove all previous formulas.
-	m_FormulaExperience.Purge();
+	m_FormulaExperience.clear(); m_FormulaExperience.shrink_to_fit();
 
 	// Load the experience formula.
 	KeyValues *pExperienceFormula = m_pMatchSystemData->FindKey( "ExperienceFormula" );
@@ -946,7 +940,7 @@ void CMatchTitleGameSettingsMgr::LoadMatchSettings( void )
 				// No more formulas specified.
 				break;
 			}
-			m_FormulaExperience.AddToTail( pszFormula );
+			m_FormulaExperience.push_back( ks::nz( pszFormula ) );
 		}
 
 		// Get the min/max range for valid values for these formulas.
@@ -955,11 +949,11 @@ void CMatchTitleGameSettingsMgr::LoadMatchSettings( void )
 	}
 
 	// Remove all previous formulas.
-	for ( int i=0; i<m_FormulaSkill.Count(); ++i )
+	for ( int i=0; i<std::ssize( m_FormulaSkill ); ++i )
 	{
 		delete m_FormulaSkill[i];
 	}
-	m_FormulaSkill.Purge();
+	m_FormulaSkill.clear(); m_FormulaSkill.shrink_to_fit();
 
 	// Load the skill formulas.
 	for ( int nSkillFormulaIndex=0; ; ++nSkillFormulaIndex )
@@ -982,14 +976,14 @@ void CMatchTitleGameSettingsMgr::LoadMatchSettings( void )
 				// No more formulas specified.
 				break;
 			}
-			pSkillFormulas->formulas.AddToTail( pszFormula );
+			pSkillFormulas->formulas.push_back( ks::nz( pszFormula ) );
 		}
 
 		// Get the min/max range for valid values for these formulas.
 		pSkillFormulas->rangeMin = pSkillFormulaInfo->GetInt( "minvalue", 0 );
 		pSkillFormulas->rangeMax = pSkillFormulaInfo->GetInt( "maxvalue", INT_MAX );
 
-		m_FormulaSkill.AddToTail( pSkillFormulas );
+		m_FormulaSkill.push_back( pSkillFormulas );
 	}
 
 	// Load the average formula.
@@ -1005,16 +999,16 @@ void CMatchTitleGameSettingsMgr::LoadMatchSettings( void )
 				// No more formulas specified.
 				break;
 			}
-			m_FormulaAverage.AddToTail( pszFormula );
+			m_FormulaAverage.push_back( ks::nz( pszFormula ) );
 		}
 	}
 
 	// Remove all previous search passes.
-	for ( int i=0; i<m_SearchPass.Count(); ++i )
+	for ( int i=0; i<std::ssize( m_SearchPass ); ++i )
 	{
 		delete m_SearchPass[i];
 	}
-	m_SearchPass.Purge();
+	m_SearchPass.clear(); m_SearchPass.shrink_to_fit();
 
 	// Load the search passes.
 	for ( int nSearchPassIndex=0; ; ++nSearchPassIndex )
@@ -1036,11 +1030,11 @@ void CMatchTitleGameSettingsMgr::LoadMatchSettings( void )
 		// so we can store their values for quick reference.
 		for ( int nSkillIndex=0; nSkillIndex<MATCH_MAX_SKILL_FIELDS; ++nSkillIndex )
 		{
-			pSearchPass->checkSkill.AddToTail( ( pSearchPassInfo->GetInt( CFmtStr( "Skill%dCheck", nSkillIndex ), 0 ) != 0 ) );
-			pSearchPass->skillRange.AddToTail(  pSearchPassInfo->GetInt( CFmtStr( "Skill%dRange", nSkillIndex ), 0 ) );
+			pSearchPass->checkSkill.push_back( ( pSearchPassInfo->GetInt( CFmtStr( "Skill%dCheck", nSkillIndex ), 0 ) != 0 ) );
+			pSearchPass->skillRange.push_back( pSearchPassInfo->GetInt( CFmtStr( "Skill%dRange", nSkillIndex ), 0 ) );
 		}
 
-		m_SearchPass.AddToTail( pSearchPass );
+		m_SearchPass.push_back( pSearchPass );
 	}
 }
 
@@ -1050,11 +1044,11 @@ char const * CMatchTitleGameSettingsMgr::GetFormulaAverage( int index )
 	// Ensure the matchmaking settings are loaded.
 	LoadMatchSettings();
 
-	if ( !m_FormulaAverage.Count() )
+	if ( m_FormulaAverage.empty() )
 		return "newValue";
 
-	int indexClamped = clamp( index, 0, m_FormulaAverage.Count() - 1 );
-	return m_FormulaAverage[ indexClamped ].String();
+	int indexClamped = clamp( index, 0, std::ssize( m_FormulaAverage ) - 1 );
+	return m_FormulaAverage[ indexClamped ].c_str();
 }
 
 // Add Steam version of X360 matchmaking rules. Writes to pResult

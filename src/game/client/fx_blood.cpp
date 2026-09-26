@@ -22,9 +22,6 @@
 #include "particle_simple3d.h"
 #include "particle_parse.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffectBloodSpray )
 PRECACHE( MATERIAL, "effects/blood_core" )
 PRECACHE( MATERIAL, "effects/blood_gore" )
@@ -113,7 +110,7 @@ void FX_BloodSpray( const Vector &origin, const Vector &normal, float scale, uns
 	{
 		TrailParticle *tParticle;
 
-		CSmartPtr<CTrailParticles> pTrailEmitter = CTrailParticles::Create( "blooddrops" );
+		ks::intrusive_ptr<CTrailParticles> pTrailEmitter = CTrailParticles::Create( "blooddrops" );
 		if ( !pTrailEmitter )
 			return;
 
@@ -190,7 +187,7 @@ void FX_BloodSpray( const Vector &origin, const Vector &normal, float scale, uns
 
 	if ((flags & FX_BLOODSPRAY_GORE) || (flags & FX_BLOODSPRAY_CLOUD))
 	{
-		CSmartPtr<CBloodSprayEmitter> pSimple = CBloodSprayEmitter::Create( "bloodgore" );
+		ks::intrusive_ptr<CBloodSprayEmitter> pSimple = CBloodSprayEmitter::Create( "bloodgore" );
 		if ( !pSimple )
 			return;
 
@@ -229,9 +226,9 @@ void FX_BloodSpray( const Vector &origin, const Vector &normal, float scale, uns
 
 					colorRamp = random->RandomFloat( 0.75f, 1.25f );
 
-					pParticle->m_uchColor[0]	= MIN( 1.0f, color[0] * colorRamp ) * 255.0f;
-					pParticle->m_uchColor[1]	= MIN( 1.0f, color[1] * colorRamp ) * 255.0f;
-					pParticle->m_uchColor[2]	= MIN( 1.0f, color[2] * colorRamp ) * 255.0f;
+					pParticle->m_uchColor[0]	= std::min( 1.0f, color[0] * colorRamp ) * 255.0f;
+					pParticle->m_uchColor[1]	= std::min( 1.0f, color[1] * colorRamp ) * 255.0f;
+					pParticle->m_uchColor[2]	= std::min( 1.0f, color[2] * colorRamp ) * 255.0f;
 					
 					pParticle->m_uchStartSize	= random->RandomFloat( scale * 0.25, scale );
 					pParticle->m_uchEndSize		= pParticle->m_uchStartSize * 2;
@@ -274,9 +271,9 @@ void FX_BloodSpray( const Vector &origin, const Vector &normal, float scale, uns
 
 					colorRamp = random->RandomFloat( 0.75f, 1.25f );
 
-					pParticle->m_uchColor[0]	= MIN( 1.0f, color[0] * colorRamp ) * 255.0f;
-					pParticle->m_uchColor[1]	= MIN( 1.0f, color[1] * colorRamp ) * 255.0f;
-					pParticle->m_uchColor[2]	= MIN( 1.0f, color[2] * colorRamp ) * 255.0f;
+					pParticle->m_uchColor[0]	= std::min( 1.0f, color[0] * colorRamp ) * 255.0f;
+					pParticle->m_uchColor[1]	= std::min( 1.0f, color[1] * colorRamp ) * 255.0f;
+					pParticle->m_uchColor[2]	= std::min( 1.0f, color[2] * colorRamp ) * 255.0f;
 					
 					pParticle->m_uchStartSize	= random->RandomFloat( scale * 1.5f, scale * 2.0f );
 					pParticle->m_uchEndSize		= pParticle->m_uchStartSize * 4;
@@ -325,7 +322,7 @@ void FX_BloodBulletImpact( const Vector &origin, const Vector &normal, float sca
 
 	Vector	offDir;
 
-	CSmartPtr<CBloodSprayEmitter> pSimple = CBloodSprayEmitter::Create( "bloodgore" );
+	ks::intrusive_ptr<CBloodSprayEmitter> pSimple = CBloodSprayEmitter::Create( "bloodgore" );
 	if ( !pSimple )
 		return;
 
@@ -359,9 +356,9 @@ void FX_BloodBulletImpact( const Vector &origin, const Vector &normal, float sca
 
 		colorRamp = random->RandomFloat( 0.75f, 2.0f );
 
-		pParticle->m_uchColor[0]	= MIN( 1.0f, color[0] * colorRamp ) * 255.0f;
-		pParticle->m_uchColor[1]	= MIN( 1.0f, color[1] * colorRamp ) * 255.0f;
-		pParticle->m_uchColor[2]	= MIN( 1.0f, color[2] * colorRamp ) * 255.0f;
+		pParticle->m_uchColor[0]	= std::min( 1.0f, color[0] * colorRamp ) * 255.0f;
+		pParticle->m_uchColor[1]	= std::min( 1.0f, color[1] * colorRamp ) * 255.0f;
+		pParticle->m_uchColor[2]	= std::min( 1.0f, color[2] * colorRamp ) * 255.0f;
 		
 		pParticle->m_uchStartSize	= random->RandomInt( 2, 4 );
 		pParticle->m_uchEndSize		= pParticle->m_uchStartSize * 8;
@@ -395,9 +392,9 @@ void FX_BloodBulletImpact( const Vector &origin, const Vector &normal, float sca
 
 			colorRamp = random->RandomFloat( 0.75f, 2.0f );
 
-			pParticle->m_uchColor[0]	= MIN( 1.0f, color[0] * colorRamp ) * 255.0f;
-			pParticle->m_uchColor[1]	= MIN( 1.0f, color[1] * colorRamp ) * 255.0f;
-			pParticle->m_uchColor[2]	= MIN( 1.0f, color[2] * colorRamp ) * 255.0f;
+			pParticle->m_uchColor[0]	= std::min( 1.0f, color[0] * colorRamp ) * 255.0f;
+			pParticle->m_uchColor[1]	= std::min( 1.0f, color[1] * colorRamp ) * 255.0f;
+			pParticle->m_uchColor[2]	= std::min( 1.0f, color[2] * colorRamp ) * 255.0f;
 			
 			pParticle->m_uchStartSize	= random->RandomInt( 2, 4 );
 			pParticle->m_uchEndSize		= pParticle->m_uchStartSize * 4;
@@ -415,7 +412,7 @@ void FX_BloodBulletImpact( const Vector &origin, const Vector &normal, float sca
 	//
 	TrailParticle *tParticle;
 
-	CSmartPtr<CTrailParticles> pTrailEmitter = CTrailParticles::Create( "blooddrops" );
+	ks::intrusive_ptr<CTrailParticles> pTrailEmitter = CTrailParticles::Create( "blooddrops" );
 	if ( !pTrailEmitter )
 		return;
 
@@ -536,7 +533,7 @@ DECLARE_CLIENT_EFFECT_END()
 //-----------------------------------------------------------------------------
 void HunterDamageCallback( const CEffectData &data )
 {
-	CSmartPtr<CSimple3DEmitter> pGlassEmitter = CSimple3DEmitter::Create( "HunterDamage" );
+	ks::intrusive_ptr<CSimple3DEmitter> pGlassEmitter = CSimple3DEmitter::Create( "HunterDamage" );
 	if ( pGlassEmitter == nullptr )
 		return;
 

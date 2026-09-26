@@ -13,9 +13,6 @@
 #include "iviewrender.h"
 #include "engine/ivdebugoverlay.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 #ifdef USE_BLOBULATOR
 
@@ -47,7 +44,7 @@ ConVar	r_surface_material("r_surface_material", "-1", FCVAR_NONE, "Choose a mate
 ConVar	r_surface_shader("r_surface_shader", "", FCVAR_NONE, "Choose a shader");
 
 
-CUtlVector< ImpParticleWithFourInterpolants, CUtlMemoryAligned< ImpParticleWithFourInterpolants, 16 > > g_SurfaceRenderParticles;	// This must be aligned due to SSE use
+ks::aligned_vector< ImpParticleWithFourInterpolants, 16 > g_SurfaceRenderParticles;	// This must be aligned due to SSE use
 const QAngle g_SurfaceRenderAnglesAngles( 0.0f, 0.0f, 0.0f );	// our local coordinate system is always aligned to world space
 
 
@@ -260,13 +257,13 @@ void Surface_DrawSpheres( IMaterial *pMaterial, float flRadius )
 
 	IMesh* pMesh = pRenderContext->GetDynamicMesh( true );
 
-	int vertMax = MIN( 24000 / 51, 32768 / (84 * 3) );
+	int vertMax = std::min( 24000 / 51, 32768 / (84 * 3) );
 
 	int j = 0;
 	// Msg( "point %.2f %.2f %.2f\n", m_vecSurfacePos[0].x, m_vecSurfacePos[0].y, m_vecSurfacePos[0].z );
 	while (j < g_SurfaceRenderParticles.Count())
 	{
-		int total = MIN( g_SurfaceRenderParticles.Count() - j, vertMax );
+		int total = std::min( g_SurfaceRenderParticles.Count() - j, vertMax );
 
 		CMeshBuilder meshBuilder;
 		meshBuilder.Begin( pMesh, MATERIAL_TRIANGLES, total * 51, total * 84 * 3 );
@@ -454,7 +451,7 @@ void TransformParticles( float angle, const Vector& center, Vector& transformedC
 		// TODO: This code should not be here as this is very specific to blobs.
 
 		// interpolants1[0..2] is the color. interpolants1[3] is the v coordinate
-		// imp_particle1->interpolants1[3] = MIN(MAX(1.4f - vec.length()/17.0f, 0.0f), 1.0f);
+		// imp_particle1->interpolants1[3] = std::min(std::max(1.4f - vec.length()/17.0f, 0.0f), 1.0f);
 		// interpolants2[0..2] is the tangent vector.
 		// interpolants3[0..2] and interpolants4[0..2] are the normal and
 		// binormal which are used to generate a u coordinate

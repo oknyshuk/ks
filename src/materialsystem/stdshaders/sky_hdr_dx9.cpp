@@ -17,9 +17,6 @@
 
 #include "convar.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 static ConVar mat_use_compressed_hdr_textures( "mat_use_compressed_hdr_textures", "1", FCVAR_MATERIAL_SYSTEM_THREAD );
 
@@ -216,7 +213,7 @@ BEGIN_VS_SHADER( Sky_HDR_DX9, "Help for Sky_HDR_DX9 shader" )
 				ITexture *txtr=params[HDRCOMPRESSEDTEXTURE]->GetTextureValue();
 				float w=txtr->GetActualWidth();
 				float h=txtr->GetActualHeight();
-				float FUDGE=0.01/MAX(w,h);					// per ATI
+				float FUDGE=0.01/std::max(w,h);					// per ATI
 				float c1[4]={0.5/w-FUDGE, 0.5/h-FUDGE, w, h };
 				pShaderAPI->SetVertexShaderConstant( VERTEX_SHADER_SHADER_SPECIFIC_CONST_0, c1);
 

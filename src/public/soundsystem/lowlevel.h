@@ -67,7 +67,7 @@ class CAudioDeviceList
 {
 public:
 	eSubSystems_t							m_nSubsystem;
-	CUtlVector<audio_device_description_t>	m_list;
+	std::vector< audio_device_description_t >	m_list;
 	int										m_nDefaultDevice;
 
 	CAudioDeviceList() {}
@@ -75,7 +75,7 @@ public:
 	bool UpdateDeviceList();	// returns true if new devices or defaults show up
 	audio_device_description_t *FindDeviceById( const char *pId );  // returns NULL if not found
 	audio_device_description_t *GetDefaultDevice(); // returns NULL if not set
-	bool IsValid() { return m_list.Count() > 0; }
+	bool IsValid() { return !m_list.empty(); }
 	IAudioDevice2 *CreateDevice( audio_device_init_params_t &params );
 	const wchar_t *GetDeviceToCreate( audio_device_init_params_t &params );
 

@@ -7,7 +7,6 @@
 #define CS_GAMESTATS_SHARED_H
 #include "cbase.h"
 // #include "tier1/utlvector.h"
-// #include "tier1/utldict.h"
 #include "shareddefs.h"
 #include "cs_shareddefs.h"
 #include "cs_weapon_parse.h"

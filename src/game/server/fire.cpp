@@ -22,9 +22,6 @@
 #include "nav.h"
 #include "nav_mesh.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 /********************************************************************
  NOTE: if you are looking at this file becase you would like flares 

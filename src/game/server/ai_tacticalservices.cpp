@@ -19,9 +19,6 @@
 #include "ai_networkmanager.h"
 #include "ai_hint.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar ai_find_lateral_cover( "ai_find_lateral_cover", "1" );
 ConVar ai_find_lateral_los( "ai_find_lateral_los", "1" );
 
@@ -370,13 +367,12 @@ int CAI_TacticalServices::FindCoverNode(const Vector &vNearPos, const Vector &vT
 	// We're going to search for a cover node by expanding to our current node's neighbors
 	// and then their neighbors, until cover is found, or all nodes are beyond MaxDist
 	// ------------------------------------------------------------------------------------
-	AI_NearNode_t *pBuffer = (AI_NearNode_t *)stackalloc( sizeof(AI_NearNode_t) * GetNetwork()->NumNodes() );
-	CNodeList list( pBuffer, GetNetwork()->NumNodes() );
-	CVarBitVec wasVisited(GetNetwork()->NumNodes());	// Nodes visited
+	CNodeList list( GetNetwork()->NumNodes() );
+	std::vector< bool > wasVisited(GetNetwork()->NumNodes());	// Nodes visited
 
 	// mark start as visited
 	list.Insert( AI_NearNode_t(iMyNode, 0) ); 
-	wasVisited.Set( iMyNode );
+	wasVisited[iMyNode] = true;
 	float flMinDistSqr = flMinDist*flMinDist;
 	float flMaxDistSqr = flMaxDist*flMaxDist;
 
@@ -449,7 +445,7 @@ int CAI_TacticalServices::FindCoverNode(const Vector &vNearPos, const Vector &vT
 			int newID = nodeLink->DestNodeID(nodeIndex);
 
 			// If not already on the closed list, add to it and set its distance
-			if (!wasVisited.IsBitSet(newID))
+			if (!wasVisited[newID])
 			{
 				// Don't accept climb nodes or nodes that aren't ready to use yet
 				if ( GetNetwork()->GetNode(newID)->GetType() != NODE_CLIMB && !GetNetwork()->GetNode(newID)->IsLocked() )
@@ -470,7 +466,7 @@ int CAI_TacticalServices::FindCoverNode(const Vector &vNearPos, const Vector &vT
 					}
 				}
 				// mark visited
-				wasVisited.Set(newID);
+				wasVisited[newID] = true;
 			}
 		}
 	}
@@ -518,12 +514,11 @@ int CAI_TacticalServices::FindLosNode(const Vector &vThreatPos, const Vector &vT
 	// We're going to search for a shoot node by expanding to our current node's neighbors
 	// and then their neighbors, until a shooting position is found, or all nodes are beyond MaxDist
 	// ------------------------------------------------------------------------------------
-	AI_NearNode_t *pBuffer = (AI_NearNode_t *)stackalloc( sizeof(AI_NearNode_t) * GetNetwork()->NumNodes() );
-	CNodeList list( pBuffer, GetNetwork()->NumNodes() );
-	CVarBitVec wasVisited(GetNetwork()->NumNodes());	// Nodes visited
+	CNodeList list( GetNetwork()->NumNodes() );
+	std::vector< bool > wasVisited(GetNetwork()->NumNodes());	// Nodes visited
 
 	// mark start as visited
-	wasVisited.Set( iMyNode );
+	wasVisited[iMyNode] = true;
 	list.Insert( AI_NearNode_t(iMyNode, 0) );
 
 	static int nSearchRandomizer = 0;		// tries to ensure the links are searched in a different order each time;
@@ -646,11 +641,11 @@ int CAI_TacticalServices::FindLosNode(const Vector &vThreatPos, const Vector &vT
 			int newID = nodeLink->DestNodeID(nodeIndex);
 
 			// If not already visited, add to the list
-			if (!wasVisited.IsBitSet(newID))
+			if (!wasVisited[newID])
 			{
 				float dist = (GetLocalOrigin() - GetNetwork()->GetNode(newID)->GetPosition(GetHullType())).LengthSqr();
 				list.Insert( AI_NearNode_t(newID, dist) );
-				wasVisited.Set( newID );
+				wasVisited[newID] = true;
 			}
 		}
 	}

@@ -21,9 +21,6 @@
 #include "net.h"
 #include "proto_oob.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 CNetSupportImpl::CNetSupportImpl()
 {
 	;

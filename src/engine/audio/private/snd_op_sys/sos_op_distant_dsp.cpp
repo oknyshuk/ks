@@ -11,9 +11,6 @@
 
 #include "snd_dma.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 extern Color OpColor;
 extern Color ConnectColor;

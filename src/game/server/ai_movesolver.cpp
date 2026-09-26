@@ -10,9 +10,6 @@
 #include "ai_movesolver.h"
 #include "ndebugoverlay.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // CAI_MoveSolver
 //-----------------------------------------------------------------------------
@@ -26,14 +23,14 @@ const float AIMS_EPS = 0.01;
 //-----------------------------------------------------------------------------
 void CAI_MoveSolver::VisualizeRegulations( const Vector& origin )
 {
-	if ( m_Regulations.Count() )
+	if ( !m_Regulations.empty() )
 	{
 		CAI_MoveSuggestions regulations;
-		regulations.AddVectorToTail( m_Regulations );
-		NormalizeSuggestions( &regulations[0], (&regulations[0]) + regulations.Count() );
+		regulations.append_range( m_Regulations );
+		NormalizeSuggestions( &regulations[0], (&regulations[0]) + std::ssize( regulations ) );
 
 		Vector side1, mid, side2;
-		for (int i = regulations.Count(); --i >= 0; )
+		for (int i = std::ssize( regulations ); --i >= 0; )
 		{
 			// Compute the positions of the angles...
 			float flMinAngle = regulations[i].arc.center - regulations[i].arc.span * 0.5f;
@@ -76,7 +73,7 @@ bool CAI_MoveSolver::Solve( const AI_MoveSuggestion_t *pSuggestions, int nSugges
 	if ( !nSuggestions )
 		return false;
 
-	if ( nSuggestions == 1 && m_Regulations.Count() == 0 && pSuggestions->type == AIMST_MOVE )
+	if ( nSuggestions == 1 && std::ssize( m_Regulations ) == 0 && pSuggestions->type == AIMST_MOVE )
 	{
 		pResult->dir = pSuggestions->arc.center;
 		return true;
@@ -88,10 +85,10 @@ bool CAI_MoveSolver::Solve( const AI_MoveSuggestion_t *pSuggestions, int nSugges
 	//
 	CAI_MoveSuggestions suggestions;
 
-	suggestions.EnsureCapacity( m_Regulations.Count() + nSuggestions );
+	suggestions.reserve( std::ssize( m_Regulations ) + nSuggestions );
 
-	suggestions.CopyArray( pSuggestions, nSuggestions);
-	suggestions.AddVectorToTail( m_Regulations );
+	suggestions.assign( pSuggestions, pSuggestions + nSuggestions );
+	suggestions.append_range( m_Regulations );
 
 	// Initialize the solver
 	const int NUM_SOLUTIONS	= 120;
@@ -114,13 +111,13 @@ bool CAI_MoveSolver::Solve( const AI_MoveSuggestion_t *pSuggestions, int nSugges
 	// The first thing we do is reweight and normalize the weights into a range of [-1..1], where
 	// a negative weight is a repulsion. This becomes a bias for the solver.
 	// @TODO (toml 06-18-02): this can be made sligtly more optimal by precalculating regulation adjusted weights
-	Assert( suggestions.Count() >= 1 );
-	NormalizeSuggestions( &suggestions[0], (&suggestions[0]) + suggestions.Count() );
+	Assert( std::ssize( suggestions ) >= 1 );
+	NormalizeSuggestions( &suggestions[0], (&suggestions[0]) + std::ssize( suggestions ) );
 
 	//
 	// Add the biased suggestions to the solutions
 	//
-	for ( int iSuggestion = 0; iSuggestion < suggestions.Count(); ++iSuggestion )
+	for ( int iSuggestion = 0; iSuggestion < std::ssize( suggestions ); ++iSuggestion )
 	{
 		AI_MoveSuggestion_t &current = suggestions[iSuggestion];
 
@@ -258,7 +255,7 @@ void CAI_MoveSolver::NormalizeSuggestions( AI_MoveSuggestion_t *pBegin, AI_MoveS
 
 bool CAI_MoveSolver::HaveRegulationForObstacle( CBaseEntity *pEntity)
 {
-   for ( int i = 0; i < m_Regulations.Count(); ++i )
+   for ( int i = 0; i < std::ssize( m_Regulations ); ++i )
    {
       if ( m_Regulations[i].hObstacleEntity != nullptr &&
            pEntity == m_Regulations[i].hObstacleEntity.Get() )

@@ -11,9 +11,6 @@
 #include <stdlib.h>
 #include "bitmap/floatbitmap.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 static float ScaleValue( float f, float overbright )
 {
@@ -25,7 +22,7 @@ static float ScaleValue( float f, float overbright )
 static float IScaleValue( float f, float overbright )
 {
 	f *= ( 1.0 / overbright );
-	int ival = ( int )MIN( 255, ceil( f * 255.0 ));
+	int ival = ( int )std::min<std::common_type_t<int, double>>( 255, ceil( f * 255.0 ));
 	return ival;
 }
 
@@ -34,7 +31,7 @@ void MaybeSetScaleVaue( FloatBitMap_t const & orig, FloatBitMap_t & newbm, int x
 {
 	// clamp the given scale value to the legal range for that pixel and regnerate the rgb
 	// components.
-	float maxc = MAX( MAX( orig.Pixel( x, y, 0, 0 ), orig.Pixel( x, y, 0, 1 )), orig.Pixel( x, y, 0, 2 ));
+	float maxc = std::max( std::max( orig.Pixel( x, y, 0, 0 ), orig.Pixel( x, y, 0, 1 )), orig.Pixel( x, y, 0, 2 ));
 	if ( maxc == 0.0 )
 	{
 		// pixel is black. any scale value is fine.
@@ -82,13 +79,13 @@ void FloatBitMap_t::CompressTo8Bits( float overbright )
 	for( int y = 0;y < NumRows();y++ )
 		for( int x = 0;x < NumCols();x++ )
 			for( int c = 0;c < 3;c++ )
-				Pixel( x, y, 0, c ) = MIN( overbright, Pixel( x, y, 0, c ));
+				Pixel( x, y, 0, c ) = std::min( overbright, Pixel( x, y, 0, c ));
 	// first pass - choose nominal scale values to convert to rgb,scale
 	for( int y = 0;y < NumRows();y++ )
 		for( int x = 0;x < NumCols();x++ )
 		{
 			// determine maximum component
-			float maxc = MAX( MAX( Pixel( x, y, 0, 0 ), Pixel( x, y, 0, 1 )), Pixel( x, y, 0, 2 ));
+			float maxc = std::max( std::max( Pixel( x, y, 0, 0 ), Pixel( x, y, 0, 1 )), Pixel( x, y, 0, 2 ));
 			if ( maxc == 0 )
 			{
 				for( int c = 0;c < 4;c++ )

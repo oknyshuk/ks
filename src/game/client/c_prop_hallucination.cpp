@@ -19,9 +19,6 @@ extern view_id_t CurrentViewID();
 extern bool IsMainView( view_id_t id );
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 class [[= ks::reflect::NetTable{ .name = "DT_Prop_Hallucination" } ]]
       C_Prop_Hallucination : public C_BaseAnimating

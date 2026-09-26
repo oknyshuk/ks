@@ -8,9 +8,6 @@
 #include "resourcefile/resourcefile.h"
 #include "tier0/dbg.h"
 
-// Must be last
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Does this resource file contain a particular block?

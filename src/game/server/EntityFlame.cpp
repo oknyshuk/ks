@@ -23,9 +23,6 @@
 #include "ai_localnavigator.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 
 IMPLEMENT_REFLECT_SERVERCLASS( CEntityFlame, DT_EntityFlame )
@@ -63,13 +60,13 @@ void CEntityFlame::UpdateOnRemove()
 		m_iDangerSound = SOUNDLIST_EMPTY;
 	}
 
-	int nCount = m_DangerLinks.Count();
+	int nCount = std::ssize( m_DangerLinks );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		CAI_Link *pLink = m_DangerLinks[i];
 		--pLink->m_nDangerCount;
 	}
-	m_DangerLinks.RemoveAll();
+	m_DangerLinks.clear();
 
 	if ( m_hObstacle != OBSTACLE_INVALID )
 	{

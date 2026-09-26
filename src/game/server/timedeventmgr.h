@@ -8,7 +8,7 @@
 #define TIMEDEVENTMGR_H
 
 
-#include "utlpriorityqueue.h"
+#include <vector>
 
 
 //
@@ -82,8 +82,8 @@ private:
 	
 private:	
 	
-	// Events, sorted by the time at which they will fire.
-	CUtlPriorityQueue<CEventRegister*> m_Events;
+	// Events, heap-ordered by the time at which they will fire (ks::heap_*).
+	std::vector<CEventRegister*> m_Events;
 };
 
 

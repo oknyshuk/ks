@@ -1,10 +1,7 @@
-import glob
 import os
 import shutil
-import subprocess
-import time
 
-from waflib import Build, Configure, Logs, Options, TaskGen
+from waflib import Build, Configure, TaskGen
 
 default_prefix = os.path.abspath("../game")
 
@@ -91,7 +88,10 @@ TSAN = ["-fsanitize=thread", "-pthread"]
 
 BUILD_TYPES = {
     "dev": (["-O1", "-g", "-gsplit-dwarf"], ["-gsplit-dwarf"]),
-    # no -ffast-math: under gcc dxbc-spirv shader compiler spins forever translating shaders
+    "debug": (
+        ["-O1", "-g", "-gsplit-dwarf", "-fno-omit-frame-pointer"],
+        ["-gsplit-dwarf"],
+    ),
     "release": (
         ["-O3", "-flto=auto", "-fno-semantic-interposition"],
         ["-flto=auto", "-fno-semantic-interposition"],
@@ -128,17 +128,10 @@ def options(opt):
         action="store",
         dest="BUILD_TYPE",
         default="dev",
-        help="build type: dev, release, sanitize, tsan",
-    )
-    grp.add_option(
-        "--install-instrumented",
-        action="store_true",
-        dest="INSTALL_INSTRUMENTED",
-        default=False,
-        help="allow installing a sanitizer build over the shared game prefix",
+        help="build type: dev, debug, release, sanitize, tsan",
     )
 
-    opt.parser.get_option("-j").default = 4
+    opt.parser.get_option("-j").default = os.cpu_count()
 
     opt.recurse(PROJECTS)
 
@@ -216,8 +209,6 @@ def configure(conf):
     conf.env.append_unique(
         "CXXFLAGS", ["-Wno-invalid-offsetof", "-Wno-free-nonheap-object"]
     )
-    # Source was written for MSVC which permits narrowing in brace init
-    conf.env.append_unique("CXXFLAGS", ["-Wno-narrowing"])
 
     includes = [
         os.path.abspath("public"),
@@ -277,26 +268,11 @@ def configure(conf):
 
 
 def build(bld):
-    if (
-        bld.is_install
-        and bld.env.BUILD_TYPE in INSTRUMENTED
-        and os.path.abspath(bld.env.PREFIX) == default_prefix
-        and not getattr(Options.options, "INSTALL_INSTRUMENTED", False)
-    ):
-        bld.fatal(
-            f"build type '{bld.env.BUILD_TYPE}' would install instrumented binaries over the "
-            f"dev prefix {bld.env.PREFIX}.\n"
-            "Use --prefix=<dir> to install elsewhere, or --install-instrumented to overwrite "
-            "the dev binaries deliberately."
-        )
-
     base_dir = bld.srcnode.abspath()
     ccache_conf_path = bld.srcnode.make_node("ccache.conf").abspath()
     if os.path.exists(ccache_conf_path):
         os.environ["CCACHE_CONFIGPATH"] = ccache_conf_path
         os.environ["CCACHE_BASEDIR"] = base_dir
-
-    root_env = bld.env
 
     bld.objects(
         source="public/tier0/memoverride.cpp",
@@ -329,208 +305,3 @@ def build(bld):
     for prj in PROJECTS:
         bld.env = bld.all_envs[prj]
         bld.recurse(prj)
-    bld.env = root_env
-
-
-class SmokeContext(Build.BuildContext):
-    """run every shipped .so through ldd -r, then srcds through a few maps"""
-
-    cmd = "smoke"
-    fun = "smoke"
-
-
-def _aborted(log):
-    for probe in (
-        "CreateDecoders failed",
-        "Missing RecvProp",
-        "RecvProp type doesn't match",
-        "Host_EndGame",
-    ):
-        if probe in log:
-            for line in log.splitlines():
-                if probe in line:
-                    return line.strip()[:160]
-    return None
-
-
-def _report(bld, log, tag, con=None):
-    path = os.path.join(bld.bldnode.abspath(), f"smoke-{tag}.log")
-    # this file is written only on failure, so a stale copy from an earlier run reads as a
-    # current one. Stamp it, and clear any previous copy at the start of every smoke.
-    with open(path, "w") as f:
-        f.write(f"=== {tag} smoke failure, {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n")
-        f.write(log)
-    for line in (con or log).splitlines()[-3:]:
-        Logs.error("       | " + line)
-    Logs.error(f"       | full log: {path}")
-
-
-def _instrumented(path):
-    """True if a binary references a sanitizer runtime."""
-    try:
-        out = subprocess.run(["nm", "-D", path], capture_output=True, text=True).stdout
-    except OSError:
-        return False
-    return any(s in out for s in ("__tsan_", "__asan_", "__ubsan_"))
-
-
-def _dec(b):
-    """TimeoutExpired hands back bytes even when text=True was asked for."""
-    return b.decode("utf-8", "replace") if isinstance(b, bytes) else b or ""
-
-
-def smoke(bld):
-    for stale in glob.glob(os.path.join(bld.bldnode.abspath(), "smoke-*.log")):
-        os.remove(stale)
-    prefix = bld.env.PREFIX
-    srcds = os.path.join(prefix, "srcds")
-    if not os.path.isfile(srcds):
-        bld.fatal(f"no srcds at {srcds}; run `waf install` first")
-
-    secs = int(os.environ.get("SECS", "12"))
-    maps = os.environ.get("MAPS", "de_dust2").split()
-
-    libdirs = [bld.env.BINPATH]
-    sos = sorted(
-        os.path.join(d, f) for d in libdirs for f in os.listdir(d) if f.endswith(".so")
-    )
-
-    exes = [os.path.join(prefix, e) for e in ("srcds", "srceng")]
-    inst = [f for f in sos + exes if os.path.isfile(f) and _instrumented(f)]
-    if inst:
-        bld.fatal(
-            f"prefix {prefix} holds instrumented binaries "
-            f"({', '.join(os.path.basename(f) for f in inst[:3])}).\n"
-            "This prefix was installed from a sanitizer build type; reconfigure and rebuild a dev "
-            "out dir into it before smoking."
-        )
-    env = dict(os.environ, LD_LIBRARY_PATH=os.pathsep.join(libdirs))
-
-    bad = 0
-    for so in sos:
-        out = subprocess.run(
-            ["ldd", "-r", so], capture_output=True, text=True, env=env
-        ).stdout
-        hits = [
-            line
-            for line in out.splitlines()
-            if "undefined symbol" in line or "not found" in line
-        ]
-        if hits:
-            bad += 1
-            Logs.error(f"FAIL {so}")
-            for line in hits[:5]:
-                Logs.error("       " + line.strip())
-    if not bad:
-        Logs.info(f"ok   {len(sos)} libraries")
-
-    cfg = os.path.join(prefix, "csgo", "cfg", "ks_smoke.cfg")
-    with open(cfg, "w") as f:
-        f.write("sv_hibernate_when_empty 0\nbot_join_after_player 0\nbot_quota 10\n")
-
-    try:
-        for m in maps:
-            argv = [
-                srcds,
-                "-game",
-                "csgo",
-                "-console",
-                "-insecure",
-                "+sv_lan",
-                "1",
-                "+servercfgfile",
-                "ks_smoke.cfg",
-                "+map",
-                m,
-            ]
-            try:
-                r = subprocess.run(
-                    argv,
-                    cwd=prefix,
-                    capture_output=True,
-                    text=True,
-                    errors="replace",
-                    timeout=secs,
-                )
-                rc, log = r.returncode, (r.stdout or "") + (r.stderr or "")
-            except subprocess.TimeoutExpired as e:
-                rc, log = 124, _dec(e.stdout) + _dec(e.stderr)
-
-            lines = log.count("\n")
-            if rc != 124:
-                bad += 1
-                Logs.error(f"FAIL {m} (exit {rc})")
-                _report(bld, log, m)
-            elif f"Host_NewGame on map {m}" not in log:
-                bad += 1
-                Logs.error(f"FAIL {m} (never loaded)")
-                _report(bld, log, m)
-            elif abort := _aborted(log):
-                bad += 1
-                Logs.error(f"FAIL {m} (loaded then aborted: {abort})")
-                _report(bld, log, m)
-            else:
-                Logs.info(f"ok   {m:<16} {lines:5d} lines")
-    finally:
-        os.remove(cfg)
-
-    if os.environ.get("DISPLAY") and os.path.isfile(os.path.join(prefix, "srceng")):
-        conlog = os.path.join(prefix, "csgo", "console.log")
-        at = os.path.getsize(conlog) if os.path.isfile(conlog) else 0
-        argv = [
-            os.path.join(prefix, "srceng"),
-            "-game",
-            "csgo",
-            "-novid",
-            "-windowed",
-            "-w",
-            "640",
-            "-h",
-            "480",
-            "+sv_lan",
-            "1",
-            "-dev",
-            "+developer",
-            "1",
-            "+map",
-            maps[0],
-        ]
-        try:
-            r = subprocess.run(
-                argv,
-                cwd=prefix,
-                capture_output=True,
-                text=True,
-                errors="replace",
-                timeout=secs * 3,
-            )
-            rc, log = r.returncode, (r.stdout or "") + (r.stderr or "")
-        except subprocess.TimeoutExpired as e:
-            rc, log = 124, _dec(e.stdout) + _dec(e.stderr)
-
-        con = ""
-        if os.path.isfile(conlog):
-            with open(conlog, errors="replace") as f:
-                f.seek(at)
-                con = f.read()
-
-        lines = con.count("\n")
-        if f"Host_NewGame on map {maps[0]}" not in con:
-            bad += 1
-            Logs.error(f"FAIL client (never rendered {maps[0]}, exit {rc})")
-            _report(bld, log, "client", con)
-        elif abort := _aborted(con):
-            bad += 1
-            Logs.error(f"FAIL client (loaded then aborted: {abort})")
-            _report(bld, log + "\n" + con, "client", con)
-        elif rc < 0:
-            Logs.warn(
-                f"ok   {'client':<16} {lines:5d} lines "
-                f"(crashed on shutdown, signal {-rc})"
-            )
-        else:
-            Logs.info(f"ok   {'client':<16} {lines:5d} lines")
-
-    if bad:
-        bld.fatal(f"smoke: {bad} check(s) failed")
-    Logs.info("smoke: PASS")

@@ -7,9 +7,6 @@
 #include "tier3/tier3.h"
 #include "tier0/dbg.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // These tier3 libraries must be set by any users of this library.

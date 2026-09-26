@@ -6,9 +6,6 @@
 
 #include "mathlib/ssemath.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 fltx4 Pow_FixedPoint_Exponent_SIMD( const fltx4 & x, int exponent)
 {

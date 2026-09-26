@@ -109,9 +109,6 @@
 #include "c_props.h"
 #include "model_types.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 static Vector WALL_MIN(-WALL_OFFSET,-WALL_OFFSET,-WALL_OFFSET );
 static Vector WALL_MAX(WALL_OFFSET,WALL_OFFSET,WALL_OFFSET );
 
@@ -262,12 +259,12 @@ CAddonInfo g_ClientSideAddons[] =
 
 #define SMOKEGRENADE_LIFETIME 17.5f
 
-CUtlVector<EHANDLE> g_SmokeGrenadeHandles;
-CUtlVector<clientSmokeGrenadeRecord_t> g_SmokeGrenades;
+std::vector< EHANDLE > g_SmokeGrenadeHandles;
+std::vector< clientSmokeGrenadeRecord_t > g_SmokeGrenades;
 
 void AddSmokeGrenade( Vector location, int iEntityId )
 {
-	int nIndex = g_SmokeGrenades.AddToTail();
+	int nIndex = std::ssize( g_SmokeGrenades ); g_SmokeGrenades.emplace_back();
 	g_SmokeGrenades[nIndex].m_flInceptionTime = gpGlobals->curtime;
 	g_SmokeGrenades[nIndex].m_vecPosition = location;
 	g_SmokeGrenades[nIndex].m_iEntityId = iEntityId;
@@ -275,7 +272,7 @@ void AddSmokeGrenade( Vector location, int iEntityId )
 
 void AddSmokeGrenadeHandle( EHANDLE hGrenade )
 {
-	for ( int i = 0; i < g_SmokeGrenadeHandles.Count(); i++ )
+	for ( int i = 0; i < std::ssize( g_SmokeGrenadeHandles ); i++ )
 	{
 		if ( g_SmokeGrenadeHandles[i] && g_SmokeGrenadeHandles[i] == hGrenade )
 		{
@@ -283,16 +280,16 @@ void AddSmokeGrenadeHandle( EHANDLE hGrenade )
 		}
 	}
 
-	g_SmokeGrenadeHandles.AddToTail( hGrenade );
+	g_SmokeGrenadeHandles.push_back( hGrenade );
 }
 
 void RemoveSmokeGrenade( Vector location, int iEntityId )
 {
-	for ( int i = 0; i < g_SmokeGrenades.Count(); i++ )
+	for ( int i = 0; i < std::ssize( g_SmokeGrenades ); i++ )
 	{
 		if ( g_SmokeGrenades[i].m_iEntityId == iEntityId && g_SmokeGrenades[i].m_vecPosition.DistToSqr( location ) < 0.1f )
 		{
-			g_SmokeGrenades.FastRemove( i );
+			ks::swap_remove( g_SmokeGrenades, i );
 			break;
 		}
 	}
@@ -300,11 +297,11 @@ void RemoveSmokeGrenade( Vector location, int iEntityId )
 
 void RemoveSmokeGrenadeHandle( EHANDLE hGrenade )
 {
-	for ( int i = 0; i < g_SmokeGrenadeHandles.Count(); i++ )
+	for ( int i = 0; i < std::ssize( g_SmokeGrenadeHandles ); i++ )
 	{
 		if ( g_SmokeGrenadeHandles[i] && g_SmokeGrenadeHandles[i] == hGrenade )
 		{
-			g_SmokeGrenadeHandles.FastRemove( i );
+			ks::swap_remove( g_SmokeGrenadeHandles, i );
 			break;
 		}
 	}
@@ -319,7 +316,7 @@ bool LineGoesThroughSmoke( Vector from, Vector to, bool grenadeBloat )
 	//float sightLength = sightDir.NormalizeInPlace();
 
 	const float smokeRadiusSq = SmokeGrenadeRadius * SmokeGrenadeRadius * grenadeBloat * grenadeBloat;
-	for( int it=0; it < g_SmokeGrenadeHandles.Count(); it++ )
+	for( int it=0; it < std::ssize( g_SmokeGrenadeHandles ); it++ )
 	{
 		float flLengthAdd = 0;
 		if ( CSGameRules() )
@@ -346,7 +343,7 @@ bool LineGoesThroughSmoke( Vector from, Vector to, bool grenadeBloat )
 
 void RemoveAllSmokeGrenades( void )
 {
-	g_SmokeGrenadeHandles.RemoveAll();
+	g_SmokeGrenadeHandles.clear();
 }
 
 void TruncatePlayerName( wchar_t *pCleanedHTMLName, int destLen, int nTruncateAt, bool bSkipHTML )
@@ -630,10 +627,10 @@ void C_CSRagdoll::Interp_Copy( C_BaseAnimatingOverlay *pSourceEntity )
 	VarMapping_t *pDest = GetVarMapping();
     	
 	// Find all the VarMapEntry_t's that represent the same variable.
-	for ( int i = 0; i < pDest->m_Entries.Count(); i++ )
+	for ( int i = 0; i < std::ssize( pDest->m_Entries ); i++ )
 	{
 		VarMapEntry_t *pDestEntry = &pDest->m_Entries[i];
-		for ( int j=0; j < pSrc->m_Entries.Count(); j++ )
+		for ( int j=0; j < std::ssize( pSrc->m_Entries ); j++ )
 		{
 			VarMapEntry_t *pSrcEntry = &pSrc->m_Entries[j];
 			if ( !Q_strcmp( pSrcEntry->watcher->GetDebugName(),
@@ -782,8 +779,8 @@ void C_CSRagdoll::CreateLowViolenceRagdoll( void )
 		if ( LookupSequence( str ) == -1 )
 			break;
 		
-		iMinDeathAnim = MIN( iMinDeathAnim, iAnim );
-		iMaxDeathAnim = MAX( iMaxDeathAnim, iAnim );
+		iMinDeathAnim = std::min( iMinDeathAnim, iAnim );
+		iMaxDeathAnim = std::max( iMaxDeathAnim, iAnim );
 	}
 
 	if ( iMinDeathAnim == 9999 )
@@ -2603,8 +2600,8 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 			// It became obsolete when we started using a separate seed for client and server
 			// to eliminate 'rage' hacks.
 			//
-			m_vecBulletVerifyListClient.RemoveAll();
-			m_vecBulletVerifyListServer.RemoveAll();
+			m_vecBulletVerifyListClient.clear();
+			m_vecBulletVerifyListServer.clear();
 			m_ui8ClientServerHitDifference = 0;
 
 			UpdateAddonModels( true );
@@ -2658,11 +2655,11 @@ void C_CSPlayer::FireGameEvent( IGameEvent *event )
 				VMatrix matLocalOffset = SetupMatrixOrgAngles( hitPos, hitAng );
 				C_BulletHitModel *pBulletHitModel = new C_BulletHitModel();
 				pBulletHitModel->AttachToPlayer( this, nBoneIndex, matLocalOffset.As3x4(), event->GetBool( "hit", false ), vecStartPos );
-				m_vecBulletHitModels.AddToTail( pBulletHitModel );
-				if ( m_vecBulletHitModels.Count() > 25 )
+				m_vecBulletHitModels.push_back( pBulletHitModel );
+				if ( std::ssize( m_vecBulletHitModels ) > 25 )
 				{
 					m_vecBulletHitModels[0]->Release();
-					m_vecBulletHitModels.Remove(0);
+					m_vecBulletHitModels.erase( m_vecBulletHitModels.begin() + 0 );
 				}
 			}
 		}
@@ -2687,7 +2684,7 @@ bool __MsgFunc_ReportHit( const ks::net::CCSUsrMsg_ReportHit &msg )
 
 			if ( pCSPlayer)
 			{
-				pCSPlayer->m_vecBulletVerifyListServer.AddToTail( clientHitVerify_t( vecServerHitPos, flServerHitTime, gpGlobals->curtime + 10 ) );
+				pCSPlayer->m_vecBulletVerifyListServer.push_back( clientHitVerify_t( vecServerHitPos, flServerHitTime, gpGlobals->curtime + 10 ) );
 			}
 
 		}
@@ -2718,23 +2715,23 @@ void C_CSPlayer::CompareClientServerBulletHits( void )
 
 	
 	// remove server hits that have matching hits on client
-	FOR_EACH_VEC_BACK( m_vecBulletVerifyListServer, s )
+	for ( int s = (int)std::ssize( m_vecBulletVerifyListServer ) - 1; s >= 0; s-- )
 	{
-		FOR_EACH_VEC_BACK( m_vecBulletVerifyListClient, c )
+		for ( int c = (int)std::ssize( m_vecBulletVerifyListClient ) - 1; c >= 0; c-- )
 		{
 			if ( CloseEnough( m_vecBulletVerifyListServer[ s ].vecPosition, m_vecBulletVerifyListClient[ c ].vecPosition, 1.0f ) )
 			{
-				m_vecBulletVerifyListServer.Remove( s );
+				m_vecBulletVerifyListServer.erase( m_vecBulletVerifyListServer.begin() + s );
 				break;
 			}
 		}
 	}
 
 	// record the unmatched server hits.
-	m_ui8ClientServerHitDifference = MIN( 255, m_vecBulletVerifyListServer.Count() );
+	m_ui8ClientServerHitDifference = std::min<std::common_type_t<int, std::common_type_t<long int, long int>>>( 255, std::ssize( m_vecBulletVerifyListServer ) );
 
-	m_vecBulletVerifyListServer.RemoveAll();
-	m_vecBulletVerifyListClient.RemoveAll();
+	m_vecBulletVerifyListServer.clear();
+	m_vecBulletVerifyListClient.clear();
 
 }
 
@@ -3971,11 +3968,9 @@ void C_CSPlayer::UpdateAddonModels( bool bForce )
 	}
 	else if ( !m_hC4AddonLED && !IsAnimLODflagSet(ANIMLODFLAG_OUTSIDEVIEWFRUSTUM) && !IsDormant() && HasC4() )
 	{
-		int j,jNext;
-		for ( j=m_AddonModels.Head(); j != m_AddonModels.InvalidIndex(); j = jNext )
+		for ( CAddonModel &model : m_AddonModels )
 		{
-			jNext = m_AddonModels.Next( j );
-			CAddonModel *pModel = &m_AddonModels[j];
+			CAddonModel *pModel = &model;
 
 			// if we haven't removed it
 			int addonBit = 1<<pModel->m_iAddon;
@@ -4019,11 +4014,9 @@ void C_CSPlayer::UpdateAddonModels( bool bForce )
 	}
 
 
-	int n,nNext;
-	for ( n=m_AddonModels.Head(); n != m_AddonModels.InvalidIndex(); n = nNext )
+	for ( auto it = m_AddonModels.begin(); it != m_AddonModels.end(); )
 	{
-		nNext = m_AddonModels.Next( n );
-		CAddonModel *pModel = &m_AddonModels[n];
+		CAddonModel *pModel = &*it;
 		int addonBit = 1<<pModel->m_iAddon;
 	
 		if ( !pModel || !pModel->m_hEnt || !pModel->m_hEnt->GetMoveParent() || pModel->m_hEnt->GetMoveParent()->IsDormant() )
@@ -4039,9 +4032,11 @@ void C_CSPlayer::UpdateAddonModels( bool bForce )
 				pModel->m_hEnt->Release();
 			}
 			
-			m_AddonModels.Remove( n );
+			it = m_AddonModels.erase( it );
 			iCurAddonBits = 0;
+			continue;
 		}
+		++it;
 	}
 
 	if ( bForce )
@@ -4069,11 +4064,9 @@ void C_CSPlayer::UpdateAddonModels( bool bForce )
 	m_iLastSecondaryAddon = m_iSecondaryAddon;
 
 	// Get rid of any old models.
-	int i,iNext;
-	for ( i=m_AddonModels.Head(); i != m_AddonModels.InvalidIndex(); i = iNext )
+	for ( auto it = m_AddonModels.begin(); it != m_AddonModels.end(); )
 	{
-		iNext = m_AddonModels.Next( i );
-		CAddonModel *pModel = &m_AddonModels[i];
+		CAddonModel *pModel = &*it;
 
 		int addonBit = 1<<pModel->m_iAddon;
 		if ( !( iCurAddonBits & addonBit ) || (rebuildPistol2Addon && addonBit == ADDON_PISTOL2 ) || ( rebuildPrimaryAddon && addonBit == ADDON_PRIMARY ) )
@@ -4089,19 +4082,21 @@ void C_CSPlayer::UpdateAddonModels( bool bForce )
 				pModel->m_hEnt->Release();
 			}
 
-			m_AddonModels.Remove( i );
+			it = m_AddonModels.erase( it );
+			continue;
 		}
+		++it;
 	}
 
 	// Figure out which models we have now.
 	int curModelBits = 0;
-	FOR_EACH_LL( m_AddonModels, j )
+	for ( const CAddonModel &model : m_AddonModels )
 	{
-		curModelBits |= (1<<m_AddonModels[j].m_iAddon );
+		curModelBits |= (1<<model.m_iAddon );
 	}
 
 	// Add any new models.
-	for ( i=0; i < NUM_ADDON_BITS + NUM_CLIENTSIDE_ADDON_BITS; i++ )
+	for ( int i=0; i < NUM_ADDON_BITS + NUM_CLIENTSIDE_ADDON_BITS; i++ )
 	{
 		if ( (iCurAddonBits & (1<<i )) && !( curModelBits & (1<<i) ) )
 		{
@@ -4111,11 +4106,9 @@ void C_CSPlayer::UpdateAddonModels( bool bForce )
 	}
 
 	// go through again and see if they need any effects
-	int j,jNext;
-	for ( j=m_AddonModels.Head(); j != m_AddonModels.InvalidIndex(); j = jNext )
+	for ( CAddonModel &model : m_AddonModels )
 	{
-		jNext = m_AddonModels.Next( j );
-		CAddonModel *pModel = &m_AddonModels[j];
+		CAddonModel *pModel = &model;
 
 		// if we haven't removed it
 		int addonBit = 1<<pModel->m_iAddon;
@@ -4134,15 +4127,13 @@ void C_CSPlayer::RemoveAddonModels()
 {
 	m_iAddonBits = 0;
 	
-	if ( !m_AddonModels.Count() )
+	if ( m_AddonModels.empty() )
 		return;
 
 	//Don't test anything about the addon models, just remove them.
-	int n, nNext;
-	for ( n=m_AddonModels.Head(); n != m_AddonModels.InvalidIndex(); n = nNext )
+	for ( CAddonModel &model : m_AddonModels )
 	{
-		nNext = m_AddonModels.Next( n );
-		CAddonModel *pModel = &m_AddonModels[n];
+		CAddonModel *pModel = &model;
 		int addonBit = 1<<pModel->m_iAddon;
 
 		if ( addonBit == ADDON_C4 )
@@ -4155,9 +4146,8 @@ void C_CSPlayer::RemoveAddonModels()
 			pModel->m_hEnt->ClearCustomMaterials();
 			pModel->m_hEnt->Release();
 		}
-
-		m_AddonModels.Remove( n );
 	}
+	m_AddonModels.clear();
 }
 
 void C_CSPlayer::CreateC4Effect( CBaseEntity *pEnt, bool bIsWeaponModel )
@@ -4258,12 +4248,9 @@ void C_CSPlayer::NotifyShouldTransmit( ShouldTransmitState_t state )
 
 void C_CSPlayer::UpdateSoundEvents()
 {
-	int iNext;
-	for ( int i=m_SoundEvents.Head(); i != m_SoundEvents.InvalidIndex(); i = iNext )
+	for ( auto it = m_SoundEvents.begin(); it != m_SoundEvents.end(); )
 	{
-		iNext = m_SoundEvents.Next( i );
-
-		CCSSoundEvent *pEvent = &m_SoundEvents[i];
+		CCSSoundEvent *pEvent = &*it;
 		if ( gpGlobals->curtime >= pEvent->m_flEventTime )
 		{
 			const Vector *pOrigin = nullptr;
@@ -4274,7 +4261,11 @@ void C_CSPlayer::UpdateSoundEvents()
 			CLocalPlayerFilter filter;
 			EmitSound( filter, GetSoundSourceIndex(), STRING( pEvent->m_SoundName ), pOrigin );
 
-			m_SoundEvents.Remove( i );
+			it = m_SoundEvents.erase( it );
+		}
+		else
+		{
+			++it;
 		}
 	}
 }
@@ -4348,12 +4339,12 @@ void C_CSPlayer::ClientThink()
 
 			float flTraceLengthLeft = vecFootPosLeft.z - m_flLastContactShadowGroundHeightLeft;
 			m_hContactShadowLeft->SetRenderMode( kRenderTransAlpha );
-			m_hContactShadowLeft->SetRenderAlpha( MIN( GetRenderAlpha(), RemapValClamped( flTraceLengthLeft, 4.0f, 8.0f, 250.0f, 0.0f ) ) ); // don't be more opaque than the player
+			m_hContactShadowLeft->SetRenderAlpha( std::min<std::common_type_t<byte, float>>( GetRenderAlpha(), RemapValClamped( flTraceLengthLeft, 4.0f, 8.0f, 250.0f, 0.0f ) ) ); // don't be more opaque than the player
 			m_hContactShadowLeft->RenderForceOpaquePass( true );
 
 			float flTraceLengthRight = vecFootPosRight.z - m_flLastContactShadowGroundHeightRight;
 			m_hContactShadowRight->SetRenderMode( kRenderTransAlpha );
-			m_hContactShadowRight->SetRenderAlpha( MIN( GetRenderAlpha(), RemapValClamped( flTraceLengthRight, 4.0f, 8.0f, 250.0f, 0.0f ) ) ); // don't be more opaque than the player
+			m_hContactShadowRight->SetRenderAlpha( std::min<std::common_type_t<byte, float>>( GetRenderAlpha(), RemapValClamped( flTraceLengthRight, 4.0f, 8.0f, 250.0f, 0.0f ) ) ); // don't be more opaque than the player
 			m_hContactShadowRight->RenderForceOpaquePass( true );
 
 			QAngle angLFoot;
@@ -4401,11 +4392,11 @@ void C_CSPlayer::ClientThink()
 	}
 	
 	//Make sure smoke grenades that have expired are removed.
-	for ( int it = 0; it < g_SmokeGrenadeHandles.Count(); it++ )
+	for ( int it = 0; it < std::ssize( g_SmokeGrenadeHandles ); it++ )
 	{
 		CBaseCSGrenadeProjectile *pGrenade = static_cast< CBaseCSGrenadeProjectile* >( g_SmokeGrenadeHandles[it].Get() );
 		if ( !pGrenade )
-			g_SmokeGrenadeHandles.FastRemove( it-- );
+			ks::swap_remove( g_SmokeGrenadeHandles, it-- );
 	}
 
 	UpdateSoundEvents();
@@ -5841,7 +5832,7 @@ void C_CSPlayer::ReevauluateAnimLOD( int boneMask )
 
 	//	// player models don't have explicit levels of vertex lod - yet. This is how vert lod would be masked:
 	//	studiohwdata_t *pHardwareData = g_pMDLCache->GetHardwareData( modelinfo->GetCacheHandle( GetModel() ) );
-	//	int nHighLod = MAX( pHardwareData->m_RootLOD, pHardwareData->m_NumLODs - 1 );
+	//	int nHighLod = std::max( pHardwareData->m_RootLOD, pHardwareData->m_NumLODs - 1 );
 	//	m_nCustomBlendingRuleMask ... BONE_USED_BY_VERTEX_AT_LOD(nHighLod);
 }
 
@@ -5992,10 +5983,10 @@ void CBoneSnapshot::CaptureSnapshot( void )
 		ConcatTransforms( matPlayerInv, m_pEnt->GetBone(i), m_Cache[i] );
 	}
 
-	FOR_EACH_VEC( m_vecSubordinateSnapshots, i )
+	for ( CBoneSnapshot *pSubordinateSnapshot : m_vecSubordinateSnapshots )
 	{
-		if ( m_vecSubordinateSnapshots[i] )
-			m_vecSubordinateSnapshots[i]->AbandonAnyPending();
+		if ( pSubordinateSnapshot )
+			pSubordinateSnapshot->AbandonAnyPending();
 	}
 
 	m_vecWorldCapturePos = matPlayer.GetOrigin();
@@ -6018,7 +6009,7 @@ void CBoneSnapshot::PlaybackSnapshot( void )
 	AngleMatrix( m_pEnt->GetRenderAngles(), m_pEnt->GetRenderOrigin(), matPlayer );
 
 	float flFailsafeDistance = matPlayer.GetOrigin().DistToSqr( m_vecWorldCapturePos );
-	m_flWeight = MIN( m_flWeight, RemapValClamped( flFailsafeDistance, 484.0f, 1296.0f, 1.0f, 0.0f ) );
+	m_flWeight = std::min( m_flWeight, RemapValClamped( flFailsafeDistance, 484.0f, 1296.0f, 1.0f, 0.0f ) );
 
 	if ( m_flWeight <= 0 )
 		return;
@@ -6403,7 +6394,7 @@ void C_CSPlayer::PlayReloadEffect( int iActAnimID, const Vector *pOrigin )
 						event.m_bHasSoundOrigin = true;
 					}
 
-					m_SoundEvents.AddToTail( event );
+					m_SoundEvents.push_back( event );
 				}
 			}
 
@@ -6993,7 +6984,7 @@ void C_CSPlayer::CalcObserverView( Vector& eyeOrigin, QAngle& eyeAngles, float& 
 			}
 			else
 			{
-				offset.z = MIN( est, offset.z );
+				offset.z = std::min( est, offset.z );
 			}
 			eyeOrigin.z = GetAbsOrigin().z + offset.z;
 		}
@@ -7461,7 +7452,7 @@ void C_CSPlayer::CalcFreezeCamView( Vector& eyeOrigin, QAngle& eyeAngles, float&
 	if ( !m_bFreezeFrameCloseOnKiller && flDistToTarg < FREEZECAM_LONGCAM_DIST )
 	{
 		Vector vCamEnd = m_vecFreezeFrameStart - ( vToTarget * 8 );
-		vCamEnd.z += MAX( (m_vecFreezeFrameStart.z - vecCamTarget.z )*0.75, 8 );
+		vCamEnd.z += std::max<std::common_type_t<double, int>>( (m_vecFreezeFrameStart.z - vecCamTarget.z )*0.75, 8 );
 
 		Vector forward, right, up;
 		QAngle angTemp;
@@ -7843,9 +7834,9 @@ void C_CSPlayer::UpdateAllBulletHitModels( void )
 {
 	if ( sv_showbullethits.GetBool() )
 	{
-		FOR_EACH_VEC( m_vecBulletHitModels, n )
+		for ( C_BulletHitModel *pBulletHitModel : m_vecBulletHitModels )
 		{
-			m_vecBulletHitModels[n]->UpdatePosition();
+			pBulletHitModel->UpdatePosition();
 		}
 	}
 	else
@@ -7856,13 +7847,13 @@ void C_CSPlayer::UpdateAllBulletHitModels( void )
 
 void C_CSPlayer::ClearAllBulletHitModels( void )
 {
-	if ( m_vecBulletHitModels.Count() )
+	if ( !m_vecBulletHitModels.empty() )
 	{
-		FOR_EACH_VEC( m_vecBulletHitModels, n )
+		for ( C_BulletHitModel *pBulletHitModel : m_vecBulletHitModels )
 		{
-			m_vecBulletHitModels[n]->Release();
+			pBulletHitModel->Release();
 		}
-		m_vecBulletHitModels.RemoveAll();
+		m_vecBulletHitModels.clear();
 	}
 }
 
@@ -7932,7 +7923,7 @@ bool C_BulletHitModel::UpdatePosition( void )
 		float flDurationToColor = RemapValClamped( flDuration, 0, 0.8, 255, 0 );
 		if ( fmod( gpGlobals->curtime, 0.25 ) < 0.125 )
 			flDurationToColor = 0;
-		flDurationToColor = MAX( flDurationToColor, 100 );
+		flDurationToColor = std::max<std::common_type_t<float, int>>( flDurationToColor, 100 );
 		SetRenderColor( flDurationToColor, flDurationToColor, flDurationToColor );
 	}
 	
@@ -7979,7 +7970,7 @@ CCSPlayerInventory *C_CSPlayer::Inventory( void )
 void CStartOfRoundAudioPlayback::AddSound( CBaseEntity* pEntityPlayingSound, const char* pName, float fPlaybackDuration )
 {
 	// Ensure that the sound is not already in the playback list
-	for ( int i = 0; i < m_SoundEvents.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_SoundEvents ); ++i )
 	{
 		if ( Q_strcmp( pName, m_SoundEvents[i].m_SoundName ) == 0 )
 		{
@@ -7998,7 +7989,7 @@ void CStartOfRoundAudioPlayback::AddSound( CBaseEntity* pEntityPlayingSound, con
 		playbackData.m_fPlaybackTime = m_NextAvailableTime;
 		m_NextAvailableTime += fPlaybackDuration;
 
-		m_SoundEvents.AddToTail( playbackData );
+		m_SoundEvents.push_back( playbackData );
 	}
 }
 
@@ -8009,7 +8000,7 @@ void CStartOfRoundAudioPlayback::PlaySounds( void )
 
 	// Loop through all the queued sound events and set their time to play
 	float curtime = gpGlobals->curtime;
-	for ( int i = 0; i < m_SoundEvents.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_SoundEvents ); ++i )
 	{
 		m_SoundEvents[i].m_fPlaybackTime += curtime;
 	}
@@ -8023,7 +8014,7 @@ void CStartOfRoundAudioPlayback::Update( void )
 		int nTotalSoundsPlayed = 0;
 
 		// Loop through each sound event to determine if it is time to play it
-		for ( int i = 0; i < m_SoundEvents.Count(); ++i )
+		for ( int i = 0; i < std::ssize( m_SoundEvents ); ++i )
 		{
 			if ( !m_SoundEvents[i].m_bHasBeenPlayed )
 			{
@@ -8049,7 +8040,7 @@ void CStartOfRoundAudioPlayback::Update( void )
 			}
 		}
 
-		if ( nTotalSoundsPlayed == m_SoundEvents.Count() )
+		if ( nTotalSoundsPlayed == std::ssize( m_SoundEvents ) )
 		{
 			// All sounds have been played, so clear the list of pending sound events
 			ClearSounds();
@@ -8060,18 +8051,18 @@ void CStartOfRoundAudioPlayback::Update( void )
 // Clear all the queued sounds
 void CStartOfRoundAudioPlayback::ClearSounds( void )
 {
-	m_SoundEvents.RemoveAll();
+	m_SoundEvents.clear();
 	m_NextAvailableTime = 1.0f;
 	m_bPlaybackEnabled = false;
 }
 
 void CStartOfRoundAudioPlayback::RemoveSoundByName( char* pName )
 {
-	FOR_EACH_VEC_BACK( m_SoundEvents, i )
+	for ( int i = (int)std::ssize( m_SoundEvents ) - 1; i >= 0; i-- )
 	{
 		if ( V_strcmp( m_SoundEvents[i].m_SoundName, pName ) == 0 )
 		{
-			m_SoundEvents.Remove( i );
+			m_SoundEvents.erase( m_SoundEvents.begin() + i );
 		}
 	}
 }

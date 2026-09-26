@@ -17,9 +17,6 @@
 #define CPhysicsProp C_PhysicsProp
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 IMPLEMENT_NETWORKCLASS_ALIASED( DynamicProp, DT_DynamicProp )
 
 IMPLEMENT_REFLECT_TABLE( C_DynamicProp, DT_DynamicProp );

@@ -11,7 +11,7 @@
 #include "tier1/interface.h"
 #include "mathlib/vector.h"
 #include "mathlib/vector4d.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/text_writer.h"
 #include "tier1/utlvector.h"
 #include "materialsystem/imaterial.h"
 #include "materialsystem/imaterialsystem.h"
@@ -182,7 +182,7 @@ struct DrawModelResults_t
 	int m_nLODUsed;
 	int m_flLODMetric;
 	CFastTimer m_RenderTime;
-	CUtlVectorFixed<IMaterial *,MAX_DRAW_MODEL_INFO_MATERIALS> m_Materials;
+	std::inplace_vector< IMaterial *, MAX_DRAW_MODEL_INFO_MATERIALS > m_Materials;
 };
 
 struct ColorMeshInfo_t
@@ -286,13 +286,13 @@ struct GetTriangles_Vertex_t
 struct GetTriangles_MaterialBatch_t
 {
 	IMaterial *m_pMaterial;
-	CUtlVector<GetTriangles_Vertex_t> m_Verts;
-	CUtlVector<int> m_TriListIndices;
+	std::vector< GetTriangles_Vertex_t > m_Verts;
+	std::vector< int > m_TriListIndices;
 };
 
 struct GetTriangles_Output_t
 {
-	CUtlVector<GetTriangles_MaterialBatch_t> m_MaterialBatches;
+	std::vector< GetTriangles_MaterialBatch_t > m_MaterialBatches;
 	matrix3x4_t m_PoseToWorld[MAXSTUDIOBONES];
 
 	DISALLOW_OPERATOR_EQUAL( GetTriangles_Output_t );
@@ -407,7 +407,7 @@ public:
 	// 1) effective triangle count (factors in batch sizes, state changes, etc)
 	// 2) texture memory usage
 	// Get Triangles returns the LOD used
-	virtual void GetPerfStats( DrawModelResults_t *pResults, const DrawModelInfo_t &info, CUtlBuffer *pSpewBuf = nullptr ) const = 0;
+	virtual void GetPerfStats( DrawModelResults_t *pResults, const DrawModelInfo_t &info, ks::text_writer *pSpewBuf = nullptr ) const = 0;
 	virtual void GetTriangles( const DrawModelInfo_t& info, matrix3x4_t *pBoneToWorld, GetTriangles_Output_t &out ) = 0;
 
 	// Returns materials used by a particular model

@@ -12,6 +12,8 @@
 #include "materialsystem/imaterial.h"
 #include "sun_shared.h"
 #include "c_pixel_visibility.h"
+#include <list>
+#include <optional>
 
 
 extern float g_flOverlayRange;
@@ -101,7 +103,7 @@ protected:
 
 private:
 	short			m_bActivated;
-	unsigned short	m_ListIndex; // index into s_GlowOverlays.
+	std::optional< std::list< CGlowOverlay * >::iterator > m_ListIndex; // position in g_GlowOverlaySystem, if added
 	pixelvis_handle_t m_queryHandle;
 };
 

@@ -67,7 +67,7 @@ private:
 	void RemoveFromGlobalList();
 };
 
-extern CUtlVector< CFogVolume * > TheFogVolumes;
+extern std::vector< CFogVolume * > TheFogVolumes;
 
 
 #endif // FOG_VOLUME_H

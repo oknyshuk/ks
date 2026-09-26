@@ -15,9 +15,6 @@
 #include "bot/shared_util.h"
 #include "localize/ilocalize.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern ConVar cl_rebuy;
 
 extern CSWeaponID GetClientWeaponID( bool primary );
@@ -255,10 +252,10 @@ void WeaponSet::GetCurrent( int& cost, WeaponSet& ws ) const
 	CSWeaponID secondaryID = GetClientWeaponID( false );	///< The local player's current pistol
 
 	BuyPresetWeaponList primaryWeapons;
-	primaryWeapons.AddToTail( m_primaryWeapon );
+	primaryWeapons.push_back( m_primaryWeapon );
 
 	BuyPresetWeaponList secondaryWeapons;
-	secondaryWeapons.AddToTail( m_secondaryWeapon );
+	secondaryWeapons.push_back( m_secondaryWeapon );
 
 	/**
 	 *  Determine best weapons & ammo to purchase
@@ -290,7 +287,7 @@ void WeaponSet::GetCurrent( int& cost, WeaponSet& ws ) const
 	//-------------------------------------------------------------------------
 	// Try to buy the primary weapon
 	int i;
-	for ( i=0; i<primaryWeapons.Count() && !doneBuyingWeapons; ++i )
+	for ( i=0; i<std::ssize( primaryWeapons ) && !doneBuyingWeapons; ++i )
 	{
 		const BuyPresetWeapon *primaryWeapon = &primaryWeapons[i];
 		primaryWeaponToBuy = nullptr;
@@ -335,7 +332,7 @@ void WeaponSet::GetCurrent( int& cost, WeaponSet& ws ) const
 			primaryClipsToBuy = primaryClips;
 		}
 
-		if ( !secondaryWeapons.Count() )
+		if ( secondaryWeapons.empty() )
 		{
 			CURRENTCOST_DEBUG("\t\t\tDone buying weapons (no secondary)\n");
 			break;
@@ -346,7 +343,7 @@ void WeaponSet::GetCurrent( int& cost, WeaponSet& ws ) const
 		// If not, reset cost to not reflect either weapon, so we can look at buying
 		// the next primary weapon in the list.
 		int j;
-		for ( j=0; j<secondaryWeapons.Count(); ++j )
+		for ( j=0; j<std::ssize( secondaryWeapons ); ++j )
 		{
 			const BuyPresetWeapon *secondaryWeapon = &secondaryWeapons[j];
 
@@ -422,7 +419,7 @@ void WeaponSet::GetCurrent( int& cost, WeaponSet& ws ) const
 	else
 	{
 		// If we failed to buy a primary weapon, and one was in the list, bail - the player can't afford this WeaponSet.
-		for ( int i=0; i<primaryWeapons.Count(); ++i )
+		for ( int i=0; i<std::ssize( primaryWeapons ); ++i )
 		{
 			int weaponID = primaryWeapons[i].GetCSWeaponID();
 			if ( weaponID != WEAPON_NONE )
@@ -444,7 +441,7 @@ void WeaponSet::GetCurrent( int& cost, WeaponSet& ws ) const
 	else
 	{
 		// If we failed to buy a required secondary weapon, and one was in the list, bail - the player can't afford this WeaponSet.
-		for ( int i=0; i<secondaryWeapons.Count(); ++i )
+		for ( int i=0; i<std::ssize( secondaryWeapons ); ++i )
 		{
 			int weaponID = secondaryWeapons[i].GetCSWeaponID();
 			if ( weaponID != WEAPON_NONE )
@@ -489,7 +486,7 @@ void WeaponSet::GetCurrent( int& cost, WeaponSet& ws ) const
 						{
 							ws.m_primaryWeapon.SetAmmoAmount( ws.m_primaryWeapon.GetAmmoAmount() + 1 );
 							--clipsLeft;
-							ammo[info->GetPrimaryAmmoType()] += MIN(maxRounds, ammoBuySize);
+							ammo[info->GetPrimaryAmmoType()] += std::min(maxRounds, ammoBuySize);
 							cost += ammoCost;
 						}
 					}
@@ -518,7 +515,7 @@ void WeaponSet::GetCurrent( int& cost, WeaponSet& ws ) const
 						{
 							ws.m_secondaryWeapon.SetAmmoAmount( ws.m_secondaryWeapon.GetAmmoAmount() + 1 );
 							--clipsLeft;
-							ammo[info->GetPrimaryAmmoType() ] += MIN(maxRounds, ammoBuySize);
+							ammo[info->GetPrimaryAmmoType() ] += std::min(maxRounds, ammoBuySize);
 							cost += ammoCost;
 						}
 					}
@@ -777,7 +774,7 @@ void BuyPreset::SetName( const wchar_t *name )
 // Parse KeyValues string into a BuyPresetWeapon vector
 static void ParseWeaponString( const char *str, BuyPresetWeaponList& weapons, bool isPrimary )
 {
-	weapons.RemoveAll();
+	weapons.clear();
 
 	if ( !str )
 		return;
@@ -820,25 +817,25 @@ static void ParseWeaponString( const char *str, BuyPresetWeaponList& weapons, bo
 			{
 				int maxRounds = GetCSAmmoDef()->MaxCarry( info->GetPrimaryAmmoType(), C_CSPlayer::GetLocalCSPlayer() );
 				int buySize = GetCSAmmoDef()->GetBuySize( info->GetPrimaryAmmoType() );
-				numClips = MIN(ceil(maxRounds/(float)buySize), MAX(0, numClips));
+				numClips = std::min<std::common_type_t<float, int>>(ceil(maxRounds/(float)buySize), std::max(0, numClips));
 				if ( ((!isPrimary) ^ IsPrimaryWeapon( weaponID )) == 0 )
 					return;
 			}
 			else
 			{
-				numClips = MIN(NUM_CLIPS_FOR_CURRENT, MAX(0, numClips));
+				numClips = std::min<int>( NUM_CLIPS_FOR_CURRENT, std::max<int>( 0, numClips ) );
 			}
 		}
 		else
 		{
-			numClips = MIN(NUM_CLIPS_FOR_CURRENT, MAX(0, numClips));
+			numClips = std::min<int>( NUM_CLIPS_FOR_CURRENT, std::max<int>( 0, numClips ) );
 		}
 
 		BuyPresetWeapon weapon( weaponID );
 		weapon.SetAmmoType( AMMO_CLIPS );
 		weapon.SetAmmoAmount( numClips );
 		weapon.SetFillAmmo( (clipModifier == '+') );
-		weapons.AddToTail( weapon );
+		weapons.push_back( weapon );
 
 		remainder = SharedParse( remainder );
 	}
@@ -852,7 +849,7 @@ static void ParseWeaponString( const char *str, BuyPresetWeaponList& weapons, bo
 void BuyPreset::Parse( KeyValues *data )
 {
 	m_name[0] = 0;
-	m_weaponList.RemoveAll();
+	m_weaponList.clear();
 
 	if (!data)
 		return;
@@ -874,16 +871,16 @@ void BuyPreset::Parse( KeyValues *data )
 	const char *secondaryString = data->GetString( "Secondary", nullptr );
 	const char *equipmentString = data->GetString( "Equipment", nullptr );
 
-	CUtlVector< BuyPresetWeapon > weapons;
+	std::vector< BuyPresetWeapon > weapons;
 	ParseWeaponString( primaryString, weapons, true );
 
 	WeaponSet ws;
-	if ( weapons.Count() )
+	if ( !weapons.empty() )
 		ws.m_primaryWeapon = weapons[0];
 
-	weapons.RemoveAll();
+	weapons.clear();
 	ParseWeaponString( secondaryString, weapons, false );
-	if ( weapons.Count() )
+	if ( !weapons.empty() )
 		ws.m_secondaryWeapon = weapons[0];
 
 	// parse equipment
@@ -946,13 +943,13 @@ void BuyPreset::Parse( KeyValues *data )
 			}
 			else if ( !strcmp( itemBuf, "flash" ) )
 			{
-				ws.m_flashbangs = MIN( 2, MAX( 0, intVal ) );
+				ws.m_flashbangs = std::min( 2, std::max( 0, intVal ) );
 			}
 
 			remainder = SharedParse( remainder );
 		}
 
-		m_weaponList.AddToTail( ws );
+		m_weaponList.push_back( ws );
 	}
 }
 
@@ -1010,7 +1007,7 @@ void BuyPreset::Save( KeyValues *data )
 	 *      Removed fallbacks to correspond to new UI.
 	 */
 	presetKey->SetInt( "Version", 4 );
-	if ( m_weaponList.Count() > 0 )
+	if ( !m_weaponList.empty() )
 	{
 		//-------------------------------------------------------------------------
 		// Save a fallback WeaponSet
@@ -1038,7 +1035,7 @@ void BuyPreset::Save( KeyValues *data )
  */
 int BuyPreset::FullCost() const
 {
-	if ( m_weaponList.Count() == 0 )
+	if ( m_weaponList.empty() )
 		return 0;
 
 	return m_weaponList[0].FullCost();
@@ -1051,7 +1048,7 @@ int BuyPreset::FullCost() const
  */
 const WeaponSet * BuyPreset::GetSet( int index ) const
 {
-	if ( index < 0 || index >= m_weaponList.Count() )
+	if ( index < 0 || index >= std::ssize( m_weaponList ) )
 		return nullptr;
 
 	return &(m_weaponList[index]);
@@ -1064,10 +1061,10 @@ const WeaponSet * BuyPreset::GetSet( int index ) const
  */
 void BuyPreset::DeleteSet( int index )
 {
-	if ( index < 0 || index >= m_weaponList.Count() )
+	if ( index < 0 || index >= std::ssize( m_weaponList ) )
 		return;
 
-	m_weaponList.Remove( index );
+	m_weaponList.erase( m_weaponList.begin() + index );
 }
 
 
@@ -1077,10 +1074,10 @@ void BuyPreset::DeleteSet( int index )
  */
 void BuyPreset::SwapSet( int firstIndex, int secondIndex )
 {
-	if ( firstIndex < 0 || firstIndex >= m_weaponList.Count() )
+	if ( firstIndex < 0 || firstIndex >= std::ssize( m_weaponList ) )
 		return;
 
-	if ( secondIndex < 0 || secondIndex >= m_weaponList.Count() )
+	if ( secondIndex < 0 || secondIndex >= std::ssize( m_weaponList ) )
 		return;
 
 	WeaponSet tmpSet = m_weaponList[firstIndex];
@@ -1095,12 +1092,12 @@ void BuyPreset::SwapSet( int firstIndex, int secondIndex )
  */
 void BuyPreset::ReplaceSet( int index, const WeaponSet& weaponSet )
 {
-	if ( index < 0 || index > m_weaponList.Count() )
+	if ( index < 0 || index > std::ssize( m_weaponList ) )
 		return;
 
-	if ( index == m_weaponList.Count() )
+	if ( index == std::ssize( m_weaponList ) )
 	{
-		m_weaponList.AddToTail( weaponSet );
+		m_weaponList.push_back( weaponSet );
 	}
 	else
 	{

@@ -32,9 +32,6 @@
 #include "props.h"
 #include "physics_npc_solver.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 const char * g_ppszGoalTypes[] =
 {
@@ -1454,7 +1451,7 @@ AIMoveResult_t CAI_Navigator::MoveClimb()
 	// Look for a block by another NPC, and attempt to recover
 	AIMoveTrace_t moveTrace;
 	if ( climbDist > 0.01 &&
-		 !GetMoveProbe()->MoveLimit( NAV_CLIMB, GetLocalOrigin(), GetLocalOrigin() + ( climbDir * MIN(0.1,climbDist - 0.005) ), GetOuter()->GetAITraceMask(), GetNavTargetEntity(), &moveTrace ) )
+		 !GetMoveProbe()->MoveLimit( NAV_CLIMB, GetLocalOrigin(), GetLocalOrigin() + ( climbDir * std::min(0.1,climbDist - 0.005) ), GetOuter()->GetAITraceMask(), GetNavTargetEntity(), &moveTrace ) )
 	{
 		CAI_BaseNPC *pOther = ( moveTrace.pObstruction ) ? moveTrace.pObstruction->MyNPCPointer() : nullptr;
 		if ( pOther )
@@ -3077,7 +3074,7 @@ AI_NavPathProgress_t CAI_Navigator::ProgressFlyPath( const AI_ProgressFlyPathPar
 
 		if ( CurWaypointIsGoal() )
 		{
-			float tolerance = MAX( params.goalTolerance, GetPath()->GetGoalTolerance() );
+			float tolerance = std::max( params.goalTolerance, GetPath()->GetGoalTolerance() );
 			if ( waypointDist <= tolerance )
 				return AINPP_COMPLETE;
 		}

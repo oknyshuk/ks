@@ -28,9 +28,6 @@
 
 #include "tier0/vprof.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static ConVar r_lightwarpidentity( "r_lightwarpidentity","0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
 static ConVar mat_phong( "mat_phong", "1", FCVAR_MATERIAL_SYSTEM_THREAD );
 static ConVar mat_displacementmap( "mat_displacementmap", "1", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT );
@@ -1312,7 +1309,7 @@ bool bDistanceAlphaFromDetail = false;
 				{
 					int nWidth, nHeight;
 					ShaderApiFast( pShaderAPI )->GetBackBufferDimensions( nWidth, nHeight );
-					flResScale=MAX( 0.5, MAX( 1024.0/nWidth, 768/nHeight ) );
+					flResScale=std::max( 0.5, std::max<std::common_type_t<double, int>>( 1024.0/nWidth, 768/nHeight ) );
 				
 					if ( bScaleEdges )
 					{
@@ -1795,7 +1792,7 @@ bool bDistanceAlphaFromDetail = false;
 					}
 
 					DECLARE_DYNAMIC_PIXEL_SHADER( vertexlit_and_unlit_generic_bump_ps20b );
-					SET_DYNAMIC_PIXEL_SHADER_COMBO( NUM_LIGHTS, ( false ) ? MIN( 2, lightState.m_nNumLights ) : lightState.m_nNumLights );
+					SET_DYNAMIC_PIXEL_SHADER_COMBO( NUM_LIGHTS, ( false ) ? std::min( 2, lightState.m_nNumLights ) : lightState.m_nNumLights );
 					SET_DYNAMIC_PIXEL_SHADER_COMBO( AMBIENT_LIGHT, lightState.m_bAmbientLight && !bStaticLight3 );
 					SET_DYNAMIC_PIXEL_SHADER_COMBO( FLASHLIGHTSHADOWS, bFlashlightShadows );
 					SET_DYNAMIC_PIXEL_SHADER_COMBO( WRITEWATERFOGTODESTALPHA, bWriteWaterFogToAlpha );

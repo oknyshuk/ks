@@ -10,9 +10,6 @@
 
 #include "steam/steam_api.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include <tier0/memdbgon.h>
-
 extern CSteamAPIContext *steamapicontext;
 
 ConVar sc_joystick_map( "sc_joystick_map", "1", FCVAR_ARCHIVE, "How to map the analog joystick deadzone and extents 0 = Scaled Cross, 1 = Concentric Mapping to Square." );

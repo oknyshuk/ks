@@ -10,6 +10,7 @@
 
 
 #include "utlvector.h"
+#include <list>
 #include "ai_movesolver.h"
 #include "ehandle.h"
 #include "mathlib/vector.h"
@@ -55,7 +56,7 @@ public:
 	void Reset();
 	
 	void AddObstacle( const Vector &pos, float radius, CBaseEntity *pEntity = nullptr, AI_MoveSuggType_t type = AIMST_AVOID_OBJECT );
-	bool HaveObstacles()	{ return ( m_Obstacles.Count() != 0 ) || ( s_GlobalObstacles.Count() != 0 ); }
+	bool HaveObstacles()	{ return ( !m_Obstacles.empty() ) || ( !s_GlobalObstacles.empty() ); }
 
 	static Obstacle_t AddGlobalObstacle( const Vector &pos, float radius, CBaseEntity *pEntity = nullptr, AI_MoveSuggType_t type = AIMST_AVOID_OBJECT );
 	static void RemoveGlobalObstacle( Obstacle_t hObstacle );
@@ -153,8 +154,8 @@ private:
 	
 	// --------------------------------
 	
-	CUtlVector<CircleObstacles_t> m_Obstacles;
-	static CUtlFixedLinkedList<CircleObstacles_t> s_GlobalObstacles;
+	std::vector< CircleObstacles_t > m_Obstacles;
+	static std::list<CircleObstacles_t> s_GlobalObstacles; // stable addresses: Obstacle_t is the element address
 	
 	// --------------------------------
 	

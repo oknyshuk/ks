@@ -12,9 +12,6 @@
 #include "c_basetempentity.h"
 #include "tier0/vprof.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern IPhysicsSurfaceProps *physprops;
 
 class [[= ks::reflect::NetTable{ .name = "DT_TEImpact" } ]]

@@ -9,7 +9,6 @@
 #define VOICE_COMMON_H
 
 
-#include "bitvec.h"
 #include "const.h"
 
 

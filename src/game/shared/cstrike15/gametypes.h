@@ -11,7 +11,10 @@
 
 #include "gametypes/igametypes.h"
 #include "tier1/keyvalues.h"
+#include "vstdlib/random.h"
 #include "const.h"
+#include <memory>
+#include <vector>
 
 
 #define GAMETYPES_MAX_NAME	64
@@ -127,8 +130,8 @@ public:
 	virtual void DisplayConvarsForCurrentMode( void );
 
 	// Returns the weapon progression for the current game type and mode.
-	virtual const CUtlVector< IGameTypes::WeaponProgression > *GetWeaponProgressionForCurrentModeCT( void );
-	virtual const CUtlVector< IGameTypes::WeaponProgression > *GetWeaponProgressionForCurrentModeT( void );
+	virtual const std::vector< IGameTypes::WeaponProgression > *GetWeaponProgressionForCurrentModeCT( void );
+	virtual const std::vector< IGameTypes::WeaponProgression > *GetWeaponProgressionForCurrentModeT( void );
 
 	virtual int GetNoResetVoteThresholdForCurrentModeCT( void );
 	virtual int GetNoResetVoteThresholdForCurrentModeT( void );
@@ -165,9 +168,9 @@ public:
 	virtual bool GetMapInfo( const char *mapName, uint32 &richPresence );
 
 	// Returns the available character model names (T or CT) for the given map.
-	virtual const CUtlStringList *GetTModelsForMap( const char *mapName );
-	virtual const CUtlStringList *GetCTModelsForMap( const char *mapName );
-	virtual const CUtlStringList *GetHostageModelsForMap( const char *mapName );
+	virtual const std::vector< std::string > *GetTModelsForMap( const char *mapName );
+	virtual const std::vector< std::string > *GetCTModelsForMap( const char *mapName );
+	virtual const std::vector< std::string > *GetHostageModelsForMap( const char *mapName );
 	virtual const int GetDefaultGameTypeForMap( const char *mapName );
 	virtual const int GetDefaultGameModeForMap( const char *mapName );
 
@@ -182,10 +185,10 @@ public:
 	virtual int GetRewardDropListForMap( const char *mapName );
 
 	// Map group properties
-	virtual const CUtlStringList *GetMapGroupMapList( const char *mapGroup );
+	virtual const std::vector< std::string > *GetMapGroupMapList( const char *mapGroup );
 
 	// Make a new map group. 
-	virtual bool CreateOrUpdateWorkshopMapGroup( const char* szName, const CUtlStringList & vecMapNames );
+	virtual bool CreateOrUpdateWorkshopMapGroup( const char* szName, const std::vector< std::string > & vecMapNames );
 	virtual bool IsWorkshopMapGroup( const char* szMapGroupName );
 
 	//
@@ -209,7 +212,7 @@ private:
 	bool LoadMaps( KeyValues *pKV );
 	bool LoadMapGroups( KeyValues *pKV );
 	bool LoadCustomBotDifficulties( KeyValues *pKV );
-	void LoadWeaponProgression( KeyValues * pKV_WeaponProgression, CUtlVector< WeaponProgression > & vecWeaponProgression, const char * szGameType, const char * szGameMode );
+	void LoadWeaponProgression( KeyValues * pKV_WeaponProgression, std::vector< WeaponProgression > & vecWeaponProgression, const char * szGameType, const char * szGameMode );
 
 	GameType *GetGameType_Internal( const char *gameType );
 	GameMode *GetGameMode_Internal( GameType *pGameType, const char *gameMode );
@@ -236,7 +239,7 @@ private:
 		int m_Index; // index of the game type in the file
 		char m_Name[GAMETYPES_MAX_NAME]; // internal name for the game type
 		char m_NameID[GAMETYPES_MAX_ID]; // UI identifier for the game type name
-		CUtlVector< GameMode* > m_GameModes; // list of associated game modes
+		std::vector< std::unique_ptr< GameMode > > m_GameModes; // list of associated game modes
 	};
 
 	struct GameMode
@@ -252,10 +255,10 @@ private:
 		char m_DescID_SP[GAMETYPES_MAX_ID]; // UI identifier game mode description
 		int m_MaxPlayers; // maximum number of players for the mode
 		KeyValues* m_pExecConfings; // configs to exec for this game mode
-		CUtlStringList m_MapGroupsSP; // single player map groups
-		CUtlStringList m_MapGroupsMP; // multiplayer map groups
-		CUtlVector< WeaponProgression > m_WeaponProgressionCT; // CT weapon progression for this game mode (only gun game)
-		CUtlVector< WeaponProgression > m_WeaponProgressionT; // T weapon progression for this game mode (only gun game)
+		std::vector< std::string > m_MapGroupsSP; // single player map groups
+		std::vector< std::string > m_MapGroupsMP; // multiplayer map groups
+		std::vector< WeaponProgression > m_WeaponProgressionCT; // CT weapon progression for this game mode (only gun game)
+		std::vector< WeaponProgression > m_WeaponProgressionT; // T weapon progression for this game mode (only gun game)
 		int	m_NoResetVoteThresholdCT;
 		int	m_NoResetVoteThresholdT;
 	};
@@ -269,11 +272,11 @@ private:
 		char m_NameID[GAMETYPES_MAX_ID]; // UI identifier for the map name
 		char m_ImageName[GAMETYPES_MAX_IMAGE_NAME]; // texture for map image
 		uint32 m_RichPresence; // optional rich presence context
-		CUtlStringList m_TModels; // list of model filenames for Ts
-		CUtlStringList m_CTModels; // list of model filenames for CTs
-		CUtlStringList m_HostageModels; // list of model filenames for Hostages
-		CUtlString m_TViewModelArms; // name of the model used for the terrorists arms.
-		CUtlString m_CTViewModelArms; // name of the model used for the counter-terrorists arms.
+		std::vector< std::string > m_TModels; // list of model filenames for Ts
+		std::vector< std::string > m_CTModels; // list of model filenames for CTs
+		std::vector< std::string > m_HostageModels; // list of model filenames for Hostages
+		std::string m_TViewModelArms; // name of the model used for the terrorists arms.
+		std::string m_CTViewModelArms; // name of the model used for the counter-terrorists arms.
 		int m_nDefaultGameType;
 		int m_nDefaultGameMode;
 
@@ -290,7 +293,7 @@ private:
 		char m_Name[GAMETYPES_MAX_MAP_GROUP_NAME]; // internal name for the map group
 		char m_NameID[GAMETYPES_MAX_ID]; // UI identifier for the map name
 		char m_ImageName[GAMETYPES_MAX_IMAGE_NAME]; // texture for map image
-		CUtlStringList m_Maps;
+		std::vector< std::string > m_Maps;
 		bool m_bIsWorkshopMapGroup;
 	};
 
@@ -306,14 +309,14 @@ private:
 		bool m_HasBotQuota; // true if this difficulty level has a bot quota in the convars
 	};
 
-	MapGroup *CreateWorkshopMapGroupInternal( const char* szName, const CUtlStringList & vecMapNames );
-	int FindWeaponProgressionIndex( CUtlVector< WeaponProgression > & vecWeaponProgression, const char * szWeaponName );
+	MapGroup *CreateWorkshopMapGroupInternal( const char* szName, const std::vector< std::string > & vecMapNames );
+	int FindWeaponProgressionIndex( std::vector< WeaponProgression > & vecWeaponProgression, const char * szWeaponName );
 	void ClearServerMapGroupInfo( void );
 	bool m_Initialized; // true if the game types interface has been initialized
-	CUtlVector< GameType* > m_GameTypes; // list of game types
-	CUtlVector< Map* > m_Maps; // list of maps
-	CUtlVector< MapGroup* > m_MapGroups; // list of map groups for cycling maps
-	CUtlVector< CustomBotDifficulty* > m_CustomBotDifficulties; // list of custom bot difficulty levels for Offline Games
+	std::vector< std::unique_ptr< GameType > > m_GameTypes; // list of game types
+	std::vector< std::unique_ptr< Map > > m_Maps; // list of maps
+	std::vector< std::unique_ptr< MapGroup > > m_MapGroups; // list of map groups for cycling maps
+	std::vector< std::unique_ptr< CustomBotDifficulty > > m_CustomBotDifficulties; // list of custom bot difficulty levels for Offline Games
 
 	bool GetRunMapWithDefaultGametype() { return m_bRunMapWithDefaultGametype; }
 	void SetRunMapWithDefaultGametype( bool bDefaultGametype ) { m_bRunMapWithDefaultGametype = bDefaultGametype; }
@@ -322,8 +325,8 @@ private:
 
 	// These are filled out on the client when connecting to a server
 	KeyValues *m_pExtendedServerInfo;
-	Map* m_pServerMap; // map on the currently connected server
-	MapGroup* m_pServerMapGroup; // map group for cycling maps on the currently connected server
+	std::unique_ptr< Map > m_pServerMap; // map on the currently connected server
+	std::unique_ptr< MapGroup > m_pServerMapGroup; // map group for cycling maps on the currently connected server
 	int m_iCurrentServerNumSlots;
 
 	// if this is true when the Level init happens, we'll run whatever game type and mode that the map defines in its KV file

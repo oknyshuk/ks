@@ -29,7 +29,7 @@ public:
 
 protected:
 
-	CUtlVector<CHLTVServer*>	m_Servers;
+	std::vector< std::unique_ptr< CHLTVServer > >	m_Servers;
 };
 
 extern CHLTVTestSystem *hltvtest;	// The global HLTV server/object. NULL on xbox.

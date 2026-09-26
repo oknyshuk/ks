@@ -11,19 +11,17 @@
 #include "toolframework_client.h"
 #include "toolframework/itoolframework.h"
 #include "vstdlib/ikeyvaluessystem.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier1/vector_ops.h"
 
 
 // Used for debugging to make sure all particle effects get freed when we exit.
-CUtlLinkedList<CParticleEffect*,int> g_ParticleEffects;
+std::vector<CParticleEffect*> g_ParticleEffects;
 class CEffectChecker
 {
 public:
 	~CEffectChecker()
 	{
-		Assert( g_ParticleEffects.Count() == 0 );
+		Assert( g_ParticleEffects.empty() );
 	}
 } g_EffectChecker;
 
@@ -41,7 +39,7 @@ CParticleEffect::CParticleEffect( const char *pName )
 	m_bSimulate = true;
 	ParticleMgr()->AddEffect( &m_ParticleEffect, this );
 #if defined( _DEBUG )
-	g_ParticleEffects.AddToTail( this );
+	g_ParticleEffects.push_back( this );
 #endif
 }
 
@@ -51,9 +49,8 @@ CParticleEffect::CParticleEffect( const char *pName )
 CParticleEffect::~CParticleEffect( void )
 {
 #if defined( _DEBUG )
-	int index = g_ParticleEffects.Find( this );
-	Assert( g_ParticleEffects.IsValidIndex(index) );
-	g_ParticleEffects.Remove( index );
+	bool bFound = ks::swap_erase_first( g_ParticleEffects, this );
+	Assert( bFound );
 #endif
 	// HACKHACK: Prevent re-entering the destructor, clear m_Flags.
 	// For some reason we'll get a callback into NotifyRemove() after being deleted!
@@ -231,7 +228,7 @@ CSimpleEmitter::~CSimpleEmitter()
 {
 }
 
-CSmartPtr<CSimpleEmitter> CSimpleEmitter::Create( const char *pDebugName )
+ks::intrusive_ptr<CSimpleEmitter> CSimpleEmitter::Create( const char *pDebugName )
 {
 	CSimpleEmitter *pRet = new CSimpleEmitter( pDebugName );
 	pRet->SetDynamicallyAllocated( true );
@@ -435,7 +432,7 @@ CEmberEffect::CEmberEffect( const char *pDebugName ) : CSimpleEmitter( pDebugNam
 }
 
 
-CSmartPtr<CEmberEffect> CEmberEffect::Create( const char *pDebugName )
+ks::intrusive_ptr<CEmberEffect> CEmberEffect::Create( const char *pDebugName )
 {
 	CEmberEffect *pRet = new CEmberEffect( pDebugName );
 	pRet->SetDynamicallyAllocated( true );
@@ -487,7 +484,7 @@ CFireSmokeEffect::CFireSmokeEffect( const char *pDebugName ) : CSimpleEmitter( p
 }
 
 
-CSmartPtr<CFireSmokeEffect> CFireSmokeEffect::Create( const char *pDebugName )
+ks::intrusive_ptr<CFireSmokeEffect> CFireSmokeEffect::Create( const char *pDebugName )
 {
 	CFireSmokeEffect *pRet = new CFireSmokeEffect( pDebugName );
 	pRet->SetDynamicallyAllocated( true );
@@ -521,7 +518,7 @@ CFireParticle::CFireParticle( const char *pDebugName ) : CSimpleEmitter( pDebugN
 }
 
 
-CSmartPtr<CFireParticle> CFireParticle::Create( const char *pDebugName )
+ks::intrusive_ptr<CFireParticle> CFireParticle::Create( const char *pDebugName )
 {
 	CFireParticle *pRet = new CFireParticle( pDebugName );
 	pRet->SetDynamicallyAllocated( true );
@@ -534,7 +531,7 @@ Vector CFireParticle::UpdateColor( const SimpleParticle *pParticle )
 	for ( int i = 0; i < 3; i++ )
 	{
 		//FIXME: This is frame dependant... but I don't want to store off start/end colors yet
-		//pParticle->m_uchColor[i] = MAX( 0, pParticle->m_uchColor[i]-2 );
+		//pParticle->m_uchColor[i] = std::max( 0, pParticle->m_uchColor[i]-2 );
 	}
 
 	return CSimpleEmitter::UpdateColor( pParticle );

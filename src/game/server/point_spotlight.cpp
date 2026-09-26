@@ -10,9 +10,6 @@
 #include "beam_shared.h"
 #include "spotlightend.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // Spawnflags
 #define SF_SPOTLIGHT_START_LIGHT_ON			0x1
 #define SF_SPOTLIGHT_NO_DYNAMIC_LIGHT		0x2

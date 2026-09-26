@@ -19,9 +19,6 @@
 #include "collisionutils.h"
 #include "precache_register.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //FIXME: All these functions will be moved out to FX_Main.CPP or a individual folder
 
 PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffectsTest )

@@ -24,9 +24,6 @@
 #include "te_effect_dispatch.h"
 #include "GameStats.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // Spawn flags
 #define SF_BREAKABLESURF_CRACK_DECALS				0x00000001
 #define SF_BREAKABLESURF_DAMAGE_FROM_HELD_OBJECTS	0x00000002
@@ -233,11 +230,11 @@ void CBreakableSurface::SurfaceTouch( CBaseEntity *pOther )
 	float flMaxsWidth,flMaxsHeight;
 	PanePos(vTouchPos, &flMaxsWidth, &flMaxsHeight);
 
-	int nMinWidth = Floor2Int(MAX(0,		MIN(flMinsWidth,flMaxsWidth)));
-	int nMaxWidth = Ceil2Int( fpmin(m_nNumWide, MAX(flMinsWidth,flMaxsWidth)));
+	int nMinWidth = Floor2Int(std::max<std::common_type_t<int, float>>(0,		std::min(flMinsWidth,flMaxsWidth)));
+	int nMaxWidth = Ceil2Int( fpmin(m_nNumWide, std::max(flMinsWidth,flMaxsWidth)));
 
-	int nMinHeight = Floor2Int(MAX(0,		MIN(flMinsHeight,flMaxsHeight)));
-	int nMaxHeight = Ceil2Int( fpmin(m_nNumHigh, MAX(flMinsHeight,flMaxsHeight)));
+	int nMinHeight = Floor2Int(std::max<std::common_type_t<int, float>>(0,		std::min(flMinsHeight,flMaxsHeight)));
+	int nMaxHeight = Ceil2Int( fpmin(m_nNumHigh, std::max(flMinsHeight,flMaxsHeight)));
 
 	Vector vHitVel;
 	pOther->GetVelocity( &vHitVel, nullptr );
@@ -759,7 +756,7 @@ void CBreakableSurface::SetSupport( int w, int h, float support )
 //------------------------------------------------------------------------------
 float CBreakableSurface::GetSupport(int nWidth, int nHeight)
 {
-	return MAX(0,m_flSupport[nWidth][nHeight]);
+	return std::max<std::common_type_t<int, float>>(0,m_flSupport[nWidth][nHeight]);
 }
 
 //------------------------------------------------------------------------------

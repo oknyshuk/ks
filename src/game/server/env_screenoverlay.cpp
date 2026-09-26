@@ -10,9 +10,6 @@
 #include "reflect_annotations.h"
 #include "shareddefs.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // named by the Proxy<> annotation below, so it must be declared before the class.
 void SendProxy_String_tToString( const SendProp *pProp, const void *pStruct, const void *pData, DVariant *pOut, int iElement, int objectID );
 

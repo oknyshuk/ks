@@ -41,9 +41,6 @@ IAchievementMgr * CAchievementMgr::GetInstanceInterface()
 
 #endif // CLIENT_DLL
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 #ifdef CLIENT_DLL
 
 ConVar achievements_easymode( "achievement_easymode", "0", FCVAR_CLIENTDLL | FCVAR_DEVELOPMENTONLY,
@@ -150,9 +147,9 @@ void CAchievement_Meta::Steam_OnUserAchievementStored( UserAchievementStored_t *
 
 	int iAchieved = 0;
 
-	FOR_EACH_VEC(m_requirements, i)
+	for ( int nRequirement : m_requirements )
 	{
-		IAchievement* pAchievement = (IAchievement*)m_pAchievementMgr->GetAchievementByID(m_requirements[i], m_nUserSlot);
+		IAchievement* pAchievement = (IAchievement*)m_pAchievementMgr->GetAchievementByID(nRequirement, m_nUserSlot);
 		Assert ( pAchievement );
 
 		if ( pAchievement->IsAchieved() )
@@ -161,7 +158,7 @@ void CAchievement_Meta::Steam_OnUserAchievementStored( UserAchievementStored_t *
 			break;
 	}
 
-	if ( iAchieved == m_requirements.Count() )
+	if ( iAchieved == std::ssize( m_requirements ) )
 	{
 		AwardAchievement();
 	}
@@ -199,7 +196,7 @@ void CAchievement_StatGoal::OnPlayerStatsUpdate( int nUserSlot )
 
 void CAchievement_Meta::AddRequirement( int nAchievementId )
 {
-	m_requirements.AddToTail(nAchievementId);
+	m_requirements.push_back( nAchievementId );
 }
 
 
@@ -873,9 +870,9 @@ class CAchievementCS_Medalist : public CCSBaseAchievement
 			int splitScreenPlayer = event->GetInt( "splitscreenplayer" );
 
 			int totalEarnedAchievements = 0;
-			FOR_EACH_MAP( g_AchievementMgrCS.GetAchievements(splitScreenPlayer), i )
+			for ( const auto &[nID, pEntry] : g_AchievementMgrCS.GetAchievements( splitScreenPlayer ) )
 			{
-				CBaseAchievement *pAchievement = g_AchievementMgrCS.GetAchievements( splitScreenPlayer )[i];
+				CBaseAchievement *pAchievement = pEntry.get();
 				if ( pAchievement && pAchievement->IsAchieved() )
 					totalEarnedAchievements++;
 			}

@@ -15,9 +15,6 @@
 #include <bitbuf.h>
 #include "engine/ivdebugoverlay.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern float UTIL_WaterLevel( const Vector &position, float minz, float maxz );
 
 

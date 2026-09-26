@@ -160,7 +160,7 @@ void CLogicPlayMovie::InputPlayLevelTransitionMovie( inputdata_t &data )
 
 	const char *szVideoCommand = "playvideo_end_level_transition";
 
-	m_bFadeInTime = MAX( 0.1f, m_bFadeInTime );
+	m_bFadeInTime = std::max( 0.1f, m_bFadeInTime );
 
 	char szClientCmd[256];
 	Q_snprintf( szClientCmd, sizeof(szClientCmd), 

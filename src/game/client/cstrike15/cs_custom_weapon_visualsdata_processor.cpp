@@ -6,10 +6,10 @@
 //=============================================================================//
 
 #include "cbase.h"
-#include "utlbufferutil.h"
+#include "serialization.h"
 #include "cs_custom_weapon_visualsdata_processor.h"
 
-void CCSWeaponVisualsDataCompare::SerializeToBuffer( CUtlBuffer &buf )
+void CCSWeaponVisualsDataCompare::SerializeToBuffer( ks::byte_writer &buf )
 {
 	CBaseVisualsDataCompare::SerializeToBuffer( buf );
 	Serialize( buf, m_flWeaponLength );
@@ -22,7 +22,7 @@ CCSWeaponVisualsDataProcessor::CCSWeaponVisualsDataProcessor( CCSWeaponVisualsDa
 	, m_flPhongAlbedoFactor( 1.0f )
 	, m_nPhongIntensity( 0 )
 {
-	m_compareObject = Move( compareObject );
+	m_compareObject = std::move( compareObject );
 	m_compareObject.FillCompareBlob();
 	memset( &m_visualsData, 0, sizeof( m_visualsData ) );
 }

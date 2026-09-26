@@ -9,7 +9,7 @@
 
 #include "reflect_annotations.h"
 
-#include "utlmap.h"
+#include <map>
 #include "simtimer.h"
 #include "ai_criteria.h"
 #include "ai_baseactor.h"
@@ -187,6 +187,12 @@ struct ConceptInfo_t
 
 //-------------------------------------
 
+// Caseless ordering of pooled concept names.
+struct ConceptStringLess
+{
+	bool operator()( const string_t &lhs, const string_t &rhs ) const;
+};
+
 class CAI_AllySpeechManager : public CLogicalEntity
 {
 	DECLARE_CLASS( CAI_AllySpeechManager, CLogicalEntity );
@@ -209,7 +215,7 @@ private:
 
 	CSimpleSimTimer	m_ConceptCategoryTimers[SPEECH_NUM_CATEGORIES];
 
-	CUtlMap<string_t, CSimpleSimTimer, char> m_ConceptTimers;
+	std::map<string_t, CSimpleSimTimer, ConceptStringLess> m_ConceptTimers;
 
 	friend CAI_AllySpeechManager *GetAllySpeechManager();
 	static CAI_AllySpeechManager *gm_pSpeechManager;

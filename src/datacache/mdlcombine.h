@@ -10,7 +10,8 @@
 
 
 
-#include "utlbuffer.h"
+#include <cstddef>
+#include <vector>
 
 
 struct studiohdr2_t;
@@ -262,9 +263,9 @@ private:
 
 	TCombinedStudioData	*m_pCombinedStudioData;
 
-	CUtlBuffer	*MDL_Data[ COMBINER_MAX_MODELS ];
-	CUtlBuffer	*VTX_Data[ COMBINER_MAX_MODELS ];
-	CUtlBuffer	*VVD_Data[ COMBINER_MAX_MODELS ];
+	std::vector< std::byte >	MDL_Data[ COMBINER_MAX_MODELS ];
+	std::vector< std::byte >	VTX_Data[ COMBINER_MAX_MODELS ];
+	std::vector< std::byte >	VVD_Data[ COMBINER_MAX_MODELS ];
 
 	studiohdr_t			*m_pStudioHdr[ COMBINER_MAX_MODELS ];
 	studiohdr2_t		*m_pStudioHdr2[ COMBINER_MAX_MODELS ];

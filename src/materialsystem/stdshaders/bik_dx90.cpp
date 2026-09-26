@@ -13,9 +13,6 @@
 #include "bik_ps20b.inc"
 #include "bik_vs20.inc"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 BEGIN_VS_SHADER( Bik, "Help for Bik" )
 	BEGIN_SHADER_PARAMS

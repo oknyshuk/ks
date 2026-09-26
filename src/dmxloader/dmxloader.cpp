@@ -5,14 +5,24 @@
 //=============================================================================
 
 #include "dmxloader/dmxelement.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
+#include "tier1/text_reader.h"
+#include "tier1/text_writer.h"
 #include "tier2/tier2.h"
-#include "tier2/utlstreambuffer.h"
 #include "filesystem.h"
 #include "datamodel/dmxheader.h"
 #include "dmxserializationdictionary.h"
 #include "tier1/memstack.h"
-#include "tier1/utldict.h"
+#include <algorithm>
+#include <cstring>
+#include <format>
+#include <map>
+#include <optional>
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
 
 
 #define DMX_BINARY_VER_STRINGTABLE 2
@@ -35,8 +45,8 @@ void BeginDMXContext( )
 
 	if ( !s_bAllocatorInitialized )
 	{
-		const int k_nStackSize = 4 * 1024 * 1024;
-		s_DMXAllocator.Init( "DMXAlloc", k_nStackSize, 0, 0, 4 );
+		const int k_nStackSize = 16 * 1024 * 1024;
+		s_DMXAllocator.Init( "DMXAlloc", k_nStackSize, 0, 0, 16 );
 		s_bAllocatorInitialized = true;
 	}
 
@@ -72,8 +82,8 @@ void* DMXAlloc( size_t size )
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
-bool UnserializeTextDMX( const char *pFileName, CUtlBuffer &buf, CDmxElement **ppRoot );
-bool SerializeTextDMX( const char *pFileName, CUtlBuffer &buf, CDmxElement *pRoot );
+bool UnserializeTextDMX( const char *pFileName, ks::text_reader &buf, CDmxElement **ppRoot );
+bool SerializeTextDMX( const char *pFileName, ks::text_writer &buf, CDmxElement *pRoot );
 
 
 //-----------------------------------------------------------------------------
@@ -92,32 +102,33 @@ enum
 class CDmxSerializer
 {
 public:
-	bool Unserialize( CUtlBuffer &buf, int nEncodingVersion, CDmxElement **ppRoot );
-	bool Serialize( CUtlBuffer &buf, CDmxElement *pRoot, const char *pFileName );
+	bool Unserialize( ks::byte_reader &buf, int nEncodingVersion, CDmxElement **ppRoot );
+	bool Serialize( ks::byte_writer &buf, CDmxElement *pRoot, const char *pFileName );
 
 private:
 	// For serialize
-	typedef CUtlDict< int, int > mapSymbolToIndex_t;
+	typedef std::map< std::string, int, std::less<> > mapSymbolToIndex_t;	// case sensitive
+	static int SymbolIndex( const mapSymbolToIndex_t *pSymbols, const char *pStr );
 
 	// Methods related to serialization
 	bool ShouldWriteAttribute( const char *pAttributeName, CDmxAttribute *pAttribute );
-	void SerializeElementIndex( CUtlBuffer& buf, CDmxSerializationDictionary& list, CDmxElement *pElement );
-	void SerializeElementAttribute( CUtlBuffer& buf, CDmxSerializationDictionary& list, CDmxAttribute *pAttribute );
-	void SerializeElementArrayAttribute( CUtlBuffer& buf, CDmxSerializationDictionary& list, CDmxAttribute *pAttribute );
-	bool SaveElementDict( CUtlBuffer& buf, mapSymbolToIndex_t *pStringValueSymbols, CDmxElement *pElement );
-	bool SaveElement( CUtlBuffer& buf, CDmxSerializationDictionary& dict, mapSymbolToIndex_t *pStringValueSymbols, CDmxElement *pElement);
-	void GatherSymbols( CUtlSymbolTableLarge *pStringValueSymbols, CDmxElement *pElement );
+	void SerializeElementIndex( ks::byte_writer &buf, CDmxSerializationDictionary& list, CDmxElement *pElement );
+	void SerializeElementAttribute( ks::byte_writer &buf, CDmxSerializationDictionary& list, CDmxAttribute *pAttribute );
+	void SerializeElementArrayAttribute( ks::byte_writer &buf, CDmxSerializationDictionary& list, CDmxAttribute *pAttribute );
+	bool SaveElementDict( ks::byte_writer &buf, mapSymbolToIndex_t *pStringValueSymbols, CDmxElement *pElement );
+	bool SaveElement( ks::byte_writer &buf, CDmxSerializationDictionary& dict, mapSymbolToIndex_t *pStringValueSymbols, CDmxElement *pElement);
+	void GatherSymbols( mapSymbolToIndex_t *pStringValueSymbols, std::vector< std::string_view > *pSymbolOrder, CDmxElement *pElement );
 
 	// Methods related to unserialization
-	CDmxElement* UnserializeElementIndex( CUtlBuffer &buf, CUtlVector<CDmxElement*> &elementList );
-	void UnserializeElementAttribute( CUtlBuffer &buf, CDmxAttribute *pAttribute, CUtlVector<CDmxElement*> &elementList );
-	void UnserializeElementArrayAttribute( CUtlBuffer &buf, CDmxAttribute *pAttribute, CUtlVector<CDmxElement*> &elementList );
-	bool UnserializeAttributes( CUtlBuffer &buf, CDmxElement *pElement, CUtlVector<CDmxElement*> &elementList, int nStrings, int *offsetTable, char *stringTable, int nEncodingVersion );
-	int GetStringOffsetTable( CUtlBuffer &buf, int *offsetTable, int nStrings );
+	CDmxElement* UnserializeElementIndex( ks::byte_reader &buf, std::vector< CDmxElement* > &elementList );
+	void UnserializeElementAttribute( ks::byte_reader &buf, CDmxAttribute *pAttribute, std::vector< CDmxElement* > &elementList );
+	void UnserializeElementArrayAttribute( ks::byte_reader &buf, CDmxAttribute *pAttribute, std::vector< CDmxElement* > &elementList );
+	bool UnserializeAttributes( ks::byte_reader &buf, CDmxElement *pElement, std::vector< CDmxElement* > &elementList, int nStrings, int *offsetTable, char *stringTable, int nEncodingVersion );
+	int GetStringOffsetTable( ks::byte_reader &buf, int *offsetTable, int nStrings );
 
-	inline char const *Dme_GetStringFromBuffer( CUtlBuffer &buf, bool bUseLargeSymbols, int nStrings, int *offsetTable, char *stringTable )
+	inline char const *Dme_GetStringFromBuffer( ks::byte_reader &buf, bool bUseLargeSymbols, int nStrings, int *offsetTable, char *stringTable )
 	{
-		int uSym = ( bUseLargeSymbols ) ? buf.GetInt() : buf.GetShort();
+		int uSym = ( bUseLargeSymbols ) ? buf.read< int >() : buf.read< short >();
 		if ( uSym >= nStrings )
 			return nullptr;
 		return stringTable + offsetTable[ uSym ];
@@ -145,22 +156,22 @@ bool CDmxSerializer::ShouldWriteAttribute( const char *pAttributeName, CDmxAttri
 //-----------------------------------------------------------------------------
 // Write out the index of the element to avoid looks at read time
 //-----------------------------------------------------------------------------
-void CDmxSerializer::SerializeElementIndex( CUtlBuffer& buf, CDmxSerializationDictionary& list, CDmxElement *pElement )
+void CDmxSerializer::SerializeElementIndex( ks::byte_writer &buf, CDmxSerializationDictionary& list, CDmxElement *pElement )
 {
 	if ( !pElement )
 	{
-		buf.PutInt( ELEMENT_INDEX_NULL ); // invalid handle
+		buf.write< int >( ELEMENT_INDEX_NULL ); // invalid handle
 		return;
 	}
 
-	buf.PutInt( list.Find( pElement ) );
+	buf.write< int >( list.Find( pElement ) );
 }
 
 
 //-----------------------------------------------------------------------------
 // Writes out element attributes
 //-----------------------------------------------------------------------------
-void CDmxSerializer::SerializeElementAttribute( CUtlBuffer& buf, CDmxSerializationDictionary& list, CDmxAttribute *pAttribute )
+void CDmxSerializer::SerializeElementAttribute( ks::byte_writer &buf, CDmxSerializationDictionary& list, CDmxAttribute *pAttribute )
 {
 	SerializeElementIndex( buf, list, pAttribute->GetValue<CDmxElement*>() );
 }
@@ -169,12 +180,12 @@ void CDmxSerializer::SerializeElementAttribute( CUtlBuffer& buf, CDmxSerializati
 //-----------------------------------------------------------------------------
 // Writes out element array attributes
 //-----------------------------------------------------------------------------
-void CDmxSerializer::SerializeElementArrayAttribute( CUtlBuffer& buf, CDmxSerializationDictionary& list, CDmxAttribute *pAttribute )
+void CDmxSerializer::SerializeElementArrayAttribute( ks::byte_writer &buf, CDmxSerializationDictionary& list, CDmxAttribute *pAttribute )
 {
-	const CUtlVector<CDmxElement*> &vec = pAttribute->GetArray<CDmxElement*>();
+	const std::vector< CDmxElement* > &vec = pAttribute->GetArray<CDmxElement*>();
 
-	int nCount = vec.Count();
-	buf.PutInt( nCount );
+	int nCount = std::ssize( vec );
+	buf.write< int >( nCount );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		SerializeElementIndex( buf, list, vec[ i ] );
@@ -185,7 +196,16 @@ void CDmxSerializer::SerializeElementArrayAttribute( CUtlBuffer& buf, CDmxSerial
 //-----------------------------------------------------------------------------
 // Writes out all attributes
 //-----------------------------------------------------------------------------
-bool CDmxSerializer::SaveElement( CUtlBuffer& buf, CDmxSerializationDictionary& list, mapSymbolToIndex_t *pStringValueSymbols, CDmxElement *pElement )
+// Index of pStr in the written symbol table, or -1.
+int CDmxSerializer::SymbolIndex( const mapSymbolToIndex_t *pSymbols, const char *pStr )
+{
+	if ( !pStr )
+		return -1;
+	auto it = pSymbols->find( std::string_view( pStr ) );
+	return it != pSymbols->end() ? it->second : -1;
+}
+
+bool CDmxSerializer::SaveElement( ks::byte_writer &buf, CDmxSerializationDictionary& list, mapSymbolToIndex_t *pStringValueSymbols, CDmxElement *pElement )
 {
 	int nAttributesToSave = 0;
 
@@ -202,7 +222,7 @@ bool CDmxSerializer::SaveElement( CUtlBuffer& buf, CDmxSerializationDictionary& 
 	}
 
 	// Now write them all out.
-	buf.PutInt( nAttributesToSave );
+	buf.write< int >( nAttributesToSave );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		CDmxAttribute *pAttribute = pElement->GetAttribute( i );
@@ -210,8 +230,8 @@ bool CDmxSerializer::SaveElement( CUtlBuffer& buf, CDmxSerializationDictionary& 
 		if ( !ShouldWriteAttribute( pName, pAttribute ) )
 			continue;
 
-		buf.PutInt( pStringValueSymbols->Find( pName ) );
-		buf.PutChar( pAttribute->GetType() );
+		buf.write< int >( SymbolIndex( pStringValueSymbols, pName ) );
+		buf.write< char >( static_cast< char >( pAttribute->GetType() ) );
 		switch( pAttribute->GetType() )
 		{
 		default:
@@ -228,31 +248,41 @@ bool CDmxSerializer::SaveElement( CUtlBuffer& buf, CDmxSerializationDictionary& 
 
 		case AT_STRING:
 			{
-				buf.PutInt( pStringValueSymbols->Find( pAttribute->GetValueString() ) );
+				buf.write< int >( SymbolIndex( pStringValueSymbols, pAttribute->GetValueString() ) );
 			}
 			break;
 		}
 	}
 
-	return buf.IsValid();
+	return buf.ok();
 }
 
-bool CDmxSerializer::SaveElementDict( CUtlBuffer& buf, mapSymbolToIndex_t *pStringValueSymbols, CDmxElement *pElement )
+bool CDmxSerializer::SaveElementDict( ks::byte_writer &buf, mapSymbolToIndex_t *pStringValueSymbols, CDmxElement *pElement )
 {
-	buf.PutInt( pStringValueSymbols->Find( pElement->GetTypeString() ) );
-	buf.PutInt( pStringValueSymbols->Find( pElement->GetName() ) );
-	buf.Put( &pElement->GetId(), sizeof(DmObjectId_t) );
-	return buf.IsValid();
+	buf.write< int >( SymbolIndex( pStringValueSymbols, pElement->GetTypeString() ) );
+	buf.write< int >( SymbolIndex( pStringValueSymbols, pElement->GetName() ) );
+	buf.write_bytes( &pElement->GetId(), sizeof(DmObjectId_t) );
+	return buf.ok();
 }
 
 //-----------------------------------------------------------------------------
 // Main entry point for serialization
 //-----------------------------------------------------------------------------
 
-void CDmxSerializer::GatherSymbols( CUtlSymbolTableLarge *pStringValueSymbols, CDmxElement *pElement )
+// Adds each distinct string once; pSymbolOrder keeps first-seen order (the file's string table order).
+void CDmxSerializer::GatherSymbols( mapSymbolToIndex_t *pStringValueSymbols, std::vector< std::string_view > *pSymbolOrder, CDmxElement *pElement )
 {
-	pStringValueSymbols->AddString( pElement->GetTypeString() );
-	pStringValueSymbols->AddString( pElement->GetName() );
+	auto AddString = [&]( const char *pStr )
+	{
+		if ( !pStr )
+			return;
+		auto [ it, bInserted ] = pStringValueSymbols->try_emplace( pStr, (int)pSymbolOrder->size() );
+		if ( bInserted )
+			pSymbolOrder->push_back( it->first );
+	};
+
+	AddString( pElement->GetTypeString() );
+	AddString( pElement->GetName() );
 
 	int nAttributes = pElement->AttributeCount();
 	for ( int ai = 0; ai < nAttributes; ++ai )
@@ -261,16 +291,16 @@ void CDmxSerializer::GatherSymbols( CUtlSymbolTableLarge *pStringValueSymbols, C
 		if ( !pAttr )
 			continue;
 
-		pStringValueSymbols->AddString( pAttr->GetName() );
+		AddString( pAttr->GetName() );
 
 		if ( pAttr->GetType() == AT_STRING )
 		{
-			pStringValueSymbols->AddString( pAttr->GetValueString() );
+			AddString( pAttr->GetValueString() );
 		}
 	}
 }
 
-bool CDmxSerializer::Serialize( CUtlBuffer &buf, CDmxElement *pRoot, const char *pFileName )
+bool CDmxSerializer::Serialize( ks::byte_writer &buf, CDmxElement *pRoot, const char *pFileName )
 {
 	DmxSerializationHandle_t i;
 
@@ -278,8 +308,9 @@ bool CDmxSerializer::Serialize( CUtlBuffer &buf, CDmxElement *pRoot, const char 
 	CDmxSerializationDictionary dict;
 	dict.BuildElementList( pRoot, true );
 
-	// collect string table
-	CUtlSymbolTableLarge stringSymbols;
+	// collect string table (case sensitive)
+	mapSymbolToIndex_t symbolToIndexMap;
+	std::vector< std::string_view > symbols;
 
 	for ( i = dict.FirstRootElement(); i != DMX_SERIALIZATION_HANDLE_INVALID; i = dict.NextRootElement(i) )
 	{
@@ -287,31 +318,21 @@ bool CDmxSerializer::Serialize( CUtlBuffer &buf, CDmxElement *pRoot, const char 
 		if ( !pElement )
 			return false;
 
-		GatherSymbols( &stringSymbols, pElement );
+		GatherSymbols( &symbolToIndexMap, &symbols, pElement );
 	}
 
 	// write out the symbol table for this file (may be significantly smaller than datamodel's full symbol table)
-	int nSymbols = stringSymbols.GetNumStrings();
+	int nSymbols = std::ssize( symbols );
 
-	buf.PutInt( nSymbols );
+	buf.write< int >( nSymbols );
 
-	CUtlVector< CUtlSymbolLarge > symbols;
-	symbols.EnsureCount( nSymbols );
-	stringSymbols.GetElements( 0, nSymbols, symbols.Base() );
-
-	// It's case sensitive
-	mapSymbolToIndex_t symbolToIndexMap( k_eDictCompareTypeCaseSensitive );
-
-	for ( int si = 0; si < nSymbols; ++si )
+	for ( std::string_view sym : symbols )
 	{
-		CUtlSymbolLarge sym = symbols[ si ];
-		const char *pStr = sym.String();
-		symbolToIndexMap.Insert( pStr, si );
-		buf.PutString( pStr );
+		buf.write_cstring( sym );
 	}
 
 	// First write out the dictionary of all elements (to avoid later stitching up in unserialize)
-	buf.PutInt( dict.RootElementCount() );
+	buf.write< int >( dict.RootElementCount() );
 	for ( i = dict.FirstRootElement(); i != DMX_SERIALIZATION_HANDLE_INVALID; i = dict.NextRootElement(i) )
 	{
 		if ( !SaveElementDict( buf, &symbolToIndexMap, dict.GetRootElement( i ) ) )
@@ -332,22 +353,22 @@ bool CDmxSerializer::Serialize( CUtlBuffer &buf, CDmxElement *pRoot, const char 
 //-----------------------------------------------------------------------------
 // Reads an element index and converts it to a handle (local or external)
 //-----------------------------------------------------------------------------
-CDmxElement* CDmxSerializer::UnserializeElementIndex( CUtlBuffer &buf, CUtlVector<CDmxElement*> &elementList )
+CDmxElement* CDmxSerializer::UnserializeElementIndex( ks::byte_reader &buf, std::vector< CDmxElement* > &elementList )
 {
-	int nElementIndex = buf.GetInt();
+	int nElementIndex = buf.read< int >();
 	if ( nElementIndex == ELEMENT_INDEX_EXTERNAL )
 	{
 		Warning( "Reading externally referenced elements is not supported!\n" );
 
 		char idstr[ 40 ];
-		buf.GetString( idstr, sizeof( idstr ) );
+		buf.read_cstring( idstr, sizeof( idstr ) );
 //		DmObjectId_t id;
 //		UniqueIdFromString( &id, idstr, sizeof( idstr ) );
 
 		return nullptr;
 	}
 
-	Assert( nElementIndex < elementList.Count() );
+	Assert( nElementIndex < std::ssize( elementList ) );
 	Assert( nElementIndex >= 0 || nElementIndex == ELEMENT_INDEX_NULL );
 	if ( nElementIndex < 0 || !elementList[ nElementIndex ] )
 		return nullptr;
@@ -359,7 +380,7 @@ CDmxElement* CDmxSerializer::UnserializeElementIndex( CUtlBuffer &buf, CUtlVecto
 //-----------------------------------------------------------------------------
 // Reads an element attribute
 //-----------------------------------------------------------------------------
-void CDmxSerializer::UnserializeElementAttribute( CUtlBuffer &buf, CDmxAttribute *pAttribute, CUtlVector<CDmxElement*> &elementList )
+void CDmxSerializer::UnserializeElementAttribute( ks::byte_reader &buf, CDmxAttribute *pAttribute, std::vector< CDmxElement* > &elementList )
 {
 	CDmxElement *pElement = UnserializeElementIndex( buf, elementList );
 	pAttribute->SetValue( pElement );
@@ -369,16 +390,16 @@ void CDmxSerializer::UnserializeElementAttribute( CUtlBuffer &buf, CDmxAttribute
 //-----------------------------------------------------------------------------
 // Reads an element array attribute
 //-----------------------------------------------------------------------------
-void CDmxSerializer::UnserializeElementArrayAttribute( CUtlBuffer &buf, CDmxAttribute *pAttribute, CUtlVector<CDmxElement*> &elementList )
+void CDmxSerializer::UnserializeElementArrayAttribute( ks::byte_reader &buf, CDmxAttribute *pAttribute, std::vector< CDmxElement* > &elementList )
 {
-	int nElementCount = buf.GetInt();
-	CUtlVector< CDmxElement* >& elementArray = pAttribute->GetArrayForEdit< CDmxElement* >();
-	elementArray.EnsureCapacity( nElementCount );
+	int nElementCount = buf.read< int >();
+	std::vector< CDmxElement* >& elementArray = pAttribute->GetArrayForEdit< CDmxElement* >();
+	elementArray.reserve( nElementCount );
 
 	for ( int i = 0; i < nElementCount; ++i )
 	{
 		CDmxElement *pElement = UnserializeElementIndex( buf, elementList );
-		elementArray.AddToTail( pElement );
+		elementArray.push_back( pElement );
 	}
 }
 
@@ -386,7 +407,7 @@ void CDmxSerializer::UnserializeElementArrayAttribute( CUtlBuffer &buf, CDmxAttr
 //-----------------------------------------------------------------------------
 // Reads a single element
 //-----------------------------------------------------------------------------
-bool CDmxSerializer::UnserializeAttributes( CUtlBuffer &buf, CDmxElement *pElement, CUtlVector<CDmxElement*> &elementList, int nStrings, int *offsetTable, char *stringTable, int nEncodingVersion )
+bool CDmxSerializer::UnserializeAttributes( ks::byte_reader &buf, CDmxElement *pElement, std::vector< CDmxElement* > &elementList, int nStrings, int *offsetTable, char *stringTable, int nEncodingVersion )
 {
 	CDmxElementModifyScope modify( pElement );
 
@@ -394,7 +415,7 @@ bool CDmxSerializer::UnserializeAttributes( CUtlBuffer &buf, CDmxElement *pEleme
 
 
 	char nameBuf[ 1024 ];
-	int nAttributeCount = buf.GetInt();
+	int nAttributeCount = buf.read< int >();
 	for ( int i = 0; i < nAttributeCount; ++i )
 	{
 		const char *pName = nullptr;
@@ -407,12 +428,12 @@ bool CDmxSerializer::UnserializeAttributes( CUtlBuffer &buf, CDmxElement *pEleme
 			}
 			else
 			{
-				buf.GetString( nameBuf, sizeof( nameBuf ) );
+				buf.read_cstring( nameBuf, sizeof( nameBuf ) );
 				pName = nameBuf;
 			}
 		}
 
-		DmAttributeType_t nAttributeType = (DmAttributeType_t)buf.GetChar();
+		DmAttributeType_t nAttributeType = (DmAttributeType_t)buf.read< char >();
 		Assert( nAttributeType >= AT_FIRST_VALUE_TYPE && nAttributeType < AT_TYPE_COUNT );
 
 		CDmxAttribute *pAttribute = pElement->AddAttribute( pName );
@@ -452,41 +473,31 @@ bool CDmxSerializer::UnserializeAttributes( CUtlBuffer &buf, CDmxElement *pEleme
 		}
 	}
 
-	return buf.IsValid();
+	return buf.ok();
 }
 
 
-int CDmxSerializer::GetStringOffsetTable( CUtlBuffer &buf, int *offsetTable, int nStrings )
+int CDmxSerializer::GetStringOffsetTable( ks::byte_reader &buf, int *offsetTable, int nStrings )
 {
-	int nBytes = buf.GetBytesRemaining();
-	char *pBegin = ( char* )buf.PeekGet();
-	char *pBytes = pBegin;
+	const std::string_view table = ks::text_view( buf.rest() );
+	size_t nPos = 0;
 	for ( int i = 0; i < nStrings; ++i )
 	{
-		offsetTable[ i ] = pBytes - pBegin;
+		offsetTable[ i ] = nPos;
 
-		do
-		{
-			// grow/shift utlbuffer if it hasn't loaded the entire string table into memory
-			if ( pBytes - pBegin >= nBytes )
-			{
-				pBegin = ( char* )buf.PeekGet( nBytes + 1, 0 );
-				if ( !pBegin )
-					return false;
-				pBytes = pBegin + nBytes;
-				nBytes = buf.GetBytesRemaining();
-			}
-		}
-		while ( *pBytes++ );
+		const size_t nEnd = table.find( '\0', nPos );
+		if ( nEnd == std::string_view::npos )
+			return -1;
+		nPos = nEnd + 1;
 	}
 
-	return pBytes - pBegin;
+	return nPos;
 }
 
 //-----------------------------------------------------------------------------
 // Main entry point for the unserialization
 //-----------------------------------------------------------------------------
-bool CDmxSerializer::Unserialize( CUtlBuffer &buf, int nEncodingVersion, CDmxElement **ppRoot )
+bool CDmxSerializer::Unserialize( ks::byte_reader &buf, int nEncodingVersion, CDmxElement **ppRoot )
 {
 	if ( nEncodingVersion < 0 || nEncodingVersion > CURRENT_BINARY_ENCODING )
 		return false;
@@ -495,9 +506,9 @@ bool CDmxSerializer::Unserialize( CUtlBuffer &buf, int nEncodingVersion, CDmxEle
 	bool bUseLargeSymbols = nEncodingVersion >= DMX_BINARY_VER_STRINGTABLE_LARGESYMBOLS;
 
 	// Keep reading until we read a NULL terminator
-	while( buf.GetChar() != 0 )
+	while( buf.read< char >() != 0 )
 	{
-		if ( !buf.IsValid() )
+		if ( !buf.ok() )
 			return false;
 	}
 
@@ -509,11 +520,11 @@ bool CDmxSerializer::Unserialize( CUtlBuffer &buf, int nEncodingVersion, CDmxEle
 	{
 		if ( nEncodingVersion >= DMX_BINARY_VER_GLOBAL_STRINGTABLE )
 		{
-			nStrings = buf.GetInt();
+			nStrings = buf.read< int >();
 		}
 		else
 		{
-			nStrings = buf.GetShort();
+			nStrings = buf.read< short >();
 		}
 
 
@@ -523,13 +534,15 @@ bool CDmxSerializer::Unserialize( CUtlBuffer &buf, int nEncodingVersion, CDmxEle
 
 			// this causes entire string table to be mapped in memory at once
 			int nStringMemoryUsage = GetStringOffsetTable( buf, offsetTable, nStrings );
+			if ( nStringMemoryUsage < 0 )
+				return false;
 			stringTable = ( char* )stackalloc( nStringMemoryUsage * sizeof( char ) );
-			buf.Get( stringTable, nStringMemoryUsage );
+			buf.read_bytes( stringTable, nStringMemoryUsage );
 		}
 	}
 
 	// Read in the element count.
-	int nElementCount = buf.GetInt();
+	int nElementCount = buf.read< int >();
 	if ( !nElementCount )
 	{
 		// Empty (but valid) file
@@ -547,7 +560,7 @@ bool CDmxSerializer::Unserialize( CUtlBuffer &buf, int nEncodingVersion, CDmxEle
 	DmObjectId_t id;
 
 	// Read + create all elements
-	CUtlVector<CDmxElement*> elementList( 0, nElementCount );
+	std::vector< CDmxElement* > elementList; elementList.reserve( nElementCount );
 	for ( int i = 0; i < nElementCount; ++i )
 	{
 		const char *pType = nullptr;
@@ -559,7 +572,7 @@ bool CDmxSerializer::Unserialize( CUtlBuffer &buf, int nEncodingVersion, CDmxEle
 		}
 		else
 		{
-			buf.GetString( pTypeBuf, sizeof( pTypeBuf ) );
+			buf.read_cstring( pTypeBuf, sizeof( pTypeBuf ) );
 			pType = pTypeBuf;
 		}
 
@@ -572,11 +585,11 @@ bool CDmxSerializer::Unserialize( CUtlBuffer &buf, int nEncodingVersion, CDmxEle
 		}
 		else
 		{
-			buf.GetString( pNameBuf, sizeof( pNameBuf ) );
+			buf.read_cstring( pNameBuf, sizeof( pNameBuf ) );
 			pName = pNameBuf;
 		}
 
-		buf.Get( &id, sizeof(DmObjectId_t) );
+		buf.read_bytes( &id, sizeof(DmObjectId_t) );
 
 		CDmxElement *pElement = new CDmxElement( pType );
 		{
@@ -585,7 +598,7 @@ bool CDmxSerializer::Unserialize( CUtlBuffer &buf, int nEncodingVersion, CDmxEle
 			pAttribute->SetValue( pName );
 			pElement->SetId( id );
 		}
-		elementList.AddToTail( pElement );
+		elementList.push_back( pElement );
 	}
 
 	// The root is the 0th element
@@ -600,28 +613,35 @@ bool CDmxSerializer::Unserialize( CUtlBuffer &buf, int nEncodingVersion, CDmxEle
 		}
 	}
 
-	return buf.IsValid();
+	return buf.ok();
 }
 
 
 //-----------------------------------------------------------------------------
 // Serialization main entry point
 //-----------------------------------------------------------------------------
-bool SerializeDMX( CUtlBuffer &buf, CDmxElement *pRoot, const char *pFileName )
+// Write the format name into the file using XML format so that 
+// 3rd-party XML readers can read the file without fail
+static std::string MakeDMXHeader( const char *pEncodingName, int nEncodingVersion )
 {
-	// Write the format name into the file using XML format so that 
-	// 3rd-party XML readers can read the file without fail
-	const char *pEncodingName = buf.IsText() ? "keyvalues2" : "binary";
-	int nEncodingVersion = buf.IsText() ? 1 : CURRENT_BINARY_ENCODING;
 	const char *pFormatName = GENERIC_DMX_FORMAT;
 	int nFormatVersion = 1; // HACK - we should have some way of automatically updating this when the encoding version changes!
-	buf.Printf( "%s encoding %s %d format %s %d %s\n", DMX_VERSION_STARTING_TOKEN, pEncodingName, nEncodingVersion, pFormatName, nFormatVersion, DMX_VERSION_ENDING_TOKEN );
+	return std::format( "{} encoding {} {} format {} {} {}\n", DMX_VERSION_STARTING_TOKEN, pEncodingName, nEncodingVersion, pFormatName, nFormatVersion, DMX_VERSION_ENDING_TOKEN );
+}
 
-	if ( buf.IsText() )
-		return SerializeTextDMX( pFileName ? pFileName : "<no file>", buf, pRoot );
+bool SerializeDMX( ks::byte_writer &buf, CDmxElement *pRoot, const char *pFileName )
+{
+	buf.write_cstring( MakeDMXHeader( "binary", CURRENT_BINARY_ENCODING ) );
 
 	CDmxSerializer dmxSerializer;
 	return dmxSerializer.Serialize( buf, pRoot, pFileName );
+}
+
+bool SerializeDMX( ks::text_writer &buf, CDmxElement *pRoot, const char *pFileName )
+{
+	buf.put( MakeDMXHeader( "keyvalues2", 1 ) );
+
+	return SerializeTextDMX( pFileName ? pFileName : "<no file>", buf, pRoot );
 }
 
 bool SerializeDMX( const char *pFileName, const char *pPathID, bool bTextMode, CDmxElement *pRoot )
@@ -640,30 +660,26 @@ bool SerializeDMX( const char *pFileName, const char *pPathID, bool bTextMode, C
 		}
 	}
 
+	std::span< const std::byte > data;
+	ks::byte_writer binary;
+	ks::text_writer text;
 	if ( !bTextMode )
 	{
-		CUtlStreamBuffer buf( pFullPath, pPathID, 0 );
-		if ( !buf.IsValid() )
-		{
-			Warning( "SerializeDMX: Unable to open file \"%s\"\n", pFullPath );
+		if ( !SerializeDMX( binary, pRoot, pFullPath ) )
 			return false;
-		}
-
-		return SerializeDMX( buf, pRoot, pFullPath );
+		data = binary.bytes();
 	}
 	else
 	{
-		CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
-
-		bool bOk = SerializeDMX( buf, pRoot, pFullPath );
-		if ( !bOk )
+		if ( !SerializeDMX( text, pRoot, pFullPath ) )
 			return false;
+		data = text.bytes();
+	}
 
-		if ( !g_pFullFileSystem->WriteFile( pFullPath, pPathID, buf ) )
-		{
-			Warning( "SerializeDMX: Unable to open file \"%s\"\n", pFullPath );
-			return false;
-		}
+	if ( !g_pFullFileSystem->WriteFile( pFullPath, pPathID, data ) )
+	{
+		Warning( "SerializeDMX: Unable to open file \"%s\"\n", pFullPath );
+		return false;
 	}
 
 	return true;
@@ -673,17 +689,22 @@ bool SerializeDMX( const char *pFileName, const char *pPathID, bool bTextMode, C
 //-----------------------------------------------------------------------------
 // Read the header, return the version (or false if it's not a DMX file)
 //-----------------------------------------------------------------------------
-bool ReadDMXHeader( CUtlBuffer &buf, char *pEncodingName, int nEncodingNameLen, int &nEncodingVersion, char *pFormatName, int nFormatNameLen, int &nFormatVersion )
+static void CopyToBuffer( char *pDest, int nDestLen, std::string_view src )
 {
-	// Make the buffer capable of being read as text
-	bool bBufIsText = buf.IsText();
-	bool bBufHasCRLF = buf.ContainsCRLF();
-	buf.SetBufferType( true, !bBufIsText || bBufHasCRLF );
+	const size_t nCopy = std::min( src.size(), (size_t)nDestLen - 1 );
+	memcpy( pDest, src.data(), nCopy );
+	pDest[ nCopy ] = '\0';
+}
 
+static bool ParseDMXHeader( ks::text_reader &buf, bool bBufIsText, char *pEncodingName, int nEncodingNameLen, int &nEncodingVersion, char *pFormatName, int nFormatNameLen, int &nFormatVersion )
+{
 	char header[ DMX_MAX_HEADER_LENGTH ] = { 0 };
-	bool bOk = buf.ParseToken( DMX_VERSION_STARTING_TOKEN, DMX_VERSION_ENDING_TOKEN, header, sizeof( header ) );
+	std::optional< std::string_view > headerToken = buf.read_between( DMX_VERSION_STARTING_TOKEN, DMX_VERSION_ENDING_TOKEN );
+	bool bOk = headerToken.has_value();
 	if ( bOk )
 	{
+		CopyToBuffer( header, sizeof( header ), *headerToken );
+
 		// sscanf considered harmful. We don't have POSIX 2008 support on OS X and "C11 Annex K" is optional... (optional specs considered useful)
 		char pTmpEncodingName[ sizeof( header ) ] = { 0 };
 		char pTmpFormatName  [ sizeof( header ) ] = { 0 };
@@ -701,10 +722,12 @@ bool ReadDMXHeader( CUtlBuffer &buf, char *pEncodingName, int nEncodingNameLen, 
 	// TODO - retire legacy format version reading
 	if ( !bOk )
 	{
-		buf.SeekGet( CUtlBuffer::SEEK_HEAD, 0 );
-		bOk = buf.ParseToken( DMX_LEGACY_VERSION_STARTING_TOKEN, DMX_LEGACY_VERSION_ENDING_TOKEN, pFormatName, nFormatNameLen );
+		buf.seek( 0 );
+		std::optional< std::string_view > legacyToken = buf.read_between( DMX_LEGACY_VERSION_STARTING_TOKEN, DMX_LEGACY_VERSION_ENDING_TOKEN );
+		bOk = legacyToken.has_value();
 		if ( bOk )
 		{
+			CopyToBuffer( pFormatName, nFormatNameLen, *legacyToken );
 			nEncodingVersion = 0;
 			nFormatVersion = 0; // format version is encoded in the format name string
 
@@ -725,22 +748,34 @@ bool ReadDMXHeader( CUtlBuffer &buf, char *pEncodingName, int nEncodingNameLen, 
 		}
 	}
 
-	// Restore the buffer type
-	buf.SetBufferType( bBufIsText, bBufHasCRLF );
-	return bOk && buf.IsValid();
+	return bOk && buf.ok();
+}
+
+static bool ReadDMXHeader( ks::byte_reader &buf, char *pEncodingName, int nEncodingNameLen, int &nEncodingVersion, char *pFormatName, int nFormatNameLen, int &nFormatVersion )
+{
+	ks::text_reader text( ks::text_view( buf.bytes() ) );
+	text.seek( buf.tell() );
+	if ( !ParseDMXHeader( text, false, pEncodingName, nEncodingNameLen, nEncodingVersion, pFormatName, nFormatNameLen, nFormatVersion ) )
+		return false;
+
+	buf.seek( text.tell() );
+	return buf.ok();
+}
+
+static bool ReadDMXHeader( ks::text_reader &buf, char *pEncodingName, int nEncodingNameLen, int &nEncodingVersion, char *pFormatName, int nFormatNameLen, int &nFormatVersion )
+{
+	return ParseDMXHeader( buf, true, pEncodingName, nEncodingNameLen, nEncodingVersion, pFormatName, nFormatNameLen, nFormatVersion );
 }
 
 
 //-----------------------------------------------------------------------------
 // Unserialization main entry point
 //-----------------------------------------------------------------------------
-bool UnserializeDMX( CUtlBuffer &buf, CDmxElement **ppRoot, const char *pFileName )
+template < class Reader >
+static bool ReadDMXHeaderAndWarn( Reader &buf, const char *pFileName, int &nEncodingVersion )
 {
 	// NOTE: Checking the format name string for a version check here is how you'd do it
-	*ppRoot = nullptr;
-
-	// Read the standard buffer header
-	int nEncodingVersion, nFormatVersion;
+	int nFormatVersion;
 	char pEncodingName[ DMX_MAX_FORMAT_NAME_MAX_LENGTH ];
 	char pFormatName  [ DMX_MAX_FORMAT_NAME_MAX_LENGTH ];
 	if ( !ReadDMXHeader( buf,
@@ -754,13 +789,29 @@ bool UnserializeDMX( CUtlBuffer &buf, CDmxElement **ppRoot, const char *pFileNam
 		Warning( "reading file '%s' of legacy format '%s' - dmxconvert this file to a newer format!\n", pFileName ? pFileName : "<no file>", pFormatName );
 	}
 
-	// Only allow binary protocol files
-	bool bIsBinary = ( buf.GetFlags() & CUtlBuffer::TEXT_BUFFER ) == 0;
-	if ( bIsBinary )
-	{
-		CDmxSerializer dmxUnserializer;
-		return dmxUnserializer.Unserialize( buf, nEncodingVersion, ppRoot );
-	}
+	return true;
+}
+
+bool UnserializeDMX( ks::byte_reader &buf, CDmxElement **ppRoot, const char *pFileName )
+{
+	*ppRoot = nullptr;
+
+	int nEncodingVersion;
+	if ( !ReadDMXHeaderAndWarn( buf, pFileName, nEncodingVersion ) )
+		return false;
+
+	CDmxSerializer dmxUnserializer;
+	return dmxUnserializer.Unserialize( buf, nEncodingVersion, ppRoot );
+}
+
+bool UnserializeDMX( ks::text_reader &buf, CDmxElement **ppRoot, const char *pFileName )
+{
+	*ppRoot = nullptr;
+
+	int nEncodingVersion;
+	if ( !ReadDMXHeaderAndWarn( buf, pFileName, nEncodingVersion ) )
+		return false;
+
 	return UnserializeTextDMX( pFileName ? pFileName : "<no file>", buf, ppRoot );
 }
 
@@ -780,31 +831,21 @@ bool UnserializeDMX( const char *pFileName, const char *pPathID, bool bTextMode,
 		}
 	}
 
-	int nFlags = CUtlBuffer::READ_ONLY;
+	std::optional< std::vector< std::byte > > data = g_pFullFileSystem->ReadFile( pFullPath, pPathID );
+	if ( !data )
+	{
+		Warning( "UnserializeDMX: Unable to open file \"%s\"\n", pFullPath );
+		return false;
+	}
+
 	if ( !bTextMode )
 	{
-		CUtlStreamBuffer buf( pFullPath, pPathID, nFlags );
-		if ( !buf.IsValid() )
-		{
-			Warning( "UnserializeDMX: Unable to open file \"%s\"\n", pFullPath );
-			return false;
-		}
-
+		ks::byte_reader buf( *data );
 		return UnserializeDMX( buf, ppRoot, pFullPath );
 	}
-	else
-	{
-		nFlags |= CUtlBuffer::TEXT_BUFFER;
-		
-		CUtlBuffer buf( 0, 0, nFlags );
-		if ( !g_pFullFileSystem->ReadFile( pFullPath, pPathID, buf ) )
-		{
-			Warning( "UnserializeDMX: Unable to open file \"%s\"\n", pFullPath );
-			return false;
-		}
 
-		return UnserializeDMX( buf, ppRoot, pFullPath ); 
-	}
+	ks::text_reader buf( ks::text_view( *data ) );
+	return UnserializeDMX( buf, ppRoot, pFullPath );
 }
 
 

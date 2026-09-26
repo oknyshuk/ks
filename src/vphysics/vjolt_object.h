@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright 2022 Joshua Ashton and Josh Dowell (Slartibarty)
+
 //=================================================================================================
 //
 // A physics object
@@ -268,7 +271,7 @@ private:
 	unsigned short m_GameMaterial = 0;
 
 
-	CUtlVector< IJoltObjectListener * > m_Listeners;
+	std::vector< IJoltObjectListener * > m_Listeners;
 
 	// Shadow variables
 	JoltPhysicsShadowController *m_pShadowController = nullptr;

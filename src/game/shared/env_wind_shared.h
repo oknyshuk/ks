@@ -10,7 +10,6 @@
 
 #include "reflect_annotations.h"
 
-#include "utllinkedlist.h"
 #include "vstdlib/random.h"
 #include "tier0/dbg.h"
 #include "mathlib/vector.h"
@@ -21,121 +20,6 @@
 // Forward declarations
 //-----------------------------------------------------------------------------
 class CSoundPatch;
-
-//-----------------------------------------------------------------------------
-// Class used to help store events that occurred over time
-//-----------------------------------------------------------------------------
-template <class T, class I>
-class CTimedEventQueue
-{
-public:
-	// The time passed in here represents the amount of time the queue stores
-	CTimedEventQueue( float flMaxTime );
-
-	// REI: Not sure why I have to declare these as delete, shouldn't that be inherited from CUtlLinkedList having a deleted copy constructor?
-	CTimedEventQueue( const CTimedEventQueue& ) = delete;
-	CTimedEventQueue& operator= ( const CTimedEventQueue& ) = delete;
-
-	// Adds an event to the queue, will pop off stale events from the queue
-	// NOTE: All events added to the queue must monotonically increase in time!
-	I PushEvent( float flTime, const T &data );
-
-	// Grabs the last event that happened before or at the specified time
-	I GetEventIndex( float flTime ) const;
-
-	// Gets event information
-	float GetEventTime( I i ) const;
-	const T &GetEventData( I i ) const;
-
-private:
-	struct QueueEntry_t
-	{
-		float	m_flTime;
-		T		m_Data;
-	};
-
-	float m_flQueueHeadTime;
-	float m_flMaxTime;
-	CUtlLinkedList< T, I >	m_Queue;
-};
-
-
-//-----------------------------------------------------------------------------
-// The time passed in here represents the amount of time the queue stores
-//-----------------------------------------------------------------------------
-template <class T, class I>
-CTimedEventQueue<T,I>::CTimedEventQueue( float flMaxTime ) : m_flMaxTime(flMaxTime)
-{
-	// The length of time of events in the queue must be reasonable
-	Assert( m_flMaxTime > 0.0f );
-	m_flQueueHeadTime = -FLT_MAX;
-}
-
-
-//-----------------------------------------------------------------------------
-// Adds an event to the queue, will pop off stale events from the queue
-//-----------------------------------------------------------------------------
-template <class T, class I>
-I CTimedEventQueue<T,I>::PushEvent( float flTime, const T &data )
-{
-	Assert( m_flQueueHeadTime <= flTime );
-	m_flQueueHeadTime = flTime;
-
-	// First push the event...
-	I idx = m_Queue.AddToHead();
-	m_Queue[idx].m_flTime = flTime;
-	m_Queue[idx].m_Data = data;
-	
-	// Then retire stale events...
-	I i = m_Queue.Tail();
-	while (m_Queue[i].m_flTime < m_flQueueHeadTime - m_flMaxTime )
-	{
-		I prev = m_Queue.Prev(i);
-		Assert( prev != m_Queue.InvalidIndex() );
-		m_Queue.Remove(i);
-		i = prev;
-	}
-
-	return idx;
-}
-
-
-//-----------------------------------------------------------------------------
-// Grabs the last event that happened before or at the specified time
-//-----------------------------------------------------------------------------
-template <class T, class I>
-I CTimedEventQueue<T,I>::GetEventIndex( float flTime ) const
-{
-	// This checks for a request that fell off the queue
-	Assert( (flTime >= m_flQueueHeadTime - m_flMaxTime) && (flTime <= m_flQueueHeadTime) );
-	
-	// Then retire stale events...
-	I i = m_Queue.Head();
-	while( m_Queue[i].m_flTime > flTime )
-	{
-		i = m_Queue.Next(i);
-		Assert( i != m_Queue.InvalidIndex() );
-	}
-
-	return i;
-}
-
-
-//-----------------------------------------------------------------------------
-// Gets event information
-//-----------------------------------------------------------------------------
-template <class T, class I>
-inline float CTimedEventQueue<T,I>::GetEventTime( I i )	const
-{
-	return m_Queue[i].m_flTime;
-}
-
-template <class T, class I>
-inline const T &CTimedEventQueue<T,I>::GetEventData( I i ) const
-{
-	return m_Queue[i].m_Data;
-}
-
 
 //-----------------------------------------------------------------------------
 // Implementation of the class that computes windspeed
@@ -211,18 +95,6 @@ public:
 #endif
 
 private:
-	struct WindAveEvent_t
-	{
-		float m_flStartWindSpeed;	// the wind speed at the time of the event
-		float m_flAveWindSpeed;		// the average wind speed of the event
-	};
-
-	struct WindVariationEvent_t
-	{
-		float m_flWindAngleVariation;
-		float m_flWindSpeedVariation;
-	};
-
 	void ComputeWindVariation( float flTime );
 
 	// Updates the wind sound
@@ -255,10 +127,6 @@ private:
 
 	// Used to generate the wind sound...
 	CSoundPatch *m_pWindSound;
-
-	// Event history required for prediction
-	CTimedEventQueue< WindAveEvent_t, unsigned short >	m_WindAveQueue;
-	CTimedEventQueue< WindVariationEvent_t, unsigned short > m_WindVariationQueue;
 };
 
 //-----------------------------------------------------------------------------

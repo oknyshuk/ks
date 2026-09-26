@@ -394,8 +394,8 @@ public:
 	FORCEINLINE uint32 GetMaxAnisotropy() const { return 1 << m_nAnisoExp; }
 	FORCEINLINE void SetMaxAnisotropy( uint32 nMaxAniso )
 	{
-		uint32 nAnisoExp = uint32( FastLog2( MAX( nMaxAniso, 1 ) ) );
-		m_nAnisoExp = MIN( nAnisoExp, 7 );
+		uint32 nAnisoExp = uint32( FastLog2( std::max<std::common_type_t<uint32, int>>( nMaxAniso, 1 ) ) );
+		m_nAnisoExp = std::min<std::common_type_t<uint32, int>>( nAnisoExp, 7 );
 	}
 
 	FORCEINLINE RsComparison_t GetComparisonFunc() const { return static_cast< RsComparison_t >( m_nComparisonFunc ); }
@@ -434,18 +434,18 @@ public:
 
 	FORCEINLINE void SetMinMaxLod( uint32 nMinLod, uint32 nMaxLod )
 	{
-		m_nMinLod = MIN( 15, nMinLod );
-		m_nMaxLod = MIN( 15, nMaxLod );
+		m_nMinLod = std::min<std::common_type_t<int, uint32>>( 15, nMinLod );
+		m_nMaxLod = std::min<std::common_type_t<int, uint32>>( 15, nMaxLod );
 	}
 
 	FORCEINLINE void SetMinLod( uint32 nMinLod )
 	{
-		m_nMinLod = MIN( 15, nMinLod );
+		m_nMinLod = std::min<std::common_type_t<int, uint32>>( 15, nMinLod );
 	}
 
 	FORCEINLINE void SetMaxLod( uint32 nMaxLod )
 	{
-		m_nMaxLod = MIN( 15, nMaxLod );
+		m_nMaxLod = std::min<std::common_type_t<int, uint32>>( 15, nMaxLod );
 	}
 
 	bool GetFetch4Enabled() const { return m_nFetch4Enable ? true : false; }

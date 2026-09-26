@@ -13,6 +13,7 @@
 
 #include "reflect_annotations.h"
 #include "shareddefs.h"
+#include <vector>
 
 #define ORDER_BITS			4
 
@@ -228,7 +229,7 @@ public:
 	};
 
 private:
-	CUtlVector< CAnimationLayer	> m_AnimOverlay;
+	std::vector< CAnimationLayer > m_AnimOverlay;
 	//int				m_nActiveLayers;
 	//int				m_nActiveBaseLayers;
 
@@ -307,7 +308,7 @@ EXTERN_SEND_TABLE(DT_BaseAnimatingOverlay);
 
 inline int CBaseAnimatingOverlay::GetNumAnimOverlays() const
 {
-	return m_AnimOverlay.Count();
+	return std::ssize( m_AnimOverlay );
 }
 
 // ------------------------------------------------------------------------------------------ //

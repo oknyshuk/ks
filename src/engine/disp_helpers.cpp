@@ -8,9 +8,6 @@
 
 #include "disp_helpers.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 void CalcMaxNumVertsAndIndices( int power, int *nVerts, int *nIndices )
 {
 	int sideLength = (1 << power) + 1;

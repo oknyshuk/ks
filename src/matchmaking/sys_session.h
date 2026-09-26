@@ -7,6 +7,8 @@
 #ifndef SYS_SESSION_H
 #define SYS_SESSION_H
 
+#include "tier1/map_ops.h"
+
 class CSysSessionBase;
 class CSysSessionHost;
 class CSysSessionClient;
@@ -198,7 +200,7 @@ protected:
 	float m_flTimeOperationStarted;
 	float m_flInitializeTimestamp;
 
-	CUtlMap< XUID, double, int, CDefLess< XUID > > m_mapKickedPlayers;
+	std::map< XUID, double > m_mapKickedPlayers;
 };
 
 class CSysSessionClient : public CSysSessionBase

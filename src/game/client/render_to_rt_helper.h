@@ -9,7 +9,7 @@
 #define RENDER_TO_RT_HELPER_H
 
 
-#include "utllinkedlist.h"
+#include <vector>
 #include "irendertorthelperobject.h"
 
 //-----------------------------------------------------------------------------
@@ -36,7 +36,7 @@ public:
 	void LookAt( Camera_t &camera, const Vector &vecCenter, float flRadius, QAngle cameraAngles, Vector cameraOffset );
 
 private:
-	CUtlLinkedList< RenderToRTData_t * > m_objectsToRender;
+	std::vector< RenderToRTData_t * > m_objectsToRender;
 	RenderToRTData_t *m_pCurrentObjectToRender;
 	MaterialLightingState_t m_LightingState;	
 

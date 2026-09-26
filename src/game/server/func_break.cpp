@@ -25,9 +25,6 @@
 #include "tier0/icommandline.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar func_break_max_pieces( "func_break_max_pieces", "15", FCVAR_ARCHIVE | FCVAR_REPLICATED );
 ConVar func_break_reduction_factor( "func_break_reduction_factor", ".5" );
 extern ConVar breakable_disable_gib_limit;
@@ -920,7 +917,7 @@ void CBreakable::Die( void )
 		else if ( m_PerformanceMode == PM_REDUCED_GIBS )
 		{
 			int iNewCount = iCount * func_break_reduction_factor.GetFloat();
-			iCount = MAX( iNewCount, 1 );
+			iCount = std::max( iNewCount, 1 );
 		}
 	}
 

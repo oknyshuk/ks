@@ -12,9 +12,6 @@
 #include "view.h"
 #include "precache_register.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static IMaterial *g_pSmokeFogMaterial = nullptr;
 
 
@@ -79,10 +76,10 @@ void DrawSmokeFogOverlay()
 	// the fog overlay. 
 	Vector vColor = g_SmokeFogOverlayColor/* / g_SmokeFogOverlayAlpha*/;
 
-	vColor.x = MIN(MAX(vColor.x, 0), 1);
-	vColor.y = MIN(MAX(vColor.y, 0), 1);
-	vColor.z = MIN(MAX(vColor.z, 0), 1);
-	float alpha = MIN(MAX(g_SmokeFogOverlayAlpha, 0), 1);
+	vColor.x = std::min<std::common_type_t<float, int>>(std::max<std::common_type_t<vec_t, int>>(vColor.x, 0), 1);
+	vColor.y = std::min<std::common_type_t<float, int>>(std::max<std::common_type_t<vec_t, int>>(vColor.y, 0), 1);
+	vColor.z = std::min<std::common_type_t<float, int>>(std::max<std::common_type_t<vec_t, int>>(vColor.z, 0), 1);
+	float alpha = std::min<std::common_type_t<float, int>>(std::max<std::common_type_t<float, int>>(g_SmokeFogOverlayAlpha, 0), 1);
 
 	meshBuilder.Begin( pMesh, MATERIAL_QUADS, 1 );
 

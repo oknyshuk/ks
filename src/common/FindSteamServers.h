@@ -36,15 +36,19 @@
 #else
 
 	#ifndef STEAM_API
-		#ifdef STEAM_EXPORTS
-			#define STEAM_API __declspec(dllexport)
+		#ifdef _WIN32
+			#ifdef STEAM_EXPORTS
+				#define STEAM_API __declspec(dllexport)
+			#else
+				#define STEAM_API __declspec(dllimport)
+			#endif
 		#else
-			#define STEAM_API __declspec(dllimport)
+			#define STEAM_API
 		#endif
 	#endif
 
 	#ifndef STEAM_CALL
-		#define STEAM_CALL __cdecl
+		#define STEAM_CALL 
 	#endif
 
 	#define STEAM_FSS_CALL STEAM_CALL

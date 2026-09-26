@@ -36,9 +36,9 @@ public:
 	template < typename Functor >
 	bool ForEachBot( Functor &func )
 	{
-		for( int i=m_botList.Head(); i != m_botList.InvalidIndex(); i = m_botList.Next( i ) )
+		for( INextBot *bot : m_botList )
 		{
-			if ( !func( m_botList[i] ) )
+			if ( !func( bot ) )
 			{
 				return false;
 			}
@@ -56,9 +56,9 @@ public:
 	template < typename Functor >
 	bool ForEachCombatCharacter( Functor &func )
 	{
-		for( int i=m_botList.Head(); i != m_botList.InvalidIndex(); i = m_botList.Next( i ) )
+		for( INextBot *bot : m_botList )
 		{
-			if ( !func( m_botList[i]->GetEntity() ) )
+			if ( !func( bot->GetEntity() ) )
 			{
 
 				return false;
@@ -77,13 +77,13 @@ public:
 		INextBot *close = nullptr;
 		float closeRangeSq = FLT_MAX;
 
-		for( int i=m_botList.Head(); i != m_botList.InvalidIndex(); i = m_botList.Next( i ) )
+		for( INextBot *bot : m_botList )
 		{
-			float rangeSq = ( m_botList[i]->GetEntity()->GetAbsOrigin() - pos ).LengthSqr();
-			if ( rangeSq < closeRangeSq && filter( m_botList[i] ) )
+			float rangeSq = ( bot->GetEntity()->GetAbsOrigin() - pos ).LengthSqr();
+			if ( rangeSq < closeRangeSq && filter( bot ) )
 			{
 				closeRangeSq = rangeSq;
-				close = m_botList[i];
+				close = bot;
 			}
 		}
 
@@ -131,7 +131,7 @@ private:
 	int Register( INextBot *bot );
 	void UnRegister( INextBot *bot );
 
-	CUtlLinkedList< INextBot * > m_botList;				// list of all active NextBots
+	std::vector< INextBot * > m_botList;				// list of all active NextBots
 
 	int m_iUpdateTickrate;
 	double m_CurUpdateStartTime;
@@ -145,7 +145,7 @@ private:
 		enum { MAX_DEBUG_NAME_SIZE = 128 };
 		char name[ MAX_DEBUG_NAME_SIZE ];
 	};
-	CUtlVector< DebugFilter > m_debugFilterList;
+	std::vector< DebugFilter > m_debugFilterList;
 
 	INextBot *m_selectedBot;						// selected bot for further debug operations
 
@@ -153,7 +153,7 @@ private:
 
 inline int NextBotManager::GetNextBotCount( void ) const
 {
-	return m_botList.Count();
+	return (int)m_botList.size();
 }
 
 inline bool NextBotManager::IsDebugging( unsigned int type ) const

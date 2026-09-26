@@ -12,9 +12,6 @@
 #include "bitbuf.h"
 #include "fmtstr.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 //
 // Implementation
@@ -177,9 +174,9 @@ KeyValues * CMatchNetworkMsgControllerBase::UnpackGameDetailsFromQOS( MM_GameDet
 	//
 	// Check if we have correct header
 	//
-	CUtlBuffer bufQos( pvQosReply->m_pvData, pvQosReply->m_numDataBytes, CUtlBuffer::READ_ONLY );
-	int iProtocol = bufQos.GetInt();
-	int iVersion = bufQos.GetInt();
+	ks::byte_reader bufQos( pvQosReply->m_pvData, pvQosReply->m_numDataBytes );
+	int iProtocol = bufQos.read<int>();
+	int iVersion = bufQos.read<int>();
 
 	if ( iProtocol != g_pMatchExtensions->GetINetSupport()->GetEngineBuildNumber() )
 		return nullptr;
@@ -198,7 +195,7 @@ KeyValues * CMatchNetworkMsgControllerBase::UnpackGameDetailsFromQOS( MM_GameDet
 	}
 
 	// Read the terminator
-	int iTerm = bufQos.GetInt();
+	int iTerm = bufQos.read<int>();
 	if ( iTerm != 0 )
 	{
 		DevWarning( "UnpackGameDetailsFromQOS found bad QOS block terminator!\n" );
@@ -207,7 +204,7 @@ KeyValues * CMatchNetworkMsgControllerBase::UnpackGameDetailsFromQOS( MM_GameDet
 	return pDetails;
 }
 
-void CMatchNetworkMsgControllerBase::PackageGameDetailsForQOS( KeyValues *pSettings, CUtlBuffer &buf )
+void CMatchNetworkMsgControllerBase::PackageGameDetailsForQOS( KeyValues *pSettings, ks::byte_writer &buf )
 {
 	KeyValues *pDetails = GetLobbyDetailsTemplate( "qos", pSettings );
 	KeyValues::AutoDelete autodelete( pDetails );
@@ -216,10 +213,10 @@ void CMatchNetworkMsgControllerBase::PackageGameDetailsForQOS( KeyValues *pSetti
 	pDetails->MergeFrom( pSettings, KeyValues::MERGE_KV_BORROW );
 
 	// Write the details as binary
-	buf.PutInt( g_pMatchExtensions->GetINetSupport()->GetEngineBuildNumber() );
-	buf.PutInt( 0 );
+	buf.write<int>( g_pMatchExtensions->GetINetSupport()->GetEngineBuildNumber() );
+	buf.write<int>( 0 );
 	pDetails->WriteAsBinary( buf );
-	buf.PutInt( 0 );
+	buf.write<int>( 0 );
 }
 
 static void UnpackGameDetailsFromSteamLobbyInKey( uint64 uiLobbyID, char const *szPath, KeyValues *pKey )

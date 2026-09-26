@@ -2,7 +2,6 @@
 #ifndef _SQCLOSURE_H_
 #define _SQCLOSURE_H_
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#include "memdbgon.h"
 #undef new // allow placement new
 #endif
 
@@ -129,6 +128,5 @@ public:
 };
 
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#include "memdbgoff.h"
 #endif
 #endif //_SQCLOSURE_H_

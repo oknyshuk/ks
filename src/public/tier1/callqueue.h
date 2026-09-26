@@ -143,7 +143,7 @@ public:
 
 		if ( pPool )
 		{
-			nNumThreads = MIN( pPool->NumThreads(), MAX( 1, Count() ) );
+			nNumThreads = std::min( pPool->NumThreads(), std::max( 1, Count() ) );
 		}
 		
 		if ( nNumThreads < 2 )

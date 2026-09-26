@@ -7,9 +7,6 @@
 #include "cbase.h"
 #include "sequence_Transitioner.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #include "studio.h"
 
 // -----------------------------------------------------------------------------
@@ -30,15 +27,15 @@ void CSequenceTransitioner::CheckForSequenceChange(
 	// due to not only sequence change, by frame index, rate, or whatever.  When that happens, 
 	// it should insert the previous rules.
 
-	if (m_animationQueue.Count() == 0)
+	if (m_animationQueue.empty())
 	{
-		m_animationQueue.AddToTail();
+		m_animationQueue.emplace_back();
 #ifdef CLIENT_DLL
 		m_animationQueue[0].SetOwner( nullptr );
 #endif
 	}
 
-	CAnimationLayer *currentblend = &m_animationQueue[m_animationQueue.Count()-1];
+	CAnimationLayer *currentblend = &m_animationQueue[std::ssize( m_animationQueue )-1];
 
 	if (currentblend->m_flLayerAnimtime && 
 		(currentblend->GetSequence() != nCurSequence || bForceNewSequence ))
@@ -46,7 +43,7 @@ void CSequenceTransitioner::CheckForSequenceChange(
 		if ( nCurSequence < 0 || nCurSequence >= hdr->GetNumSeq() )
 		{
 			// remove all entries
-			m_animationQueue.RemoveAll();
+			m_animationQueue.clear();
 		}
 		else
 		{
@@ -55,12 +52,12 @@ void CSequenceTransitioner::CheckForSequenceChange(
 			if ((seqdesc.flags & STUDIO_SNAP) || !bInterpolate )
 			{
 				// remove all entries
-				m_animationQueue.RemoveAll();
+				m_animationQueue.clear();
 			}
 			else
 			{
 				mstudioseqdesc_t &prevseqdesc = hdr->pSeqdesc( currentblend->GetSequence() );
-				currentblend->m_flLayerFadeOuttime = MIN( prevseqdesc.fadeouttime, seqdesc.fadeintime );
+				currentblend->m_flLayerFadeOuttime = std::min( prevseqdesc.fadeouttime, seqdesc.fadeintime );
 				/*
 				// clip blends to time remaining
 				if ( !IsSequenceLooping(hdr, currentblend->GetSequence()) )
@@ -72,12 +69,12 @@ void CSequenceTransitioner::CheckForSequenceChange(
 				}
 				*/
 			}
-			if ( m_animationQueue.Count() > 2 )
-				m_animationQueue.RemoveMultipleFromHead( 1 );
+			if ( std::ssize( m_animationQueue ) > 2 )
+				m_animationQueue.erase( m_animationQueue.begin(), m_animationQueue.begin() + 1 );
 		}
 		// push previously set sequence
-		m_animationQueue.AddToTail();
-		currentblend = &m_animationQueue[m_animationQueue.Count()-1];
+		m_animationQueue.emplace_back();
+		currentblend = &m_animationQueue[std::ssize( m_animationQueue )-1];
 #ifdef CLIENT_DLL
 		currentblend->SetOwner( nullptr );
 #endif
@@ -100,15 +97,15 @@ void CSequenceTransitioner::UpdateCurrent(
 	if ( hdr == nullptr)
 		return;
 
-	if (m_animationQueue.Count() == 0)
+	if (m_animationQueue.empty())
 	{
-		m_animationQueue.AddToTail();
+		m_animationQueue.emplace_back();
 #ifdef CLIENT_DLL
 		m_animationQueue[0].SetOwner( nullptr );
 #endif
 	}
 
-	CAnimationLayer *currentblend = &m_animationQueue[m_animationQueue.Count()-1];
+	CAnimationLayer *currentblend = &m_animationQueue[std::ssize( m_animationQueue )-1];
 
 	// keep track of current sequence
 	currentblend->SetSequence( nCurSequence );
@@ -118,7 +115,7 @@ void CSequenceTransitioner::UpdateCurrent(
 
 	// calc blending weights for previous sequences
 	int i;
-	for (i = 0; i < m_animationQueue.Count() - 1;)
+	for (i = 0; i < std::ssize( m_animationQueue ) - 1;)
 	{
  		float s = m_animationQueue[i].GetFadeout( flCurTime );
 
@@ -129,7 +126,7 @@ void CSequenceTransitioner::UpdateCurrent(
 		}
 		else
 		{
-			m_animationQueue.Remove( i );
+			m_animationQueue.erase( m_animationQueue.begin() + i );
 		}
 	}
 }

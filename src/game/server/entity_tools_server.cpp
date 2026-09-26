@@ -19,21 +19,18 @@
 #include "mapentities.h"
 #include "point_template.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 class CFoundryEntitySpawnRecord
 {
 public:
-	CUtlVector<char> m_VMFText;
+	std::vector< char > m_VMFText;
 	int m_iEntityIndex;
 	int m_iHammerID;
 	int m_iSerialNumber;
 	int m_debugOverlays;
 };
 
-static CUtlLinkedList<CFoundryEntitySpawnRecord*,int> g_FoundryEntitySpawnRecords;
+static std::vector<CFoundryEntitySpawnRecord> g_FoundryEntitySpawnRecords;
 
 
 //-----------------------------------------------------------------------------
@@ -245,20 +242,20 @@ bool CServerTools::DestroyEntityByHammerId( int iHammerID )
 
 void HandleFoundryEntitySpawnRecords()
 {
-	if ( g_FoundryEntitySpawnRecords.Count() == 0 )
+	if ( g_FoundryEntitySpawnRecords.empty() )
 		return;
 
 	VPROF("HandleFoundryEntitySpawnRecords");
 
 	// Create all the entities.
-	CUtlVector<CBaseEntity*> newEnts;
+	std::vector< CBaseEntity* > newEnts;
 	
 	CMapEntitySpawner spawner;
 	spawner.m_bFoundryMode = true;
 
-	FOR_EACH_LL( g_FoundryEntitySpawnRecords, i )
+	for ( CFoundryEntitySpawnRecord &record : g_FoundryEntitySpawnRecords )
 	{
-		CFoundryEntitySpawnRecord *pRecord = g_FoundryEntitySpawnRecords[i];
+		CFoundryEntitySpawnRecord *pRecord = &record;
 
 		if ( pRecord->m_iEntityIndex > 0 )
 		{
@@ -267,7 +264,7 @@ void HandleFoundryEntitySpawnRecords()
 		}
 
 		// Figure out the class name.
-		CEntityMapData entData( pRecord->m_VMFText.Base() );
+		CEntityMapData entData( pRecord->m_VMFText.data() );
 		char szClassName[MAPKEY_MAXLENGTH];
 		if ( !entData.ExtractValue( "classname", szClassName ) )
 		{
@@ -309,7 +306,7 @@ void HandleFoundryEntitySpawnRecords()
 	// This makes sure those ents get cleaned up.
 	gEntList.CleanupDeleteList();
 
-	g_FoundryEntitySpawnRecords.PurgeAndDeleteElements();
+	g_FoundryEntitySpawnRecords = {};
 }
 
 
@@ -318,11 +315,11 @@ bool CServerTools::RespawnEntitiesWithEdits( CEntityRespawnInfo *pInfos, int nIn
 	// Create a spawn record so it'll respawn the entity next frame.
 	for ( int i=0; i < nInfos; i++ )
 	{
-		CFoundryEntitySpawnRecord *pRecord = new CFoundryEntitySpawnRecord;
+		CFoundryEntitySpawnRecord *pRecord = &g_FoundryEntitySpawnRecords.emplace_back();
 		CEntityRespawnInfo *pInfo = &pInfos[i];
 		
-		pRecord->m_VMFText.SetSize( V_strlen( pInfo->m_pEntText ) + 1 );
-		V_strncpy( pRecord->m_VMFText.Base(), pInfo->m_pEntText, pRecord->m_VMFText.Count() );
+		pRecord->m_VMFText.assign( V_strlen( pInfo->m_pEntText ) + 1, {} );
+		V_strncpy( pRecord->m_VMFText.data(), pInfo->m_pEntText, std::ssize( pRecord->m_VMFText ) );
 		pRecord->m_iHammerID = pInfo->m_nHammerID;
 
 		CBaseEntity *pOldEntity = (CBaseEntity*)FindEntityByHammerID( pInfo->m_nHammerID );
@@ -341,8 +338,6 @@ bool CServerTools::RespawnEntitiesWithEdits( CEntityRespawnInfo *pInfos, int nIn
 			pRecord->m_iSerialNumber = -1;
 			pRecord->m_debugOverlays = -1;
 		}
-
-		g_FoundryEntitySpawnRecords.AddToTail( pRecord );
 	}
 	
 return true;
@@ -354,7 +349,7 @@ return true;
 void CServerTools::ReloadParticleDefintions( const char *pFileName, const void *pBufData, int nLen )
 {
 	// FIXME: Use file name to determine if we care about this data
-	CUtlBuffer buf( pBufData, nLen, CUtlBuffer::READ_ONLY );
+	ks::byte_reader buf( pBufData, nLen );
 	g_pParticleSystemMgr->ReadParticleConfigFile( buf, true );
 }
 

@@ -7,7 +7,6 @@
 #include "shaderlib/ShaderDLL.h"
 #include "materialsystem/IShader.h"
 #include "tier1/utlvector.h"
-#include "tier1/utllinkedlist.h"
 #include "tier0/dbg.h"
 #include "materialsystem/imaterialsystemhardwareconfig.h"
 #include "materialsystem/materialsystem_config.h"
@@ -16,9 +15,6 @@
 #include "shaderlib_cvar.h"
 #include "mathlib/mathlib.h"
 #include "tier2/tier2.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // The standard implementation of CShaderDLL
@@ -44,8 +40,8 @@ public:
 	virtual void AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics );
 
 private:
-	CUtlVector< IShader * >	m_ShaderList;
-	CUtlLinkedList< const ShaderComboSemantics_t * > m_ShaderComboSemantics;
+	std::vector< IShader * >	m_ShaderList;
+	std::vector< const ShaderComboSemantics_t * > m_ShaderComboSemantics;
 };
 
 
@@ -152,12 +148,12 @@ void CShaderDLL::Disconnect()
 //-----------------------------------------------------------------------------
 int CShaderDLL::ShaderCount() const
 {
-	return m_ShaderList.Count();
+	return std::ssize( m_ShaderList );
 }
 
 IShader *CShaderDLL::GetShader( int nShader ) 
 {
-	if ( ( nShader < 0 ) || ( nShader >= m_ShaderList.Count() ) )
+	if ( ( nShader < 0 ) || ( nShader >= std::ssize( m_ShaderList ) ) )
 		return nullptr;
 
 	return m_ShaderList[nShader];
@@ -170,7 +166,7 @@ IShader *CShaderDLL::GetShader( int nShader )
 void CShaderDLL::InsertShader( IShader *pShader )
 {
 	Assert( pShader );
-	m_ShaderList.AddToTail( pShader );
+	m_ShaderList.push_back( pShader );
 }
 
 //-----------------------------------------------------------------------------
@@ -178,12 +174,12 @@ void CShaderDLL::InsertShader( IShader *pShader )
 //-----------------------------------------------------------------------------
 int CShaderDLL::ShaderComboSemanticsCount() const
 {
-	return m_ShaderComboSemantics.Count();
+	return std::ssize( m_ShaderComboSemantics );
 }
 
 const ShaderComboSemantics_t *CShaderDLL::GetComboSemantics( int n ) 
 {
-	if ( ( n < 0 ) || ( n >= m_ShaderComboSemantics.Count() ) )
+	if ( ( n < 0 ) || ( n >= std::ssize( m_ShaderComboSemantics ) ) )
 		return nullptr;
 
 	return m_ShaderComboSemantics[n];
@@ -194,5 +190,5 @@ const ShaderComboSemantics_t *CShaderDLL::GetComboSemantics( int n )
 //-----------------------------------------------------------------------------
 void CShaderDLL::AddShaderComboInformation( const ShaderComboSemantics_t *pSemantics )
 {
-	m_ShaderComboSemantics.AddToTail( pSemantics );
+	m_ShaderComboSemantics.push_back( pSemantics );
 }

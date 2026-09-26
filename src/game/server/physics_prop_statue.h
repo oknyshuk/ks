@@ -20,7 +20,7 @@ struct outer_collision_obb_t
 	Vector	vecMaxs;
 	QAngle	angAngles;
 
-	CUtlVector<short>	iSpheres;
+	std::vector< short >	iSpheres;
 };
 
 
@@ -69,12 +69,12 @@ public:
 	CNetworkVector( m_vShatterPosition, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
 	CNetworkVector( m_vShatterForce, [[= ks::reflect::Net{ .bits = 32, .flags = SPROP_NOSCALE, .enc = ks::reflect::WireEnc::Vector } ]] );
 
-	const CUtlVector<outer_collision_obb_t>	*m_pInitOBBs;
+	const std::vector< outer_collision_obb_t >	*m_pInitOBBs;
 };
 
 
 CBaseEntity *CreateServerStatue( CBaseAnimating *pAnimating, int collisionGroup );
-CBaseEntity *CreateServerStatueFromOBBs( const CUtlVector<outer_collision_obb_t> &vecSphereOrigins, CBaseAnimating *pChildEntity );
+CBaseEntity *CreateServerStatueFromOBBs( const std::vector< outer_collision_obb_t > &vecSphereOrigins, CBaseAnimating *pChildEntity );
 
 
 #endif // PHYSICS_PROP_STATUE_H

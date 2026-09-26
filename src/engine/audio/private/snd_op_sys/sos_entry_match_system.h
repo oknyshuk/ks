@@ -7,7 +7,6 @@
 #ifndef SOS_ENTRY_MATCH_SYSTEM_H
 #define SOS_ENTRY_MATCH_SYSTEM_H
 
-#include "bitvec.h"
 //#include "snd_channels.h"
 
 // Externs the logging channel

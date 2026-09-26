@@ -6,16 +6,11 @@
 //
 //=============================================================================//
 // Avoid these warnings:
-#pragma warning(disable : 4512) // warning C4512: 'InFileRIFF' : assignment operator could not be generated
-#pragma warning(disable : 4514) // warning C4514: 'RIFFName' : unreferenced inline function has been removed
 
 #include "riff.h"
 #include <stdio.h>
 #include <string.h>
 #include "tier0/dbg.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 

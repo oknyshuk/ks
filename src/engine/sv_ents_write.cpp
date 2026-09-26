@@ -9,7 +9,8 @@
 #include "server_pch.h"
 #include <eiface.h>
 #include <dt_send.h>
-#include <utllinkedlist.h>
+#include <bitset>
+#include <vector>
 #include "dt_send_eng.h"
 #include "dt.h"
 #include "net_synctags.h"
@@ -23,9 +24,6 @@
 #include "framesnapshot.h"
 #include "changeframelist.h"
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 extern ConVar g_CV_DTWatchEnt;
 
@@ -52,7 +50,7 @@ public:
 };
 
 
-static CUtlLinkedList<CChangeTrack*, int> g_Tracks;
+static std::vector<CChangeTrack*> g_Tracks;
 
 
 // These are the main variables used by the SV_CreatePacketEntities function.
@@ -67,7 +65,7 @@ public:
 	const PackedEntity	*m_pNewPack;
 
 	// For each entity handled in the to packet, mark that's it has already been deleted if that's the case
-	CBitVec<MAX_EDICTS>	m_DeletionFlags;
+	std::bitset<MAX_EDICTS>	m_DeletionFlags;
 	
 	CFrameSnapshot	*m_pFromSnapshot; // = m_pFrom->GetSnapshot();
 	CFrameSnapshot	*m_pToSnapshot; // = m_pTo->GetSnapshot();
@@ -92,10 +90,8 @@ public:
 
 CChangeTrack* GetChangeTrack( const char *pName )
 {
-	FOR_EACH_LL( g_Tracks, i )
+	for ( CChangeTrack *pCur : g_Tracks )
 	{
-		CChangeTrack *pCur = g_Tracks[i];
-
 		if ( stricmp( pCur->m_pName, pName ) == 0 )
 			return pCur;
 	}
@@ -106,7 +102,7 @@ CChangeTrack* GetChangeTrack( const char *pName )
 	Q_strncpy( pCur->m_pName, pName, len );
 	pCur->m_nChanged = pCur->m_nUnchanged = 0;
 	
-	g_Tracks.AddToTail( pCur );
+	g_Tracks.push_back( pCur );
 	
 	return pCur;
 }
@@ -120,17 +116,14 @@ void PrintChangeTracks()
 	ConMsg( "------------------------------------------------------------------------\n" );
 
 	CCycleCount total, encodeTotal;
-	FOR_EACH_LL( g_Tracks, i )
+	for ( CChangeTrack *pCur : g_Tracks )
 	{
-		CChangeTrack *pCur = g_Tracks[i];
 		CCycleCount::Add( pCur->m_Count, total, total );
 		CCycleCount::Add( pCur->m_EncodeCount, encodeTotal, encodeTotal );
 	}
 
-	FOR_EACH_LL( g_Tracks, j )
-	{
-		CChangeTrack *pCur = g_Tracks[j];
-	
+	for ( CChangeTrack *pCur : g_Tracks )
+	{	
 		ConMsg( "%6.2fms       %5.2f    %6.2fms    %4d        %4d          %s\n", 
 			pCur->m_Count.GetMillisecondsF(),
 			pCur->m_Count.GetMillisecondsF() * 100.0f / total.GetMillisecondsF(),
@@ -292,37 +285,37 @@ static inline void SV_WritePropsFromPackedEntity( CEntityWriteInfo &u, CalcDelta
 			CalcDeltaResultsList_t culledProps;
 			CalcDeltaResultsList_t addProps;
 
-			FOR_EACH_VEC( checkProps, i )
+			for ( int nProp : checkProps )
 			{
-				if ( sendProps.Find( checkProps[i] ) == -1 )
+				if ( ks::find_index( sendProps, nProp ) == -1 )
 				{
-					culledProps.AddToTail( checkProps[i] );
+					culledProps.push_back( nProp );
 				}
 			}
 
-			FOR_EACH_VEC( sendProps, i )
+			for ( int nProp : sendProps )
 			{
-				if ( checkProps.Find( sendProps[i] ) == -1 )
+				if ( ks::find_index( checkProps, nProp ) == -1 )
 				{
-					addProps.AddToTail( sendProps[i] );
+					addProps.push_back( nProp );
 				}
 			}
 
-			if ( culledProps.Count() || addProps.Count() )
+			if ( std::ssize( culledProps ) || std::ssize( addProps ) )
 			{
 				Msg("CullPropsFromProxies for class %s, client=%d:\n", pSendTable->GetName(), u.m_nClientEntity - 1 );
-				FOR_EACH_VEC( culledProps, i )
+				for ( int nProp : culledProps )
 				{
-					const SendProp *pProp = pSendTable->m_pPrecalc->GetProp( culledProps[i] );
+					const SendProp *pProp = pSendTable->m_pPrecalc->GetProp( nProp );
 					if ( pProp )
 					{
 						Msg("   CULL: %s type=%d\n", pProp->GetName(), (int)pProp->GetType() );
 					}
 				}
 
-				FOR_EACH_VEC( addProps, i )
+				for ( int nProp : addProps )
 				{
-					const SendProp *pProp = pSendTable->m_pPrecalc->GetProp( addProps[i] );
+					const SendProp *pProp = pSendTable->m_pPrecalc->GetProp( nProp );
 					if ( pProp )
 					{
 						Msg("    ADD: %s type=%d\n", pProp->GetName(), (int)pProp->GetType() );
@@ -336,7 +329,7 @@ static inline void SV_WritePropsFromPackedEntity( CEntityWriteInfo &u, CalcDelta
 	{
 		// this is a HLTV relay proxy
 		bufStart = *u.m_pBuf;
-		sendProps.CopyArray( checkProps.Base(), checkProps.Count() );
+		sendProps.assign( ( checkProps.data() ), ( checkProps.data() ) + ( std::ssize( checkProps ) ) );
 	}
 		
 	SendTable_WritePropList(
@@ -438,11 +431,11 @@ static int GetPackedEntityChangedProps( const PackedEntity* pEntity, int nTick, 
 		if( *pCurrBucket > nTick )
 		{
 			//we have a change in our bucket we need to find, so scan through each prop in the bucket range
-			const int* RESTRICT pPropBucketEnd = MIN( pCurrProp + CChangeFrameList::knBucketSize, pEndProps );
+			const int* RESTRICT pPropBucketEnd = std::min( pCurrProp + CChangeFrameList::knBucketSize, pEndProps );
 			for( ; pCurrProp != pPropBucketEnd; ++pCurrProp )
 			{
 				if( *pCurrProp > nTick )
-					Results.AddToTail( pCurrProp - pStartProps );
+					Results.push_back( pCurrProp - pStartProps );
 			}
 		}
 		else
@@ -452,7 +445,7 @@ static int GetPackedEntityChangedProps( const PackedEntity* pEntity, int nTick, 
 		}
 	}
 
-	return Results.Count();
+	return std::ssize( Results );
 }
 
 
@@ -644,7 +637,7 @@ static inline void SV_WriteEnterPVS( CEntityWriteInfo &u )
 	if ( u.m_pTo->from_baseline )
 	{
 		// remember that we sent this entity as full update from entity baseline
-		u.m_pTo->from_baseline->Set( u.m_nNewEntity );
+		u.m_pTo->from_baseline->set( u.m_nNewEntity );
 	}
 	
 	SerializedEntityHandle_t toEntity = u.m_pNewPack->GetPackedData();
@@ -673,7 +666,7 @@ static inline void SV_WriteLeavePVS( CEntityWriteInfo &u )
 	if ( deleteentity )
 	{
 		// Mark that we handled deletion of this index
-		u.m_DeletionFlags.Set( u.m_nOldEntity );
+		u.m_DeletionFlags.set( u.m_nOldEntity );
 
 		headerflags |= FHDR_DELETE;
 	}
@@ -750,20 +743,20 @@ static inline int SV_WriteDeletions( CEntityWriteInfo &u )
 	CFrameSnapshot *pFromSnapShot = u.m_pFromSnapshot;
 	CFrameSnapshot *pToSnapShot = u.m_pToSnapshot;
 
-	CUtlVector< int > deletions;
+	std::vector< int > deletions;
 
-	int nLast = MAX( pFromSnapShot->m_nNumEntities, pToSnapShot->m_nNumEntities );
+	int nLast = std::max( pFromSnapShot->m_nNumEntities, pToSnapShot->m_nNumEntities );
 	for ( int i = 0; i < nLast; i++ )
 	{
 		// Packet update didn't clear it out expressly
-		if ( u.m_DeletionFlags.Get( i ) ) 
+		if ( u.m_DeletionFlags[i] ) 
 			continue;
 
 		// Looks like it should be gone
 		bool bNeedsExplicitDelete = SV_NeedsExplicitDestroy( i, pFromSnapShot, pToSnapShot );
 		if ( !bNeedsExplicitDelete && u.m_pTo )
 		{
-			bNeedsExplicitDelete = (pToSnapShot->m_iExplicitDeleteSlots.Find(i) != pToSnapShot->m_iExplicitDeleteSlots.InvalidIndex() );
+			bNeedsExplicitDelete = (ks::find_index( pToSnapShot->m_iExplicitDeleteSlots, i ) != -1 );
 			if ( bNeedsExplicitDelete )
 			{
 				const CFrameSnapshotEntry *pFromEnt = ( i < pFromSnapShot->m_nNumEntities ) ? &pFromSnapShot->m_pEntities[i] : nullptr;
@@ -772,7 +765,7 @@ static inline int SV_WriteDeletions( CEntityWriteInfo &u )
 				if ( pFromEnt && pToEnt )
 				{
 					bool bWillBeExplicitlyCreated = (pFromEnt->m_pClass == nullptr) || pFromEnt->m_nSerialNumber != pToEnt->m_nSerialNumber;
-					if ( bWillBeExplicitlyCreated && u.m_pTo->transmit_entity.Get(i) )
+					if ( bWillBeExplicitlyCreated && u.m_pTo->transmit_entity[i] )
 					{
 						//Warning("Entity %d is being explicitly deleted, but it will be explicitly created.\n", i );
 						bNeedsExplicitDelete = false;
@@ -790,20 +783,19 @@ static inline int SV_WriteDeletions( CEntityWriteInfo &u )
 		{
 			TRACE_PACKET( ( "  SV Explicit Destroy (%d)\n", i ) );
 			Assert( !u.m_pTo->transmit_entity.Get(i) );
-			deletions.AddToTail( i );
+			deletions.push_back( i );
 		}
 	}
 
-	u.m_pBuf->WriteUBitVar( deletions.Count() );
+	u.m_pBuf->WriteUBitVar( std::ssize( deletions ) );
 	int nBase = -1;
-	FOR_EACH_VEC( deletions, i )
+	for ( int nSlot : deletions )
 	{
-		int nSlot = deletions[ i ];
 		int nDelta = nSlot - nBase;
 		u.m_pBuf->WriteUBitVar( nDelta );
 		nBase = nSlot;
 	}
-	return deletions.Count();
+	return std::ssize( deletions );
 }
 
 
@@ -945,12 +937,12 @@ void CBaseServer::WriteDeltaEntities( CBaseClient *client, CClientFrame *to, CCl
 	// set from_baseline pointer if this snapshot may become a baseline update
 	if ( client->m_nBaselineUpdateTick == -1 )
 	{
-		client->m_BaselinesSent.ClearAll();
+		client->m_BaselinesSent.reset();
 		to->from_baseline = &client->m_BaselinesSent;
 	}
 
 	net_scratchbuffer_t scratch;
-	int nScratchUseSize = MIN( scratch.Size(), sv_delta_entity_buffer_size.GetInt() );
+	int nScratchUseSize = std::min( scratch.Size(), sv_delta_entity_buffer_size.GetInt() );
 
 	bool bFitIntoBuffer = InternalWriteDeltaEntities( this, client, to, from, msg, scratch.GetBuffer(), nScratchUseSize );
 	if( !bFitIntoBuffer )

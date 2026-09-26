@@ -11,9 +11,6 @@
 #include "materialsystem/imaterial.h"
 #include "iclientrenderable.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Helper class to deal with floating point inputs
 //-----------------------------------------------------------------------------

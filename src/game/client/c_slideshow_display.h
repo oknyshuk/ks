@@ -17,8 +17,8 @@
 struct SlideMaterialList_t
 {
 	char				szSlideKeyword[64];
-	CUtlVector<int>		iSlideMaterials;
-	CUtlVector<int>		iSlideIndex;
+	std::vector< int >		iSlideMaterials;
+	std::vector< int >		iSlideIndex;
 };
 
 
@@ -58,7 +58,7 @@ private:
 
 	[[= ks::reflect::Net{} ]] char	m_szSlideshowDirectory[ 128 ];
 
-	CUtlVector<SlideMaterialList_t*>	m_SlideMaterialLists;
+	std::vector< SlideMaterialList_t* >	m_SlideMaterialLists;
 	[[= ks::reflect::Net{} ]] unsigned char						m_chCurrentSlideLists[ 16 ];
 	int									m_iCurrentMaterialIndex;
 	int									m_iCurrentSlideIndex;
@@ -74,6 +74,6 @@ private:
 	int		m_iCurrentSlide;
 };
 
-extern CUtlVector< C_SlideshowDisplay* > g_SlideshowDisplays;
+extern std::vector< C_SlideshowDisplay* > g_SlideshowDisplays;
 
 #endif //C_SLIDESHOW_STATS_DISPLAY_H

@@ -19,9 +19,6 @@
 #include "c_pixel_visibility.h"
 #include "particles_ez.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //Precahce the effects
 PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffectSparks )
 	PRECACHE( MATERIAL, "effects/spark" )
@@ -301,7 +298,7 @@ void CTrailParticles::SimulateParticles( CParticleSimulateIterator *pIterator )
 void FX_ElectricSpark( const Vector &pos, int nMagnitude, int nTrailLength, const Vector *vecDir )
 {
 	VPROF_BUDGET( "FX_ElectricSpark", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
-	CSmartPtr<CTrailParticles> pSparkEmitter	= CTrailParticles::Create( "FX_ElectricSpark 1" );
+	ks::intrusive_ptr<CTrailParticles> pSparkEmitter	= CTrailParticles::Create( "FX_ElectricSpark 1" );
 
 	if ( !pSparkEmitter )
 	{
@@ -365,7 +362,7 @@ void FX_ElectricSpark( const Vector &pos, int nMagnitude, int nTrailLength, cons
 	// Little sparks
 	//
 	
-	CSmartPtr<CTrailParticles> pSparkEmitter2	= CTrailParticles::Create( "FX_ElectricSpark 2" );
+	ks::intrusive_ptr<CTrailParticles> pSparkEmitter2	= CTrailParticles::Create( "FX_ElectricSpark 2" );
 
 	if ( !pSparkEmitter2 )
 	{
@@ -409,7 +406,7 @@ void FX_ElectricSpark( const Vector &pos, int nMagnitude, int nTrailLength, cons
 	//
 	// Caps
 	//
-	CSmartPtr<CSimpleGlowEmitter> pSimple = CSimpleGlowEmitter::Create( "FX_ElectricSpark 3", pos, gpGlobals->curtime + 0.2 );
+	ks::intrusive_ptr<CSimpleGlowEmitter> pSimple = CSimpleGlowEmitter::Create( "FX_ElectricSpark 3", pos, gpGlobals->curtime + 0.2 );
 
 	// NOTE: None of these will render unless the effect is visible!
 	//
@@ -523,7 +520,7 @@ void FX_MetalScrape( Vector &position, Vector &normal )
 	VPROF_BUDGET( "FX_MetalScrape", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
 	Vector	offset = position + ( normal * 1.0f );
 
-	CSmartPtr<CTrailParticles> sparkEmitter = CTrailParticles::Create( "FX_MetalScrape 1" );
+	ks::intrusive_ptr<CTrailParticles> sparkEmitter = CTrailParticles::Create( "FX_MetalScrape 1" );
 
 	if ( !sparkEmitter )
 		return;
@@ -601,7 +598,7 @@ void FX_MetalSpark( const Vector &position, const Vector &direction, const Vecto
 
 	Vector offset = position + ( surfaceNormal * 1.0f );
 
-	CSmartPtr<CTrailParticles> sparkEmitter = CTrailParticles::Create( "FX_MetalSpark 1" );
+	ks::intrusive_ptr<CTrailParticles> sparkEmitter = CTrailParticles::Create( "FX_MetalSpark 1" );
 
 	if ( sparkEmitter == nullptr )
 		return;
@@ -692,7 +689,7 @@ void FX_MetalSpark( const Vector &position, const Vector &direction, const Vecto
 void FX_Sparks( const Vector &pos, int nMagnitude, int nTrailLength, const Vector &vecDir, float flWidth, float flMinSpeed, float flMaxSpeed, char *pSparkMaterial )
 {
 	VPROF_BUDGET( "FX_Sparks", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
-	CSmartPtr<CTrailParticles> pSparkEmitter	= CTrailParticles::Create( "FX_Sparks 1" );
+	ks::intrusive_ptr<CTrailParticles> pSparkEmitter	= CTrailParticles::Create( "FX_Sparks 1" );
 
 	if ( !pSparkEmitter )
 	{
@@ -759,7 +756,7 @@ void FX_Sparks( const Vector &pos, int nMagnitude, int nTrailLength, const Vecto
 	//
 	// Little sparks
 	//
-	CSmartPtr<CTrailParticles> pSparkEmitter2	= CTrailParticles::Create( "FX_ElectricSpark 2" );
+	ks::intrusive_ptr<CTrailParticles> pSparkEmitter2	= CTrailParticles::Create( "FX_ElectricSpark 2" );
 
 	if ( !pSparkEmitter2 )
 	{
@@ -861,7 +858,7 @@ void FX_EnergySplash( const Vector &pos, const Vector &normal, int nFlags )
 
 	SimpleParticle *sParticle;
 
-	CSmartPtr<CSimpleEmitter> pEmitter;
+	ks::intrusive_ptr<CSimpleEmitter> pEmitter;
 
 	pEmitter = CSimpleEmitter::Create( "C_EntityDissolve" );
 	pEmitter->SetSortOrigin( pos );
@@ -925,7 +922,7 @@ void FX_MicroExplosion( Vector &position, Vector &normal )
 	VPROF_BUDGET( "FX_MicroExplosion", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
 	Vector	offset = position + ( normal * 2.0f );
 
-	CSmartPtr<CTrailParticles> sparkEmitter = CTrailParticles::Create( "FX_MicroExplosion 1" );
+	ks::intrusive_ptr<CTrailParticles> sparkEmitter = CTrailParticles::Create( "FX_MicroExplosion 1" );
 
 	if ( !sparkEmitter )
 		return;
@@ -981,7 +978,7 @@ void FX_MicroExplosion( Vector &position, Vector &normal )
 	// Filler
 	//
 
-	CSmartPtr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "FX_MicroExplosion 2" );
+	ks::intrusive_ptr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "FX_MicroExplosion 2" );
 	pSimple->SetSortOrigin( offset );
 	
 	SimpleParticle *sParticle = (SimpleParticle *) pSimple->AddParticle( sizeof( SimpleParticle ), pSimple->GetPMaterial( "sprites/rico1" ), offset );
@@ -1025,7 +1022,7 @@ void FX_Explosion( Vector& origin, Vector& normal, char materialType )
 	VPROF_BUDGET( "FX_Explosion", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
 	Vector	offset = origin + ( normal * 2.0f );
 
-	CSmartPtr<CTrailParticles> pSparkEmitter = CTrailParticles::Create( "FX_Explosion 1" );
+	ks::intrusive_ptr<CTrailParticles> pSparkEmitter = CTrailParticles::Create( "FX_Explosion 1" );
 	if ( !pSparkEmitter )
 		return;
 
@@ -1086,7 +1083,7 @@ void FX_Explosion( Vector& origin, Vector& normal, char materialType )
 	// Only create dirt chunks on concrete/world
 	if ( materialType == 'C' || materialType == 'W' )
 	{
-		CSmartPtr<CFleckParticles> fleckEmitter = CFleckParticles::Create( "FX_Explosion 10", offset, Vector(5,5,5) );
+		ks::intrusive_ptr<CFleckParticles> fleckEmitter = CFleckParticles::Create( "FX_Explosion 10", offset, Vector(5,5,5) );
 		if ( !fleckEmitter )
 			return;
 
@@ -1124,14 +1121,14 @@ void FX_Explosion( Vector& origin, Vector& normal, char materialType )
 			pParticle->m_flRollDelta	= random->RandomFloat( 0, 360 );
 
 			float colorRamp = random->RandomFloat( 0.75f, 1.5f );
-			pParticle->m_uchColor[0] = MIN( 1.0f, r*colorRamp )*255.0f;
-			pParticle->m_uchColor[1] = MIN( 1.0f, g*colorRamp )*255.0f;
-			pParticle->m_uchColor[2] = MIN( 1.0f, b*colorRamp )*255.0f;
+			pParticle->m_uchColor[0] = std::min( 1.0f, r*colorRamp )*255.0f;
+			pParticle->m_uchColor[1] = std::min( 1.0f, g*colorRamp )*255.0f;
+			pParticle->m_uchColor[2] = std::min( 1.0f, b*colorRamp )*255.0f;
 		}
 	}
 
 	// Large sphere bursts
-	CSmartPtr<CSimpleEmitter> pSimpleEmitter = CSimpleEmitter::Create( "FX_Explosion 1" );
+	ks::intrusive_ptr<CSimpleEmitter> pSimpleEmitter = CSimpleEmitter::Create( "FX_Explosion 1" );
 	PMaterialHandle	hSphereMaterial = g_Mat_DustPuff[1];
 	Vector vecBurstOrigin = offset + normal * 8.0;
 	pSimpleEmitter->SetSortOrigin( vecBurstOrigin );
@@ -1147,9 +1144,9 @@ void FX_Explosion( Vector& origin, Vector& normal, char materialType )
 		pSphereParticle->m_vecVelocity		= Vector(0,0,0);
 
 		float colorRamp = random->RandomFloat( 0.75f, 1.5f );
-		pSphereParticle->m_uchColor[0] = MIN( 1.0f, r*colorRamp )*255.0f;
-		pSphereParticle->m_uchColor[1] = MIN( 1.0f, g*colorRamp )*255.0f;
-		pSphereParticle->m_uchColor[2] = MIN( 1.0f, b*colorRamp )*255.0f;
+		pSphereParticle->m_uchColor[0] = std::min( 1.0f, r*colorRamp )*255.0f;
+		pSphereParticle->m_uchColor[1] = std::min( 1.0f, g*colorRamp )*255.0f;
+		pSphereParticle->m_uchColor[2] = std::min( 1.0f, b*colorRamp )*255.0f;
 	}
 
 	// Throw some smoke balls out around the normal
@@ -1176,14 +1173,14 @@ void FX_Explosion( Vector& origin, Vector& normal, char materialType )
 			pParticle->m_vecVelocity = (vecRight*x + vecUp*y) * 1024.0;
 
 			float colorRamp = random->RandomFloat( 0.75f, 1.5f );
-			pParticle->m_uchColor[0] = MIN( 1.0f, r*colorRamp )*255.0f;
-			pParticle->m_uchColor[1] = MIN( 1.0f, g*colorRamp )*255.0f;
-			pParticle->m_uchColor[2] = MIN( 1.0f, b*colorRamp )*255.0f;
+			pParticle->m_uchColor[0] = std::min( 1.0f, r*colorRamp )*255.0f;
+			pParticle->m_uchColor[1] = std::min( 1.0f, g*colorRamp )*255.0f;
+			pParticle->m_uchColor[2] = std::min( 1.0f, b*colorRamp )*255.0f;
 		}
 	}
 
 	// Create a couple of big, floating smoke clouds
-	CSmartPtr<CSimpleEmitter> pSmokeEmitter = CSimpleEmitter::Create( "FX_Explosion 2" );
+	ks::intrusive_ptr<CSimpleEmitter> pSmokeEmitter = CSimpleEmitter::Create( "FX_Explosion 2" );
 	pSmokeEmitter->SetSortOrigin( offset );
 	for ( i = 0; i < 2; i++ )
 	{
@@ -1205,9 +1202,9 @@ void FX_Explosion( Vector& origin, Vector& normal, char materialType )
 		pParticle->m_flRollDelta	= random->RandomFloat( -1, 1 );
 
 		float colorRamp = random->RandomFloat( 0.5f, 1.25f );
-		pParticle->m_uchColor[0] = MIN( 1.0f, r*colorRamp )*255.0f;
-		pParticle->m_uchColor[1] = MIN( 1.0f, g*colorRamp )*255.0f;
-		pParticle->m_uchColor[2] = MIN( 1.0f, b*colorRamp )*255.0f;
+		pParticle->m_uchColor[0] = std::min( 1.0f, r*colorRamp )*255.0f;
+		pParticle->m_uchColor[1] = std::min( 1.0f, g*colorRamp )*255.0f;
+		pParticle->m_uchColor[2] = std::min( 1.0f, b*colorRamp )*255.0f;
 	}
 }
 
@@ -1227,7 +1224,7 @@ void FX_ConcussiveExplosion( Vector &origin, Vector &normal )
 	// Smoke
 	//
 
-	CSmartPtr<CSimpleEmitter> pSmokeEmitter = CSimpleEmitter::Create( "FX_ConcussiveExplosion 1" );
+	ks::intrusive_ptr<CSimpleEmitter> pSmokeEmitter = CSimpleEmitter::Create( "FX_ConcussiveExplosion 1" );
 	pSmokeEmitter->SetSortOrigin( offset );
 
 	//Quick moving sprites
@@ -1293,7 +1290,7 @@ void FX_ConcussiveExplosion( Vector &origin, Vector &normal )
 	// Quick sphere
 	//
 
-	CSmartPtr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "FX_ConcussiveExplosion 2" );
+	ks::intrusive_ptr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "FX_ConcussiveExplosion 2" );
 
 	pSimple->SetSortOrigin( offset );
 	
@@ -1352,11 +1349,11 @@ void FX_ConcussiveExplosion( Vector &origin, Vector &normal )
 	//
 
 	TrailParticle	*pTrailParticle;
-	CSmartPtr<CTrailParticles> pSparkEmitter	= CTrailParticles::Create( "FX_ConcussiveExplosion 3" );
+	ks::intrusive_ptr<CTrailParticles> pSparkEmitter	= CTrailParticles::Create( "FX_ConcussiveExplosion 3" );
 	PMaterialHandle hMaterial;
 	int				numSparks;
 
-	if ( pSparkEmitter.IsValid() )
+	if ( pSparkEmitter )
 	{
 		hMaterial= pSparkEmitter->GetPMaterial( "effects/blueflare1" );
 
@@ -1389,9 +1386,9 @@ void FX_ConcussiveExplosion( Vector &origin, Vector &normal )
 	}
 
 	//Moving particles
-	CSmartPtr<CTrailParticles> pCollisionEmitter	= CTrailParticles::Create( "FX_ConcussiveExplosion 4" );
+	ks::intrusive_ptr<CTrailParticles> pCollisionEmitter	= CTrailParticles::Create( "FX_ConcussiveExplosion 4" );
 
-	if ( pCollisionEmitter.IsValid() )
+	if ( pCollisionEmitter )
 	{
 		//Setup our collision information
 		pCollisionEmitter->Setup( (Vector &) offset,
@@ -1438,7 +1435,7 @@ void FX_SparkFan( Vector &position, Vector &normal )
 {
 	Vector	offset = position + ( normal * 1.0f );
 
-	CSmartPtr<CTrailParticles> sparkEmitter = CTrailParticles::Create( "FX_MetalScrape 1" );
+	ks::intrusive_ptr<CTrailParticles> sparkEmitter = CTrailParticles::Create( "FX_MetalScrape 1" );
 
 	if ( !sparkEmitter )
 		return;

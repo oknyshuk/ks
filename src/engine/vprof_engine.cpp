@@ -5,6 +5,7 @@
 //===========================================================================//
 
 #include "tier0/platform.h"
+#include "tier1/byte_writer.h"
 #include "sys.h"
 #include "vprof_engine.h"
 #include "sv_main.h"
@@ -28,9 +29,6 @@
 #include "tier1/utlvector.h"
 #include "debugoverlay.h"
 #include "fmtstr.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 #ifdef VPROF_ENABLED
 void VProfExport_StartOrStop();
@@ -251,18 +249,18 @@ void PreUpdateProfile( float filteredtime )
 			}
 			else
 			{
-				static CUtlVector<int> history[30];
+				static std::vector< int > history[30];
 
-				history[nCycle].EnsureCount( n );
+				ks::ensure_size( history[nCycle], n );
 				history[nCycle][i] = val;
 
 				int valMin = val;
 				int valMax = val;
 				for (int j = 0; j < 30; j++)
 				{
-					history[j].EnsureCount( n );
-					valMin = MIN( valMin, history[j][i] );
-					valMax = MAX( valMax, history[j][i] );
+					ks::ensure_size( history[j], n );
+					valMin = std::min( valMin, history[j][i] );
+					valMax = std::max( valMax, history[j][i] );
 				}
 
 				Con_NPrintf( nprintIndex, "%s = %6d (%6d:%6d)\n", pName, val, valMin, valMax );
@@ -596,7 +594,7 @@ public:
 
 	virtual int GetNumBudgetGroups()
 	{
-		int nTotalGroups = MIN( m_Times.Count(), GetActiveVProfile()->GetNumBudgetGroups() );
+		int nTotalGroups = std::min<int>( std::ssize( m_Times ), GetActiveVProfile()->GetNumBudgetGroups() );
 		int nRet = 0;
 		for ( int i=0; i < nTotalGroups; i++ )
 		{
@@ -609,7 +607,7 @@ public:
 	virtual void GetBudgetGroupInfos( CExportedBudgetGroupInfo *pInfos )
 	{
 		int iOut = 0;
-		int nTotalGroups = MIN( m_Times.Count(), GetActiveVProfile()->GetNumBudgetGroups() );
+		int nTotalGroups = std::min<int>( std::ssize( m_Times ), GetActiveVProfile()->GetNumBudgetGroups() );
 		for ( int i=0; i < nTotalGroups; i++ )
 		{
 			if ( CanShowBudgetGroup( i ) )
@@ -628,8 +626,8 @@ public:
 
 	virtual void GetBudgetGroupTimes( float times[IVProfExport::MAX_BUDGETGROUP_TIMES] )
 	{
-		int nTotalGroups = MIN( m_Times.Count(), GetActiveVProfile()->GetNumBudgetGroups() );
-		int nGroups = MIN( nTotalGroups, IVProfExport::MAX_BUDGETGROUP_TIMES );
+		int nTotalGroups = std::min<int>( std::ssize( m_Times ), GetActiveVProfile()->GetNumBudgetGroups() );
+		int nGroups = std::min<int>( nTotalGroups, IVProfExport::MAX_BUDGETGROUP_TIMES );
 		memset( times, 0, sizeof( times[0] ) * nGroups );
 
 		int iOut = 0;
@@ -699,7 +697,7 @@ public:
 
 		int groupID = pTestNode->GetBudgetGroupID();
 		double nodeTime = pNode->GetPrevTimeLessChildren();
-		if ( groupID >= 0 && groupID < MIN( m_Times.Count(), IVProfExport::MAX_BUDGETGROUP_TIMES ) )
+		if ( groupID >= 0 && groupID < std::min<int>( std::ssize( m_Times ), IVProfExport::MAX_BUDGETGROUP_TIMES ) )
 		{
 			m_Times[groupID] += nodeTime;
 		}
@@ -729,12 +727,12 @@ public:
 		if ( !GetActiveVProfile()->IsEnabled() )
 			return;
 	
-		if ( m_Times.Count() < GetActiveVProfile()->GetNumBudgetGroups() )
+		if ( std::ssize( m_Times ) < GetActiveVProfile()->GetNumBudgetGroups() )
 		{
-			m_Times.SetSize( GetActiveVProfile()->GetNumBudgetGroups() );
+			m_Times.assign( GetActiveVProfile()->GetNumBudgetGroups(), {} );
 		}
 
-		memset( m_Times.Base(), 0, sizeof( m_Times[0] ) * GetActiveVProfile()->GetNumBudgetGroups() );
+		memset( m_Times.data(), 0, sizeof( m_Times[0] ) * GetActiveVProfile()->GetNumBudgetGroups() );
 		CVProfNode *pNode = GetActiveVProfile()->GetRoot();
 		if( pNode && pNode->GetChild() )
 		{
@@ -743,7 +741,7 @@ public:
 	}
 
 private:
-	CUtlVector<float> m_Times;	// Times from the most recent snapshot.
+	std::vector< float > m_Times;	// Times from the most recent snapshot.
 	int m_nListeners;
 	int m_BudgetFlagsFilter;	// We can only capture one type of filtered data at a time.
 	bool m_bStart;
@@ -803,17 +801,20 @@ struct VProfListenInfo_t
 {
 	ra_listener_id m_nListenerId;
 	float m_flLastSentVProfDataTime;
-	CUtlVector< CUtlString > m_SentGroups;
+	std::vector< std::string > m_SentGroups;
 
 	VProfListenInfo_t() : m_flLastSentVProfDataTime( 0.0f ) {}
 	VProfListenInfo_t( ra_listener_id nListenerId ) : m_nListenerId( nListenerId ), m_flLastSentVProfDataTime( 0.0f ) {}
 	bool operator==( const VProfListenInfo_t& src ) const { return src.m_nListenerId == m_nListenerId; }
 
+	VProfListenInfo_t( VProfListenInfo_t && ) = default;	// std::vector relocation; copies stay private
+	VProfListenInfo_t &operator=( VProfListenInfo_t && ) = default;
+
 private:
 	VProfListenInfo_t( const VProfListenInfo_t& src );
 };
 
-static CUtlVector<VProfListenInfo_t> s_VProfListeners;
+static std::vector< VProfListenInfo_t > s_VProfListeners;
 
 
 //-----------------------------------------------------------------------------
@@ -821,10 +822,10 @@ static CUtlVector<VProfListenInfo_t> s_VProfListeners;
 //-----------------------------------------------------------------------------
 static int FindSentGroupIndex( VProfListenInfo_t &info, const char *pGroupName )
 {
-	int nCount = info.m_SentGroups.Count();
+	int nCount = std::ssize( info.m_SentGroups );
 	for ( int i = 0; i < nCount; ++i )
 	{
-		if ( !Q_strcmp( pGroupName, info.m_SentGroups[i].Get() ) )
+		if ( !Q_strcmp( pGroupName, info.m_SentGroups[i].data() ) )
 			return i;
 	}
 	return -1;
@@ -838,7 +839,7 @@ void WriteRemoteVProfGroupData( VProfListenInfo_t &info )
 {
 
 	int nGroupCount = g_pVProfileForDisplay->GetNumBudgetGroups();
-	int nInitialCount = info.m_SentGroups.Count();
+	int nInitialCount = std::ssize( info.m_SentGroups );
 
 	// Build list of unsent groups to send
 	int nSendCount = 0;
@@ -848,33 +849,33 @@ void WriteRemoteVProfGroupData( VProfListenInfo_t &info )
 		const char *pName = g_pVProfileForDisplay->GetBudgetGroupName( i );
 		if ( FindSentGroupIndex( info, pName ) >= 0 )
 			continue;
-		int j = info.m_SentGroups.AddToTail();
-		info.m_SentGroups[j] = pName;
+		int j = std::ssize( info.m_SentGroups ); info.m_SentGroups.emplace_back();
+		info.m_SentGroups[j] = ks::nz( pName );
 		pIndex[nSendCount++] = i;
 	}
 
 	if ( nSendCount == 0 )
 		return;
 
-	CUtlBuffer buf( 1024, 1024 );
-	buf.PutInt( nInitialCount );
-	buf.PutInt( nSendCount );
+	ks::byte_writer buf( 1024 );
+	buf.write< int >( nInitialCount );
+	buf.write< int >( nSendCount );
 
 	for ( int i=0; i < nSendCount; i++ )
 	{
 		int nIndex = pIndex[i];
 		int red, green, blue, alpha;
 		g_pVProfileForDisplay->GetBudgetGroupColor( nIndex, red, green, blue, alpha );
-		buf.PutUnsignedChar( (unsigned char)red );
-		buf.PutUnsignedChar( (unsigned char)green );
-		buf.PutUnsignedChar( (unsigned char)blue );
-		buf.PutUnsignedChar( (unsigned char)alpha );
+		buf.write< unsigned char >( red );
+		buf.write< unsigned char >( green );
+		buf.write< unsigned char >( blue );
+		buf.write< unsigned char >( alpha );
 
 		const char *pName = g_pVProfileForDisplay->GetBudgetGroupName( nIndex );
-		buf.PutString( pName );
+		buf.write_cstring( ks::nz( pName ) );
 	}
 
-	g_ServerRemoteAccess.SendVProfData( info.m_nListenerId, true, buf.Base(), buf.TellMaxPut() );
+	g_ServerRemoteAccess.SendVProfData( info.m_nListenerId, true, buf.data(), int( buf.size() ) );
 }
 		 
 static ConVar rpt_vprof_time( "rpt_vprof_time","0.25", FCVAR_HIDDEN | FCVAR_DONTRECORD, "" );
@@ -885,7 +886,7 @@ void WriteRemoteVProfData()
 	float flMaxDelta = rpt_vprof_time.GetFloat();
 	float flTime = Plat_FloatTime();
 	bool bShouldSend = false;
-	int nListenerCount = s_VProfListeners.Count();
+	int nListenerCount = std::ssize( s_VProfListeners );
 	for( int i = 0; i < nListenerCount; i++ )
 	{
 		if ( flTime - s_VProfListeners[i].m_flLastSentVProfDataTime >= flMaxDelta )
@@ -912,7 +913,7 @@ void WriteRemoteVProfData()
 		s_VProfListeners[i].m_flLastSentVProfDataTime = flTime;
 
 		// Re-order send times to match send group order
-		int nSentSize = s_VProfListeners[i].m_SentGroups.Count() * sizeof(float);
+		int nSentSize = std::ssize( s_VProfListeners[i].m_SentGroups ) * sizeof(float);
 		float *pSentTimes = (float*)stackalloc( nSentSize );
 		memset( pSentTimes, 0, nSentSize );
 		for ( int j = 0; j < nGroupCount; ++j )
@@ -932,7 +933,7 @@ void WriteRemoteVProfData()
 void RegisterVProfDataListener( ra_listener_id listenerID )
 {
 	RemoveVProfDataListener( listenerID );
-	int nIndex = s_VProfListeners.AddToTail( );
+	int nIndex = std::ssize( s_VProfListeners ); s_VProfListeners.emplace_back();
 	s_VProfListeners[nIndex].m_nListenerId = listenerID;
 	g_VProfExport.AddListener();
 	WriteRemoteVProfGroupData( s_VProfListeners[nIndex] );
@@ -945,7 +946,7 @@ void RegisterVProfDataListener( ra_listener_id listenerID )
 void RemoveVProfDataListener( ra_listener_id listenerID )
 {
 	VProfListenInfo_t findInfo( listenerID );
-	if ( s_VProfListeners.FindAndRemove( findInfo ) )
+	if ( ks::erase_first( s_VProfListeners, findInfo ) )
 	{
 		g_VProfExport.RemoveListener();
 	}

@@ -22,11 +22,11 @@ public:
 	const char			*GetFileName(char *pBuf, size_t bufLen );
 	FileNameHandle_t	GetFileNameHandle();
 
-	void				SetNamePoolIndex( int index );
+	void				SetFileNameHandle( FileNameHandle_t hName );
 	bool				IsPrecachedSound();
 	void				OnNameChanged( const char *pName );
 
-	int					m_namePoolIndex;
+	FileNameHandle_t	m_fnHandle;		// key in the sound dictionary, null until named
 	CAudioSource		*pSource;
 
 	bool				m_bUseErrorFilename : 1;

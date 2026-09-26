@@ -15,19 +15,6 @@
 #include <stdio.h>
 #include <string.h>
 #include "stringregistry.h"
-#include "utldict.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
-
-//-----------------------------------------------------------------------------
-// Purpose: This class wraps the containers that do the actual work
-//-----------------------------------------------------------------------------
-struct StringTable_t : public CUtlDict<int, unsigned short>
-{
-};
-
 
 
 //-----------------------------------------------------------------------------
@@ -35,9 +22,9 @@ struct StringTable_t : public CUtlDict<int, unsigned short>
 // Input  :
 // Output :
 //-----------------------------------------------------------------------------
-unsigned short CStringRegistry::AddString(const char *stringText, int stringID)
+CStringRegistry::Key CStringRegistry::AddString(const char *stringText, int stringID)
 {
-	return m_pStringList->Insert( stringText, stringID );
+	return m_pStringList->emplace( stringText, stringID ).first;
 }
 
 //-----------------------------------------------------------------------------
@@ -47,10 +34,9 @@ unsigned short CStringRegistry::AddString(const char *stringText, int stringID)
 //-----------------------------------------------------------------------------
 int	CStringRegistry::GetStringID( const char *stringText )
 {
-	unsigned short index = m_pStringList->Find( stringText );
-	if ( m_pStringList->IsValidIndex( index ) )
+	if ( int *pID = ks::find_ptr( *m_pStringList, stringText ) )
 	{
-		return (*m_pStringList)[index];
+		return *pID;
 	}
 
 	return -1;
@@ -63,11 +49,11 @@ int	CStringRegistry::GetStringID( const char *stringText )
 //-----------------------------------------------------------------------------
 char const *CStringRegistry::GetStringText( int stringID )
 {
-	for( unsigned short index = m_pStringList->First() ; index != m_pStringList->InvalidIndex(); index = m_pStringList->Next( index ) )
+	for ( auto &[name, id] : *m_pStringList )
 	{
-		if ( (*m_pStringList)[index] == stringID )
+		if ( id == stringID )
 		{
-			return m_pStringList->GetElementName( index );
+			return name.c_str();
 		}
 	}
 
@@ -78,23 +64,23 @@ char const *CStringRegistry::GetStringText( int stringID )
 //-----------------------------------------------------------------------------
 // Purpose: Given a key return the string text
 //-----------------------------------------------------------------------------
-char const *CStringRegistry::GetStringForKey( unsigned short key )
+char const *CStringRegistry::GetStringForKey( Key key )
 {
-	if ( !m_pStringList->IsValidIndex( key ) )
+	if ( key == m_pStringList->end() )
 		return nullptr;
 
-	return m_pStringList->GetElementName( key );
+	return key->first.c_str();
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Given a key return the string text
 //-----------------------------------------------------------------------------
-int CStringRegistry::GetIDForKey( unsigned short key )
+int CStringRegistry::GetIDForKey( Key key )
 {
-	if ( !m_pStringList->IsValidIndex( key ) )
+	if ( key == m_pStringList->end() )
 		return 0;
 
-	return (*m_pStringList)[key];
+	return key->second;
 }
 
 //-----------------------------------------------------------------------------
@@ -102,7 +88,7 @@ int CStringRegistry::GetIDForKey( unsigned short key )
 //-----------------------------------------------------------------------------
 void CStringRegistry::ClearStrings(void)
 {
-	m_pStringList->RemoveAll();
+	m_pStringList->clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -122,22 +108,21 @@ CStringRegistry::~CStringRegistry(void)
 //-----------------------------------------------------------------------------
 CStringRegistry::CStringRegistry(void)
 {
-	m_pStringList = new StringTable_t;
+	m_pStringList = new ks::idict<int>;
 }
 
 
-unsigned short CStringRegistry::First() const
+CStringRegistry::Key CStringRegistry::First() const
 {
-	return m_pStringList->First();
+	return m_pStringList->begin();
 }
 
-unsigned short CStringRegistry::Next( unsigned short key ) const
+CStringRegistry::Key CStringRegistry::Next( Key key ) const
 {
-	return m_pStringList->Next( key );
+	return std::next( key );
 }
 
-unsigned short CStringRegistry::InvalidIndex() const
+CStringRegistry::Key CStringRegistry::InvalidIndex() const
 {
-	return m_pStringList->InvalidIndex();
+	return m_pStringList->end();
 }
-

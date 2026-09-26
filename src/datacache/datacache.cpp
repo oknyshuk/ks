@@ -4,6 +4,7 @@
 //
 //=============================================================================
 
+#include <mutex>
 #include "datacache/idatacache.h"
 
 #include <malloc.h>
@@ -13,17 +14,12 @@
 #include "convar.h"
 #include "interface.h"
 #include "datamanager.h"
-#include "utlrbtree.h"
-#include "utlhash.h"
-#include "utlmap.h"
+#include <algorithm>
 #include "generichash.h"
 #include "filesystem.h"
 #include "datacache.h"
 #include "utlvector.h"
 #include "fmtstr.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Singleton
@@ -51,7 +47,7 @@ static int g_iDontForceFlush;
 // DataCacheItem_t
 //-----------------------------------------------------------------------------
 
-DEFINE_FIXEDSIZE_ALLOCATOR_MT( DataCacheItem_t, 4096/sizeof(DataCacheItem_t), CUtlMemoryPool::GROW_SLOW );
+DEFINE_FIXEDSIZE_ALLOCATOR_MT( DataCacheItem_t, 4096/sizeof(DataCacheItem_t), ks::fixed_pool::grow::slow );
 
 void DataCacheItem_t::DestroyResource()
 { 
@@ -258,7 +254,7 @@ DataCacheHandle_t CDataCacheSection::Find( DataCacheClientID_t clientId )
 //---------------------------------------------------------
 DataCacheHandle_t CDataCacheSection::DoFind( DataCacheClientID_t clientId )
 {
-	AUTO_LOCK( m_mutex );
+	std::scoped_lock lock( m_mutex );
 	memhandle_t hCurrent;
 
 	hCurrent = GetFirstUnlockedItem();
@@ -304,7 +300,7 @@ DataCacheRemoveResult_t CDataCacheSection::Remove( DataCacheHandle_t handle, con
 			return DC_LOCKED;
 		}
 
-		AUTO_LOCK( m_mutex );
+		std::scoped_lock lock( m_mutex );
 
 		DataCacheItem_t *pItem = AccessItem( lruHandle );
 		if ( pItem )
@@ -347,7 +343,7 @@ void CDataCacheSection::GetAndLockMultiple( void **ppData, int nCount, DataCache
 
 	ForceFlushDebug( !g_iDontForceFlush );
 
-	AUTO_LOCK( m_mutex );
+	std::scoped_lock lock( m_mutex );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		if ( pHandles[i] == DC_INVALID_HANDLE )
@@ -412,13 +408,13 @@ int CDataCacheSection::Unlock( DataCacheHandle_t handle )
 	{
 		AssertMsg( AccessItem( (memhandle_t)handle ) != nullptr, "Attempted to unlock nonexistent cache entry" );
 		unsigned nBytesUnlocked = 0;
-		m_mutex.Lock();
+		m_mutex.lock();
 		iNewLockCount = m_LRU.UnlockResource( (memhandle_t)handle );
 		if ( iNewLockCount == 0 )
 		{
 			nBytesUnlocked = AccessItem( (memhandle_t)handle )->size;
 		}
-		m_mutex.Unlock();
+		m_mutex.unlock();
 		if ( nBytesUnlocked )
 		{
 			NoteUnlock( nBytesUnlocked );
@@ -435,7 +431,7 @@ int CDataCacheSection::Unlock( DataCacheHandle_t handle )
 void CDataCacheSection::LockMutex()
 {
 	g_iDontForceFlush++;
-	m_mutex.Lock();
+	m_mutex.lock();
 }
 
 
@@ -445,7 +441,7 @@ void CDataCacheSection::LockMutex()
 void CDataCacheSection::UnlockMutex()
 {
 	g_iDontForceFlush--;
-	m_mutex.Unlock();
+	m_mutex.unlock();
 }
 
 //-----------------------------------------------------------------------------
@@ -462,7 +458,7 @@ void *CDataCacheSection::Get( DataCacheHandle_t handle, bool bFrameLock )
 		if ( bFrameLock && IsFrameLocking() )
 			return FrameLock( handle );
 
-		AUTO_LOCK( m_mutex );
+		std::scoped_lock lock( m_mutex );
 		DataCacheItem_t *pItem = m_LRU.GetResource_NoLock( (memhandle_t)handle );
 		if ( pItem )
 		{
@@ -486,7 +482,7 @@ void *CDataCacheSection::GetNoTouch( DataCacheHandle_t handle, bool bFrameLock )
 		if ( bFrameLock && IsFrameLocking() )
 			return FrameLock( handle );
 
-		AUTO_LOCK( m_mutex );
+		std::scoped_lock lock( m_mutex );
 		DataCacheItem_t *pItem = m_LRU.GetResource_NoLockNoLRUTouch( (memhandle_t)handle );
 		if ( pItem )
 		{
@@ -585,7 +581,7 @@ int CDataCacheSection::EndFrameLocking()
 
 		if ( pFrameLock->m_pFirst )
 		{
-			AUTO_LOCK( m_mutex );
+			std::scoped_lock lock( m_mutex );
 
 			DataCacheItem_t *pItem = pFrameLock->m_pFirst;
 			DataCacheItem_t *pNext;
@@ -664,7 +660,7 @@ unsigned CDataCacheSection::Flush( bool bUnlockedOnly, bool bNotify )
 {
 	VPROF( "CDataCacheSection::Flush" );
 
-	AUTO_LOCK( m_mutex );
+	std::scoped_lock lock( m_mutex );
 
 	DataCacheNotificationType_t notificationType = ( bNotify )? DC_FLUSH_DISCARD : DC_NONE;
 
@@ -716,7 +712,7 @@ unsigned CDataCacheSection::Purge( unsigned nBytes )
 {
 	VPROF( "CDataCacheSection::Purge" );
 
-	AUTO_LOCK( m_mutex );
+	std::scoped_lock lock( m_mutex );
 
 	unsigned nBytesPurged = 0;
 	unsigned nBytesCurrent = 0;
@@ -735,7 +731,7 @@ unsigned CDataCacheSection::Purge( unsigned nBytes )
 			if ( DiscardItem( hCurrent, DC_FLUSH_DISCARD  ) )
 			{
 				nBytesPurged += nBytesCurrent;
-				nBytes -= MIN( nBytesCurrent, nBytes );
+				nBytes -= std::min( nBytesCurrent, nBytes );
             }
 		}
 		hCurrent = hNext;
@@ -749,7 +745,7 @@ unsigned CDataCacheSection::Purge( unsigned nBytes )
 //-----------------------------------------------------------------------------
 unsigned CDataCacheSection::PurgeItems( unsigned nItems )
 {
-	AUTO_LOCK( m_mutex );
+	std::scoped_lock lock( m_mutex );
 
 	unsigned nPurged = 0;
 
@@ -992,29 +988,27 @@ void CDataCacheSection::ForceFlushDebug( bool bFlush )
 //-----------------------------------------------------------------------------
 DataCacheHandle_t CDataCacheSectionFastFind::DoFind( DataCacheClientID_t clientId ) 
 { 
-	AUTO_LOCK( m_mutex );
-	UtlHashFastHandle_t hHash = m_Handles.Find( Hash4( &clientId ) );
-	if( hHash != m_Handles.InvalidHandle() )
-		return m_Handles[hHash];
+	std::scoped_lock lock( m_mutex );
+	auto it = m_Handles.find( clientId );
+	if( it != m_Handles.end() )
+		return it->second;
 	return DC_INVALID_HANDLE; 
 }
 
 
 void CDataCacheSectionFastFind::OnAdd( DataCacheClientID_t clientId, DataCacheHandle_t hCacheItem ) 
 {
-	AUTO_LOCK( m_mutex );
-	Assert( m_Handles.Find( Hash4( &clientId ) ) == m_Handles.InvalidHandle());
-	m_Handles.FastInsert( Hash4( &clientId ), hCacheItem );
+	std::scoped_lock lock( m_mutex );
+	Assert( !m_Handles.contains( clientId ) );
+	m_Handles.insert_or_assign( clientId, hCacheItem );
 }
 
 
 void CDataCacheSectionFastFind::OnRemove( DataCacheClientID_t clientId ) 
 {
-	AUTO_LOCK( m_mutex );
-	UtlHashFastHandle_t hHash = m_Handles.Find( Hash4( &clientId ) );
-	Assert( hHash != m_Handles.InvalidHandle());
-	if( hHash != m_Handles.InvalidHandle() )
-		return m_Handles.Remove( hHash );
+	std::scoped_lock lock( m_mutex );
+	[[maybe_unused]] size_t nRemoved = m_Handles.erase( clientId );
+	Assert( nRemoved );
 }
 
 
@@ -1110,7 +1104,7 @@ void CDataCache::SetSize( int nMaxBytes )
 //-----------------------------------------------------------------------------
 void CDataCache::SetOptions( unsigned options )
 {
-	for ( int i = 0; m_Sections.Count(); i++ )
+	for ( int i = 0; std::ssize( m_Sections ); i++ )
 	{
 		m_Sections[i]->SetOptions( options );
 	}
@@ -1173,7 +1167,7 @@ IDataCacheSection *CDataCache::AddSection( IDataCacheClient *pClient, const char
 		
 	pSection->SetLimits( limits );
 
-	m_Sections.AddToTail( pSection );
+	m_Sections.push_back( pSection );
 	return pSection;	
 }
 
@@ -1186,14 +1180,14 @@ void CDataCache::RemoveSection( const char *pszClientName, bool bCallFlush )
     {
 		int iSection = FindSectionIndex( pszClientName );
 
-		if ( iSection != m_Sections.InvalidIndex() )
+		if ( iSection != -1 )
 		{
 			if ( bCallFlush )
 			{
 				m_Sections[iSection]->Flush( false );
 			}
 			delete m_Sections[iSection];
-			m_Sections.FastRemove( iSection );
+			ks::swap_remove( m_Sections, iSection );
 			return;
         }
 	}
@@ -1207,7 +1201,7 @@ IDataCacheSection *CDataCache::FindSection( const char *pszClientName )
 {
 	int iSection = FindSectionIndex( pszClientName );
 
-	if ( iSection != m_Sections.InvalidIndex() )
+	if ( iSection != -1 )
 	{
 		return m_Sections[iSection];
 	}
@@ -1275,12 +1269,12 @@ void CDataCache::OutputReport( DataCacheReportType_t reportType, const char *psz
 	float percent;
 	int i;
 
-	AUTO_LOCK( m_mutex );
+	std::scoped_lock lock( m_mutex );
 	int bytesUsed = m_LRU.UsedSize();
 	int bytesTotal = m_LRU.TargetSize();
 	percent = 100.0f * (float)bytesUsed / (float)bytesTotal;
 
-	CUtlVector<memhandle_t> lruList, lockedlist;
+	std::vector< memhandle_t > lruList, lockedlist;
 
 	m_LRU.GetLockHandleList( lockedlist );
 	m_LRU.GetLRUHandleList( lruList );
@@ -1298,34 +1292,36 @@ void CDataCache::OutputReport( DataCacheReportType_t reportType, const char *psz
 
 	if ( reportType == DC_DETAIL_REPORT )
 	{
-		CUtlRBTree< memhandle_t, int >	sortedbysize( 0, 0, SortMemhandlesBySizeLessFunc );
-		for ( i = 0; i < lockedlist.Count(); ++i )
+		std::vector< memhandle_t > sortedbysize;
+		for ( i = 0; i < std::ssize( lockedlist ); ++i )
 		{
 			if ( !pSection || AccessItem( lockedlist[ i ] )->pSection == pSection )
-				sortedbysize.Insert( lockedlist[ i ] );
+				sortedbysize.push_back( lockedlist[ i ] );
 		}
 
-		for ( i = 0; i < lruList.Count(); ++i )
+		for ( i = 0; i < std::ssize( lruList ); ++i )
 		{
 			if ( !pSection || AccessItem( lruList[ i ] )->pSection == pSection )
-				sortedbysize.Insert( lruList[ i ] );
+				sortedbysize.push_back( lruList[ i ] );
 		}
 
-		for ( i = sortedbysize.FirstInorder(); i != sortedbysize.InvalidIndex(); i = sortedbysize.NextInorder( i ) )
+		// stable: equal sizes stay in list order, as the legacy tree inserted after equals
+		std::ranges::stable_sort( sortedbysize, SortMemhandlesBySizeLessFunc );
+		for ( memhandle_t hItem : sortedbysize )
 		{
-			OutputItemReport( sortedbysize[ i ] );
+			OutputItemReport( hItem );
 		}
 		OutputReport( DC_SUMMARY_REPORT, pszSection );
 	}
 	else if ( reportType == DC_DETAIL_REPORT_LRU )
 	{
-		for ( i = 0; i < lockedlist.Count(); ++i )
+		for ( i = 0; i < std::ssize( lockedlist ); ++i )
 		{
 			if ( !pSection || AccessItem( lockedlist[ i ] )->pSection == pSection )
 				OutputItemReport( lockedlist[ i ] );
 		}
 
-		for ( i = 0; i < lruList.Count(); ++i )
+		for ( i = 0; i < std::ssize( lruList ); ++i )
 		{
 			if ( !pSection || AccessItem( lruList[ i ] )->pSection == pSection )
 				OutputItemReport( lruList[ i ] );
@@ -1337,14 +1333,14 @@ void CDataCache::OutputReport( DataCacheReportType_t reportType, const char *psz
 		if ( !pszSection )
 		{
 			// summary for all of the sections
-			for ( int i = 0; i < m_Sections.Count(); ++i )
+			for ( int i = 0; i < std::ssize( m_Sections ); ++i )
 			{
 				if ( m_Sections[i]->GetName() )
 				{
 					OutputReport( DC_SUMMARY_REPORT, m_Sections[i]->GetName() );
 				}
 			}
-			Msg( "Summary: %i resources total %s, %.2f %% of capacity\n", lockedlist.Count() + lruList.Count(), Q_pretifymem( bytesUsed, 2, true ), percent );
+			Msg( "Summary: %i resources total %s, %.2f %% of capacity\n", (int)std::ssize( lockedlist ) + (int)std::ssize( lruList ), Q_pretifymem( bytesUsed, 2, true ), percent );
 		}
 		else
 		{
@@ -1352,7 +1348,7 @@ void CDataCache::OutputReport( DataCacheReportType_t reportType, const char *psz
 			DataCacheItem_t *pItem;
 			int sectionBytes = 0;
 			int sectionCount = 0;
-			for ( i = 0; i < lockedlist.Count(); ++i )
+			for ( i = 0; i < std::ssize( lockedlist ); ++i )
 			{
 				if ( AccessItem( lockedlist[ i ] )->pSection == pSection )
 				{
@@ -1361,7 +1357,7 @@ void CDataCache::OutputReport( DataCacheReportType_t reportType, const char *psz
 					sectionCount++;
 				}
 			}
-			for ( i = 0; i < lruList.Count(); ++i )
+			for ( i = 0; i < std::ssize( lruList ); ++i )
 			{
 				if ( AccessItem( lruList[ i ] )->pSection == pSection )
 				{
@@ -1391,7 +1387,7 @@ void CDataCache::OutputReport( DataCacheReportType_t reportType, const char *psz
 
 void CDataCache::OutputItemReport( memhandle_t hItem, void *pXboxData )
 {
-	AUTO_LOCK( m_mutex );
+	std::scoped_lock lock( m_mutex );
 	DataCacheItem_t *pItem = m_LRU.GetResource_NoLockNoLRUTouch( hItem );
 	if ( !pItem )
 		return;
@@ -1418,12 +1414,12 @@ void CDataCache::OutputItemReport( memhandle_t hItem, void *pXboxData )
 //-----------------------------------------------------------------------------
 int CDataCache::FindSectionIndex( const char *pszSection )
 {
-	for ( int i = 0; i < m_Sections.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Sections ); i++ )
 	{
 		if ( stricmp( m_Sections[i]->GetName(), pszSection ) == 0 )
 			return i;
 	}
-	return m_Sections.InvalidIndex();
+	return -1;
 }
 
 
@@ -1443,12 +1439,12 @@ bool CDataCache::SortMemhandlesBySizeLessFunc( const memhandle_t& lhs, const mem
 
 int CDataCache::GetSectionCount( void )
 {
-	return m_Sections.Count();
+	return std::ssize( m_Sections );
 }
 
 const char *CDataCache::GetSectionName( int iIndex )
 {
-	if ( iIndex >= 0 && iIndex < m_Sections.Count() )
+	if ( iIndex >= 0 && iIndex < std::ssize( m_Sections ) )
 	{
 		return m_Sections[iIndex]->GetName();
 	}

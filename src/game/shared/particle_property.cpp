@@ -32,9 +32,6 @@
 #include "sendproxy.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Save/load
 //-----------------------------------------------------------------------------
@@ -108,13 +105,13 @@ int CParticleProperty::GetAllParticleEffectRenderables( IClientRenderable **pOut
 		return 0;
 
 	int iReturnedRenderables = 0;
-	int iParticleEffectListCount = m_ParticleEffects.Count();
+	int iParticleEffectListCount = std::ssize( m_ParticleEffects );
 
 	for( int i = 0; i != iParticleEffectListCount; ++i )
 	{
-		if( m_ParticleEffects[i].pParticleEffect.IsValid() )
+		if( m_ParticleEffects[i].pParticleEffect )
 		{
-			pOutput[iReturnedRenderables++] = m_ParticleEffects[i].pParticleEffect.GetObject();
+			pOutput[iReturnedRenderables++] = m_ParticleEffects[i].pParticleEffect.get();
 			if( iReturnedRenderables == iMaxOutput )
 				break;
 		}
@@ -150,20 +147,20 @@ CNewParticleEffect *CParticleProperty::Create( CParticleSystemDefinition *pDef, 
 		int iIndex = FindEffect( pDef->GetName() );
 		if ( iIndex >= 0 )
 		{
-			CNewParticleEffect *pEffect = m_ParticleEffects[iIndex].pParticleEffect.GetObject();
+			CNewParticleEffect *pEffect = m_ParticleEffects[iIndex].pParticleEffect.get();
 			pEffect->Restart();
 			return pEffect;
 		}
 	}
 
-	int iIndex = m_ParticleEffects.AddToTail();
+	int iIndex = std::ssize( m_ParticleEffects ); m_ParticleEffects.emplace_back();
 	ParticleEffectList_t *newEffect = &m_ParticleEffects[iIndex];
 	newEffect->pParticleEffect = CNewParticleEffect::Create( m_pOuter, pDef, pDef->GetName() );
 
 	if ( !newEffect->pParticleEffect->IsValid() )
 	{
 		// Caused by trying to spawn an unregistered particle effect. Remove it.
-		ParticleMgr()->RemoveEffect( newEffect->pParticleEffect.GetObject() );
+		ParticleMgr()->RemoveEffect( newEffect->pParticleEffect.get() );
 		return nullptr;
 	}
 
@@ -171,10 +168,10 @@ CNewParticleEffect *CParticleProperty::Create( CParticleSystemDefinition *pDef, 
 
 	if ( m_pOuter )
 	{
-		m_pOuter->OnNewParticleEffect( pDef->GetName(), newEffect->pParticleEffect.GetObject() );
+		m_pOuter->OnNewParticleEffect( pDef->GetName(), newEffect->pParticleEffect.get() );
 	}
 
-	return newEffect->pParticleEffect.GetObject();
+	return newEffect->pParticleEffect.get();
 }
 
 CNewParticleEffect *CParticleProperty::CreatePrecached( int nPrecacheIndex, ParticleAttachment_t iAttachType, int iAttachmentPoint, Vector vecOriginOffset, matrix3x4_t *matOffset )
@@ -215,7 +212,7 @@ void CParticleProperty::AddControlPoint( CNewParticleEffect *pEffect, int iPoint
 			iAttachment = GetParticleAttachment( pEntity, pszAttachmentName, pEffect->GetEffectName() );
 		}
 
-		for ( int i = 0; i < m_ParticleEffects.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_ParticleEffects ); i++ )
 		{
 			if ( m_ParticleEffects[i].pParticleEffect == pEffect )
 			{
@@ -234,11 +231,11 @@ void CParticleProperty::AddControlPoint( CNewParticleEffect *pEffect, int iPoint
 //-----------------------------------------------------------------------------
 void CParticleProperty::AddControlPoint( int iEffectIndex, int iPoint, C_BaseEntity *pEntity, ParticleAttachment_t iAttachType, int iAttachmentPoint, Vector vecOriginOffset, matrix3x4_t *matOffset )
 {
-	Assert( iEffectIndex >= 0 && iEffectIndex < m_ParticleEffects.Count() );
+	Assert( iEffectIndex >= 0 && iEffectIndex < std::ssize( m_ParticleEffects ) );
 	ParticleEffectList_t *pEffect = &m_ParticleEffects[iEffectIndex];
-	Assert( pEffect->pControlPoints.Count() < MAX_PARTICLE_CONTROL_POINTS );
+	Assert( std::ssize( pEffect->pControlPoints ) < MAX_PARTICLE_CONTROL_POINTS );
 
-	int iIndex = pEffect->pControlPoints.AddToTail();
+	int iIndex = std::ssize( pEffect->pControlPoints ); pEffect->pControlPoints.emplace_back();
 	ParticleControlPoint_t *pNewPoint = &pEffect->pControlPoints[iIndex];
 	pNewPoint->iControlPoint = iPoint;
 	pNewPoint->hEntity = pEntity;
@@ -259,10 +256,10 @@ void CParticleProperty::AddControlPoint( int iEffectIndex, int iPoint, C_BaseEnt
 //-----------------------------------------------------------------------------
 void CParticleProperty::ReplaceParticleEffect( CNewParticleEffect *pOldEffect, CNewParticleEffect *pNewEffect )
 {
-	int nCount = m_ParticleEffects.Count();
+	int nCount = std::ssize( m_ParticleEffects );
 	for ( int i = 0; i < nCount; ++i )
 	{
-		if ( pOldEffect != m_ParticleEffects[i].pParticleEffect.GetObject() )
+		if ( pOldEffect != m_ParticleEffects[i].pParticleEffect.get() )
 			continue;
 
 		m_ParticleEffects[i].pParticleEffect = pNewEffect;
@@ -304,14 +301,14 @@ void CParticleProperty::StopEmission( CNewParticleEffect *pEffect, bool bWakeOnS
 	{
 		// Stop all effects
 		float flNow = g_pParticleSystemMgr->GetLastSimulationTime();
-		int nCount = m_ParticleEffects.Count();
+		int nCount = std::ssize( m_ParticleEffects );
 		for ( int i = nCount-1; i >= 0; i-- )
 		{
-			CNewParticleEffect *pTmp = m_ParticleEffects[i].pParticleEffect.GetObject();
+			CNewParticleEffect *pTmp = m_ParticleEffects[i].pParticleEffect.get();
 			bool bRemoveSystem = bRemoveInstantly || ( bDestroyAsleepSystems && ( flNow >= pTmp->m_flNextSleepTime ) );
 			if ( bRemoveSystem )
 			{
-				m_ParticleEffects.Remove( i );
+				m_ParticleEffects.erase( m_ParticleEffects.begin() + i );
 				pTmp->SetOwner( nullptr );
 			}
 			pTmp->StopEmission( false, bRemoveSystem, !bRemoveSystem && bWakeOnStop, bPlayEndCap );
@@ -331,7 +328,7 @@ void CParticleProperty::StopEmissionAndDestroyImmediately( CNewParticleEffect *p
 		Assert( iIndex != -1 );
 		if ( iIndex != -1 )
 		{
-			m_ParticleEffects.Remove( iIndex );
+			m_ParticleEffects.erase( m_ParticleEffects.begin() + iIndex );
 
 			// Clear the owner so it doesn't try to call back to us on deletion
 			pEffect->SetOwner( nullptr );
@@ -341,11 +338,11 @@ void CParticleProperty::StopEmissionAndDestroyImmediately( CNewParticleEffect *p
 	else
 	{
 		// Immediately destroy all effects
-		int nCount = m_ParticleEffects.Count();
+		int nCount = std::ssize( m_ParticleEffects );
 		for ( int i = nCount-1; i >= 0; i-- )
 		{
-			CNewParticleEffect *pTmp = m_ParticleEffects[i].pParticleEffect.GetObject();
-			m_ParticleEffects.Remove( i );
+			CNewParticleEffect *pTmp = m_ParticleEffects[i].pParticleEffect.get();
+			m_ParticleEffects.erase( m_ParticleEffects.begin() + i );
 
 			// Clear the owner so it doesn't try to call back to us on deletion
 			pTmp->SetOwner( nullptr );
@@ -370,13 +367,13 @@ void CParticleProperty::StopParticlesInvolving( CBaseEntity *pEntity, bool bForc
 	// force remove particles instantly if caller specified
 	bRemoveInstantly |= bForceRemoveInstantly;
 
-	int nCount = m_ParticleEffects.Count();
+	int nCount = std::ssize( m_ParticleEffects );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		// for each effect...
 		ParticleEffectList_t &part = m_ParticleEffects[i];
 		// look through all the control points to see if any mention the given object
-		int cpCount = part.pControlPoints.Count();
+		int cpCount = std::ssize( part.pControlPoints );
 		for (int j = 0; j < cpCount ; ++j )
 		{
 			// if any control points respond to the given handle...
@@ -409,11 +406,11 @@ void CParticleProperty::StopParticlesNamed( const char *pszEffectName, bool bFor
 	// force remove particles instantly if caller specified
 	bRemoveInstantly |= bForceRemoveInstantly;
 
-	int nCount = m_ParticleEffects.Count();
+	int nCount = std::ssize( m_ParticleEffects );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		// for each effect...
-		CNewParticleEffect *pParticleEffect = m_ParticleEffects[i].pParticleEffect.GetObject();
+		CNewParticleEffect *pParticleEffect = m_ParticleEffects[i].pParticleEffect.get();
 		if (pParticleEffect->m_pDef() == pDef)
 		{
 			if ( nSplitScreenPlayerSlot != -1 )
@@ -460,8 +457,8 @@ void CParticleProperty::OnParticleSystemDeleted( CNewParticleEffect *pEffect )
 		m_pOuter->OnParticleEffectDeleted( pEffect );
 	}
 
-	m_ParticleEffects[iIndex].pParticleEffect.MarkDeleted();
-	m_ParticleEffects.Remove( iIndex );
+	m_ParticleEffects[iIndex].pParticleEffect.detach();
+	m_ParticleEffects.erase( m_ParticleEffects.begin() + iIndex );
 }
 
 #ifdef CLIENT_DLL
@@ -472,7 +469,7 @@ void CParticleProperty::OwnerSetDormantTo( bool bDormant )
 {
 	m_iDormancyChangedAtFrame = gpGlobals->framecount;
 
-	int nCount = m_ParticleEffects.Count();
+	int nCount = std::ssize( m_ParticleEffects );
 	for ( int i = 0; i < nCount; i++ )
 	{
 		//m_ParticleEffects[i].pParticleEffect->SetShouldSimulate( !bDormant );
@@ -486,7 +483,7 @@ void CParticleProperty::OwnerSetDormantTo( bool bDormant )
 //-----------------------------------------------------------------------------
 int	CParticleProperty::FindEffect( CNewParticleEffect *pEffect )
 {
-	for ( int i = 0; i < m_ParticleEffects.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_ParticleEffects ); i++ )
 	{
 		if ( m_ParticleEffects[i].pParticleEffect == pEffect )
 			return i;
@@ -497,7 +494,7 @@ int	CParticleProperty::FindEffect( CNewParticleEffect *pEffect )
 
 int CParticleProperty::FindEffect( const char *pEffectName )
 {
-	for ( int i = 0; i < m_ParticleEffects.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_ParticleEffects ); i++ )
 	{
 		if ( !Q_stricmp( m_ParticleEffects[i].pParticleEffect->GetName(), pEffectName ) )
 			return i;
@@ -519,7 +516,7 @@ void CParticleProperty::UpdateParticleEffect( ParticleEffectList_t *pEffect, boo
 	}
 
 	// Loop through our control points and update them all
-	for ( int i = 0; i < pEffect->pControlPoints.Count(); i++ )
+	for ( int i = 0; i < std::ssize( pEffect->pControlPoints ); i++ )
 	{
 		UpdateControlPoint( pEffect, i, bInitializing );
 	}
@@ -733,11 +730,11 @@ void CParticleProperty::UpdateControlPoint( ParticleEffectList_t *pEffect, int i
 //-----------------------------------------------------------------------------
 void CParticleProperty::DebugPrintEffects( void )
 {
-	int nCount = m_ParticleEffects.Count();
+	int nCount = std::ssize( m_ParticleEffects );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		// for each effect...
-		CNewParticleEffect *pParticleEffect = m_ParticleEffects[i].pParticleEffect.GetObject();
+		CNewParticleEffect *pParticleEffect = m_ParticleEffects[i].pParticleEffect.get();
 
 		if ( !pParticleEffect )
 			continue;
@@ -755,10 +752,10 @@ bool CParticleProperty::IsValidEffect( const CNewParticleEffect *pEffect )
 	if( pEffect == nullptr )
 		return false;
 
-	int nCount = m_ParticleEffects.Count();
+	int nCount = std::ssize( m_ParticleEffects );
 	for ( int i = 0; i < nCount; ++i )
 	{
-		if( pEffect == m_ParticleEffects[i].pParticleEffect.GetObject() )
+		if( pEffect == m_ParticleEffects[i].pParticleEffect.get() )
 			return true;
 	}
 

@@ -17,7 +17,9 @@ typedef int64_t time64_t;
 #include "tier0/platform.h"
 #include "tier0/t0constants.h"
 #include "tier1/utlstring.h"
-#include "tier1/utllinkedlist.h"
+#include <atomic>
+#include <deque>
+#include <string>
 
 class CPathString
 {
@@ -133,21 +135,21 @@ public:
 	void Close();
 	uint64 GetBytesWritten();
 
-	static void __stdcall ThreadedWriteFileCompletionFunc( sigval sigval );
+	static void ThreadedWriteFileCompletionFunc( sigval sigval );
 
 	void Sleep( uint nMSec ); // system specific sleep call
 
 private:
 	HANDLE m_hFileDest;
 	uint64 m_cubWritten;
-	volatile int m_cubOutstanding;
+	std::atomic<int> m_cubOutstanding;
 	bool m_bAsync;
 	bool m_bDefaultAsync;
 	uint32 m_unThreadID; // main thread for this FileWriter. On this thread we support correct async IO
 	
 	// if the CFileWriter is called from any other thread, we block until the write is complete
 	// this is not great but a good enough for log files and we didn't need a full blow IOCP manager for this.
-	volatile int m_cPendingCallbacksFromOtherThreads; 
+	std::atomic<int> m_cPendingCallbacksFromOtherThreads; 
 
 };
 
@@ -170,14 +172,14 @@ public:
 	void SetDirToWatch( const char *pchDir );
 
 	// retrieve any changes
-	bool GetChangedFile( CUtlString *psFile );
+	bool GetChangedFile( std::string *psFile );
 
 #ifdef DBGFLAG_VALIDATE
 	void Validate( CValidator &validator, const char *pchName );
 #endif
 
 private:
-	CUtlLinkedList<CUtlString> m_listChangedFiles;
+	std::deque<std::string> m_listChangedFiles;
 	void *m_hFile;
 	void *m_pOverlapped;
 	void *m_pFileInfo;

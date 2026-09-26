@@ -7,8 +7,8 @@
 #include "server_pch.h"
 #include "iclient.h"
 #include "net.h"
-#include "utlbuffer.h"
-#include "utllinkedlist.h"
+#include "tier1/byte_reader.h"
+#include "tier1/string_ops.h"
 #include "igameserverdata.h"
 #include "sv_remoteaccess.h"
 #include "sv_rcon.h"
@@ -22,9 +22,6 @@
 #include "zip/XZip.h"
 #endif
 #include "cl_main.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 
 extern IServerGameDLL	*serverGameDLL;
@@ -64,25 +61,26 @@ CServerRemoteAccess::CServerRemoteAccess()
 //-----------------------------------------------------------------------------
 ra_listener_id CServerRemoteAccess::GetNextListenerID( bool authConnection, const netadr_t *adr )
 {
-	int i = m_ListenerIDs.AddToTail();
-	m_ListenerIDs[i].listenerID = i;
-	m_ListenerIDs[i].authenticated = !authConnection;
-	m_ListenerIDs[i].m_bHasAddress = ( adr != nullptr );
+	int i = std::ssize( m_ListenerIDs );
+	ListenerStore_t &store = m_ListenerIDs.emplace_back();
+	store.listenerID = i;
+	store.authenticated = !authConnection;
+	store.m_bHasAddress = ( adr != nullptr );
 	if ( adr )
 	{
-		m_ListenerIDs[i].adr = *adr;
+		store.adr = *adr;
 	}
 	return i;
 }
 
 
-bool GetStringHelper( CUtlBuffer & cmd, char *outBuf, int bufSize )
+bool GetStringHelper( ks::byte_reader & cmd, char *outBuf, int bufSize )
 {
 	outBuf[0] = 0;
-	cmd.GetString(outBuf, bufSize);
-	if ( !cmd.IsValid() )
+	cmd.read_cstring(outBuf, bufSize);
+	if ( !cmd.ok() )
 	{
-		cmd.Purge();
+		cmd.seek( cmd.size() );
 		return false;
 	}
 
@@ -102,15 +100,15 @@ void CServerRemoteAccess::WriteDataRequest( CRConServer *pNetworkListener, ra_li
 		return;
 	}
 
-	CUtlBuffer cmd(buffer, bufferSize, CUtlBuffer::READ_ONLY);
+	ks::byte_reader cmd(buffer, bufferSize);
 	bool invalidRequest = false;
 
-	while ( invalidRequest == false && (int)cmd.TellGet() < (int)(cmd.Size() - 2 * sizeof(int) ) ) // while there is commands to read
+	while ( invalidRequest == false && (int)cmd.tell() < (int)(cmd.size() - 2 * sizeof(int) ) ) // while there is commands to read
 	{
 		// parse out the buffer
-		int requestID = cmd.GetInt();
+		int requestID = cmd.read<int>();
 		pNetworkListener->SetRequestID( listener, requestID ); // tell the rcon server the ID so it can reflect it when the console redirect flushes
-		int requestType = cmd.GetInt();
+		int requestType = cmd.read<int>();
 
 		switch (requestType)
 		{
@@ -263,13 +261,13 @@ void CServerRemoteAccess::WriteDataRequest( CRConServer *pNetworkListener, ra_li
 			case SERVERDATA_SEND_CONSOLE_LOG:
 				{
 #ifndef DEDICATED
-					CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
+					ks::text_writer buf;
 					if ( GetConsoleLogFileData( buf ) )
 					{
 						HZIP hZip = CreateZipZ( 0, 1024 * 1024, ZIP_MEMORY );
 						void *pMem = nullptr;
 						unsigned long nLen;
-						ZipAdd( hZip, "console.log", buf.Base(), buf.TellMaxPut(), ZIP_MEMORY );
+						ZipAdd( hZip, "console.log", (void *)buf.c_str(), buf.size(), ZIP_MEMORY );
 						ZipGetMemory( hZip, &pMem, &nLen );
 						SendResponseToClient( listener, SERVERDATA_CONSOLE_LOG_RESPONSE, pMem, nLen );
 						CloseZip( hZip );
@@ -349,7 +347,7 @@ void CServerRemoteAccess::WriteDataRequest( CRConServer *pNetworkListener, ra_li
 
 			default:
 				Assert(!("Unknown requestType in CServerRemoteAccess::WriteDataRequest()"));
-				cmd.Purge();
+				cmd.seek( cmd.size() );
 				invalidRequest = true;
 				break;
 		};
@@ -367,14 +365,14 @@ void CServerRemoteAccess::RemoteBug( const char *pBugPath )
 	if ( m_nBugListener < 0 )
 		return;
 
-	int i = m_ResponsePackets.AddToTail();
-	m_ResponsePackets[i].responderID = m_nBugListener;
+	DataResponse_t &newResponse = m_ResponsePackets.emplace_back();
+	newResponse.responderID = m_nBugListener;
 
-	CUtlBuffer &response = m_ResponsePackets[i].packet;
+	ks::byte_writer &response = newResponse.packet;
 
-	response.PutInt(0);
-	response.PutInt(SERVERDATA_RESPONSE_REMOTEBUG);
-	response.PutString(pBugPath);
+	response.write<int>(0);
+	response.write<int>(SERVERDATA_RESPONSE_REMOTEBUG);
+	response.write_cstring(ks::nz(pBugPath));
 
 	m_nBugListener = -1;
 }
@@ -388,13 +386,12 @@ void CServerRemoteAccess::UploadScreenshot( const char *pFileName )
 	if ( m_nScreenshotListener < 0 )
 		return;
 
-	CUtlBuffer buf( 128 * 1024, 0 );
-	if ( g_pFullFileSystem->ReadFile( pFileName, "MOD", buf ) )
+	if ( auto buf = g_pFullFileSystem->ReadFile( pFileName, "MOD" ) )
 	{
 		HZIP hZip = CreateZipZ( 0, 1024 * 1024, ZIP_MEMORY );
 		void *pMem = nullptr;
 		unsigned long nLen;
-		ZipAdd( hZip, "screenshot.jpg", buf.Base(), buf.TellMaxPut(), ZIP_MEMORY );
+		ZipAdd( hZip, "screenshot.jpg", buf->data(), buf->size(), ZIP_MEMORY );
 		ZipGetMemory( hZip, &pMem, &nLen );
 		SendResponseToClient( m_nScreenshotListener, SERVERDATA_SCREENSHOT_RESPONSE, pMem, nLen );
 		CloseZip( hZip );
@@ -418,7 +415,7 @@ void CServerRemoteAccess::LogCommand( ra_listener_id listener, const char *msg )
 	if ( !sv_rcon_log.GetBool() )
 		return;
 		
-	if ( listener < (ra_listener_id)m_ListenerIDs.Count() && m_ListenerIDs[listener].m_bHasAddress )
+	if ( listener < (ra_listener_id)std::ssize( m_ListenerIDs ) && m_ListenerIDs[listener].m_bHasAddress )
 	{
 		Log_Msg( LOG_SERVER_LOG, "rcon from \"%s\": %s\n", m_ListenerIDs[listener].adr.ToString(), msg );
 	}
@@ -441,16 +438,16 @@ void CServerRemoteAccess::CheckPassword( CRConServer *pNetworkListener, ra_liste
 	}
 
 		// allocate a spot in the list for the response
-	int i = m_ResponsePackets.AddToTail();
-	m_ResponsePackets[i].responderID = listener; // record who we need to respond to
+	DataResponse_t &newResponse = m_ResponsePackets.emplace_back();
+	newResponse.responderID = listener; // record who we need to respond to
 
-	CUtlBuffer &response = m_ResponsePackets[i].packet;
+	ks::byte_writer &response = newResponse.packet;
 
 	// build the response
-	response.PutInt(requestID);
-	response.PutInt(SERVERDATA_AUTH_RESPONSE);
-	response.PutString("");
-	response.PutString("");
+	response.write<int>(requestID);
+	response.write<int>(SERVERDATA_AUTH_RESPONSE);
+	response.write_cstring("");
+	response.write_cstring("");
 
 	m_ListenerIDs[ listener ].authenticated = true;
 }
@@ -460,7 +457,7 @@ void CServerRemoteAccess::CheckPassword( CRConServer *pNetworkListener, ra_liste
 //-----------------------------------------------------------------------------
 bool CServerRemoteAccess::IsAuthenticated( ra_listener_id listener )
 {
-	Assert( listener >= 0 && listener < (ra_listener_id)m_ListenerIDs.Count() );
+	Assert( listener >= 0 && listener < (ra_listener_id)std::ssize( m_ListenerIDs ) );
 	return m_ListenerIDs[listener].authenticated;
 }
 
@@ -488,15 +485,15 @@ void CServerRemoteAccess::BadPassword( CRConServer *pNetworkListener, ra_listene
 		//
 
 		// allocate a spot in the list for the response
-		int i = m_ResponsePackets.AddToTail();
-		m_ResponsePackets[i].responderID = listener; // record who we need to respond to
-		CUtlBuffer &response = m_ResponsePackets[i].packet;
+		DataResponse_t &newResponse = m_ResponsePackets.emplace_back();
+		newResponse.responderID = listener; // record who we need to respond to
+		ks::byte_writer &response = newResponse.packet;
 
 		// build the response
-		response.PutInt(-1); // special flag for bad password
-		response.PutInt(SERVERDATA_AUTH_RESPONSE);
-		response.PutString("");
-		response.PutString("");
+		response.write<int>(-1); // special flag for bad password
+		response.write<int>(SERVERDATA_AUTH_RESPONSE);
+		response.write_cstring("");
+		response.write_cstring("");
 	}
 }
 
@@ -506,32 +503,32 @@ void CServerRemoteAccess::BadPassword( CRConServer *pNetworkListener, ra_listene
 //-----------------------------------------------------------------------------
 int CServerRemoteAccess::GetDataResponseSize( ra_listener_id listener )
 {
-	for( int i = m_ResponsePackets.Head(); m_ResponsePackets.IsValidIndex(i); i = m_ResponsePackets.Next(i) )
+	for( DataResponse_t &resp : m_ResponsePackets )
 	{
 		// copy response into buffer
-		if ( m_ResponsePackets[i].responderID != listener ) // not for us, skip to the next entry
+		if ( resp.responderID != listener ) // not for us, skip to the next entry
 			continue;
 
-		CUtlBuffer &response = m_ResponsePackets[i].packet;
-		return response.TellPut();
+		ks::byte_writer &response = resp.packet;
+		return response.size();
 	}
 	return 0;
 }
 
 int CServerRemoteAccess::ReadDataResponse( ra_listener_id listener, void *buffer, int bufferSize )
 {
-	for( int i = m_ResponsePackets.Head(); m_ResponsePackets.IsValidIndex(i); i = m_ResponsePackets.Next(i) )
+	for( auto it = m_ResponsePackets.begin(); it != m_ResponsePackets.end(); ++it )
 	{
 		// copy response into buffer
-		if ( m_ResponsePackets[i].responderID != listener ) // not for us, skip to the next entry
+		if ( it->responderID != listener ) // not for us, skip to the next entry
 			continue;
 
-		CUtlBuffer &response = m_ResponsePackets[i].packet;
-		int bytesToCopy = response.TellPut();
+		ks::byte_writer &response = it->packet;
+		int bytesToCopy = response.size();
 		Assert(bufferSize >= bytesToCopy);
 		if (bytesToCopy <= bufferSize)
 		{
-			memcpy(buffer, response.Base(), bytesToCopy);
+			memcpy(buffer, response.data(), bytesToCopy);
 		}
 		else
 		{
@@ -543,7 +540,7 @@ int CServerRemoteAccess::ReadDataResponse( ra_listener_id listener, void *buffer
 		// ConMsg("RemoteAccess: bytes sent: %d\n", m_iBytesSent);
 
 		// remove from list
-		m_ResponsePackets.Remove(i);
+		m_ResponsePackets.erase(it);
 		// return bytes copied
 		return bytesToCopy;
 	}
@@ -558,26 +555,23 @@ int CServerRemoteAccess::ReadDataResponse( ra_listener_id listener, void *buffer
 void CServerRemoteAccess::RequestValue( ra_listener_id listener, int requestID, const char *variable)
 {
 	// look up the cvar
-	CUtlBuffer value(0, 256, CUtlBuffer::TEXT_BUFFER);		// text-mode buffer
+	ks::text_writer value;
 	LookupValue(variable, value);
 
 	// allocate a spot in the list for the response
-	int i = m_ResponsePackets.AddToTail();
-	m_ResponsePackets[i].responderID = listener; // record who we need to respond to
+	DataResponse_t &newResponse = m_ResponsePackets.emplace_back();
+	newResponse.responderID = listener; // record who we need to respond to
 
-	CUtlBuffer &response = m_ResponsePackets[i].packet;
+	ks::byte_writer &response = newResponse.packet;
 
 	// build the response
-	response.PutInt(requestID);
-	response.PutInt(SERVERDATA_RESPONSE_VALUE);
-	response.PutString(variable);
+	response.write<int>(requestID);
+	response.write<int>(SERVERDATA_RESPONSE_VALUE);
+	response.write_cstring(ks::nz(variable));
 
 	//Assert(value.TellPut() > 0);
-	response.PutInt(value.TellPut());
-	if (value.TellPut())
-	{
-		response.Put(value.Base(), value.TellPut());
-	}
+	response.write<int>(value.size());
+	response.write_bytes(value.bytes());
 }
 
 
@@ -587,15 +581,15 @@ void CServerRemoteAccess::RequestValue( ra_listener_id listener, int requestID, 
 void CServerRemoteAccess::RespondString( ra_listener_id listener, int requestID, const char *pString )
 {
 	// allocate a spot in the list for the response
-	int i = m_ResponsePackets.AddToTail();
-	m_ResponsePackets[i].responderID = listener; // record who we need to respond to
+	DataResponse_t &newResponse = m_ResponsePackets.emplace_back();
+	newResponse.responderID = listener; // record who we need to respond to
 
-	CUtlBuffer &response = m_ResponsePackets[i].packet;
+	ks::byte_writer &response = newResponse.packet;
 
 	// build the response
-	response.PutInt(requestID);
-	response.PutInt(SERVERDATA_RESPONSE_STRING);
-	response.PutString(pString);
+	response.write<int>(requestID);
+	response.write<int>(SERVERDATA_RESPONSE_STRING);
+	response.write_cstring(ks::nz(pString));
 }
 
 
@@ -655,23 +649,21 @@ void CServerRemoteAccess::ExecCommand(const char *cmdString)
 //-----------------------------------------------------------------------------
 // Purpose: Finds the value of a particular server variable
 //-----------------------------------------------------------------------------
-bool CServerRemoteAccess::LookupValue(const char *variable, CUtlBuffer &value)
+bool CServerRemoteAccess::LookupValue(const char *variable, ks::text_writer &value)
 {
-	Assert(value.IsText());
-
 	// first see if it's a cvar
 	const char *strval = LookupStringValue(variable);
 	if (strval)
 	{
-		value.PutString(strval);
-		value.PutChar(0);
+		value.put(strval);
+		value.put('\0');
 	}
 	else if (!stricmp(variable, "stats"))
 	{
 		char stats[512];
 		GetStatsString(stats, sizeof(stats));
-		value.PutString(stats);
-		value.PutChar(0);
+		value.put(stats);
+		value.put('\0');
 	}
 	else if (!stricmp(variable, "banlist"))
 	{
@@ -689,15 +681,15 @@ bool CServerRemoteAccess::LookupValue(const char *variable, CUtlBuffer &value)
 	else if (!stricmp(variable, "uptime"))
 	{
 		int timeSeconds = (int)(Plat_FloatTime());
-		value.PutInt(timeSeconds);
-		value.PutChar(0);
+		value.put(timeSeconds);
+		value.put('\0');
 	}
 	else if (!stricmp(variable, "ipaddress"))
 	{
 		char addr[25];
 		Q_snprintf( addr, sizeof(addr), "%s:%i", net_local_adr.ToString(true), sv.GetUDPPort());
-		value.PutString( addr );
-		value.PutChar(0);
+		value.put( addr );
+		value.put('\0');
 	}
 	else if (!stricmp(variable, "mapcycle"))
 	{
@@ -715,13 +707,13 @@ bool CServerRemoteAccess::LookupValue(const char *variable, CUtlBuffer &value)
 			if ( len && g_pFileSystem->Read( mapcycleData, len, f ) )
 			{
 				mapcycleData[len] = 0; // Make sure it's null terminated.
-				value.PutString((const char *)mapcycleData);
-				value.PutChar(0);
+				value.put((const char *)mapcycleData);
+				value.put('\0');
 			}
 			else
 			{
-				value.PutString( "" );
-				value.PutChar(0);
+				value.put( "" );
+				value.put('\0');
 			}
 
 			g_pFileSystem->Close( f );
@@ -732,7 +724,7 @@ bool CServerRemoteAccess::LookupValue(const char *variable, CUtlBuffer &value)
 	else
 	{
 		// value not found, null terminate
-		value.PutChar(0);
+		value.put('\0');
 		return false;
 	}
 	
@@ -778,24 +770,24 @@ const char *CServerRemoteAccess::LookupStringValue(const char *variable)
 //-----------------------------------------------------------------------------
 // Purpose: fills a buffer with a list of all banned IP addresses
 //-----------------------------------------------------------------------------
-void CServerRemoteAccess::GetUserBanList(CUtlBuffer &value)
+void CServerRemoteAccess::GetUserBanList(ks::text_writer &value)
 {
 	// add user bans
 	int i;
-	for (i = 0; i < g_UserFilters.Count(); i++)
+	for (i = 0; i < std::ssize( g_UserFilters ); i++)
 	{
-		value.Printf("%i %s : %.3f min\n", i + 1, GetUserIDString(g_UserFilters[i].userid), g_UserFilters[i].banTime);
+		value.printf("%i %s : %.3f min\n", i + 1, GetUserIDString(g_UserFilters[i].userid), g_UserFilters[i].banTime);
 	}
 
 	// add ip filters
-	for (i = 0; i < g_IPFilters.Count() ; i++)
+	for (i = 0; i < std::ssize( g_IPFilters ) ; i++)
 	{
 		unsigned char b[4];
 		*(unsigned *)b = g_IPFilters[i].compare;
-		value.Printf("%i %i.%i.%i.%i : %.3f min\n", i + 1 + g_UserFilters.Count(), b[0], b[1], b[2], b[3], g_IPFilters[i].banTime);
+		value.printf("%i %i.%i.%i.%i : %.3f min\n", i + 1 + (int)std::ssize( g_UserFilters ), b[0], b[1], b[2], b[3], g_IPFilters[i].banTime);
 	}
 
-	value.PutChar(0);
+	value.put('\0');
 }
 
 void CServerRemoteAccess::GetStatsString(char *buf, int bufSize)
@@ -820,7 +812,7 @@ void CServerRemoteAccess::GetStatsString(char *buf, int bufSize)
 //-----------------------------------------------------------------------------
 // Purpose: Fills buffer with details on everyone in the server
 //-----------------------------------------------------------------------------
-void CServerRemoteAccess::GetPlayerList(CUtlBuffer &value)
+void CServerRemoteAccess::GetPlayerList(ks::text_writer &value)
 {
 	if ( !serverGameClients )
 	{
@@ -842,14 +834,14 @@ void CServerRemoteAccess::GetPlayerList(CUtlBuffer &value)
 		//      "name authID ipAddress ping loss frags time"
 		if ( client->IsFakeClient() )
 		{
-			value.Printf("\"%s\" %s 0 0 0 %d 0\n",
+			value.printf("\"%s\" %s 0 0 0 %d 0\n",
 				client->GetClientName(),
 				client->GetNetworkIDString(),
 				pl->score);
 		}
 		else
 		{
-			value.Printf("\"%s\" %s %s %d %d %d %d\n", 
+			value.printf("\"%s\" %s %s %d %d %d %d\n", 
 				client->GetClientName(),
 				client->GetNetworkIDString(),
 				client->GetNetChannel()->GetAddress(),
@@ -860,13 +852,13 @@ void CServerRemoteAccess::GetPlayerList(CUtlBuffer &value)
 		}
 	}
 
-	value.PutChar(0);
+	value.put('\0');
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Fills buffer with list of maps from this mod
 //-----------------------------------------------------------------------------
-void CServerRemoteAccess::GetMapList(CUtlBuffer &value)
+void CServerRemoteAccess::GetMapList(ks::text_writer &value)
 {
 	// search the directory structure.
 	char mapwild[MAX_QPATH];
@@ -895,14 +887,14 @@ void CServerRemoteAccess::GetMapList(CUtlBuffer &value)
 			}
 
 			// write into buffer
-			value.PutString(mapName);
-			value.PutString("\n");
+			value.put(mapName);
+			value.put("\n");
 		}
 		findfn = Sys_FindNext( nullptr, 0 );
 	}
 
 	Sys_FindClose();
-	value.PutChar(0);
+	value.put('\0');
 }
 
 //-----------------------------------------------------------------------------
@@ -916,14 +908,14 @@ void CServerRemoteAccess::SendMessageToAdminUI( ra_listener_id listenerID, const
 	}
 
 	// allocate a spot in the list for the response
-	int i = m_ResponsePackets.AddToTail();
-	m_ResponsePackets[i].responderID = listenerID; // record who we need to respond to
-	CUtlBuffer &response = m_ResponsePackets[i].packet;
+	DataResponse_t &newResponse = m_ResponsePackets.emplace_back();
+	newResponse.responderID = listenerID; // record who we need to respond to
+	ks::byte_writer &response = newResponse.packet;
 
 	// post the message
-	response.PutInt(0);
-	response.PutInt(SERVERDATA_UPDATE);
-	response.PutString(message);
+	response.write<int>(0);
+	response.write<int>(SERVERDATA_UPDATE);
+	response.write_cstring(ks::nz(message));
 }
 
 
@@ -933,15 +925,15 @@ void CServerRemoteAccess::SendMessageToAdminUI( ra_listener_id listenerID, const
 void CServerRemoteAccess::SendResponseToClient( ra_listener_id listenerID, ServerDataResponseType_t type, void *pData, int nDataLen )
 {
 	// allocate a spot in the list for the response
-	int i = m_ResponsePackets.AddToTail();
-	m_ResponsePackets[i].responderID = listenerID; // record who we need to respond to
-	CUtlBuffer &response = m_ResponsePackets[i].packet;
+	DataResponse_t &newResponse = m_ResponsePackets.emplace_back();
+	newResponse.responderID = listenerID; // record who we need to respond to
+	ks::byte_writer &response = newResponse.packet;
 
 	// post the message
-	response.PutInt( 0 );
-	response.PutInt( type );
-	response.PutInt( nDataLen );
-	response.Put( pData, nDataLen );
+	response.write<int>( 0 );
+	response.write<int>( type );
+	response.write<int>( nDataLen );
+	response.write_bytes( pData, nDataLen );
 }
 
 

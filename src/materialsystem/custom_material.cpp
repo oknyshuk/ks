@@ -46,14 +46,14 @@ void CCustomMaterial::AddTexture( ICompositeTexture * pTextureInterface )
 	CCompositeTexture *pTexture = dynamic_cast< CCompositeTexture * >( pTextureInterface );
 	if ( pTexture )
 	{
-		m_pTextures.AddToTail( pTexture );
+		m_pTextures.push_back( pTexture );
 		pTexture->AddRef();
 	}
 }
 
 ICompositeTexture *CCustomMaterial::GetTexture( int nIndex )
 {
-	if ( nIndex >= 0 && nIndex < m_pTextures.Count() )
+	if ( nIndex >= 0 && nIndex < std::ssize( m_pTextures ) )
 	{
 		return m_pTextures[ nIndex ];
 	}
@@ -62,7 +62,7 @@ ICompositeTexture *CCustomMaterial::GetTexture( int nIndex )
 
 bool CCustomMaterial::CheckRegenerate( int nSize )
 {
-	if ( m_pTextures.Count() > 0 )
+	if ( !m_pTextures.empty() )
 	{
 		return nSize != ( 2048 >> m_pTextures[ 0 ]->Size() );
 	}
@@ -86,7 +86,7 @@ void CCustomMaterial::Shutdown()
 		m_pVMTKeyValues = nullptr;
 	}
 
-	for ( int i = 0; i < m_pTextures.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_pTextures ); i++ )
 	{
 		if ( m_pTextures[ i ] )
 		{
@@ -97,12 +97,12 @@ void CCustomMaterial::Shutdown()
 	if ( m_szBaseMaterialName )
 		free( ( void * ) m_szBaseMaterialName );
 
-	m_pTextures.RemoveAll();
+	m_pTextures.clear();
 }
 
 void CCustomMaterial::Usage( int& nTextures, int& nBackingTextures )
 {
-	for ( int i = 0; i < m_pTextures.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_pTextures ); i++ )
 	{
 		m_pTextures[ i ]->Usage( nTextures, nBackingTextures );
 	}
@@ -110,12 +110,12 @@ void CCustomMaterial::Usage( int& nTextures, int& nBackingTextures )
 
 bool CCustomMaterial::TexturesReady() const
 {
-	if ( m_pTextures.Count() == 0 )
+	if ( m_pTextures.empty() )
 	{
 		return false;
 	}
 
-	for ( int i = 0; i < m_pTextures.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_pTextures ); i++ )
 	{
 		if ( !m_pTextures[ i ]->IsReady() )
 		{
@@ -128,7 +128,7 @@ bool CCustomMaterial::TexturesReady() const
 
 void CCustomMaterial::RegenerateTextures()
 {
-	for ( int i = 0; i < m_pTextures.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_pTextures ); i++ )
 	{
 		m_pTextures[ i ]->ForceRegenerate();
 	}
@@ -139,11 +139,11 @@ bool CCustomMaterial::ShouldRelease()
 	return ( ( GetRefCount() == 1 ) && IsValid() );
 }
 
-bool CCustomMaterial::Compare( const CUtlVector< SCompositeTextureInfo > &vecTextures )
+bool CCustomMaterial::Compare( const std::vector< SCompositeTextureInfo > &vecTextures )
 {
-	if ( m_pTextures.Count() == vecTextures.Count() )
+	if ( std::ssize( m_pTextures ) == std::ssize( vecTextures ) )
 	{
-		FOR_EACH_VEC( m_pTextures, i )
+		for ( int i = 0; i < std::ssize( m_pTextures ); i++ )
 		{
 			if ( !m_pTextures[ i ]->Compare( vecTextures[ i ] ) )
 			{
@@ -191,7 +191,7 @@ void CCustomMaterial::CreateProceduralMaterial( const char *pMaterialName, KeyVa
 {
 	// Replace parts of existing material key values
 	// loop over m_pTextures and set the material params
-	for ( int i = 0; i < m_pTextures.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_pTextures ); i++ )
 	{
 		pVMTKeyValues->SetString( g_szMaterialParamNames[ m_pTextures[ i ]->GetMaterialParamNameId() ], m_pTextures[ i ]->GetName() );
 	}
@@ -214,8 +214,7 @@ void CCustomMaterial::DestroyProceduralMaterial()
 CCustomMaterialManager::CCustomMaterialManager()
 {
 #ifndef DEDICATED
-	m_pCustomMaterials.EnsureCapacity( 128 );
-	m_mapVMTKeyValues.SetLessFunc( StringLessThan );
+	m_pCustomMaterials.reserve( 128 );
 #endif
 }
 
@@ -243,11 +242,12 @@ bool CCustomMaterialManager::Init()
 			const char *pszVMTToCache = pValue->GetString();
 			if ( pszVMTToCache && pszVMTToCache[0] != 0 )
 			{
-				KeyValues *pVMTKeyValues = new KeyValues( "VertexLitGeneric" );
+				auto pVMTKeyValues = std::make_unique< KeyValues >( "VertexLitGeneric" );
 				bool bVMTExists = pVMTKeyValues->LoadFromFile( g_pFullFileSystem , pszVMTToCache, "MOD" );
 				if ( bVMTExists )
 				{
-					m_mapVMTKeyValues.Insert( pszVMTToCache, pVMTKeyValues );
+					// A repeated entry keeps the first copy.
+					m_mapVMTKeyValues.try_emplace( pszVMTToCache, std::move( pVMTKeyValues ) );
 					DevMsg( "CustomMaterialManager: Cached KeyValues %s.\n", pszVMTToCache );
 				}
 				else
@@ -266,11 +266,7 @@ void CCustomMaterialManager::Shutdown()
 {
 #ifndef DEDICATED
 	MaterialSystem()->RemoveEndFramePriorToNextContextFunc( ::ProcessDynamicCustomMaterialGenerator );
-	FOR_EACH_MAP_FAST( m_mapVMTKeyValues, i )
-	{
-		m_mapVMTKeyValues[ i ]->deleteThis();
-	}
-	m_mapVMTKeyValues.Purge();
+	m_mapVMTKeyValues.clear();
 	DestroyMaterials();
 #endif
 }
@@ -278,11 +274,11 @@ void CCustomMaterialManager::Shutdown()
 bool CCustomMaterialManager::GetVMTKeyValues( const char *pszVMTName, KeyValues **ppVMTKeyValues )
 {
 	// lookup VMT KeyValues in container
-	int nIndex = m_mapVMTKeyValues.Find( pszVMTName );
-	if ( nIndex != m_mapVMTKeyValues.InvalidIndex() )
+	auto it = m_mapVMTKeyValues.find( pszVMTName );
+	if ( it != m_mapVMTKeyValues.end() )
 	{
 		// need to return a copy here, since we don't want the caller to change our copy.
-		*ppVMTKeyValues = m_mapVMTKeyValues[ nIndex ]->MakeCopy();
+		*ppVMTKeyValues = it->second->MakeCopy();
 		return true;
 	}
 	return false;
@@ -293,7 +289,7 @@ bool CCustomMaterialManager::Process()
 {
 	//TM_ZONE( TELEMETRY_LEVEL0, TMZF_NONE, "%s", __FUNCTION__ );
 
-	for ( int i = 0; i < m_pCustomMaterials.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_pCustomMaterials ); ++i )
 	{
 		if ( m_pCustomMaterials[ i ] &&
 			 m_pCustomMaterials[ i ]->TexturesReady() &&
@@ -313,7 +309,7 @@ bool CCustomMaterialManager::Process()
 		}
 	}
 
-	for ( int i = m_pCustomMaterials.Count() - 1; i >= 0; i-- )
+	for ( int i = std::ssize( m_pCustomMaterials ) - 1; i >= 0; i-- )
 	{
 		if ( m_pCustomMaterials[ i ] )
 		{
@@ -325,7 +321,7 @@ bool CCustomMaterialManager::Process()
 #endif
 				m_pCustomMaterials[ i ]->Release();
 				m_pCustomMaterials[ i ] = nullptr;
-				m_pCustomMaterials.Remove( i );
+				m_pCustomMaterials.erase( m_pCustomMaterials.begin() + i );
 			}
 		}
 	}
@@ -333,14 +329,14 @@ bool CCustomMaterialManager::Process()
 	return false;
 }
 
-ICustomMaterial * CCustomMaterialManager::GetOrCreateCustomMaterial( KeyValues *pKeyValues, const CUtlVector< SCompositeTextureInfo > &vecTextureInfos, bool bIgnorePicMip /*= false */ )
+ICustomMaterial * CCustomMaterialManager::GetOrCreateCustomMaterial( KeyValues *pKeyValues, const std::vector< SCompositeTextureInfo > &vecTextureInfos, bool bIgnorePicMip /*= false */ )
 {
 #if defined( DEDICATED ) || defined( DISABLE_CUSTOM_MATERIAL_GENERATION )
 	return nullptr;
 #endif
 	TM_MESSAGE( TELEMETRY_LEVEL0, TMMF_ICON_NOTE | TMMF_SEVERITY_WARNING, "%s %d", __FUNCTION__, vecTextureInfos[0].m_size );
 
-	for ( int i = 0; i < m_pCustomMaterials.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_pCustomMaterials ); ++i )
 	{
 		CCustomMaterial *pMaterial = m_pCustomMaterials[ i ];
 		if ( pMaterial && pMaterial->Compare( vecTextureInfos ) )
@@ -353,9 +349,9 @@ ICustomMaterial * CCustomMaterialManager::GetOrCreateCustomMaterial( KeyValues *
 	pMaterial->SetValid( false );
 	pMaterial->SetBaseMaterialName( vecTextureInfos[ 0 ].m_pVisualsDataProcessor->GetOriginalMaterialBaseName() );
 
-	FOR_EACH_VEC( vecTextureInfos, i )
+	for ( const SCompositeTextureInfo &textureInfo : vecTextureInfos )
 	{
-		ICompositeTexture *pTexture = g_pMaterialSystem->GetCompositeTextureGenerator()->GetCompositeTexture( vecTextureInfos[ i ] );
+		ICompositeTexture *pTexture = g_pMaterialSystem->GetCompositeTextureGenerator()->GetCompositeTexture( textureInfo );
 		if ( pTexture )
 		{
 			pMaterial->AddTexture( pTexture );
@@ -368,7 +364,7 @@ ICustomMaterial * CCustomMaterialManager::GetOrCreateCustomMaterial( KeyValues *
 		}
 	}
 
-	m_pCustomMaterials.AddToTail( pMaterial );
+	m_pCustomMaterials.push_back( pMaterial );
 
 #ifdef DEBUG_CUSTOMMATERIALS
 	DevMsg( "Created custom material for: %s \n", pVisualsDataProcessor->GetOriginalMaterialName() );
@@ -380,7 +376,7 @@ ICustomMaterial * CCustomMaterialManager::GetOrCreateCustomMaterial( KeyValues *
 
 void CCustomMaterialManager::ReloadAllMaterials( const CCommand &args )
 {
-	for ( int i = 0; i < m_pCustomMaterials.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_pCustomMaterials ); ++i )
 	{
 		CCustomMaterial *pMaterial = m_pCustomMaterials[ i ];
 		if ( pMaterial )
@@ -398,7 +394,7 @@ int CCustomMaterialManager::DebugGetNumActiveCustomMaterials( )
 {
 	int nActive = 0;
 
-	for ( int i = 0; i < m_pCustomMaterials.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_pCustomMaterials ); ++i )
 	{
 		CCustomMaterial *pMaterial = m_pCustomMaterials[ i ];
 
@@ -416,7 +412,7 @@ void CCustomMaterialManager::Usage( const CCommand &args )
 	int nBackingTextures = 0;
 	int nActive = 0;
 
-	for ( int i = 0; i < m_pCustomMaterials.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_pCustomMaterials ); ++i )
 	{
 		CCustomMaterial *pMaterial = m_pCustomMaterials[ i ];
 
@@ -430,12 +426,12 @@ void CCustomMaterialManager::Usage( const CCommand &args )
 		}
 	}
 
-	Msg( "Custom Weapon Material Usage: Total: %d Active: %d  Textures: %d  BackingTextures: %d \n", m_pCustomMaterials.Count(), nActive, nTextures, nBackingTextures );
+	Msg( "Custom Weapon Material Usage: Total: %d Active: %d  Textures: %d  BackingTextures: %d \n", (int)std::ssize( m_pCustomMaterials ), nActive, nTextures, nBackingTextures );
 }
 
 void CCustomMaterialManager::DestroyMaterials( void )
 {
-	for ( int i = 0; i < m_pCustomMaterials.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_pCustomMaterials ); ++i )
 	{
 		if ( m_pCustomMaterials[ i ] )
 		{
@@ -443,5 +439,5 @@ void CCustomMaterialManager::DestroyMaterials( void )
 			m_pCustomMaterials[ i ] = nullptr;
 		}
 	}
-	m_pCustomMaterials.RemoveAll();
+	m_pCustomMaterials.clear();
 }

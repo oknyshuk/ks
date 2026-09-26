@@ -36,9 +36,6 @@
 #include "fx_cs_shared.h"
 #include "cs_player.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define SF_FUNNEL_REVERSE			1 // funnel effect repels particles instead of attracting them.
 
 #define	SF_GIBSHOOTER_REPEATABLE	(1<<0)	// allows a gibshooter to be refired
@@ -2162,7 +2159,7 @@ struct DelayedDamageInfoData_t
 	CTakeDamageInfo m_info;
 	trace_t m_tr;
 
-	typedef CUtlVectorFixedGrowable< DelayedDamageInfoData_t, kMaxNumPenetrationsSupported > Array;
+	typedef ks::small_vector< DelayedDamageInfoData_t, kMaxNumPenetrationsSupported > Array;
 };
 
 inline void UTIL_TraceLineIgnoreTwoEntities( const Vector& vecAbsStart, const Vector& vecAbsEnd, unsigned int mask,
@@ -2434,7 +2431,7 @@ void CEnvGunfire::FireBullet(
 		// [pfreese] Check if enemy players were killed by this bullet, and if so,
 		// add them to the iPenetrationKills count
 
-		DelayedDamageInfoData_t &delayedDamage = arrPendingDamage.Element( arrPendingDamage.AddToTail() );
+		DelayedDamageInfoData_t &delayedDamage = arrPendingDamage.emplace_back();
 		delayedDamage.m_tr = tr;
 
 		int nObjectsPenetrated = kMaxNumPenetrationsSupported - ( nPenetrationCount + nPenetrationAtMaxDistance );
@@ -2462,12 +2459,12 @@ void CEnvGunfire::FireBullet(
 
 
 #ifndef CLIENT_DLL
-	FOR_EACH_VEC( arrPendingDamage, idxDamage )
+	for ( auto &pendingDamage : arrPendingDamage )
 	{
 		ClearMultiDamage();
 
-		CTakeDamageInfo &info = arrPendingDamage[idxDamage].m_info;
-		trace_t &tr = arrPendingDamage[idxDamage].m_tr;
+		CTakeDamageInfo &info = pendingDamage.m_info;
+		trace_t &tr = pendingDamage.m_tr;
 
 		CBaseEntity *pEntity = tr.Ent<CBaseEntity>();
 		//bool bWasAlive = pEntity->IsAlive();

@@ -16,7 +16,7 @@
 #include "mathlib/vector4d.h"
 #include "mathlib/vmatrix.h"
 #include "datamodel/dmelementhandle.h"
-#include "tier1/utlsymbollarge.h"
+#include <string_view>
 #include "tier1/timeutils.h"
 
 
@@ -40,20 +40,18 @@ struct DmUnknownAttribute_t
 //-----------------------------------------------------------------------------
 struct DmElementAttribute_t
 {
-	DmElementAttribute_t() : m_ElementType( UTL_INVAL_SYMBOL_LARGE ) {}
+	DmElementAttribute_t() {}
 
 	operator DmElementHandle_t&() { return m_Handle; }
 	operator const DmElementHandle_t&() const { return m_Handle; }
 
 	DmElementHandle_t m_Handle;
-	CUtlSymbolLarge m_ElementType;
+	std::string_view m_ElementType;	// pooled type name; null when untyped
 };
 
-struct DmElementArray_t : public CUtlVector< DmElementHandle_t >
+struct DmElementArray_t : public std::vector< DmElementHandle_t >
 {
-	DmElementArray_t() : m_ElementType( UTL_INVAL_SYMBOL_LARGE ) {}
-
-	CUtlSymbolLarge m_ElementType;	
+	std::string_view m_ElementType;	// pooled type name; null when untyped
 };
 
 
@@ -298,21 +296,21 @@ public:
 	};																		\
 
 #define DECLARE_ATTRIBUTE_ARRAY_TYPE_INTERNAL( _className, _storageType, _attributeType, _attributeName ) \
-	template< > class CDmAttributeInfo< CUtlVector<_className> >				\
+	template< > class CDmAttributeInfo< std::vector< _className > >				\
 	{																			\
 	public:																		\
 		enum { ATTRIBUTE_TYPE = _attributeType };								\
 		typedef _storageType StorageType_t;										\
 		static DmAttributeType_t AttributeType() { return _attributeType; }		\
 		static const char *AttributeTypeName() { return _attributeName; }		\
-		static void SetDefaultValue( CUtlVector< _className >& value ) { value.RemoveAll(); }	\
+		static void SetDefaultValue( std::vector< _className >& value ) { value.clear(); }	\
 	};																			\
 
 #define DECLARE_ATTRIBUTE_TYPE( _className, _attributeType, _attributeName, _defaultSetStatement ) \
 	DECLARE_ATTRIBUTE_TYPE_INTERNAL( _className, _className, _attributeType, _attributeName, _defaultSetStatement )
 
 #define DECLARE_ATTRIBUTE_ARRAY_TYPE( _className, _attributeType, _attributeName )\
-	DECLARE_ATTRIBUTE_ARRAY_TYPE_INTERNAL( _className, CUtlVector< _className >, _attributeType, _attributeName )
+	DECLARE_ATTRIBUTE_ARRAY_TYPE_INTERNAL( _className, std::vector< _className >, _attributeType, _attributeName )
 
 // NOTE: If you add an attribute type here, also add it to the list of DEFINE_ATTRIBUTE_TYPES in dmattribute.cpp
 DECLARE_ATTRIBUTE_TYPE( int,					AT_INT,					"int",			value = 0; )
@@ -325,8 +323,8 @@ DECLARE_ATTRIBUTE_TYPE( Vector4D,				AT_VECTOR4,				"vector4",		value.Init( 0.0f
 DECLARE_ATTRIBUTE_TYPE( QAngle,					AT_QANGLE,				"qangle",		value.Init( 0.0f, 0.0f, 0.0f ); )
 DECLARE_ATTRIBUTE_TYPE( Quaternion,				AT_QUATERNION,			"quaternion",	value.Init( 0.0f, 0.0f, 0.0f, 1.0f ); )
 DECLARE_ATTRIBUTE_TYPE( VMatrix,				AT_VMATRIX,				"matrix",		MatrixSetIdentity( value ); )
-DECLARE_ATTRIBUTE_TYPE( CUtlSymbolLarge,		AT_STRING,				"string",		value = UTL_INVAL_SYMBOL_LARGE; )
-DECLARE_ATTRIBUTE_TYPE( CUtlBinaryBlock,		AT_VOID,				"binary",		value.Set( nullptr, 0 ); )
+// AT_STRING and AT_STRING_ARRAY are std::string, declared in dmxloader/dmxattribute.h.
+DECLARE_ATTRIBUTE_TYPE( std::vector< unsigned char >,	AT_VOID,				"binary",		value.clear(); )
 DECLARE_ATTRIBUTE_TYPE( DmeTime_t,				AT_TIME,				"time",			value.SetTenthsOfMS( 0 ); )
 DECLARE_ATTRIBUTE_TYPE_INTERNAL( DmElementHandle_t, DmElementAttribute_t, AT_ELEMENT,	"element", value = DMELEMENT_HANDLE_INVALID; )
 
@@ -340,8 +338,7 @@ DECLARE_ATTRIBUTE_ARRAY_TYPE( Vector4D,			AT_VECTOR4_ARRAY,		"vector4_array" )
 DECLARE_ATTRIBUTE_ARRAY_TYPE( QAngle,			AT_QANGLE_ARRAY,		"qangle_array" )
 DECLARE_ATTRIBUTE_ARRAY_TYPE( Quaternion,		AT_QUATERNION_ARRAY,	"quaternion_array" )
 DECLARE_ATTRIBUTE_ARRAY_TYPE( VMatrix,			AT_VMATRIX_ARRAY,		"matrix_array" )
-DECLARE_ATTRIBUTE_ARRAY_TYPE( CUtlSymbolLarge,	AT_STRING_ARRAY,		"string_array" )
-DECLARE_ATTRIBUTE_ARRAY_TYPE( CUtlBinaryBlock,	AT_VOID_ARRAY,			"binary_array" )
+DECLARE_ATTRIBUTE_ARRAY_TYPE( std::vector< unsigned char >,	AT_VOID_ARRAY,			"binary_array" )
 DECLARE_ATTRIBUTE_ARRAY_TYPE( DmeTime_t,		AT_TIME_ARRAY,			"time_array" )
 DECLARE_ATTRIBUTE_ARRAY_TYPE_INTERNAL( DmElementHandle_t, DmElementArray_t,	AT_ELEMENT_ARRAY, "element_array" )
 

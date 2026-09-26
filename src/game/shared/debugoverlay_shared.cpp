@@ -10,9 +10,6 @@
 #include "gamerules.h"
 #include "mathlib/mathlib.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define	MAX_OVERLAY_DIST_SQR	90000000
 
 //-----------------------------------------------------------------------------

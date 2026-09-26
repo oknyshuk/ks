@@ -151,7 +151,7 @@ public:
 	virtual void AddShadow( IMaterial* pMaterial, void* pProxyData, FlashlightState_t *pFlashlightState, VMatrix *pWorldToTexture, ITexture *pFlashlightDepthTexture );
 	virtual void ClearAllShadows();
 	virtual int ComputeModelLod( studiohwdata_t* pHardwareData, float flUnitSphereSize, float *pMetric = nullptr );
-	virtual void GetPerfStats( DrawModelResults_t *pResults, const DrawModelInfo_t &info, CUtlBuffer *pSpewBuf = nullptr ) const;
+	virtual void GetPerfStats( DrawModelResults_t *pResults, const DrawModelInfo_t &info, ks::text_writer *pSpewBuf = nullptr ) const;
 	virtual void GetTriangles( const DrawModelInfo_t& info, matrix3x4_t *pBoneToWorld, GetTriangles_Output_t &out );
 	virtual int GetMaterialList( studiohdr_t *pStudioHdr, int count, IMaterial** ppMaterials );
 	virtual int GetMaterialListFromBodyAndSkin( MDLHandle_t studio, int nSkin, int nBody, int nCountOutputMaterials, IMaterial** ppOutputMaterials );

@@ -12,9 +12,6 @@
 #include "nav_colors.h"
 #include "color.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 //--------------------------------------------------------------------------------------------------------------
 /**
@@ -137,7 +134,7 @@ void NavDrawDashedLine( const Vector& from, const Vector& to, NavEditColor navCo
 	{
 		Vector start = from + unit * distance;
 		float endDistance = distance + solidLen;
-		endDistance = MIN( endDistance, totalDistance );
+		endDistance = std::min( endDistance, totalDistance );
 		Vector end = from + unit * endDistance;
 
 		distance += solidLen + gapLen;

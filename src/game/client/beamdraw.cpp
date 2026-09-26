@@ -16,9 +16,6 @@
 #include "fx_line.h"
 #include "materialsystem/imaterialvar.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern ConVar r_drawsprites;
 extern ConVar r_DrawBeams;
 
@@ -248,7 +245,7 @@ void DrawSegs( int noise_divisions, float *prgNoise, const model_t* spritemodel,
 	}
 	
 	length = VectorLength( delta );
-	float flMaxWidth = MAX(startWidth, endWidth) * 0.5f;
+	float flMaxWidth = std::max(startWidth, endWidth) * 0.5f;
 	div = 1.0 / (segments-1);
 
 	if ( length*div < flMaxWidth * 1.414 )

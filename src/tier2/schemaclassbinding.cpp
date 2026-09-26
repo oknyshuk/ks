@@ -10,9 +10,6 @@
 #include "resourcefile/schema.h"
 #include "resourcesystem/iresourcesystem.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 CSchemaClassBindingBase *CSchemaClassBindingBase::sm_pClassBindingList;
 
 void CSchemaClassBindingBase::Install()

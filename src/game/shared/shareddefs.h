@@ -861,7 +861,7 @@ struct EmitSound_t
 	bool						m_bWarnOnMissingCloseCaption;
 	bool						m_bWarnOnDirectWaveReference;
 	int							m_nSpeakerEntity;
-	mutable CUtlVector< Vector >	m_UtlVecSoundOrigin;  ///< Actual sound origin(s) (can be multiple if sound routed through speaker entity(ies) )
+	mutable std::vector< Vector >	m_UtlVecSoundOrigin;  ///< Actual sound origin(s) (can be multiple if sound routed through speaker entity(ies) )
 	mutable HSOUNDSCRIPTHASH	m_hSoundScriptHash;
 	int							m_nSoundEntryVersion;
 };

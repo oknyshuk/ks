@@ -68,9 +68,7 @@
 
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 
 //-----------------------------------------------------------------------------
 // Globals
@@ -194,7 +192,7 @@ void MoveConsoleWindowToFront()
 {
 }
 
-CUtlVector<char> g_TextModeLine;
+std::vector< char > g_TextModeLine;
 
 char NextGetch()
 {
@@ -253,25 +251,25 @@ void EatTextModeKeyPresses()
 		if ( ch == 8 )
 		{
 			// Backspace..
-			if ( g_TextModeLine.Count() )
+			if ( !g_TextModeLine.empty() )
 			{
-				g_TextModeLine.Remove( g_TextModeLine.Count() - 1 );
+				g_TextModeLine.erase( g_TextModeLine.begin() + ( std::ssize( g_TextModeLine ) - 1 ) );
 			}
 		}
 		else if ( ch == '\r' )
 		{
 			// Finish the line.
-			if ( g_TextModeLine.Count() )
+			if ( !g_TextModeLine.empty() )
 			{
-				g_TextModeLine.AddMultipleToTail( 2, "\n" );
-				Cbuf_AddText( Cbuf_GetCurrentPlayer(), g_TextModeLine.Base() );
-				g_TextModeLine.Purge();
+				g_TextModeLine.insert( g_TextModeLine.end(), ( "\n" ), ( "\n" ) + 2 );
+				Cbuf_AddText( Cbuf_GetCurrentPlayer(), g_TextModeLine.data() );
+				g_TextModeLine.clear(); g_TextModeLine.shrink_to_fit();
 			}
 			printf( "\n" );
 		}
 		else
 		{
-			g_TextModeLine.AddToTail( ch );
+			g_TextModeLine.push_back( ch );
 		}
 
 		printf( "%c", ch );
@@ -338,7 +336,7 @@ private:
 	{
 		return m_bServerOnly;
 	}
-	bool ModuleAlreadyInList( CUtlVector< AppSystemInfo_t >& list, const char *moduleName, const char *interfaceName );
+	bool ModuleAlreadyInList( std::vector< AppSystemInfo_t >& list, const char *moduleName, const char *interfaceName );
 
 	bool AddLegacySystems();
 	bool	m_bServerOnly;
@@ -1049,7 +1047,7 @@ void GetSpew( char *buf, size_t buflen );
 // Turn this to 1 to allow for > 3kb of comments in dumps
 static ConVar sys_minidumpexpandedspew( "sys_minidumpexpandedspew", "0" );
 
-extern "C" void __cdecl FailSafe( unsigned int uStructuredExceptionCode, struct _EXCEPTION_POINTERS * pExceptionInfo	)
+extern "C" void FailSafe( unsigned int uStructuredExceptionCode, struct _EXCEPTION_POINTERS * pExceptionInfo	)
 {
 	// Nothing, this just catches a crash when creating the comment block
 }
@@ -1075,7 +1073,7 @@ public:
 		try 
 		{
 			int nSize = m_Size;
-			nSize = MIN( nSize, DUMP_COMMENT_SIZE );
+			nSize = std::min( nSize, DUMP_COMMENT_SIZE );
 
 			Q_memset( m_errorText, 0x00, nSize );
 
@@ -1158,7 +1156,7 @@ public:
 								cvar->GetName(), cvar->GetFloat(), Q_atof( cvar->GetDefault() ) );
 							}
 
-							int toCopy = MIN( add, remainder );
+							int toCopy = std::min( add, remainder );
 							if ( toCopy <= 0 )
 								break;
 
@@ -1211,12 +1209,12 @@ void BuildMinidumpComment( char const *pchSysErrorText )
 
 #ifndef DEDICATED
 
-extern "C" void __cdecl WriteMiniDumpUsingExceptionInfo( unsigned int uStructuredExceptionCode, struct _EXCEPTION_POINTERS * pExceptionInfo	)
+extern "C" void WriteMiniDumpUsingExceptionInfo( unsigned int uStructuredExceptionCode, struct _EXCEPTION_POINTERS * pExceptionInfo	)
 {
 	// TODO: dynamically set the minidump comment from contextual info about the crash (i.e current VPROF node)?
 } 
 
-extern "C" void __cdecl WriteMiniDump( void	);
+extern "C" void WriteMiniDump( void	);
 
 //-----------------------------------------------------------------------------
 // Purpose: Main 
@@ -1288,8 +1286,8 @@ static int VerToInt( const char *pszVersion )
 #define VERSION_STRING "1.0.1.0"
 #define FS_MAGIC_NUM_KEY "FSKey="
 
-static CUtlString g_sVersionString;
-static CUtlString g_sProductString;
+static std::string g_sVersionString;
+static std::string g_sProductString;
 static int32 sHostVersion;
 static int32 sClientVersion;
 static int32 sServerVersion;
@@ -1297,13 +1295,13 @@ static int32 sServerVersion;
 //-----------------------------------------------------------------------------
 const char *GetHostVersionString()
 {
-	return g_sVersionString.String();
+	return g_sVersionString.c_str();
 }
 
 //-----------------------------------------------------------------------------
 const char *GetHostProductString()
 {
-	return g_sProductString.String();
+	return g_sProductString.c_str();
 }
 
 int32 GetHostVersion()
@@ -1335,12 +1333,12 @@ int32 GetServerVersion()
 
 const char *Sys_GetVersionString()
 {
-	return g_sVersionString.String();
+	return g_sVersionString.c_str();
 }
 
 const char *Sys_GetProductString()
 {
-	return g_sProductString;
+	return g_sProductString.c_str();
 }
 
 static bool ParseSteamInfFile( const char *szFileName, AppId_t &unSteamAppID )
@@ -1667,7 +1665,7 @@ bool CModAppSystemGroup::Create()
 	}
 
 	// Load game and client .dlls and build list then
-	CUtlVector< AppSystemInfo_t >	systems;
+	std::vector< AppSystemInfo_t >	systems;
 
 	int i;
 	int serverCount = serverSharedSystems->Count();
@@ -1680,7 +1678,7 @@ bool CModAppSystemGroup::Create()
 		info.m_pModuleName = dllName;
 		info.m_pInterfaceName = interfaceName;
 
-		systems.AddToTail( info );
+		systems.push_back( info );
 	}
 
 	if ( !IsServerOnly() )
@@ -1698,16 +1696,16 @@ bool CModAppSystemGroup::Create()
 			info.m_pModuleName = dllName;
 			info.m_pInterfaceName = interfaceName;
 
-			systems.AddToTail( info );
+			systems.push_back( info );
 		}
 	}
 
 	AppSystemInfo_t info;
 	info.m_pModuleName = "";
 	info.m_pInterfaceName = "";
-	systems.AddToTail( info );
+	systems.push_back( info );
 
-	if ( !AddSystems( systems.Base() ) ) 
+	if ( !AddSystems( systems.data() ) ) 
 		return false;
 
 
@@ -1722,9 +1720,9 @@ bool CModAppSystemGroup::Create()
 //			*moduleName - 
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
-bool CModAppSystemGroup::ModuleAlreadyInList( CUtlVector< AppSystemInfo_t >& list, const char *moduleName, const char *interfaceName )
+bool CModAppSystemGroup::ModuleAlreadyInList( std::vector< AppSystemInfo_t >& list, const char *moduleName, const char *interfaceName )
 {
-	for ( int i = 0; i < list.Count(); ++i )
+	for ( int i = 0; i < std::ssize( list ); ++i )
 	{
 		if ( !Q_stricmp( list[ i ].m_pModuleName, moduleName ) &&
 			 !Q_stricmp( list[ i ].m_pInterfaceName, interfaceName ) )
@@ -1760,7 +1758,7 @@ int CModAppSystemGroup::Main()
 				}
 				if ( hints )
 				{
-					free(hints);
+					g_pMemAlloc->Free(hints);
 				}
 			}
 #endif
@@ -2052,7 +2050,7 @@ int CDedicatedServerAPI::BuildMapCycleListHints(char **hints)
 	// Start off with the common preloads.
 	Q_snprintf(szMap, sizeof( szMap ), "%s\\%s\\%s%s\r\n", szReslistsBaseDir, szMod, szCommonPreloads, szReslistsExt);
 	int hintsSize = strlen(szMap) + 1;
-	*hints = (char*)malloc( hintsSize );
+	*hints = (char*)MemAlloc_Alloc( hintsSize );
 	if ( *hints == nullptr )
 	{
 		ConMsg("Unable to allocate memory for map cycle hints list");
@@ -2065,7 +2063,7 @@ int CDedicatedServerAPI::BuildMapCycleListHints(char **hints)
 	length = g_pFileSystem->Size(pFile);
 	if ( length )
 	{
-		char *pStart = (char *)malloc(length);
+		char *pStart = (char *)MemAlloc_Alloc(length);
 		if ( pStart && ( 1 == g_pFileSystem->Read(pStart, length, pFile) )
 		   )
 		{
@@ -2087,7 +2085,7 @@ int CDedicatedServerAPI::BuildMapCycleListHints(char **hints)
 
 				char mapLine[sizeof(szMap)];
 				Q_snprintf(mapLine, sizeof(mapLine), "%s\\%s\\%s%s\r\n", szReslistsBaseDir, szMod, szMap, szReslistsExt);
-				*hints = (char*)realloc(*hints, strlen(*hints) + 1 + strlen(mapLine) + 1); // count NULL string terminators
+				*hints = (char*)g_pMemAlloc->Realloc(*hints, strlen(*hints) + 1 + strlen(mapLine) + 1); // count NULL string terminators
 				if ( *hints == nullptr )
 				{
 					ConMsg("Unable to reallocate memory for map cycle hints list");
@@ -2103,7 +2101,7 @@ int CDedicatedServerAPI::BuildMapCycleListHints(char **hints)
 
 	// Tack on <moddir>\mp_maps.txt to the end to make sure we load reslists for all multiplayer maps we know of
 	Q_snprintf(szMap, sizeof( szMap ), "%s\\%s\\mp_maps.txt\r\n", szReslistsBaseDir, szMod);
-	*hints = (char*)realloc(*hints, strlen(*hints) + 1 + strlen(szMap) + 1); // count NULL string terminators
+	*hints = (char*)g_pMemAlloc->Realloc(*hints, strlen(*hints) + 1 + strlen(szMap) + 1); // count NULL string terminators
 	Q_strncat( *hints, szMap, hintsSize, COPY_ALL_CHARACTERS );
 
 	return 1;

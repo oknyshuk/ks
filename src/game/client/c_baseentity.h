@@ -12,6 +12,7 @@
 #ifndef C_BASEENTITY_H
 #define C_BASEENTITY_H
 
+#include <bitset>
 #include "reflect_annotations.h"
 #include "dt_recv.h"
 
@@ -35,6 +36,8 @@
 #include "particle_property.h"
 #include "toolframework/itoolentity.h"
 #include "tier0/threadtools.h"
+#include <mutex>
+#include <flat_set>
 
 #include "vscript/ivscript.h"
 #include "vscript_shared.h"
@@ -97,7 +100,7 @@ struct VarMapping_t
 		m_nInterpolatedEntries = 0;
 	}
 
-	CUtlVector< VarMapEntry_t >	m_Entries;
+	std::vector< VarMapEntry_t >	m_Entries;
 	int							m_nInterpolatedEntries;
 	float						m_lastInterpolationTime;
 };
@@ -196,7 +199,7 @@ public:
 	virtual int Interpolate( float currentTime )
 	{
 		int iRetVal = CInterpolatedVar<Type>::Interpolate(currentTime);
-		if( m_Discontinuities.Count() == 0 )
+		if( m_Discontinuities.empty() )
 		{
 			return iRetVal;
 		}
@@ -205,7 +208,7 @@ public:
 
 		float fInterpolatedTime = currentTime - this->m_InterpolationAmount;
 
-		for( int i = m_Discontinuities.Count(); --i >= 0; )
+		for( int i = std::ssize( m_Discontinuities ); --i >= 0; )
 		{
 			if( m_Discontinuities[i].fBeforeTime < fInterpolatedTime )
 			{
@@ -277,8 +280,8 @@ public:
 	{
 		float fTargetTime = fCurTime - this->m_InterpolationAmount;
 		float fOldestEntryTime = this->GetOldestEntry();
-		fOldestEntryTime = MIN( fOldestEntryTime, fCurTime ); //pull entries in the future to now
-		return MAX( fTargetTime, fOldestEntryTime );
+		fOldestEntryTime = std::min( fOldestEntryTime, fCurTime ); //pull entries in the future to now
+		return std::max( fTargetTime, fOldestEntryTime );
 	}
 
 	bool HasDiscontinuityForTime( float fCurTime )
@@ -293,21 +296,21 @@ public:
 
 	bool GetDiscontinuityTransform( float fCurTime, matrix3x4_t &matOut )
 	{		
-		if( m_Discontinuities.Count() == 0 )
+		if( m_Discontinuities.empty() )
 			return false;
 
 		float fTargetTime = GetInterpolatedTime( fCurTime );
 
-		if( fTargetTime >= m_Discontinuities[m_Discontinuities.Count()-1].fBeforeTime )
+		if( fTargetTime >= m_Discontinuities[std::ssize( m_Discontinuities )-1].fBeforeTime )
 			return false;
 
 		//common case is exactly 0 or 1 transforms. 0's handled above. Do a copy of the first transform now and skip it in the iterator below
-		matOut = m_Discontinuities[m_Discontinuities.Count() - 1].matTransform;
+		matOut = m_Discontinuities[std::ssize( m_Discontinuities ) - 1].matTransform;
 
 		matrix3x4_t matTemp;
 		matrix3x4_t *pSwapMatrices[2] = { &matOut, &matTemp };
 		int iSwapRead = 0; //which of the swap indices has the newest value
-		for( int i = m_Discontinuities.Count() - 1; --i >= 0; )
+		for( int i = std::ssize( m_Discontinuities ) - 1; --i >= 0; )
 		{
 			if( m_Discontinuities[i].fBeforeTime < fTargetTime )
 			{
@@ -333,14 +336,14 @@ protected:
 
 	void ClearOldDiscontinuities( void )
 	{
-		if( m_Discontinuities.Count() == 0 )
+		if( m_Discontinuities.empty() )
 			return;
 
 		float fOldestEntry = this->GetOldestEntry();
 		while( fOldestEntry >= m_Discontinuities[0].fBeforeTime )
 		{
-			m_Discontinuities.Remove( 0 );
-			if( m_Discontinuities.Count() == 0 )
+			m_Discontinuities.erase( m_Discontinuities.begin() + 0 );
+			if( m_Discontinuities.empty() )
 				break;
 		}
 	}
@@ -377,7 +380,7 @@ protected:
 
 	static void TransformValue( const matrix3x4_t &matTransform, Type &Value );
 
-	CUtlVector<Discontinuity_t> m_Discontinuities;	
+	std::vector< Discontinuity_t > m_Discontinuities;	
 };
 
 template<>
@@ -920,7 +923,7 @@ public:
 	// For each client who appears to be a valid recipient, checks the client has disabled CC and if so, removes them from 
 	//  the recipient list.
 	static void RemoveRecipientsIfNotCloseCaptioning( C_RecipientFilter& filter );
-	static void EmitCloseCaption( IRecipientFilter& filter, int entindex, char const *token, CUtlVector< Vector >& soundorigins, float duration, bool warnifmissing = false );
+	static void EmitCloseCaption( IRecipientFilter& filter, int entindex, char const *token, std::vector< Vector >& soundorigins, float duration, bool warnifmissing = false );
 
 	// Moves all aiments into their correct position for the frame
 	static void	MarkAimEntsDirty();
@@ -1783,7 +1786,7 @@ public:
 	// Used to store the state we were added to the BSP as, so it can
 	// reinsert the entity if the state changes.
 	ClientRenderHandle_t			m_hRender;	// link into spatial partition
-	CBitVec< MAX_SPLITSCREEN_PLAYERS > m_VisibilityBits;
+	std::bitset< MAX_SPLITSCREEN_PLAYERS > m_VisibilityBits;
 
 	// Interpolation says don't draw yet
 	bool							m_bReadyToDraw;
@@ -1887,7 +1890,7 @@ protected:
 
 	// Think contexts
 	int								GetIndexForThinkContext( const char *pszContext );
-	CUtlVector< thinkfunc_t >		m_aThinkFunctions;
+	std::vector< thinkfunc_t >		m_aThinkFunctions;
 	int								m_iCurrentThinkContext;
 
 	int								m_spawnflags;
@@ -1997,7 +2000,7 @@ private:
 
 	// Shadow data
 	ClientShadowHandle_t			m_ShadowHandle;
-	CBitVec< MAX_SPLITSCREEN_PLAYERS > m_ShadowBits; // Per-splitscreen user shadow visibility bits
+	std::bitset< MAX_SPLITSCREEN_PLAYERS > m_ShadowBits; // Per-splitscreen user shadow visibility bits
 
 	ClientThinkHandle_t				m_hThink;
 
@@ -2143,8 +2146,8 @@ protected:
 	void RemoveFromEntityList( entity_list_ids_t listId );
 	unsigned short m_ListEntry[NUM_ENTITY_LISTS];	// Entry into each g_EntityList (or InvalidIndex() if not in the list).
 	
-	CThreadFastMutex m_CalcAbsolutePositionMutex;
-	CThreadFastMutex m_CalcAbsoluteVelocityMutex;
+	std::recursive_mutex m_CalcAbsolutePositionMutex;
+	std::recursive_mutex m_CalcAbsoluteVelocityMutex;
 
 private:
 	bool							m_bIsBlurred;
@@ -2670,12 +2673,12 @@ inline bool C_BaseEntity::IsVisible() const
 	if ( INVALID_CLIENT_RENDER_HANDLE == m_hRender )
 		return false;
 	ASSERT_LOCAL_PLAYER_RESOLVABLE();
-	return m_VisibilityBits.IsBitSet( GET_ACTIVE_SPLITSCREEN_SLOT() );
+	return m_VisibilityBits[GET_ACTIVE_SPLITSCREEN_SLOT()];
 }
 
 inline bool C_BaseEntity::IsVisibleToAnyPlayer() const
 {
-	return !m_VisibilityBits.IsAllClear();
+	return m_VisibilityBits.any();
 }
 
 inline bool C_BaseEntity::HasSpawnFlags( int nFlags ) const
@@ -2714,10 +2717,9 @@ C_BaseEntity *CreateEntityByName( const char *className );
 
 #if !defined( NO_ENTITY_PREDICTION )
 
-class CEntIndexLessFunc
+struct CEntIndexLessFunc
 {
-public:
-	bool Less( C_BaseEntity * const & lhs, C_BaseEntity * const & rhs, void *pContext )
+	bool operator()( C_BaseEntity *lhs, C_BaseEntity *rhs ) const
 	{
 		int e1 = lhs->entindex();
 		int e2 = rhs->entindex();
@@ -2745,7 +2747,7 @@ protected:
 	void			RemoveFromPredictablesList( C_BaseEntity *remove );
 
 private:
-	CUtlSortVector< C_BaseEntity *, CEntIndexLessFunc >	m_Predictables;
+	std::flat_set< C_BaseEntity *, CEntIndexLessFunc >	m_Predictables;	// one entity per entindex
 
 	friend class C_BaseEntity;
 };
@@ -2757,7 +2759,7 @@ private:
 //-----------------------------------------------------------------------------
 FORCEINLINE C_BaseEntity *CPredictableList::GetPredictable( int slot )
 {
-	return m_Predictables[ slot ];
+	return m_Predictables.begin()[ slot ];
 }
 
 //-----------------------------------------------------------------------------
@@ -2766,7 +2768,7 @@ FORCEINLINE C_BaseEntity *CPredictableList::GetPredictable( int slot )
 //-----------------------------------------------------------------------------
 FORCEINLINE int CPredictableList::GetPredictableCount( void ) const
 {
-	return m_Predictables.Count();
+	return std::ssize( m_Predictables );
 }
 
 FORCEINLINE int C_BaseEntity::GetSplitUserPlayerPredictionSlot()

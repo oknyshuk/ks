@@ -9,6 +9,7 @@
 
 
 #include "utlvector.h"
+#include "mathlib/vector.h"
 
 //-----------------------------------------------------------------------------
 // NOTE: Polygons are assumed to be wound clockwise unless otherwise noted.
@@ -25,12 +26,12 @@ static const float POINT_IN_POLYGON_EPSILON = 0.01f;
 // allowed).
 // With a low max deviation, this will perfectly remove all colinear points.
 //-----------------------------------------------------------------------------
-void SimplifyPolygon( CUtlVector< Vector > *pPoints, const Vector &vNormal, float flMaxDeviation );
+void SimplifyPolygon( std::vector< Vector > *pPoints, const Vector &vNormal, float flMaxDeviation );
 
 //-----------------------------------------------------------------------------
 // Simplifies a polygon using quadric error metrics.
 //-----------------------------------------------------------------------------
-void SimplifyPolygonQEM( CUtlVector< Vector > *pPoints, const Vector &vNormal, float flMaximumSquaredError, bool bUseOptimalPointPlacement );
+void SimplifyPolygonQEM( std::vector< Vector > *pPoints, const Vector &vNormal, float flMaximumSquaredError, bool bUseOptimalPointPlacement );
 
 //-----------------------------------------------------------------------------
 // Returns whether a vertex of a polygon (v1) is concave, given its normal 
@@ -55,14 +56,14 @@ bool IsConcave( const Vector *pPolygonPoints, int nPointCount, const Vector &vNo
 //-----------------------------------------------------------------------------
 struct SubPolygon_t
 {
-	CUtlVector< int > m_Indices;
+	std::vector< int > m_Indices;
 	
 	int GetVertexIndex( int i ) const
 	{
-		i = i % m_Indices.Count();
+		i = i % std::ssize( m_Indices );
 		if ( i < 0 )
 		{
-			i += m_Indices.Count();
+			i += std::ssize( m_Indices );
 		}
 		return m_Indices[i];
 	}
@@ -77,21 +78,21 @@ struct SubPolygon_t
 		return pPolygonPoints[nVertex];
 	}
 
-	static const Vector &GetPoint( const CUtlVector< Vector > &originalPoints, int nVertex )
+	static const Vector &GetPoint( const std::vector< Vector > &originalPoints, int nVertex )
 	{
-		return GetPoint( originalPoints.Base(), originalPoints.Count(), nVertex );
+		return GetPoint( originalPoints.data(), std::ssize( originalPoints ), nVertex );
 	}
 };
 
 //-----------------------------------------------------------------------------
 // Attempts to strip off one convex region from a concave/convex polygon.
 //-----------------------------------------------------------------------------
-void DecomposePolygon_Step( const CUtlVector< Vector > &polygonPoints, const Vector &vNormal, CUtlVector< SubPolygon_t > *pHoles, SubPolygon_t *pNewPartition, SubPolygon_t *pRemainingPolygon, int *pFirstIndex );
+void DecomposePolygon_Step( const std::vector< Vector > &polygonPoints, const Vector &vNormal, std::vector< SubPolygon_t > *pHoles, SubPolygon_t *pNewPartition, SubPolygon_t *pRemainingPolygon, int *pFirstIndex );
 
 //-----------------------------------------------------------------------------
 // Decomposes a polygon into one or more convex, non-overlapping parts.
 //-----------------------------------------------------------------------------
-void DecomposePolygon( const CUtlVector< Vector > &polygonPoints, const Vector &vNormal, SubPolygon_t *pOriginalPolygon, CUtlVector< SubPolygon_t > *pHoles, CUtlVector< SubPolygon_t > *pPartitions );
+void DecomposePolygon( const std::vector< Vector > &polygonPoints, const Vector &vNormal, SubPolygon_t *pOriginalPolygon, std::vector< SubPolygon_t > *pHoles, std::vector< SubPolygon_t > *pPartitions );
 
 //-----------------------------------------------------------------------------
 // Is a point in the prism formed by extruding the polygon?

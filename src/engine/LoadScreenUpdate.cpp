@@ -15,9 +15,6 @@
 #include "materialsystem/imaterialsystem.h"
 #include "tier0/dbg.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Used to tick the loading screen every so often
 //-----------------------------------------------------------------------------

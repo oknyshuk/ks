@@ -15,9 +15,6 @@
 #include "materialsystem/MaterialSystemUtil.h"
 #include "iclientmode.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 static ConVar mat_colcorrection_disableentities( "mat_colcorrection_disableentities", "0", FCVAR_NONE, "Disable map color-correction entities" );
 
@@ -206,7 +203,7 @@ void C_ColorCorrection::SetWeight( float fWeight )
 void C_ColorCorrection::StartFade( int nSplitScreenSlot, float flDuration )
 {
 	m_flFadeStartTime[nSplitScreenSlot] = gpGlobals->curtime;
-	m_flFadeDuration[nSplitScreenSlot] = MAX( flDuration, 0.0f );
+	m_flFadeDuration[nSplitScreenSlot] = std::max( flDuration, 0.0f );
 }
 
 float C_ColorCorrection::GetFadeRatio( int nSplitScreenSlot ) const

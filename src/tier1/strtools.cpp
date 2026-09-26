@@ -60,9 +60,12 @@
 
 #include "tier0/dbg.h"
 #include "tier1/strtools.h"
+#include "tier1/string_ops.h"
+#include "tier1/text_writer.h"
+#include "tier1/utlvector.h"
 #include <string.h>
+#include <ranges>
 #include <stdlib.h>
-#include "tier1/utldict.h"
 #include "tier1/characterset.h"
 #include "tier1/utlstring.h"
 #include "tier1/fmtstr.h"
@@ -71,7 +74,6 @@
 
 
 #include "tier0/vprof.h"
-#include "tier0/memdbgon.h"
 
 #ifndef NDEBUG
 static volatile const char *pDebugString;
@@ -848,8 +850,6 @@ void V_strncpy( char *pDest, const char *pSrc, int maxLen )
 // These warnings were investigated through code inspection and writing of tests and they are
 // believed to all be spurious.
 #ifdef _PREFAST_
-#pragma warning( push )
-#pragma warning( disable : 6053 6059 6386 )
 #endif
 
 void V_wcsncpy( OUT_Z_BYTECAP(maxLenInBytes) wchar_t *pDest, wchar_t const *pSrc, int maxLenInBytes )
@@ -868,7 +868,6 @@ void V_wcsncpy( OUT_Z_BYTECAP(maxLenInBytes) wchar_t *pDest, wchar_t const *pSrc
 #ifdef _PREFAST_
 // Suppress warnings about _vsnwprintf and _vsnprintf not zero-terminating the buffers.
 // We explicitly null-terminate in the cases that matter.
-#pragma warning( disable : 6053 )
 #endif
 int V_snwprintf( OUT_Z_CAP(maxLenInNumWideCharacters) wchar_t *pDest, int maxLenInNumWideCharacters, PRINTF_FORMAT_STRING const wchar_t *pFormat, ... )
 {
@@ -1000,7 +999,7 @@ char *V_strncat( char *pDest, const char *pSrc, size_t maxLenInBytes, int nMaxCh
 	}
 	else
 	{
-		charstocopy = MIN( nMaxCharsToCopy, (int)srclen );
+		charstocopy = std::min( nMaxCharsToCopy, (int)srclen );
 	}
 
 	if ( len + charstocopy >= maxLenInBytes )
@@ -1048,7 +1047,7 @@ wchar_t *V_wcsncat( INOUT_Z_BYTECAP(maxLenInBytes) wchar_t *pDest, const wchar_t
 	}
 	else
 	{
-		charstocopy = (size_t)MIN( nMaxCharsToCopy, (int)srclen );
+		charstocopy = (size_t)std::min( nMaxCharsToCopy, (int)srclen );
 	}
 
 	if ( len + charstocopy >= (size_t)maxLenInCharacters )
@@ -1108,7 +1107,7 @@ char *V_pretifymem( float value, int digitsafterdecimal /*= 2*/, bool usebinaryo
 	char val[ 32 ];
 
 	// Clamp to >= 0
-	digitsafterdecimal = MAX( digitsafterdecimal, 0 );
+	digitsafterdecimal = std::max( digitsafterdecimal, 0 );
 
 	// If it's basically integral, don't do any decimals
 	if ( FloatMakePositive( value - (int)value ) < 0.00001 )
@@ -1313,7 +1312,6 @@ int _V_UCS2ToUnicode( const ucs2 *pUCS2, wchar_t *pUnicode, int cubDestSizeInByt
 }
 
 #ifdef _PREFAST_
-#pragma warning( pop ) // Restore the /analyze warnings
 #endif
 
 
@@ -1438,7 +1436,7 @@ static unsigned char V_nibble( char c )
 void V_hextobinary( const char *in, int numchars, byte *out, int maxoutputbytes )
 {
 	int len = V_strlen( in );
-	numchars = MIN( len, numchars );
+	numchars = std::min( len, numchars );
 	// Make sure it's even
 	numchars = ( numchars ) & ~0x1;
 
@@ -1542,7 +1540,7 @@ void V_FileBase( const char *in, char *out, int maxlen )
 	// Length of new sting
 	len = end - start + 1;
 
-	int maxcopy = MIN( len + 1, maxlen );
+	int maxcopy = std::min( len + 1, maxlen );
 
 	// Copy partial string
 	V_strncpy( out, &in[start], maxcopy );
@@ -1641,7 +1639,7 @@ void V_StripExtension( const char *in, char *out, int outSize )
 
 	if (end > 0 && !PATHSEPARATOR( in[end] ) && end < outSize)
 	{
-		int nChars = MIN( end, outSize-1 );
+		int nChars = std::min( end, outSize-1 );
 		if ( out != in )
 		{
 			memcpy( out, in, nChars );
@@ -1922,7 +1920,7 @@ bool V_ExtractFilePath (const char *path, char *dest, int destSize )
 		src--;
 	}
 
-	int copysize = MIN( src - path, destSize - 1 );
+	int copysize = std::min<std::common_type_t<long int, int>>( src - path, destSize - 1 );
 	memcpy( dest, path, copysize );
 	dest[copysize] = 0;
 
@@ -2385,181 +2383,41 @@ bool V_StrSubst(
 }
 
 
-char* AllocString( const char *pStr, int nMaxChars )
+
+
+void V_SplitString2( const char *pString, const char * const *pSeparators, int nSeparators, std::vector< std::string > &outStrings, bool bIncludeEmptyStrings )
 {
-	int allocLen;
-	if ( nMaxChars == -1 )
-		allocLen = V_strlen( pStr ) + 1;
-	else
-		allocLen = MIN( V_strlen(pStr), nMaxChars ) + 1;
-
-	char *pOut = new char[allocLen];
-	V_strncpy( pOut, pStr, allocLen );
-	return pOut;
-}
-
-
-
-
-void V_SplitString2( const char *pString, const char **pSeparators, int nSeparators, CUtlVector<char*> &outStrings )
-{
-	// We must pass in an empty outStrings buffer or call outStrings.PurgeAndDeleteElements between
-	// calls.
-	Assert( outStrings.Count() == 0 );
-	// This will make outStrings empty but it will not free any memory that the elements were pointing to.
-	outStrings.Purge();
+	outStrings.clear();
 	const char *pCurPos = pString;
-	while ( 1 )
+	for ( ;; )
 	{
 		int iFirstSeparator = -1;
-		const char *pFirstSeparator = 0;
-		for ( int i=0; i < nSeparators; i++ )
+		const char *pFirstSeparator = nullptr;
+		for ( int i = 0; i < nSeparators; i++ )
 		{
-			const char *pTest = V_stristr( pCurPos, pSeparators[i] );
-			if ( pTest && (!pFirstSeparator || pTest < pFirstSeparator) )
+			const char *pTest = V_stristr_fast( pCurPos, pSeparators[i] );
+			if ( pTest && ( !pFirstSeparator || pTest < pFirstSeparator ) )
 			{
 				iFirstSeparator = i;
 				pFirstSeparator = pTest;
 			}
 		}
-
-		if ( pFirstSeparator )
+		if ( !pFirstSeparator )
 		{
-			// Split on this separator and continue on.
-			int separatorLen = V_strlen( pSeparators[iFirstSeparator] );
-			if ( pFirstSeparator > pCurPos )
-			{
-				outStrings.AddToTail( AllocString( pCurPos, pFirstSeparator-pCurPos ) );
-			}
-
-			pCurPos = pFirstSeparator + separatorLen;
-		}
-		else
-		{
-			// Copy the rest of the string
-			if ( V_strlen( pCurPos ) )
-			{
-				outStrings.AddToTail( AllocString( pCurPos, -1 ) );
-			}
+			if ( pCurPos[0] )
+				outStrings.emplace_back( pCurPos );
 			return;
 		}
+		if ( pFirstSeparator > pCurPos || bIncludeEmptyStrings )
+			outStrings.emplace_back( pCurPos, pFirstSeparator - pCurPos );
+		pCurPos = pFirstSeparator + strlen( pSeparators[iFirstSeparator] );
 	}
 }
 
-
-void V_SplitString( const char *pString, const char *pSeparator, CUtlVector<char*> &outStrings )
+void V_SplitString( const char *pString, const char *pSeparator, std::vector< std::string > &outStrings, bool bIncludeEmptyStrings )
 {
-	V_SplitString2( pString, &pSeparator, 1, outStrings );
+	V_SplitString2( pString, &pSeparator, 1, outStrings, bIncludeEmptyStrings );
 }
-
-void V_SplitString2(const char *pString, const char * const *pSeparators, int nSeparators, CUtlVector<CUtlString> &outStrings, bool bIncludeEmptyStrings)
-{
-	outStrings.Purge();
-	const char *pCurPos = pString;
-	for (;;)
-	{
-		int iFirstSeparator = -1;
-		const char *pFirstSeparator = 0;
-		for (int i = 0; i < nSeparators; i++)
-		{
-			const char *pTest = V_stristr_fast(pCurPos, pSeparators[i]);
-			if (pTest && (!pFirstSeparator || pTest < pFirstSeparator))
-			{
-				iFirstSeparator = i;
-				pFirstSeparator = pTest;
-			}
-		}
-
-		if (pFirstSeparator)
-		{
-			// Split on this separator and continue on.
-			int separatorLen = (int)strlen(pSeparators[iFirstSeparator]);
-			if (pFirstSeparator > pCurPos || (pFirstSeparator == pCurPos && bIncludeEmptyStrings))
-			{
-				outStrings[outStrings.AddToTail()].SetDirect(pCurPos, (int)(pFirstSeparator - pCurPos));
-			}
-
-			pCurPos = pFirstSeparator + separatorLen;
-		}
-		else
-		{
-			// Copy the rest of the string, if there's anything there
-			if (pCurPos[0] != 0)
-			{
-				outStrings[outStrings.AddToTail()].Set(pCurPos);
-			}
-			return;
-		}
-	}
-}
-
-void V_SplitString(const char *pString, const char *pSeparator, CUtlVector<CUtlString> &outStrings, bool bIncludeEmptyStrings)
-{
-	V_SplitString2(pString, &pSeparator, 1, outStrings, bIncludeEmptyStrings);
-}
-
-
-wchar_t* AllocWString( const wchar_t *pStr, int nMaxChars )
-{
-	int allocLen;
-	if ( nMaxChars == -1 )
-		allocLen = V_wcslen( pStr ) + 1;
-	else
-		allocLen = MIN( (int)V_wcslen(pStr), nMaxChars ) + 1;
-
-	wchar_t *pOut = new wchar_t[allocLen];
-	V_wcsncpy( pOut, pStr, allocLen * sizeof(wchar_t) );
-	return pOut;
-}
-
-
-void V_SplitWString2( const wchar_t *pString, const wchar_t **pSeparators, int nSeparators, CUtlVector<wchar_t*> &outStrings )
-{
-	outStrings.Purge();
-	const wchar_t *pCurPos = pString;
-	while ( 1 )
-	{
-		int iFirstSeparator = -1;
-		const wchar_t *pFirstSeparator = 0;
-		for ( int i=0; i < nSeparators; i++ )
-		{
-			const wchar_t *pTest = V_wcsistr( pCurPos, pSeparators[i] );
-			if ( pTest && (!pFirstSeparator || pTest < pFirstSeparator) )
-			{
-				iFirstSeparator = i;
-				pFirstSeparator = pTest;
-			}
-		}
-
-		if ( pFirstSeparator )
-		{
-			// Split on this separator and continue on.
-			int separatorLen = V_wcslen( pSeparators[iFirstSeparator] );
-			if ( pFirstSeparator > pCurPos )
-			{
-				outStrings.AddToTail( AllocWString( pCurPos, pFirstSeparator-pCurPos ) );
-			}
-
-			pCurPos = pFirstSeparator + separatorLen;
-		}
-		else
-		{
-			// Copy the rest of the string
-			if ( V_wcslen( pCurPos ) )
-			{
-				outStrings.AddToTail( AllocWString( pCurPos, -1 ) );
-			}
-			return;
-		}
-	}
-}
-
-
-void V_SplitWString( const wchar_t *pString, const wchar_t *pSeparator, CUtlVector<wchar_t*> &outStrings )
-{
-	V_SplitWString2( pString, &pSeparator, 1, outStrings );
-}
-
 
 bool V_GetCurrentDirectory( char *pOut, int maxLen )
 {
@@ -3175,7 +3033,7 @@ bool AsianWordWrap::CanBreakRepeated( wchar_t wcCandidate )
 	return true;
 }
 
-inline int __cdecl iswascii(wchar_t c) { return ((unsigned)(c) < 0x80); } // not defined in wctype.h on Linux
+inline int iswascii(wchar_t c) { return ((unsigned)(c) < 0x80); } // not defined in wctype.h on Linux
 
 // Used to determine if we can break a line between the first two characters passed
 bool AsianWordWrap::CanBreakAfter( const wchar_t* wsz )
@@ -3509,7 +3367,7 @@ size_t Q_URLDecodeRaw( char *pchDecodeDest, int nDecodeDestLen, const char *pchE
 	return Q_URLDecodeInternal( pchDecodeDest, nDecodeDestLen, pchEncodedSource, nEncodedSourceLen, false );
 }
 
-void V_qsort_s( void *base, size_t num, size_t width, int ( __cdecl *compare )(void *, const void *, const void *), void * context ) 
+void V_qsort_s( void *base, size_t num, size_t width, int ( *compare )(void *, const void *, const void *), void * context ) 
 {
 	return qsort_s( base, num, width, compare, context );
 }
@@ -3582,9 +3440,9 @@ int V_BoyerMooreSearch( const byte *pNeedle, int nNeedleLength, const byte *pHay
 	return search.Search( pHayStack, nHayStackLength );
 }
 
-CUtlString V_RandomString( int nLen )
+std::string V_RandomString( int nLen )
 {
-	CUtlString out;
+	std::string out;
 	for ( int i = 0; i < nLen; ++i )
 	{
 		char c = 0;
@@ -3599,7 +3457,7 @@ CUtlString V_RandomString( int nLen )
 }
 
 // Prints out a memory dump where stuff that's ascii is human readable, etc.
-void V_LogMultiline( bool input, char const *label, const char *data, size_t len, CUtlString &output )
+void V_LogMultiline( bool input, char const *label, const char *data, size_t len, std::string &output )
 {
 	static const char HEX[] = "0123456789abcdef";
 	const char * direction = (input ? " << " : " >> ");
@@ -3609,7 +3467,7 @@ void V_LogMultiline( bool input, char const *label, const char *data, size_t len
 	{
 		V_memset(asc_line, ' ', sizeof(asc_line));
 		V_memset(hex_line, ' ', sizeof(hex_line));
-		size_t line_len = MIN(len, LINE_SIZE);
+		size_t line_len = std::min(len, LINE_SIZE);
 		for (size_t i=0; i<line_len; ++i) {
 			unsigned char ch = static_cast<unsigned char>(data[i]);
 			asc_line[i] = ( V_isprint(ch) && !V_iscntrl(ch) ) ? data[i] : '.';
@@ -3753,8 +3611,6 @@ struct Tier1FullHTMLEntity_t
 };
 
 
-#pragma warning( push )
-#pragma warning( disable : 4428 ) // universal-character-name encountered in source
 const Tier1FullHTMLEntity_t g_Tier1_FullHTMLEntities[] =
 {
 	{ L'"', "&quot;", 6 },
@@ -3864,7 +3720,6 @@ const Tier1FullHTMLEntity_t g_Tier1_FullHTMLEntities[] =
 	{ L'\u00FF', "&yuml;", 6 },
 	{ 0, nullptr, 0 } // sentinel for end of array
 };
-#pragma warning( pop )
 
 
 
@@ -4526,7 +4381,7 @@ bool V_URLContainsDomain( const char *pchURL, const char *pchDomain )
 //			Does some additional formatting, like turning <li> into * when not preserving that tag,
 //          and auto-closing unclosed tags if they aren't specified in rgszNoCloseTags
 //-----------------------------------------------------------------------------
-void V_StripAndPreserveHTMLCore( CUtlBuffer *pbuffer, const char *pchHTML, const char **rgszPreserveTags, uint cPreserveTags, const char **rgszNoCloseTags, uint cNoCloseTags, uint cMaxResultSize )
+void V_StripAndPreserveHTMLCore( ks::text_writer *pbuffer, const char *pchHTML, const char **rgszPreserveTags, uint cPreserveTags, const char **rgszNoCloseTags, uint cNoCloseTags, uint cMaxResultSize )
 {
 	uint cHTMLCur = 0;
 
@@ -4550,7 +4405,7 @@ void V_StripAndPreserveHTMLCore( CUtlBuffer *pbuffer, const char *pchHTML, const
 	bool bInDoubleQuote = false;
 	bool bInSingleQuote = false;
 	int nPreTagDepth = 0;
-	CUtlVector< const char* > vecTagStack;
+	std::vector< const char* > vecTagStack;
 
 	for ( int iContents = 0; pchHTML[ iContents ] != '\0' && cHTMLCur < cMaxResultSize; iContents++ )
 	{
@@ -4584,7 +4439,7 @@ void V_StripAndPreserveHTMLCore( CUtlBuffer *pbuffer, const char *pchHTML, const
 		{
 			// we're inside a tag, keep stripping/preserving until we get to a >
 			if ( bInPreservedTag )
-				pbuffer->PutChar( c );
+				pbuffer->put( c );
 
 			// While inside a tag, ignore ending > properties if they are inside a property value in "" or ''
 			if ( c == '"' )
@@ -4638,7 +4493,7 @@ void V_StripAndPreserveHTMLCore( CUtlBuffer *pbuffer, const char *pchHTML, const
 
 			// cHTMLCur is in characters, so just +1
 			cHTMLCur++;
-			pbuffer->Put( pchCur, 1 + nMultibyteRemaining );
+			pbuffer->put_raw( std::string_view( pchCur, 1 + nMultibyteRemaining ) );
 
 			iContents += nMultibyteRemaining;
 
@@ -4695,15 +4550,15 @@ void V_StripAndPreserveHTMLCore( CUtlBuffer *pbuffer, const char *pchHTML, const
 									// ending a paragraph tag is optional. If we were expecting to find one, and didn't, skip
 									if ( Q_stricmp( szTag, "p" ) != 0 )
 									{
-										while ( vecTagStack.Count() > 0 && Q_stricmp( vecTagStack[ vecTagStack.Count() - 1 ], "p" ) == 0 )
+										while ( !vecTagStack.empty() && Q_stricmp( vecTagStack[ std::ssize( vecTagStack ) - 1 ], "p" ) == 0 )
 										{
-											vecTagStack.Remove( vecTagStack.Count() - 1 );
+											vecTagStack.erase( vecTagStack.begin() + ( std::ssize( vecTagStack ) - 1 ) );
 										}
 									}
 
-									if ( vecTagStack.Count() > 0 && vecTagStack[ vecTagStack.Count() - 1 ] == szTag )
+									if ( !vecTagStack.empty() && vecTagStack[ std::ssize( vecTagStack ) - 1 ] == szTag )
 									{
-										vecTagStack.Remove( vecTagStack.Count() - 1 );
+										vecTagStack.erase( vecTagStack.begin() + ( std::ssize( vecTagStack ) - 1 ) );
 
 										if ( Q_stricmp( szTag, "pre" ) == 0 )
 										{
@@ -4734,7 +4589,7 @@ void V_StripAndPreserveHTMLCore( CUtlBuffer *pbuffer, const char *pchHTML, const
 
 									if ( !bNoCloseTag )
 									{
-										vecTagStack.AddToTail( szTag );
+										vecTagStack.push_back( szTag );
 										if ( Q_stricmp( szTag, "pre" ) == 0 )
 										{
 											nPreTagDepth++;
@@ -4751,7 +4606,7 @@ void V_StripAndPreserveHTMLCore( CUtlBuffer *pbuffer, const char *pchHTML, const
 						else
 						{
 							bInPreservedTag = true;
-							pbuffer->PutChar( c );
+							pbuffer->put( c );
 						}
 
 					}
@@ -4763,19 +4618,19 @@ void V_StripAndPreserveHTMLCore( CUtlBuffer *pbuffer, const char *pchHTML, const
 					{
 						if ( bInListItemTag )
 						{
-							pbuffer->PutChar( ';' );
+							pbuffer->put( ';' );
 							cHTMLCur++;
 							bInListItemTag = false;
 						}
 
 						if ( !bLastCharWasWhitespace )
 						{
-							pbuffer->PutChar( ' ' );
+							pbuffer->put( ' ' );
 							cHTMLCur++;
 						}
 
-						pbuffer->PutChar( '*' );
-						pbuffer->PutChar( ' ' );
+						pbuffer->put( '*' );
+						pbuffer->put( ' ' );
 						cHTMLCur += 2;
 						bInListItemTag = true;
 					}
@@ -4786,20 +4641,20 @@ void V_StripAndPreserveHTMLCore( CUtlBuffer *pbuffer, const char *pchHTML, const
 						{
 							char cLastChar = ' ';
 
-							if ( pbuffer->TellPut() > 0 )
+							if ( !pbuffer->empty() )
 							{
-								cLastChar = ( ( (char*)pbuffer->Base() ) + pbuffer->TellPut() - 1 )[ 0 ];
+								cLastChar = pbuffer->view().back();
 							}
 							if ( cLastChar != '.' && cLastChar != '?' && cLastChar != '!' )
 							{
-								pbuffer->PutChar( ';' );
+								pbuffer->put( ';' );
 								cHTMLCur++;
 							}
 							bInListItemTag = false;
 						}
 
 						//we're decided to remove a tag, simulate a space in the original text
-						pbuffer->PutChar( ' ' );
+						pbuffer->put( ' ' );
 						cHTMLCur++;
 					}
 					bLastCharWasWhitespace = true;
@@ -4814,7 +4669,7 @@ void V_StripAndPreserveHTMLCore( CUtlBuffer *pbuffer, const char *pchHTML, const
 					{
 						//replace any block of whitespace with a single space
 						cHTMLCur++;
-						pbuffer->PutChar( ' ' );
+						pbuffer->put( ' ' );
 						bLastCharWasWhitespace = true;
 					}
 					// don't put anything for whitespace if the previous character was whitespace 
@@ -4823,7 +4678,7 @@ void V_StripAndPreserveHTMLCore( CUtlBuffer *pbuffer, const char *pchHTML, const
 				else
 				{
 					cHTMLCur++;
-					pbuffer->PutChar( c );
+					pbuffer->put( c );
 					bLastCharWasWhitespace = false;
 				}
 			}
@@ -4832,29 +4687,51 @@ void V_StripAndPreserveHTMLCore( CUtlBuffer *pbuffer, const char *pchHTML, const
 	if ( cHTMLCur >= cMaxResultSize )
 	{
 		// we terminated because the blurb was full.  Add a '...' to the end
-		pbuffer->Put( "...", 3 );
+		pbuffer->put_raw( "..." );
 	}
 	//close any preserved tags that were open at the end.
-	FOR_EACH_VEC_BACK( vecTagStack, iTagStack )
+	for ( const char *pTag : vecTagStack | std::views::reverse )
 	{
-		pbuffer->PutChar( '<' );
-		pbuffer->PutChar( '/' );
-		pbuffer->Put( vecTagStack[ iTagStack ], Q_strlen( vecTagStack[ iTagStack ] ) );
-		pbuffer->PutChar( '>' );
+		pbuffer->put( '<' );
+		pbuffer->put( '/' );
+		pbuffer->put_raw( pTag );
+		pbuffer->put( '>' );
 	}
 
 	// Null terminate
-	pbuffer->PutChar( '\0' );
+	pbuffer->put( '\0' );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Strips all HTML tags not specified in rgszPreserveTags
 //			Does some additional formatting, like turning <li> into * when not preserving that tag
 //-----------------------------------------------------------------------------
-void V_StripAndPreserveHTML( CUtlBuffer *pbuffer, const char *pchHTML, const char **rgszPreserveTags, uint cPreserveTags, uint cMaxResultSize )
+void V_StripAndPreserveHTML( ks::text_writer *pbuffer, const char *pchHTML, const char **rgszPreserveTags, uint cPreserveTags, uint cMaxResultSize )
 {
 	const char *rgszNoCloseTags[] = { "br", "img" };
 	V_StripAndPreserveHTMLCore( pbuffer, pchHTML, rgszPreserveTags, cPreserveTags, rgszNoCloseTags, V_ARRAYSIZE( rgszNoCloseTags ), cMaxResultSize );
 }
 
 
+
+std::string ks::format_printfv( const char *pFormat, va_list args )
+{
+	va_list measure;
+	va_copy( measure, args );
+	int n = vsnprintf( nullptr, 0, pFormat, measure );
+	va_end( measure );
+	if ( n <= 0 )
+		return {};
+	std::string s( n, '\0' );
+	vsnprintf( s.data(), n + 1, pFormat, args );
+	return s;
+}
+
+std::string ks::format_printf( const char *pFormat, ... )
+{
+	va_list args;
+	va_start( args, pFormat );
+	std::string s = format_printfv( pFormat, args );
+	va_end( args );
+	return s;
+}

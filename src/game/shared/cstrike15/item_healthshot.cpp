@@ -24,9 +24,6 @@
 #include "cs_player.h"
 #endif // CLIENT_DLL
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 #define HEALTHSHOT_INJECT_TIME 1.65f
 
 IMPLEMENT_NETWORKCLASS_ALIASED( Item_Healthshot, DT_Item_Healthshot )

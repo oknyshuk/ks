@@ -8,6 +8,10 @@
 #ifndef CONST_H
 #define CONST_H
 
+#include <bitset>
+#include <mutex>
+#include "tier1/null_mutex.h"
+
 
 // the command line param that tells the engine to use steam
 #define STEAM_PARM					"-steam"
@@ -36,9 +40,9 @@
 #define ABSOLUTE_PLAYER_LIMIT_DW	( (ABSOLUTE_PLAYER_LIMIT/32) + 1 )
 
 #if ABSOLUTE_PLAYER_LIMIT > 32
-#define CPlayerBitVec CBitVec<ABSOLUTE_PLAYER_LIMIT>
+using CPlayerBitVec = std::bitset< ABSOLUTE_PLAYER_LIMIT >;
 #else
-#define CPlayerBitVec CDWordBitVec
+using CPlayerBitVec = std::bitset< 32 >;
 #endif
 
 // a player name may have 31 chars + 0 on the PC.
@@ -419,11 +423,9 @@ enum
 
 #define SOURCE_MT
 #ifdef SOURCE_MT
-class CThreadMutex;
-typedef CThreadMutex CSourceMutex;
+typedef std::recursive_mutex CSourceMutex;
 #else
-class CThreadNullMutex;
-typedef CThreadNullMutex CSourceMutex;
+typedef ks::null_mutex CSourceMutex;
 #endif
 
 #if defined( CLIENT_DLL )

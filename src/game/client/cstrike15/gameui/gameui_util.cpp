@@ -11,9 +11,6 @@
 #include "strtools.h"
 #include "engineinterface.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 static int g_nGameUIActiveSplitscreenPlayerSlot = 0;
 

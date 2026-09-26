@@ -28,9 +28,6 @@
 #include "func_break.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern int	gEvilImpulse101;		// In Player.h
 
 // -----------------------------------------

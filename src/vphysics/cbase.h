@@ -51,8 +51,8 @@
 #else
 #include "tier1/keyvalues.h"
 #endif
-#include "tier1/UtlStringMap.h"
-#include "tier1/utlbuffer.h"
+#include "tier1/map_ops.h"
+#include <deque>
 
 // Misc
 #include "bspfile.h"

@@ -4,14 +4,12 @@
 //
 //===========================================================================//
 
+#include <mutex>
 #include "datacache/iresourceaccesscontrol.h"
 #include "tier1/utlvector.h"
 #include "tier1/utlstring.h"
 #include "tier2/tier2.h"
 #include "tier1/convar.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 //-----------------------------------------------------------------------------
@@ -51,19 +49,19 @@ private:
 
 	struct ResourceInfo_t
 	{
-		CUtlString m_DebugName;
-		CUtlVector< CUtlString > m_Resources[RESOURCE_TYPE_OLD_COUNT]; 
+		std::string m_DebugName;
+		std::vector< std::string > m_Resources[RESOURCE_TYPE_OLD_COUNT]; 
 	};
 
 	bool ContainsResource( ResourceList_t hResourceList, ResourceTypeOld_t nType, const char *pResourceName );
 	int FindOrAddCurrentThreadID();
 	void FixupResourceName( const char *pResourceName, char *pBuf, int nBufLen );
 
-	CUtlVector< ResourceInfo_t > m_ResourceLists;
+	std::vector< ResourceInfo_t > m_ResourceLists;
 	int m_pLimitAccess[MAX_THREADS];
 	unsigned long m_pThread[MAX_THREADS];
 	int m_nThreadCount;
-	CThreadMutex m_Mutex;
+	std::recursive_mutex m_Mutex;
 };
 
 
@@ -129,10 +127,10 @@ int CResourceAccessControl::FindOrAddCurrentThreadID()
 		return -1;
 	}
 
-	m_Mutex.Lock();
+	m_Mutex.lock();
 	int nIndex = m_nThreadCount;
 	m_pThread[m_nThreadCount++] = nThreadId;
-	m_Mutex.Unlock();
+	m_Mutex.unlock();
 	return nIndex;
 }
 
@@ -153,14 +151,14 @@ void CResourceAccessControl::FixupResourceName( const char *pResourceName, char 
 //-----------------------------------------------------------------------------
 ResourceList_t CResourceAccessControl::CreateResourceList( const char *pDebugName )
 {
-	int nIndex = m_ResourceLists.AddToTail();
-	m_ResourceLists[nIndex].m_DebugName.Set( pDebugName );
+	int nIndex = std::ssize( m_ResourceLists ); m_ResourceLists.emplace_back();
+	m_ResourceLists[nIndex].m_DebugName.assign( ks::nz( pDebugName ) );
 	return (ResourceList_t)(intp)nIndex;
 }
 
 void CResourceAccessControl::DestroyAllResourceLists( )
 {
-	m_ResourceLists.Purge();
+	m_ResourceLists.clear(); m_ResourceLists.shrink_to_fit();
 	memset( m_pLimitAccess, 0xFF, sizeof(m_pLimitAccess) );
 }
 
@@ -170,11 +168,11 @@ bool CResourceAccessControl::ContainsResource( ResourceList_t hResourceList, Res
 	FixupResourceName( pResourceName, pBuf, sizeof(pBuf) );
 
 	int nIndex = size_cast< int >( (intp)hResourceList );
-	CUtlVector< CUtlString > &list = m_ResourceLists[nIndex].m_Resources[nType];
-	int nCount = list.Count();
+	std::vector< std::string > &list = m_ResourceLists[nIndex].m_Resources[nType];
+	int nCount = std::ssize( list );
 	for ( int i = 0; i < nCount; ++i )
 	{
-		if ( !Q_stricmp( pBuf, list[i].Get() ) )
+		if ( !Q_stricmp( pBuf, list[i].data() ) )
 			return true;
 	}
 	return false;
@@ -186,11 +184,11 @@ void CResourceAccessControl::AddResource( ResourceList_t hResourceList, Resource
 		return;
 
 	int nIndex = size_cast< int >( (intp)hResourceList );
-	int nSubIndex = m_ResourceLists[nIndex].m_Resources[nType].AddToTail();
+	int nSubIndex = std::ssize( m_ResourceLists[nIndex].m_Resources[nType] ); m_ResourceLists[nIndex].m_Resources[nType].emplace_back();
 
 	char pBuf[MAX_PATH];
 	FixupResourceName( pResourceName, pBuf, sizeof(pBuf) );
-	m_ResourceLists[nIndex].m_Resources[nType][nSubIndex].Set( pBuf );
+	m_ResourceLists[nIndex].m_Resources[nType][nSubIndex].assign( ks::nz( pBuf ) );
 }
 
 void CResourceAccessControl::LimitAccess( ResourceList_t hResourceList )
@@ -220,7 +218,7 @@ bool CResourceAccessControl::IsAccessAllowed( ResourceTypeOld_t nType, const cha
 
 	COMPILE_TIME_ASSERT( ARRAYSIZE( s_pResourceTypeName ) == RESOURCE_TYPE_OLD_COUNT );
 	Warning( "Access to %s resource \"%s\" denied. Missing precache in %s?\n",
-		s_pResourceTypeName[nType], pResourceName, m_ResourceLists[hResourceList].m_DebugName.Get() );
+		s_pResourceTypeName[nType], pResourceName, m_ResourceLists[hResourceList].m_DebugName.data() );
 
 	return false;
 }

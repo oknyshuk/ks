@@ -21,6 +21,7 @@
 #include "baseparticleentity.h"
 
 #include "fx_trail.h"
+#include "tier1/intrusive_ptr.h"
 
 //
 // Smoke Trail
@@ -100,7 +101,7 @@ private:
 	TimedEvent		m_ParticleSpawn;
 
 	CParticleMgr	*m_pParticleMgr;
-	CSmartPtr<CSimpleEmitter> m_pSmokeEmitter;
+	ks::intrusive_ptr<CSimpleEmitter> m_pSmokeEmitter;
 };
 
 //==================================================
@@ -180,7 +181,7 @@ private:
 	TimedEvent		m_ParticleSpawn;
 
 	CParticleMgr	*m_pParticleMgr;
-	CSmartPtr<CSimpleEmitter> m_pRocketEmitter;
+	ks::intrusive_ptr<CSimpleEmitter> m_pRocketEmitter;
 };
 
 class SporeSmokeEffect;
@@ -297,8 +298,8 @@ private:
 		NUM_FTRAIL_MATERIALS
 	};
 
-	CSmartPtr<CSimpleEmitter>	m_pTrailEmitter;
-	CSmartPtr<CSmokeParticle>	m_pSmokeEmitter;
+	ks::intrusive_ptr<CSimpleEmitter>	m_pTrailEmitter;
+	ks::intrusive_ptr<CSmokeParticle>	m_pSmokeEmitter;
 
 	PMaterialHandle				m_hMaterial[NUM_FTRAIL_MATERIALS];
 
@@ -433,7 +434,7 @@ private:
 	TimedEvent		m_ParticleSpawn;
 
 	CParticleMgr	*m_pParticleMgr;
-	CSmartPtr<CSimpleEmitter> m_pDustEmitter;
+	ks::intrusive_ptr<CSimpleEmitter> m_pDustEmitter;
 };
 
 #endif

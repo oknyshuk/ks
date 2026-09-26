@@ -1,6 +1,6 @@
 //========= Copyright (c) 1996-2005, Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 //=============================================================================//
 
@@ -28,9 +28,6 @@
 #include "toolframework/itoolframework.h"
 #include "flexcycler.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static ConVar scene_showlook( "scene_showlook", "0", FCVAR_ARCHIVE, "When playing back, show the directions of look events." );
 static ConVar scene_showmoveto( "scene_showmoveto", "0", FCVAR_ARCHIVE, "When moving, show the end location." );
 static ConVar scene_showunlock( "scene_showunlock", "0", FCVAR_ARCHIVE, "Show when a vcd is playing but normal AI is running." );
@@ -54,8 +51,8 @@ void* SendProxy_FlexWeights( const SendProp *pProp, const void *pStruct, const v
 	if ( !g_bClientFlex )
 		return (void*)pVarData;
 	else
-		return nullptr;	
-}	
+		return nullptr;
+}
 
 REGISTER_SEND_PROXY_NON_MODIFIED_POINTER( SendProxy_FlexWeights );
 
@@ -73,8 +70,7 @@ END_SCRIPTDESC();
 
 LINK_ENTITY_TO_CLASS( funCBaseFlex, CBaseFlex ); // meaningless independant class!!
 
-CBaseFlex::CBaseFlex( void ) : 
-	m_LocalToGlobal( 0, 0, FlexSettingLessFunc )
+CBaseFlex::CBaseFlex( void )
 {
 #ifdef _DEBUG
 	// default constructor sets the viewtarget to NAN
@@ -86,11 +82,11 @@ CBaseFlex::CBaseFlex( void ) :
 
 CBaseFlex::~CBaseFlex( void )
 {
-	m_LocalToGlobal.RemoveAll();
+	m_LocalToGlobal.clear();
 	// If a player is forcibly removed while speaking a response .vcd we can get into here w/ some events waiting to
 	//  be closed out.  It's benign and we just discard the events.  The CSceneEntity uses EHANDLEs so it'll wipe the
-	//  scene out on next think anyway.  
-	m_SceneEvents.RemoveAll();
+	//  scene out on next think anyway.
+	m_SceneEvents.clear();
 }
 
 void CBaseFlex::SetModel( const char *szModelName )
@@ -149,7 +145,7 @@ float CBaseFlex::GetFlexWeight( LocalFlexController_t index )
 		{
 			return m_flexWeight[index] * (pflexcontroller->max - pflexcontroller->min) + pflexcontroller->min;
 		}
-				
+
 		return m_flexWeight[index];
 	}
 	return 0.0;
@@ -171,28 +167,28 @@ LocalFlexController_t CBaseFlex::FindFlexController( const char *szName )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 void CBaseFlex::StartChoreoScene( CChoreoScene *scene )
 {
-	if ( m_ActiveChoreoScenes.Find( scene ) != m_ActiveChoreoScenes.InvalidIndex() )
+	if ( ks::find_index( m_ActiveChoreoScenes, scene ) != -1 )
 	{
 		return;
 	}
 
-	m_ActiveChoreoScenes.AddToTail( scene );
+	m_ActiveChoreoScenes.push_back( scene );
 	m_bUpdateLayerPriorities = true;
 }
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 void CBaseFlex::RemoveChoreoScene( CChoreoScene *scene, bool canceled )
 {
 	// Assert( m_ActiveChoreoScenes.Find( scene ) != m_ActiveChoreoScenes.InvalidIndex() );
 
-	m_ActiveChoreoScenes.FindAndRemove( scene );
+	ks::erase_first( m_ActiveChoreoScenes, scene );
 	m_bUpdateLayerPriorities = true;
 
 	if (canceled)
@@ -208,13 +204,13 @@ void CBaseFlex::RemoveChoreoScene( CChoreoScene *scene, bool canceled )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 
 int CBaseFlex::GetScenePriority( CChoreoScene *scene )
 {
 	int iPriority = 0;
-	int c = m_ActiveChoreoScenes.Count();
+	int c = std::ssize( m_ActiveChoreoScenes );
 	// count number of channels in scenes older than current
 	for ( int i = 0; i < c; i++ )
 	{
@@ -244,11 +240,11 @@ void CBaseFlex::ClearSceneEvents( CChoreoScene *scene, bool canceled )
 {
 	if ( !scene )
 	{
-		m_SceneEvents.RemoveAll();
+		m_SceneEvents.clear();
 		return;
 	}
 
-	for ( int i = m_SceneEvents.Count() - 1; i >= 0; i-- )
+	for ( int i = std::ssize( m_SceneEvents ) - 1; i >= 0; i-- )
 	{
 		CSceneEventInfo *info = &m_SceneEvents[ i ];
 
@@ -270,7 +266,7 @@ void CBaseFlex::ClearSceneEvents( CChoreoScene *scene, bool canceled )
 		info->m_pScene		= nullptr;
 		info->m_bStarted	= false;
 
-		m_SceneEvents.Remove( i );
+		m_SceneEvents.erase( m_SceneEvents.begin() + i );
 	}
 }
 
@@ -289,7 +285,7 @@ bool CBaseFlex::ClearSceneEvent( CSceneEventInfo *info, bool fastKill, bool canc
 	switch ( info->m_pEvent->GetType() )
 	{
 	case CChoreoEvent::GESTURE:
-	case CChoreoEvent::SEQUENCE: 
+	case CChoreoEvent::SEQUENCE:
 		{
 			if (info->m_iLayer >= 0)
 			{
@@ -317,7 +313,7 @@ bool CBaseFlex::ClearSceneEvent( CSceneEventInfo *info, bool fastKill, bool canc
 		}
 		return true;
 
-	case CChoreoEvent::MOVETO: 
+	case CChoreoEvent::MOVETO:
 		{
 			CAI_BaseNPC *myNpc = MyNPCPointer( );
 			if (!myNpc)
@@ -337,7 +333,7 @@ bool CBaseFlex::ClearSceneEvent( CSceneEventInfo *info, bool fastKill, bool canc
 			}
 		}
 		return true;
-	case CChoreoEvent::FACE: 
+	case CChoreoEvent::FACE:
 	case CChoreoEvent::FLEXANIMATION:
 	case CChoreoEvent::EXPRESSION:
 	case CChoreoEvent::LOOKAT:
@@ -365,9 +361,9 @@ bool CBaseFlex::ClearSceneEvent( CSceneEventInfo *info, bool fastKill, bool canc
 
 //-----------------------------------------------------------------------------
 // Purpose: Add string indexed scene/expression/duration to list of active SceneEvents
-// Input  : scenefile - 
-//			expression - 
-//			duration - 
+// Input  : scenefile -
+//			expression -
+//			duration -
 //-----------------------------------------------------------------------------
 void CBaseFlex::AddSceneEvent( CChoreoScene *scene, CChoreoEvent *event, CBaseEntity *pTarget /*= NULL*/, CSceneEntity* pSceneEntity /*= NULL*/ )
 {
@@ -397,7 +393,7 @@ void CBaseFlex::AddSceneEvent( CChoreoScene *scene, CChoreoEvent *event, CBaseEn
 
 	if (StartSceneEvent( &info, scene, event, actor, pTarget ))
 	{
-		m_SceneEvents.AddToTail( info );
+		m_SceneEvents.push_back( info );
 	}
 	else
 	{
@@ -408,7 +404,7 @@ void CBaseFlex::AddSceneEvent( CChoreoScene *scene, CChoreoEvent *event, CBaseEn
 
 
 //-----------------------------------------------------------------------------
-// Starting various expression types 
+// Starting various expression types
 //-----------------------------------------------------------------------------
 
 bool CBaseFlex::RequestStartSequenceSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CChoreoEvent *event, CChoreoActor *actor, CBaseEntity *pTarget )
@@ -459,7 +455,7 @@ bool CBaseFlex::HandleStartSequenceSceneEvent( CSceneEventInfo *info, CChoreoSce
 		Warning( "CSceneEntity %s :\"%s\" unable to find sequence \"%s\"\n", STRING(GetEntityName()), actor->GetName(), event->GetParameters() );
 		return false;
 	}
-	
+
 	if (!EnterSceneSequence( scene, event ))
 	{
 		if (!event->GetPlayOverScript())
@@ -578,7 +574,7 @@ bool CBaseFlex::HandleStartGestureSceneEvent( CSceneEventInfo *info, CChoreoScen
 		if ( pkvAllFaceposer )
 		{
 			CStudioHdr *pstudiohdr = GetModelPtr();
-			
+
 			mstudioseqdesc_t &seqdesc = pstudiohdr->pSeqdesc( info->m_nSequence );
 			mstudioanimdesc_t &animdesc = pstudiohdr->pAnimdesc( pstudiohdr->iRelativeAnim( info->m_nSequence, seqdesc.anim(0,0) ) );
 
@@ -644,7 +640,7 @@ bool CBaseFlex::HandleStartGestureSceneEvent( CSceneEventInfo *info, CChoreoScen
 	bool looping = ((GetSequenceFlags( GetModelPtr(), info->m_nSequence ) & STUDIO_LOOPING) != 0);
 	if ( looping )
 	{
-		DevMsg( 1, "vcd error, gesture %s of model %s is marked as STUDIO_LOOPING!\n", 
+		DevMsg( 1, "vcd error, gesture %s of model %s is marked as STUDIO_LOOPING!\n",
 				event->GetParameters(), STRING(GetModelName()) );
 	}
 
@@ -709,23 +705,23 @@ bool CBaseFlex::StartMoveToSceneEvent( CSceneEventInfo *info, CChoreoScene *scen
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 bool CBaseFlex::StartSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CChoreoEvent *event, CChoreoActor *actor, CBaseEntity *pTarget )
 {
 	switch ( event->GetType() )
 	{
-	case CChoreoEvent::SEQUENCE: 
+	case CChoreoEvent::SEQUENCE:
 		return RequestStartSequenceSceneEvent( info, scene, event, actor, pTarget );
 
 	case CChoreoEvent::GESTURE:
 		return RequestStartGestureSceneEvent( info, scene, event, actor, pTarget );
 
-	case CChoreoEvent::FACE: 
+	case CChoreoEvent::FACE:
 		return StartFacingSceneEvent( info, scene, event, actor, pTarget );
 
 	// FIXME: move this to an CBaseActor
-	case CChoreoEvent::MOVETO: 
+	case CChoreoEvent::MOVETO:
 		return StartMoveToSceneEvent( info, scene, event, actor, pTarget );
 
 	case CChoreoEvent::LOOKAT:
@@ -738,7 +734,7 @@ bool CBaseFlex::StartSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CCh
 
 	case CChoreoEvent::SPEAK:
 		return true;
-	
+
 	case CChoreoEvent::EXPRESSION: // These are handled client-side
 		return true;
 	}
@@ -749,14 +745,14 @@ bool CBaseFlex::StartSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CCh
 
 //-----------------------------------------------------------------------------
 // Purpose: Remove expression
-// Input  : scenefile - 
-//			expression - 
+// Input  : scenefile -
+//			expression -
 //-----------------------------------------------------------------------------
 void CBaseFlex::RemoveSceneEvent( CChoreoScene *scene, CChoreoEvent *event, bool fastKill )
 {
 	Assert( event );
 
-	for ( int i = 0 ; i < m_SceneEvents.Count(); i++ )
+	for ( int i = 0 ; i < std::ssize( m_SceneEvents ); i++ )
 	{
 		CSceneEventInfo *info = &m_SceneEvents[ i ];
 
@@ -776,7 +772,7 @@ void CBaseFlex::RemoveSceneEvent( CChoreoScene *scene, CChoreoEvent *event, bool
 			info->m_pScene		= nullptr;
 			info->m_bStarted	= false;
 
-			m_SceneEvents.Remove( i );
+			m_SceneEvents.erase( m_SceneEvents.begin() + i );
 			return;
 		}
 	}
@@ -789,7 +785,7 @@ void CBaseFlex::RemoveSceneEvent( CChoreoScene *scene, CChoreoEvent *event, bool
 //-----------------------------------------------------------------------------
 bool CBaseFlex::CheckSceneEvent( float currenttime, CChoreoScene *scene, CChoreoEvent *event )
 {
-	for ( int i = 0 ; i < m_SceneEvents.Count(); i++ )
+	for ( int i = 0 ; i < std::ssize( m_SceneEvents ); i++ )
 	{
 		CSceneEventInfo *info = &m_SceneEvents[ i ];
 
@@ -801,7 +797,7 @@ bool CBaseFlex::CheckSceneEvent( float currenttime, CChoreoScene *scene, CChoreo
 
 		if ( info->m_pEvent != event)
 			continue;
-		
+
 		return CheckSceneEventCompletion( info, currenttime, scene, event );
 	}
 	return true;
@@ -853,7 +849,7 @@ bool CBaseFlex::CheckSceneEventCompletion( CSceneEventInfo *info, float currentt
 					// FIXME: There's still a hole in the logic is the save happens immediately after the SS steals the npc but before their AI has run again
 					Warning( "%s : %8.2f: waiting for actor %s to complete MOVETO but actor not in SCHED_SCENE_GENERIC\n", scene->GetFilename(), scene->GetTime(), event->GetActor()->GetName() );
 					// no longer in a scene :P
-					return true;		
+					return true;
 				}
 				// still trying
 				return false;
@@ -881,7 +877,7 @@ void CBaseFlex::ProcessSceneEvents( void )
 
 	bool bHasForegroundEvents = false;
 	// Iterate SceneEvents and look for active slots
-	for ( int i = 0; i < m_SceneEvents.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_SceneEvents ); i++ )
 	{
 		CSceneEventInfo *info = &m_SceneEvents[ i ];
 		Assert( info );
@@ -943,7 +939,7 @@ public:
 
 		FileFindHandle_t fh;
 		const char *fn;
-		
+
 		for (fn = g_pFullFileSystem->FindFirst( directory, &fh ); fn; fn = g_pFullFileSystem->FindNext( fh ) )
 		{
 			if ( !stricmp( fn, ".") || !stricmp( fn, "..") )
@@ -1001,8 +997,8 @@ public:
 
 	//-----------------------------------------------------------------------------
 	// Purpose: Sets up translations
-	// Input  : *instance - 
-	//			*pSettinghdr - 
+	// Input  : *instance -
+	//			*pSettinghdr -
 	// Output : 	void
 	//-----------------------------------------------------------------------------
 	void EnsureTranslations( CBaseFlex *instance, const flexsettinghdr_t *pSettinghdr )
@@ -1019,12 +1015,12 @@ public:
 		char szFilename[MAX_PATH];
 		Assert( V_strlen( filename ) < MAX_PATH );
 		V_strcpy( szFilename, filename );
-		
+
 		Q_FixSlashes( szFilename );
 
 		// See if it's already loaded
 		int i;
-		for ( i = 0; i < m_FileList.Count(); i++ )
+		for ( i = 0; i < std::ssize( m_FileList ); i++ )
 		{
 			CFlexSceneFile *file = m_FileList[ i ];
 			if ( file && !V_stricmp( file->filename, szFilename ) )
@@ -1054,7 +1050,7 @@ public:
 		// Remember data pointer
 		pfile->buffer = buffer;
 		// Add to list
-		m_FileList.AddToTail( pfile );
+		m_FileList.push_back( pfile );
 
 		// Swap the entire file
 
@@ -1069,92 +1065,76 @@ private:
 
 	void DeleteSceneFiles()
 	{
-		while ( m_FileList.Count() > 0 )
+		while ( !m_FileList.empty() )
 		{
 			CFlexSceneFile *file = m_FileList[ 0 ];
-			m_FileList.Remove( 0 );
+			m_FileList.erase( m_FileList.begin() + 0 );
 			filesystem->FreeOptimalReadBuffer( file->buffer );
 			delete file;
 		}
 	}
 
-	CUtlVector< CFlexSceneFile * > m_FileList;
+	std::vector< CFlexSceneFile * > m_FileList;
 };
 
 // Singleton manager
 CFlexSceneFileManager g_FlexSceneFileManager( "CFlexSceneFileManager" );
 
 //-----------------------------------------------------------------------------
-// Purpose: Each CBaseFlex maintains a UtlRBTree of mappings, one for each loaded flex scene file it uses.  This is used to
-//  sort the entries in the RBTree
-// Input  : lhs - 
-//			rhs - 
-// Output : Returns true on success, false on failure.
-//-----------------------------------------------------------------------------
-bool CBaseFlex::FlexSettingLessFunc( const FS_LocalToGlobal_t& lhs, const FS_LocalToGlobal_t& rhs )
-{
-	return lhs.m_Key < rhs.m_Key;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Since everyone shared a pSettinghdr now, we need to set up the localtoglobal mapping per entity, but 
+// Purpose: Since everyone shared a pSettinghdr now, we need to set up the localtoglobal mapping per entity, but
 //  we just do this in memory with an array of integers (could be shorts, I suppose)
-// Input  : *pSettinghdr - 
+// Input  : *pSettinghdr -
 //-----------------------------------------------------------------------------
 void CBaseFlex::EnsureTranslations( const flexsettinghdr_t *pSettinghdr )
 {
 	Assert( pSettinghdr );
 
-	FS_LocalToGlobal_t entry( pSettinghdr );
-
-	unsigned short idx = m_LocalToGlobal.Find( entry );
-	if ( idx != m_LocalToGlobal.InvalidIndex() )
+	if ( m_LocalToGlobal.contains( pSettinghdr ) )
 		return;
 
-	entry.SetCount( pSettinghdr->numkeys );
+	Assert( pSettinghdr->numkeys > 0 );
+	std::vector< LocalFlexController_t > mapping( pSettinghdr->numkeys );
 
 	for ( int i = 0; i < pSettinghdr->numkeys; ++i )
 	{
-		entry.m_Mapping[ i ] = FindFlexController( pSettinghdr->pLocalName( i ) );
+		mapping[ i ] = FindFlexController( pSettinghdr->pLocalName( i ) );
 	}
 
-	m_LocalToGlobal.Insert( entry );
+	m_LocalToGlobal.emplace( pSettinghdr, std::move( mapping ) );
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Look up instance specific mapping
-// Input  : *pSettinghdr - 
-//			key - 
+// Input  : *pSettinghdr -
+//			key -
 // Output : int
 //-----------------------------------------------------------------------------
 LocalFlexController_t CBaseFlex::FlexControllerLocalToGlobal( const flexsettinghdr_t *pSettinghdr, int key )
 {
-	FS_LocalToGlobal_t entry( pSettinghdr );
-
-	int idx = m_LocalToGlobal.Find( entry );
-	if ( idx == m_LocalToGlobal.InvalidIndex() )
+	auto idx = m_LocalToGlobal.find( pSettinghdr );
+	if ( idx == m_LocalToGlobal.end() )
 	{
 		// This should never happen!!!
 		Assert( 0 );
 		Warning( "Unable to find mapping for flexcontroller %i, settings %p on %i/%s\n", key, pSettinghdr, entindex(), GetClassname() );
 		EnsureTranslations( pSettinghdr );
-		idx = m_LocalToGlobal.Find( entry );
-		if ( idx == m_LocalToGlobal.InvalidIndex() )
+		idx = m_LocalToGlobal.find( pSettinghdr );
+		if ( idx == m_LocalToGlobal.end() )
 		{
 			Error( "CBaseFlex::FlexControllerLocalToGlobal failed!\n" );
 		}
 	}
 
-	FS_LocalToGlobal_t& result = m_LocalToGlobal[ idx ];
+	const std::vector< LocalFlexController_t >& result = idx->second;
 	// Validate lookup
-	Assert( result.m_nCount != 0 && key < result.m_nCount );
-	LocalFlexController_t index = result.m_Mapping[ key ];
+	Assert( !result.empty() && key < std::ssize( result ) );
+	LocalFlexController_t index = result[ key ];
 	return index;
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : *filename - 
+// Purpose:
+// Input  : *filename -
 //-----------------------------------------------------------------------------
 const void *CBaseFlex::FindSceneFile( const char *filename )
 {
@@ -1174,7 +1154,7 @@ const void *CBaseFlex::FindSceneFile( const char *filename )
 	V_FixupPathName( szExtendedPath, sizeof( szExtendedPath ), szExtendedPath );
 
 	const void *pSceneFile = nullptr;
-	// FIXME: V_StripLastDir returns "./" path when it strips out the last one.  That don't resolve on FindSceneFile 
+	// FIXME: V_StripLastDir returns "./" path when it strips out the last one.  That don't resolve on FindSceneFile
 	while ( V_strlen( szExtendedPath ) > 2 )
 	{
 		static char szExtendedName[MAX_PATH];
@@ -1203,7 +1183,7 @@ ConVar	ai_expression_optimization( "ai_expression_optimization", "0", FCVAR_NONE
 ConVar	ai_expression_frametime( "ai_expression_frametime", "0.05", FCVAR_NONE, "Maximum frametime to still play background expressions." );
 
 //-----------------------------------------------------------------------------
-// Various methods to process facial SceneEvents: 
+// Various methods to process facial SceneEvents:
 //-----------------------------------------------------------------------------
 bool CBaseFlex::ProcessFlexAnimationSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CChoreoEvent *event )
 {
@@ -1264,11 +1244,11 @@ bool CBaseFlex::ProcessFlexSettingSceneEvent( CSceneEventInfo *info, CChoreoScen
 	// Look up the actual strings
 	const char *scenefile	= event->GetParameters();
 	const char *name		= event->GetParameters2();
-	
+
 	// Have to find both strings
 	if ( scenefile && name )
 	{
-		if ( info->m_pExpHdr == nullptr) 
+		if ( info->m_pExpHdr == nullptr)
 		{
 			info->m_pExpHdr = ( const flexsettinghdr_t * )FindSceneFile( scenefile );
 		}
@@ -1276,9 +1256,9 @@ bool CBaseFlex::ProcessFlexSettingSceneEvent( CSceneEventInfo *info, CChoreoScen
 		if ( info->m_pExpHdr )
 		{
 			float scenetime = scene->GetTime();
-			
+
 			float scale = event->GetIntensity( scenetime );
-			
+
 			// Add the named expression
 			AddFlexSetting( name, scale, info->m_pExpHdr, !info->m_bStarted );
 		}
@@ -1336,7 +1316,7 @@ bool CBaseFlex::ProcessFacingSceneEvent( CSceneEventInfo *info, CChoreoScene *sc
 
 			float idealYaw = UTIL_AngleMod( info->m_flInitialYaw + diff * intensity );
 
-			// Msg("yaw %.1f : %.1f (%.1f)\n", info->m_flInitialYaw, idealYaw, intensity ); 
+			// Msg("yaw %.1f : %.1f (%.1f)\n", info->m_flInitialYaw, idealYaw, intensity );
 
 			myNpc->GetMotor()->SetIdealYawAndUpdate( idealYaw );
 		}
@@ -1379,7 +1359,7 @@ static Activity DetermineExpressionMoveActivity( CChoreoEvent *event, CAI_BaseNP
 	{
 		activity = ACT_WALK_CROUCH;
 	}
-	else 
+	else
 	{
 		// Try and resolve the activity name
 		activity = (Activity)ActivityList_IndexForName( pszAct );
@@ -1449,11 +1429,11 @@ bool CBaseFlex::ProcessMoveToSceneEvent( CSceneEventInfo *info, CChoreoScene *sc
 
 			float flDist = (info->m_hTarget->EyePosition() - GetAbsOrigin()).Length2D();
 
-			if (flDist > MAX( MAX( flDistTolerance, 0.1 ), event->GetDistanceToTarget()))
+			if (flDist > std::max( std::max( flDistTolerance, 0.1f ), event->GetDistanceToTarget()))
 			{
 				// Msg("flDist %.1f\n", flDist );
 				int result = false;
-				
+
 				if ( !myNpc->IsUnreachable( info->m_hTarget ) )
 				{
 					result = myNpc->GetNavigator()->SetGoal( goal, AIN_CLEAR_TARGET );
@@ -1574,7 +1554,7 @@ bool CBaseFlex::ProcessLookAtSceneEvent( CSceneEventInfo *info, CChoreoScene *sc
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 bool CBaseFlex::ProcessSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CChoreoEvent *event )
 {
@@ -1616,11 +1596,11 @@ bool CBaseFlex::ProcessSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, C
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 bool CBaseFlex::IsRunningSceneMoveToEvent()
 {
-	for ( int i = m_SceneEvents.Count() - 1; i >= 0; i-- )
+	for ( int i = std::ssize( m_SceneEvents ) - 1; i >= 0; i-- )
 	{
 		CSceneEventInfo *info = &m_SceneEvents[ i ];
 		CChoreoEvent *event = info->m_pEvent;
@@ -1658,8 +1638,8 @@ flexsetting_t const *CBaseFlex::FindNamedSetting( flexsettinghdr_t const *pSetti
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : *event - 
+// Purpose:
+// Input  : *event -
 //-----------------------------------------------------------------------------
 void CBaseFlex::AddFlexAnimation( CSceneEventInfo *info )
 {
@@ -1782,13 +1762,13 @@ void CBaseFlex::AddFlexAnimation( CSceneEventInfo *info )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : *expr - 
-//			scale - 
-//			*pSettinghdr - 
-//			newexpression - 
+// Purpose:
+// Input  : *expr -
+//			scale -
+//			*pSettinghdr -
+//			newexpression -
 //-----------------------------------------------------------------------------
-void CBaseFlex::AddFlexSetting( const char *expr, float scale, 
+void CBaseFlex::AddFlexSetting( const char *expr, float scale,
 	const flexsettinghdr_t *pSettinghdr, bool newexpression )
 {
 	int i;
@@ -1835,15 +1815,15 @@ void CBaseFlex::AddFlexSetting( const char *expr, float scale,
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : *actor - 
-//			*parameters - 
+// Purpose:
+// Input  : *actor -
+//			*parameters -
 //-----------------------------------------------------------------------------
 bool CBaseFlex::ProcessGestureSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CChoreoEvent *event )
 {
 	if ( !info || !event || !scene )
 		return false;
-	
+
 	if ( info->m_iLayer == REQUEST_DEFERRED_LAYER_ALLOCATION )
 	{
 		HandleStartGestureSceneEvent( info, scene, event, info->m_pActor );
@@ -1857,7 +1837,7 @@ bool CBaseFlex::ProcessGestureSceneEvent( CSceneEventInfo *info, CChoreoScene *s
 		float duration = event->GetDuration( );
 		float flEventCycle = (scene->GetTime() - event->GetStartTime()) / duration;
 		float flCycle = event->GetOriginalPercentageFromPlaybackPercentage( flEventCycle );
-		
+
 		SetLayerCycle( info->m_iLayer, flCycle );
 
 		float flWeight = event->GetIntensity( scene->GetTime() );
@@ -1874,11 +1854,11 @@ bool CBaseFlex::ProcessGestureSceneEvent( CSceneEventInfo *info, CChoreoScene *s
 		{
 			if (IsMoving())
 			{
-				info->m_flWeight = MAX( info->m_flWeight - 0.2, 0.0 );
+				info->m_flWeight = std::max( info->m_flWeight - 0.2, 0.0 );
 			}
 			else
 			{
-				info->m_flWeight = MIN( info->m_flWeight + 0.2, 1.0 );
+				info->m_flWeight = std::min( info->m_flWeight + 0.2, 1.0 );
 			}
 		}
 
@@ -1895,7 +1875,7 @@ bool CBaseFlex::ProcessGestureSceneEvent( CSceneEventInfo *info, CChoreoScene *s
 		/*
 		Msg( "%d : %.2f (%.2f) : %.3f %.3f : %.3f\n",
 			info->m_iLayer,
-			scene->GetTime(), 
+			scene->GetTime(),
 			(scene->GetTime() - event->GetStartTime()) / duration,
 			flCycle,
 			flNextCycle,
@@ -1910,15 +1890,15 @@ bool CBaseFlex::ProcessGestureSceneEvent( CSceneEventInfo *info, CChoreoScene *s
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : *actor - 
-//			*parameters - 
+// Purpose:
+// Input  : *actor -
+//			*parameters -
 //-----------------------------------------------------------------------------
 bool CBaseFlex::ProcessSequenceSceneEvent( CSceneEventInfo *info, CChoreoScene *scene, CChoreoEvent *event )
 {
 	if ( !info  || !event || !scene )
 		return false;
-	
+
 	bool bNewlyAllocated = false;
 	if ( info->m_iLayer == REQUEST_DEFERRED_LAYER_ALLOCATION )
 	{
@@ -1951,11 +1931,11 @@ bool CBaseFlex::ProcessSequenceSceneEvent( CSceneEventInfo *info, CChoreoScene *
 
 		if (bFadeOut)
 		{
-			info->m_flWeight = MAX( info->m_flWeight - 0.2, 0.0 );
+			info->m_flWeight = std::max( info->m_flWeight - 0.2, 0.0 );
 		}
 		else
 		{
-			info->m_flWeight = MIN( info->m_flWeight + 0.2, 1.0 );
+			info->m_flWeight = std::min( info->m_flWeight + 0.2, 1.0 );
 		}
 
 		float spline = 3 * info->m_flWeight * info->m_flWeight - 2 * info->m_flWeight * info->m_flWeight * info->m_flWeight;
@@ -1991,9 +1971,9 @@ bool CBaseFlex::ProcessSequenceSceneEvent( CSceneEventInfo *info, CChoreoScene *
 
 //-----------------------------------------------------------------------------
 // Purpose: Returns true if the actor is not currently in a scene OR if the actor
-//  is in a scene (checked externally), but a PERMIT_RESPONSES event is active and 
+//  is in a scene (checked externally), but a PERMIT_RESPONSES event is active and
 //  the permit time period has enough time remaining to handle the response in full.
-// Input  : response_length - 
+// Input  : response_length -
 //-----------------------------------------------------------------------------
 bool CBaseFlex::PermitResponse( float response_length )
 {
@@ -2015,7 +1995,7 @@ bool CBaseFlex::PermitResponse( float response_length )
 
 //-----------------------------------------------------------------------------
 // Purpose: Set response end time (0 to clear response blocking)
-// Input  : endtime - 
+// Input  : endtime -
 //-----------------------------------------------------------------------------
 void CBaseFlex::SetPermitResponse( float endtime )
 {
@@ -2042,7 +2022,7 @@ float CBaseFlex::ScriptPlayScene( const char* pszScene, float flDelay )
 
 //-----------------------------------------------------------------------------
 // Purpose: Generate a one-shot scene in memory with one track which is to play the named sound on the actor
-// Input  : *soundname - 
+// Input  : *soundname -
 // Output : float
 //-----------------------------------------------------------------------------
 float CBaseFlex::PlayAutoGeneratedSoundScene( const char *soundname )
@@ -2056,9 +2036,9 @@ float CBaseFlex::PlayAutoGeneratedSoundScene( const char *soundname )
 //--------------------------------------------------------------------------------------------------
 HSCRIPT CBaseFlex::ScriptGetOldestScene( void )
 {
-	if ( m_SceneEvents.Count() > 0 )
+	if ( !m_SceneEvents.empty() )
 	{
-		CSceneEventInfo curScene = m_SceneEvents.Head();
+		CSceneEventInfo curScene = m_SceneEvents.front();
 		return ToHScript( (CBaseEntity*)(curScene.m_hSceneEntity.Get()) );
 	}
 	else
@@ -2068,13 +2048,13 @@ HSCRIPT CBaseFlex::ScriptGetOldestScene( void )
 }
 
 //--------------------------------------------------------------------------------------------------
-// Returns the script instance of the scene at the specified index, or null if index >= count 
+// Returns the script instance of the scene at the specified index, or null if index >= count
 //--------------------------------------------------------------------------------------------------
 HSCRIPT CBaseFlex::ScriptGetSceneByIndex( int index )
 {
-	if ( m_SceneEvents.IsValidIndex( index ) )
+	if ( ks::is_valid_index( m_SceneEvents, index ) )
 	{
-		CSceneEventInfo curScene = m_SceneEvents.Element( index ); 
+		CSceneEventInfo curScene = m_SceneEvents[ index ];
 		return ToHScript( (CBaseEntity*)(curScene.m_hSceneEntity.Get()) );
 	}
 	else
@@ -2093,7 +2073,7 @@ bool CBaseFlex::EnterSceneSequence( CChoreoScene *scene, CChoreoEvent *event, bo
 		return false;
 
 	// 2 seconds past current event, or 0.2 seconds past end of scene, whichever is shorter
-	float flDuration = MIN( 2.0, MIN( event->GetEndTime() - scene->GetTime() + 2.0, scene->FindStopTime() - scene->GetTime() + 0.2 ) );
+	float flDuration = std::min( 2.0, std::min( event->GetEndTime() - scene->GetTime() + 2.0, scene->FindStopTime() - scene->GetTime() + 0.2 ) );
 
 	if (myNpc->IsCurSchedule( SCHED_SCENE_GENERIC ))
 	{
@@ -2107,9 +2087,9 @@ bool CBaseFlex::EnterSceneSequence( CChoreoScene *scene, CChoreoEvent *event, bo
 		CAI_ScheduleBits testBits;
 		myNpc->GetCurSchedule()->GetInterruptMask( &testBits );
 
-		testBits.Clear( COND_PROVOKED );
+		testBits.reset( COND_PROVOKED );
 
-		if (testBits.IsAllClear()) 
+		if (testBits.none())
 		{
 			return false;
 		}
@@ -2199,11 +2179,11 @@ float CSceneEventInfo::UpdateWeight( CBaseFlex *pActor )
 	// decay if this is a background scene and there's other flex animations playing
 	if (pActor->IsSuppressedFlexAnimation( this ))
 	{
-		m_flWeight = MAX( m_flWeight - 0.2, 0.0 );
+		m_flWeight = std::max( m_flWeight - 0.2, 0.0 );
 	}
 	else
 	{
-		m_flWeight = MIN( m_flWeight + 0.1, 1.0 );
+		m_flWeight = std::min( m_flWeight + 0.1, 1.0 );
 	}
 	return m_flWeight;
 }
@@ -2265,7 +2245,7 @@ void CFlexCycler::Spawn( )
 	SetMoveType( MOVETYPE_NONE );
 	m_takedamage		= DAMAGE_YES;
 	m_iHealth			= 80000;// no cycler should die
-	
+
 	m_flPlaybackRate	= 1.0f;
 	m_flGroundSpeed		= 0;
 
@@ -2277,7 +2257,7 @@ void CFlexCycler::Spawn( )
 	m_flCycle = random->RandomFloat( 0, 1.0 );
 }
 
-const char *predef_flexcontroller_names[] = { 
+const char *predef_flexcontroller_names[] = {
 	"right_lid_raiser",
 	"left_lid_raiser",
 	"right_lid_tightener",
@@ -2307,16 +2287,16 @@ const char *predef_flexcontroller_names[] = {
 	"jaw_clencher",
 	"jaw_drop",
 	"right_mouth_drop",
-	"left_mouth_drop", 
+	"left_mouth_drop",
 	nullptr };
 
 float predef_flexcontroller_values[7][30] = {
-/* 0 */	{ 0.700,0.560,0.650,0.650,0.650,0.585,0.000,0.000,0.400,0.040,0.000,0.000,0.450,0.450,0.000,0.000,0.000,0.750,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.150,1.000,0.000,0.000,0.000 }, 
-/* 1 */	{ 0.450,0.450,0.450,0.450,0.000,0.000,0.000,0.000,0.300,0.300,0.000,0.000,0.250,0.250,0.000,0.000,0.000,0.750,0.750,0.000,0.000,0.000,0.000,0.400,0.400,0.000,1.000,0.000,0.050,0.050 }, 
-/* 2 */	{ 0.200,0.200,0.500,0.500,0.150,0.150,0.100,0.100,0.150,0.150,0.000,0.000,0.700,0.700,0.000,0.000,0.000,0.750,0.750,0.000,0.200,0.000,0.000,0.000,0.000,0.000,0.850,0.000,0.000,0.000 }, 
-/* 3 */	{ 0.000,0.000,0.000,0.000,0.000,0.000,0.300,0.300,0.000,0.000,0.000,0.000,0.000,0.000,0.100,0.000,0.000,0.000,0.000,0.700,0.300,0.000,0.000,0.200,0.200,0.000,0.000,0.300,0.000,0.000 }, 
-/* 4 */	{ 0.450,0.450,0.000,0.000,0.450,0.450,0.000,0.000,0.000,0.000,0.450,0.450,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.300,0.000,0.000,0.000,0.000 }, 
-/* 5 */	{ 0.000,0.000,0.350,0.350,0.150,0.150,0.300,0.300,0.450,0.450,0.000,0.000,0.200,0.200,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.200,0.200,0.000,0.000,0.300,0.000,0.000,0.000,0.000 }, 
+/* 0 */	{ 0.700,0.560,0.650,0.650,0.650,0.585,0.000,0.000,0.400,0.040,0.000,0.000,0.450,0.450,0.000,0.000,0.000,0.750,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.150,1.000,0.000,0.000,0.000 },
+/* 1 */	{ 0.450,0.450,0.450,0.450,0.000,0.000,0.000,0.000,0.300,0.300,0.000,0.000,0.250,0.250,0.000,0.000,0.000,0.750,0.750,0.000,0.000,0.000,0.000,0.400,0.400,0.000,1.000,0.000,0.050,0.050 },
+/* 2 */	{ 0.200,0.200,0.500,0.500,0.150,0.150,0.100,0.100,0.150,0.150,0.000,0.000,0.700,0.700,0.000,0.000,0.000,0.750,0.750,0.000,0.200,0.000,0.000,0.000,0.000,0.000,0.850,0.000,0.000,0.000 },
+/* 3 */	{ 0.000,0.000,0.000,0.000,0.000,0.000,0.300,0.300,0.000,0.000,0.000,0.000,0.000,0.000,0.100,0.000,0.000,0.000,0.000,0.700,0.300,0.000,0.000,0.200,0.200,0.000,0.000,0.300,0.000,0.000 },
+/* 4 */	{ 0.450,0.450,0.000,0.000,0.450,0.450,0.000,0.000,0.000,0.000,0.450,0.450,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.300,0.000,0.000,0.000,0.000 },
+/* 5 */	{ 0.000,0.000,0.350,0.350,0.150,0.150,0.300,0.300,0.450,0.450,0.000,0.000,0.200,0.200,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.200,0.200,0.000,0.000,0.300,0.000,0.000,0.000,0.000 },
 /* 6 */	{ 0.000,0.000,0.650,0.650,0.750,0.750,0.000,0.000,0.000,0.000,0.300,0.300,0.000,0.000,0.000,0.250,0.250,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000 }
 };
 
@@ -2452,7 +2432,7 @@ void CFlexCycler::Think( void )
 			{
 				if (*pszExpression == '+')
 					*pszExpression = ' ';
-				
+
 				pszExpression++;
 			}
 
@@ -2551,7 +2531,7 @@ void CFlexCycler::Think( void )
 			}
 
 			flex_talk.SetValue( "0" );
-		} 
+		}
 		else if (!FStrEq( flex_talk.GetString(), "0") )
 		{
 			int sentenceIndex = engine->SentenceIndexFromName( flex_talk.GetString() );
@@ -2616,5 +2596,3 @@ void CFlexCycler::ProcessSceneEvents( void )
 {
 	// Don't do anything since we handle facial stuff in Think()
 }
-
-

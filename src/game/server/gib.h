@@ -101,7 +101,7 @@ private:
 
 	// Limit the max number of extant Gibs (mainly a memory issue):
 	static const int MAX_CONCURRENT_GIBS = 75;
-	static CUtlVector<EHANDLE> s_ExtantGibs;
+	static std::vector< EHANDLE > s_ExtantGibs;
 };
 
 class CRagGib : public CBaseAnimating

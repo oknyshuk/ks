@@ -12,9 +12,7 @@
 #include "../../debugoverlay.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 
 Color CollectionColor( 245, 245, 245, 255 );
 Color StackColor( 225, 225, 245, 255 );
@@ -55,7 +53,7 @@ CSosOperatorStack::~CSosOperatorStack()
 	
 	if ( m_pMemPool )
 	{
-		free( m_pMemPool );
+		g_pMemAlloc->Free( m_pMemPool );
 	}
 }
 
@@ -74,15 +72,17 @@ void CSosOperatorStack::SetScriptHash( HSOUNDSCRIPTHASH nHash )
 }
 void CSosOperatorStack::AddToTail( CSosOperator *pOperator, const char *pName )
 {
-	int nIndex = m_vStack.AddToTail( pOperator );
-	m_vOperatorMap.Insert( pName , nIndex );
+	int nIndex = std::ssize( m_vStack ); m_vStack.push_back( pOperator );
+	// a repeated name keeps resolving to its first operator
+	auto it = m_vOperatorMap.emplace( pName, nIndex ).first;
+	m_vOperatorNames.push_back( it->first.c_str() );
 }
 
 int CSosOperatorStack::FindOperatorViaOffset( size_t nOffset )
 {
 	size_t memOffset = 0;
 	int i;
-	for( i = 0; i < m_vStack.Count(); i++ )
+	for( i = 0; i < std::ssize( m_vStack ); i++ )
 	{
 		CSosOperator *pOp = m_vStack[i];
 		if ( pOp )
@@ -100,7 +100,8 @@ int CSosOperatorStack::FindOperatorViaOffset( size_t nOffset )
 
 CSosOperator *CSosOperatorStack::FindOperator( const char *pName, void **pStructHandle )
 {
-	int nOpIndex = m_vOperatorMap.Find( pName );
+	auto itOp = m_vOperatorMap.find( pName );
+	int nOpIndex = itOp != m_vOperatorMap.end() ? itOp->second : -1;
 	size_t memOffset = 0;
 	*pStructHandle = m_pMemPool;
 	for( int i = 0; i < nOpIndex; i++ )
@@ -123,8 +124,9 @@ CSosOperator *CSosOperatorStack::FindOperator( const char *pName, void **pStruct
 }
 int CSosOperatorStack::FindOperator( const char *pName )
 {
-	int nIndex = m_vOperatorMap.Find( pName );
-	if ( !m_vStack.IsValidIndex( nIndex ) )
+	auto itOp = m_vOperatorMap.find( pName );
+	int nIndex = itOp != m_vOperatorMap.end() ? itOp->second : -1;
+	if ( !ks::is_valid_index( m_vStack, nIndex ) )
 	{
 		// error
 		return -1;
@@ -134,7 +136,7 @@ int CSosOperatorStack::FindOperator( const char *pName )
 }
 int CSosOperatorStack::GetOperatorOffset( int nIndex )
 {
-	if ( !m_vStack.IsValidIndex( nIndex ) )
+	if ( !ks::is_valid_index( m_vStack, nIndex ) )
 	{
 		// error
 		return -1;
@@ -155,7 +157,7 @@ int CSosOperatorStack::GetOperatorOffset( int nIndex )
 int CSosOperatorStack::GetOperatorOutputOffset( const char *pOperatorName, const char *pOutputName )
 {
 	int nOpIndex = FindOperator( pOperatorName );
-	if ( ! m_vStack.IsValidIndex( nOpIndex ) )
+	if ( ! ks::is_valid_index( m_vStack, nOpIndex ) )
 	{
 		Log_Warning( LOG_SND_OPERATORS, "Error: Unable to find referenced operator: %s", pOperatorName );
 		return -1;
@@ -170,7 +172,7 @@ int CSosOperatorStack::GetOperatorOutputOffset( const char *pOperatorName, const
 void CSosOperatorStack::Init( )
 {
 	size_t TotalSize = 0;
-	for( int i = 0 ; i < m_vStack.Count(); i++ )
+	for( int i = 0 ; i < std::ssize( m_vStack ); i++ )
 	{
 		char *pCharMem = ((char *)m_pMemPool) + TotalSize;
 
@@ -191,7 +193,7 @@ void CSosOperatorStack::Shutdown( )
 	// 	}
 
 	size_t TotalSize = 0;
-	for( int i = 0 ; i < m_vStack.Count(); i++ )
+	for( int i = 0 ; i < std::ssize( m_vStack ); i++ )
 	{
 		char *pCharMem = ((char *)m_pMemPool) + TotalSize;
 
@@ -242,7 +244,7 @@ void CSosOperatorStack::Execute( channel_t *pChannel, CScratchPad *pScratchPad )
 	}
 
 	size_t TotalSize = 0;
-	for( int i = 0 ; i < m_vStack.Count(); i++ )
+	for( int i = 0 ; i < std::ssize( m_vStack ); i++ )
 	{
 		char *pCharMem = ((char *)m_pMemPool) + TotalSize;
 		CSosOperator_t *pStructMem = (CSosOperator_t *)pCharMem;
@@ -250,7 +252,7 @@ void CSosOperatorStack::Execute( channel_t *pChannel, CScratchPad *pScratchPad )
 		m_vStack[i]->ResolveInputValues( (void *)pCharMem, m_pMemPool );
 		if( pStructMem->m_flExecute[0] > 0.0 && !( pStructMem->m_bExecuteOnce && pStructMem->m_bHasExecuted ) )
 		{
-			m_pCurrentOperatorName = m_vOperatorMap.GetElementName( i );
+			m_pCurrentOperatorName = m_vOperatorNames[ i ];
 			m_vStack[i]->Execute( (void *)pCharMem, pChannel, pScratchPad, this, i );
 			pStructMem->m_bHasExecuted = true;
 
@@ -297,7 +299,7 @@ void CSosOperatorStack::ExecuteIterator( channel_t *pChannel, CScratchPad *pScra
 	}
 
 	size_t TotalSize = 0;
-	for( int i = 0; i < m_vStack.Count(); i++ )
+	for( int i = 0; i < std::ssize( m_vStack ); i++ )
 	{
 		char *pCharMem = ((char *)m_pMemPool) + TotalSize;
 		CSosOperator_t *pStructMem = (CSosOperator_t *)pCharMem;
@@ -307,7 +309,7 @@ void CSosOperatorStack::ExecuteIterator( channel_t *pChannel, CScratchPad *pScra
 			m_vStack[i]->ResolveInputValues( (void *)pCharMem, m_pMemPool );
 			if( pStructMem->m_flExecute[0] > 0.0 && !( pStructMem->m_bExecuteOnce && pStructMem->m_bHasExecuted ) )
 			{
-				m_pCurrentOperatorName = m_vOperatorMap.GetElementName( i );;
+				m_pCurrentOperatorName = m_vOperatorNames[ i ];
 				m_vStack[i]->Execute( (void *)pCharMem, pChannel, pScratchPad, this, i );
 				pStructMem->m_bHasExecuted = true;
 
@@ -343,14 +345,13 @@ void CSosOperatorStack::Copy( CSosOperatorStack *pSrcStack, size_t nMemOffset )
 	size_t nTotalOffset = 0;
 
 	// UGLY, MAKE POINTERS!
-	for ( int i = 0; i < pSrcStack->m_vStack.Count(); i++ )
+	for ( int i = 0; i < std::ssize( pSrcStack->m_vStack ); i++ )
 	{
  		CSosOperator *pOperator = pSrcStack->m_vStack[i];
-		const char *pName = pSrcStack->m_vOperatorMap.GetElementName( i );
+		const char *pName = pSrcStack->m_vOperatorNames[ i ];
 
 		// same names not allowed?
-		int nIndex = m_vOperatorMap.Find( pName );
-		if ( m_vOperatorMap.IsValidIndex( nIndex ) )
+		if ( m_vOperatorMap.contains( pName ) )
 		{
 			Log_Warning( LOG_SND_OPERATORS, "Error: Importing operator with same name as existing operator: %s\n", pName );
 		}
@@ -370,7 +371,7 @@ void CSosOperatorStack::Print( int nLevel )
 	}
 	Log_Msg( LOG_SND_OPERATORS, StackColor, "\n%*sOperator Stack: %s\n%*sSize: %i\n", nLevel, "    ", m_nName, nLevel, "    ", static_cast<int>( m_nMemSize ) );
 	size_t TotalSize = 0;
-	for ( int i = 0 ; i < m_vStack.Count(); i++ )
+	for ( int i = 0 ; i < std::ssize( m_vStack ); i++ )
 	{
 		m_vStack[i]->Print( (void *)((char *)m_pMemPool + TotalSize), this, i, nLevel );
 		TotalSize += m_vStack[i]->GetSize();
@@ -390,7 +391,7 @@ void CSosOperatorStack::ParseKV( KeyValues *pOperatorsKV )
 	size_t TotalSize = 0;
 	KeyValues *pOperator = pOperatorsKV->GetFirstSubKey();
 
-	CUtlDict < CSosOperator * > testDict;
+	std::set< std::string, ks::iless > testDict;
 
 	// 2 passes:
 	//
@@ -418,11 +419,10 @@ void CSosOperatorStack::ParseKV( KeyValues *pOperatorsKV )
 			if ( pParams )
 			{
 				// do we already have this one and just need to override params?
-				int nNewStackIndex = testDict.Find( pOpName );
-				int nExistingStackIndex = m_vOperatorMap.Find( pOpName );
+				bool bNewStackOp = testDict.contains( pOpName );
 
 				// is an override of an operator existing in the stack
-				if ( m_vOperatorMap.IsValidIndex( nExistingStackIndex ) )
+				if ( m_vOperatorMap.contains( pOpName ) )
 				{
 					// only the second time through
 					if ( i == SND_SOS_MEMORY_INITIALIZATION_PASS )
@@ -434,7 +434,7 @@ void CSosOperatorStack::ParseKV( KeyValues *pOperatorsKV )
 						pNewOp->ParseKV( this, pStructMem, pOperator );
 					}
 				}
-				else if( !( testDict.IsValidIndex( nNewStackIndex ) && i == SND_SOS_MEMORY_ALLOCATION_PASS ) ) // do nothing if override of new op on first memory accumulating pass
+				else if( !( bNewStackOp && i == SND_SOS_MEMORY_ALLOCATION_PASS ) ) // do nothing if override of new op on first memory accumulating pass
 				{
 					CSosOperator *pNewOp = nullptr;
 					const char *pOpType = nullptr;
@@ -444,10 +444,10 @@ void CSosOperatorStack::ParseKV( KeyValues *pOperatorsKV )
 					}
 					if( pOpType && *pOpType )
 					{
-						int nElementIndex = g_pSoundOperatorSystem->m_vOperatorCollection.Find( pOpType );
-						if ( g_pSoundOperatorSystem->m_vOperatorCollection.IsValidIndex( nElementIndex ) )
+						auto itOpType = g_pSoundOperatorSystem->m_vOperatorCollection.find( pOpType );
+						if ( itOpType != g_pSoundOperatorSystem->m_vOperatorCollection.end() )
 						{
-							pNewOp = g_pSoundOperatorSystem->m_vOperatorCollection[ nElementIndex ];
+							pNewOp = itOpType->second;
 						}
 						else
 						{
@@ -460,7 +460,7 @@ void CSosOperatorStack::ParseKV( KeyValues *pOperatorsKV )
 							if ( i == SND_SOS_MEMORY_ALLOCATION_PASS )
 							{	
 								// new operator
-								testDict.Insert( pOperator->GetName(), pNewOp );
+								testDict.insert( pOperator->GetName() );
 							}
 							else if ( i == SND_SOS_MEMORY_INITIALIZATION_PASS )
 							{
@@ -503,7 +503,7 @@ void CSosOperatorStack::ParseKV( KeyValues *pOperatorsKV )
 		{
 			if ( TotalSize > 0 )
 			{
-				m_pMemPool = malloc( TotalSize );
+				m_pMemPool = MemAlloc_Alloc( TotalSize );
 				m_nMemSize = TotalSize;
 			}
 			TotalSize = 0;
@@ -1211,36 +1211,16 @@ CSosOperatorStackCollection::~CSosOperatorStackCollection()
 
 void CSosOperatorStackCollection::Clear()
 {
-	for ( unsigned int i = 0; i < m_vUpdateStacks.Count(); i++ )
-	{
-		delete m_vUpdateStacks[i];
-	}
-	m_vUpdateStacks.RemoveAll();
-	for ( unsigned int i = 0; i < m_vStartStacks.Count(); i++ )
-	{
-		delete m_vStartStacks[i];
-	}
-	m_vStartStacks.RemoveAll();
-	for ( unsigned int i = 0; i < m_vStopStacks.Count(); i++ )
-	{
-		delete m_vStopStacks[i];
-	}
-	m_vStopStacks.RemoveAll();
-	for ( unsigned int i = 0; i < m_vCueStacks.Count(); i++ )
-	{
-		delete m_vCueStacks[i];
-	}
-	m_vCueStacks.RemoveAll();
-	m_vAllStacks.RemoveAll();
+	m_vAllStacks.clear();
+	m_vUpdateStacks.clear();
+	m_vStartStacks.clear();
+	m_vStopStacks.clear();
+	m_vCueStacks.clear();
 }
 CSosOperatorStack *CSosOperatorStackCollection::GetStack( const char *pStackName )
 {
-	int nIndex = m_vAllStacks.Find( pStackName );
-	if ( m_vAllStacks.IsValidIndex( nIndex ) )
-	{
-		return m_vAllStacks[nIndex];
-	}
-	return nullptr;
+	CSosOperatorStack **ppStack = ks::find_ptr( m_vAllStacks, pStackName );
+	return ppStack ? *ppStack : nullptr;
 }
 CSosOperatorStack *CSosOperatorStackCollection::GetStack( CSosOperatorStack::SosStackType_t SosType,  const char *pStackName )
 {
@@ -1262,34 +1242,39 @@ void CSosOperatorStackCollection::ParseKV( CSosOperatorStack::SosStackType_t Sos
 	while ( pStack )
 	{
 		const char *pStackName = pStack->GetName();
-		CSosOperatorStack *pNewStack = new CSosOperatorStack( SosType, stackData );
+		auto pNewStack = std::make_unique< CSosOperatorStack >( SosType, stackData );
 		pNewStack->SetName( pStackName );
 
 		pNewStack->ParseKV( pStack );
 
+		ks::idict< std::unique_ptr< CSosOperatorStack > > *pStacks = nullptr;
 		switch ( SosType )
 		{
 		case CSosOperatorStack::SOS_UPDATE:
-			m_vUpdateStacks.Insert( pStackName, pNewStack );
-			m_vAllStacks.Insert( pStackName, pNewStack );
+			pStacks = &m_vUpdateStacks;
 			break;
 		case CSosOperatorStack::SOS_START:
-			m_vStartStacks.Insert( pStackName, pNewStack );
-			m_vAllStacks.Insert( pStackName, pNewStack );
+			pStacks = &m_vStartStacks;
 			break;
 		case CSosOperatorStack::SOS_STOP:
-			m_vStopStacks.Insert( pStackName, pNewStack );
-			m_vAllStacks.Insert( pStackName, pNewStack );
+			pStacks = &m_vStopStacks;
 			break;
 		case CSosOperatorStack::SOS_CUE:
-			m_vCueStacks.Insert( pStackName, pNewStack  );
-			m_vAllStacks.Insert( pStackName, pNewStack );
+			pStacks = &m_vCueStacks;
 			break;
 		default:
 			// BETTER ERROR HERE
 			Log_Warning( LOG_SND_OPERATORS, "Error: Unknown sound operator stack type" );
-			delete pNewStack;
 			break;
+		}
+		if ( pStacks )
+		{
+			// a repeated stack name keeps the first definition
+			auto [it, bInserted] = pStacks->try_emplace( pStackName, std::move( pNewStack ) );
+			if ( bInserted )
+			{
+				m_vAllStacks.try_emplace( pStackName, it->second.get() );
+			}
 		}
 		pStack = pStack->GetNextKey();
 	}
@@ -1299,24 +1284,24 @@ void CSosOperatorStackCollection::Print()
 	Log_Msg( LOG_SND_OPERATORS, CollectionColor, "\n\nSound Operators Collection:\n");
 
 	Log_Msg( LOG_SND_OPERATORS, CollectionColor, "\n%*sCue Stacks:\n", 1, "    ");
-	for ( unsigned int i = 0; i < m_vCueStacks.Count(); i++ )
+	for ( auto &[name, pStack] : m_vCueStacks )
 	{
-		m_vCueStacks[i]->Print( 3 );
+		pStack->Print( 3 );
 	}
 	Log_Msg( LOG_SND_OPERATORS, CollectionColor, "\n%*sStart Stacks:\n", 1, "    " );
-	for ( unsigned int i = 0; i < m_vStartStacks.Count(); i++ )
+	for ( auto &[name, pStack] : m_vStartStacks )
 	{
-		m_vStartStacks[i]->Print( 3 );
+		pStack->Print( 3 );
 	}
 	Log_Msg ( LOG_SND_OPERATORS, CollectionColor, "\n%*sUpdate Stacks:\n", 1, "    " );
-	for ( unsigned int i = 0; i < m_vUpdateStacks.Count(); i++ )
+	for ( auto &[name, pStack] : m_vUpdateStacks )
 	{
-		m_vUpdateStacks[i]->Print( 3 );
+		pStack->Print( 3 );
 	}
 	Log_Msg ( LOG_SND_OPERATORS, CollectionColor, "\n%*sStop Stacks:\n", 1, "    " );
-	for ( unsigned int i = 0; i < m_vStopStacks.Count(); i++ )
+	for ( auto &[name, pStack] : m_vStopStacks )
 	{
-		m_vStopStacks[i]->Print( 3 );
+		pStack->Print( 3 );
 	}
 	Log_Msg( LOG_SND_OPERATORS, CollectionColor, "\n");
 }
@@ -1331,25 +1316,6 @@ CSosOperatorSystem::CSosOperatorSystem()
 
 CSosOperatorSystem::~CSosOperatorSystem()
 {
-	for( int i = 0; i < m_sosStopChannelQueue.Count(); i++ )
-	{
-		SosStopQueueData_t *pStopQueue = m_sosStopChannelQueue[i];
-		if( pStopQueue )
-		{
-			delete pStopQueue;
-		}
-	}
-	m_sosStopChannelQueue.RemoveAll();
-
-	for( int i = 0; i < m_sosStartEntryQueue.Count(); i++ )
-	{
-		SosStartQueueData_t *pStartQueue = m_sosStartEntryQueue[i];
-		if( pStartQueue )
-		{
-			delete pStartQueue;
-		}
-	}
-	m_sosStartEntryQueue.RemoveAll();
 }
 
 #define SOUND_OPERATORS_FILE "scripts/sound_operator_stacks.txt"
@@ -1430,9 +1396,9 @@ void CSosOperatorSystem::Init()
 }
 void CSosOperatorSystem::PrintOperatorList()
 {
-	for( unsigned int i = 0; i < m_vOperatorCollection.Count(); i++)
+	for ( auto &[name, pOperator] : m_vOperatorCollection )
 	{
-		DevMsg("%s\n", m_vOperatorCollection.GetElementName( i ) );
+		DevMsg("%s\n", name.c_str() );
 	}
 }
 void S_PrintOperatorList( void )
@@ -1444,28 +1410,28 @@ ConCommand snd_sos_print_operators( "snd_sos_print_operators", S_PrintOperatorLi
 
 void CSosOperatorSystem::ClearSubSystems()
 {
-	m_vTrackDict.RemoveAll();
-	m_sosStopChannelQueue.PurgeAndDeleteElements();
-	m_sosStartEntryQueue.PurgeAndDeleteElements();
+	m_vTrackDict.clear();
+	m_sosStopChannelQueue.clear();
+	m_sosStartEntryQueue.clear();
 }
 
 void CSosOperatorSystem::QueueStartEntry( StartSoundParams_t &startParams, float flDelay /*= 0.0*/, bool bFromPrestart /* = false */ )
 {
-	SosStartQueueData_t *pStartQueue = new SosStartQueueData_t();
+	auto pStartQueue = std::make_unique< SosStartQueueData_t >();
 	pStartQueue->m_nStartTime = g_pSoundServices->GetHostTime() + flDelay;
 	pStartQueue->m_bFromPrestart = bFromPrestart;
 
 	startParams.Copy( pStartQueue->m_startSoundParams );
 
-	m_sosStartEntryQueue.AddToTail( pStartQueue );
+	m_sosStartEntryQueue.push_back( std::move( pStartQueue ) );
 }
 
 ConVar snd_sos_show_startqueue("snd_sos_show_startqueue", "0", FCVAR_CHEAT );
 void CSosOperatorSystem::StartQueuedEntries()
 {
-	for( int i = m_sosStartEntryQueue.Count() -1; i > -1; i-- )
+	for( int i = std::ssize( m_sosStartEntryQueue ) -1; i > -1; i-- )
 	{
-		SosStartQueueData_t *pStartQueue = m_sosStartEntryQueue[i];
+		SosStartQueueData_t *pStartQueue = m_sosStartEntryQueue[i].get();
 		if( snd_sos_show_startqueue.GetInt() )
 		{
 			Log_Msg( LOG_SND_OPERATORS, "STARTQUEUE: %s time to start of %f\n", g_pSoundEmitterSystem->GetSoundNameForHash( pStartQueue->m_startSoundParams.m_nSoundScriptHash ), pStartQueue->m_nStartTime - g_pSoundServices->GetHostTime() );
@@ -1523,25 +1489,24 @@ void CSosOperatorSystem::StartQueuedEntries()
 // 				}
 			}
 
-			m_sosStartEntryQueue.Remove( i );
-			delete pStartQueue;
+			m_sosStartEntryQueue.erase( m_sosStartEntryQueue.begin() + i );
 		}
 	}
 }
 
 void CSosOperatorSystem::QueueStopChannel( int nChannelGuid, float flDelay /* = 0.0*/ )
 {
-	SosStopQueueData_t *pStopQueue = new SosStopQueueData_t;
+	auto pStopQueue = std::make_unique< SosStopQueueData_t >();
 	pStopQueue->m_nChannelGuid = nChannelGuid;
 	pStopQueue->m_nStopTime = g_pSoundServices->GetHostTime() + flDelay;
 
-	m_sosStopChannelQueue.AddToTail( pStopQueue );
+	m_sosStopChannelQueue.push_back( std::move( pStopQueue ) );
 }
 bool CSosOperatorSystem::IsInStopQueue( int nChannelGuid )
 {
-	for( int i = 0; i < m_sosStopChannelQueue.Count(); i++ )
+	for( int i = 0; i < std::ssize( m_sosStopChannelQueue ); i++ )
 	{
-		SosStopQueueData_t *pStopQueue = m_sosStopChannelQueue[i];
+		SosStopQueueData_t *pStopQueue = m_sosStopChannelQueue[i].get();
 		if( nChannelGuid == pStopQueue->m_nChannelGuid )
 		{
 			return true;
@@ -1552,44 +1517,27 @@ bool CSosOperatorSystem::IsInStopQueue( int nChannelGuid )
 
 void CSosOperatorSystem::StopQueuedChannels()
 {
-	for( int i = m_sosStopChannelQueue.Count() -1; i > -1; i-- )
+	for( int i = std::ssize( m_sosStopChannelQueue ) -1; i > -1; i-- )
 	{
-		SosStopQueueData_t *pStopQueue = m_sosStopChannelQueue[i];
+		SosStopQueueData_t *pStopQueue = m_sosStopChannelQueue[i].get();
 		if( pStopQueue->m_nStopTime <= g_pSoundServices->GetHostTime() )
 		{
 			S_StopSoundByGuid( pStopQueue->m_nChannelGuid );
-			m_sosStopChannelQueue.Remove( i );
-			delete pStopQueue;
+			m_sosStopChannelQueue.erase( m_sosStopChannelQueue.begin() + i );
 		}
 	}
 }
 
 void CSosOperatorSystem::SetChannelOnTrack( const char *pTrackName, channel_t *pChannel )
 {
-	int nTrackIndex = m_vTrackDict.Find( pTrackName );
-	if( m_vTrackDict.IsValidIndex( nTrackIndex ) )
-	{
-		g_pSoundOperatorSystem->m_vTrackDict[nTrackIndex] = pChannel;
-	}
-	else
-	{
-		int nNewIndex = g_pSoundOperatorSystem->m_vTrackDict.Insert( pTrackName );
-		g_pSoundOperatorSystem->m_vTrackDict[ nNewIndex ] = pChannel;
-	}
+	m_vTrackDict.insert_or_assign( ks::nz( pTrackName ), pChannel );
 
 }
 
 channel_t *CSosOperatorSystem::GetChannelOnTrack( const char *pTrackName )
 {
-	int nTrackIndex = m_vTrackDict.Find( pTrackName );
-	if( m_vTrackDict.IsValidIndex( nTrackIndex ) )
-	{
-		return g_pSoundOperatorSystem->m_vTrackDict[nTrackIndex];
-	}
-	else
-	{
-		return nullptr;
-	}
+	channel_t **ppChannel = ks::find_ptr( m_vTrackDict, ks::nz( pTrackName ) );
+	return ppChannel ? *ppChannel : nullptr;
 }
 HSOUNDSCRIPTHASH CSosOperatorSystem::GetSoundEntryOnTrack( const char *pTrackName )
 {
@@ -1616,10 +1564,9 @@ bool CSosOperatorSystem::GetTrackDataOnTrack( const char *pTrackName, track_data
 
 void CSosOperatorSystem::StopChannelOnTrack( const char *pTrackName, bool bStopAll /* false */, float flStopDelay /* = 0.0 */ )
 {
-	int nTrackIndex = m_vTrackDict.Find( pTrackName );
-	if( m_vTrackDict.IsValidIndex( nTrackIndex ) )
+	if( channel_t **ppChannel = ks::find_ptr( m_vTrackDict, ks::nz( pTrackName ) ) )
 	{
-		channel_t *pPreviousChannelOnTrack = m_vTrackDict[ nTrackIndex ];
+		channel_t *pPreviousChannelOnTrack = *ppChannel;
 
 		if( pPreviousChannelOnTrack && pPreviousChannelOnTrack->sfx )
 		{
@@ -1639,15 +1586,14 @@ void CSosOperatorSystem::StopChannelOnTrack( const char *pTrackName, bool bStopA
 	// remove a queued entry that is on the same track
 	if( bStopAll )
 	{
-		for( int i = m_sosStartEntryQueue.Count() -1; i > -1; i-- )
+		for( int i = std::ssize( m_sosStartEntryQueue ) -1; i > -1; i-- )
 		{
-			SosStartQueueData_t *pStartQueue = m_sosStartEntryQueue[i];
+			SosStartQueueData_t *pStartQueue = m_sosStartEntryQueue[i].get();
 			track_data_t trackData;
 			S_GetTrackData( pStartQueue->m_startSoundParams.m_pOperatorsKV, trackData );
-			if( trackData.m_nTrackNumber == nTrackIndex )
+			if( trackData.m_pTrackName && !V_stricmp( trackData.m_pTrackName, ks::nz( pTrackName ) ) )
 			{
-				m_sosStartEntryQueue.Remove( i );
-				delete pStartQueue;
+				m_sosStartEntryQueue.erase( m_sosStartEntryQueue.begin() + i );
 			}
 		}
 	}
@@ -1661,15 +1607,11 @@ void CSosOperatorSystem::RemoveChannelFromTracks( int nGuid )
 		return;
 	}
 
-	FOR_EACH_DICT( m_vTrackDict, i )
+	for ( auto &[name, pChannel] : m_vTrackDict )
 	{
-		channel_t *pChannel = m_vTrackDict[ i ];
-		if( pChannel )
+		if( pChannel && pChannel->guid == nGuid )
 		{
-			if( pChannel->guid == nGuid )
-			{
-				m_vTrackDict[i] = nullptr;
-			}
+			pChannel = nullptr;
 		}
 	}
 }
@@ -1681,14 +1623,10 @@ void CSosOperatorSystem::RemoveChannelFromTrack( const char *pTrackName, int nGu
 		return;
 	}
 
-	int nTrackIndex = m_vTrackDict.Find( pTrackName );
-	if( m_vTrackDict.IsValidIndex( nTrackIndex ) )
+	channel_t **ppChannel = ks::find_ptr( m_vTrackDict, ks::nz( pTrackName ) );
+	if( ppChannel && *ppChannel && (*ppChannel)->guid == nGuid )
 	{
-		channel_t *pChannelOnTrack = m_vTrackDict[ nTrackIndex ];
-		if( pChannelOnTrack && pChannelOnTrack->guid == nGuid )
-		{
-			m_vTrackDict[ nTrackIndex ] = nullptr;
-		}
+		*ppChannel = nullptr;
 	}
 }
 
@@ -1700,34 +1638,21 @@ void CSosOperatorSystem::DEBUG_ShowTrackList( void )
 		return;
 	}
 
-	FOR_EACH_DICT( m_vTrackDict, i )
+	int i = 0;
+	for ( const auto &[name, pChannel] : m_vTrackDict )
 	{
-		channel_t *pChannel = m_vTrackDict[ i ];
 		char chanStr[128];
-		sprintf( chanStr, "Channel %i : %s = %s", i, m_vTrackDict.GetElementName( i ),  pChannel ? g_pSoundEmitterSystem->GetSoundNameForHash( pChannel->m_nSoundScriptHash ) : "empty" );
+		sprintf( chanStr, "Channel %i : %s = %s", i, name.c_str(),  pChannel ? g_pSoundEmitterSystem->GetSoundNameForHash( pChannel->m_nSoundScriptHash ) : "empty" );
 		CDebugOverlay::AddScreenTextOverlay( 0.01, 0.2 + (0.012 * (float)  i) , 0.5, 200, 200, 200, 255, chanStr );
+		++i;
 	}
 }
 
 //Returns a valid id into the string table
 bool CSosOperatorSystem::SetOpVarFloat( const char *pString, float flVariable )
 {
-	int nIndex = m_sosOpVarFloatMap.Find( pString );
-	if ( m_sosOpVarFloatMap.IsValidIndex( nIndex ) )
-	{
-		m_sosOpVarFloatMap[nIndex] = flVariable;
-		return true;
-	}
-	nIndex = m_sosOpVarFloatMap.Insert( pString );
-
-	if ( m_sosOpVarFloatMap.IsValidIndex( nIndex ) )
-	{
-		m_sosOpVarFloatMap[ nIndex ] = flVariable;
-		return true;
-	}
-
-	DevWarning( "SOS System Warning: Unable to set or create float variable %s\n", pString );
-	return false;
+	m_sosOpVarFloatMap.insert_or_assign( pString, flVariable );
+	return true;
 
 // 	int stringId = m_sosFloatOpvarMap.Find( pString );
 // 	if ( stringId != m_sosFloatOpvarMap.InvalidIndex() )
@@ -1753,13 +1678,13 @@ bool CSosOperatorSystem::SetOpVarFloat( const char *pString, float flVariable )
 bool CSosOperatorSystem::GetOpVarFloat( const char *pString, float &flVariable )
 {
 
-	int nIndex = m_sosOpVarFloatMap.Find( pString );
-	if ( !m_sosOpVarFloatMap.IsValidIndex( nIndex ) )
+	float *pValue = ks::find_ptr( m_sosOpVarFloatMap, pString );
+	if ( !pValue )
 	{
 		// error
 		return false;
 	}
-	float flTest = m_sosOpVarFloatMap.Element( nIndex );
+	float flTest = *pValue;
 	flVariable = flTest;
 	return true;
 
@@ -1784,7 +1709,7 @@ void CSosOperatorSystem::DEBUG_ShowOpvarList( void )
 	}
 
 
-	int nCount = m_sosOpVarFloatMap.Count();
+	int nCount = (int)m_sosOpVarFloatMap.size();
 
 	char opVarStr[128];
 	sprintf( opVarStr, "Opvars %i", nCount );
@@ -1792,15 +1717,13 @@ void CSosOperatorSystem::DEBUG_ShowOpvarList( void )
 	CDebugOverlay::AddScreenTextOverlay( 0.01, 0.5, 0.5, 200, 200, 200, 255, opVarStr );
 
 	
-	for ( int i = 0 ; i < nCount; i++ )
+	int i = 0;
+	for ( const auto &[name, flValue] : m_sosOpVarFloatMap )
 	{
-		if( m_sosOpVarFloatMap.IsValidIndex( i ) )
-		{
-			float flValue = m_sosOpVarFloatMap[ i ];
-			char chanStr[128];
-			sprintf( chanStr, "- %s = %f", m_sosOpVarFloatMap.GetElementName( i ), flValue );
-			CDebugOverlay::AddScreenTextOverlay( 0.01, 0.512 + (0.012 * (float)  i) , 0.5, 200, 200, 200, 255, chanStr );
-		}
+		char chanStr[128];
+		sprintf( chanStr, "- %s = %f", name.c_str(), flValue );
+		CDebugOverlay::AddScreenTextOverlay( 0.01, 0.512 + (0.012 * (float)  i) , 0.5, 200, 200, 200, 255, chanStr );
+		i++;
 	}
 
 }

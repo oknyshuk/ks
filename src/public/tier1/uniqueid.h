@@ -18,7 +18,13 @@
 // Forward declarations
 //-----------------------------------------------------------------------------
 struct UniqueId_t;
-class CUtlBuffer;
+namespace ks
+{
+	class byte_reader;
+	class byte_writer;
+	class text_reader;
+	class text_writer;
+}
 
 
 //-----------------------------------------------------------------------------
@@ -40,8 +46,10 @@ bool IsUniqueIdEqual( const UniqueId_t &id1, const UniqueId_t &id2 );
 void UniqueIdToString( const UniqueId_t &id, char *pBuf, int nMaxLen );
 bool UniqueIdFromString( UniqueId_t *pDest, const char *pBuf, int nMaxLen = 0 );
 void CopyUniqueId( const UniqueId_t &src, UniqueId_t *pDest );
-bool Serialize( CUtlBuffer &buf, const UniqueId_t &src );
-bool Unserialize( CUtlBuffer &buf, UniqueId_t &dest );
+bool Serialize( ks::byte_writer &buf, const UniqueId_t &src );
+bool Unserialize( ks::byte_reader &buf, UniqueId_t &dest );
+bool Serialize( ks::text_writer &buf, const UniqueId_t &src );
+bool Unserialize( ks::text_reader &buf, UniqueId_t &dest );
 
 inline bool operator ==( const UniqueId_t& lhs, const UniqueId_t& rhs )
 {

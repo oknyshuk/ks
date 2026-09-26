@@ -7,6 +7,7 @@
 //===========================================================================//
 
 #include "cvar.h"
+#include "tier1/text_writer.h"
 #include "gl_cvars.h"
 
 #include "tier1/convar.h"
@@ -21,13 +22,12 @@
 #include <ctype.h>
 #include "vstdlib/vstrtools.h"
 #include <wctype.h>
+#include <set>
+#include "tier1/map_ops.h"
 
 #ifndef DEDICATED
 #include "localize/ilocalize.h"
 #endif
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Singleton CCvarUtilities
@@ -620,18 +620,21 @@ void CCvarUtilities::ResetConVarsToDefaultValues( const char *pMatchStr )
 }
 
 
-static bool CVarSortFunc( ConVar * const &lhs, ConVar * const &rhs )
+struct CVarSortLess
 {
-	return ( CaselessStringLessThan( lhs->GetName(), rhs->GetName() ) );
-}
+	bool operator()( const ConVar *lhs, const ConVar *rhs ) const
+	{
+		return ks::iless()( lhs->GetName(), rhs->GetName() );
+	}
+};
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : *f - 
 //-----------------------------------------------------------------------------
-void CCvarUtilities::WriteVariables( CUtlBuffer *buff, const int iSplitscreenSlot /*= -1*/, bool bSlotRequired /* = false */, void *pConvarsListVoid /*= NULL*/ )
+void CCvarUtilities::WriteVariables( ks::text_writer *buff, const int iSplitscreenSlot /*= -1*/, bool bSlotRequired /* = false */, void *pConvarsListVoid /*= NULL*/ )
 {
-	CUtlRBTree< ConVar *, int > sorted( 0, 0, CVarSortFunc );
-	CUtlVector< ConVar * > *pConvarsList = (CUtlVector< ConVar * > *)pConvarsListVoid;
+	std::multiset< ConVar *, CVarSortLess > sorted;
+	std::vector< ConVar * > *pConvarsList = (std::vector< ConVar * > *)pConvarsListVoid;
 
 	ICvar::Iterator iter( g_pCVar );
 	for ( iter.SetFirst() ; iter.IsValid() ; iter.Next() )
@@ -687,23 +690,22 @@ void CCvarUtilities::WriteVariables( CUtlBuffer *buff, const int iSplitscreenSlo
 				}
 			}
 
-			sorted.Insert( cv );
+			sorted.insert( cv );
 		}
 	}
 
-	for ( int i = sorted.FirstInorder(); i != sorted.InvalidIndex(); i = sorted.NextInorder( i ) )
+	for ( ConVar *var : sorted )
 	{
-		ConVar *var = sorted[ i ];
 
 		// If we are saving per-controller, we always want to write the base name ( joy_inverty as opposed to joy_inverty2 )
 		const char *name = ( iSplitscreenSlot >= 0 ) ? var->GetBaseName() : var->GetName();
 		DevMsg( 2, "%s \"%s\"\n", name, var->GetString() );
 
 		if ( buff )
-			buff->Printf( "%s \"%s\"\n", name, var->GetString() );
+			buff->printf( "%s \"%s\"\n", name, var->GetString() );
 
 		if ( pConvarsList )
-			pConvarsList->AddToTail( var );
+			pConvarsList->push_back( var );
 	}
 }
 
@@ -935,18 +937,22 @@ static void PrintCommand( const ConCommand *cmd, bool logging, FileHandle_t& f )
 	}
 }
 
-static bool ConCommandBaseLessFunc( const ConCommandBase * const &lhs, const ConCommandBase * const &rhs )
-{ 
-	const char *left = lhs->GetName();
-	const char *right = rhs->GetName();
+// Ignores a leading + or -, so +foo and -foo tie.
+struct ConCommandBaseLess
+{
+	bool operator()( const ConCommandBase *lhs, const ConCommandBase *rhs ) const
+	{
+		const char *left = lhs->GetName();
+		const char *right = rhs->GetName();
 
-	if ( *left == '-' || *left == '+' )
-		left++;
-	if ( *right == '-' || *right == '+' )
-		right++;
+		if ( *left == '-' || *left == '+' )
+			left++;
+		if ( *right == '-' || *right == '+' )
+			right++;
 
-	return ( Q_stricmp( left, right ) < 0 );
-}
+		return ( Q_stricmp( left, right ) < 0 );
+	}
+};
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -1002,7 +1008,7 @@ void CCvarUtilities::CvarList( const CCommand &args )
 	// Banner
 	ConMsg( "cvar list\n--------------\n" );
 
-	CUtlRBTree< const ConCommandBase * > sorted( 0, 0, ConCommandBaseLessFunc );
+	std::multiset< const ConCommandBase *, ConCommandBaseLess > sorted;
 
 	// Loop through cvars...
 	ICvar::Iterator iter( g_pCVar );
@@ -1029,16 +1035,16 @@ void CCvarUtilities::CvarList( const CCommand &args )
 		if ( !print )
 			continue;
 
-		sorted.Insert( var );
+		sorted.insert( var );
 	}
 
 	if ( bLogging )
 	{
 		PrintListHeader( f );
 	}
-	for ( int i = sorted.FirstInorder(); i != sorted.InvalidIndex(); i = sorted.NextInorder( i ) )
+	for ( const ConCommandBase *pSorted : sorted )
 	{
-		var = sorted[ i ];
+		var = pSorted;
 		if ( var->IsCommand() )
 		{
 			PrintCommand( (ConCommand *)var, bLogging, f );
@@ -1053,11 +1059,11 @@ void CCvarUtilities::CvarList( const CCommand &args )
 	// Show total and syntax help...
 	if ( partial && partial[0] )
 	{
-		ConMsg("--------------\n%3i convars/concommands for [%s]\n", sorted.Count(), partial );
+		ConMsg("--------------\n%3i convars/concommands for [%s]\n", (int)sorted.size(), partial );
 	}
 	else
 	{
-		ConMsg("--------------\n%3i total convars/concommands\n", sorted.Count() );
+		ConMsg("--------------\n%3i total convars/concommands\n", (int)sorted.size() );
 	}
 
 	if ( bLogging )
@@ -1217,7 +1223,7 @@ int CCvarUtilities::CvarFindFlagsCompletionCallback( const char *partial, char c
 	if ( len < Q_strlen( pcmd ) )
 	{
 		int i = 0;
-		for ( ; i < MIN( flagC, COMMAND_COMPLETION_MAXITEMS ); i++ )
+		for ( ; i < std::min( flagC, COMMAND_COMPLETION_MAXITEMS ); i++ )
 		{
 			Q_snprintf( commands[ i ], sizeof( commands[ i ] ), "%s %s", pcmd, g_ConVarFlags[i].desc );
 			Q_strlower( commands[ i ] );

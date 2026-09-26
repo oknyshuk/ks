@@ -23,7 +23,7 @@
 #include "tier0/icommandline.h"
 #include "blockingudpsocket.h"
 #include "cserserverprotocol_engine.h"
-#include "utlbuffer.h"
+#include "tier1/byte_writer.h"
 #include "eiface.h"
 #include "FindSteamServers.h"
 #include <vstdlib/random.h>
@@ -39,9 +39,6 @@
 #include "threadtools.h"
 
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 typedef unsigned int u32;
 typedef unsigned char u8;
@@ -514,7 +511,7 @@ public:
 		u32 contextid );
 	~CWin32UploadGameStats();
 
-	EGameStatsUploadStatus Upload( CUtlBuffer& buf );
+	EGameStatsUploadStatus Upload( ks::byte_writer& buf );
 
 private:
 
@@ -532,18 +529,18 @@ private:
 		eCloseTCPSocket
 	};
 
-	bool	CreateTCPSocket( EGameStatsUploadStatus& status, CUtlBuffer& buf );
-	bool	ConnectToHarvesterServer( EGameStatsUploadStatus& status, CUtlBuffer& buf );
-	bool	SendProtocolVersion( EGameStatsUploadStatus& status, CUtlBuffer& buf );
-	bool	ReceiveProtocolOkay( EGameStatsUploadStatus& status, CUtlBuffer& buf );
-	bool	SendUploadCommand( EGameStatsUploadStatus& status, CUtlBuffer& buf );
-	bool	ReceiveOKToSendFile( EGameStatsUploadStatus& status, CUtlBuffer& buf );
-	bool	SendWholeFile( EGameStatsUploadStatus& status, CUtlBuffer& buf );
-	bool	ReceiveFileUploadSuccess( EGameStatsUploadStatus& status, CUtlBuffer& buf );
-	bool	SendGracefulClose( EGameStatsUploadStatus& status, CUtlBuffer& buf );
-	bool	CloseTCPSocket( EGameStatsUploadStatus& status, CUtlBuffer& buf );
+	bool	CreateTCPSocket( EGameStatsUploadStatus& status, ks::byte_writer& buf );
+	bool	ConnectToHarvesterServer( EGameStatsUploadStatus& status, ks::byte_writer& buf );
+	bool	SendProtocolVersion( EGameStatsUploadStatus& status, ks::byte_writer& buf );
+	bool	ReceiveProtocolOkay( EGameStatsUploadStatus& status, ks::byte_writer& buf );
+	bool	SendUploadCommand( EGameStatsUploadStatus& status, ks::byte_writer& buf );
+	bool	ReceiveOKToSendFile( EGameStatsUploadStatus& status, ks::byte_writer& buf );
+	bool	SendWholeFile( EGameStatsUploadStatus& status, ks::byte_writer& buf );
+	bool	ReceiveFileUploadSuccess( EGameStatsUploadStatus& status, ks::byte_writer& buf );
+	bool	SendGracefulClose( EGameStatsUploadStatus& status, ks::byte_writer& buf );
+	bool	CloseTCPSocket( EGameStatsUploadStatus& status, ks::byte_writer& buf );
 
-	typedef bool ( CWin32UploadGameStats::*pfnProtocolStateHandler )( EGameStatsUploadStatus& status, CUtlBuffer& buf );
+	typedef bool ( CWin32UploadGameStats::*pfnProtocolStateHandler )( EGameStatsUploadStatus& status, ks::byte_writer& buf );
 	struct FSMState_t
 	{
 		FSMState_t( uint f, pfnProtocolStateHandler s ) :
@@ -558,9 +555,9 @@ private:
 
 	void	AddState( uint StateIndex, pfnProtocolStateHandler handler );
 	void	SetNextState( uint StateIndex );
-	bool	DoBlockingReceive( uint bytesExpected, CUtlBuffer& buf );
+	bool	DoBlockingReceive( uint bytesExpected, ks::byte_writer& buf );
 
-	CUtlVector< FSMState_t >		m_States;
+	std::vector< FSMState_t >		m_States;
 	uint							m_uCurrentState;
 	struct sockaddr_in				m_HarvesterSockAddr;
 	uint							m_SocketTCP;
@@ -607,11 +604,11 @@ CWin32UploadGameStats::~CWin32UploadGameStats()
 // Function:	DoBlockingReceive()
 //
 //-----------------------------------------------------------------------------
-bool CWin32UploadGameStats::DoBlockingReceive( uint bytesExpected, CUtlBuffer& buf )
+bool CWin32UploadGameStats::DoBlockingReceive( uint bytesExpected, ks::byte_writer& buf )
 {
 	uint totalReceived = 0;
 
-	buf.Purge();
+	buf.clear();
 	for ( ;; )
 	{
 		char temp[ 8192 ];
@@ -620,8 +617,8 @@ bool CWin32UploadGameStats::DoBlockingReceive( uint bytesExpected, CUtlBuffer& b
 		if ( bytesReceived <= 0 )
 			return false;
 
-		buf.Put( ( const void * )temp, (u32)bytesReceived );
-		totalReceived = buf.TellPut();
+		buf.write_bytes( temp, (u32)bytesReceived );
+		totalReceived = buf.size();
 		if ( totalReceived >= bytesExpected )
 			break;
 
@@ -632,10 +629,10 @@ bool CWin32UploadGameStats::DoBlockingReceive( uint bytesExpected, CUtlBuffer& b
 void CWin32UploadGameStats::AddState( uint StateIndex, pfnProtocolStateHandler handler )
 {
 	FSMState_t newState( StateIndex, handler );
-	m_States.AddToTail( newState );
+	m_States.push_back( newState );
 }
 
-EGameStatsUploadStatus CWin32UploadGameStats::Upload( CUtlBuffer& buf )
+EGameStatsUploadStatus CWin32UploadGameStats::Upload( ks::byte_writer& buf )
 {
 	UpdateProgress( m_rCrashParameters, "Commencing game stats upload connection." );
 
@@ -659,7 +656,7 @@ void CWin32UploadGameStats::SetNextState( uint StateIndex )
 	m_uCurrentState = StateIndex;
 }
 
-bool CWin32UploadGameStats::CreateTCPSocket( EGameStatsUploadStatus& status, CUtlBuffer& /*buf*/ )
+bool CWin32UploadGameStats::CreateTCPSocket( EGameStatsUploadStatus& status, ks::byte_writer& /*buf*/ )
 {
 	UpdateProgress( m_rCrashParameters, "Creating game stats upload socket." );
 
@@ -676,7 +673,7 @@ bool CWin32UploadGameStats::CreateTCPSocket( EGameStatsUploadStatus& status, CUt
 	return true;
 }
 
-bool CWin32UploadGameStats::ConnectToHarvesterServer( EGameStatsUploadStatus& status, CUtlBuffer& /*buf*/ )
+bool CWin32UploadGameStats::ConnectToHarvesterServer( EGameStatsUploadStatus& status, ks::byte_writer& /*buf*/ )
 {
 	UpdateProgress( m_rCrashParameters, "Connecting to game stats harvesting server." );
 
@@ -692,14 +689,14 @@ bool CWin32UploadGameStats::ConnectToHarvesterServer( EGameStatsUploadStatus& st
 	return true;
 }
 
-bool CWin32UploadGameStats::SendProtocolVersion( EGameStatsUploadStatus& status, CUtlBuffer& buf )
+bool CWin32UploadGameStats::SendProtocolVersion( EGameStatsUploadStatus& status, ks::byte_writer& buf )
 {
 	UpdateProgress( m_rCrashParameters, "Sending game stats harvester protocol info." );
 	// Send protocol version
-	buf.Purge();
-	buf.PutInt( cuCurrentProtocolVersion );
+	buf.clear();
+	buf.write<int>( cuCurrentProtocolVersion );
 
-	if ( send( m_SocketTCP, (const char *)buf.Base(), (int)buf.TellPut(), 0 ) == SOCKET_ERROR )
+	if ( send( m_SocketTCP, (const char *)buf.data(), (int)buf.size(), 0 ) == SOCKET_ERROR )
 	{
 		UpdateProgress( m_rCrashParameters, "Send failed." );
 
@@ -711,10 +708,10 @@ bool CWin32UploadGameStats::SendProtocolVersion( EGameStatsUploadStatus& status,
 	return true;
 }
 
-bool CWin32UploadGameStats::ReceiveProtocolOkay( EGameStatsUploadStatus& status, CUtlBuffer& buf )
+bool CWin32UploadGameStats::ReceiveProtocolOkay( EGameStatsUploadStatus& status, ks::byte_writer& buf )
 {
 	UpdateProgress( m_rCrashParameters, "Receiving harvesting protocol acknowledgement." );
-	buf.Purge();
+	buf.clear();
 
 	// Now receive the protocol is acceptable token from the server
 	if ( !DoBlockingReceive( 1, buf ) )
@@ -725,7 +722,7 @@ bool CWin32UploadGameStats::ReceiveProtocolOkay( EGameStatsUploadStatus& status,
 		return false;
 	}
 
-	bool protocolokay = buf.GetChar() ? true : false;
+	bool protocolokay = buf.reader().read<char>() ? true : false;
 	if ( !protocolokay )
 	{
 		UpdateProgress( m_rCrashParameters, "Server rejected protocol." );
@@ -740,11 +737,11 @@ bool CWin32UploadGameStats::ReceiveProtocolOkay( EGameStatsUploadStatus& status,
 	return true;
 }
 
-bool CWin32UploadGameStats::SendUploadCommand( EGameStatsUploadStatus& status, CUtlBuffer& buf )
+bool CWin32UploadGameStats::SendUploadCommand( EGameStatsUploadStatus& status, ks::byte_writer& buf )
 {
 	UpdateProgress( m_rCrashParameters, "Sending harvesting protocol upload request." );
 // Send upload command
-	buf.Purge();
+	buf.clear();
 
 	NetworkMessageLengthPrefix_t messageSize
 		(
@@ -756,16 +753,16 @@ bool CWin32UploadGameStats::SendUploadCommand( EGameStatsUploadStatus& status, C
 		);
 
 	// Prefix the length to the command
-	buf.PutInt( (int)messageSize );
-	buf.PutChar( Commands::cuSendGameStats );
-	buf.PutInt( (int)m_ContextID );
+	buf.write<int>( (int)messageSize );
+	buf.write<char>( Commands::cuSendGameStats );
+	buf.write<int>( (int)m_ContextID );
 
-	buf.PutInt( (int)m_rCrashParameters.m_uStatsBlobSize );
-	buf.PutInt( static_cast<HarvestFileCommand::SendMethod_t>( eSendMethodWholeRawFileNoBlocks ) );
-	buf.PutInt( static_cast<HarvestFileCommand::FileSize_t>( 0 ) );
+	buf.write<int>( (int)m_rCrashParameters.m_uStatsBlobSize );
+	buf.write<int>( static_cast<HarvestFileCommand::SendMethod_t>( eSendMethodWholeRawFileNoBlocks ) );
+	buf.write<int>( static_cast<HarvestFileCommand::FileSize_t>( 0 ) );
 
 	// Send command to server
-	if ( send( m_SocketTCP, (const char *)buf.Base(), (int)buf.TellPut(), 0 ) == SOCKET_ERROR )
+	if ( send( m_SocketTCP, (const char *)buf.data(), (int)buf.size(), 0 ) == SOCKET_ERROR )
 	{
 		UpdateProgress( m_rCrashParameters, "Send failed." );
 
@@ -777,7 +774,7 @@ bool CWin32UploadGameStats::SendUploadCommand( EGameStatsUploadStatus& status, C
 	return true;
 }
 
-bool CWin32UploadGameStats::ReceiveOKToSendFile( EGameStatsUploadStatus& status, CUtlBuffer& buf )
+bool CWin32UploadGameStats::ReceiveOKToSendFile( EGameStatsUploadStatus& status, ks::byte_writer& buf )
 {
 	UpdateProgress( m_rCrashParameters, "Receive game stats harvesting protocol upload permissible." );
 
@@ -790,7 +787,7 @@ bool CWin32UploadGameStats::ReceiveOKToSendFile( EGameStatsUploadStatus& status,
 	}
 
 	bool dosend = false;
-	CommandResponse_t cmd = (CommandResponse_t)buf.GetChar();
+	CommandResponse_t cmd = (CommandResponse_t)buf.reader().read<char>();
 	switch ( cmd )
 	{
 	case HarvestFileCommand::cuOkToSendFile:
@@ -818,7 +815,7 @@ bool CWin32UploadGameStats::ReceiveOKToSendFile( EGameStatsUploadStatus& status,
 	return true;
 }
 
-bool CWin32UploadGameStats::SendWholeFile( EGameStatsUploadStatus& status, CUtlBuffer& /*buf*/ )
+bool CWin32UploadGameStats::SendWholeFile( EGameStatsUploadStatus& status, ks::byte_writer& /*buf*/ )
 {
 	UpdateProgress( m_rCrashParameters, "Uploading game stats data." );
 	// Send to server
@@ -838,7 +835,7 @@ bool CWin32UploadGameStats::SendWholeFile( EGameStatsUploadStatus& status, CUtlB
 	return bret;
 }
 
-bool CWin32UploadGameStats::ReceiveFileUploadSuccess( EGameStatsUploadStatus& status, CUtlBuffer& buf )
+bool CWin32UploadGameStats::ReceiveFileUploadSuccess( EGameStatsUploadStatus& status, ks::byte_writer& buf )
 {
 	UpdateProgress( m_rCrashParameters, "Receiving game stats upload success/fail message." );
 
@@ -851,7 +848,7 @@ bool CWin32UploadGameStats::ReceiveFileUploadSuccess( EGameStatsUploadStatus& st
 		return false;
 	}
 
-	bool success = buf.GetChar() == 1 ? true : false;
+	bool success = buf.reader().read<char>() == 1 ? true : false;
 	if ( !success )
 	{
 		UpdateProgress( m_rCrashParameters, "Upload failed." );
@@ -866,19 +863,19 @@ bool CWin32UploadGameStats::ReceiveFileUploadSuccess( EGameStatsUploadStatus& st
 	return true;
 }
 
-bool CWin32UploadGameStats::SendGracefulClose( EGameStatsUploadStatus& status, CUtlBuffer& buf )
+bool CWin32UploadGameStats::SendGracefulClose( EGameStatsUploadStatus& status, ks::byte_writer& buf )
 {
 	UpdateProgress( m_rCrashParameters, "Closing connection to server." );
 
 	// Now send disconnect command
-	buf.Purge();
+	buf.clear();
 
 	size_t messageSize = sizeof( Command_t );
 
-	buf.PutInt( (int)messageSize );
-	buf.PutChar( Commands::cuGracefulClose );
+	buf.write<int>( (int)messageSize );
+	buf.write<char>( Commands::cuGracefulClose );
 
-	if ( send( m_SocketTCP, (const char *)buf.Base(), (int)buf.TellPut(), 0 ) == SOCKET_ERROR )
+	if ( send( m_SocketTCP, (const char *)buf.data(), (int)buf.size(), 0 ) == SOCKET_ERROR )
 	{
 		UpdateProgress( m_rCrashParameters, "Send failed." );
 
@@ -890,7 +887,7 @@ bool CWin32UploadGameStats::SendGracefulClose( EGameStatsUploadStatus& status, C
 	return true;
 }
 
-bool CWin32UploadGameStats::CloseTCPSocket( EGameStatsUploadStatus& status, CUtlBuffer& /*buf*/ )
+bool CWin32UploadGameStats::CloseTCPSocket( EGameStatsUploadStatus& status, ks::byte_writer& /*buf*/ )
 {
 	UpdateProgress( m_rCrashParameters, "Closing socket, upload succeeded." );
 
@@ -909,31 +906,31 @@ EGameStatsUploadStatus Win32UploadGameStatsBlocking
 {
 	EGameStatsUploadStatus status = eGameStatsUploadSucceeded;
 
-	CUtlBuffer buf( rGameStatsParameters.m_uStatsBlobSize + 4096 );
+	ks::byte_writer buf( rGameStatsParameters.m_uStatsBlobSize + 4096 );
 
 	UpdateProgress( rGameStatsParameters, "Creating initial report." );
 
-	buf.Purge();
-	buf.PutChar( C2M_REPORT_GAMESTATISTICS );
-	buf.PutChar( '\n' );
-	buf.PutChar( C2M_REPORT_GAMESTATISTICS_PROTOCOL_VERSION );
+	buf.clear();
+	buf.write<char>( C2M_REPORT_GAMESTATISTICS );
+	buf.write<char>( '\n' );
+	buf.write<char>( C2M_REPORT_GAMESTATISTICS_PROTOCOL_VERSION );
 
 	// See CSERServerProtocol.h for format
 
 	if ( 0 ) // This is the old protocol
 	{
-		buf.PutInt( (int)rGameStatsParameters.m_uEngineBuildNumber );
-		buf.PutString( rGameStatsParameters.m_sExecutableName );  // exe name
-		buf.PutString( rGameStatsParameters.m_sGameDirectory );	 // gamedir
-		buf.PutString( rGameStatsParameters.m_sMapName );
+		buf.write<int>( (int)rGameStatsParameters.m_uEngineBuildNumber );
+		buf.write_cstring( rGameStatsParameters.m_sExecutableName );  // exe name
+		buf.write_cstring( rGameStatsParameters.m_sGameDirectory );	 // gamedir
+		buf.write_cstring( rGameStatsParameters.m_sMapName );
 
-		buf.PutInt( (int)rGameStatsParameters.m_uStatsBlobVersion ); // game stats blob version
-		buf.PutInt( (int)rGameStatsParameters.m_uStatsBlobSize );  // game stats blob size
+		buf.write<int>( (int)rGameStatsParameters.m_uStatsBlobVersion ); // game stats blob version
+		buf.write<int>( (int)rGameStatsParameters.m_uStatsBlobSize );  // game stats blob size
 	}
 	else
 	{
-		buf.PutInt( (int)rGameStatsParameters.m_uAppId );
-		buf.PutInt( (int)rGameStatsParameters.m_uStatsBlobSize );  // game stats blob size
+		buf.write<int>( (int)rGameStatsParameters.m_uAppId );
+		buf.write<int>( (int)rGameStatsParameters.m_uStatsBlobSize );  // game stats blob size
 	}
 
 	CBlockingUDPSocket bcs;
@@ -947,7 +944,7 @@ EGameStatsUploadStatus Win32UploadGameStatsBlocking
 
 	UpdateProgress( rGameStatsParameters, "Sending game stats to server %s.", rGameStatsParameters.m_ipCSERServer.ToString() );
 
-	bcs.SendSocketMessage( sa, (const u8 *)buf.Base(), buf.TellPut() ); //lint !e534
+	bcs.SendSocketMessage( sa, (const u8 *)buf.data(), buf.size() ); //lint !e534
 
 	UpdateProgress( rGameStatsParameters, "Waiting for response." );
 
@@ -956,31 +953,32 @@ EGameStatsUploadStatus Win32UploadGameStatsBlocking
 		UpdateProgress( rGameStatsParameters, "Received response." );
 
 		struct sockaddr_in replyaddress;
-		buf.EnsureCapacity( 4096 );
+		u8 reply[4096];
 
-		uint bytesReceived = bcs.ReceiveSocketMessage( &replyaddress, (u8 *)buf.Base(), 4096 );
+		uint bytesReceived = bcs.ReceiveSocketMessage( &replyaddress, reply, sizeof( reply ) );
 		if ( bytesReceived > 0 )
 		{
-			// Fixup actual size
-			buf.SeekPut( CUtlBuffer::SEEK_HEAD, bytesReceived );
+			buf.clear();
+			buf.write_bytes( reply, bytesReceived );
+			ks::byte_reader rd = buf.reader();
 
 			UpdateProgress( rGameStatsParameters, "Checking response." );
 
 			// Parse out data
-			u8 msgtype = (u8)buf.GetChar();
+			u8 msgtype = (u8)rd.read<char>();
 			if ( M2C_ACKREPORT_GAMESTATISTICS != msgtype  )
 			{
 				UpdateProgress( rGameStatsParameters, "Request denied, invalid message type." );
 				return eGameStatsSendingGameStatsHeaderFailed;
 			}
-			bool validProtocol = (u8)buf.GetChar() == 1 ? true : false;
+			bool validProtocol = (u8)rd.read<char>() == 1 ? true : false;
 			if ( !validProtocol )
 			{
 				UpdateProgress( rGameStatsParameters, "Request denied, invalid message protocol." );
 				return eGameStatsSendingGameStatsHeaderFailed;
 			}
 
-			u8 disposition = (u8)buf.GetChar();
+			u8 disposition = (u8)rd.read<char>();
 			if ( GS_UPLOAD_REQESTED != disposition )
 			{
 				// Server doesn't want a gamestats, oh well
@@ -990,9 +988,9 @@ EGameStatsUploadStatus Win32UploadGameStatsBlocking
 			}
 
 			// Read in the game stats info parameters
-			u32 harvester_ip	= (u32)buf.GetInt();
-			u16 harvester_port	= (u16)buf.GetShort();
-			u32 dumpcontext		= (u32)buf.GetInt();
+			u32 harvester_ip	= (u32)rd.read<int>();
+			u16 harvester_port	= (u16)rd.read<short>();
+			u32 dumpcontext		= (u32)rd.read<int>();
 
 			sockaddr_in adr;
 			adr.sin_family = AF_INET;

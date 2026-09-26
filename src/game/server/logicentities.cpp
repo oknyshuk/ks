@@ -16,9 +16,6 @@
 #include "vstdlib/random.h"
 #include "gameinterface.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 extern CServerGameDLL g_ServerGameDLL;
 
@@ -2169,7 +2166,7 @@ private:
 
 	[[= ks::reflect::Key{ .name = "InitialValue" } ]] bool m_bInValue;					// Place to hold the last input value for a future test.
 	
-	CUtlVector<EHANDLE> m_Listeners;	// A list of logic_branch_listeners that are monitoring us.
+	std::vector< EHANDLE > m_Listeners;	// A list of logic_branch_listeners that are monitoring us.
 
 	// Outputs
 	[[= ks::reflect::Key{ .name = "OnTrue" } ]] COutputEvent m_OnTrue;				// Fired when the value is true.
@@ -2188,9 +2185,9 @@ IMPLEMENT_REFLECT_DATAMAP( CLogicBranch )
 //-----------------------------------------------------------------------------
 void CLogicBranch::UpdateOnRemove()
 {
-	for ( int i = 0; i < m_Listeners.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Listeners ); i++ )
 	{
-		CBaseEntity *pEntity = m_Listeners.Element( i ).Get();
+		CBaseEntity *pEntity = m_Listeners[ i ].Get();
 		if ( pEntity )
 		{
 			g_EventQueue.AddEvent( this, "_OnLogicBranchRemoved", 0, this, this );
@@ -2260,9 +2257,9 @@ void CLogicBranch::UpdateValue( bool bNewValue, CBaseEntity *pActivator, LogicBr
 	{
 		m_bInValue = bNewValue;
 
-		for ( int i = 0; i < m_Listeners.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_Listeners ); i++ )
 		{
-			CBaseEntity *pEntity = m_Listeners.Element( i ).Get();
+			CBaseEntity *pEntity = m_Listeners[ i ].Get();
 			if ( pEntity )
 			{
 				g_EventQueue.AddEvent( pEntity, "_OnLogicBranchChanged", 0, this, this );
@@ -2297,9 +2294,9 @@ bool CLogicBranch::GetLogicBranchState()
 //-----------------------------------------------------------------------------
 void CLogicBranch::AddLogicBranchListener( CBaseEntity *pEntity )
 {
-	if ( m_Listeners.Find( pEntity ) == -1 )
+	if ( ks::find_index( m_Listeners, pEntity ) == -1 )
 	{
-		m_Listeners.AddToTail( pEntity );
+		m_Listeners.push_back( pEntity );
 	}
 }
 
@@ -2590,7 +2587,7 @@ private:
 	void DoTest( CBaseEntity *pActivator );
 
 	[[= ks::reflect::Key{ .name = "Branch16", .index = 15 } ]] [[= ks::reflect::Key{ .name = "Branch15", .index = 14 } ]] [[= ks::reflect::Key{ .name = "Branch14", .index = 13 } ]] [[= ks::reflect::Key{ .name = "Branch13", .index = 12 } ]] [[= ks::reflect::Key{ .name = "Branch12", .index = 11 } ]] [[= ks::reflect::Key{ .name = "Branch11", .index = 10 } ]] [[= ks::reflect::Key{ .name = "Branch10", .index = 9 } ]] [[= ks::reflect::Key{ .name = "Branch09", .index = 8 } ]] [[= ks::reflect::Key{ .name = "Branch08", .index = 7 } ]] [[= ks::reflect::Key{ .name = "Branch07", .index = 6 } ]] [[= ks::reflect::Key{ .name = "Branch06", .index = 5 } ]] [[= ks::reflect::Key{ .name = "Branch05", .index = 4 } ]] [[= ks::reflect::Key{ .name = "Branch04", .index = 3 } ]] [[= ks::reflect::Key{ .name = "Branch03", .index = 2 } ]] [[= ks::reflect::Key{ .name = "Branch02", .index = 1 } ]] [[= ks::reflect::Key{ .name = "Branch01", .index = 0 } ]] string_t m_nLogicBranchNames[MAX_LOGIC_BRANCH_NAMES];
-	CUtlVector<EHANDLE> m_LogicBranchList;
+	std::vector< EHANDLE > m_LogicBranchList;
 	LogicBranchListenerLastState_t m_eLastState;
 
 	// Inputs
@@ -2634,7 +2631,7 @@ void CLogicBranchList::Activate( void )
 			{
 				CLogicBranch *pBranch = (CLogicBranch *)pEntity;
 				pBranch->AddLogicBranchListener( this );
-				m_LogicBranchList.AddToTail( pBranch );
+				m_LogicBranchList.push_back( pBranch );
 			}
 			else
 			{
@@ -2653,10 +2650,10 @@ void CLogicBranchList::Activate( void )
 //-----------------------------------------------------------------------------
 void CLogicBranchList::Input_OnLogicBranchRemoved( inputdata_t &inputdata )
 {
-	int nIndex = m_LogicBranchList.Find( inputdata.pActivator );
+	int nIndex = ks::find_index( m_LogicBranchList, inputdata.pActivator );
 	if ( nIndex != -1 )
 	{
-		m_LogicBranchList.FastRemove( nIndex );
+		ks::swap_remove( m_LogicBranchList, nIndex );
 	}
 
 	// See if this logic_branch's deletion affects the final result.
@@ -2693,9 +2690,9 @@ void CLogicBranchList::DoTest( CBaseEntity *pActivator )
 	bool bOneTrue = false;
 	bool bOneFalse = false;
 	
-	for ( int i = 0; i < m_LogicBranchList.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_LogicBranchList ); i++ )
 	{
-		CLogicBranch *pBranch = (CLogicBranch *)m_LogicBranchList.Element( i ).Get();
+		CLogicBranch *pBranch = (CLogicBranch *)m_LogicBranchList[ i ].Get();
 		if ( pBranch && pBranch->GetLogicBranchState() )
 		{
 			bOneTrue = true;
@@ -2744,9 +2741,9 @@ int CLogicBranchList::DrawDebugTextOverlays( void )
 	{
 		char tempstr[512];
 
-		for ( int i = 0; i < m_LogicBranchList.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_LogicBranchList ); i++ )
 		{
-			CLogicBranch *pBranch = (CLogicBranch *)m_LogicBranchList.Element( i ).Get();
+			CLogicBranch *pBranch = (CLogicBranch *)m_LogicBranchList[ i ].Get();
 			if ( pBranch )
 			{
 				Q_snprintf( tempstr, sizeof(tempstr), "Branch (%s): %s", STRING(pBranch->GetEntityName()), (pBranch->GetLogicBranchState()) ? "TRUE" : "FALSE" );

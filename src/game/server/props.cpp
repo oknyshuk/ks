@@ -7,6 +7,7 @@
 
 
 #include "cbase.h"
+#include <map>
 #include "reflect_datamap.h"
 #include "reflect_sendtable.h"
 #include "reflect_annotations.h"
@@ -22,7 +23,6 @@
 #include "vcollide_parse.h"
 #include "studio.h"
 #include "explode.h"
-#include "utlrbtree.h"
 #include "tier1/strtools.h"
 #include "physics_impact_damage.h"
 #include "keyvalues.h"
@@ -55,9 +55,6 @@
 
 
 #include "vstdlib/ikeyvaluessystem.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 #define DOOR_HARDWARE_GROUP 1
 
@@ -404,9 +401,9 @@ void CBreakableProp::SetEnableMotionPosition( const Vector &position, const QAng
 
 CBaseEntity	*CBreakableProp::FindEnableMotionFixup()
 {
-	CUtlVector<CBaseEntity*> list;
+	std::vector< CBaseEntity* > list;
 	GetAllChildren( this, list );
-	for ( int i = list.Count()-1; i >= 0; --i )
+	for ( int i = std::ssize( list )-1; i >= 0; --i )
 	{
 		if ( FClassnameIs( list[i], "point_enable_motion_fixup" ) )
 			return list[i];
@@ -528,11 +525,11 @@ void CBreakableProp::HandleFirstCollisionInteractions( int index, gamevcollision
 
 	if ( HasInteraction( PROPINTER_PHYSGUN_NOTIFY_CHILDREN ) )
 	{
-		CUtlVector<CBaseEntity *> children;
+		std::vector< CBaseEntity * > children;
 		GetAllChildren( this, children );
-		for (int i = 0; i < children.Count(); i++ )
+		for (int i = 0; i < std::ssize( children ); i++ )
 		{
-			CBaseEntity *pent = children.Element( i );
+			CBaseEntity *pent = children[ i ];
 
 			IParentPropInteraction *pPropInter = dynamic_cast<IParentPropInteraction *>( pent );
 			if ( pPropInter )
@@ -1045,7 +1042,7 @@ int CBreakableProp::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 			float flFactor;
 			flFactor = flDist / MAX_BLAST_DIST;
 			const float MAX_BURN_TIME = 5.0f;
-			flBurnTime = MAX( 0.5, MAX_BURN_TIME * flFactor );
+			flBurnTime = std::max<std::common_type_t<double, float>>( 0.5, MAX_BURN_TIME * flFactor );
 			flBurnTime += random->RandomFloat( 0, 0.5 );
 		}
 		else
@@ -2867,11 +2864,11 @@ void CPhysicsProp::OnPhysGunDrop( CBasePlayer *pPhysGunUser, PhysGunDrop_t Reaso
 	
 	if ( HasInteraction( PROPINTER_PHYSGUN_NOTIFY_CHILDREN ) )
 	{
-		CUtlVector<CBaseEntity *> children;
+		std::vector< CBaseEntity * > children;
 		GetAllChildren( this, children );
-		for (int i = 0; i < children.Count(); i++ )
+		for (int i = 0; i < std::ssize( children ); i++ )
 		{
-			CBaseEntity *pent = children.Element( i );
+			CBaseEntity *pent = children[ i ];
 
 			IParentPropInteraction *pPropInter = dynamic_cast<IParentPropInteraction *>( pent );
 			if ( pPropInter )
@@ -3098,9 +3095,8 @@ void CPhysicsProp::NavThink( void )
 	TheNavMesh->ForAllAreasOverlappingExtent( overlap, extent );
 
 	float obstructionHeight = GetNavObstructionHeight();
-	FOR_EACH_VEC( overlap.m_area, it )
+	for ( CNavArea *area : overlap.m_area )
 	{
-		CNavArea *area = overlap.m_area[ it ];
 		area->MarkObstacleToAvoid( obstructionHeight );
 	}
 }
@@ -3510,7 +3506,7 @@ CBaseEntity *BreakModelCreateSingle( CBaseEntity *pOwner, breakmodel_t *pModel, 
 		pEntity->m_iHealth = pModel->health;
 		if ( g_ActiveGibCount >= ACTIVE_GIB_FADE )
 		{
-			pModel->fadeTime = MIN( 3, pModel->fadeTime );
+			pModel->fadeTime = std::min<std::common_type_t<int, float>>( 3, pModel->fadeTime );
 		}
 		if ( pModel->fadeTime )
 		{
@@ -3548,28 +3544,14 @@ class CBreakModelsPrecached : public CAutoGameSystem
 public:
 	CBreakModelsPrecached() : CAutoGameSystem( "CBreakModelsPrecached" )
 	{
-		m_modelList.SetLessFunc( BreakLessFunc );
-	}
-
-	struct breakable_precache_t
-	{
-		string_t	iszModelName;
-		int			iBreakableCount;
-	};
-
-	static bool BreakLessFunc( breakable_precache_t const &lhs, breakable_precache_t const &rhs )
-	{
-		return ( lhs.iszModelName.ToCStr() < rhs.iszModelName.ToCStr() );
 	}
 
 	bool IsInList( string_t modelName, int *iBreakableCount )
 	{
-		breakable_precache_t sEntry;
-		sEntry.iszModelName = modelName;
-		int iEntry = m_modelList.Find(sEntry);
-		if ( iEntry != m_modelList.InvalidIndex() )
+		auto iEntry = m_modelList.find( modelName.ToCStr() );
+		if ( iEntry != m_modelList.end() )
 		{
-			*iBreakableCount = m_modelList[iEntry].iBreakableCount;
+			*iBreakableCount = iEntry->second;
 			return true;
 		}
 
@@ -3578,19 +3560,17 @@ public:
 
 	void AddToList( string_t modelName, int iBreakableCount )
 	{
-		breakable_precache_t sEntry;
-		sEntry.iszModelName = modelName;
-		sEntry.iBreakableCount = iBreakableCount;
-		m_modelList.Insert( sEntry );
+		m_modelList.emplace( modelName.ToCStr(), iBreakableCount );
 	}
 
 	void LevelShutdownPostEntity()
 	{
-		m_modelList.RemoveAll();
+		m_modelList.clear();
 	}
 
 private:
-	CUtlRBTree<breakable_precache_t>	m_modelList;
+	// Pooled model name -> breakable count; pooled strings compare by address.
+	std::map<const char *, int>	m_modelList;
 };
 
 static CBreakModelsPrecached g_BreakModelsPrecached;
@@ -3609,10 +3589,10 @@ int PropBreakablePrecacheAll( string_t modelName )
 
 	int modelIndex = CBaseEntity::PrecacheModel( STRING(modelName) );
 
-	CUtlVector<breakmodel_t> list;
+	std::vector< breakmodel_t > list;
 
 	BreakModelList( list, modelIndex, COLLISION_GROUP_NONE, 0 );
-	iBreakables = list.Count();
+	iBreakables = std::ssize( list );
 
 	g_BreakModelsPrecached.AddToList( modelName, iBreakables );
 
@@ -3631,7 +3611,7 @@ int PropBreakablePrecacheAll( string_t modelName )
 	return iBreakables;
 }
 
-bool PropBreakableCapEdictsOnCreateAll( CUtlVector<breakmodel_t> &list, IPhysicsObject *pPhysics, const breakablepropparams_t &params, CBaseEntity *pEntity, int iPrecomputedBreakableCount = -1 )
+bool PropBreakableCapEdictsOnCreateAll( std::vector< breakmodel_t > &list, IPhysicsObject *pPhysics, const breakablepropparams_t &params, CBaseEntity *pEntity, int iPrecomputedBreakableCount = -1 )
 {
 	// @Note (toml 10-07-03): this is stop-gap to prevent this function from crashing the engine
 	const int BREATHING_ROOM = 64;
@@ -3645,17 +3625,17 @@ bool PropBreakableCapEdictsOnCreateAll( CUtlVector<breakmodel_t> &list, IPhysics
 	}
 	else
 	{
-		if ( list.Count() ) 
+		if ( !list.empty() ) 
 		{
 			// if there are enough don't bother checking each piece
 			int nCurrentAvailable = MAX_EDICTS - (nCurrentEntityCount + BREATHING_ROOM);
-			if ( nCurrentAvailable > list.Count() )
+			if ( nCurrentAvailable > std::ssize( list ) )
 			{
-				numToCreate = list.Count();
+				numToCreate = std::ssize( list );
 			}
 			else
 			{
-				for ( int i = 0; i < list.Count(); i++ )
+				for ( int i = 0; i < std::ssize( list ); i++ )
 				{
 					int modelIndex = modelinfo->GetModelIndex( list[i].modelName );
 					if ( modelIndex <= 0 )
@@ -3833,7 +3813,7 @@ void CBasePropDoor::Activate( void )
 
 				if ( pDoor != nullptr && pDoor->HasSlaves() == false )
 				{
-					m_hDoorList.AddToTail( pDoor );
+					m_hDoorList.push_back( pDoor );
 					pDoor->SetMaster( this );
 					pDoor->SetOwnerEntity( this );
 				}
@@ -4290,7 +4270,7 @@ void CBasePropDoor::DoorOpen(CBaseEntity *pOpenAwayFrom)
 	// Tell all the slaves
 	if ( HasSlaves() )
 	{
-		int	numDoors = m_hDoorList.Count();
+		int	numDoors = std::ssize( m_hDoorList );
 
 		CBasePropDoor *pLinkedDoor = nullptr;
 
@@ -4413,7 +4393,7 @@ void CBasePropDoor::DoorClose(void)
 	// Tell all the slaves
 	if ( HasSlaves() )
 	{
-		int	numDoors = m_hDoorList.Count();
+		int	numDoors = std::ssize( m_hDoorList );
 
 		CBasePropDoor *pLinkedDoor = nullptr;
 
@@ -4466,7 +4446,7 @@ void CBasePropDoor::MasterStartBlocked( CBaseEntity *pOther )
 {
 	if ( HasSlaves() )
 	{
-		int	numDoors = m_hDoorList.Count();
+		int	numDoors = std::ssize( m_hDoorList );
 
 		CBasePropDoor *pLinkedDoor = nullptr;
 
@@ -4661,7 +4641,7 @@ void CBasePropDoor::EndBlocked( void )
 
 	if ( HasSlaves() )
 	{
-		int	numDoors = m_hDoorList.Count();
+		int	numDoors = std::ssize( m_hDoorList );
 
 		CBasePropDoor *pLinkedDoor = nullptr;
 
@@ -4775,7 +4755,7 @@ public:
 	{
 		if ( passentity )
 		{
-			m_pPassEnts.AddToTail( passentity );
+			m_pPassEnts.push_back( passentity );
 		}
 	}
 	
@@ -4787,7 +4767,7 @@ public:
 		if ( !PassServerEntityFilter( pHandleEntity, m_pDoor ) )
 			return false;
 
-		for ( int i=0; i<m_pPassEnts.Count(); ++i )
+		for ( int i=0; i<std::ssize( m_pPassEnts ); ++i )
 		{
 			if ( !PassServerEntityFilter( pHandleEntity, m_pPassEnts[i] ) )
 				return false;
@@ -4826,12 +4806,12 @@ public:
 
 	void AddPassEnt( CBaseEntity *pEntity )
 	{
-		m_pPassEnts.AddToTail( pEntity );
+		m_pPassEnts.push_back( pEntity );
 	}
 
 private:
 
-	CUtlVector< const IHandleEntity * > m_pPassEnts;
+	std::vector< const IHandleEntity * > m_pPassEnts;
 	const IHandleEntity *m_pDoor;
 	int m_collisionGroup;
 };
@@ -4881,14 +4861,14 @@ CPropDoorRotating::~CPropDoorRotating( void )
 void UTIL_ComputeAABBForBounds( const Vector &mins1, const Vector &maxs1, const Vector &mins2, const Vector &maxs2, Vector *destMins, Vector *destMaxs )
 {
 	// Find the minimum extents
-	(*destMins)[0] = MIN( mins1[0], mins2[0] );
-	(*destMins)[1] = MIN( mins1[1], mins2[1] );
-	(*destMins)[2] = MIN( mins1[2], mins2[2] );
+	(*destMins)[0] = std::min( mins1[0], mins2[0] );
+	(*destMins)[1] = std::min( mins1[1], mins2[1] );
+	(*destMins)[2] = std::min( mins1[2], mins2[2] );
 
 	// Find the maximum extents
-	(*destMaxs)[0] = MAX( maxs1[0], maxs2[0] );
-	(*destMaxs)[1] = MAX( maxs1[1], maxs2[1] );
-	(*destMaxs)[2] = MAX( maxs1[2], maxs2[2] );
+	(*destMaxs)[0] = std::max( maxs1[0], maxs2[0] );
+	(*destMaxs)[1] = std::max( maxs1[1], maxs2[1] );
+	(*destMaxs)[2] = std::max( maxs1[2], maxs2[2] );
 }
 
 bool DoorUnlockedFilter( CBaseEntity *pVisibleEntity, CBasePlayer *pViewingPlayer )
@@ -5062,7 +5042,7 @@ bool CPropDoorRotating::DoorCanClose( bool bAutoClose )
 	// Check all slaves
 	if ( HasSlaves() )
 	{
-		int	numDoors = m_hDoorList.Count();
+		int	numDoors = std::ssize( m_hDoorList );
 
 		CPropDoorRotating *pLinkedDoor = nullptr;
 
@@ -5419,8 +5399,8 @@ void CPropDoorRotating::BeginOpening(CBaseEntity *pOpenAwayFrom)
 	Vector	volumeCenter = ((mins+maxs) * 0.5f) + GetAbsOrigin();
 
 	// Ignoring the Z
-	float volumeRadius = MAX( fabs(mins.x), maxs.x );
-	volumeRadius = MAX( volumeRadius, MAX( fabs(mins.y), maxs.y ) );
+	float volumeRadius = std::max( fabs(mins.x), maxs.x );
+	volumeRadius = std::max( volumeRadius, std::max( fabs(mins.y), maxs.y ) );
 
 	// Debug
 	if ( g_debug_doors.GetBool() )
@@ -5806,7 +5786,7 @@ void CCSPropExplodingBarrel::FadeOut( void )
 		dt = 0.1f;
 
 	m_hBarrelTop.Get()->m_nRenderMode = kRenderTransTexture;
-	int speed = MAX( 2, 256 * dt ); // fade out
+	int speed = std::max<std::common_type_t<int, float>>( 2, 256 * dt ); // fade out
 	m_hBarrelTop.Get()->SetRenderAlpha( UTIL_Approach( 0, m_hBarrelTop.Get()->m_clrRender->a, speed ) );
 
 	if ( m_hBarrelTop.Get()->m_clrRender->a == 0 )
@@ -5934,7 +5914,7 @@ void CPropDoorRotatingBreakable::Spawn( void )
 	BaseClass::Spawn();
 	PrecacheBreakables();
 
-	m_damageStates.RemoveAll();
+	m_damageStates.clear();
 	m_currentDamageState = -1;
 	m_blockedTeamNumber = TEAM_ANY;
 
@@ -5961,7 +5941,7 @@ void CPropDoorRotatingBreakable::Spawn( void )
 					char *modelName = str.Access();
 					V_FixSlashes( modelName, '/' );
 					PrecacheModel( modelName );
-					m_damageStates.AddToTail( AllocPooledString( damageState) );
+					m_damageStates.push_back( AllocPooledString( damageState) );
 				}
 			}
 		}
@@ -6024,7 +6004,7 @@ void CPropDoorRotatingBreakable::UpdateBlocked( bool bBlocked )
 	extent.Init( this );
 	TheNavMesh->ForAllAreasOverlappingExtent( collector, extent );
 
-	for ( int i = 0; i < collector.m_area.Count(); ++i )
+	for ( int i = 0; i < std::ssize( collector.m_area ); ++i )
 	{
 		CNavArea *area = collector.m_area[i];
 		if ( bBlocked )
@@ -6135,9 +6115,9 @@ bool CPropDoorRotatingBreakable::operator()( CNavArea *area )
 //--------------------------------------------------------------------------------------------------------
 void CPropDoorRotatingBreakable::Event_Killed( const CTakeDamageInfo &info )
 {
-	if ( m_damageStates.Count() )
+	if ( !m_damageStates.empty() )
 	{
-		int targetDamageState = m_damageStates.Count() - 1;
+		int targetDamageState = std::ssize( m_damageStates ) - 1;
 		if ( targetDamageState > m_currentDamageState )
 		{
 			PhysBreakSound( this, VPhysicsGetObject(), GetAbsOrigin() );
@@ -6149,7 +6129,7 @@ void CPropDoorRotatingBreakable::Event_Killed( const CTakeDamageInfo &info )
 				Vector force( offset );
 
 				offset *= 10.0f; // offset some so fragments aren't spawned stuck in the door
-				force *= MIN( forceLen, 300.0f ); // cap the damage force so pieces don't go spinning off
+				force *= std::min( forceLen, 300.0f ); // cap the damage force so pieces don't go spinning off
 
 				color24 color = GetRenderColor();
 				te->PhysicsProp( filter, -1, GetModelIndex(), m_nSkin, GetAbsOrigin() + offset, GetAbsAngles(), force, 1, GetEffects(), color );
@@ -6208,10 +6188,10 @@ int CPropDoorRotatingBreakable::OnTakeDamage( const CTakeDamageInfo &info )
 	int ret = BaseClass::OnTakeDamage( subInfo );
 	int newHealth = m_iHealth;
 
-	if ( oldHealth != newHealth && newHealth > 0 && m_damageStates.Count() > 0 )
+	if ( oldHealth != newHealth && newHealth > 0 && std::ssize( m_damageStates ) > 0 )
 	{
 		// We were hurt, but are still alive.  Check to see if we should change damage states.
-		int healthPerDamageState = m_iMaxHealth / (m_damageStates.Count()+1);
+		int healthPerDamageState = m_iMaxHealth / (std::ssize( m_damageStates )+1);
 
 		int targetDamageState = -1;
 		while ( newHealth < m_iMaxHealth - healthPerDamageState * (targetDamageState + 2) )
@@ -6219,7 +6199,7 @@ int CPropDoorRotatingBreakable::OnTakeDamage( const CTakeDamageInfo &info )
 			++targetDamageState;
 		}
 		
-		targetDamageState = clamp( targetDamageState, -1, m_damageStates.Count() - 1 );
+		targetDamageState = clamp( targetDamageState, -1, std::ssize( m_damageStates ) - 1 );
 		
 		if ( targetDamageState > m_currentDamageState )
 		{
@@ -6341,7 +6321,7 @@ int CPropDoorRotatingBreakable::DrawDebugTextOverlays( void )
 		extent.Init( this );
 		TheNavMesh->ForAllAreasOverlappingExtent( collector, extent );
 
-		for ( int i = 0; i < collector.m_area.Count(); ++i )
+		for ( int i = 0; i < std::ssize( collector.m_area ); ++i )
 		{
 			CNavArea *area = collector.m_area[i];
 			Extent areaExtent;

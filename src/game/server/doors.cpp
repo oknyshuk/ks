@@ -20,9 +20,6 @@
 #include "keyvalues.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define CLOSE_AREAPORTAL_THINK_CONTEXT "CloseAreaportalThink"
 
 IMPLEMENT_REFLECT_DATAMAP( CBaseDoor )

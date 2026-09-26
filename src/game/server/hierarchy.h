@@ -16,8 +16,8 @@ void		UnlinkFromParent( CBaseEntity *pRemove );
 void		TransferChildren( CBaseEntity *pOldParent, CBaseEntity *pNewParent );
 void		LinkChild( CBaseEntity *pParent, CBaseEntity *pChild );
 void		UnlinkAllChildren( CBaseEntity *pParent );
-int			GetAllChildren( CBaseEntity *pParent, CUtlVector<CBaseEntity *> &list );
+int			GetAllChildren( CBaseEntity *pParent, std::vector< CBaseEntity * > &list );
 bool		EntityIsParentOf( CBaseEntity *pParent, CBaseEntity *pEntity );
-int			GetAllInHierarchy( CBaseEntity *pParent, CUtlVector<CBaseEntity *> &list );
+int			GetAllInHierarchy( CBaseEntity *pParent, std::vector< CBaseEntity * > &list );
 
 #endif // HIERARCHY_H

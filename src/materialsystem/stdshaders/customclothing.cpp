@@ -17,12 +17,8 @@
 
 #include "writez_vs20.inc"
 #include "white_ps20.inc"
-#include "white_ps20b.inc"
 
 #include "shaderlib/commandbuilder.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 static const float kDefaultColor[3] = { 0.5f, 0.5f, 0.5f };
 

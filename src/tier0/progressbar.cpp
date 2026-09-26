@@ -14,8 +14,6 @@
 #if !defined(STEAM) && !defined(NO_MALLOC_OVERRIDE)
 #include "tier0/memalloc.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 #endif
 
 

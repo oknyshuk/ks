@@ -12,8 +12,7 @@
 
 #include "tier1/utlstring.h"
 #include "inputsystem/ButtonCode.h"
-
-class CUtlBuffer;
+#include "tier1/text_writer.h"
 
 
 class CKeyBindings
@@ -27,12 +26,12 @@ public:
 	void UnbindAll();
 
 	int GetBindingCount() const;
-	void WriteBindings( CUtlBuffer &buf );
+	void WriteBindings( ks::text_writer &buf );
 	const char *ButtonNameForBinding( const char *pBinding );
 	const char *GetBindingForButton( ButtonCode_t code );
 
 private:
-	CUtlString m_KeyInfo[ BUTTON_CODE_LAST ];
+	std::string m_KeyInfo[ BUTTON_CODE_LAST ];
 };
 
 

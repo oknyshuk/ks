@@ -7,9 +7,6 @@
 #include "cbase.h"
 #include "gamevars_shared.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #ifdef GAME_DLL
 void MPForceCameraCallback( IConVar *var, const char *pOldString, float flOldValue )
 {

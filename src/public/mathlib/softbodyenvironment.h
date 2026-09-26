@@ -8,7 +8,7 @@
 
 #include "mathlib/vector.h"
 #include "rubikon/param_types.h"
-#include "tier1/utlincrementalvector.h"
+#include <vector>
 #include "mathlib/softbody.h"
 #include "rubikon/intersection.h"
 #include "mathlib/aabb.h"
@@ -100,11 +100,11 @@ public:
 	const VectorAligned &GetGravity()const { return m_vGravity; }
 	CDebugHighlightCone& GetDebugHighlightCone() { return m_DebugHighlightCone; }
 	
-	void Register( CSoftbody *pSoftbody ) { m_Softbodies.AddToTail( pSoftbody ); }
-	void Unregister( CSoftbody *pSoftbody ) { m_Softbodies.FindAndFastRemove( pSoftbody ); }
+	void Register( CSoftbody *pSoftbody );
+	void Unregister( CSoftbody *pSoftbody );
 	void Step( float dt, float flSubstepDt = 1.0f / 60.0f, int nMaxSubsteps = 3 );
 
-	int GetSoftbodyCount() const { return m_Softbodies.Count(); }
+	int GetSoftbodyCount() const { return std::ssize( m_Softbodies ); }
 	CSoftbody* GetSoftbody( int i ) { return m_Softbodies[ i ]; }
 
 	void Add( CSoftbodyCollisionShape * pShape );
@@ -123,7 +123,7 @@ protected:
 	CDynamicTree m_BroadphaseTree;
 	int m_nIterations;
 	CDebugHighlightCone m_DebugHighlightCone;
-	CUtlIncrementalVector< CSoftbody, CSoftbody::CWorldIndexPred > m_Softbodies;
+	std::vector< CSoftbody* > m_Softbodies;	// not owned; each body stores its slot (CWorldIndexPred) for O(1) unregister
 	float m_flAccumulatedTimeSlack;
 };
 
@@ -133,6 +133,23 @@ inline CSoftbodyEnvironment::CSoftbodyEnvironment()
 	m_flAccumulatedTimeSlack = 0.0f;
 	m_nIterations = 1;
 	m_vGravity.Init( 0, 0, -360 );
+}
+
+inline void CSoftbodyEnvironment::Register( CSoftbody *pSoftbody )
+{
+	CSoftbody::CWorldIndexPred::SetIndex( pSoftbody, std::ssize( m_Softbodies ) );
+	m_Softbodies.push_back( pSoftbody );
+}
+
+// doesn't preserve order: the last body takes the removed one's slot
+inline void CSoftbodyEnvironment::Unregister( CSoftbody *pSoftbody )
+{
+	int nIndex = CSoftbody::CWorldIndexPred::GetIndex( pSoftbody );
+	Assert( m_Softbodies[ nIndex ] == pSoftbody );
+	CSoftbody *pLast = m_Softbodies.back();
+	m_Softbodies[ nIndex ] = pLast;
+	m_Softbodies.pop_back();
+	CSoftbody::CWorldIndexPred::SetIndex( pLast, nIndex );
 }
 
 
@@ -152,7 +169,7 @@ inline void CSoftbodyEnvironment::Step( float dt, float flSubstepDt, int nMaxSub
 		nSubsteps = nMaxSubsteps;
 		m_flAccumulatedTimeSlack = 0.0f;
 	}
-	for ( int i = 0; i < m_Softbodies.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_Softbodies ); ++i )
 	{
 		CSoftbody *pSoftbody = m_Softbodies[ i ];
 		for ( int j = 0; j < nSubsteps; ++j )

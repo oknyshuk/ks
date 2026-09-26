@@ -260,7 +260,7 @@ public:
 	}
 };
 
-// never construct this - only the Resource stream may construct or load data that contains ResourceArray or ResourcePointer; use LockedResource or naked pointer or CUtlBuffer or something like that instead
+// never construct this - only the Resource stream may construct or load data that contains ResourceArray or ResourcePointer; use LockedResource or naked pointer or std::vector or something like that instead
 
 class CResourceArrayBase
 {

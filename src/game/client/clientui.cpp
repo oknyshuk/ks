@@ -11,6 +11,7 @@
 #endif
 
 #include "cbase.h"
+#include <bitset>
 #include "clientui.h"
 #include "iengineui.h"
 #include "uicenterprint.h"
@@ -22,9 +23,6 @@
 
 
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 bool IsWidescreen( void );
@@ -368,13 +366,13 @@ void UI_UpdateScreenSpaceBounds( int nNumSplits, int sx, int sy, int sw, int sh 
 	g_TrueScreenSize.width = sw;
 	g_TrueScreenSize.height = sh;
 
-	CUtlVector< int > validSlots;
+	std::vector< int > validSlots;
 	FOR_EACH_VALID_SPLITSCREEN_PLAYER( i )
 	{
-		validSlots.AddToTail( i );
+		validSlots.push_back( i );
 	}
 
-	Assert( validSlots.Count() == nNumSplits );
+	Assert( std::ssize( validSlots ) == nNumSplits );
 
 	switch ( nNumSplits )
 	{
@@ -448,7 +446,7 @@ void UI_UpdateScreenSpaceBounds( int nNumSplits, int sx, int sy, int sw, int sh 
 	}
 }
 
-CBitVec< MAX_SPLITSCREEN_PLAYERS > g_SplitScreenPlayers;
+std::bitset< MAX_SPLITSCREEN_PLAYERS > g_SplitScreenPlayers;
 
 bool g_bIterateRemoteSplitScreenPlayers = false;
 C_BasePlayer *g_RemoteSplitScreenPlayers[MAX_SPLITSCREEN_PLAYERS];
@@ -463,7 +461,7 @@ void AddRemoteSplitScreenViewPlayer( C_BasePlayer *pPlayer )
 
 	for( int i = 0; i != MAX_SPLITSCREEN_PLAYERS; ++i )
 	{
-		if( !g_SplitScreenPlayers.IsBitSet( i ) && (g_RemoteSplitScreenPlayers[i] == nullptr) )
+		if( !g_SplitScreenPlayers[i] && (g_RemoteSplitScreenPlayers[i] == nullptr) )
 		{
 			g_RemoteSplitScreenPlayers[i] = pPlayer;
 			UI_OnSplitScreenStateChanged();
@@ -487,7 +485,7 @@ void RemoveRemoteSplitScreenViewPlayer( C_BasePlayer *pPlayer )
 
 C_BasePlayer *GetSplitScreenViewPlayer( int nSlot )
 {
-	return g_SplitScreenPlayers.IsBitSet( nSlot ) ? C_BasePlayer::GetLocalPlayer( nSlot ) : g_RemoteSplitScreenPlayers[nSlot];
+	return g_SplitScreenPlayers[nSlot] ? C_BasePlayer::GetLocalPlayer( nSlot ) : g_RemoteSplitScreenPlayers[nSlot];
 }
 
 void cl_enable_remote_splitscreen_callback_f( IConVar *var, const char *pOldValue, float flOldValue )
@@ -496,7 +494,7 @@ void cl_enable_remote_splitscreen_callback_f( IConVar *var, const char *pOldValu
 }
 
 ConVar cl_enable_remote_splitscreen( "cl_enable_remote_splitscreen", "0", 0, "Allows viewing of nonlocal players in a split screen fashion", cl_enable_remote_splitscreen_callback_f );
-static CUtlVector<bool> s_IterateNetworkedSplitScreenSlotsPushedValues;
+static std::vector< bool > s_IterateNetworkedSplitScreenSlotsPushedValues;
 void IterateRemoteSplitScreenViewSlots_Push( bool bSet )
 {
 	if( !cl_enable_remote_splitscreen.GetBool() )
@@ -504,20 +502,20 @@ void IterateRemoteSplitScreenViewSlots_Push( bool bSet )
 		bSet = false;
 	}
 
-	s_IterateNetworkedSplitScreenSlotsPushedValues.AddToTail( g_bIterateRemoteSplitScreenPlayers );
+	s_IterateNetworkedSplitScreenSlotsPushedValues.push_back( g_bIterateRemoteSplitScreenPlayers );
 	g_bIterateRemoteSplitScreenPlayers = bSet;
 }
 
 void IterateRemoteSplitScreenViewSlots_Pop( void )
 {
-	Assert( s_IterateNetworkedSplitScreenSlotsPushedValues.Count() > 0 );
-	g_bIterateRemoteSplitScreenPlayers = s_IterateNetworkedSplitScreenSlotsPushedValues.Tail();
-	s_IterateNetworkedSplitScreenSlotsPushedValues.RemoveMultipleFromTail( 1 );
+	Assert( std::ssize( s_IterateNetworkedSplitScreenSlotsPushedValues ) > 0 );
+	g_bIterateRemoteSplitScreenPlayers = s_IterateNetworkedSplitScreenSlotsPushedValues.back();
+	s_IterateNetworkedSplitScreenSlotsPushedValues.resize( s_IterateNetworkedSplitScreenSlotsPushedValues.size() - 1 );
 }
 
 bool IsLocalSplitScreenPlayer( int nSlot )
 {
-	return g_SplitScreenPlayers.IsBitSet( nSlot );
+	return g_SplitScreenPlayers[nSlot];
 }
 
 int FirstValidSplitScreenSlot()
@@ -530,7 +528,7 @@ int NextValidSplitScreenSlot( int i )
 	++i;
 	while ( i<  MAX_SPLITSCREEN_PLAYERS )
 	{
-		if ( g_SplitScreenPlayers.IsBitSet( i ) )
+		if ( g_SplitScreenPlayers[i] )
 			return i;
 
 		if( g_bIterateRemoteSplitScreenPlayers && cl_enable_remote_splitscreen.GetBool() && (g_RemoteSplitScreenPlayers[i] != nullptr) )
@@ -543,7 +541,7 @@ int NextValidSplitScreenSlot( int i )
 
 bool IsValidSplitScreenSlot( int i )
 {
-	return g_SplitScreenPlayers.IsBitSet( i ) || (g_bIterateRemoteSplitScreenPlayers && (g_RemoteSplitScreenPlayers[i] != nullptr));
+	return g_SplitScreenPlayers[i] || (g_bIterateRemoteSplitScreenPlayers && (g_RemoteSplitScreenPlayers[i] != nullptr));
 }
 
 static int g_nCachedScreenSize[ 2 ] = { -1, -1 };
@@ -577,14 +575,14 @@ bool UI_UsePipSplit()
 bool g_bSuppressConfigSystemLevelDueToPIPTransitions;
 void UI_OnSplitScreenStateChanged()
 {
-	g_SplitScreenPlayers.ClearAll();
+	g_SplitScreenPlayers.reset();
 	g_nNumSplits = 0;
 	g_nNumLocalSplits = 0;
 	for ( int i = engine->FirstValidSplitScreenSlot();				
 		i != -1;												
 		i = engine->NextValidSplitScreenSlot( i ) )	
 	{
-		g_SplitScreenPlayers.Set( i );
+		g_SplitScreenPlayers.set( i );
 		g_RemoteSplitScreenPlayers[i] = nullptr; //actual splitscreen players nuke networked splitscreen players
 		++g_nNumSplits;
 		++g_nNumLocalSplits;

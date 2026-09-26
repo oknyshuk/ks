@@ -7,7 +7,6 @@
 #include "cbase.h"
 #include "vscript_server.h"
 #include "icommandline.h"
-#include "tier1/utlbuffer.h"
 #include "tier1/fmtstr.h"
 #include "filesystem.h"
 #include "eventqueue.h"
@@ -906,12 +905,12 @@ CON_COMMAND( script_reload_entity_code, "Execute all of this entity's VScripts, 
 		{
 			char szScriptsList[255];
 			V_strcpy_safe( szScriptsList, STRING(pEntity->m_iszVScripts) );
-			CUtlStringList szScripts;
+			std::vector< std::string > szScripts;
 			V_SplitString( szScriptsList, " ", szScripts);
 
-			for( int i = 0 ; i < szScripts.Count() ; i++ )
+			for( int i = 0 ; i < std::ssize( szScripts ) ; i++ )
 			{
-				VScriptServerReplaceClosures( szScripts[i], pEntity->m_ScriptScope, true );
+				VScriptServerReplaceClosures( szScripts[i].c_str(), pEntity->m_ScriptScope, true );
 			}
 		}
 	}

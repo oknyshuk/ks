@@ -11,9 +11,6 @@
 #include "hsl_filmgrain_pass2_ps20.inc"
 #include "hsl_filmgrain_pass2_ps20b.inc"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 //
 // Second pass merely converts from HSL back to RGB space, noise was already applied in first pass

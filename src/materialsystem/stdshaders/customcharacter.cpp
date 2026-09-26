@@ -8,9 +8,6 @@
 
 #include "../materialsystem_global.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 BEGIN_VS_SHADER( CustomCharacter, "Help for CustomCharacter Shader" )
 	BEGIN_SHADER_PARAMS
 	

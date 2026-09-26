@@ -6,8 +6,6 @@
 
 #include "audio_pch.h"
 #include "vox_private.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: This replaces the old sentence logic that was integrated with the

@@ -1,10 +1,10 @@
 #include "basetypes.h"
+#include <atomic>
 #include "commonmacros.h"
 #include "soundsystem/lowlevel.h"
-#include "soundsystem/audio_mix.h"
 
-CInterlockedInt g_nDetectedAudioError(0);
-CInterlockedInt g_nDetectedBufferStarvation( 0 );
+std::atomic<int> g_nDetectedAudioError(0);
+std::atomic<int> g_nDetectedBufferStarvation( 0 );
 uint g_nDeviceStamp = 0x100;
 
 class CAudioDeviceNull2 : public IAudioDevice2
@@ -74,7 +74,7 @@ int Audio_EnumerateDevices( eSubSystems_t nSubsystem, audio_device_description_t
 
 int CAudioDeviceList::FindDeviceById( const wchar_t *pId, finddevice_t nFind )
 {
-	for ( int i = 0; i < m_list.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_list ); i++ )
 	{
 		if ( nFind == FIND_AVAILABLE_DEVICE_ONLY && !m_list[i].m_bIsAvailable )
 			continue;
@@ -90,7 +90,7 @@ audio_device_description_t *CAudioDeviceList::FindDeviceById( const char *pId )
 	wchar_t tempName[256];
 	V_strtowcs( pId, -1, tempName, Q_ARRAYSIZE(tempName) );
 	int nDevice = FindDeviceById( tempName, FIND_AVAILABLE_DEVICE_ONLY );
-	if ( nDevice >= 0 && nDevice < m_list.Count() )
+	if ( nDevice >= 0 && nDevice < std::ssize( m_list ) )
 		return &m_list[nDevice];
 	return nullptr;
 }
@@ -115,17 +115,17 @@ void CAudioDeviceList::BuildDeviceList( eSubSystems_t nPreferredSubsystem )
 	{
 		nCount = Audio_EnumerateDevices( AUDIO_SUBSYSTEM_NULL, initList, Q_ARRAYSIZE(initList) );
 	}
-	if ( !m_list.Count() )
+	if ( m_list.empty() )
 	{
-		m_list.CopyArray( initList, nCount );
-		for ( int i = 0; i < m_list.Count(); i++ )
+		m_list.assign( initList, initList + nCount );
+		for ( int i = 0; i < std::ssize( m_list ); i++ )
 		{
 			m_list[i].m_bIsAvailable = true;
 		}
 	}
 	else
 	{
-		for ( int i = 0; i < m_list.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_list ); i++ )
 		{
 			m_list[i].m_bIsAvailable = false;
 			m_list[i].m_bIsDefault = false;
@@ -139,7 +139,7 @@ void CAudioDeviceList::BuildDeviceList( eSubSystems_t nPreferredSubsystem )
 			}
 			else
 			{
-				m_list.AddToTail( initList[i] );
+				m_list.push_back( initList[i] );
 			}
 		}
 	}
@@ -159,7 +159,7 @@ void CAudioDeviceList::UpdateDefaultDevice()
 {
 	m_nDefaultDevice = -1;
 	int nFirst = -1;
-	for ( int i = 0; i < m_list.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_list ); i++ )
 	{
 		if ( m_list[i].m_bIsAvailable )
 		{
@@ -216,7 +216,7 @@ const wchar_t *CAudioDeviceList::GetDeviceToCreate( audio_device_init_params_t &
 			return m_list[nIndex].m_deviceName;
 		}
 	}
-	Assert( m_nDefaultDevice >= 0 && m_nDefaultDevice < m_list.Count() );
+	Assert( m_nDefaultDevice >= 0 && m_nDefaultDevice < std::ssize( m_list ) );
 	return m_list[m_nDefaultDevice].m_deviceName;
 }
 
@@ -265,7 +265,7 @@ int ChannelCountToSpeakerConfigValue( int nChannelCount, bool bIsHeadphone )
 
 bool Audio_PollErrorEvents()
 {
-	int nError = g_nDetectedAudioError.InterlockedExchange(0);
+	int nError = g_nDetectedAudioError.exchange(0);
 
 	return nError != 0;
 }

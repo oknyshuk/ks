@@ -9,9 +9,6 @@
 #include "mathlib/vmatrix.h"
 #include "beamdraw.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 class C_Hairball : public C_BaseEntity
 {
 	DECLARE_CLASS( C_Hairball, C_BaseEntity );
@@ -55,9 +52,9 @@ public:
 	int									m_nNodesPerHair;
 	float								m_flSpringDist;				// = hair length / (m_nNodesPerHair-1)
 
-	CUtlVector<CSimplePhysics::CNode>	m_Nodes;					// This is m_nHairs * m_nNodesPerHair large.
-	CUtlVector<Vector>					m_HairPositions;			// Untransformed base hair positions, distributed on the sphere.
-	CUtlVector<Vector>					m_TransformedHairPositions;	// Transformed base hair positions, distributed on the sphere.
+	std::vector< CSimplePhysics::CNode >	m_Nodes;					// This is m_nHairs * m_nNodesPerHair large.
+	std::vector< Vector >					m_HairPositions;			// Untransformed base hair positions, distributed on the sphere.
+	std::vector< Vector >					m_TransformedHairPositions;	// Transformed base hair positions, distributed on the sphere.
 
 	CHairballDelegate					m_Delegate;
 	CSimplePhysics						m_Physics;
@@ -127,9 +124,9 @@ C_Hairball::C_Hairball()
 	float flHairLength = 20;
 	m_flSpringDist = flHairLength / (m_nNodesPerHair - 1);
 	
-	m_Nodes.SetSize( m_nHairs * m_nNodesPerHair );
-	m_HairPositions.SetSize( m_nHairs );
-	m_TransformedHairPositions.SetSize( m_nHairs );
+	m_Nodes.assign( m_nHairs * m_nNodesPerHair, {} );
+	m_HairPositions.assign( m_nHairs, {} );
+	m_TransformedHairPositions.assign( m_nHairs, {} );
 
 	m_flSphereRadius = 20;
 	m_vMoveDir.Init();
@@ -139,7 +136,7 @@ C_Hairball::C_Hairball()
 	m_flSpinRateX = m_flSpinRateY = 0;
 
 	// Distribute on the sphere (need a better random distribution for the sphere).
-	for ( int i=0; i < m_HairPositions.Count(); i++ )
+	for ( int i=0; i < std::ssize( m_HairPositions ); i++ )
 	{
 		float theta = RandomFloat( -M_PI, M_PI );
 		float phi   = RandomFloat( -M_PI/2, M_PI/2 );
@@ -272,7 +269,7 @@ void C_Hairball::ClientThink()
 	VMatrix mTransform;
 	mTransform.SetupMatrixOrgAngles( GetLocalOrigin(), GetLocalAngles() );
 
-	for ( int i=0; i < m_HairPositions.Count(); i++ )
+	for ( int i=0; i < std::ssize( m_HairPositions ); i++ )
 	{
 		Vector3DMultiplyPosition( mTransform, m_HairPositions[i], m_TransformedHairPositions[i] );
 	}
@@ -280,7 +277,7 @@ void C_Hairball::ClientThink()
 	if ( m_bFirstThink )
 	{
 		m_bFirstThink = false;
-		for ( int i=0; i < m_HairPositions.Count(); i++ )
+		for ( int i=0; i < std::ssize( m_HairPositions ); i++ )
 		{
 			for ( int j=0; j < m_nNodesPerHair; j++ )
 			{
@@ -290,7 +287,7 @@ void C_Hairball::ClientThink()
 	}
 
 	// Simulate the physics and apply constraints.
-	m_Physics.Simulate( m_Nodes.Base(), m_Nodes.Count(), &m_Delegate, gpGlobals->frametime, 0.98 );
+	m_Physics.Simulate( m_Nodes.data(), std::ssize( m_Nodes ), &m_Delegate, gpGlobals->frametime, 0.98 );
 }
 
 

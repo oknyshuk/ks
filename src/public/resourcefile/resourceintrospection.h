@@ -146,7 +146,7 @@ public:
 	void SetFieldInfo( CResourceStream *pStream, const char *pFieldName, int nMemoryOffset, int nDiskOffset, int nArrayCount );
 	void SetFieldInfo( CResourceStream *pStream, const CResourceFieldIntrospection *src );
 
-	void SetFieldType( CResourceStream *pStream, const CUtlVector<ResourceFieldType_t>& TypeChain, uint32 nRootFieldData );
+	void SetFieldType( CResourceStream *pStream, const std::vector< ResourceFieldType_t >& TypeChain, uint32 nRootFieldData );
 
 	// Introspection helper routines
 public:

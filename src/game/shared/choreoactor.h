@@ -11,7 +11,7 @@
 
 class CChoreoChannel;
 class CChoreoScene;
-class CUtlBuffer;
+namespace ks { class byte_reader; class byte_writer; }
 class IChoreoStringPool;
 
 //-----------------------------------------------------------------------------
@@ -30,8 +30,8 @@ public:
 	CChoreoActor&	operator = ( const CChoreoActor& src );
 
 	// Serialization
-	void			SaveToBuffer( CUtlBuffer& buf, CChoreoScene *pScene, IChoreoStringPool *pStringPool );
-	bool			RestoreFromBuffer( CUtlBuffer& buf, CChoreoScene *pScene, IChoreoStringPool *pStringPool );
+	void			SaveToBuffer( ks::byte_writer& buf, CChoreoScene *pScene, IChoreoStringPool *pStringPool );
+	bool			RestoreFromBuffer( ks::byte_reader& buf, CChoreoScene *pScene, IChoreoStringPool *pStringPool );
 
 	// Accessors
 	void			SetName( const char *name );
@@ -75,7 +75,7 @@ private:
 	char			m_szFacePoserModelName[ MAX_FACEPOSER_MODEL_NAME ];
 
 	// Children
-	CUtlVector < CChoreoChannel * >	m_Channels;
+	std::vector< CChoreoChannel * >	m_Channels;
 
 	bool			m_bActive;
 

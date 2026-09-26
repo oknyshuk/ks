@@ -16,7 +16,7 @@ class IServerFoundry : public IBaseInterface
 {
 public:
 	// This is used when you load a savegame and use certain Hammer entities on top of the savegame data.
-	virtual bool GetRestoredEntityReplacementData( int iHammerID, CUtlVector<char> &data ) = 0;
+	virtual bool GetRestoredEntityReplacementData( int iHammerID, std::vector< char > &data ) = 0;
 	virtual void OnFinishedRestoreSavegame() = 0;
 
 	// Move Hammer's version of the entity.

@@ -17,14 +17,14 @@
 #include "reflect_annotations.h"
 
 #include "baseentity.h"
-#include "utllinkedlist.h"
+#include <vector>
 
 class CInfoRemarkable : public CPointEntity
 {
 public:
 	DECLARE_CLASS( CInfoRemarkable, CPointEntity );
 	DECLARE_DATADESC();
-	typedef CUtlLinkedList< CInfoRemarkable * > tRemarkableList;
+	typedef std::vector< CInfoRemarkable * > tRemarkableList;
 	static tRemarkableList *GetListOfAllThatIsRemarkable( void );
 
 	~CInfoRemarkable();

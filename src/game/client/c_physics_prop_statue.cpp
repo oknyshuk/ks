@@ -11,9 +11,6 @@
 #include "c_physics_prop_statue.h"
 #include "debugoverlay_shared.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 IMPLEMENT_REFLECT_CLIENTCLASS( C_StatueProp, DT_StatueProp, CStatueProp )
 
 C_StatueProp::C_StatueProp()

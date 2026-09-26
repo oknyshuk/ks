@@ -287,7 +287,7 @@ bool FASTCALL IsBoxIntersectingRay( fltx4 boxMin, fltx4 boxMax,
 
 FORCEINLINE bool IsBoxIntersectingRay( const Vector& boxMin, const Vector& boxMax, const Ray_t& ray )
 {
-	return IsBoxIntersectingRay( LoadUnaligned3SIMD(boxMin.Base()), LoadUnaligned3SIMD(boxMax.Base()), ray, LoadZeroSIMD() );
+	return IsBoxIntersectingRay( LoadVector3SIMD(boxMin), LoadVector3SIMD(boxMax), ray, LoadZeroSIMD() );
 }
 
 

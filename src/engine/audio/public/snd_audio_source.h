@@ -25,10 +25,11 @@ class CSfxTable;
 
 class CAudioSource;
 class IAudioDevice;
-class CUtlBuffer;
 
 #include "tier0/vprof.h"
-#include "utlhandletable.h"
+#include "tier1/handle_table.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
 
 //-----------------------------------------------------------------------------
 // Purpose: This is an instance of an audio source.
@@ -91,7 +92,7 @@ inline int CalcSampleSize( int bitsPerSample, int channels )
 	return (bitsPerSample >> 3) * channels;
 }
 
-#include "UtlCachedFileData.h"
+#include "cached_file_data.h"
 
 class CSentence;
 class CSfxTable;
@@ -108,8 +109,8 @@ public:
 	void	Clear();
 	void	RemoveData();
 
-	virtual void Save( CUtlBuffer& buf );
-	virtual void Restore( CUtlBuffer& buf );
+	virtual void Save( ks::byte_writer& buf );
+	virtual void Restore( ks::byte_reader& buf );
 	virtual void Rebuild( char const *filename );
 
 	// A hack, but will work okay
@@ -312,23 +313,17 @@ public:
 
 extern IAudioSourceCache *audiosourcecache;
 
-typedef UtlHandle_t WaveCacheHandle_t;
+typedef ks::handle_t WaveCacheHandle_t;
 enum
 {
 	// purposely 0
-	INVALID_WAVECACHE_HANDLE = (UtlHandle_t)0 
+	INVALID_WAVECACHE_HANDLE = (ks::handle_t)0 
 };
 
 typedef int StreamHandle_t;
 enum
 {
 	INVALID_STREAM_HANDLE = (StreamHandle_t)~0 
-};
-
-typedef int BufferHandle_t;
-enum
-{
-	INVALID_BUFFER_HANDLE = (BufferHandle_t)~0
 };
 
 typedef unsigned int streamFlags_t;
@@ -376,7 +371,6 @@ public:
 	virtual void			CloseStreamedLoad( StreamHandle_t hStream ) = 0;
 	virtual int				CopyStreamedDataIntoMemory( StreamHandle_t hStream, void *pBuffer, int buffSize, int copyStartPos, int bytesToCopy ) = 0;
 	virtual bool			IsStreamedDataReady( StreamHandle_t hStream ) = 0;
-	virtual void			MarkBufferDiscarded( BufferHandle_t hBuffer ) = 0;
 	virtual void			*GetStreamedDataPointer( StreamHandle_t hStream, bool bSync ) = 0;
 	virtual bool			IsDataLoadInProgress( WaveCacheHandle_t handle ) = 0;
 

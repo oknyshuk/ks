@@ -12,7 +12,7 @@
 #include <map>
 #include <vector>
 #include <string>
-#include "tier1/UtlStringMap.h"
+#include "tier1/map_ops.h"
 
 namespace DataLinker
 {
@@ -145,7 +145,7 @@ protected:
 		int m_nOffset;
 		StringTableElement_t(): m_pString( nullptr ), m_nOffset( 0 ) {}
 	};
-	CUtlStringMap<StringTableElement_t> m_stringTable; // each string offset
+	ks::idict<StringTableElement_t> m_stringTable; // each string offset
 
 	uint m_size; // this is the currently used data
 	int m_lastTarget; // the last id of LinkTarget

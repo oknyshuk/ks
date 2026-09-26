@@ -10,9 +10,7 @@
 //////////////////////////////////////////////////////////////////////
 
 //#include "port.h"
-#pragma warning(disable:4100) //unreferenced formal parameter
 #include "textconsole.h"
-#pragma warning(default:4100) //unreferenced formal parameter
 #include "utlvector.h"
 #include "tier1/strtools.h"
 
@@ -159,7 +157,7 @@ void CTextConsole::ReceiveBackspace( void )
 
 void CTextConsole::ReceiveTab( void )
 {
-	CUtlVector<char *> matches;
+	std::vector< char * > matches;
 
 	//if ( !m_System )
 	//	return;
@@ -168,12 +166,12 @@ void CTextConsole::ReceiveTab( void )
 
 	//m_System->GetCommandMatches( m_szConsoleText, &matches );
 
-	if ( matches.Count() == 0 )
+	if ( matches.empty() )
 	{
 		return;
 	}
 
-	if ( matches.Count() == 1 )
+	if ( std::ssize( matches ) == 1 )
 	{
 		char * pszCmdName;
 		char * pszRest;

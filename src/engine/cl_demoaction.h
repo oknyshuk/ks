@@ -11,7 +11,7 @@
 // Forward declarations
 #include <keyvalues.h>
 
-class CUtlBuffer;
+#include "tier1/text_writer.h"
 class CBaseDemoAction;
 class CBaseActionEditDialog;
 class CDemoEditorPanel;
@@ -96,7 +96,7 @@ public:
 
 	virtual void			Reset( void );
 
-	virtual void			SaveKeysToBuffer( int depth, CUtlBuffer& buf );
+	virtual void			SaveKeysToBuffer( int depth, ks::text_writer& buf );
 
 	virtual void			OnActionFinished( void );
 
@@ -127,7 +127,7 @@ public:
 	char const				*GetActionTarget( void ) const;
 	void					SetActionTarget( char const *name );
 
-	void					SaveToBuffer( int depth, int index, CUtlBuffer& buf );
+	void					SaveToBuffer( int depth, int index, ks::text_writer& buf );
 
 public:
 
@@ -148,7 +148,7 @@ public:
 	static bool				HasEditorFactory( DEMOACTION actionType );
 
 	// Serialization helper ( handles indenting )
-	static void				BufPrintf( int depth, CUtlBuffer& buf, char const *fmt, ... );
+	static void				BufPrintf( int depth, ks::text_writer& buf, char const *fmt, ... );
 
 private:
 

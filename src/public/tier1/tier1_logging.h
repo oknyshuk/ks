@@ -9,7 +9,7 @@
 
 
 #include "logging.h"
-#include "utlbuffer.h"
+#include "tier1/byte_writer.h"
 #include "color.h"
 
 class CBufferedLoggingListener : public ILoggingListener
@@ -23,7 +23,7 @@ public:
 
 private:
 
-	CUtlBuffer m_StoredSpew;
+	ks::byte_writer m_StoredSpew;
 };
 
 #endif // TIER1_LOGGING_H

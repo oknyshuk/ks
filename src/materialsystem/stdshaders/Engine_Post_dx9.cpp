@@ -16,9 +16,6 @@
 
 #include "../materialsystem_global.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 ConVar mat_screen_blur_override( "mat_screen_blur_override", "-1.0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
 ConVar mat_depth_blur_focal_distance_override( "mat_depth_blur_focal_distance_override", "-1.0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
 ConVar mat_depth_blur_strength_override( "mat_depth_blur_strength_override", "-1.0", FCVAR_MATERIAL_SYSTEM_THREAD | FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY );
@@ -333,7 +330,7 @@ BEGIN_VS_SHADER_FLAGS( Engine_Post_dx9, "Engine post-processing effects (softwar
 			pShaderShadow->EnableSRGBRead( SHADER_SAMPLER1, bForceSRGBReadsAndWrites );
 
 			// Up to 4 (sRGB) color-correction lookup textures are bound to samplers 2-5:
-			int nLookupCount = MIN( (int) params[NUM_LOOKUPS]->GetFloatValue(), 3 );
+			int nLookupCount = std::min( (int) params[NUM_LOOKUPS]->GetFloatValue(), 3 );
 			for( int i = 0 ; i < nLookupCount; i++ )
 			{
 				pShaderShadow->EnableTexture(  ( Sampler_t ) ( SHADER_SAMPLER2 + i ), true );
@@ -456,7 +453,7 @@ BEGIN_VS_SHADER_FLAGS( Engine_Post_dx9, "Engine post-processing effects (softwar
 				}
 			}
 
-			int colCorrectNumLookups = MIN( ccInfo.m_nLookupCount, 3 );
+			int colCorrectNumLookups = std::min( ccInfo.m_nLookupCount, 3 );
 			if ( colCorrectNumLookups )
 			{
 				int i;

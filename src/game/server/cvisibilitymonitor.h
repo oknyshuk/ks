@@ -7,9 +7,6 @@
 
 #include "cbase.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // A callback which will automatically be used instead of generating the generic
 // 'on_entity_visible' game event. Often used so that the entity can generate
 // its own, more unique game event. 

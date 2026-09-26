@@ -12,9 +12,6 @@
 #include "c_func_brush.h"
 #include "collisionutils.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 IMPLEMENT_REFLECT_CLIENTCLASS( C_BaseTrigger, DT_BaseTrigger, CBaseTrigger )
 
 //-----------------------------------------------------------------------------

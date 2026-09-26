@@ -16,7 +16,7 @@ public:
 	virtual bool Init( KeyValues *pInitData );
 	virtual bool Update( const DemoActionTimingContext& tc );
 	virtual void FireAction( void );
-	virtual void SaveKeysToBuffer( int depth, CUtlBuffer& buf );
+	virtual void SaveKeysToBuffer( int depth, ks::text_writer& buf );
 
 	void SetSkipToTick( int tick );
 	void SetSkipToTime( float t );
@@ -56,7 +56,7 @@ class CDemoActionPlayCommands : public CBaseDemoAction
 public:
 	virtual bool Init( KeyValues *pInitData );
 	virtual void FireAction( void );
-	virtual void SaveKeysToBuffer( int depth, CUtlBuffer& buf );
+	virtual void SaveKeysToBuffer( int depth, ks::text_writer& buf );
 
 	void		SetCommandStream( char const *stream );
 	char const	*GetCommandStream( void ) const;
@@ -81,7 +81,7 @@ class CDemoActionScreenFadeStart : public CBaseDemoAction
 public:
 	virtual bool Init( KeyValues *pInitData );
 	virtual void FireAction( void );
-	virtual void SaveKeysToBuffer( int depth, CUtlBuffer& buf );
+	virtual void SaveKeysToBuffer( int depth, ks::text_writer& buf );
 
 	ScreenFade_t *GetScreenFade( void );
 
@@ -101,7 +101,7 @@ class CDemoActionTextMessageStart : public CBaseDemoAction
 public:
 	virtual bool Init( KeyValues *pInitData );
 	virtual void			FireAction( void );
-	virtual void SaveKeysToBuffer( int depth, CUtlBuffer& buf );
+	virtual void SaveKeysToBuffer( int depth, ks::text_writer& buf );
 
 	client_textmessage_t *GetTextMessage( void );
 
@@ -133,7 +133,7 @@ class CDemoActionCDTrackStart : public CBaseDemoAction
 public:
 	virtual bool Init( KeyValues *pInitData );
 	virtual void			FireAction( void );
-	virtual void SaveKeysToBuffer( int depth, CUtlBuffer& buf );
+	virtual void SaveKeysToBuffer( int depth, ks::text_writer& buf );
 
 	void		SetTrack( int track );
 	int			GetTrack( void ) const;
@@ -165,7 +165,7 @@ class CDemoActionPlaySoundStart : public CBaseDemoAction
 public:
 	virtual bool Init( KeyValues *pInitData );
 	virtual void			FireAction( void );
-	virtual void SaveKeysToBuffer( int depth, CUtlBuffer& buf );
+	virtual void SaveKeysToBuffer( int depth, ks::text_writer& buf );
 
 	void		SetSoundName( char const *name );
 	char const	*GetSoundName( void ) const;
@@ -190,7 +190,7 @@ class CBaseDemoActionWithStopTime : public CBaseDemoAction
 public:
 	virtual bool Init( KeyValues *pInitData );
 	virtual bool Update( const DemoActionTimingContext& tc );
-	virtual void SaveKeysToBuffer( int depth, CUtlBuffer& buf );
+	virtual void SaveKeysToBuffer( int depth, ks::text_writer& buf );
 
 	void		SetStopTick( int tick );
 	void		SetStopTime( float time );
@@ -218,7 +218,7 @@ public:
 	virtual void FireAction( void );
 	virtual void	OnActionFinished( void );
 
-	virtual void SaveKeysToBuffer( int depth, CUtlBuffer& buf );
+	virtual void SaveKeysToBuffer( int depth, ks::text_writer& buf );
 
 	void		SetPlaybackRate( float rate );
 	float		GetPlaybackRate( void ) const;
@@ -244,7 +244,7 @@ public:
 	virtual bool Init( KeyValues *pInitData );
 	virtual void FireAction( void );
 
-	virtual void SaveKeysToBuffer( int depth, CUtlBuffer& buf );
+	virtual void SaveKeysToBuffer( int depth, ks::text_writer& buf );
 
 	void		SetPauseTime( float t );
 	float		GetPauseTime( void ) const;
@@ -265,7 +265,7 @@ public:
 	virtual bool Init( KeyValues *pInitData );
 	virtual bool Update( const DemoActionTimingContext& tc );
 	virtual void FireAction( void );
-	virtual void SaveKeysToBuffer( int depth, CUtlBuffer& buf );
+	virtual void SaveKeysToBuffer( int depth, ks::text_writer& buf );
 private:
 
 	bool			m_bSpline;

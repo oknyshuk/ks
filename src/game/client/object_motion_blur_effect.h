@@ -60,7 +60,7 @@ private:
 		static const int ENTRY_IN_USE = -2;
 	};
 
-	CUtlVector< ObjectMotionBlurDefinition_t > m_ObjectMotionBlurDefinitions;
+	std::vector< ObjectMotionBlurDefinition_t > m_ObjectMotionBlurDefinitions;
 	int m_nFirstFreeSlot;
 };
 

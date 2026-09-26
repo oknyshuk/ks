@@ -50,9 +50,6 @@
 
 void PrecachePhysicsSounds( void );
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar phys_speeds( "phys_speeds", "0" );
 ConVar phys_show_active( "phys_show_active", "0", FCVAR_CHEAT );
 
@@ -120,7 +117,7 @@ public:
 	bool FindOrAddVehicleScript( const char *pScriptName, vehicleparams_t *pVehicle, vehiclesounds_t *pSounds );
 	void FlushVehicleScripts()
 	{
-		m_vehicleScripts.RemoveAll();
+		m_vehicleScripts.clear();
 	}
 
 	bool ShouldSimulate()
@@ -129,10 +126,10 @@ public:
 	}
 
 	physicssound::soundlist_t m_impactSounds;
-	CUtlVector<physicssound::breaksound_t> m_breakSounds;
+	std::vector< physicssound::breaksound_t > m_breakSounds;
 
-	CUtlVector<masscenteroverride_t>	m_massCenterOverrides;
-	CUtlVector<vehiclescript_t>			m_vehicleScripts;
+	std::vector< masscenteroverride_t >	m_massCenterOverrides;
+	std::vector< vehiclescript_t >			m_vehicleScripts;
 
 	float		m_impactSoundTime;
 	bool		m_bPaused;
@@ -174,7 +171,7 @@ bool CPhysicsHook::Init( void )
 
 	m_isFinalTick = true;
 	m_impactSoundTime = 0;
-	m_vehicleScripts.EnsureCapacity(4);
+	m_vehicleScripts.reserve( 4 );
 	return true;
 }
 
@@ -262,8 +259,8 @@ void CPhysicsHook::LevelShutdownPostEntity()
 	delete g_pShadowEntities;
 	g_pShadowEntities = nullptr;
 	m_impactSounds.RemoveAll();
-	m_breakSounds.RemoveAll();
-	m_massCenterOverrides.Purge();
+	m_breakSounds.clear();
+	m_massCenterOverrides.clear(); m_massCenterOverrides.shrink_to_fit();
 	FlushVehicleScripts();
 }
 
@@ -272,7 +269,7 @@ bool CPhysicsHook::FindOrAddVehicleScript( const char *pScriptName, vehicleparam
 {
 	bool bLoadedSounds = false;
 	int index = -1;
-	for ( int i = 0; i < m_vehicleScripts.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_vehicleScripts ); i++ )
 	{
 		if ( !Q_stricmp(m_vehicleScripts[i].scriptName.ToCStr(), pScriptName) )
 		{
@@ -288,7 +285,7 @@ bool CPhysicsHook::FindOrAddVehicleScript( const char *pScriptName, vehicleparam
 		if ( pFile )
 		{
 			// new script, parse it and write to the table
-			index = m_vehicleScripts.AddToTail();
+			index = std::ssize( m_vehicleScripts ); m_vehicleScripts.emplace_back();
 			m_vehicleScripts[index].scriptName = AllocPooledString(pScriptName);
 			m_vehicleScripts[index].sounds.Init();
 
@@ -781,24 +778,24 @@ static void UpdateEntityPenetrationFlag( CBaseEntity *pEntity, bool isPenetratin
 	}
 }
 
-void CCollisionEvent::GetListOfPenetratingEntities( CBaseEntity *pSearch, CUtlVector<CBaseEntity *> &list )
+void CCollisionEvent::GetListOfPenetratingEntities( CBaseEntity *pSearch, std::vector< CBaseEntity * > &list )
 {
-	for ( int i = m_penetrateEvents.Count()-1; i >= 0; --i )
+	for ( int i = std::ssize( m_penetrateEvents )-1; i >= 0; --i )
 	{
 		if ( m_penetrateEvents[i].hEntity0 == pSearch && m_penetrateEvents[i].hEntity1.Get() != nullptr )
 		{
-			list.AddToTail( m_penetrateEvents[i].hEntity1 );
+			list.push_back( m_penetrateEvents[i].hEntity1 );
 		}
 		else if ( m_penetrateEvents[i].hEntity1 == pSearch && m_penetrateEvents[i].hEntity0.Get() != nullptr )
 		{
-			list.AddToTail( m_penetrateEvents[i].hEntity0 );
+			list.push_back( m_penetrateEvents[i].hEntity0 );
 		}
 	}
 }
 
 void CCollisionEvent::UpdatePenetrateEvents( void )
 {
-	for ( int i = m_penetrateEvents.Count()-1; i >= 0; --i )
+	for ( int i = std::ssize( m_penetrateEvents )-1; i >= 0; --i )
 	{
 		CBaseEntity *pEntity0 = m_penetrateEvents[i].hEntity0;
 		CBaseEntity *pEntity1 = m_penetrateEvents[i].hEntity1;
@@ -875,7 +872,7 @@ void CCollisionEvent::UpdatePenetrateEvents( void )
 			continue;
 		}
 		// done, clear event
-		m_penetrateEvents.FastRemove(i);
+		ks::swap_remove( m_penetrateEvents, i );
 		UpdateEntityPenetrationFlag( pEntity0, false );
 		UpdateEntityPenetrationFlag( pEntity1, false );
 	}
@@ -884,7 +881,7 @@ void CCollisionEvent::UpdatePenetrateEvents( void )
 penetrateevent_t &CCollisionEvent::FindOrAddPenetrateEvent( CBaseEntity *pEntity0, CBaseEntity *pEntity1 )
 {
 	int index = -1;
-	for ( int i = m_penetrateEvents.Count()-1; i >= 0; --i )
+	for ( int i = std::ssize( m_penetrateEvents )-1; i >= 0; --i )
 	{
 		if ( m_penetrateEvents[i].hEntity0.Get() == pEntity0 && m_penetrateEvents[i].hEntity1.Get() == pEntity1 )
 		{
@@ -894,7 +891,7 @@ penetrateevent_t &CCollisionEvent::FindOrAddPenetrateEvent( CBaseEntity *pEntity
 	}
 	if ( index < 0 )
 	{
-		index = m_penetrateEvents.AddToTail();
+		index = std::ssize( m_penetrateEvents ); m_penetrateEvents.emplace_back();
 		penetrateevent_t &event = m_penetrateEvents[index];
 		event.hEntity0 = pEntity0;
 		event.hEntity1 = pEntity1;
@@ -911,7 +908,7 @@ penetrateevent_t &CCollisionEvent::FindOrAddPenetrateEvent( CBaseEntity *pEntity
 
 void CCollisionEvent::RemovePenetrationEvents( CBaseEntity *pEntity )
 {
-	for ( int i = m_penetrateEvents.Count()-1; i >= 0; --i )
+	for ( int i = std::ssize( m_penetrateEvents )-1; i >= 0; --i )
 	{
 		penetrateevent_t &event = m_penetrateEvents[i];
 		CBaseEntity *pEntity0 = event.hEntity0;
@@ -933,7 +930,7 @@ void CCollisionEvent::RemovePenetrationEvents( CBaseEntity *pEntity )
 				}                                              
 			}
 
-			m_penetrateEvents.FastRemove(i);
+			ks::swap_remove( m_penetrateEvents, i );
 			UpdateEntityPenetrationFlag( pEntity0, false );
 			UpdateEntityPenetrationFlag( pEntity1, false );
 		}
@@ -1167,16 +1164,16 @@ void PhysSetMassCenterOverride( masscenteroverride_t &override )
 {
 	if ( override.entityName != NULL_STRING )
 	{
-		g_PhysicsHook.m_massCenterOverrides.AddToTail( override );
+		g_PhysicsHook.m_massCenterOverrides.push_back( override );
 	}
 }
 
 // NOTE: This will remove the entry from the list as well
 int PhysGetMassCenterOverrideIndex( string_t name )
 {
-	if ( name != NULL_STRING && g_PhysicsHook.m_massCenterOverrides.Count() )
+	if ( name != NULL_STRING && std::ssize( g_PhysicsHook.m_massCenterOverrides ) )
 	{
-		for ( int i = 0; i < g_PhysicsHook.m_massCenterOverrides.Count(); i++ )
+		for ( int i = 0; i < std::ssize( g_PhysicsHook.m_massCenterOverrides ); i++ )
 		{
 			if ( g_PhysicsHook.m_massCenterOverrides[i].entityName == name )
 			{
@@ -1211,7 +1208,7 @@ void PhysGetMassCenterOverride( CBaseEntity *pEntity, vcollide_t *pCollide, soli
 			}
 			break;
 		}
-		g_PhysicsHook.m_massCenterOverrides.FastRemove( index );
+		ks::swap_remove( g_PhysicsHook.m_massCenterOverrides, index );
 
 		if ( solidOut.massCenterOverride.Length() > DIST_EPSILON )
 		{
@@ -1319,9 +1316,9 @@ static void OutputVPhysicsDebugInfo( CBaseEntity *pEntity )
 	if ( pEntity )
 	{
 		Msg("Entity %s (%s) %s Collision Group %d\n", pEntity->GetClassname(), pEntity->GetDebugName(), pEntity->IsNavIgnored() ? "NAV IGNORE" : "", pEntity->GetCollisionGroup() );
-		CUtlVector<CBaseEntity *> list;
+		std::vector< CBaseEntity * > list;
 		g_Collisions.GetListOfPenetratingEntities( pEntity, list );
-		for ( int i = 0; i < list.Count(); i++ )
+		for ( int i = 0; i < std::ssize( list ); i++ )
 		{
 			Msg("  penetration with entity %s (%s)\n", list[i]->GetDebugName(), STRING(list[i]->GetModelName()) );
 		}
@@ -1351,7 +1348,7 @@ class CConstraintFloodEntry
 public:
 	CConstraintFloodEntry() : isMarked(false), isConstraint(false) {}
 
-	CUtlVector<CBaseEntity *> linkList;
+	std::vector< CBaseEntity * > linkList;
 	bool isMarked;
 	bool isConstraint;
 };
@@ -1361,9 +1358,7 @@ class CConstraintFloodList
 public:
 	CConstraintFloodList()
 	{
-		SetDefLessFunc( m_list );
-		m_list.EnsureCapacity(64);
-		m_entryList.EnsureCapacity(64);
+		m_entryList.reserve( 64 );
 	}
 
 	bool IsWorldEntity( CBaseEntity *pEnt )
@@ -1377,38 +1372,38 @@ public:
 	{
 		if ( !pEntity || !pLink || IsWorldEntity(pEntity) || IsWorldEntity(pLink) )
 			return;
-		int listIndex = m_list.Find(pEntity);
-		if ( listIndex == m_list.InvalidIndex() )
+		auto it = m_list.find(pEntity);
+		if ( it == m_list.end() )
 		{
-			int entryIndex = m_entryList.AddToTail();
+			int entryIndex = std::ssize( m_entryList ); m_entryList.emplace_back();
 			m_entryList[entryIndex].isConstraint = bIsConstraint;
-			listIndex = m_list.Insert( pEntity, entryIndex );
+			it = m_list.emplace( pEntity, entryIndex ).first;
 		}
-		int entryIndex = m_list.Element(listIndex);
-		CConstraintFloodEntry &entry = m_entryList.Element(entryIndex);
+		int entryIndex = it->second;
+		CConstraintFloodEntry &entry = m_entryList[ entryIndex ];
 		Assert( entry.isConstraint == bIsConstraint );
-		if ( entry.linkList.Find(pLink) < 0 )
+		if ( ks::find_index( entry.linkList, pLink ) < 0 )
 		{
-			entry.linkList.AddToTail( pLink );
+			entry.linkList.push_back( pLink );
 		}
 	}
 
-	void BuildGraphFromEntity( CBaseEntity *pEntity, CUtlVector<CBaseEntity *> &constraintList )
+	void BuildGraphFromEntity( CBaseEntity *pEntity, std::vector< CBaseEntity * > &constraintList )
 	{
-		int listIndex = m_list.Find(pEntity);
-		if ( listIndex != m_list.InvalidIndex() )
+		auto it = m_list.find(pEntity);
+		if ( it != m_list.end() )
 		{
-			int entryIndex = m_list.Element(listIndex);
-			CConstraintFloodEntry &entry = m_entryList.Element(entryIndex);
+			int entryIndex = it->second;
+			CConstraintFloodEntry &entry = m_entryList[ entryIndex ];
 			if ( !entry.isMarked )
 			{
 				if ( entry.isConstraint )
 				{
-					Assert( constraintList.Find(pEntity) < 0);
-					constraintList.AddToTail( pEntity );
+					Assert( ks::find_index( constraintList, pEntity ) < 0);
+					constraintList.push_back( pEntity );
 				}
 				entry.isMarked = true;
-				for ( int i = 0; i < entry.linkList.Count(); i++ )
+				for ( int i = 0; i < std::ssize( entry.linkList ); i++ )
 				{
 					// now recursively traverse the graph from here
 					BuildGraphFromEntity( entry.linkList[i], constraintList );
@@ -1416,8 +1411,8 @@ public:
 			}
 		}
 	}
-	CUtlMap<CBaseEntity *, int>	m_list;
-	CUtlVector<CConstraintFloodEntry> m_entryList;
+	std::map<CBaseEntity *, int>	m_list;
+	std::vector< CConstraintFloodEntry > m_entryList;
 };
 
 // traverses the graph of attachments (currently supports springs & constraints) starting at an entity
@@ -1446,9 +1441,9 @@ static void DebugConstraints( CBaseEntity *pEntity )
 		}
 	}
 
-	CUtlVector<CBaseEntity *> constraints;
+	std::vector< CBaseEntity * > constraints;
 	list.BuildGraphFromEntity( pEntity, constraints );
-	for ( int i = 0; i < constraints.Count(); i++ )
+	for ( int i = 0; i < std::ssize( constraints ); i++ )
 	{
 		if ( !GetConstraintAttachments(constraints[i], pAttach, pAttachVPhysics) )
 		{
@@ -1551,7 +1546,7 @@ CON_COMMAND( physics_budget, "Times the cost of each active object" )
 	int activeCount = physenv->GetActiveObjectCount();
 
 	IPhysicsObject **pActiveList = nullptr;
-	CUtlVector<CBaseEntity *> ents;
+	std::vector< CBaseEntity * > ents;
 	if ( activeCount )
 	{
 		int i;
@@ -1564,7 +1559,7 @@ CON_COMMAND( physics_budget, "Times the cost of each active object" )
 			if ( pEntity )
 			{
 				int index = -1;
-				for ( int j = 0; j < ents.Count(); j++ )
+				for ( int j = 0; j < std::ssize( ents ); j++ )
 				{
 					if ( pEntity == ents[j] )
 					{
@@ -1575,15 +1570,15 @@ CON_COMMAND( physics_budget, "Times the cost of each active object" )
 				if ( index >= 0 )
 					continue;
 
-				ents.AddToTail( pEntity );
+				ents.push_back( pEntity );
 			}
 		}
 		stackfree( pActiveList );
 
-		if ( !ents.Count() )
+		if ( ents.empty() )
 			return;
 
-		CUtlVector<double> times;
+		std::vector< double > times;
 		double totalTime = 0.f;
 		g_Collisions.BufferTouchEvents( true );
 		double full = Plat_FloatTime();
@@ -1594,13 +1589,13 @@ CON_COMMAND( physics_budget, "Times the cost of each active object" )
 		full = Plat_FloatTime() - full;
 		double lastTime = full;
 
-		times.SetSize( ents.Count() );
+		times.assign( std::ssize( ents ), {} );
 
 
 		// NOTE: This is just a heuristic.  Attempt to estimate cost by putting each object to sleep in turn.
 		//	note that simulation may wake the objects again and some costs scale with sets of objects/constraints/etc
 		//	so these are only generally useful for broad questions, not real metrics!
-		for ( i = 0; i < ents.Count(); i++ )
+		for ( i = 0; i < std::ssize( ents ); i++ )
 		{
 			for ( int j = 0; j < i; j++ )
 			{
@@ -1620,8 +1615,8 @@ CON_COMMAND( physics_budget, "Times the cost of each active object" )
 			lastTime = elapsed;
  		}
 
-		totalTime = MAX( totalTime, 0.001 );
-		for ( i = 0; i < ents.Count(); i++ )
+		totalTime = std::max( totalTime, 0.001 );
+		for ( i = 0; i < std::ssize( ents ); i++ )
 		{
 			float fraction = times[i] / totalTime;
 			Msg( "%s (%s): %.3fms (%.3f%%) @ %s\n", ents[i]->GetClassname(), ents[i]->GetDebugName(), fraction * totalTime * 1000.0f, fraction * 100.0f, VecToString(ents[i]->GetAbsOrigin()) );
@@ -1827,10 +1822,10 @@ void CCollisionEvent::PreCollision( vcollisionevent_t *pEvent )
 					// so make it fairly small and have a tiny collision instead.
 					pObject->GetVelocity( &velocity, &angVel );
 					float len = VectorNormalize(velocity);
-					len = MAX( len, 10 );
+					len = std::max<std::common_type_t<float, int>>( len, 10 );
 					velocity *= len;
 					len = VectorNormalize(angVel);
-					len = MAX( len, 1 );
+					len = std::max<std::common_type_t<float, int>>( len, 1 );
 					angVel *= len;
 					pObject->SetVelocity( &velocity, &angVel );
 				}
@@ -1978,11 +1973,11 @@ void CCollisionEvent::ShutdownFriction( friction_t &friction )
 void CCollisionEvent::UpdateRemoveObjects()
 {
 	Assert(!PhysIsInCallback());
-	for ( int i = 0 ; i < m_removeObjects.Count(); i++ )
+	for ( int i = 0 ; i < std::ssize( m_removeObjects ); i++ )
 	{
 		UTIL_Remove(m_removeObjects[i]);
 	}
-	m_removeObjects.RemoveAll();
+	m_removeObjects.clear();
 }
 
 void CCollisionEvent::PostSimulationFrame()
@@ -1997,7 +1992,7 @@ void CCollisionEvent::FlushQueuedOperations()
 	int loopCount = 0;
 	while ( loopCount < 20 )
 	{
-		int count = m_triggerEvents.Count() + m_touchEvents.Count() + m_damageEvents.Count() + m_removeObjects.Count() + g_PostSimulationQueue.Count();
+		int count = std::ssize( m_triggerEvents ) + std::ssize( m_touchEvents ) + std::ssize( m_damageEvents ) + std::ssize( m_removeObjects ) + g_PostSimulationQueue.Count();
 		if ( !count )
 			break;
 		// testing, if this assert fires it proves we've fixed the crash
@@ -2038,11 +2033,11 @@ void PhysOnCleanupDeleteList()
 
 void CCollisionEvent::UpdateFluidEvents( void )
 {
-	for ( int i = m_fluidEvents.Count()-1; i >= 0; --i )
+	for ( int i = std::ssize( m_fluidEvents )-1; i >= 0; --i )
 	{
 		if ( (gpGlobals->curtime - m_fluidEvents[i].impactTime) > FLUID_TIME_MAX )
 		{
-			m_fluidEvents.FastRemove(i);
+			ks::swap_remove( m_fluidEvents, i );
 		}
 	}
 }
@@ -2050,7 +2045,7 @@ void CCollisionEvent::UpdateFluidEvents( void )
 
 float CCollisionEvent::DeltaTimeSinceLastFluid( CBaseEntity *pEntity )
 {
-	for ( int i = m_fluidEvents.Count()-1; i >= 0; --i )
+	for ( int i = std::ssize( m_fluidEvents )-1; i >= 0; --i )
 	{
 		if ( m_fluidEvents[i].hEntity.Get() == pEntity )
 		{
@@ -2058,7 +2053,7 @@ float CCollisionEvent::DeltaTimeSinceLastFluid( CBaseEntity *pEntity )
 		}
 	}
 
-	int index = m_fluidEvents.AddToTail();
+	int index = std::ssize( m_fluidEvents ); m_fluidEvents.emplace_back();
 	m_fluidEvents[index].hEntity = pEntity;
 	m_fluidEvents[index].impactTime = gpGlobals->curtime;
 	return FLUID_TIME_MAX;
@@ -2105,7 +2100,7 @@ void CCollisionEvent::UpdateTouchEvents( void )
 	// Turn on buffering in case new touch events occur during processing
 	bool bOldTouchEvents = m_bBufferTouchEvents;
 	m_bBufferTouchEvents = true;
-	for ( i = 0; i < m_touchEvents.Count(); i++ )
+	for ( i = 0; i < std::ssize( m_touchEvents ); i++ )
 	{
 		const touchevent_t &event = m_touchEvents[i];
 		if ( event.touchType == TOUCH_START )
@@ -2118,9 +2113,9 @@ void CCollisionEvent::UpdateTouchEvents( void )
 			DispatchEndTouch( event.pEntity0, event.pEntity1 );
 		}
 	}
-	m_touchEvents.RemoveAll();
+	m_touchEvents.clear();
 
-	for ( i = 0; i < m_triggerEvents.Count(); i++ )
+	for ( i = 0; i < std::ssize( m_triggerEvents ); i++ )
 	{
 		m_currentTriggerEvent = m_triggerEvents[i];
 		if ( m_currentTriggerEvent.bStart )
@@ -2132,14 +2127,14 @@ void CCollisionEvent::UpdateTouchEvents( void )
 			m_currentTriggerEvent.pTriggerEntity->EndTouch( m_currentTriggerEvent.pEntity );
 		}
 	}
-	m_triggerEvents.RemoveAll();
+	m_triggerEvents.clear();
 	m_currentTriggerEvent.Clear();
 	m_bBufferTouchEvents = bOldTouchEvents;
 }
 
 void CCollisionEvent::UpdateDamageEvents( void )
 {
-	for ( int i = 0; i < m_damageEvents.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_damageEvents ); i++ )
 	{
 		damageevent_t &event = m_damageEvents[i];
 
@@ -2163,8 +2158,8 @@ void CCollisionEvent::UpdateDamageEvents( void )
 			RestoreDamageInflictorState( event.pInflictorPhysics );
 		}
 	}
-	m_damageEvents.RemoveAll();
-	m_damageInflictors.RemoveAll();
+	m_damageEvents.clear();
+	m_damageInflictors.clear();
 }
 
 void CCollisionEvent::RestoreDamageInflictorState( int inflictorStateIndex, float velocityBlend )
@@ -2248,7 +2243,7 @@ void CCollisionEvent::AddTouchEvent( CBaseEntity *pEntity0, CBaseEntity *pEntity
 	if ( !pEntity0 || !pEntity1 )
 		return;
 
-	int index = m_touchEvents.AddToTail();
+	int index = std::ssize( m_touchEvents ); m_touchEvents.emplace_back();
 	touchevent_t &event = m_touchEvents[index];
 	event.pEntity0 = pEntity0;
 	event.pEntity1 = pEntity1;
@@ -2268,7 +2263,7 @@ void CCollisionEvent::AddDamageEvent( CBaseEntity *pEntity, const CTakeDamageInf
 		Assert( info.GetDamageForce() != vec3_origin && info.GetDamagePosition() != vec3_origin );
 	}
 
-	int index = m_damageEvents.AddToTail();
+	int index = std::ssize( m_damageEvents ); m_damageEvents.emplace_back();
 	damageevent_t &event = m_damageEvents[index];
 	event.pEntity = pEntity;
 	event.info = info;
@@ -2317,15 +2312,15 @@ void PostSimulation_SetVelocityEvent( IPhysicsObject *pPhysicsObject, const Vect
 
 void CCollisionEvent::AddRemoveObject(IServerNetworkable *pRemove)
 {
-	if ( pRemove && m_removeObjects.Find(pRemove) == -1 )
+	if ( pRemove && ks::find_index( m_removeObjects, pRemove ) == -1 )
 	{
-		m_removeObjects.AddToTail(pRemove);
+		m_removeObjects.push_back( pRemove );
 	}
 }
 int CCollisionEvent::FindDamageInflictor( IPhysicsObject *pInflictorPhysics )
 {
 	// UNDONE: Linear search?  Probably ok with a low count here
-	for ( int i = m_damageInflictors.Count()-1; i >= 0; --i )
+	for ( int i = std::ssize( m_damageInflictors )-1; i >= 0; --i )
 	{
 		const inflictorstate_t &state = m_damageInflictors[i];
 		if ( state.pInflictorPhysics == pInflictorPhysics )
@@ -2343,7 +2338,7 @@ int CCollisionEvent::AddDamageInflictor( IPhysicsObject *pInflictorPhysics, floa
 	// UNDONE: Should we absorb some energy here?
 	// NOTE: we can't save a delta because there could be subsequent post-fatal collisions
 
-	int addIndex = m_damageInflictors.AddToTail();
+	int addIndex = std::ssize( m_damageInflictors ); m_damageInflictors.emplace_back();
 	{
 		inflictorstate_t &state = m_damageInflictors[addIndex];
 		state.pInflictorPhysics = pInflictorPhysics;
@@ -2483,7 +2478,7 @@ void CCollisionEvent::ObjectEnterTrigger( IPhysicsObject *pTrigger, IPhysicsObje
 		// UNDONE: Don't buffer these until we can solve generating touches at object creation time
 		if ( 0 && m_bBufferTouchEvents )
 		{
-			int index = m_triggerEvents.AddToTail();
+			int index = std::ssize( m_triggerEvents ); m_triggerEvents.emplace_back();
 			m_triggerEvents[index].Init( pTriggerEntity, pTrigger, pEntity, pObject, true );
 		}
 		else
@@ -2505,7 +2500,7 @@ void CCollisionEvent::ObjectLeaveTrigger( IPhysicsObject *pTrigger, IPhysicsObje
 		// UNDONE: Don't buffer these until we can solve generating touches at object creation time
 		if ( 0 && m_bBufferTouchEvents )
 		{
-			int index = m_triggerEvents.AddToTail();
+			int index = std::ssize( m_triggerEvents ); m_triggerEvents.emplace_back();
 			m_triggerEvents[index].Init( pTriggerEntity, pTrigger, pEntity, pObject, false );
 		}
 		else
@@ -2529,7 +2524,7 @@ bool CCollisionEvent::GetTriggerEvent( triggerevent_t *pEvent, CBaseEntity *pTri
 	return false;
 }
 
-void PhysGetListOfPenetratingEntities( CBaseEntity *pSearch, CUtlVector<CBaseEntity *> &list )
+void PhysGetListOfPenetratingEntities( CBaseEntity *pSearch, std::vector< CBaseEntity * > &list )
 {
 	g_Collisions.GetListOfPenetratingEntities( pSearch, list );
 }

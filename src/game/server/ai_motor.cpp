@@ -17,9 +17,6 @@
 #include "ai_localnavigator.h"
 #include "ai_moveprobe.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #ifdef DEBUG
 ConVar	ai_draw_motor_movement( "ai_draw_motor_movement","0" );
 #endif
@@ -35,8 +32,6 @@ void DebugNoteMovementFailure()
 }
 
 // a place to put breakpoints
-#pragma warning(push)
-#pragma warning(disable:4189)
 AIMoveResult_t DbgResult( AIMoveResult_t result )
 {
 	if ( result < AIMR_OK )
@@ -296,7 +291,7 @@ AIMoveResult_t CAI_Motor::MoveClimbExecute( const Vector &climbDest, const Vecto
 	if (m_nDismountSequence != ACT_INVALID)
 	{
 		// catch situations where the climb mount/dismount finished before reaching goal
-		climbSpeed = MAX( climbSpeed, 30.0 );
+		climbSpeed = std::max<std::common_type_t<float, double>>( climbSpeed, 30.0 );
 	}
 	else
 	{
@@ -762,7 +757,7 @@ void CAI_Motor::UpdateYaw( int yawSpeed )
 	ideal = UTIL_AngleMod( GetIdealYaw() );
 
 	// FIXME: this needs a proper interval
-	float dt = MIN( 0.2, gpGlobals->curtime - GetLastThink() );
+	float dt = std::min<std::common_type_t<double, float>>( 0.2, gpGlobals->curtime - GetLastThink() );
 	
 	newYaw = AI_ClampYaw( (float)yawSpeed * 10.0, current, ideal, dt );
 		
@@ -851,11 +846,11 @@ float CAI_Motor::GetFacingDirection( Vector &vecDir )
 	int i;
 
 	// clean up facing targets
-	for (i = 0; i < m_facingQueue.Count();)
+	for (i = 0; i < std::ssize( m_facingQueue );)
 	{
 		if (!m_facingQueue[i].IsActive())
 		{
-			m_facingQueue.Remove( i );
+			m_facingQueue.erase( m_facingQueue.begin() + i );
 		}
 		else
 		{
@@ -863,7 +858,7 @@ float CAI_Motor::GetFacingDirection( Vector &vecDir )
 		}
 	}
 
-	for (i = 0; i < m_facingQueue.Count(); i++)
+	for (i = 0; i < std::ssize( m_facingQueue ); i++)
 	{
 		float flInterest = m_facingQueue[i].Interest( );
 		Vector tmp = m_facingQueue[i].GetPosition() - GetAbsOrigin();
@@ -932,7 +927,7 @@ float CAI_Motor::MinCheckDist( void )
 {
 	// Take the groundspeed into account
 	float flMoveDist = GetMoveInterval() * GetIdealSpeed();
-	float flMinDist = MAX( MinStoppingDist(), flMoveDist);
+	float flMinDist = std::max( MinStoppingDist(), flMoveDist);
 	if ( flMinDist < GetHullWidth() )
 		flMinDist = GetHullWidth();
 	return flMinDist;

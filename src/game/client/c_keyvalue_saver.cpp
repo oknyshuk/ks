@@ -9,9 +9,6 @@
 #include "c_keyvalue_saver.h"
 #include "filesystem.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 // Key Value Saver auto game system instantiation
 C_KeyValueSaver g_KeyValueSaver[ MAX_SPLITSCREEN_PLAYERS ];
@@ -54,7 +51,7 @@ void C_KeyValueSaver::Shutdown( void )
 
 	WriteAllDirtyKeyValues();
 
-	for ( int i = 0; i < m_KeyValueData.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_KeyValueData ); ++i )
 	{
 		if ( m_KeyValueData[ i ].pKeyValues )
 		{
@@ -63,7 +60,7 @@ void C_KeyValueSaver::Shutdown( void )
 		}
 	}
 
-	m_KeyValueData.RemoveAll();
+	m_KeyValueData.clear();
 
 	// Stop listening for events
 	StopListeningForAllEvents();
@@ -99,7 +96,7 @@ bool C_KeyValueSaver::InitKeyValues( const char *pchFileName, KeyValueBuilder fu
 		return false;
 	}
 
-	int nNew = m_KeyValueData.AddToTail();
+	int nNew = std::ssize( m_KeyValueData ); m_KeyValueData.emplace_back();
 	pKeyValueData = &(m_KeyValueData[ nNew ]);
 	V_strcpy( pKeyValueData->szFileName, pchFileName );
 	pKeyValueData->bDirtySaveData = false;
@@ -190,7 +187,7 @@ bool C_KeyValueSaver::WriteDirtyKeyValues( KeyValueSaverData *pKeyValueData, boo
 
 void C_KeyValueSaver::WriteAllDirtyKeyValues( void )
 {
-	for ( int i = 0; i < m_KeyValueData.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_KeyValueData ); ++i )
 	{
 		WriteDirtyKeyValues( &(m_KeyValueData[ i ]) );
 	}
@@ -198,7 +195,7 @@ void C_KeyValueSaver::WriteAllDirtyKeyValues( void )
 
 KeyValueSaverData * C_KeyValueSaver::FindKeyValueData( const char *pchFileName )
 {
-	for ( int i = 0; i < m_KeyValueData.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_KeyValueData ); ++i )
 	{
 		KeyValueSaverData *pKeyValueData = &(m_KeyValueData[ i ]);
 		if ( V_strcmp( pKeyValueData->szFileName, pchFileName ) == 0 )

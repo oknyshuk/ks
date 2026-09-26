@@ -12,9 +12,6 @@
 #include "utlvector.h"
 #include "vprof.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // enable this #define (here or in your vpc) to have 
 // each GameSystem accounted for individually in the vprof.
 // You must enable VPROF_LEVEL 1 too.
@@ -39,9 +36,9 @@ static void InvokePerFrameMethod( PerFrameGameSystemFunc_t f, char const *timed 
 static bool s_bSystemsInitted = false; 
 
 // List of all installed Game systems
-static CUtlVector<IGameSystem*> s_GameSystems( 0, 4 );
+static std::vector< IGameSystem* > s_GameSystems;
 // List of all installed Game systems
-static CUtlVector<IGameSystemPerFrame*> s_GameSystemsPerFrame( 0, 4 );
+static std::vector< IGameSystemPerFrame* > s_GameSystemsPerFrame;
 
 // The map name
 static char* s_pMapName = 0;
@@ -115,10 +112,10 @@ IGameSystemPerFrame::~IGameSystemPerFrame()
 //-----------------------------------------------------------------------------
 void IGameSystem::Add( IGameSystem* pSys )
 {
-	s_GameSystems.AddToTail( pSys );
+	s_GameSystems.push_back( pSys );
 	if ( dynamic_cast< IGameSystemPerFrame * >( pSys ) != nullptr )
 	{
-		s_GameSystemsPerFrame.AddToTail( static_cast< IGameSystemPerFrame * >( pSys ) );
+		s_GameSystemsPerFrame.push_back( static_cast< IGameSystemPerFrame * >( pSys ) );
 	}
 }
 
@@ -128,10 +125,10 @@ void IGameSystem::Add( IGameSystem* pSys )
 //-----------------------------------------------------------------------------
 void IGameSystem::Remove( IGameSystem* pSys )
 {
-	s_GameSystems.FindAndRemove( pSys );
+	ks::erase_first( s_GameSystems, pSys );
 	if ( dynamic_cast< IGameSystemPerFrame * >( pSys ) != nullptr )
 	{
-		s_GameSystemsPerFrame.FindAndRemove( static_cast< IGameSystemPerFrame * >( pSys ) );
+		ks::erase_first( s_GameSystemsPerFrame, static_cast< IGameSystemPerFrame * >( pSys ) );
 	}
 }
 
@@ -140,8 +137,8 @@ void IGameSystem::Remove( IGameSystem* pSys )
 //-----------------------------------------------------------------------------
 void IGameSystem::RemoveAll(  )
 {
-	s_GameSystems.RemoveAll();
-	s_GameSystemsPerFrame.RemoveAll();
+	s_GameSystems.clear();
+	s_GameSystemsPerFrame.clear();
 }
 
 
@@ -177,7 +174,7 @@ bool IGameSystem::InitAllSystems()
 		CAutoGameSystem *pSystem = s_pSystemList;
 		while ( pSystem )
 		{
-			if ( s_GameSystems.Find( pSystem ) == s_GameSystems.InvalidIndex() )
+			if ( ks::find_index( s_GameSystems, pSystem ) == -1 )
 			{
 				Add( pSystem );
 			}
@@ -194,7 +191,7 @@ bool IGameSystem::InitAllSystems()
 		CAutoGameSystemPerFrame *pSystem = s_pPerFrameSystemList;
 		while ( pSystem )
 		{
-			if ( s_GameSystems.Find( pSystem ) == s_GameSystems.InvalidIndex() )
+			if ( ks::find_index( s_GameSystems, pSystem ) == -1 )
 			{
 				Add( pSystem );
 			}
@@ -211,7 +208,7 @@ bool IGameSystem::InitAllSystems()
 	s_bSystemsInitted = true;
 
 	// PS3: haul the fontlib into memory; some systems (eg vgui) need it.
-	for ( i = 0; i < s_GameSystems.Count(); ++i )
+	for ( i = 0; i < std::ssize( s_GameSystems ); ++i )
 	{
 		MDLCACHE_COARSE_LOCK();
 		MDLCACHE_CRITICAL_SECTION();
@@ -305,7 +302,7 @@ void IGameSystem::UpdateAllSystems( float frametime )
 	SafeRemoveIfDesiredAllSystems();
 
 	int i;
-	int c = s_GameSystemsPerFrame.Count();
+	int c = std::ssize( s_GameSystemsPerFrame );
 	MDLCACHE_CRITICAL_SECTION();
 	for ( i = 0; i < c; ++i )
 	{
@@ -354,7 +351,7 @@ void InvokeMethod( GameSystemFunc_t f, char const *timed /*=0*/ )
 	MDLCACHE_COARSE_LOCK();
 	MDLCACHE_CRITICAL_SECTION();
 	int i;
-	int c = s_GameSystems.Count();
+	int c = std::ssize( s_GameSystems );
 	for ( i = 0; i < c ; ++i )
 	{
 		IGameSystem *sys = s_GameSystems[i];
@@ -371,7 +368,7 @@ void InvokeMethodTickProgress( GameSystemFunc_t f, char const *timed /*=0*/ )
 	NOTE_UNUSED( timed );
 
 	int i;
-	int c = s_GameSystems.Count();
+	int c = std::ssize( s_GameSystems );
 	for ( i = 0; i < c ; ++i )
 	{
 		IGameSystem *sys = s_GameSystems[i];
@@ -392,7 +389,7 @@ void InvokePerFrameMethod( PerFrameGameSystemFunc_t f, char const *timed /*=0*/ 
 	NOTE_UNUSED( timed );
 
 	int i;
-	int c = s_GameSystemsPerFrame.Count();
+	int c = std::ssize( s_GameSystemsPerFrame );
 	for ( i = 0; i < c ; ++i )
 	{
 		IGameSystemPerFrame *sys  = s_GameSystemsPerFrame[i];
@@ -414,7 +411,7 @@ void InvokePerFrameMethod( PerFrameGameSystemFunc_t f, char const *timed /*=0*/ 
 void InvokeMethodReverseOrder( GameSystemFunc_t f )
 {
 	int i;
-	int c = s_GameSystems.Count();
+	int c = std::ssize( s_GameSystems );
 	MDLCACHE_CRITICAL_SECTION();
 	for ( i = c; --i >= 0; )
 	{

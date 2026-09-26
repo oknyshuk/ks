@@ -49,11 +49,11 @@ public:
 private:
 	CStringRegistry							m_soundscapes;
 	int										m_soundscapeCount;
-	CUtlVector< CEnvSoundscape * >			m_soundscapeEntities;
-	CUtlVector<clusterSoundscapeList_t>		m_soundscapesInCluster;
-	CUtlVector<unsigned short>				m_soundscapeIndexList;
+	std::vector< CEnvSoundscape * >			m_soundscapeEntities;
+	std::vector< clusterSoundscapeList_t >		m_soundscapesInCluster;
+	std::vector< unsigned short >				m_soundscapeIndexList;
 	int										m_activeIndex;
-	CUtlVector< CUtlVector< CUtlString > >	m_soundscapeSounds;
+	std::vector< std::vector< std::string > >	m_soundscapeSounds;
 };
 
 extern CSoundscapeSystem g_SoundscapeSystem;

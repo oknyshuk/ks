@@ -47,10 +47,10 @@ public:
 
 	CActivityRemapCache( const CActivityRemapCache& src )
 	{
-		int c = src.m_cachedActivityRemaps.Count();
+		int c = std::ssize( src.m_cachedActivityRemaps );
 		for ( int i = 0; i < c; i++ )
 		{
-			m_cachedActivityRemaps.AddToTail( src.m_cachedActivityRemaps[ i ] );
+			m_cachedActivityRemaps.push_back( src.m_cachedActivityRemaps[ i ] );
 		}
 	}
 
@@ -59,19 +59,19 @@ public:
 		if ( this == &src )
 			return *this;
 
-		int c = src.m_cachedActivityRemaps.Count();
+		int c = std::ssize( src.m_cachedActivityRemaps );
 		for ( int i = 0; i < c; i++ )
 		{
-			m_cachedActivityRemaps.AddToTail( src.m_cachedActivityRemaps[ i ] );
+			m_cachedActivityRemaps.push_back( src.m_cachedActivityRemaps[ i ] );
 		}
 
 		return *this;
 	}
 
-	CUtlVector< CActivityRemap > m_cachedActivityRemaps;
+	std::vector< CActivityRemap > m_cachedActivityRemaps;
 };
 
-void UTIL_LoadActivityRemapFile( const char *filename, const char *section, CUtlVector <CActivityRemap> &entries );
+void UTIL_LoadActivityRemapFile( const char *filename, const char *section, std::vector< CActivityRemap > &entries );
 
 //=========================================================
 //=========================================================

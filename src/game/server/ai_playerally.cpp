@@ -14,9 +14,6 @@
 #include "ai_behavior_lead.h"
 #include "gameinterface.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern CServerGameDLL g_ServerGameDLL;
 
 extern ConVar rr_debugresponses;
@@ -130,7 +127,7 @@ ConceptInfo_t g_ConceptInfos[] =
 
 //-----------------------------------------------------------------------------
 
-bool ConceptStringLessFunc( const string_t &lhs, const string_t &rhs )	
+bool ConceptStringLess::operator()( const string_t &lhs, const string_t &rhs ) const
 { 
 	return CaselessStringLessThan( STRING(lhs), STRING(rhs) ); 
 }
@@ -139,44 +136,39 @@ bool ConceptStringLessFunc( const string_t &lhs, const string_t &rhs )
 
 #if AI_CONCEPTS_ARE_STRINGS
 
-class CConceptInfoMap : public CUtlMap<AIConcept_t, ConceptInfo_t *> {
-public:
-	CConceptInfoMap() :
-	  CUtlMap<AIConcept_t, ConceptInfo_t *>( CaselessStringLessThan )
-	  {
-		  for ( int i = 0; i < ARRAYSIZE(g_ConceptInfos); i++ )
-		  {
-			  Insert( g_ConceptInfos[i].conc, &g_ConceptInfos[i] );
-		  }
-	  }
-};
+typedef std::map<AIConcept_t, ConceptInfo_t *, ks::cstr_iless> CConceptInfoMap;
 
 #else
 
-bool ConceptIDLessFunc( const AIConcept_t::tGenericId &lhs, const AIConcept_t::tGenericId &rhs )	
-{ 
-	return CaselessStringLessThan( CAI_Concept::GetStringForGenericId(lhs), CAI_Concept::GetStringForGenericId(rhs) ); 
-}
-
-class CConceptInfoMap : public CUtlMap<AIConcept_t::tGenericId, ConceptInfo_t *> {
-public:
-	CConceptInfoMap() :
-	  CUtlMap<AIConcept_t::tGenericId, ConceptInfo_t *>( ConceptIDLessFunc )
-	  {
-		  for ( int i = 0; i < ARRAYSIZE(g_ConceptInfos); i++ )
-		  {
-			  Insert( g_ConceptInfos[i].conc, &g_ConceptInfos[i] );
-		  }
-	  }
+struct ConceptIDLess
+{
+	bool operator()( const AIConcept_t::tGenericId &lhs, const AIConcept_t::tGenericId &rhs ) const
+	{ 
+		return CaselessStringLessThan( CAI_Concept::GetStringForGenericId(lhs), CAI_Concept::GetStringForGenericId(rhs) ); 
+	}
 };
+
+typedef std::map<AIConcept_t::tGenericId, ConceptInfo_t *, ConceptIDLess> CConceptInfoMap;
 
 #endif
 
-static CConceptInfoMap g_ConceptInfoMap;
+static CConceptInfoMap MakeConceptInfoMap()
+{
+	CConceptInfoMap map;
+	for ( int i = 0; i < ARRAYSIZE(g_ConceptInfos); i++ )
+	{
+		CConceptInfoMap::key_type key = g_ConceptInfos[i].conc;
+		map.emplace( key, &g_ConceptInfos[i] );
+	}
+	return map;
+}
+
+static CConceptInfoMap g_ConceptInfoMap = MakeConceptInfoMap();
+// Storage for concepts added by AddCustomConcept; g_ConceptInfoMap only points at them.
+static std::vector< std::unique_ptr< ConceptInfo_t > > g_CustomConceptInfos;
 
 CAI_AllySpeechManager::CAI_AllySpeechManager()
 {
-	m_ConceptTimers.SetLessFunc( ConceptStringLessFunc );
 	Assert( !gm_pSpeechManager );
 	gm_pSpeechManager = this;
 }
@@ -188,25 +180,24 @@ CAI_AllySpeechManager::~CAI_AllySpeechManager()
 
 void CAI_AllySpeechManager::Spawn()
 {
-	Assert( g_ConceptInfoMap.Count() != 0 );
+	Assert( !g_ConceptInfoMap.empty() );
 	for ( int i = 0; i < ARRAYSIZE(g_ConceptInfos); i++ )
-		m_ConceptTimers.Insert( AllocPooledString( g_ConceptInfos[i].conc ), CSimpleSimTimer() );
+		m_ConceptTimers.try_emplace( AllocPooledString( g_ConceptInfos[i].conc ) );
 }
 
 void CAI_AllySpeechManager::AddCustomConcept( const ConceptInfo_t &conceptInfo )
 {
-	Assert( g_ConceptInfoMap.Count() != 0 );
-	Assert( m_ConceptTimers.Count() != 0 );
+	Assert( !g_ConceptInfoMap.empty() );
+	Assert( !m_ConceptTimers.empty() );
 
-	if ( g_ConceptInfoMap.Find( conceptInfo.conc ) == g_ConceptInfoMap.InvalidIndex() )
+	CConceptInfoMap::key_type key = conceptInfo.conc;
+	if ( !g_ConceptInfoMap.contains( key ) )
 	{
-		g_ConceptInfoMap.Insert( conceptInfo.conc, new ConceptInfo_t( conceptInfo ) );
+		g_CustomConceptInfos.push_back( std::make_unique< ConceptInfo_t >( conceptInfo ) );
+		g_ConceptInfoMap.emplace( key, g_CustomConceptInfos.back().get() );
 	}
 
-	if ( m_ConceptTimers.Find( AllocPooledString(conceptInfo.conc) ) == m_ConceptTimers.InvalidIndex() )
-	{
-		m_ConceptTimers.Insert( AllocPooledString( conceptInfo.conc ), CSimpleSimTimer() );
-	}
+	m_ConceptTimers.try_emplace( AllocPooledString( conceptInfo.conc ) );
 }
 
 ConceptCategoryInfo_t *CAI_AllySpeechManager::GetConceptCategoryInfo( ConceptCategory_t category )
@@ -216,9 +207,9 @@ ConceptCategoryInfo_t *CAI_AllySpeechManager::GetConceptCategoryInfo( ConceptCat
 
 ConceptInfo_t *CAI_AllySpeechManager::GetConceptInfo( AIConcept_t conc )
 {
-	int iResult = g_ConceptInfoMap.Find( conc );
+	auto it = g_ConceptInfoMap.find( conc );
 
-	return ( iResult != g_ConceptInfoMap.InvalidIndex() ) ? g_ConceptInfoMap[iResult] : nullptr;
+	return ( it != g_ConceptInfoMap.end() ) ? it->second : nullptr;
 }
 
 void CAI_AllySpeechManager::OnSpokeConcept( CAI_PlayerAlly *pPlayerAlly, AIConcept_t conc, AI_Response *response )
@@ -273,9 +264,9 @@ void CAI_AllySpeechManager::OnSpokeConcept( CAI_PlayerAlly *pPlayerAlly, AIConce
 		if ( pConceptInfo && pConceptInfo->minConceptDelay != -1 )
 		{
 			Assert( pConceptInfo->maxConceptDelay != -1 );
-			char iConceptTimer = m_ConceptTimers.Find( MAKE_STRING(conc) );
-			if ( iConceptTimer != m_ConceptTimers.InvalidIndex() )
-				m_ConceptTimers[iConceptTimer].Set( pConceptInfo->minConceptDelay, pConceptInfo->minConceptDelay );
+			auto itConceptTimer = m_ConceptTimers.find( MAKE_STRING(conc) );
+			if ( itConceptTimer != m_ConceptTimers.end() )
+				itConceptTimer->second.Set( pConceptInfo->minConceptDelay, pConceptInfo->minConceptDelay );
 		}
 	}
 }
@@ -295,9 +286,9 @@ bool CAI_AllySpeechManager::CategoryDelayExpired( ConceptCategory_t category )
 
 bool CAI_AllySpeechManager::ConceptDelayExpired( AIConcept_t conc )
 {
-	char iConceptTimer = m_ConceptTimers.Find( MAKE_STRING(conc) );
-	if ( iConceptTimer != m_ConceptTimers.InvalidIndex() )
-		return m_ConceptTimers[iConceptTimer].Expired();
+	auto itConceptTimer = m_ConceptTimers.find( MAKE_STRING(conc) );
+	if ( itConceptTimer != m_ConceptTimers.end() )
+		return itConceptTimer->second.Expired();
 	return true;
 }
 

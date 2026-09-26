@@ -10,6 +10,7 @@
 //////////////////////////////////////////////////////////////////////
 
 #include <server_class.h>
+#include <mutex>
 #include <inetmessage.h>
 #include <tier0/vprof.h>
 #include <keyvalues.h>
@@ -41,9 +42,7 @@
 #include "changeframelist.h"
 #include "ihltv.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 extern ConVar tv_snapshotrate, tv_snapshotrate1;
 
 extern CNetworkStringTableContainer *networkStringTableContainerClient;
@@ -181,7 +180,7 @@ void CDeltaEntityCache::Flush()
 		{
 			if ( m_Cache[i] != nullptr )
 			{
-				free( m_Cache[i] );
+				g_pMemAlloc->Free( m_Cache[i] );
 				m_Cache[i] = nullptr;
 			}
 		}
@@ -204,7 +203,7 @@ void CDeltaEntityCache::SetTick( int nTick, int nMaxEntities )
 	if ( m_nCacheSize <= 0 )
 		return;
 
-	m_nMaxEntities = MIN(nMaxEntities,MAX_EDICTS);
+	m_nMaxEntities = std::min(nMaxEntities,MAX_EDICTS);
 	m_nTick = nTick;
 }
 
@@ -248,7 +247,7 @@ void CDeltaEntityCache::AddDeltaBits( int nEntityIndex, int nDeltaTick, int nBit
 		if ( (int)(nBufferSize+sizeof(DeltaEntityEntry_s)) > m_nCacheSize )
 			return;  // way too big, don't even create an entry
 
-		pEntry = m_Cache[nEntityIndex] = (DeltaEntityEntry_s *) malloc( m_nCacheSize );
+		pEntry = m_Cache[nEntityIndex] = (DeltaEntityEntry_s *) MemAlloc_Alloc( m_nCacheSize );
 	}
 	else
 	{
@@ -701,7 +700,7 @@ void CHLTVServer::StartMaster(CGameClient *client)
 	if ( m_bMasterOnlyMode )
 	{
 		// we allow only one client in master only mode
-		tv_maxclients.SetValue( MIN(1,tv_maxclients.GetInt()) );
+		tv_maxclients.SetValue( std::min(1,tv_maxclients.GetInt()) );
 	}
 
 	SetMaxClients( tv_maxclients.GetInt() );
@@ -790,7 +789,7 @@ bool CHLTVServer::DispatchToRelay( CHLTVClient *pClient )
 		int numSlots = GetMaxClients();
 		if ( tv_maxclients_relayreserved.GetInt() > 0 )
 			numSlots -= tv_maxclients_relayreserved.GetInt();
-		numSlots = MAX( 0, numSlots );
+		numSlots = std::max( 0, numSlots );
 
 		int numClients = GetNumClients();
 		if ( numClients > numSlots )
@@ -801,7 +800,7 @@ bool CHLTVServer::DispatchToRelay( CHLTVClient *pClient )
 			flDispatchWeight = 1.01;
 		float myRatio = ((float)numClients/(float)numSlots) * flDispatchWeight;
 
-		myRatio = MIN( myRatio, 1.0f ); // clamp to 1
+		myRatio = std::min( myRatio, 1.0f ); // clamp to 1
 
 		// if we have a better local ratio then other proxies, keep this client here
 		if ( myRatio < fBestRatio )
@@ -895,7 +894,7 @@ int	CHLTVServer::GetHLTVSlot( void )
 
 float CHLTVServer::GetOnlineTime( void )
 {
-	return MAX(0, net_time - m_flStartTime);
+	return std::max<std::common_type_t<int, double>>(0, net_time - m_flStartTime);
 }
 
 void CHLTVServer::GetLocalStats( int &proxies, int &slots, int &clients )
@@ -903,7 +902,7 @@ void CHLTVServer::GetLocalStats( int &proxies, int &slots, int &clients )
 	int numSlots = GetMaxClients();
 	if ( tv_maxclients_relayreserved.GetInt() > 0 )
 		numSlots -= tv_maxclients_relayreserved.GetInt();
-	numSlots = MAX( 0, numSlots );
+	numSlots = std::max( 0, numSlots );
 
 	int numClients = GetNumClients();
 	if ( numClients > numSlots )
@@ -942,7 +941,7 @@ void CHLTVServer::GetGlobalStats( int &proxies, int &slots, int &clients )
 		int numSlots = GetMaxClients();
 		if ( tv_maxclients_relayreserved.GetInt() > 0 )
 			numSlots -= tv_maxclients_relayreserved.GetInt();
-		numSlots = MAX( 0, numSlots );
+		numSlots = std::max( 0, numSlots );
 		
 		int numClients = GetNumClients();
 
@@ -1035,7 +1034,7 @@ void CHLTVServer::BroadcastLocalTitle( CHLTVClient *client )
 	}
 	else
 	{
-		for ( int i = 0; i < m_Clients.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_Clients ); i++ )
 		{
 			client = Client(i);
 
@@ -1070,7 +1069,7 @@ void CHLTVServer::BroadcastLocalChat( const char *pszChat, const char *pszGroup 
 		return;
 	}
 
-	for ( int i = 0; i < m_Clients.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Clients ); i++ )
 	{
 		CHLTVClient *cl = Client(i);
 
@@ -1100,7 +1099,7 @@ void CHLTVServer::BroadcastEventLocal( IGameEvent *event, bool bReliable )
 		return;
 	}
 
-	for ( int i = 0; i < m_Clients.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Clients ); i++ )
 	{
 		CHLTVClient *cl = Client(i);
 
@@ -1362,7 +1361,7 @@ bool CHLTVServer::GetClassBaseline( ServerClass *pClass, SerializedEntityHandle_
 void CHLTVServer::LinkInstanceBaselines( void )
 {	
 	// Forces to update m_pInstanceBaselineTable.
-	AUTO_LOCK_FM( g_svInstanceBaselineMutex );
+	std::scoped_lock lock( g_svInstanceBaselineMutex );
 	GetInstanceBaselineTable(); 
 
 	Assert( m_pInstanceBaselineTable );
@@ -1506,13 +1505,13 @@ void CHLTVServer::EntityPVSCheck( CClientFrame *pFrame )
 
 	while ( true )
 	{
-		entindex = pFrame->transmit_entity.FindNextSetBit( entindex+1 );
+		entindex = ks::next_set_bit( pFrame->transmit_entity, entindex+1 );
 
 		if ( entindex < 0 )
 			break;
 			
 		// is transmit_always is set ->  no PVS check
-		if ( pFrame->transmit_always->Get(entindex) )
+		if ( (*pFrame->transmit_always)[entindex] )
 		{
 			pFrame->last_entity = entindex;
 			continue;
@@ -1548,7 +1547,7 @@ void CHLTVServer::EntityPVSCheck( CClientFrame *pFrame )
 		}
 
  		// entity is not in PVS, remove from transmit_entity list
-		pFrame->transmit_entity.Clear( entindex );
+		pFrame->transmit_entity.reset( entindex );
 	}
 }
 
@@ -1677,7 +1676,7 @@ static SerializedEntityHandle_t CreateDeltaProperties( int nTick, const PackedEn
 //given a current and previous packed data, this will determine if the entity data changed, and if so, will setup the new recipient list with the appropraite information
 static CSendProxyRecipients* CopyRecipientList( const PackedEntity* pCurrFramePacked, const PackedEntity* pPrevFramePacked )
 {
-	if( ( pPrevFramePacked != nullptr ) && pCurrFramePacked->CompareRecipients( CUtlMemory< CSendProxyRecipients >( pPrevFramePacked->GetRecipients(), pPrevFramePacked->GetNumRecipients() ) ) )
+	if( ( pPrevFramePacked != nullptr ) && pCurrFramePacked->CompareRecipients( std::span< const CSendProxyRecipients >( pPrevFramePacked->GetRecipients(), pPrevFramePacked->GetNumRecipients() ) ) )
 	{
 		//they match, so we don't need a delta buffer
 		return nullptr;
@@ -2031,7 +2030,7 @@ static void CompareSnapshot( const CFrameSnapshot* pOldSnapshot, const CFrameSna
 
 	//first off compare the valid entity list
 	CompareArray( pOldSnapshot->m_nValidEntities, pOldSnapshot->m_pValidEntities, pNewSnapshot->m_nValidEntities, pNewSnapshot->m_pValidEntities, sizeof( uint16 ) );
-	CompareArray( pOldSnapshot->m_iExplicitDeleteSlots.Count(), pOldSnapshot->m_iExplicitDeleteSlots.Base(), pNewSnapshot->m_iExplicitDeleteSlots.Count(), pNewSnapshot->m_iExplicitDeleteSlots.Base(), sizeof( int ) );
+	CompareArray( std::ssize( pOldSnapshot->m_iExplicitDeleteSlots ), pOldSnapshot->m_iExplicitDeleteSlots.data(), std::ssize( pNewSnapshot->m_iExplicitDeleteSlots ), pNewSnapshot->m_iExplicitDeleteSlots.data(), sizeof( int ) );
 
 	//now each element
 	for( int nCurrEntity = 0; nCurrEntity < pOldSnapshot->m_nValidEntities; ++nCurrEntity )
@@ -2208,13 +2207,13 @@ void CHLTVServer::ExpandDeltaFrameToFullFrame( SHLTVDeltaFrame_t *pDeltaFrame )
 			//update our entities (which we either have stored, or we need to take from the previous frame)
 			if( pDeltaEntity->m_pNewRecipients )
 			{
-				pNewPacked->SetRecipients( CUtlMemory< CSendProxyRecipients >( pDeltaEntity->m_pNewRecipients, pDeltaEntity->m_nNumRecipients ) );
+				pNewPacked->SetRecipients( std::span< const CSendProxyRecipients >( pDeltaEntity->m_pNewRecipients, pDeltaEntity->m_nNumRecipients ) );
 			}
 			else if( pDeltaEntity->m_nNumRecipients > 0 )
 			{
 				//sanity check that they didn't change, and that we have valid frame of reference
 				Assert( pPrevPacked && ( pPrevPacked->GetNumRecipients() == pDeltaEntity->m_nNumRecipients ) );
-				pNewPacked->SetRecipients( CUtlMemory< CSendProxyRecipients >( pPrevPacked->GetRecipients(), pPrevPacked->GetNumRecipients() ) );
+				pNewPacked->SetRecipients( std::span< const CSendProxyRecipients >( pPrevPacked->GetRecipients(), pPrevPacked->GetNumRecipients() ) );
 			}
 
 			//and handle expanding out our serialized values. Either we can have a new object (just steal the properties), no changes (copy the original properties) or a diff
@@ -2425,7 +2424,7 @@ void CHLTVServer::FixupConvars( CNETMsg_SetConVar_t &convars )
 void CHLTVServer::SendClientMessages( bool bSendSnapshots )
 {
 	// build individual updates
-	for ( int i=0; i< m_Clients.Count(); i++ )
+	for ( int i=0; i< std::ssize( m_Clients ); i++ )
 	{
 		CHLTVClient* client = Client(i);
 		
@@ -2561,16 +2560,10 @@ void CHLTVServer::UpdateStats( void )
 
 bool CHLTVServer::NETMsg_PlayerAvatarData( const ks::net::CNETMsg_PlayerAvatarData& msg )
 {
-	PlayerAvatarDataMap_t::IndexType_t idxData = m_mapPlayerAvatarData.Find( msg.accountid );
-	if ( idxData != m_mapPlayerAvatarData.InvalidIndex() )
-	{
-		delete m_mapPlayerAvatarData.Element( idxData );
-		m_mapPlayerAvatarData.RemoveAt( idxData );
-	}
-
-	CNETMsg_PlayerAvatarData_t *pHtlvDataCopy = new CNETMsg_PlayerAvatarData_t;
-	pHtlvDataCopy->CopyFrom( msg );
-	m_mapPlayerAvatarData.Insert( pHtlvDataCopy->accountid, pHtlvDataCopy );
+	auto pOwnedCopy = std::make_unique< CNETMsg_PlayerAvatarData_t >();
+	pOwnedCopy->CopyFrom( msg );
+	CNETMsg_PlayerAvatarData_t *pHtlvDataCopy = pOwnedCopy.get();
+	m_mapPlayerAvatarData.insert_or_assign( pHtlvDataCopy->accountid, std::move( pOwnedCopy ) );
 
 	// Enqueue this message for all fully connected clients immediately
 	for ( int iClient = 0; iClient < GetClientCount(); ++iClient )
@@ -2689,15 +2682,15 @@ CClientFrame *CHLTVServer::GetDeltaFrame( int nTick )
 	if ( !tv_deltacache.GetBool() )
 		return GetClientFrame( nTick ); //expensive
 
-	AUTO_LOCK_FM( m_FrameCacheMutex ); // we need to lock frame cache because we're potentially modifying it from multiple sendPacket threads
+	std::scoped_lock lock( m_FrameCacheMutex ); // we need to lock frame cache because we're potentially modifying it from multiple sendPacket threads
 	// TODO make that a utlmap
-	FOR_EACH_VEC( m_FrameCache, iFrame )
+	for ( const auto &cacheEntry : m_FrameCache )
 	{
-		if ( m_FrameCache[iFrame].nTick == nTick )
-			return m_FrameCache[iFrame].pFrame;
+		if ( cacheEntry.nTick == nTick )
+			return cacheEntry.pFrame;
 	}
 
-	int i = m_FrameCache.AddToTail();
+	int i = std::ssize( m_FrameCache ); m_FrameCache.emplace_back();
 
 	CFrameCacheEntry_s &entry = m_FrameCache[i];
 
@@ -2835,7 +2828,7 @@ void CHLTVServer::UpdateTick( void )
 		DeleteClientFrames( removeTick );
 	}
 
-	m_FrameCache.RemoveAll();
+	m_FrameCache.clear();
 }
 
 const char *CHLTVServer::GetName( void ) const
@@ -2902,7 +2895,7 @@ void CHLTVServer::Changelevel( bool bInactivateClients )
 	DeleteClientFrames( -1 );
 
 	m_DeltaCache.Flush();
-	m_FrameCache.RemoveAll();
+	m_FrameCache.clear();
 
 
 	//free any frames that we may have had outstanding
@@ -2921,7 +2914,7 @@ void CHLTVServer::Changelevel( bool bInactivateClients )
 	}
 
 	// Free all avatar data
-	m_mapPlayerAvatarData.PurgeAndDeleteElements();
+	m_mapPlayerAvatarData.clear();
 }
 
 void CHLTVServer::GetNetStats( float &avgIn, float &avgOut )
@@ -3113,7 +3106,7 @@ void CHLTVServer::ReadCompleteDemoFile()
 			break;
 		case dem_stringtables:
 			{
-				void *data = malloc( 512*1024 ); // X360TBD: How much memory is really needed here?
+				void *data = MemAlloc_Alloc( 512*1024 ); // X360TBD: How much memory is really needed here?
 				bf_read buf( "dem_stringtables", data, 512*1024 );
 
 				m_DemoFile.ReadStringTables( &buf );
@@ -3124,7 +3117,7 @@ void CHLTVServer::ReadCompleteDemoFile()
 					Host_Error( "Error parsing string tables during demo playback." );
 				}
 
-				free( data );
+				g_pMemAlloc->Free( data );
 			}
 			break;
 		case dem_usercmd:
@@ -3311,7 +3304,7 @@ const char *CHLTVServer::GetHltvRelayPassword() const
 
 IClient *CHLTVServer::ConnectClient ( const ns_address &adr, int protocol, int challenge, int authProtocol, 
 									 const char *name, const char *password, const char *hashedCDkey, int cdKeyLen,
-									CUtlVector< CCLCMsg_SplitPlayerConnect_t * > & splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform,
+									const SplitPlayerConnects_t &splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform,
 									const byte *pbEncryptionKey, int nEncryptionKeyIndex )
 {
 	IClient	*client = (CHLTVClient*)CBaseServer::ConnectClient( 
@@ -3328,11 +3321,11 @@ IClient *CHLTVServer::ConnectClient ( const ns_address &adr, int protocol, int c
 	return client;
 }
 
-bool CHLTVServer::GetRedirectAddressForConnectClient( const ns_address &adr, CUtlVector< CCLCMsg_SplitPlayerConnect_t* > & splitScreenClients, ns_address *pNetAdrRedirect )
+bool CHLTVServer::GetRedirectAddressForConnectClient( const ns_address &adr, const SplitPlayerConnects_t &splitScreenClients, ns_address *pNetAdrRedirect )
 {
 	bool bConnectingClientIsTvRelay = false;
 
-	if ( splitScreenClients.Count() )
+	if ( !splitScreenClients.empty() )
 	{
 		const ks::net::CMsg_CVars& convars = splitScreenClients[0]->convars;
 		for ( int i = 0; i< convars.cvars.size(); ++i )
@@ -3412,7 +3405,7 @@ bool CHLTVServer::GetRedirectAddressForConnectClient( const ns_address &adr, CUt
 		int numSlots = GetMaxClients();
 		if ( tv_maxclients_relayreserved.GetInt() > 0 )
 			numSlots -= tv_maxclients_relayreserved.GetInt();
-		numSlots = MAX( 0, numSlots );
+		numSlots = std::max( 0, numSlots );
 
 		int numClients = GetNumClients();
 		if ( numClients > numSlots )
@@ -3423,7 +3416,7 @@ bool CHLTVServer::GetRedirectAddressForConnectClient( const ns_address &adr, CUt
 			flDispatchWeight = 1.01;
 		float myRatio = ((float)numClients/(float)numSlots) * flDispatchWeight;
 
-		myRatio = MIN( myRatio, 1.0f ); // clamp to 1
+		myRatio = std::min( myRatio, 1.0f ); // clamp to 1
 
 		// if we have a better local ratio then other proxies, keep this client here
 		if ( myRatio < fBestRatio )
@@ -3693,8 +3686,8 @@ CON_COMMAND( tv_retry, "Reconnects the GOTV relay proxy " )
 			return;
 		}
 
-		ConMsg( "Commencing GOTV[%u] connection retry to %s\n", hltv.GetIndex(), hltv->m_ClientState.m_Remote.Get( 0 ).m_szRetryAddress.String() );
-		Cbuf_AddText( Cbuf_GetCurrentPlayer(), va( "tv_relay %s\n", hltv->m_ClientState.m_Remote.Get( 0 ).m_szRetryAddress.String() ) );
+		ConMsg( "Commencing GOTV[%u] connection retry to %s\n", hltv.GetIndex(), hltv->m_ClientState.m_Remote.Get( 0 ).m_szRetryAddress.c_str() );
+		Cbuf_AddText( Cbuf_GetCurrentPlayer(), va( "tv_relay %s\n", hltv->m_ClientState.m_Remote.Get( 0 ).m_szRetryAddress.c_str() ) );
 	}
 }
 

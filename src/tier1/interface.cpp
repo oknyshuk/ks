@@ -25,9 +25,6 @@
 #include "tier0/threadtools.h"
 #include "tier0/platform.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // ------------------------------------------------------------------------------------ //
 // InterfaceReg.
 // ------------------------------------------------------------------------------------ //

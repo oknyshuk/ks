@@ -8,9 +8,6 @@
 #include "reflect_recvtable.h"
 #include "reflect_annotations.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 extern bool g_bUseCustomAutoExposureMin;
 extern bool g_bUseCustomAutoExposureMax;

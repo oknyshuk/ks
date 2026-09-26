@@ -21,9 +21,6 @@
 #include "cs_gamerules.h"
 #include "weapon_csbase.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 static CStringRegistry *g_pClassnameSpawnPriority = nullptr;
 extern edict_t *g_pForceAttachEdict;
@@ -99,7 +96,7 @@ string_t ExtractParentName(string_t parentName)
 //			pEnt2 - 
 // Output : Returns -1, 0, or 1 per qsort spec.
 //-----------------------------------------------------------------------------
-static int __cdecl CompareSpawnOrder(HierarchicalSpawn_t *pEnt1, HierarchicalSpawn_t *pEnt2)
+static int CompareSpawnOrder(HierarchicalSpawn_t *pEnt1, HierarchicalSpawn_t *pEnt2)
 {
 	if (pEnt1->m_nDepth == pEnt2->m_nDepth)
 	{
@@ -390,7 +387,7 @@ void CMapEntitySpawner::AddEntity( CBaseEntity *pEntity, const char *pCurMapData
 	CPointTemplate *pTemplate = dynamic_cast< CPointTemplate* >(pEntity);
 	if ( pTemplate )
 	{
-		m_PointTemplates.AddToTail( pTemplate );
+		m_PointTemplates.push_back( pTemplate );
 	}
 	else
 	{
@@ -457,7 +454,7 @@ void MapEntity_ParseAllEntites_SpawnTemplates( CPointTemplate **pTemplates, int 
 
 void CMapEntitySpawner::HandleTemplates()
 {
-	if( m_PointTemplates.Count() == 0 )
+	if( m_PointTemplates.empty() )
 		return;
 
 	CBaseEntity **pSpawnedEntities = (CBaseEntity **)stackalloc( sizeof(CBaseEntity *) * m_nEntities );
@@ -467,7 +464,7 @@ void CMapEntitySpawner::HandleTemplates()
 	}
 
 	PurgeRemovedEntities();
-	MapEntity_ParseAllEntites_SpawnTemplates( m_PointTemplates.Base(), m_PointTemplates.Count(), pSpawnedEntities, m_pSpawnMapData, m_nEntities );
+	MapEntity_ParseAllEntites_SpawnTemplates( m_PointTemplates.data(), std::ssize( m_PointTemplates ), pSpawnedEntities, m_pSpawnMapData, m_nEntities );
 
 	//copy the entity list back since some entities may have been removed and nulled out
 	for( int i = 0; i != m_nEntities; ++i )

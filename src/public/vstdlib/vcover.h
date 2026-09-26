@@ -7,7 +7,9 @@
 #ifndef VCOVER_H
 #define VCOVER_H
 
-#include "tier1/utlrbtree.h"
+#include <set>
+#include "tier0/dbg.h"
+#include "tier1/strtools.h"
 #include "vstdlib.h"
 
 
@@ -46,7 +48,7 @@ public:
 
 	void Reset()
 	{
-		m_locations.RemoveAll();
+		m_locations.clear();
 	}
 
 	bool ShouldCover( unsigned token ) const
@@ -58,16 +60,16 @@ public:
 	{
 		Location_t location = { pszFile, line };
 
-		m_locations.Insert( location );
+		m_locations.insert( location );
 
 		return m_token;
 	}
 
 	void Report()
 	{
-		for ( int i = m_locations.FirstInorder(); i != m_locations.InvalidIndex(); i = m_locations.NextInorder( i ) )
+		for ( const Location_t &location : m_locations )
 		{
-			Msg( "%s(%d) :\n", m_locations[i].pszFile, m_locations[i].line );
+			Msg( "%s(%d) :\n", location.pszFile, location.line );
 		}
 	}
 
@@ -82,9 +84,6 @@ private:
 	class CLocationLess
 	{
 	public:
-		CLocationLess( int ignored ) {}
-		bool operator!() { return false; }
-
 		bool operator()(  const Location_t &lhs, const Location_t &rhs ) const
 		{
 			if ( lhs.line < rhs.line )
@@ -100,7 +99,7 @@ private:
 	int m_depth;
 	unsigned m_token;
 
-	CUtlRBTree< Location_t, unsigned short, CLocationLess > m_locations;
+	std::multiset< Location_t, CLocationLess > m_locations;
 };
 
 VSTDLIB_INTERFACE CVCoverage g_VCoverage;

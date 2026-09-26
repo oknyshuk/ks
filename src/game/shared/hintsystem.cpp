@@ -13,9 +13,6 @@
 	#include <igameevents.h>
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #ifdef CLIENT_DLL
 ConVar cl_showhelp( "cl_showhelp", "1", FCVAR_ARCHIVE, "Set to 0 to not show on-screen help" );
 #endif
@@ -57,8 +54,7 @@ void CHintSystem::Init( CBasePlayer *pPlayer, int iMaxHintTypes, const char **ps
 	m_pPlayer = pPlayer;	
 	m_bShowHints = true;
 
-	m_HintHistory.Resize( iMaxHintTypes );
-	m_HintHistory.ClearAll();
+	m_HintHistory.assign( iMaxHintTypes, false );
 
 	m_pszHintMessages = pszHintStrings;
 
@@ -92,7 +88,7 @@ void CHintSystem::Update( void )
 bool CHintSystem::HintMessage( int hint, bool bForce /* = false */, bool bOnlyIfClear /* = false */ )
 {
 	Assert( m_pPlayer );
-	Assert( hint < m_HintHistory.GetNumBits() );
+	Assert( hint < static_cast< int >( m_HintHistory.size() ) );
 
 	// Not really an optimal solution, but saves us querying the hud element,
 	// which wouldn't be easy with derived versions in different mods.
@@ -103,7 +99,7 @@ bool CHintSystem::HintMessage( int hint, bool bForce /* = false */, bool bOnlyIf
 	{
 		PlayedAHint();
 		HintMessage( m_pszHintMessages[hint] );
-		m_HintHistory.Set(hint);
+		m_HintHistory[hint] = true;
 		return true;
 	}
 
@@ -153,7 +149,7 @@ void CHintSystem::ResetHints( void )
 	m_pHintMessageTimers->Reset();
 
 	// Readd registered hints
-	for (int i = 0; i < m_RegisteredResetHints.Count(); i++ )
+	for (int i = 0; i < std::ssize( m_RegisteredResetHints ); i++ )
 	{
 		ReAddHintTimerIfNotDisplayed( m_RegisteredResetHints[i].iHintID, m_RegisteredResetHints[i].flTimer );
 	}
@@ -172,14 +168,14 @@ void CHintSystem::ResetHints( void )
 void CHintSystem::RegisterHintTimer( int iHintID, float flTimerDuration, bool bOnlyIfClear /* = false */, HintTimerCallback pfnCallback )
 {
 	Assert( m_pPlayer );
-	Assert( iHintID < m_HintHistory.GetNumBits() );
+	Assert( iHintID < static_cast< int >( m_HintHistory.size() ) );
 
 	onresethints_t newHint;
 	newHint.iHintID = iHintID;
 	newHint.flTimer = flTimerDuration;
 	newHint.bOnlyIfClear = bOnlyIfClear;
 	newHint.pfnCallback = pfnCallback;
-	m_RegisteredResetHints.AddToTail( newHint );
+	m_RegisteredResetHints.push_back( newHint );
 }
 
 //-----------------------------------------------------------------------------
@@ -187,7 +183,7 @@ void CHintSystem::RegisterHintTimer( int iHintID, float flTimerDuration, bool bO
 //-----------------------------------------------------------------------------
 void CHintSystem::ReAddHintTimerIfNotDisplayed( int iHintID, float flTimerDuration )
 {
-	Assert( iHintID < m_HintHistory.GetNumBits() );
+	Assert( iHintID < static_cast< int >( m_HintHistory.size() ) );
 	if ( m_HintHistory[iHintID] == 0 )
 	{
 		m_pHintMessageTimers->AddTimer( iHintID, flTimerDuration );
@@ -200,7 +196,7 @@ void CHintSystem::ReAddHintTimerIfNotDisplayed( int iHintID, float flTimerDurati
 void CHintSystem::StartHintTimer( int iHintID )
 {
 	Assert( m_pPlayer );
-	Assert( iHintID < m_HintHistory.GetNumBits() );
+	Assert( iHintID < static_cast< int >( m_HintHistory.size() ) );
 	Assert(m_pHintMessageTimers);
 	m_pHintMessageTimers->StartTimer( iHintID );
 }
@@ -211,7 +207,7 @@ void CHintSystem::StartHintTimer( int iHintID )
 void CHintSystem::StopHintTimer( int iHintID )
 {
 	Assert( m_pPlayer );
-	Assert( iHintID < m_HintHistory.GetNumBits() );
+	Assert( iHintID < static_cast< int >( m_HintHistory.size() ) );
 	Assert(m_pHintMessageTimers);
 	m_pHintMessageTimers->StopTimer( iHintID );
 }
@@ -232,12 +228,12 @@ void CHintSystem::ResetHintTimers( void )
 void CHintSystem::RemoveHintTimer( int iHintID )
 {
 	Assert( m_pPlayer );
-	Assert( iHintID < m_HintHistory.GetNumBits() );
+	Assert( iHintID < static_cast< int >( m_HintHistory.size() ) );
 	Assert(m_pHintMessageTimers);
 	m_pHintMessageTimers->RemoveTimer( iHintID );
 
 	// Mark us as having heard this hint
-	m_HintHistory.Set(iHintID);
+	m_HintHistory[iHintID] = true;
 }
 
 //-----------------------------------------------------------------------------
@@ -246,7 +242,7 @@ void CHintSystem::RemoveHintTimer( int iHintID )
 //-----------------------------------------------------------------------------
 bool CHintSystem::TimerShouldFire( int iHintID )
 {
-	for (int i = 0; i < m_RegisteredResetHints.Count(); i++ )
+	for (int i = 0; i < std::ssize( m_RegisteredResetHints ); i++ )
 	{
 		if ( m_RegisteredResetHints[i].iHintID != iHintID )
 			continue;
@@ -287,7 +283,7 @@ void CHintSystem::PlayedAHint( void )
 bool CHintSystem::HasPlayedHint( int iHintID )
 {
 	Assert( m_pPlayer );
-	Assert( iHintID < m_HintHistory.GetNumBits() );
+	Assert( iHintID < static_cast< int >( m_HintHistory.size() ) );
 	return ( m_HintHistory[iHintID] > 0 );
 }
 
@@ -297,8 +293,8 @@ bool CHintSystem::HasPlayedHint( int iHintID )
 void CHintSystem::SetHintPlayed( int iHintID )
 {
 	Assert( m_pPlayer );
-	Assert( iHintID < m_HintHistory.GetNumBits() );
-	m_HintHistory.Set(iHintID);
+	Assert( iHintID < static_cast< int >( m_HintHistory.size() ) );
+	m_HintHistory[iHintID] = true;
 }
 
 //-----------------------------------------------------------------------------

@@ -69,7 +69,7 @@ public:
 	[[= ks::reflect::Key{ .name = "filtername" } ]] string_t	m_iFilterName;
 	CHandle<class CBaseFilter>	m_hFilter;
 
-	const CUtlVector< EHANDLE > *GetTouchingEntities( void ) const
+	const std::vector< EHANDLE > *GetTouchingEntities( void ) const
 	{
 		return &m_hTouchingEntities;
 	}
@@ -85,7 +85,7 @@ protected:
 	[[= ks::reflect::Key{ .name = "OnNotTouching" } ]] COutputEvent m_OnNotTouching;
 
 	// Entities currently being touched by this trigger
-	CUtlVector< EHANDLE >	m_hTouchingEntities;
+	std::vector< EHANDLE >	m_hTouchingEntities;
 
 	DECLARE_DATADESC();
 
@@ -114,7 +114,7 @@ public:
 };
 
 // Global list of triggers that care about weapon fire
-extern CUtlVector< CHandle<CTriggerMultiple> >	g_hWeaponFireTriggers;
+extern std::vector< CHandle<CTriggerMultiple> >	g_hWeaponFireTriggers;
 
 
 //------------------------------------------------------------------------------
@@ -202,7 +202,7 @@ public:
 	[[= ks::reflect::Key{ .name = "OnHurt" } ]] COutputEvent m_OnHurt;
 	[[= ks::reflect::Key{ .name = "OnHurtPlayer" } ]] COutputEvent m_OnHurtPlayer;
 
-	CUtlVector<EHANDLE>	m_hurtEntities;
+	std::vector< EHANDLE >	m_hurtEntities;
 };
 //
 //  Callback trigger

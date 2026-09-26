@@ -24,9 +24,6 @@
 #include "engine_model_client.h"
 #include "tier0/vprof.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Convars defined by other systems
@@ -167,7 +164,6 @@ private:
 	CMaterialReference m_ShadowBuild;
 	IMatRenderContext *m_pRenderContext;
 
-	CUtlMemoryFixedGrowable< BrushModelList_t, 512 > m_BrushModelList;
 	int m_nColorMeshHandles;
 	int m_nModelTypeCount;
 	int m_nTotalModelCount;
@@ -345,7 +341,7 @@ uint CModelRenderSystem::AddModelToLists( int &nModelTypeCountInOut, ModelListBy
 	}
 
 	node.m_pNext = list.m_pFirstNode;
-	list.m_nParentDepth = MAX( list.m_nParentDepth, nParentDepth );
+	list.m_nParentDepth = std::max( list.m_nParentDepth, nParentDepth );
 	list.m_pFirstNode = &node;
 	++list.m_nCount;
 	nModelTypeCountInOut = nModelTypeCount;

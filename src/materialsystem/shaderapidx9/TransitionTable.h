@@ -12,7 +12,7 @@
 
 #include "utlvector.h"
 #include "shadershadowdx8.h"
-#include "utlsortvector.h"
+#include <flat_set>
 #include "checksum_crc.h"
 #include "shaderapi/ishaderapi.h"
 
@@ -212,22 +212,17 @@ private:
 		StateSnapshot_t m_nSnapshot;
 	};
 
-	class ShadowStateDictLessFunc
+	// Dictionary entries order by checksum; checksums can collide.
+	struct ChecksumLess
 	{
-	public:
-		bool Less( const ShadowStateDictEntry_t &src1, const ShadowStateDictEntry_t &src2, void *pCtx );
+		template < class Entry >
+		bool operator()( const Entry &src1, const Entry &src2 ) const { return src1.m_nChecksum < src2.m_nChecksum; }
 	};
 
-	class SnapshotDictLessFunc
+	// Descending by operation count
+	struct UniqueSnapshotLess
 	{
-	public:
-		bool Less( const SnapshotDictEntry_t &src1, const SnapshotDictEntry_t &src2, void *pCtx );
-	};
-
-	class UniqueSnapshotLessFunc
-	{
-	public:
-		bool Less( const TransitionList_t &src1, const TransitionList_t &src2, void *pCtx );
+		bool operator()( const TransitionList_t &src1, const TransitionList_t &src2 ) const { return src1.m_NumOperations > src2.m_NumOperations; }
 	};
 
 	CurrentSamplerState_t &SamplerState( int stage ) { return m_CurrentState.m_SamplerState[stage]; }
@@ -271,25 +266,25 @@ private:
 	StateSnapshot_t m_CurrentSnapshotId;
 
 	// Maintains a list of all used snapshot transition states
-	CUtlVector< ShadowState_t >	m_ShadowStateList;
+	std::vector< ShadowState_t >	m_ShadowStateList;
 
 	// Lookup table for fast snapshot finding
-	CUtlSortVector< ShadowStateDictEntry_t, ShadowStateDictLessFunc >	m_ShadowStateDict;
+	std::flat_multiset< ShadowStateDictEntry_t, ChecksumLess >	m_ShadowStateDict;
 
 	// The snapshot transition table
-	CUtlVector< CUtlVector< TransitionList_t > >	m_TransitionTable;
+	std::vector< std::vector< TransitionList_t > >	m_TransitionTable;
 
 	// List of unique transitions
-	CUtlSortVector< TransitionList_t, UniqueSnapshotLessFunc >	m_UniqueTransitions;
+	std::flat_multiset< TransitionList_t, UniqueSnapshotLess >	m_UniqueTransitions;
 
 	// Stores all state transition operations
-	CUtlVector< TransitionOp_t > m_TransitionOps;
+	std::vector< TransitionOp_t > m_TransitionOps;
 
 	// Stores all state for a particular snapshot
-	CUtlVector< SnapshotShaderState_t >	m_SnapshotList;
+	std::vector< SnapshotShaderState_t >	m_SnapshotList;
 
 	// Lookup table for fast snapshot finding
-	CUtlSortVector< SnapshotDictEntry_t, SnapshotDictLessFunc >	m_SnapshotDict;
+	std::flat_multiset< SnapshotDictEntry_t, ChecksumLess >	m_SnapshotDict;
 
 	// The current board state.
 	CurrentState_t m_CurrentState;
@@ -309,13 +304,13 @@ private:
 //-----------------------------------------------------------------------------
 inline const ShadowState_t &CTransitionTable::GetSnapshot( StateSnapshot_t snapshotId ) const
 {
-	Assert( (snapshotId >= 0) && (snapshotId < m_SnapshotList.Count()) );
+	Assert( (snapshotId >= 0) && (snapshotId < std::ssize( m_SnapshotList )) );
 	return m_ShadowStateList[m_SnapshotList[snapshotId].m_ShadowStateId];
 }
 
 inline const ShadowShaderState_t &CTransitionTable::GetSnapshotShader( StateSnapshot_t snapshotId ) const
 {
-	Assert( (snapshotId >= 0) && (snapshotId < m_SnapshotList.Count()) );
+	Assert( (snapshotId >= 0) && (snapshotId < std::ssize( m_SnapshotList )) );
 	return m_SnapshotList[snapshotId].m_ShaderState;
 }
 
@@ -324,7 +319,7 @@ inline const ShadowState_t *CTransitionTable::CurrentShadowState() const
 	if ( m_CurrentShadowId == -1 )
 		return nullptr;
 
-	Assert( (m_CurrentShadowId >= 0) && (m_CurrentShadowId < m_ShadowStateList.Count()) );
+	Assert( (m_CurrentShadowId >= 0) && (m_CurrentShadowId < std::ssize( m_ShadowStateList )) );
 	return &m_ShadowStateList[m_CurrentShadowId];
 }
 
@@ -333,7 +328,7 @@ inline const ShadowShaderState_t *CTransitionTable::CurrentShadowShaderState() c
 	if ( m_CurrentShadowId == -1 )
 		return nullptr;
 
-	Assert( (m_CurrentShadowId >= 0) && (m_CurrentShadowId < m_ShadowStateList.Count()) );
+	Assert( (m_CurrentShadowId >= 0) && (m_CurrentShadowId < std::ssize( m_ShadowStateList )) );
 	return &m_SnapshotList[m_CurrentShadowId].m_ShaderState;
 }
 

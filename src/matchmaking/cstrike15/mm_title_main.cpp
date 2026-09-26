@@ -9,9 +9,6 @@
 
 #include "fmtstr.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 LINK_MATCHMAKING_LIB();
 
 static CMatchTitle g_MatchTitle;

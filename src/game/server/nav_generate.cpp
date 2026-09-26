@@ -20,9 +20,6 @@
 #include "usermessages.h"
 
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 enum { MAX_BLOCKED_AREAS = 256 };
 static unsigned int blockedID[ MAX_BLOCKED_AREAS ];
@@ -256,7 +253,7 @@ void CNavMesh::CreateLadder( const Vector& absMin, const Vector& absMax, float m
 	ladder->ConnectGeneratedLadder( maxHeightAboveTopArea );
 
 	// add ladder to global list
-	m_ladders.AddToTail( ladder );		
+	m_ladders.push_back( ladder );		
 }
 
 
@@ -350,7 +347,7 @@ void CNavMesh::CreateLadder( const Vector &top, const Vector &bottom, float widt
 	ladder->ConnectGeneratedLadder( maxHeightAboveTopArea );
 
 	// add ladder to global list
-	m_ladders.AddToTail( ladder );
+	m_ladders.push_back( ladder );
 }
 
 
@@ -386,7 +383,7 @@ void CNavLadder::ConnectGeneratedLadder( float maxHeightAboveTopArea )
 	center = m_top + Vector( 0, 0, GenerationStepSize );
 	AddDirectionVector( &center, m_dir, HalfHumanWidth );
 
-	float beneathLimit = MIN( 120.0f, m_top.z - m_bottom.z + HalfHumanWidth );
+	float beneathLimit = std::min( 120.0f, m_top.z - m_bottom.z + HalfHumanWidth );
 
 	// find "ahead" area
 	m_topForwardArea = findFirstAreaInDirection( &center, OppositeDirection( m_dir ), nearLadderRange, beneathLimit, nullptr );
@@ -456,7 +453,7 @@ void CNavLadder::ConnectGeneratedLadder( float maxHeightAboveTopArea )
 	{
 		if ( maxHeightAboveTopArea > 0.0f )
 		{
-			m_top.z = MIN( topZ + maxHeightAboveTopArea, m_top.z );
+			m_top.z = std::min( topZ + maxHeightAboveTopArea, m_top.z );
 		}
 		else
 		{
@@ -517,7 +514,7 @@ private:
 
 	void TryToConnect( CNavArea *jumpArea, const NavConnectVector *source, const NavConnectVector *dest, NavDirType outgoingDir )
 	{
-		FOR_EACH_VEC( (*source), sourceIt )
+		for ( int sourceIt = 0; sourceIt < std::ssize( *source ); sourceIt++ )
 		{
 			CNavArea *sourceArea = const_cast< CNavArea * >( (*source)[ sourceIt ].area );
 			if ( !sourceArea->IsConnected( jumpArea, outgoingDir ) )
@@ -543,7 +540,7 @@ private:
 
 	void TryToConnect( CNavArea *jumpArea, CNavArea *sourceArea, const NavConnectVector *dest, NavDirType outgoingDir )
 	{
-		FOR_EACH_VEC( (*dest), destIt )
+		for ( int destIt = 0; destIt < std::ssize( *dest ); destIt++ )
 		{
 			CNavArea *destArea = const_cast< CNavArea * >( (*dest)[ destIt ].area );
 			if ( destArea->HasAttributes( NAV_MESH_JUMP ) )
@@ -601,9 +598,8 @@ void CNavMesh::MarkPlayerClipAreas( void )
  */
 void CNavMesh::MarkJumpAreas( void )
 {
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ it ];
 		if ( !area->HasNodes() )
 			continue;
 
@@ -611,7 +607,7 @@ void CNavMesh::MarkJumpAreas( void )
 		area->ComputeNormal( &normal );
 		area->ComputeNormal( &otherNormal, true );
 
-		float lowestNormalZ = MIN( normal.z, otherNormal.z );
+		float lowestNormalZ = std::min( normal.z, otherNormal.z );
 		if (lowestNormalZ < nav_slope_limit.GetFloat())
 		{
 			// The area is a jump area, and we don't merge jump areas together
@@ -665,7 +661,7 @@ void AdjustObstacleDistances( float *pObstacleStartDist, float *pObstacleEndDist
 	{		
 		float halfDelta = ( MinObstacleAreaWidth - obstacleWidth ) /2;
 		// move start so it's half of min width from center, but no less than zero
-		*pObstacleStartDist = MAX( *pObstacleStartDist - halfDelta, 0 );
+		*pObstacleStartDist = std::max<std::common_type_t<float, int>>( *pObstacleStartDist - halfDelta, 0 );
 		// move end so it's min width from start
 		*pObstacleEndDist = *pObstacleStartDist + MinObstacleAreaWidth;
 
@@ -708,12 +704,10 @@ void CNavMesh::HandleObstacleTopAreas( void )
 void CNavMesh::RaiseAreasWithInternalObstacles()
 {
 	// obstacle areas next to stairs are bad - delete them
-	CUtlVector< CNavArea * > areasToDelete;
+	std::vector< CNavArea * > areasToDelete;
 
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ it ];
-
 		// any nav area with internal obstacles will be 1x1 (width and height = GenerationStepSize), so
 		// only need to consider areas of that size
 		if ( ( area->GetSizeX() != GenerationStepSize ) || (area->GetSizeY() != GenerationStepSize ) )
@@ -762,8 +756,8 @@ void CNavMesh::RaiseAreasWithInternalObstacles()
 						{							
 							obstacleZThisDir[iEdge] = obstacleZ;
 						}
-						obstacleStartDistThisDir = MIN( nodeFrom->m_obstacleStartDist[dir], obstacleStartDistThisDir );
-						obstacleEndDistThisDir = MAX( nodeFrom->m_obstacleEndDist[dir], obstacleEndDistThisDir );
+						obstacleStartDistThisDir = std::min( nodeFrom->m_obstacleStartDist[dir], obstacleStartDistThisDir );
+						obstacleEndDistThisDir = std::max( nodeFrom->m_obstacleEndDist[dir], obstacleEndDistThisDir );
 					}
 				}
 			}
@@ -772,9 +766,9 @@ void CNavMesh::RaiseAreasWithInternalObstacles()
 			const NavConnectVector *connections = area->GetAdjacentAreas( dir );
 			if ( connections )
 			{
-				for ( int conIndex=0; conIndex<connections->Count(); ++conIndex )
+				for ( int conIndex=0; conIndex<std::ssize( *connections ); ++conIndex )
 				{
-					const CNavArea *connectedArea = connections->Element( conIndex ).area;
+					const CNavArea *connectedArea = (*connections)[ conIndex ].area;
 					if ( connectedArea && connectedArea->HasAttributes( NAV_MESH_STAIRS ) )
 					{
 						isStairNeighbor = true;
@@ -785,12 +779,12 @@ void CNavMesh::RaiseAreasWithInternalObstacles()
 			}
 
 			// are both edged blocked in this direction, and is the obstacle height in this direction the tallest we've seen?
-			if ( (iEdgesBlocked >= BlockedEdgeCutoff ) && ( MAX( obstacleZThisDir[0], obstacleZThisDir[1] ) ) > obstacleZMax )
+			if ( (iEdgesBlocked >= BlockedEdgeCutoff ) && ( std::max( obstacleZThisDir[0], obstacleZThisDir[1] ) ) > obstacleZMax )
 			{
 				// this is the tallest obstacle we've encountered so far, remember its details
 				obstacleZ[0] = obstacleZThisDir[0];
 				obstacleZ[1] = obstacleZThisDir[1];
-				obstacleZMax = MAX( obstacleZ[0], obstacleZ[1] );
+				obstacleZMax = std::max( obstacleZ[0], obstacleZ[1] );
 				obstacleDir = dir;
 				obstacleStartDist = obstacleStartDistThisDir;
 				obstacleEndDist = obstacleStartDistThisDir;
@@ -799,7 +793,7 @@ void CNavMesh::RaiseAreasWithInternalObstacles()
 
 		if ( isStairNeighbor && obstacleZMax > -FLT_MAX )
 		{
-			areasToDelete.AddToTail( area );
+			areasToDelete.push_back( area );
 			continue;
 		}
 
@@ -869,9 +863,9 @@ void CNavMesh::RaiseAreasWithInternalObstacles()
 		}
 	}
 
-	for ( int i=0; i<areasToDelete.Count(); ++i )
+	for ( int i=0; i<std::ssize( areasToDelete ); ++i )
 	{
-		TheNavAreas.FindAndRemove( areasToDelete[i] );
+		ks::erase_first( TheNavAreas, areasToDelete[i] );
 		DestroyArea( areasToDelete[i] );
 	}
 }
@@ -884,7 +878,7 @@ void CNavMesh::RaiseAreasWithInternalObstacles()
 void CNavMesh::CreateObstacleTopAreas()
 {
 	// enumerate all areas
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( int it = 0; it < std::ssize( TheNavAreas ); it++ )
 	{
 		CNavArea *area = TheNavAreas[ it ];
 
@@ -1014,10 +1008,10 @@ bool CNavMesh::CreateObstacleTopAreaIfNecessary( CNavArea *area, CNavArea *areaO
 					}
 				}
 
-				obstacleHeightMin = MIN( obstacleHeight, obstacleHeightMin );
-				obstacleHeightMax = MAX( obstacleHeight, obstacleHeightMax );							
-				obstacleDistMin = MIN( obstacleDistStartCur, obstacleDistMin );
-				obstacleDistMax = MAX( obstacleDistEndCur, obstacleDistMax );
+				obstacleHeightMin = std::min( obstacleHeight, obstacleHeightMin );
+				obstacleHeightMax = std::max( obstacleHeight, obstacleHeightMax );							
+				obstacleDistMin = std::min( obstacleDistStartCur, obstacleDistMin );
+				obstacleDistMax = std::max( obstacleDistEndCur, obstacleDistMax );
 
 				if ( obstacleHeightStart == 0 )
 				{
@@ -1091,7 +1085,7 @@ bool CNavMesh::CreateObstacleTopAreaIfNecessary( CNavArea *area, CNavArea *areaO
 			areaNew->Build( cornerNW, cornerNE, cornerSE, cornerSW );
 
 			// add it to the nav area list
-			TheNavAreas.AddToTail( areaNew );
+			TheNavAreas.push_back( areaNew );
 			AddNavArea( areaNew );
 
 			Assert( !areaNew->IsDegenerate() );
@@ -1130,19 +1124,18 @@ void CNavMesh::RemoveOverlappingObstacleTopAreas()
 	// them so there is generally a path to get over any obstacle.
 
 	// make a list of just the obstacle top areas to reduce the N of the N squared operation we're about to do
-	CUtlVector<CNavArea *> vecObstacleTopAreas;
-	FOR_EACH_VEC( TheNavAreas, it )
+	std::vector< CNavArea * > vecObstacleTopAreas;
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ it ];
 		if ( area->GetAttributes() & NAV_MESH_OBSTACLE_TOP ) 
 		{
-			vecObstacleTopAreas.AddToTail( area );
+			vecObstacleTopAreas.push_back( area );
 		}
 	}
 
 	// look at every pair of obstacle top areas
-	CUtlVector<CNavArea *> vecAreasToRemove;
-	FOR_EACH_VEC( vecObstacleTopAreas, it )
+	std::vector< CNavArea * > vecAreasToRemove;
+	for ( int it = 0; it < std::ssize( vecObstacleTopAreas ); it++ )
 	{
 		CNavArea *area = vecObstacleTopAreas[it];
 
@@ -1151,13 +1144,13 @@ void CNavMesh::RemoveOverlappingObstacleTopAreas()
 		area->ComputeNormal( &otherNormal, true );
 
 		// Remove any obstacle areas that are steep enough to be jump areas
-		float lowestNormalZ = MIN( normal.z, otherNormal.z );
+		float lowestNormalZ = std::min( normal.z, otherNormal.z );
 		if ( lowestNormalZ < nav_slope_limit.GetFloat() )
 		{
-			vecAreasToRemove.AddToTail( area );
+			vecAreasToRemove.push_back( area );
 		}
 
-		for ( int it2 = it+1; it2 < vecObstacleTopAreas.Count(); it2++ )
+		for ( int it2 = it+1; it2 < std::ssize( vecObstacleTopAreas ); it2++ )
 		{
 			CNavArea *areaOther = vecObstacleTopAreas[it2];
 			if ( area->IsOverlapping( areaOther ) )
@@ -1165,34 +1158,34 @@ void CNavMesh::RemoveOverlappingObstacleTopAreas()
 				if ( area->Contains( areaOther ) )
 				{
 					// if one entirely contains the other, mark the other for removal
-					vecAreasToRemove.AddToTail( areaOther );					
+					vecAreasToRemove.push_back( areaOther );					
 				}
 				else if ( areaOther->Contains( area ) )
 				{
 					// if one entirely contains the other, mark the other for removal
-					vecAreasToRemove.AddToTail( area );
+					vecAreasToRemove.push_back( area );
 				}
 				else
 				{
 					// if they overlap without one being a superset of the other, just remove the smaller area
 					CNavArea *areaToRemove = ( area->GetSizeX() * area->GetSizeY() > areaOther->GetSizeX() * areaOther->GetSizeY() ? areaOther : area );
-					vecAreasToRemove.AddToTail( areaToRemove );					
+					vecAreasToRemove.push_back( areaToRemove );					
 				}
 			}
 		}
 	}
 
 	// now go delete all the areas we want to remove
-	while ( vecAreasToRemove.Count() > 0 )
+	while ( !vecAreasToRemove.empty() )
 	{
 		CNavArea *areaToDelete = vecAreasToRemove[0];
 		RemoveFromSelectedSet( areaToDelete );
 		TheNavMesh->OnEditDestroyNotify( areaToDelete );
-		TheNavAreas.FindAndRemove( areaToDelete );
+		ks::erase_first( TheNavAreas, areaToDelete );
 		TheNavMesh->DestroyArea( areaToDelete );
 
 		// remove duplicates so we don't double-delete
-		while ( vecAreasToRemove.FindAndRemove( areaToDelete ) );
+		while ( ks::erase_first( vecAreasToRemove, areaToDelete ) );
 	}
 
 }
@@ -1209,9 +1202,8 @@ static ConCommand nav_check_stairs( "nav_check_stairs", CommandNavCheckStairs, "
  */
 void CNavMesh::MarkStairAreas( void )
 {
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ it ];
 		area->TestStairs();
 	}
 }
@@ -1418,7 +1410,7 @@ CON_COMMAND_F( nav_test_stairs, "Test the selected set for being on stairs", FCV
 	int count = 0;
 
 	const NavAreaVector &selectedSet = TheNavMesh->GetSelectedSet();
-	for ( int i=0; i<selectedSet.Count(); ++i )
+	for ( int i=0; i<std::ssize( selectedSet ); ++i )
 	{
 		CNavArea *area = selectedSet[i];
 		if ( area->TestStairs() )
@@ -1442,10 +1434,10 @@ void CNavMesh::RemoveJumpAreas( void )
 		return;
 	}
 
-	CUtlVector< CNavArea * > unusedAreas;
+	std::vector< CNavArea * > unusedAreas;
 
 	int i;
-	for ( i=0; i<TheNavAreas.Count(); ++i )
+	for ( i=0; i<std::ssize( TheNavAreas ); ++i )
 	{
 		CNavArea *testArea = TheNavAreas[i];
 		if ( !(testArea->GetAttributes() & NAV_MESH_JUMP) )
@@ -1453,14 +1445,14 @@ void CNavMesh::RemoveJumpAreas( void )
 			continue;
 		}
 
-		unusedAreas.AddToTail( testArea );
+		unusedAreas.push_back( testArea );
 	}
 
-	for ( i=0; i<unusedAreas.Count(); ++i )
+	for ( i=0; i<std::ssize( unusedAreas ); ++i )
 	{
 		CNavArea *areaToDelete = unusedAreas[i];
 		TheNavMesh->OnEditDestroyNotify( areaToDelete );
-		TheNavAreas.FindAndRemove( areaToDelete );
+		ks::erase_first( TheNavAreas, areaToDelete );
 		TheNavMesh->DestroyArea( areaToDelete );
 	}
 
@@ -1477,9 +1469,9 @@ void CNavMesh::CommandNavRemoveJumpAreas( void )
 	JumpConnector connector;
 	ForAllAreas( connector );
 
-	int before = TheNavAreas.Count();
+	int before = std::ssize( TheNavAreas );
 	RemoveJumpAreas();
-	int after = TheNavAreas.Count();
+	int after = std::ssize( TheNavAreas );
 
 	Msg( "Removed %d jump areas\n", before - after );
 }
@@ -1557,7 +1549,7 @@ void CNavMesh::SquareUpAreas( void )
 {
 	int it = 0;
 
-	while( it < TheNavAreas.Count() )
+	while( it < std::ssize( TheNavAreas ) )
 	{
 		CNavArea *area = TheNavAreas[ it ];
 
@@ -1665,18 +1657,18 @@ void CNavMesh::StitchGeneratedAreas( void )
 class AreaSet
 {
 public:
-	AreaSet( CUtlVector< CNavArea * > *areas )
+	AreaSet( std::vector< CNavArea * > *areas )
 	{
 		m_areas = areas;
 	}
 
 	bool operator()( CNavArea *area )
 	{
-		return ( m_areas->HasElement( area ) );
+		return ( ks::contains( *m_areas, area ) );
 	}
 
 private:
-	CUtlVector< CNavArea * > *m_areas;
+	std::vector< CNavArea * > *m_areas;
 };
 
 
@@ -1684,7 +1676,7 @@ private:
 /**
  * Stitches an arbitrary set of areas (newly-merged, for example) into the existing mesh
  */
-void CNavMesh::StitchAreaSet( CUtlVector< CNavArea * > *areas )
+void CNavMesh::StitchAreaSet( std::vector< CNavArea * > *areas )
 {
 	AreaSet areaSet( areas );
 	StitchMesh( areaSet );
@@ -1866,10 +1858,8 @@ void CNavMesh::ConnectGeneratedAreas( void )
 {
 	Msg( "Connecting navigation areas...\n" );
 
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ it ];
-
 		// scan along edge nodes, stepping one node over into the next area
 		// for now, only use bi-directional connections
 
@@ -2038,16 +2028,15 @@ void CNavMesh::MergeGeneratedAreas( void )
 	{
 		merged = false;
 
-		FOR_EACH_VEC( TheNavAreas, it )
+		for ( CNavArea *area : TheNavAreas )
 		{
-			CNavArea *area = TheNavAreas[ it ];
 			if ( !area->HasNodes() || ( area->GetAttributes() & NAV_MESH_NO_MERGE ) ) 
 				continue;
 
 			// north edge
-			FOR_EACH_VEC( area->m_connect[ NORTH ], nit )
+			for ( const NavConnect &connect : area->m_connect[ NORTH ] )
 			{
-				CNavArea *adjArea = area->m_connect[ NORTH ][ nit ].area;
+				CNavArea *adjArea = connect.area;
 				if ( !area->IsAbleToMergeWith( adjArea ) ) // pre-existing areas in incremental generates won't have nodes
 					continue;
 
@@ -2077,9 +2066,9 @@ void CNavMesh::MergeGeneratedAreas( void )
 				break;
 
 			// south edge
-			FOR_EACH_VEC( area->m_connect[ SOUTH ], sit )
+			for ( const NavConnect &connect : area->m_connect[ SOUTH ] )
 			{
-				CNavArea *adjArea = area->m_connect[ SOUTH ][ sit ].area;
+				CNavArea *adjArea = connect.area;
 				if ( !area->IsAbleToMergeWith( adjArea ) ) // pre-existing areas in incremental generates won't have nodes
 					continue;
 
@@ -2111,9 +2100,9 @@ void CNavMesh::MergeGeneratedAreas( void )
 
 
 			// west edge
-			FOR_EACH_VEC( area->m_connect[ WEST ], wit )
+			for ( const NavConnect &connect : area->m_connect[ WEST ] )
 			{
-				CNavArea *adjArea = area->m_connect[ WEST ][ wit ].area;
+				CNavArea *adjArea = connect.area;
 				if ( !area->IsAbleToMergeWith( adjArea ) ) // pre-existing areas in incremental generates won't have nodes
 					continue;
 
@@ -2144,9 +2133,9 @@ void CNavMesh::MergeGeneratedAreas( void )
 				break;
 
 			// east edge
-			FOR_EACH_VEC( area->m_connect[ EAST ], eit )
+			for ( const NavConnect &connect : area->m_connect[ EAST ] )
 			{
-				CNavArea *adjArea = area->m_connect[ EAST ][ eit ].area;
+				CNavArea *adjArea = connect.area;
 				if ( !area->IsAbleToMergeWith( adjArea ) ) // pre-existing areas in incremental generates won't have nodes
 					continue;
 
@@ -2226,9 +2215,8 @@ void CNavMesh::FixUpGeneratedAreas( void )
 void CNavMesh::FixConnections( void )
 {
 	// Test the steep sides of stairs for any outgoing links that cross nodes that were partially obstructed.
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ it ];
 		if ( !area->HasAttributes( NAV_MESH_STAIRS ) )
 			continue;
 
@@ -2246,10 +2234,10 @@ void CNavMesh::FixConnections( void )
 				continue;
 
 			const NavConnectVector *connectedAreas = area->GetAdjacentAreas( (NavDirType)dir );
-			CUtlVector< CNavArea * > areasToDisconnect;
-			for ( int i=0; i<connectedAreas->Count(); ++i )
+			std::vector< CNavArea * > areasToDisconnect;
+			for ( int i=0; i<std::ssize( *connectedAreas ); ++i )
 			{
-				CNavArea *adjArea = connectedAreas->Element(i).area;
+				CNavArea *adjArea = (*connectedAreas)[ i ].area;
 				if ( !adjArea->HasNodes() )
 					continue;
 
@@ -2274,23 +2262,23 @@ void CNavMesh::FixConnections( void )
 				// there's an obstruction close to the adjacent area that could prevent walking from the stairs down.
 				if ( node->GetGroundHeightAboveNode( cornerType[0] ) > StepHeight )
 				{
-					areasToDisconnect.AddToTail( adjArea );
+					areasToDisconnect.push_back( adjArea );
 				}
 				else if ( node->GetGroundHeightAboveNode( cornerType[1] ) > StepHeight )
 				{
-					areasToDisconnect.AddToTail( adjArea );
+					areasToDisconnect.push_back( adjArea );
 				}
 				else if ( adjPos.z + adjNode->GetGroundHeightAboveNode( adjCornerType[0] ) > pos.z + StepHeight )
 				{
-					areasToDisconnect.AddToTail( adjArea );
+					areasToDisconnect.push_back( adjArea );
 				}
 				else if ( adjPos.z + adjNode->GetGroundHeightAboveNode( adjCornerType[1] ) > pos.z + StepHeight )
 				{
-					areasToDisconnect.AddToTail( adjArea );
+					areasToDisconnect.push_back( adjArea );
 				}
 			}
 
-			for ( int i=0; i<areasToDisconnect.Count(); ++i )
+			for ( int i=0; i<std::ssize( areasToDisconnect ); ++i )
 			{
 				area->Disconnect( areasToDisconnect[i] );
 			}
@@ -2299,30 +2287,29 @@ void CNavMesh::FixConnections( void )
 
 	// Test to prevent A->C if A->B->C.  This can happen in doorways and dropdowns from rooftops.
 	// @TODO: find the root cause of A->C links.
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ it ];
-		CUtlVector< CNavArea * > areasToDisconnect;
+		std::vector< CNavArea * > areasToDisconnect;
 		for ( int dir=0; dir<NUM_DIRECTIONS; ++dir )
 		{
 			const NavConnectVector *connectedAreas = area->GetAdjacentAreas( (NavDirType)dir );
-			for ( int i=0; i<connectedAreas->Count(); ++i )
+			for ( int i=0; i<std::ssize( *connectedAreas ); ++i )
 			{
-				CNavArea *adjArea = connectedAreas->Element(i).area;
+				CNavArea *adjArea = (*connectedAreas)[ i ].area;
 				const NavConnectVector *adjConnectedAreas = adjArea->GetAdjacentAreas( (NavDirType)dir );
-				for ( int j=0; j<adjConnectedAreas->Count(); ++j )
+				for ( int j=0; j<std::ssize( *adjConnectedAreas ); ++j )
 				{
-					CNavArea *farArea = adjConnectedAreas->Element(j).area;
+					CNavArea *farArea = (*adjConnectedAreas)[ j ].area;
 
 					if ( area->IsConnected( farArea, (NavDirType)dir ) )
 					{
-						areasToDisconnect.AddToTail( farArea );
+						areasToDisconnect.push_back( farArea );
 					}
 				}
 			}
 		}
 
-		for ( int i=0; i<areasToDisconnect.Count(); ++i )
+		for ( int i=0; i<std::ssize( areasToDisconnect ); ++i )
 		{
 			area->Disconnect( areasToDisconnect[i] );
 		}
@@ -2338,7 +2325,7 @@ void CNavMesh::FixCornerOnCornerAreas( void )
 {
 	const float MaxDrop = StepHeight;	// don't make corner on corner areas that are too steep
 
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( int it = 0; it < std::ssize( TheNavAreas ); it++ )
 	{
 		CNavArea *area = TheNavAreas[ it ];
 
@@ -2368,7 +2355,7 @@ void CNavMesh::FixCornerOnCornerAreas( void )
 					
 			// if we have any connections on cardinal compass directions on edge on either side of corner we're OK, skip this nav area
 			if ( area->GetAdjacentCount( dirToLeft ) > 0 || area->GetAdjacentCount( dirToRight ) > 0 ||
-				area->GetIncomingConnections( dirToLeft )->Count() > 0 || area->GetIncomingConnections( dirToRight )->Count() > 0 )
+				std::ssize( *( area->GetIncomingConnections( dirToLeft ) ) ) > 0 || std::ssize( *( area->GetIncomingConnections( dirToRight ) ) ) > 0 )
 				continue;
 
 			Vector cornerPos = area->GetCorner( (NavCornerType) iCorner );
@@ -2445,7 +2432,7 @@ void CNavMesh::FixCornerOnCornerAreas( void )
 				areaNew->Build( vecNW, vecNE, vecSE, vecSW );
 
 				// add it to the nav area list
-				TheNavAreas.AddToTail( areaNew );
+				TheNavAreas.push_back( areaNew );
 				AddNavArea( areaNew );
 				
 				areaNew->SetAttributes( area->GetAttributes() );
@@ -2477,7 +2464,7 @@ void CNavMesh::SplitAreasUnderOverhangs( void )
 		bRestartProcessing = false;
 
 		// iterate all nav areas
-		for ( int it = 0; it < TheNavAreas.Count() && !bRestartProcessing; it++ )
+		for ( int it = 0; it < std::ssize( TheNavAreas ) && !bRestartProcessing; it++ )
 		{
 			CNavArea *area = TheNavAreas[ it ];
 			Extent areaExtent;
@@ -2488,7 +2475,7 @@ void CNavMesh::SplitAreasUnderOverhangs( void )
 			{
 				// iterate all connections in that direction
 				const NavConnectVector *pConnections = area->GetAdjacentAreas( (NavDirType) dir );
-				for ( int iConnection = 0; iConnection < pConnections->Count() && !bRestartProcessing; iConnection++ )
+				for ( int iConnection = 0; iConnection < std::ssize( *pConnections ) && !bRestartProcessing; iConnection++ )
 				{
 					CNavArea *otherArea = (*pConnections)[iConnection].area;
 					Extent otherAreaExtent;
@@ -3138,7 +3125,7 @@ int CNavMesh::BuildArea( CNavNode *node, int width, int height )
 	
 	area->Build( nwNode, neNode, seNode, swNode );
 		
-	TheNavAreas.AddToTail( area );
+	TheNavAreas.push_back( area );
 	// since all internal nodes have the same attributes, set this area's attributes
 
 	area->SetAttributes( node->GetAttributes() );
@@ -3213,7 +3200,7 @@ void CNavMesh::CreateNavAreasFromNodes( void )
 			break;
 	}
 
-	if ( !TheNavAreas.Count() )
+	if ( TheNavAreas.empty() )
 	{
 		// If we somehow have no areas, don't try to create an impossibly-large grid
 		AllocateGrid( 0, 0, 0, 0 );
@@ -3227,9 +3214,8 @@ void CNavMesh::CreateNavAreasFromNodes( void )
 	extent.hi.y = -9999999999.9f;
 
 	// compute total extent
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ it ];
 		Extent areaExtent;
 		area->GetExtent( &areaExtent );
 
@@ -3246,9 +3232,9 @@ void CNavMesh::CreateNavAreasFromNodes( void )
 	// add the areas to the grid
 	AllocateGrid( extent.lo.x, extent.hi.x, extent.lo.y, extent.hi.y );
 
-	FOR_EACH_VEC( TheNavAreas, git )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		AddNavArea( TheNavAreas[ git ] );
+		AddNavArea( area );
 	}
 
 	
@@ -3270,7 +3256,7 @@ void CNavMesh::CreateNavAreasFromNodes( void )
 	/// @TODO: incremental generation doesn't create ladders yet
 	if ( m_generationMode != GENERATE_INCREMENTAL )
 	{
-		for ( int i=0; i<m_ladders.Count(); ++i )
+		for ( int i=0; i<std::ssize( m_ladders ); ++i )
 		{
 			CNavLadder *ladder = m_ladders[i];
 			ladder->ConnectGeneratedLadder( 0.0f );
@@ -3348,7 +3334,7 @@ void CNavMesh::BeginGeneration( bool incremental )
 	m_currentNode = nullptr;
 
 	// if there are no seed points, we can't generate
-	if (m_walkableSeeds.Count() == 0)
+	if (m_walkableSeeds.empty())
 	{
 		m_generationMode = GENERATE_NONE;
 		Msg( "No valid walkable seed positions.  Cannot generate Navigation Mesh.\n" );
@@ -3373,16 +3359,16 @@ void CNavMesh::BeginAnalysis( bool quitWhenFinished )
 	// Remove and re-add elements in TheNavAreas, to ensure indices are useful for progress feedback
 	NavAreaVector tmpSet;
 	{
-		FOR_EACH_VEC( TheNavAreas, it )
+		for ( CNavArea *pNavArea : TheNavAreas )
 		{
-			tmpSet.AddToTail( TheNavAreas[it] );
+			tmpSet.push_back( pNavArea );
 		}
 	}
-	TheNavAreas.RemoveAll();
+	TheNavAreas.clear();
 	{
-		FOR_EACH_VEC( tmpSet, it )
+		for ( CNavArea *pNavArea : tmpSet )
 		{
-			TheNavAreas.AddToTail( tmpSet[it] );
+			TheNavAreas.push_back( pNavArea );
 		}
 	}
 
@@ -3491,8 +3477,8 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 	double startTime = Plat_FloatTime();
 	static unsigned int s_movedPlayerToArea = 0;	// Last area we moved a player to for lighting calcs
 	static CountdownTimer s_playerSettleTimer;		// Settle time after moving the player for lighting calcs
-	static CUtlVector<CNavArea *> s_unlitAreas;
-	static CUtlVector<CNavArea *> s_unlitSeedAreas;
+	static std::vector< CNavArea * > s_unlitAreas;
+	static std::vector< CNavArea * > s_unlitSeedAreas;
 
 	static ConVarRef host_thread_mode( "host_thread_mode" );
 
@@ -3527,9 +3513,8 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 			if ( m_generationMode == GENERATE_INCREMENTAL )
 			{
 				ClearSelectedSet();
-				FOR_EACH_VEC( TheNavAreas, nit )
+				for ( CNavArea *area : TheNavAreas )
 				{
-					CNavArea *area = TheNavAreas[nit];
 					AddToSelectedSet( area );
 				}
 			}
@@ -3548,16 +3533,16 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 			// Remove and re-add elements in TheNavAreas, to ensure indices are useful for progress feedback
 			NavAreaVector tmpSet;
 			{
-				FOR_EACH_VEC( TheNavAreas, it )
+				for ( CNavArea *pNavArea : TheNavAreas )
 				{
-					tmpSet.AddToTail( TheNavAreas[it] );
+					tmpSet.push_back( pNavArea );
 				}
 			}
-			TheNavAreas.RemoveAll();
+			TheNavAreas.clear();
 			{
-				FOR_EACH_VEC( tmpSet, it )
+				for ( CNavArea *pNavArea : tmpSet )
 				{
-					TheNavAreas.AddToTail( tmpSet[it] );
+					TheNavAreas.push_back( pNavArea );
 				}
 			}
 
@@ -3569,7 +3554,7 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 		//---------------------------------------------------------------------------
 		case FIND_HIDING_SPOTS:
 		{
-			while( m_generationIndex < TheNavAreas.Count() )
+			while( m_generationIndex < std::ssize( TheNavAreas ) )
 			{
 				CNavArea *area = TheNavAreas[ m_generationIndex ];
 				++m_generationIndex;
@@ -3579,7 +3564,7 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 				// don't go over our time allotment
 				if( Plat_FloatTime() - startTime > maxTime )
 				{
-					AnalysisProgress( "Finding hiding spots...", 100, 100 * m_generationIndex / TheNavAreas.Count() );
+					AnalysisProgress( "Finding hiding spots...", 100, 100 * m_generationIndex / std::ssize( TheNavAreas ) );
 					return true;
 				}
 			}
@@ -3594,7 +3579,7 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 		//---------------------------------------------------------------------------
 		case FIND_ENCOUNTER_SPOTS:
 		{
-			while( m_generationIndex < TheNavAreas.Count() )
+			while( m_generationIndex < std::ssize( TheNavAreas ) )
 			{
 				CNavArea *area = TheNavAreas[ m_generationIndex ];
 				++m_generationIndex;
@@ -3604,7 +3589,7 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 				// don't go over our time allotment
 				if( Plat_FloatTime() - startTime > maxTime )
 				{
-					AnalysisProgress( "Finding encounter spots...", 100, 100 * m_generationIndex / TheNavAreas.Count() );
+					AnalysisProgress( "Finding encounter spots...", 100, 100 * m_generationIndex / std::ssize( TheNavAreas ) );
 					return true;
 				}
 			}
@@ -3619,7 +3604,7 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 		//---------------------------------------------------------------------------
 		case FIND_SNIPER_SPOTS:
 		{
-			while( m_generationIndex < TheNavAreas.Count() )
+			while( m_generationIndex < std::ssize( TheNavAreas ) )
 			{
 				CNavArea *area = TheNavAreas[ m_generationIndex ];
 				++m_generationIndex;
@@ -3629,7 +3614,7 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 				// don't go over our time allotment
 				if( Plat_FloatTime() - startTime > maxTime )
 				{
-					AnalysisProgress( "Finding sniper spots...", 100, 100 * m_generationIndex / TheNavAreas.Count() );
+					AnalysisProgress( "Finding sniper spots...", 100, 100 * m_generationIndex / std::ssize( TheNavAreas ) );
 					return true;
 				}
 			}
@@ -3647,9 +3632,8 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 			else
 			{
 				// no visibility data desired - skip directly to next analyze step
-				FOR_EACH_VEC( TheNavAreas, it )
+				for ( CNavArea *area : TheNavAreas )
 				{
-					CNavArea *area = TheNavAreas[ it ];
 					area->ResetPotentiallyVisibleAreas();
 				}
 
@@ -3663,7 +3647,7 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 		//---------------------------------------------------------------------------
 		case COMPUTE_MESH_VISIBILITY:
 		{
-			while( m_generationIndex < TheNavAreas.Count() )
+			while( m_generationIndex < std::ssize( TheNavAreas ) )
 			{
 				CNavArea *area = TheNavAreas[ m_generationIndex ];
 				++m_generationIndex;
@@ -3673,7 +3657,7 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 				// don't go over our time allotment
 				if ( Plat_FloatTime() - startTime > maxTime )
 				{
-					AnalysisProgress( "Computing mesh visibility...", 100, 100 * m_generationIndex / TheNavAreas.Count() );
+					AnalysisProgress( "Computing mesh visibility...", 100, 100 * m_generationIndex / std::ssize( TheNavAreas ) );
 					return true;
 				}
 			}
@@ -3692,7 +3676,7 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 		//---------------------------------------------------------------------------
 		case FIND_EARLIEST_OCCUPY_TIMES:
 		{
-			while( m_generationIndex < TheNavAreas.Count() )
+			while( m_generationIndex < std::ssize( TheNavAreas ) )
 			{
 				CNavArea *area = TheNavAreas[ m_generationIndex ];
 				++m_generationIndex;
@@ -3702,7 +3686,7 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 				// don't go over our time allotment
 				if( Plat_FloatTime() - startTime > maxTime )
 				{
-					AnalysisProgress( "Finding earliest occupy times...", 100, 100 * m_generationIndex / TheNavAreas.Count() );
+					AnalysisProgress( "Finding earliest occupy times...", 100, 100 * m_generationIndex / std::ssize( TheNavAreas ) );
 					return true;
 				}
 			}
@@ -3724,11 +3708,11 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 				m_generationState = FIND_LIGHT_INTENSITY;
 				s_playerSettleTimer.Invalidate();
 				CNavArea::MakeNewMarker();
-				s_unlitAreas.RemoveAll();
-				FOR_EACH_VEC( TheNavAreas, nit )
+				s_unlitAreas.clear();
+				for ( CNavArea *area : TheNavAreas )
 				{
-					s_unlitAreas.AddToTail( TheNavAreas[nit] );
-					s_unlitSeedAreas.AddToTail( TheNavAreas[nit] );
+					s_unlitAreas.push_back( area );
+					s_unlitSeedAreas.push_back( area );
 				}
 			}
 
@@ -3743,7 +3727,7 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 
 			CBasePlayer *host = UTIL_GetListenServerHost();
 
-			if ( !s_unlitAreas.Count() || !host )
+			if ( s_unlitAreas.empty() || !host )
 			{
 				Msg( "Finding light intensity...DONE\n" );
 
@@ -3757,13 +3741,13 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 
 			// Now try to compute lighting for remaining areas
 			int sit = 0;
-			while( sit < s_unlitAreas.Count() )
+			while( sit < std::ssize( s_unlitAreas ) )
 			{
 				CNavArea *area = s_unlitAreas[sit];
 				if ( area->ComputeLighting() )
 				{
-					s_unlitSeedAreas.FindAndRemove( area );
-					s_unlitAreas.Remove( sit );
+					ks::erase_first( s_unlitSeedAreas, area );
+					s_unlitAreas.erase( s_unlitAreas.begin() + sit );
 
 					continue;
 				}
@@ -3773,12 +3757,12 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 				}
 			}
 
-			if ( s_unlitAreas.Count() )
+			if ( !s_unlitAreas.empty() )
 			{
-				if ( s_unlitSeedAreas.Count() )
+				if ( !s_unlitSeedAreas.empty() )
 				{
 					CNavArea *moveArea = s_unlitSeedAreas[0];
-					s_unlitSeedAreas.FastRemove( 0 );
+					ks::swap_remove( s_unlitSeedAreas, 0 );
 
 					//Msg( "Moving to new area %d to compute lighting for %d/%d areas\n", moveArea->GetID(), s_unlitAreas.Count(), TheNavAreas.Count() );
 
@@ -3793,18 +3777,18 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 						eyePos.z += HalfHumanHeight - StepHeight;	// players light from their centers, and we light from slightly below that, to allow for low ceilings
 					}
 					host->SetAbsOrigin( eyePos );
-					AnalysisProgress( "Finding light intensity...", 100, 100 * (TheNavAreas.Count() - s_unlitAreas.Count()) / TheNavAreas.Count() );
+					AnalysisProgress( "Finding light intensity...", 100, 100 * (std::ssize( TheNavAreas ) - std::ssize( s_unlitAreas )) / std::ssize( TheNavAreas ) );
 					s_movedPlayerToArea = moveArea->GetID();
 					s_playerSettleTimer.Start( 0.1f );
 					return true;
 				}
 				else
 				{
-					Msg( "Finding light intensity...DONE (%d unlit areas)\n", s_unlitAreas.Count() );
-					if ( s_unlitAreas.Count() )
+					Msg( "Finding light intensity...DONE (%d unlit areas)\n", (int)std::ssize( s_unlitAreas ) );
+					if ( !s_unlitAreas.empty() )
 					{
 						Warning( "To see unlit areas:\n" );
-						for ( int sit=0; sit<s_unlitAreas.Count(); ++sit )
+						for ( int sit=0; sit<std::ssize( s_unlitAreas ); ++sit )
 						{
 							CNavArea *area = s_unlitAreas[ sit ];
 							Warning( "nav_unmark; nav_mark %d; nav_warp_to_mark;\n", area->GetID() );
@@ -3831,7 +3815,7 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 				BeginCustomAnalysis( m_generationMode == GENERATE_INCREMENTAL );
 				Msg( "Start custom...\n ");
 			}
-			while( m_generationIndex < TheNavAreas.Count() )
+			while( m_generationIndex < std::ssize( TheNavAreas ) )
 			{
 				CNavArea *area = TheNavAreas[ m_generationIndex ];
 				++m_generationIndex;
@@ -3841,7 +3825,7 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 				// don't go over our time allotment
 				if( Plat_FloatTime() - startTime > maxTime )
 				{
-					AnalysisProgress( "Custom game-specific analysis...", 100, 100 * m_generationIndex / TheNavAreas.Count() );
+					AnalysisProgress( "Custom game-specific analysis...", 100, 100 * m_generationIndex / std::ssize( TheNavAreas ) );
 					return true;
 				}
 			}
@@ -3900,9 +3884,9 @@ bool CNavMesh::UpdateGeneration( float maxTime )
 			}
 			else
 			{
-				FOR_EACH_VEC( TheNavAreas, it )
+				for ( CNavArea *area : TheNavAreas )
 				{
-					TheNavAreas[ it ]->ResetNodes();
+					area->ResetNodes();
 				}
 
 #if !(DEBUG_NAV_NODES)
@@ -3985,7 +3969,7 @@ CNavNode *CNavMesh::AddNode( const Vector &destPos, const Vector &normal, NavDir
 	{
 		if ( obstacleHeight > 0 )
 		{
-			obstacleHeight = MAX( obstacleHeight + deltaZ, 0 );
+			obstacleHeight = std::max<std::common_type_t<float, int>>( obstacleHeight + deltaZ, 0 );
 			Assert( obstacleHeight > 0 );
 		}
 		node->ConnectTo( source, OppositeDirection( dir ), obstacleHeight, GenerationStepSize - obstacleEndDist, GenerationStepSize - obstacleStartDist );
@@ -4249,7 +4233,7 @@ bool CNavMesh::SampleStep( void )
 				}
 
 				// search is exhausted - continue search from ends of ladders
-				for ( int i=0; i<m_ladders.Count(); ++i )
+				for ( int i=0; i<std::ssize( m_ladders ); ++i )
 				{
 					CNavLadder *ladder = m_ladders[i];
 
@@ -4308,7 +4292,7 @@ bool CNavMesh::SampleStep( void )
 				if ( m_generationMode == GENERATE_INCREMENTAL && incrementalRange > 0 )
 				{
 					bool inRange = false;
-					for ( int i=0; i<m_walkableSeeds.Count(); ++i )
+					for ( int i=0; i<std::ssize( m_walkableSeeds ); ++i )
 					{
 						const Vector &seedPos = m_walkableSeeds[i].pos;
 						if ( (seedPos - pos).IsLengthLessThan( incrementalRange ) )
@@ -4438,7 +4422,7 @@ bool CNavMesh::SampleStep( void )
 				{
 					bool bValid = false;
 					int zPos = to.z;
-					for ( int i=0; i<m_walkableSeeds.Count(); ++i )
+					for ( int i=0; i<std::ssize( m_walkableSeeds ); ++i )
 					{
 						const Vector &seedPos = m_walkableSeeds[i].pos;
 						int zMin = seedPos.z - nTolerance;
@@ -4521,7 +4505,7 @@ void CNavMesh::AddWalkableSeed( const Vector &pos, const Vector &normal )
 	seed.pos.z = pos.z;
 	seed.normal = normal;
 
-	m_walkableSeeds.AddToTail( seed );
+	m_walkableSeeds.push_back( seed );
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -4530,7 +4514,7 @@ void CNavMesh::AddWalkableSeed( const Vector &pos, const Vector &normal )
  */
 CNavNode *CNavMesh::GetNextWalkableSeedNode( void )
 {	
-	if ( m_seedIdx >= m_walkableSeeds.Count() )
+	if ( m_seedIdx >= std::ssize( m_walkableSeeds ) )
 		return nullptr;
 
 	WalkableSeedSpot spot = m_walkableSeeds[ m_seedIdx ];
@@ -4720,7 +4704,7 @@ void CNavMesh::ValidateNavAreaConnections( void )
 	// iterate all nav areas
 	NavConnect connect;
 
-	for ( int it = 0; it < TheNavAreas.Count(); it++ )
+	for ( int it = 0; it < std::ssize( TheNavAreas ); it++ )
 	{
 		CNavArea *area = TheNavAreas[ it ];
 
@@ -4729,19 +4713,19 @@ void CNavMesh::ValidateNavAreaConnections( void )
 			const NavConnectVector *pOutgoing = area->GetAdjacentAreas(  dir );
 			const NavConnectVector *pIncoming = area->GetIncomingConnections( dir );
 
-			for ( int iConnect = 0; iConnect < pOutgoing->Count(); iConnect++ )
+			for ( int iConnect = 0; iConnect < std::ssize( *pOutgoing ); iConnect++ )
 			{
 				// make sure no area is on both the connection and incoming list
 				CNavArea *areaOther = (*pOutgoing)[iConnect].area;
 				connect.area = areaOther;
-				if ( pIncoming->Find( connect ) != pIncoming->InvalidIndex() )
+				if ( ks::find_index( *pIncoming, connect ) != -1 )
 				{
 					Msg( "Area %d has area %d on both 2-way and incoming list, should only be on one\n", area->GetID(), areaOther->GetID() );
 					Assert( false );
 				}
 
 				// make sure there are no duplicate connections on the list
-				for ( int iConnectCheck = iConnect+1; iConnectCheck < pOutgoing->Count(); iConnectCheck++ )
+				for ( int iConnectCheck = iConnect+1; iConnectCheck < std::ssize( *pOutgoing ); iConnectCheck++ )
 				{
 					CNavArea *areaCheck = (*pOutgoing)[iConnectCheck].area;
 					if ( areaOther == areaCheck )
@@ -4756,11 +4740,11 @@ void CNavMesh::ValidateNavAreaConnections( void )
 
 				// if we have a one-way outgoing connection, make sure we are on the other area's incoming list
 				connect.area = area;
-				bool bIsTwoWay = pOutgoingOther->Find( connect ) != pOutgoingOther->InvalidIndex();				
+				bool bIsTwoWay = ks::find_index( *pOutgoingOther, connect ) != -1;				
 				if ( !bIsTwoWay )
 				{				
 					connect.area = area;
-					bool bOnOthersIncomingList = pIncomingOther->Find( connect ) != pIncomingOther->InvalidIndex();
+					bool bOnOthersIncomingList = ks::find_index( *pIncomingOther, connect ) != -1;
 					if ( !bOnOthersIncomingList )
 					{
 						Msg( "Area %d has one-way connect to area %d but does not appear on the latter's incoming list\n", area->GetID(), areaOther->GetID() );
@@ -4768,12 +4752,12 @@ void CNavMesh::ValidateNavAreaConnections( void )
 				}
 			}
 
-			for ( int iConnect = 0; iConnect < pIncoming->Count(); iConnect++ )
+			for ( int iConnect = 0; iConnect < std::ssize( *pIncoming ); iConnect++ )
 			{
 				CNavArea *areaOther = (*pIncoming)[iConnect].area;
 
 				// make sure there are not duplicate areas on the incoming list
-				for ( int iConnectCheck = iConnect+1; iConnectCheck < pIncoming->Count(); iConnectCheck++ )
+				for ( int iConnectCheck = iConnect+1; iConnectCheck < std::ssize( *pIncoming ); iConnectCheck++ )
 				{
 					CNavArea *areaCheck = (*pIncoming)[iConnectCheck].area;
 					if ( areaOther == areaCheck )
@@ -4785,7 +4769,7 @@ void CNavMesh::ValidateNavAreaConnections( void )
 
 				const NavConnectVector *pOutgoingOther = areaOther->GetAdjacentAreas( OppositeDirection( dir ) );
 				connect.area = area;
-				bool bOnOthersOutgoingList = pOutgoingOther->Find( connect ) != pOutgoingOther->InvalidIndex();
+				bool bOnOthersOutgoingList = ks::find_index( *pOutgoingOther, connect ) != -1;
 				if ( !bOnOthersOutgoingList )
 				{
 					Msg( "Area %d has incoming connection from area %d but does not appear on latter's outgoing connection list\n", area->GetID(), areaOther->GetID() );
@@ -4805,7 +4789,7 @@ void CNavMesh::ValidateNavAreaConnections( void )
 */
 void CNavMesh::PostProcessCliffAreas()
 {
-	for ( int it = 0; it < TheNavAreas.Count(); it++ )
+	for ( int it = 0; it < std::ssize( TheNavAreas ); it++ )
 	{
 		CNavArea *area = TheNavAreas[ it ];
 		if ( area->GetAttributes() & NAV_MESH_CLIFF )

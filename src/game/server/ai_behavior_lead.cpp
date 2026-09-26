@@ -17,9 +17,6 @@
 #include "ai_pathfinder.h"
 #include "sceneentity.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // Minimum time between leader nags
 #define LEAD_NAG_TIME		3.0
 

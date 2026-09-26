@@ -5,7 +5,6 @@
 #include <setjmp.h>
 #include "sqstdstring.h"
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#include "memdbgon.h"
 #endif
 
 #ifdef _UINCODE

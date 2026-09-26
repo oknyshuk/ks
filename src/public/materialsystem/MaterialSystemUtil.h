@@ -13,6 +13,7 @@
 #include "bitmap/imageformat.h" //ImageFormat enum definition
 #include "materialsystem/imaterialsystem.h"  // RenderTargetSizeMode_t and MaterialRenderTargetDepth_t definition
 #include "materialsystem/itexture.h"
+#include <utility>
 //-----------------------------------------------------------------------------
 // Forward declarations
 //-----------------------------------------------------------------------------
@@ -48,13 +49,21 @@ public:
 	operator const IMaterial *() const { return m_pMaterial; }
 	IMaterial* operator->() { return m_pMaterial; }
 
-	// Assignment operator
+	// Copies take a reference; moves transfer it.
+	CMaterialReference( const CMaterialReference &ref ) : m_pMaterial( nullptr ) { Init( ref.m_pMaterial ); }
+	CMaterialReference( CMaterialReference &&ref ) : m_pMaterial( std::exchange( ref.m_pMaterial, nullptr ) ) {}
 	const CMaterialReference& operator=( const CMaterialReference &ref );
+	CMaterialReference &operator=( CMaterialReference &&ref )
+	{
+		if ( this != &ref )
+		{
+			Shutdown();
+			m_pMaterial = std::exchange( ref.m_pMaterial, nullptr );
+		}
+		return *this;
+	}
 
-	
 private:
-	CMaterialReference( CMaterialReference &ref ) { }
-
 	IMaterial* m_pMaterial;
 };
 
@@ -84,8 +93,18 @@ public:
 	operator ITexture const*() const { return m_pTexture; }
 	ITexture* operator->() { return m_pTexture; }
 
-	// Assignment operator
-	const CTextureReference& operator=( CTextureReference &ref );
+	// Copies take a reference; moves transfer it.
+	CTextureReference( CTextureReference &&ref ) : m_pTexture( std::exchange( ref.m_pTexture, nullptr ) ) {}
+	const CTextureReference& operator=( const CTextureReference &ref );
+	CTextureReference &operator=( CTextureReference &&ref )
+	{
+		if ( this != &ref )
+		{
+			Shutdown();
+			m_pTexture = std::exchange( ref.m_pTexture, nullptr );
+		}
+		return *this;
+	}
 
 private:
 	ITexture* m_pTexture;

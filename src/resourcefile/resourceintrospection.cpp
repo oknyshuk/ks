@@ -10,9 +10,6 @@
 #include "tier1/generichash.h"
 #include "tier0/dbg.h"
 
-// Must be last
-#include "tier0/memdbgon.h"
-
 
 #define STRUCT_NAME_HASH_SEED 0xBAADFEED
 #define FIELD_CRC_HASH_SEED 0x12345678
@@ -401,11 +398,11 @@ void CResourceFieldIntrospection::SetFieldInfo( CResourceStream *pStream,
 }
 
 void CResourceFieldIntrospection::SetFieldType( CResourceStream *pStream,
-											    const CUtlVector<ResourceFieldType_t>& TypeChain, uint32 nRootFieldData )
+											    const std::vector< ResourceFieldType_t >& TypeChain, uint32 nRootFieldData )
 {
-	Assert( TypeChain.Count() > 0 );
+	Assert( std::ssize( TypeChain ) > 0 );
 
-	m_nTypeChainCount = TypeChain.Count();
+	m_nTypeChainCount = std::ssize( TypeChain );
 	m_nFieldType = TypeChain[0];
 
 	if ( m_nTypeChainCount == 1 )

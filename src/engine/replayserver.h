@@ -15,6 +15,7 @@
 #include "replayhistorymanager.h"
 #include "dt_recv.h"
 #include <ireplay.h>
+#include <bitset>
 #include <convar.h>
 
 #define REPLAY_BUFFER_DIRECTOR		0	// director commands
@@ -109,7 +110,7 @@ public: // CBaseServer interface:
 	virtual const char *GetPassword() const OVERRIDE;
 	IClient *ConnectClient ( const ns_address &adr, int protocol, int challenge, int authProtocol, 
 		const char *name, const char *password, const char *hashedCDkey, int cdKeyLen,
-		CUtlVector< CCLCMsg_SplitPlayerConnect_t * > & splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform,
+		const SplitPlayerConnects_t &splitScreenClients, bool isClientLowViolence, CrossPlayPlatform_t clientPlatform,
 		const byte *pbEncryptionKey, int nEncryptionKeyIndex ) OVERRIDE;
 
 public: // IGameEventListener2 interface:
@@ -191,7 +192,7 @@ public:
 	CNetworkStringTableContainer m_NetworkStringTables;
 
 	CReplayDeltaEntityCache					m_DeltaCache;
-	CUtlVector<CReplayFrameCacheEntry_s>	m_FrameCache;
+	std::vector< CReplayFrameCacheEntry_s >	m_FrameCache;
 
 	// demoplayer stuff:
 	CDemoFile		m_DemoFile;		// for demo playback
@@ -203,7 +204,7 @@ public:
 	int				m_nSkipToTick;	// skip to tick ASAP, -1 = off
 
 	// TODO: Index by SteamID
-	CBitVec< 64 >	m_vecClientsDownloading;		// Indexed by client slot - each bit represents whether the given client is currently downloading
+	std::bitset< 64 >	m_vecClientsDownloading;		// Indexed by client slot - each bit represents whether the given client is currently downloading
 
 	friend class CReplayClientState;
 };

@@ -33,8 +33,7 @@
 #include "tier1/fmtstr.h"
 #include "vphysics/friction.h"
 #include "prediction.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier1/vector_ops.h"
 
 // file system interface
 extern IFileSystem *filesystem;
@@ -53,19 +52,19 @@ void PrecachePhysicsSounds( void );
 //FIXME: Replicated from server end, consolidate?
 
 
-CUtlLinkedList<C_BaseEntity *> g_ShadowEntities;
+std::vector<C_BaseEntity *> g_ShadowEntities;
 
 void PhysAddShadow( C_BaseEntity *pEntity )
 {
-	if( g_ShadowEntities.Find( pEntity ) == g_ShadowEntities.InvalidIndex() )
+	if( !ks::contains( g_ShadowEntities, pEntity ) )
 	{
-		g_ShadowEntities.AddToTail( pEntity );
+		g_ShadowEntities.push_back( pEntity );
 	}
 }
 
 void PhysRemoveShadow( C_BaseEntity *pEntity )
 {
-	g_ShadowEntities.FindAndRemove( pEntity );
+	ks::erase_first( g_ShadowEntities, pEntity );
 }
 
 
@@ -177,9 +176,9 @@ private:
 	void	FindOrAddPenetrateEvent( C_BaseEntity *pEntity0, C_BaseEntity *pEntity1 );
 
 	friction_t					m_current[8];
-	CUtlVector<fluidevent_t>	m_fluidEvents;
-	CUtlVector<touchevent_t>	m_touchEvents;
-	CUtlVector<penetrateevent_t> m_penetrateEvents;
+	std::vector< fluidevent_t >	m_fluidEvents;
+	std::vector< touchevent_t >	m_touchEvents;
+	std::vector< penetrateevent_t > m_penetrateEvents;
 	int							m_inCallback;
 	bool						m_bBufferTouchEvents;
 
@@ -646,10 +645,10 @@ void CPhysicsSystem::PhysicsSimulate()
 					stackfree( pActiveList );
 				}
 
-				if( g_ShadowEntities.Count() > 0 )
+				if( !g_ShadowEntities.empty() )
 				{
 					VPROF( "PhysFrame VPhysicsShadowUpdate" );
-					for ( int i = g_ShadowEntities.Head(); i != g_ShadowEntities.InvalidIndex(); i = g_ShadowEntities.Next(i) )
+					for ( size_t i = 0; i < g_ShadowEntities.size(); i++ )
 					{
 						CBaseEntity *pEntity = g_ShadowEntities[i];
 
@@ -772,10 +771,10 @@ void CPhysicsSystem::PhysicsSimulate()
 			}
 		}
 
-		if( g_ShadowEntities.Count() > 0 )
+		if( !g_ShadowEntities.empty() )
 		{
 			VPROF( "PhysFrame VPhysicsShadowUpdate" );
-			for ( int i = g_ShadowEntities.Head(); i != g_ShadowEntities.InvalidIndex(); i = g_ShadowEntities.Next(i) )
+			for ( size_t i = 0; i < g_ShadowEntities.size(); i++ )
 			{
 				CBaseEntity *pEntity = g_ShadowEntities[i];
 				
@@ -860,7 +859,7 @@ void CCollisionEvent::FrameUpdate( void )
 
 void CCollisionEvent::LevelShutdown()
 {
-	m_penetrateEvents.RemoveAll();
+	m_penetrateEvents.clear();
 	m_flLastSplashTime = 0.0f;
 }
 
@@ -872,7 +871,7 @@ void CCollisionEvent::UpdateTouchEvents( void )
 	// Turn on buffering in case new touch events occur during processing
 	bool bOldTouchEvents = m_bBufferTouchEvents;
 	m_bBufferTouchEvents = true;
-	for ( int i = 0; i < m_touchEvents.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_touchEvents ); i++ )
 	{
 		const touchevent_t &event = m_touchEvents[i];
 		if ( event.touchType == TOUCH_START )
@@ -886,7 +885,7 @@ void CCollisionEvent::UpdateTouchEvents( void )
 		}
 	}
 
-	m_touchEvents.RemoveAll();
+	m_touchEvents.clear();
 	m_bBufferTouchEvents = bOldTouchEvents;
 }
 
@@ -901,7 +900,7 @@ void CCollisionEvent::AddTouchEvent( C_BaseEntity *pEntity0, C_BaseEntity *pEnti
 	if ( !pEntity0 || !pEntity1 )
 		return;
 
-	int index = m_touchEvents.AddToTail();
+	int index = std::ssize( m_touchEvents ); m_touchEvents.emplace_back();
 	touchevent_t &event = m_touchEvents[index];
 	event.pEntity0 = pEntity0;
 	event.pEntity1 = pEntity1;
@@ -995,7 +994,7 @@ void CCollisionEvent::DispatchEndTouch( C_BaseEntity *pEntity0, C_BaseEntity *pE
 // NOTE: This assumes entity pointers are sorted to simplify search!
 void CCollisionEvent::FindOrAddPenetrateEvent( C_BaseEntity *pEntity0, C_BaseEntity *pEntity1 )
 {
-	int count = m_penetrateEvents.Count();
+	int count = std::ssize( m_penetrateEvents );
 	for ( int i = 0; i < count; i++ )
 	{
 		if ( m_penetrateEvents[i].pEntity0 == pEntity0 && m_penetrateEvents[i].pEntity1 == pEntity1 )
@@ -1004,7 +1003,7 @@ void CCollisionEvent::FindOrAddPenetrateEvent( C_BaseEntity *pEntity0, C_BaseEnt
 			return;
 		}
 	}
-	int index = m_penetrateEvents.AddToTail();
+	int index = std::ssize( m_penetrateEvents ); m_penetrateEvents.emplace_back();
 	m_penetrateEvents[index].pEntity0 = pEntity0;
 	m_penetrateEvents[index].pEntity1 = pEntity1;
 	m_penetrateEvents[index].startTime = gpGlobals->curtime;
@@ -1016,12 +1015,12 @@ void CCollisionEvent::UpdatePenetrateEvents()
 {
 	const float MAX_PENETRATION_TIME = 3.0f;
 
-	for ( int i = m_penetrateEvents.Count()-1; i >= 0; --i )
+	for ( int i = std::ssize( m_penetrateEvents )-1; i >= 0; --i )
 	{
 		float timeSincePenetration = gpGlobals->curtime - m_penetrateEvents[i].timeStamp;
 		if ( timeSincePenetration > 0.1f )
 		{
-			m_penetrateEvents.FastRemove(i);
+			ks::swap_remove( m_penetrateEvents, i );
 			continue;
 		}
 		float timeInPenetration = m_penetrateEvents[i].timeStamp - m_penetrateEvents[i].startTime;
@@ -1029,7 +1028,7 @@ void CCollisionEvent::UpdatePenetrateEvents()
 		if ( timeInPenetration > MAX_PENETRATION_TIME )
 		{
 			PhysDisableEntityCollisions( m_penetrateEvents[i].pEntity0, m_penetrateEvents[i].pEntity1 );
-			m_penetrateEvents.FastRemove(i);
+			ks::swap_remove( m_penetrateEvents, i );
 			continue;
 		}
 	}
@@ -1283,11 +1282,11 @@ void PhysicsSplash( IPhysicsFluidController *pFluid, IPhysicsObject *pObject, CB
 //-----------------------------------------------------------------------------
 void CCollisionEvent::UpdateFluidEvents( void )
 {
-	for ( int i = m_fluidEvents.Count()-1; i >= 0; --i )
+	for ( int i = std::ssize( m_fluidEvents )-1; i >= 0; --i )
 	{
 		if ( (gpGlobals->curtime - m_fluidEvents[i].impactTime) > FLUID_TIME_MAX )
 		{
-			m_fluidEvents.FastRemove(i);
+			ks::swap_remove( m_fluidEvents, i );
 		}
 	}
 }
@@ -1299,7 +1298,7 @@ void CCollisionEvent::UpdateFluidEvents( void )
 //-----------------------------------------------------------------------------
 float CCollisionEvent::DeltaTimeSinceLastFluid( CBaseEntity *pEntity )
 {
-	for ( int i = m_fluidEvents.Count()-1; i >= 0; --i )
+	for ( int i = std::ssize( m_fluidEvents )-1; i >= 0; --i )
 	{
 		if ( m_fluidEvents[i].hEntity.Get() == pEntity )
 		{
@@ -1307,7 +1306,7 @@ float CCollisionEvent::DeltaTimeSinceLastFluid( CBaseEntity *pEntity )
 		}
 	}
 
-	int index = m_fluidEvents.AddToTail();
+	int index = std::ssize( m_fluidEvents ); m_fluidEvents.emplace_back();
 	m_fluidEvents[index].hEntity = pEntity;
 	m_fluidEvents[index].impactTime = gpGlobals->curtime;
 	return FLUID_TIME_MAX;

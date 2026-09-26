@@ -44,9 +44,6 @@
 
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern IFileSystem *g_pFileSystem;
 static const char *CacheDirectory = "cache";
 static const char *CacheFilename = "cache/DownloadCache.db";
@@ -393,7 +390,7 @@ void DownloadCache::GenerateCacheFilename( const RequestContext *rc, char cacheP
 		const char *gameFilename = rc->gamePath;
 		if ( lastSlash || lastBackslash )
 		{
-			gameFilename = MAX( lastSlash, lastBackslash ) + 1;
+			gameFilename = std::max( lastSlash, lastBackslash ) + 1;
 		}
 		for( int i=0; i<1000; ++i )
 		{
@@ -421,7 +418,7 @@ public:
 
 	void Queue( const char *baseURL, const char *gamePath );
 	void Stop() { Reset(); }
-	int GetQueueSize() { return m_queuedRequests.Count(); }
+	int GetQueueSize() { return std::ssize( m_queuedRequests ); }
 
 	bool Update();	///< Monitors download thread, starts new downloads, and updates progress bar
 
@@ -440,7 +437,7 @@ private:
 
 	void UpdateProgressBar();
 
-	typedef CUtlVector< RequestContext * > RequestVector;
+	typedef std::vector< RequestContext * > RequestVector;
 	RequestVector m_queuedRequests;		///< these are requests waiting to be spawned
 	RequestContext *m_activeRequest;	///< this is the active request being downloaded in another thread
 	RequestVector m_completedRequests;	///< these are waiting for the thread to exit
@@ -450,7 +447,7 @@ private:
 
 	int m_RequestIDCounter;				///< global increasing request ID counter
 
-	typedef CUtlVector< char * > StrVector;
+	typedef std::vector< char * > StrVector;
 	StrVector m_downloadedMaps;			///< List of maps for which we have already tried to download assets.
 };
 
@@ -470,11 +467,11 @@ DownloadManager::~DownloadManager()
 {
 	Reset();
 
-	for ( int i=0; i<m_downloadedMaps.Count(); ++i )
+	for ( int i=0; i<std::ssize( m_downloadedMaps ); ++i )
 	{
 		delete[] m_downloadedMaps[i];
 	}
-	m_downloadedMaps.RemoveAll();
+	m_downloadedMaps.clear();
 }
 
 //--------------------------------------------------------------------------------------------------------------
@@ -483,7 +480,7 @@ bool DownloadManager::HasMapBeenDownloadedFromServer( const char *serverMapName 
 	if ( !serverMapName )
 		return false;
 
-	for ( int i=0; i<m_downloadedMaps.Count(); ++i )
+	for ( int i=0; i<std::ssize( m_downloadedMaps ); ++i )
 	{
 		const char *oldServerMapName = m_downloadedMaps[i];
 		if ( oldServerMapName && !stricmp( serverMapName, oldServerMapName ) )
@@ -509,7 +506,7 @@ bool DownloadManager::FileDenied( const char *filename, unsigned int requestID, 
 	UpdateProgressBar();
 
 	// try to download the next file
-	m_completedRequests.AddToTail( m_activeRequest );
+	m_completedRequests.push_back( m_activeRequest );
 	m_activeRequest = nullptr;
 
 	return true;
@@ -534,7 +531,7 @@ bool DownloadManager::FileReceived( const char *filename, unsigned int requestID
 	Log_Msg( LOG_DownloadManager, DownloadCompleteColor, "Download finished!\n" );
 	UpdateProgressBar();
 
-	m_completedRequests.AddToTail( m_activeRequest );
+	m_completedRequests.push_back( m_activeRequest );
 	m_activeRequest = nullptr;
 
 	// INFESTED_DLL
@@ -569,7 +566,7 @@ void DownloadManager::MarkMapAsDownloadedFromServer( const char *serverMapName )
 	if ( HasMapBeenDownloadedFromServer( serverMapName ) )
 		return;
 
-	m_downloadedMaps.AddToTail( CloneString( serverMapName ) );
+	m_downloadedMaps.push_back( CloneString( serverMapName ) );
 
 
 	return;
@@ -620,7 +617,7 @@ void DownloadManager::Queue( const char *baseURL, const char *gamePath )
 		}
 
 		RequestContext *rc = new RequestContext;
-		m_queuedRequests.AddToTail( rc );
+		m_queuedRequests.push_back( rc );
 
 		memset( rc, 0, sizeof(RequestContext) );
 
@@ -648,7 +645,7 @@ void DownloadManager::Queue( const char *baseURL, const char *gamePath )
 	}
 
 	RequestContext *rc = new RequestContext;
-	m_queuedRequests.AddToTail( rc );
+	m_queuedRequests.push_back( rc );
 
 	memset( rc, 0, sizeof(RequestContext) );
 
@@ -686,18 +683,18 @@ void DownloadManager::Reset()
 			TheDownloadCache->PersistToCache( m_activeRequest );
 		}
 		m_activeRequest->shouldStop = true;
-		m_completedRequests.AddToTail( m_activeRequest );
+		m_completedRequests.push_back( m_activeRequest );
 		m_activeRequest = nullptr;
 		//TODO: StopLoadingProgressBar();
 	}
 
 	// clear out any queued requests
-	for ( int i=0; i<m_queuedRequests.Count(); ++i )
+	for ( int i=0; i<std::ssize( m_queuedRequests ); ++i )
 	{
 		Log_Msg( LOG_DownloadManager, DownloadColor, "Discarding queued download of %s\n", m_queuedRequests[i]->gamePath );
 		delete m_queuedRequests[i];
 	}
-	m_queuedRequests.RemoveAll();
+	m_queuedRequests.clear();
 
 	if ( TheDownloadCache )
 	{
@@ -713,7 +710,7 @@ void DownloadManager::Reset()
 // Check download requests that have been completed to see if their threads have exited
 void DownloadManager::PruneCompletedRequests()
 {
-	for ( int i=m_completedRequests.Count()-1; i>=0; --i )
+	for ( int i=std::ssize( m_completedRequests )-1; i>=0; --i )
 	{
 		if ( m_completedRequests[i]->threadDone || !m_completedRequests[i]->bAsHTTP )
 		{
@@ -722,7 +719,7 @@ void DownloadManager::PruneCompletedRequests()
 				delete[] m_completedRequests[i]->cacheData;
 			}
 			delete m_completedRequests[i];
-			m_completedRequests.Remove( i );
+			m_completedRequests.erase( m_completedRequests.begin() + i );
 		}
 	}
 }
@@ -757,9 +754,9 @@ void DownloadManager::CheckActiveDownload()
 			// Persist complete data to disk, and remove cache entry
 			TheDownloadCache->PersistToDisk( m_activeRequest );
 			m_activeRequest->shouldStop = true;
-			m_completedRequests.AddToTail( m_activeRequest );
+			m_completedRequests.push_back( m_activeRequest );
 			m_activeRequest = nullptr;
-			if ( !m_queuedRequests.Count() )
+			if ( m_queuedRequests.empty() )
 			{
 				//TODO: StopLoadingProgressBar();
 				//TODO: Cbuf_AddText("retry\n");
@@ -772,9 +769,9 @@ void DownloadManager::CheckActiveDownload()
 
 		// try to download the next file
 		m_activeRequest->shouldStop = true;
-		m_completedRequests.AddToTail( m_activeRequest );
+		m_completedRequests.push_back( m_activeRequest );
 		m_activeRequest = nullptr;
-		if ( !m_queuedRequests.Count() )
+		if ( m_queuedRequests.empty() )
 		{
 			//TODO: StopLoadingProgressBar();
 			//TODO: Cbuf_AddText("retry\n");
@@ -802,21 +799,21 @@ void DownloadManager::CheckActiveDownload()
 // Starts a new download if there are queued requests
 void DownloadManager::StartNewDownload()
 {
-	if ( m_activeRequest || !m_queuedRequests.Count() )
+	if ( m_activeRequest || !std::ssize( m_queuedRequests ) )
 		return;
 
-	while ( !m_activeRequest && m_queuedRequests.Count() )
+	while ( !m_activeRequest && std::ssize( m_queuedRequests ) )
 	{
 		// Remove one request from the queue and make it active
 		m_activeRequest = m_queuedRequests[0];
-		m_queuedRequests.Remove( 0 );
+		m_queuedRequests.erase( m_queuedRequests.begin() + 0 );
 
 		if ( g_pFileSystem->FileExists( m_activeRequest->gamePath ) && !CL_ShouldRedownloadFile( m_activeRequest->gamePath ) )
 		{
 			Log_Msg( LOG_DownloadManager, DownloadColor, "Skipping existing file %s%s.\n", m_activeRequest->baseURL, m_activeRequest->gamePath );
 			m_activeRequest->shouldStop = true;
 			m_activeRequest->threadDone = true;
-			m_completedRequests.AddToTail( m_activeRequest );
+			m_completedRequests.push_back( m_activeRequest );
 			m_activeRequest = nullptr;
 		}
 	}
@@ -828,7 +825,7 @@ void DownloadManager::StartNewDownload()
 	{
 		m_activeRequest->shouldStop = true;
 		m_activeRequest->threadDone = true;
-		m_completedRequests.AddToTail( m_activeRequest );
+		m_completedRequests.push_back( m_activeRequest );
 		m_activeRequest = nullptr;
 		return; // don't download existing files
 	}
@@ -879,7 +876,7 @@ void DownloadManager::UpdateProgressBar()
 #endif
 	if ( m_activeRequest->bAsHTTP )
 	{
-		int overallPercent = (m_totalRequests - m_queuedRequests.Count() - 1) * 100 / m_totalRequests;
+		int overallPercent = (m_totalRequests - std::ssize( m_queuedRequests ) - 1) * 100 / m_totalRequests;
 		int filePercent = 0;
 		if ( m_activeRequest->nBytesTotal > 0 )
 		{	

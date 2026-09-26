@@ -21,9 +21,6 @@
 #include "cs_gamerules.h"
 #include "matchmaking/cstrike15/imatchext_cstrike15.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 PRECACHE_REGISTER_BEGIN( GLOBAL, GameinstructorIcons )
 	PRECACHE( KV_DEP_FILE, "scripts/instructor_texturemanifest.txt" )
@@ -165,7 +162,7 @@ void CGameInstructorUserNotificationsListener::RefCount( int nDelta )
 		g_pMatchFramework->GetEventsSubscription()->Unsubscribe( this );
 	}
 
-	m_nRefCount = MAX( 0, m_nRefCount + nDelta );
+	m_nRefCount = std::max( 0, m_nRefCount + nDelta );
 }
 
 void CGameInstructorUserNotificationsListener::OnEvent( KeyValues *pEvent )
@@ -310,7 +307,7 @@ void C_GameInstructor::Shutdown( void )
 	WriteSaveData();
 
 	// Clear out all the lessons
-	for ( int i = 0; i < m_Lessons.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_Lessons ); ++i )
 	{
 		if ( m_Lessons[ i ] )
 		{
@@ -319,9 +316,9 @@ void C_GameInstructor::Shutdown( void )
 			m_Lessons[ i ] = nullptr;
 		}
 	}
-	m_Lessons.RemoveAll();
+	m_Lessons.clear();
 
-	m_LessonGroupConVarToggles.RemoveAll();
+	m_LessonGroupConVarToggles.clear();
 
 	// Stop listening for events
 	StopListeningForAllEvents();
@@ -377,7 +374,7 @@ void C_GameInstructor::Update( float frametime )
 	}
 
 	// Loop through all the lesson roots and reset their active status
-	for ( int i = m_OpenOpportunities.Count() - 1; i >= 0; --i )
+	for ( int i = std::ssize( m_OpenOpportunities ) - 1; i >= 0; --i )
 	{
 		CBaseLesson *pLesson = m_OpenOpportunities[ i ];
 		CBaseLesson *pRootLesson = pLesson->GetRoot();
@@ -391,7 +388,7 @@ void C_GameInstructor::Update( float frametime )
 	int iCurrentPriority = 0;
 
 	// Loop through all the open lessons
-	for ( int i = m_OpenOpportunities.Count() - 1; i >= 0; --i )
+	for ( int i = std::ssize( m_OpenOpportunities ) - 1; i >= 0; --i )
 	{
 		CBaseLesson *pLesson = m_OpenOpportunities[ i ];
 
@@ -522,7 +519,7 @@ void C_GameInstructor::FireGameEvent( IGameEvent *event )
 				ConColorMsg( CBaseLesson::m_rgbaVerbosePlain, "Local player died...\n" );
 			}
 
-			for ( int i = m_OpenOpportunities.Count() - 1; i >= 0; --i )
+			for ( int i = std::ssize( m_OpenOpportunities ) - 1; i >= 0; --i )
 			{
 				CBaseLesson *pLesson = m_OpenOpportunities[ i ];
 				CBaseLesson *pRootLesson = pLesson->GetRoot();
@@ -630,7 +627,7 @@ void C_GameInstructor::DefineLesson( CBaseLesson *pLesson )
 		ConColorMsg( CBaseLesson::m_rgbaVerbosePlain, "defined.\n" );
 	}
 
-	m_Lessons.AddToTail( pLesson );
+	m_Lessons.push_back( pLesson );
 }
 
 const CBaseLesson * C_GameInstructor::GetLesson( const char *pchLessonName )
@@ -641,7 +638,7 @@ const CBaseLesson * C_GameInstructor::GetLesson( const char *pchLessonName )
 
 bool C_GameInstructor::IsLessonOfSameTypeOpen( const CBaseLesson *pLesson ) const
 {
-	for ( int i = 0; i < m_OpenOpportunities.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_OpenOpportunities ); ++i )
 	{
 		CBaseLesson *pOpenOpportunity = m_OpenOpportunities[ i ];
 
@@ -681,7 +678,7 @@ bool C_GameInstructor::ReadSaveData( void )
 
 	int nVersion = 0;
 
-	for ( int i = 0; i < m_Lessons.Count();++i )
+	for ( int i = 0; i < std::ssize( m_Lessons );++i )
 	{
 		CBaseLesson *pLesson = m_Lessons[i];
 		if ( !pLesson || ( pLesson->GetDisplayLimit() == 0 && pLesson->GetSuccessLimit() == 0 ) )
@@ -739,7 +736,7 @@ void C_GameInstructor::KeyValueBuilder( KeyValues *pKeyValues )
 	TitleDataFieldsDescription_t const *fields = g_pMatchFramework->GetMatchTitle()->DescribeTitleDataStorage();
 
 	// Build key value data to save
-	for ( int i = 0; i < m_Lessons.Count();++i )
+	for ( int i = 0; i < std::ssize( m_Lessons );++i )
 	{
 		CBaseLesson *pLesson = m_Lessons[ i ];
 		TitleData3::GameInstructorData_t::LessonInfo_t li;
@@ -776,7 +773,7 @@ void C_GameInstructor::ResetDisplaysAndSuccesses( void )
 		ConColorMsg( CBaseLesson::m_rgbaVerbosePlain, "Reset all lesson display and success counts.\n" );
 	}
 
-	for ( int i = 0; i < m_Lessons.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_Lessons ); ++i )
 	{
 		m_Lessons[ i ]->ResetDisplaysAndSuccesses();
 	}
@@ -919,7 +916,7 @@ bool C_GameInstructor::OpenOpportunity( CBaseLesson *pLesson )
 		int iInstanceCount = 0;
 
 		// Check how many are already open
-		for ( int i = m_OpenOpportunities.Count() - 1; i >= 0; --i )
+		for ( int i = std::ssize( m_OpenOpportunities ) - 1; i >= 0; --i )
 		{
 			CBaseLesson *pOpenOpportunity = m_OpenOpportunities[ i ];
 
@@ -986,7 +983,7 @@ bool C_GameInstructor::OpenOpportunity( CBaseLesson *pLesson )
 		ConColorMsg( CBaseLesson::m_rgbaVerbosePlain, "opened.\n" );
 	}
 
-	m_OpenOpportunities.AddToTail( pLesson );
+	m_OpenOpportunities.push_back( pLesson );
 
 	return true;
 }
@@ -996,7 +993,7 @@ void C_GameInstructor::DumpOpenOpportunities( void )
 	ConColorMsg( CBaseLesson::m_rgbaVerboseHeader, "GAME INSTRUCTOR: " );
 	ConColorMsg( CBaseLesson::m_rgbaVerbosePlain, "Open lessons...\n" );
 
-	for ( int i = m_OpenOpportunities.Count() - 1; i >= 0; --i )
+	for ( int i = std::ssize( m_OpenOpportunities ) - 1; i >= 0; --i )
 	{
 		CBaseLesson *pLesson = m_OpenOpportunities[ i ];
 		CBaseLesson *pRootLesson = pLesson->GetRoot();
@@ -1061,13 +1058,13 @@ C_BasePlayer * C_GameInstructor::GetLocalPlayer( void )
 void C_GameInstructor::EvaluateLessonsForGameRules( void )
 {
 	// Enable everything by default
-	for ( int i = 0; i < m_Lessons.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_Lessons ); ++i )
 	{
 		m_Lessons[ i ]->SetEnabled( true );
 	}
 
 	// Then see if we should disable anything
-	for ( int nConVar = 0; nConVar < m_LessonGroupConVarToggles.Count(); ++nConVar )
+	for ( int nConVar = 0; nConVar < std::ssize( m_LessonGroupConVarToggles ); ++nConVar )
 	{
 		LessonGroupConVarToggle_t *pLessonGroupConVarToggle = &(m_LessonGroupConVarToggles[ nConVar ]);
 		if ( pLessonGroupConVarToggle->var.IsValid() )
@@ -1082,7 +1079,7 @@ void C_GameInstructor::EvaluateLessonsForGameRules( void )
 
 void C_GameInstructor::SetLessonGroupEnabled( const char *pszGroup, bool bEnabled )
 {
-	for ( int i = 0; i < m_Lessons.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_Lessons ); ++i )
 	{
 		if ( !Q_stricmp(pszGroup, m_Lessons[i]->GetGroup()) )
 		{
@@ -1094,41 +1091,41 @@ void C_GameInstructor::SetLessonGroupEnabled( const char *pszGroup, bool bEnable
 void C_GameInstructor::FindErrors( void )
 {
 	// Loop through all the lesson and run all their scripted actions
-	for ( int i = 0; i < m_Lessons.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_Lessons ); ++i )
 	{
 		CScriptedIconLesson *pLesson = dynamic_cast<CScriptedIconLesson *>( m_Lessons[ i ] );
 		if ( pLesson )
 		{
 			// Process all open events
-			for ( int iLessonEvent = 0; iLessonEvent < pLesson->GetOpenEvents().Count(); ++iLessonEvent )
+			for ( int iLessonEvent = 0; iLessonEvent < std::ssize( pLesson->GetOpenEvents() ); ++iLessonEvent )
 			{
 				const LessonEvent_t *pLessonEvent = &(pLesson->GetOpenEvents()[ iLessonEvent ]);
 				pLesson->ProcessElements( nullptr, &(pLessonEvent->elements) );
 			}
 
 			// Process all close events
-			for ( int iLessonEvent = 0; iLessonEvent < pLesson->GetCloseEvents().Count(); ++iLessonEvent )
+			for ( int iLessonEvent = 0; iLessonEvent < std::ssize( pLesson->GetCloseEvents() ); ++iLessonEvent )
 			{
 				const LessonEvent_t *pLessonEvent = &(pLesson->GetCloseEvents()[ iLessonEvent ]);
 				pLesson->ProcessElements( nullptr, &(pLessonEvent->elements) );
 			}
 
 			// Process all success events
-			for ( int iLessonEvent = 0; iLessonEvent < pLesson->GetSuccessEvents().Count(); ++iLessonEvent )
+			for ( int iLessonEvent = 0; iLessonEvent < std::ssize( pLesson->GetSuccessEvents() ); ++iLessonEvent )
 			{
 				const LessonEvent_t *pLessonEvent = &(pLesson->GetSuccessEvents()[ iLessonEvent ]);
 				pLesson->ProcessElements( nullptr, &(pLessonEvent->elements) );
 			}
 
 			// Process all on open events
-			for ( int iLessonEvent = 0; iLessonEvent < pLesson->GetOnOpenEvents().Count(); ++iLessonEvent )
+			for ( int iLessonEvent = 0; iLessonEvent < std::ssize( pLesson->GetOnOpenEvents() ); ++iLessonEvent )
 			{
 				const LessonEvent_t *pLessonEvent = &(pLesson->GetOnOpenEvents()[ iLessonEvent ]);
 				pLesson->ProcessElements( nullptr, &(pLessonEvent->elements) );
 			}
 
 			// Process all update events
-			for ( int iLessonEvent = 0; iLessonEvent < pLesson->GetUpdateEvents().Count(); ++iLessonEvent )
+			for ( int iLessonEvent = 0; iLessonEvent < std::ssize( pLesson->GetUpdateEvents() ); ++iLessonEvent )
 			{
 				const LessonEvent_t *pLessonEvent = &(pLesson->GetUpdateEvents()[ iLessonEvent ]);
 				pLesson->ProcessElements( nullptr, &(pLessonEvent->elements) );
@@ -1210,7 +1207,7 @@ void C_GameInstructor::UpdateInactiveLesson( CBaseLesson *pLesson )
 
 CBaseLesson * C_GameInstructor::GetLesson_Internal( const char *pchLessonName )
 {
-	for ( int i = 0; i < m_Lessons.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_Lessons ); ++i )
 	{
 		CBaseLesson *pLesson = m_Lessons[ i ];
 
@@ -1227,7 +1224,7 @@ void C_GameInstructor::StopAllLessons( void )
 {
 	ACTIVE_SPLITSCREEN_PLAYER_GUARD( m_nSplitScreenSlot );
 	// Stop all the current lessons
-	for ( int i = m_OpenOpportunities.Count() - 1; i >= 0; --i )
+	for ( int i = std::ssize( m_OpenOpportunities ) - 1; i >= 0; --i )
 	{
 		CBaseLesson *pLesson = m_OpenOpportunities[ i ];
 		UpdateInactiveLesson( pLesson );
@@ -1238,13 +1235,13 @@ void C_GameInstructor::CloseAllOpenOpportunities( void )
 {
 	ACTIVE_SPLITSCREEN_PLAYER_GUARD( m_nSplitScreenSlot );
 	// Clear out all the open opportunities
-	for ( int i = m_OpenOpportunities.Count() - 1; i >= 0; --i )
+	for ( int i = std::ssize( m_OpenOpportunities ) - 1; i >= 0; --i )
 	{
 		CBaseLesson *pLesson = m_OpenOpportunities[ i ];
 		CloseOpportunity( pLesson );
 	}
 
-	Assert( m_OpenOpportunities.Count() == 0 );
+	Assert( std::ssize( m_OpenOpportunities ) == 0 );
 }
 
 void C_GameInstructor::CloseOpportunity( CBaseLesson *pLesson )
@@ -1268,7 +1265,7 @@ void C_GameInstructor::CloseOpportunity( CBaseLesson *pLesson )
 
 	pLesson->StopListeningForAllEvents();
 
-	m_OpenOpportunities.FindAndRemove( pLesson );
+	ks::erase_first( m_OpenOpportunities, pLesson );
 	delete pLesson;
 }
 
@@ -1289,7 +1286,7 @@ void C_GameInstructor::ReadLessonsFromFile( const char *pchFileName )
 		if ( Q_stricmp( m_pScriptKeys->GetName(), "GroupConVarToggle" ) == 0 )
 		{
 			// Add convar group toggler to the list
-			int nLessonGroupConVarToggle = m_LessonGroupConVarToggles.AddToTail( LessonGroupConVarToggle_t( m_pScriptKeys->GetString( "convar" ) ) );
+			int nLessonGroupConVarToggle = std::ssize( m_LessonGroupConVarToggles ); m_LessonGroupConVarToggles.push_back( LessonGroupConVarToggle_t( m_pScriptKeys->GetString( "convar" ) ) );
 			LessonGroupConVarToggle_t *pLessonGroupConVarToggle = &(m_LessonGroupConVarToggles[ nLessonGroupConVarToggle ]);
 			V_strcpy_safe( pLessonGroupConVarToggle->szLessonGroupName, m_pScriptKeys->GetString( "group" ) );
 
@@ -1312,7 +1309,7 @@ void C_GameInstructor::ReadLessonsFromFile( const char *pchFileName )
 
 void C_GameInstructor::InitLessonPrerequisites( void )
 {
-	for ( int i = 0; i < m_Lessons.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_Lessons ); ++i )
 	{
 		m_Lessons[ i ]->InitPrerequisites();
 	}

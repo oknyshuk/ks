@@ -110,14 +110,14 @@ protected:
 	void DoorClose();
 
 	CBasePropDoor *GetMaster( void ) { return m_hMaster; }
-	bool HasSlaves( void ) { return ( m_hDoorList.Count() > 0 ); }
+	bool HasSlaves( void ) { return ( !m_hDoorList.empty() ); }
 
 	inline void SetDoorState( DoorState_t eDoorState );
 
 	virtual void CalcDoorSounds();
 
 	[[= ks::reflect::Key{ .name = "returndelay" } ]] float m_flAutoReturnDelay;	// How many seconds to wait before automatically closing, -1 never closes automatically.
-	CUtlVector< CHandle< CBasePropDoor > >	m_hDoorList;	// List of doors linked to us
+	std::vector< CHandle< CBasePropDoor > >	m_hDoorList;	// List of doors linked to us
 
 	inline CBaseEntity *GetActivator();
 
@@ -487,7 +487,7 @@ class CPropDoorRotatingBreakable : public CPropDoorRotating
 	int m_currentDamageState;
 	int m_blockedTeamNumber;
 	bool m_isBlockingNav[MAX_NAV_TEAMS];
-	CUtlVector< string_t > m_damageStates;
+	std::vector< string_t > m_damageStates;
 };
 
 #endif // BASEPROPDOOR_H

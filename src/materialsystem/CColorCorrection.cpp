@@ -15,9 +15,6 @@
 #include "tier2/fileutils.h"
 #include "pixelwriter.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 class ITextureInternal;
 
 //-----------------------------------------------------------------------------
@@ -217,7 +214,7 @@ public:
 	virtual ColorCorrectionHandle_t FindLookup( const char *pName );
 
 protected:
-	CUtlVector< ColorCorrectionLookup_t * > m_ColorCorrectionList;
+	std::vector< ColorCorrectionLookup_t * > m_ColorCorrectionList;
     ColorCorrectionHandle_t m_DefaultColorCorrectionHandle;
 	ColorCorrectionHandle_t m_UnnamedColorCorrectionHandle;
 	float m_DefaultColorCorrectionWeight;
@@ -277,7 +274,7 @@ void CColorCorrectionSystem::Init()
 //-----------------------------------------------------------------------------
 void CColorCorrectionSystem::Shutdown()
 {
-	for ( int i=0;i<m_ColorCorrectionList.Count();i++ )
+	for ( int i=0;i<std::ssize( m_ColorCorrectionList );i++ )
 	{
 		delete m_ColorCorrectionList[i];
 	}
@@ -400,14 +397,14 @@ int _cdecl CompareLookups( const CCLPtr *lookup_a, const CCLPtr *lookup_b )
 //-----------------------------------------------------------------------------
 void CColorCorrectionSystem::SortLookups()
 {
-	m_ColorCorrectionList.Sort( CompareLookups );
+	ks::qsort( m_ColorCorrectionList, CompareLookups );
 
-	for ( int i=0;i<COLOR_CORRECTION_MAX_TEXTURES && i<m_ColorCorrectionList.Count();i++ )
+	for ( int i=0;i<COLOR_CORRECTION_MAX_TEXTURES && i<std::ssize( m_ColorCorrectionList );i++ )
 	{
 		TextureManager()->SetColorCorrectionTexture( i, m_ColorCorrectionList[i]->m_pColorCorrectionTexture );
 	}
 
-	for ( int i=m_ColorCorrectionList.Count();i<COLOR_CORRECTION_MAX_TEXTURES;i++ )
+	for ( int i=std::ssize( m_ColorCorrectionList );i<COLOR_CORRECTION_MAX_TEXTURES;i++ )
 	{
 		TextureManager()->SetColorCorrectionTexture( i, nullptr );
 	}
@@ -418,7 +415,7 @@ void CColorCorrectionSystem::SortLookups()
 //-----------------------------------------------------------------------------
 ColorCorrectionLookup_t *CColorCorrectionSystem::FindLookup( ColorCorrectionHandle_t handle )
 {
-	for ( int i=0; i<m_ColorCorrectionList.Count(); i++ )
+	for ( int i=0; i<std::ssize( m_ColorCorrectionList ); i++ )
 	{
 		if ( m_ColorCorrectionList[i]->m_Handle == handle )
 		{
@@ -458,7 +455,7 @@ ColorCorrectionHandle_t CColorCorrectionSystem::AddLookup( const char *pName )
 	}
 
 	lookup = new ColorCorrectionLookup_t( handle );
-	m_ColorCorrectionList.AddToTail( lookup );
+	m_ColorCorrectionList.push_back( lookup );
 
 	// xbox needs to defer the real download (only once) to when the volume data is pushed in
 	// the PC downloads becuase that was the legacy behavior (silly to me)
@@ -498,12 +495,12 @@ bool CColorCorrectionSystem::RemoveLookup( ColorCorrectionHandle_t handle )
 	if ( handle == m_DefaultColorCorrectionHandle )
 		return false;
 
-	for ( int i=0;i<m_ColorCorrectionList.Count();i++ )
+	for ( int i=0;i<std::ssize( m_ColorCorrectionList );i++ )
 	{
 		ColorCorrectionLookup_t *lookup = m_ColorCorrectionList[i];
 		if ( lookup->m_Handle == handle )
 		{
-			m_ColorCorrectionList.Remove( i );
+			m_ColorCorrectionList.erase( m_ColorCorrectionList.begin() + i );
 
 			delete lookup;
 
@@ -556,7 +553,7 @@ float CColorCorrectionSystem::GetLookupWeight( ColorCorrectionHandle_t handle )
 //-----------------------------------------------------------------------------
 float CColorCorrectionSystem::GetLookupWeight( int i )
 {
-	if ( i<m_ColorCorrectionList.Count() )
+	if ( i<std::ssize( m_ColorCorrectionList ) )
 	{
 		if ( i==-1 )
 			return m_DefaultColorCorrectionWeight;
@@ -687,21 +684,22 @@ void CColorCorrectionSystem::LoadLookup( ColorCorrectionHandle_t handle, const c
 
 	char szXboxName[MAX_PATH];
 
-	CUtlBuffer colorBuff;
-	if ( !g_pFullFileSystem->ReadFile( pLookupName, "GAME", colorBuff ) )
+	auto colorData = g_pFullFileSystem->ReadFile( pLookupName, "GAME" );
+	if ( !colorData )
 	{
 		Warning( "CColorCorrectionSystem: Missing '%s'\n", pLookupName );
 		return;
 	}
 
-	int res = (int)powf( (float)( colorBuff.TellMaxPut()/sizeof( color24 ) ), 1.0f/3.0f );
-	if ( res != COLOR_CORRECTION_TEXTURE_SIZE || res*res*res*(int)sizeof( color24 ) != colorBuff.TellMaxPut() )
+	const int nColorBytes = (int)colorData->size();
+	int res = (int)powf( (float)( nColorBytes/sizeof( color24 ) ), 1.0f/3.0f );
+	if ( res != COLOR_CORRECTION_TEXTURE_SIZE || res*res*res*(int)sizeof( color24 ) != nColorBytes )
 	{
-		Warning( "CColorCorrectionSystem: Raw file '%s' has bad size (%d)\n", pLookupName, colorBuff.TellMaxPut() );
+		Warning( "CColorCorrectionSystem: Raw file '%s' has bad size (%d)\n", pLookupName, nColorBytes );
 		return;
 	}
 
-	color24 *pColors = (color24 *)colorBuff.Base();
+	const color24 *pColors = (const color24 *)colorData->data();
 	int colorIndex = 0;
 	RGBX5551_t inColor;
 
@@ -790,7 +788,7 @@ void CColorCorrectionSystem::ResetLookupWeights()
 {
     m_DefaultColorCorrectionWeight = 0.0f;
 
-	for ( int i=0;i<m_ColorCorrectionList.Count();i++ )
+	for ( int i=0;i<std::ssize( m_ColorCorrectionList );i++ )
 	{
 		ColorCorrectionLookup_t *lookup = m_ColorCorrectionList[i];
 		if ( lookup->m_bResetable )
@@ -822,7 +820,7 @@ color24 CColorCorrectionSystem::ConvertToColor24( RGBX5551_t inColor )
 void CColorCorrectionSystem::ReleaseTextures()
 {
 
-	for ( int i=0;i<m_ColorCorrectionList.Count();i++ )
+	for ( int i=0;i<std::ssize( m_ColorCorrectionList );i++ )
 	{
 		m_ColorCorrectionList[i]->ReleaseTexture();
 	}
@@ -834,7 +832,7 @@ void CColorCorrectionSystem::ReleaseTextures()
 void CColorCorrectionSystem::RestoreTextures()
 {
 
-	for ( int i=0;i<m_ColorCorrectionList.Count();i++ )
+	for ( int i=0;i<std::ssize( m_ColorCorrectionList );i++ )
 	{
 		m_ColorCorrectionList[i]->RestoreTexture();
 	}
@@ -846,7 +844,7 @@ void CColorCorrectionSystem::RestoreTextures()
 void CColorCorrectionSystem::GetNormalizedWeights( float *pDefaultWeight, float *pLookupWeights )
 {
 	float total_weight = 0.0f;
-	int nLoopCount = MIN( m_ColorCorrectionList.Count(), COLOR_CORRECTION_MAX_TEXTURES );
+	int nLoopCount = std::min<int>( std::ssize( m_ColorCorrectionList ), COLOR_CORRECTION_MAX_TEXTURES );
 	for ( int i=0; i<nLoopCount; i++ )
 	{
 		total_weight += m_ColorCorrectionList[i]->m_flWeight;
@@ -880,7 +878,7 @@ void CColorCorrectionSystem::GetNormalizedWeights( float *pDefaultWeight, float 
 int CColorCorrectionSystem::GetNumLookups()
 {
 	int i;
-	for ( i=0;i<m_ColorCorrectionList.Count()&&i<COLOR_CORRECTION_MAX_TEXTURES;i++ )
+	for ( i=0;i<std::ssize( m_ColorCorrectionList )&&i<COLOR_CORRECTION_MAX_TEXTURES;i++ )
 	{
 		 if ( m_ColorCorrectionList[i]->m_flWeight<=0.0f )
 			 break;

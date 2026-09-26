@@ -8,9 +8,6 @@
 #include "c_baseentity.h"
 #include "tier0/vprof.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // helper method for trace hull as used by physics...

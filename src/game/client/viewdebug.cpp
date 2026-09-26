@@ -19,9 +19,6 @@
 #include "materialsystem/icustommaterialmanager.h"
 
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // debugging overlays

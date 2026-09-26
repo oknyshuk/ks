@@ -17,6 +17,7 @@
 #include <vcollide_parse.h>
 #include <bone_setup.h>
 #include "vstdlib/ikeyvaluessystem.h"
+#include <deque>
 
 #ifdef CLIENT_DLL
 #include "gamestringpool.h"
@@ -24,9 +25,6 @@
 #else
 #include "props.h"
 #endif
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 ConVar sv_pushaway_clientside_size( "sv_pushaway_clientside_size", "15", FCVAR_REPLICATED | FCVAR_DEVELOPMENTONLY, "Minimum size of pushback objects" );
 ConVar props_break_max_pieces( "props_break_max_pieces", false ? "32" : "-1", FCVAR_REPLICATED, "Maximum prop breakable piece count (-1 = model default)" );
@@ -37,7 +35,7 @@ extern ConVar breakable_multiplayer;
 ConVar cl_burninggibs( "cl_burninggibs", "0", 0, "A burning player that gibs has burning gibs." );
 #endif // GAME_DLL
 
-extern bool PropBreakableCapEdictsOnCreateAll( CUtlVector<breakmodel_t> &list, IPhysicsObject *pPhysics, const breakablepropparams_t &params, CBaseEntity *pEntity, int iPrecomputedBreakableCount = -1 );
+extern bool PropBreakableCapEdictsOnCreateAll( std::vector< breakmodel_t > &list, IPhysicsObject *pPhysics, const breakablepropparams_t &params, CBaseEntity *pEntity, int iPrecomputedBreakableCount = -1 );
 extern CBaseEntity *BreakModelCreateSingle( CBaseEntity *pOwner, breakmodel_t *pModel, const Vector &position, 
 	const QAngle &angles, const Vector &velocity, const AngularImpulse &angVelocity, int nSkin, const breakablepropparams_t &params );
 
@@ -205,7 +203,7 @@ CPropData::CPropData( void ) :
 //-----------------------------------------------------------------------------
 void CPropData::LevelInitPreEntity( void )
 {
-	m_BreakableChunks.RemoveAll();
+	m_BreakableChunks.clear();
 	ParsePropDataFile();
 }
 
@@ -244,7 +242,7 @@ void CPropData::ParsePropDataFile( void )
 		while ( pChunkSection )
 		{
 			// Create a new chunk section and add it to our list
-			int index = m_BreakableChunks.AddToTail();
+			int index = std::ssize( m_BreakableChunks ); m_BreakableChunks.emplace_back();
 			propdata_breakablechunk_t *pBreakableChunk = &m_BreakableChunks[index];
 			pBreakableChunk->iszChunkType = AllocPooledString( pChunkSection->GetName() );
 
@@ -254,7 +252,7 @@ void CPropData::ParsePropDataFile( void )
 			{
 				const char *pModel = pModelName->GetName();
 				string_t pooledName = AllocPooledString( pModel );
-				pBreakableChunk->iszChunkModels.AddToTail( pooledName );
+				pBreakableChunk->iszChunkModels.push_back( pooledName );
 				CBaseEntity::PrecacheModel( STRING( pooledName ) );
 
 				pModelName = pModelName->GetNextKey();
@@ -509,7 +507,7 @@ const char *CPropData::GetRandomChunkModel( const char *pszBreakableSection, int
 		return nullptr;
 
 	// Find the right section
-	int iCount = m_BreakableChunks.Count();
+	int iCount = std::ssize( m_BreakableChunks );
 	int i;
 	for ( i = 0; i < iCount; i++ )
 	{
@@ -523,12 +521,12 @@ const char *CPropData::GetRandomChunkModel( const char *pszBreakableSection, int
 	int iRandom;
 	if ( iMaxSize == -1 )
 	{
-		iRandom = RandomInt( 0, m_BreakableChunks[i].iszChunkModels.Count()-1 );
+		iRandom = RandomInt( 0, std::ssize( m_BreakableChunks[i].iszChunkModels )-1 );
 	}
 	else
 	{
 		// Don't pick anything over the specified size
-		iRandom = RandomInt( 0, MIN(iMaxSize, m_BreakableChunks[i].iszChunkModels.Count()-1) );
+		iRandom = RandomInt( 0, std::min<std::common_type_t<int, std::common_type_t<long int, long int>>>(iMaxSize, std::ssize( m_BreakableChunks[i].iszChunkModels )-1) );
 	}
 
 	return STRING(m_BreakableChunks[i].iszChunkModels[iRandom]);
@@ -671,7 +669,7 @@ private:
 	bool	m_wroteCollisionGroup;
 };
 
-void BreakModelList( CUtlVector<breakmodel_t> &list, int modelindex, float defBurstScale, int defCollisionGroup )
+void BreakModelList( std::vector< breakmodel_t > &list, int modelindex, float defBurstScale, int defCollisionGroup )
 {
 	vcollide_t *pCollide = modelinfo->GetVCollide( modelindex );
 	if ( !pCollide )
@@ -685,7 +683,7 @@ void BreakModelList( CUtlVector<breakmodel_t> &list, int modelindex, float defBu
 		const char *pBlock = pParse->GetCurrentBlockName();
 		if ( !strcmpi( pBlock, "break" ) )
 		{
-			int index = list.AddToTail();
+			int index = std::ssize( list ); list.emplace_back();
 			breakmodel_t &breakModel = list[index];
 			pParse->ParseCustom( &breakModel, &breakParser );
 		}
@@ -790,7 +788,7 @@ private:
 	[[= ks::reflect::Input{ .name = "SetMaxPiecesDX8", .type = FIELD_INTEGER } ]] void InputSetMaxPiecesDX8( inputdata_t &inputdata );
 
 	typedef CHandle<CBaseAnimating> CGibHandle;
-	CUtlLinkedList< CGibHandle > m_LRU; 
+	std::deque< CGibHandle > m_LRU; 
 
 	[[= ks::reflect::Key{ .name = "allownewgibs" } ]] bool		m_bAllowNewGibs;
 
@@ -820,7 +818,7 @@ LINK_ENTITY_TO_CLASS( game_gib_manager, CGameGibManager );
 
 void CGameGibManager::Activate( void )
 {
-	m_LRU.Purge();
+	m_LRU.clear();
 
 	UpdateMaxPieces();
 
@@ -848,7 +846,7 @@ bool CGameGibManager::AllowedToSpawnGib( void )
 
 	if ( m_iLastFrame == gpGlobals->framecount )
 	{
-		if ( m_LRU.Count() >= m_iCurrentMaxPieces )
+		if ( (int)m_LRU.size() >= m_iCurrentMaxPieces )
 		{
 			return false;
 		}
@@ -870,36 +868,24 @@ void CGameGibManager::InputSetMaxPiecesDX8( inputdata_t &inputdata )
 
 void CGameGibManager::AddGibToLRU( CBaseAnimating *pEntity )
 {
-	int i, next;
-
 	if ( pEntity == nullptr )
 		return;
 
 	//Find stale gibs.
-	for ( i = m_LRU.Head(); i < m_LRU.InvalidIndex(); i = next )
-	{
-		next = m_LRU.Next(i);
-
-		if ( m_LRU[i].Get() == nullptr )
-		{
-			m_LRU.Remove(i);
-		}
-	}
+	std::erase_if( m_LRU, []( const CGibHandle &h ) { return h.Get() == nullptr; } );
 
 	// We're not tracking gibs at the moment
 	if ( m_iCurrentMaxPieces <= 0 )
 		return;
 
-	while ( m_LRU.Count() >= m_iCurrentMaxPieces )
+	while ( (int)m_LRU.size() >= m_iCurrentMaxPieces )
 	{
-		i = m_LRU.Head();
-
 		//TODO: Make this fade out instead of pop.
-		UTIL_Remove( m_LRU[i] );
-		m_LRU.Remove(i);
+		UTIL_Remove( m_LRU.front() );
+		m_LRU.pop_front();
 	}
 	
-	m_LRU.AddToTail( pEntity );
+	m_LRU.push_back( pEntity );
 	m_iLastFrame = gpGlobals->framecount;
 }
 
@@ -932,7 +918,7 @@ void PropBreakableCreateAll( int modelindex, IPhysicsObject *pPhysics, const bre
 	{
 		if ( iPrecomputedBreakableCount != -1 )
 		{
-			iPrecomputedBreakableCount = MIN( iMaxBreakCount, iPrecomputedBreakableCount );
+			iPrecomputedBreakableCount = std::min( iMaxBreakCount, iPrecomputedBreakableCount );
 		}
 		else
 		{
@@ -1002,12 +988,12 @@ void PropBreakableCreateAll( int modelindex, IPhysicsObject *pPhysics, const bre
 		}
 	}
 	
-	CUtlVector<breakmodel_t> list;
+	std::vector< breakmodel_t > list;
 
-	list.EnsureCapacity( 20 );
+	list.reserve( 20 );
 	BreakModelList( list, modelindex, params.defBurstScale, params.defCollisionGroup );
 
-	if ( list.Count() )
+	if ( !list.empty() )
 	{
 #ifdef GAME_DLL
 		// On server limit break model creation
@@ -1017,7 +1003,7 @@ void PropBreakableCreateAll( int modelindex, IPhysicsObject *pPhysics, const bre
 			return;
 		}
 #endif
-		for ( int i = 0; i < list.Count(); i++ )
+		for ( int i = 0; i < std::ssize( list ); i++ )
 		{
 			const char *modelName = list[i].modelName;
 			int modelIndex = modelinfo->GetModelIndex( modelName );
@@ -1315,7 +1301,7 @@ void PrecacheGibsForModel( int iModel )
 //			defBurstScale - 
 //			defCollisionGroup - 
 //-----------------------------------------------------------------------------
-void BuildGibList( CUtlVector<breakmodel_t> &list, int modelindex, float defBurstScale, int defCollisionGroup )
+void BuildGibList( std::vector< breakmodel_t > &list, int modelindex, float defBurstScale, int defCollisionGroup )
 {
 	BreakModelList( list, modelindex, defBurstScale, defCollisionGroup );
 }
@@ -1331,7 +1317,7 @@ void BuildGibList( CUtlVector<breakmodel_t> &list, int modelindex, float defBurs
 //			bIgnoreGibLImit - 
 //			defaultLocation - 
 //-----------------------------------------------------------------------------
-CBaseEntity *CreateGibsFromList( CUtlVector<breakmodel_t> &list, int modelindex, IPhysicsObject *pPhysics, const breakablepropparams_t &params, CBaseEntity *pEntity, int iPrecomputedBreakableCount, bool bIgnoreGibLimit, bool defaultLocation, CUtlVector<EHANDLE> *pGibList, bool bBurning )
+CBaseEntity *CreateGibsFromList( std::vector< breakmodel_t > &list, int modelindex, IPhysicsObject *pPhysics, const breakablepropparams_t &params, CBaseEntity *pEntity, int iPrecomputedBreakableCount, bool bIgnoreGibLimit, bool defaultLocation, std::vector< EHANDLE > *pGibList, bool bBurning )
 {
     // Check for prop breakable count reset. 
 	int nPropCount = props_break_max_pieces_perframe.GetInt(); 
@@ -1353,7 +1339,7 @@ CBaseEntity *CreateGibsFromList( CUtlVector<breakmodel_t> &list, int modelindex,
 	{
 		if ( iPrecomputedBreakableCount != -1 )
 		{
-			iPrecomputedBreakableCount = MIN( iMaxBreakCount, iPrecomputedBreakableCount );
+			iPrecomputedBreakableCount = std::min( iMaxBreakCount, iPrecomputedBreakableCount );
 		}
 		else
 		{
@@ -1410,14 +1396,14 @@ CBaseEntity *CreateGibsFromList( CUtlVector<breakmodel_t> &list, int modelindex,
 		AngleMatrix( vec3_angle, localToWorld );
 	}
 	
-//	CUtlVector<breakmodel_t> list;
+//	std::vector< breakmodel_t > list;
 //	BreakModelList( list, modelindex, params.defBurstScale, params.defCollisionGroup );
 
 	CBaseEntity *pFirstBreakable = nullptr;
 
-	if ( list.Count() )
+	if ( !list.empty() )
 	{
-		for ( int i = 0; i < list.Count(); i++ )
+		for ( int i = 0; i < std::ssize( list ); i++ )
 		{
 			int modelIndex = modelinfo->GetModelIndex( list[i].modelName );
 			if ( modelIndex <= 0 )
@@ -1578,7 +1564,7 @@ CBaseEntity *CreateGibsFromList( CUtlVector<breakmodel_t> &list, int modelindex,
 
 				if ( pGibList )
 				{
-					pGibList->AddToTail( pBreakable );
+					pGibList->push_back( pBreakable );
 				}
 			}
 		}
@@ -1673,7 +1659,7 @@ CBaseEntity *CreateGibsFromList( CUtlVector<breakmodel_t> &list, int modelindex,
 
 					if ( pGibList )
 					{
-						pGibList->AddToTail( pBreakable );
+						pGibList->push_back( pBreakable );
 					}
 				}
 				else

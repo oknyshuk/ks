@@ -9,8 +9,10 @@
 
 #include "tier0/platform.h"
 
-#include <mempool.h>
-#include <utllinkedlist.h>
+#include "tier1/fixed_pool.h"
+#include <atomic>
+#include <list>
+#include <mutex>
 
 
 class PackedEntity;
@@ -80,6 +82,8 @@ public:
 	// Reference-counting.
 	void					AddReference();
 	void					ReleaseReference();
+	void					AddRef() { AddReference(); }
+	void					Release() { ReleaseReference(); }
 
 	size_t					GetMemSize()const;
 public:
@@ -101,7 +105,7 @@ public:
 	CEventInfo				**m_pTempEntities; // temp entities
 	int						m_nTempEntities;
 
-	CUtlVector<int>			m_iExplicitDeleteSlots;
+	std::vector< int >			m_iExplicitDeleteSlots;
 
 private:
 
@@ -110,14 +114,14 @@ private:
 	CFrameSnapshot();
 	~CFrameSnapshot();
 
-	// Index info CFrameSnapshotManager::m_FrameSnapshots.
-	CInterlockedInt			m_ListIndex;	
+	// Position in CFrameSnapshotManager::m_FrameSnapshots.
+	std::list< CFrameSnapshot * >::iterator m_ListIter;
 
 	//the set that this snapshot belongs to
 	uint32					m_nSnapshotSet;
 
 	// Snapshots auto-delete themselves when their refcount goes to zero.
-	CInterlockedInt			m_nReferences;
+	std::atomic<int>			m_nReferences;
 
 #ifdef DEBUG_SNAPSHOT_REFERENCES
 	char					m_chDebugSnapshotName[128];
@@ -129,14 +133,14 @@ class CReferencedSnapshotList
 public:
 	~CReferencedSnapshotList()
 	{
-		for ( int i = 0; i < m_vecSnapshots.Count(); ++i )
+		for ( int i = 0; i < std::ssize( m_vecSnapshots ); ++i )
 		{
 			m_vecSnapshots[ i ]->ReleaseReference();
 		}
-		m_vecSnapshots.RemoveAll();
+		m_vecSnapshots.clear();
 	}
 
-	CUtlVector< CFrameSnapshot * > m_vecSnapshots;
+	std::vector< CFrameSnapshot * > m_vecSnapshots;
 };
 
 //-----------------------------------------------------------------------------
@@ -180,7 +184,7 @@ public:
 
 	// Returns the pack data for a particular entity for a particular snapshot
 	inline PackedEntity*	GetPackedEntity( CFrameSnapshot& Snapshot, int entity );
-	PackedEntity*			GetPackedEntity( PackedEntityHandle_t handle  )					{ return m_PackedEntities[ handle ]; }
+	PackedEntity*			GetPackedEntity( PackedEntityHandle_t handle  )					{ return PackedEntityFromHandle( handle ); }
 
 	// if we are copying a Packed Entity, we have to increase the reference counter 
 	void			AddEntityReference( PackedEntityHandle_t handle );
@@ -209,22 +213,23 @@ private:
 	CFrameSnapshot			*NextSnapshot( CFrameSnapshot *pSnapshot );
 
 	// Mutex for m_FrameSnapshots array
-	CThreadFastMutex									m_FrameSnapshotsWriteMutex;
-	CUtlLinkedList<CFrameSnapshot*, unsigned short>		m_FrameSnapshots;
+	std::recursive_mutex									m_FrameSnapshotsWriteMutex;
+	std::list< CFrameSnapshot * >						m_FrameSnapshots;
 
-	CClassMemoryPool< PackedEntity >					m_PackedEntitiesPool;
-	CUtlFixedLinkedList<PackedEntity *>					m_PackedEntities; 
+	// A PackedEntityHandle_t is the address of its entity in this pool; 0 is invalid.
+	ks::object_pool< PackedEntity >					m_PackedEntitiesPool;	// addresses are the packed-entity handles
+	static PackedEntity *PackedEntityFromHandle( PackedEntityHandle_t handle ) { return reinterpret_cast< PackedEntity * >( handle ); }
 
 	int								m_nPackedEntityCacheCounter;  // increase with every cache access
-	CUtlVector<UnpackedDataCache_t>	m_PackedEntityCache;	// cache for uncompressed packed entities
+	std::vector< UnpackedDataCache_t >	m_PackedEntityCache;	// cache for uncompressed packed entities
 
 	// The most recently sent packets for each entity
 	PackedEntityHandle_t	m_pLastPackedData[ MAX_EDICTS ];
 	int						m_pSerialNumber[ MAX_EDICTS ];
 
-	CThreadFastMutex		m_WriteMutex;
+	std::recursive_mutex		m_WriteMutex;
 
-	CUtlVector<int>			m_iExplicitDeleteSlots;
+	std::vector< int >			m_iExplicitDeleteSlots;
 };
 
 PackedEntity* CFrameSnapshotManager::GetPackedEntity( CFrameSnapshot& Snapshot, int entity )
@@ -234,8 +239,8 @@ PackedEntity* CFrameSnapshotManager::GetPackedEntity( CFrameSnapshot& Snapshot, 
 	if ( index == INVALID_PACKED_ENTITY_HANDLE )
 		return nullptr;
 
-	Assert( m_PackedEntities[index]->m_nEntityIndex == entity );
-	return m_PackedEntities[index];
+	Assert( PackedEntityFromHandle( index )->m_nEntityIndex == entity );
+	return PackedEntityFromHandle( index );
 }
 
 extern CFrameSnapshotManager *framesnapshotmanager;

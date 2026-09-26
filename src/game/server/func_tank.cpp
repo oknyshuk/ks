@@ -38,9 +38,6 @@
 #include "props.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar mortar_visualize("mortar_visualize", "0" );
 
 IMPLEMENT_REFLECT_DATAMAP( CFuncTank )

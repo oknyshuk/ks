@@ -10,7 +10,7 @@
 
 #include "interpolatortypes.h"
 
-class CUtlBuffer;
+namespace ks { class byte_reader; class byte_writer; class text_writer; }
 class ISceneTokenProcessor;
 class IChoreoStringPool;
 
@@ -95,11 +95,11 @@ public:
 	float				GetEdgeZeroValue( bool leftEdge ) const;
 	void				RemoveOutOfRangeSamples( ICurveDataAccessor *data );
 
-	void				SaveToBuffer( CUtlBuffer& buf, IChoreoStringPool *pStringPool );
-	bool				RestoreFromBuffer( CUtlBuffer& buf, IChoreoStringPool *pStringPool );
+	void				SaveToBuffer( ks::byte_writer& buf, IChoreoStringPool *pStringPool );
+	bool				RestoreFromBuffer( ks::byte_reader& buf, IChoreoStringPool *pStringPool );
 
 	void				Parse( ISceneTokenProcessor *tokenizer, ICurveDataAccessor *data );
-	void				FileSave( CUtlBuffer& buf, int level, const char *name );
+	void				FileSave( ks::text_writer& buf, int level, const char *name );
 
 	float	GetIntensity( ICurveDataAccessor *data, float time );
 	CExpressionSample *GetBoundedSample( ICurveDataAccessor *data, int number, bool& bClamped );
@@ -107,9 +107,9 @@ public:
 	CCurveData & operator = (const CCurveData &src) 
 	{
 		// Copy ramp over
-		m_Ramp.RemoveAll();
+		m_Ramp.clear();
 		int i;
-		for ( i = 0; i < src.m_Ramp.Count(); i++ )
+		for ( i = 0; i < std::ssize( src.m_Ramp ); i++ )
 		{
 			CExpressionSample sample = src.m_Ramp[ i ];
 			CExpressionSample *newSample = Add( sample.time, sample.value, sample.selected );
@@ -123,7 +123,7 @@ public:
 	};
 
 private:
-	CUtlVector< CExpressionSample > m_Ramp;
+	std::vector< CExpressionSample > m_Ramp;
 	EdgeInfo_t		m_RampEdgeInfo[ 2 ];
 
 public:
@@ -131,7 +131,7 @@ public:
 
 private:
 	void	UpdateIntensityArea( ICurveDataAccessor *data );
-	CUtlVector< float > m_RampAccumulator;
+	std::vector< float > m_RampAccumulator;
 };
 
 

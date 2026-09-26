@@ -7,9 +7,6 @@
 
 #include "rrbase.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 using namespace ResponseRules;
 
 
@@ -37,8 +34,8 @@ Matcher::Matcher()
 	maxval = 0.0f;
 	minval = 0.0f;
 
-	token = UTL_INVAL_SYMBOL;
-	rawtoken = UTL_INVAL_SYMBOL;
+	token = nullptr;
+	rawtoken = nullptr;
 }
 
 void Matcher::Describe( void )
@@ -87,30 +84,22 @@ void Matcher::Describe( void )
 
 void Matcher::SetToken( char const *s )
 {
-	token = g_RS.AddString( s );
+	token = g_RS.intern( s ).data();
 }
 
 void Matcher::SetRaw( char const *raw )
 {
-	rawtoken = g_RS.AddString( raw );
+	rawtoken = g_RS.intern( raw ).data();
 }
 
 char const *Matcher::GetToken()
 {
-	if ( token.IsValid() )
-	{
-		return g_RS.String( token );
-	}
-	return "";
+	return ks::nz( token );
 }
 
 char const *Matcher::GetRaw()
 {
-	if ( rawtoken.IsValid() )
-	{
-		return g_RS.String( rawtoken );
-	}
-	return "";
+	return ks::nz( rawtoken );
 }
 
 //-------------------- CRITERIA ----------------------------------------------
@@ -143,12 +132,7 @@ Criteria& Criteria::operator =(const Criteria& src )
 
 	matcher = src.matcher;
 
-	int c = src.subcriteria.Count();
-	subcriteria.EnsureCapacity( c );
-	for ( int i = 0; i < c; i++ )
-	{
-		subcriteria.AddToTail( src.subcriteria[ i ] );
-	}
+	subcriteria = src.subcriteria;
 
 	return *this;
 }
@@ -217,22 +201,8 @@ Rule& Rule::operator =( const Rule& src )
 	if ( this == &src )
 		return *this;
 
-	int i;
-	int c;
-
-	c = src.m_Criteria.Count(); 
-	m_Criteria.EnsureCapacity( c );
-	for ( i = 0; i < c; i++ )
-	{
-		m_Criteria.AddToTail( src.m_Criteria[ i ] );
-	}
-
-	c = src.m_Responses.Count(); 
-	m_Responses.EnsureCapacity( c );
-	for ( i = 0; i < c; i++ )
-	{
-		m_Responses.AddToTail( src.m_Responses[ i ] );
-	}
+	m_Criteria = src.m_Criteria;
+	m_Responses = src.m_Responses;
 
 	SetContext( src.m_szContext );
 	m_bMatchOnce = src.m_bMatchOnce;

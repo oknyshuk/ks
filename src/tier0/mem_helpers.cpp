@@ -11,9 +11,6 @@
 #include <string.h>
 //#include <malloc.h>
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 // Needed for debugging
 bool g_bInitMemory = true;
 

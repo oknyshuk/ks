@@ -8,7 +8,7 @@
 #ifndef CL_DEMOACTIONMANAGER_H
 #define CL_DEMOACTIONMANAGER_H
 
-class CUtlBuffer;
+#include "tier1/text_writer.h"
 
 
 class CBaseDemoAction;
@@ -30,7 +30,7 @@ public:
 
 	virtual void		Update( bool newframe, int demoframe, float demotime ) = 0;
 
-	virtual void		SaveToBuffer( CUtlBuffer& buf ) = 0;
+	virtual void		SaveToBuffer( ks::text_writer& buf ) = 0;
 	virtual void		SaveToFile( void ) = 0;
 
 	virtual char const	*GetCurrentDemoFile( void ) = 0;

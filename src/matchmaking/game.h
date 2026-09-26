@@ -43,7 +43,7 @@ public:
 
 private:
 
-	typedef CUtlVector< IPlayer * > IPlayerList_t;
+	typedef std::vector< IPlayer * > IPlayerList_t;
 	IPlayerList_t m_PlayerList;
 };
 

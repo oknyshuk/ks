@@ -11,9 +11,6 @@
 #include "Downsample_ps20.inc"
 #include "Downsample_ps20b.inc"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 BEGIN_VS_SHADER_FLAGS( Downsample, "Help for Downsample", SHADER_NOT_EDITABLE )
 	BEGIN_SHADER_PARAMS

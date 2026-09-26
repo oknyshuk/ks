@@ -12,9 +12,6 @@
 #include "func_areaportalwindow.h"
 #include "entitylist.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // The server will still send entities through a window even after it opaque 
 // to allow for net lag.
 #define FADE_DIST_BUFFER	10
@@ -73,10 +70,10 @@ void CFuncAreaPortalWindow::Activate()
 }
 
 
-bool CFuncAreaPortalWindow::IsWindowOpen( const CUtlVector< Vector > &vecOrigins, float fovDistanceAdjustFactor )
+bool CFuncAreaPortalWindow::IsWindowOpen( const std::vector< Vector > &vecOrigins, float fovDistanceAdjustFactor )
 {
 	float flClosestDistance = FLT_MAX;
-	for ( int i = 0; i < vecOrigins.Count(); ++i )
+	for ( int i = 0; i < std::ssize( vecOrigins ); ++i )
 	{
 		float flDist = CollisionProp()->CalcDistanceFromPoint( vecOrigins[ i ] );
 		if ( flDist < flClosestDistance )
@@ -93,7 +90,7 @@ bool CFuncAreaPortalWindow::IsWindowOpen( const CUtlVector< Vector > &vecOrigins
 }
 
 
-bool CFuncAreaPortalWindow::UpdateVisibility( const CUtlVector< Vector > &vecOrigins, float fovDistanceAdjustFactor, bool &bIsOpenOnClient )
+bool CFuncAreaPortalWindow::UpdateVisibility( const std::vector< Vector > &vecOrigins, float fovDistanceAdjustFactor, bool &bIsOpenOnClient )
 {
 	if ( IsWindowOpen( vecOrigins, fovDistanceAdjustFactor ) )
 	{

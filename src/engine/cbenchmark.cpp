@@ -15,9 +15,6 @@
 #include "vstdlib/random.h"
 #include "cl_steamauth.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define DEFAULT_RESULTS_FOLDER "results"
 #define DEFAULT_RESULTS_FILENAME "results.txt"
 

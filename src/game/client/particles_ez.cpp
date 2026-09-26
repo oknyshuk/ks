@@ -9,16 +9,13 @@
 #include "igamesystem.h"
 #include "model_types.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 // Singletons for each type of particle system.
 // 0 = world, 1 = skybox
-static CSmartPtr<CSimpleEmitter> g_pSimpleSingleton[2];
-static CSmartPtr<CEmberEffect> g_pEmberSingleton[2];
-static CSmartPtr<CFireSmokeEffect> g_pFireSmokeSingleton[2];
-static CSmartPtr<CFireParticle> g_pFireSingleton[2];
+static ks::intrusive_ptr<CSimpleEmitter> g_pSimpleSingleton[2];
+static ks::intrusive_ptr<CEmberEffect> g_pEmberSingleton[2];
+static ks::intrusive_ptr<CFireSmokeEffect> g_pFireSmokeSingleton[2];
+static ks::intrusive_ptr<CFireParticle> g_pFireSingleton[2];
 
 
 class CEZParticleInit : public CAutoGameSystem
@@ -29,7 +26,7 @@ public:
 	}
 
 	template< class T >
-	CSmartPtr<T> InitSingleton( CSmartPtr<T> pEmitter )
+	ks::intrusive_ptr<T> InitSingleton( ks::intrusive_ptr<T> pEmitter )
 	{
 		if ( !pEmitter )
 		{
@@ -98,7 +95,7 @@ inline void CopyParticle( const T *pSrc, T *pDest )
 
 void AddSimpleParticle( const SimpleParticle *pParticle, PMaterialHandle hMaterial, bool bInSkybox )
 {
-	if ( g_pSimpleSingleton[bInSkybox].IsValid() )
+	if ( g_pSimpleSingleton[bInSkybox] )
 	{
 		SimpleParticle *pNew = g_pSimpleSingleton[bInSkybox]->AddSimpleParticle( hMaterial, pParticle->m_Pos );
 		CopyParticle( pParticle, pNew );
@@ -108,7 +105,7 @@ void AddSimpleParticle( const SimpleParticle *pParticle, PMaterialHandle hMateri
 
 void AddEmberParticle( const SimpleParticle *pParticle, PMaterialHandle hMaterial, bool bInSkybox )
 {
-	if ( g_pEmberSingleton[bInSkybox].IsValid() )
+	if ( g_pEmberSingleton[bInSkybox] )
 	{
 		SimpleParticle *pNew = g_pEmberSingleton[bInSkybox]->AddSimpleParticle( hMaterial, pParticle->m_Pos );
 		CopyParticle( pParticle, pNew );
@@ -118,7 +115,7 @@ void AddEmberParticle( const SimpleParticle *pParticle, PMaterialHandle hMateria
 
 void AddFireSmokeParticle( const SimpleParticle *pParticle, PMaterialHandle hMaterial, bool bInSkybox )
 {
-	if ( g_pFireSmokeSingleton[bInSkybox].IsValid() )
+	if ( g_pFireSmokeSingleton[bInSkybox] )
 	{
 		SimpleParticle *pNew = g_pFireSmokeSingleton[bInSkybox]->AddSimpleParticle( hMaterial, pParticle->m_Pos );
 		CopyParticle( pParticle, pNew );
@@ -128,7 +125,7 @@ void AddFireSmokeParticle( const SimpleParticle *pParticle, PMaterialHandle hMat
 
 void AddFireParticle( const SimpleParticle *pParticle, PMaterialHandle hMaterial, bool bInSkybox )
 {
-	if ( g_pFireSingleton[bInSkybox].IsValid() )
+	if ( g_pFireSingleton[bInSkybox] )
 	{
 		SimpleParticle *pNew = g_pFireSingleton[bInSkybox]->AddSimpleParticle( hMaterial, pParticle->m_Pos );
 		CopyParticle( pParticle, pNew );
@@ -141,22 +138,22 @@ void DrawParticleSingletons( bool bInSkybox )
 	RenderableInstance_t instance;
 	instance.m_nAlpha = 255;
 
-	if ( g_pSimpleSingleton[bInSkybox].IsValid() )
+	if ( g_pSimpleSingleton[bInSkybox] )
 	{
 		g_pSimpleSingleton[bInSkybox]->GetBinding().DrawModel( STUDIO_RENDER, instance );
 	}
 
-	if ( g_pEmberSingleton[bInSkybox].IsValid() )
+	if ( g_pEmberSingleton[bInSkybox] )
 	{
 		g_pEmberSingleton[bInSkybox]->GetBinding().DrawModel( STUDIO_RENDER, instance );
 	}
 
-	if ( g_pFireSmokeSingleton[bInSkybox].IsValid() )
+	if ( g_pFireSmokeSingleton[bInSkybox] )
 	{
 		g_pFireSmokeSingleton[bInSkybox]->GetBinding().DrawModel( STUDIO_RENDER, instance );
 	}
 	
-	if ( g_pFireSingleton[bInSkybox].IsValid() )
+	if ( g_pFireSingleton[bInSkybox] )
 	{
 		g_pFireSingleton[bInSkybox]->GetBinding().DrawModel( STUDIO_RENDER, instance );
 	}

@@ -13,7 +13,7 @@
 
 #include "BaseAnimatingOverlay.h"
 #include "utlvector.h"
-#include "utlrbtree.h"
+#include <map>
 #include "sceneentity_shared.h"
 
 struct flexsettinghdr_t;
@@ -181,66 +181,17 @@ private:
 	CNetworkVar( int, m_blinktoggle, [[= ks::reflect::Net{ .bits = 1, .flags = SPROP_UNSIGNED } ]] );
 
 	// Array of active SceneEvents, in order oldest to newest
-	CUtlVector < CSceneEventInfo >		m_SceneEvents;
+	std::vector< CSceneEventInfo >		m_SceneEvents;
 
-	// Mapping for each loaded scene file used by this actor
-	struct FS_LocalToGlobal_t
-	{
-		explicit FS_LocalToGlobal_t() :
-			m_Key( 0 ),
-			m_nCount( 0 ),
-			m_Mapping( 0 )
-		{
-		}
-
-		explicit FS_LocalToGlobal_t( const flexsettinghdr_t *key ) :
-			m_Key( key ),
-			m_nCount( 0 ),
-			m_Mapping( 0 )
-		{
-		}		
-
-		void SetCount( int count )
-		{
-			Assert( !m_Mapping );
-			Assert( count > 0 );
-			m_nCount = count;
-			m_Mapping = new LocalFlexController_t[ m_nCount ];
-			Q_memset( m_Mapping, 0, m_nCount * sizeof( int ) );
-		}
-
-		FS_LocalToGlobal_t( const FS_LocalToGlobal_t& src )
-		{
-			m_Key = src.m_Key;
-			delete m_Mapping;
-			m_Mapping = new LocalFlexController_t[ src.m_nCount ];
-			Q_memcpy( m_Mapping, src.m_Mapping, src.m_nCount * sizeof( int ) );
-
-			m_nCount = src.m_nCount;
-		}
-
-		~FS_LocalToGlobal_t()
-		{
-			delete m_Mapping;
-			m_nCount = 0;
-			m_Mapping = 0;
-		}
-
-		const flexsettinghdr_t	*m_Key;
-		int						m_nCount;
-		LocalFlexController_t	*m_Mapping;	
-	};
-
-	static bool FlexSettingLessFunc( const FS_LocalToGlobal_t& lhs, const FS_LocalToGlobal_t& rhs );
-
-	CUtlRBTree< FS_LocalToGlobal_t, unsigned short > m_LocalToGlobal;
+	// Mapping for each loaded scene file used by this actor: local flex controller index -> global
+	std::map< const flexsettinghdr_t *, std::vector< LocalFlexController_t > > m_LocalToGlobal;
 
 	// The NPC is in a scene, but another .vcd (such as a short wave to say in response to the player doing something )
 	//  can be layered on top of this actor (assuming duration matches, etc.
 	float				m_flAllowResponsesEndTime;
 
 	// List of actively playing scenes
-	CUtlVector < CChoreoScene * >		m_ActiveChoreoScenes;
+	std::vector< CChoreoScene * >		m_ActiveChoreoScenes;
 	bool				m_bUpdateLayerPriorities;
 
 public:
@@ -272,7 +223,7 @@ inline void CBaseFlex::Blink()
 //-----------------------------------------------------------------------------
 inline bool CBaseFlex::HasSceneEvents() const
 {
-	return m_SceneEvents.Count() != 0;
+	return !m_SceneEvents.empty();
 }
 
 

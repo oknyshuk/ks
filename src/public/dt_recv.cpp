@@ -9,9 +9,6 @@
 #include "tier1/strtools.h"
 #include "dt_utlvector_common.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 const char *s_ClientElementNames[MAX_ARRAY_ELEMENTS] =
 {
@@ -154,6 +151,7 @@ RecvProp::RecvProp()
 	m_ArrayLengthProxy = nullptr;
 	m_pParentArrayPropName = nullptr;
 	m_bInsideArray = false;
+	m_bVectorLength = false;
 }
 
 // ---------------------------------------------------------------------- //

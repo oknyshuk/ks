@@ -15,21 +15,18 @@
 #include "reflect_datamap.h"
 #include "func_ladder.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #if !defined( CLIENT_DLL )
 ConVar sv_showladders( "sv_showladders", "0", 0, "Show bbox and dismount points for all ladders (must be set before level load.)\n" );
 #endif
 
-CUtlVector< CFuncLadder * >	CFuncLadder::s_Ladders;
+std::vector< CFuncLadder * >	CFuncLadder::s_Ladders;
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 CFuncLadder::CFuncLadder() :
 	m_bDisabled( false )
 {
-	s_Ladders.AddToTail( this );
+	s_Ladders.push_back( this );
 }
 
 //-----------------------------------------------------------------------------
@@ -37,17 +34,17 @@ CFuncLadder::CFuncLadder() :
 //-----------------------------------------------------------------------------
 CFuncLadder::~CFuncLadder()
 {
-	s_Ladders.FindAndRemove( this );
+	ks::erase_first( s_Ladders, this );
 }
 
 int CFuncLadder::GetLadderCount()
 {
-	return s_Ladders.Count();
+	return std::ssize( s_Ladders );
 }
 
 CFuncLadder *CFuncLadder::GetLadder( int index )
 {
-	if ( index < 0 || index >= s_Ladders.Count() )
+	if ( index < 0 || index >= std::ssize( s_Ladders ) )
 		return nullptr;
 
 	return s_Ladders[ index ];
@@ -184,7 +181,7 @@ void CFuncLadder::Activate()
 void CFuncLadder::SearchForDismountPoints()
 {
 #if !defined( CLIENT_DLL )
-	CUtlVector< CInfoLadderDismountHandle > allNodes;
+	std::vector< CInfoLadderDismountHandle > allNodes;
 
 	Vector topPos;
 	Vector bottomPos;
@@ -276,7 +273,7 @@ void CFuncLadder::DrawDebugGeometryOverlays()
 	UTIL_TraceHull( m_vecPlayerMountPositionBottom, m_vecPlayerMountPositionBottom, 
 		playerMins, playerMaxs, MASK_PLAYERSOLID_BRUSHONLY, nullptr, COLLISION_GROUP_PLAYER_MOVEMENT, &bottomtrace );
 
-	int c = m_Dismounts.Count();
+	int c = std::ssize( m_Dismounts );
 	for ( int i = 0 ; i < c ; i++ )
 	{
 		CInfoLadderDismount *pt = m_Dismounts[ i ];
@@ -327,7 +324,7 @@ void CFuncLadder::ComputeLadderDir( Vector& bottomToTopVec )
 //-----------------------------------------------------------------------------
 int CFuncLadder::GetDismountCount() const
 {
-	return m_Dismounts.Count();
+	return std::ssize( m_Dismounts );
 }
 
 //-----------------------------------------------------------------------------
@@ -337,7 +334,7 @@ int CFuncLadder::GetDismountCount() const
 //-----------------------------------------------------------------------------
 CInfoLadderDismount *CFuncLadder::GetDismount( int index )
 {
-	if ( index < 0 || index >= m_Dismounts.Count() )
+	if ( index < 0 || index >= std::ssize( m_Dismounts ) )
 		return nullptr;
 	return m_Dismounts[ index ];
 }
@@ -348,7 +345,7 @@ CInfoLadderDismount *CFuncLadder::GetDismount( int index )
 //			radius - 
 //			list - 
 //-----------------------------------------------------------------------------
-void CFuncLadder::FindNearbyDismountPoints( const Vector& origin, float radius, CUtlVector< CInfoLadderDismountHandle >& list )
+void CFuncLadder::FindNearbyDismountPoints( const Vector& origin, float radius, std::vector< CInfoLadderDismountHandle >& list )
 {
 #if !defined( CLIENT_DLL )
 	CBaseEntity *pEntity = nullptr;
@@ -368,9 +365,9 @@ void CFuncLadder::FindNearbyDismountPoints( const Vector& origin, float radius, 
 
 		CInfoLadderDismountHandle handle;
 		handle = landingspot;
-		if ( list.Find( handle ) == list.InvalidIndex() )
+		if ( ks::find_index( list, handle ) == -1 )
 		{
-			list.AddToTail( handle  );
+			list.push_back( handle );
 		}
 	}
 #endif

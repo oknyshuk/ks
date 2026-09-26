@@ -4,8 +4,6 @@
 #include "cbase.h"
 #include "reflect_recvtable.h"
 
-#include "tier0/memdbgon.h"
-
 namespace ks::reflect::recv
 {
 
@@ -47,7 +45,7 @@ RecvProp make_prop( const PropDesc &d, std::span<const PropDesc> all )
 	case PropKind::ArrayInner:
 		return InternalRecvPropArray( d.elements, d.stride, d.name, d.lenProxy );
 	case PropKind::UtlVector:
-		return RecvPropUtlVector( d.name, d.offset, d.size, d.resizeFn, d.ensure, d.max,
+		return RecvPropUtlVector( d.name, d.offset, d.size, d.vec, d.max,
 		                          make_prop( all[d.elem], all ) );
 	default:
 		// Error() is not fatal enough: execution continued into a table built from this empty

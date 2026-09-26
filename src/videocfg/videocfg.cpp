@@ -11,7 +11,7 @@
 #include "tier1/strtools.h"
 #include "filesystem.h"
 #include "tier1/keyvalues.h"
-#include "utlbuffer.h"
+#include "tier1/text_writer.h"
 #include "mathlib/IceKey.H"
 #include "tier0/icommandline.h"
 
@@ -29,11 +29,11 @@ static const char *GetVideoCfgPathID()
 	return VIDEOCONFIG_PATHID;
 }
 
-static void WriteVideoCfgDataToFile( char const *pszFile, CUtlBuffer &buf )
+static void WriteVideoCfgDataToFile( char const *pszFile, ks::text_writer &buf )
 {
 	const char *pPathID = GetVideoCfgPathID();
 	g_pFullFileSystem->CreateDirHierarchy( "cfg", pPathID );
-	g_pFullFileSystem->WriteFile( pszFile, pPathID, buf );
+	g_pFullFileSystem->WriteFile( pszFile, pPathID, buf.bytes() );
 }
 
 enum AspectRatioMode_t
@@ -453,7 +453,7 @@ static bool GetNearestFullscreenResolution( int& nWidth, int& nHeight, VidMatCon
 	// Iterate modes, looking for one that is just smaller than currentWidth and currentHeight while retaining the aspect ratio
 	while ( true )
 	{
-		for ( int i = 0; i < configData.displayModes.Count(); i++ )
+		for ( int i = 0; i < std::ssize( configData.displayModes ); i++ )
 		{
 			const ShaderDisplayMode_t &mode = configData.displayModes[i];
 
@@ -596,7 +596,7 @@ bool VerifyDefaultVideoConfig( VidMatConfigData_t &configData )
 	}
 
 	// Diagnostic buffer
-	CUtlBuffer bufDiagnostic( 0, 0, CUtlBuffer::TEXT_BUFFER );
+	ks::text_writer bufDiagnostic;
 
 	// Start with the assumption they are the same.
 	bool bEqual = true;
@@ -607,14 +607,14 @@ bool VerifyDefaultVideoConfig( VidMatConfigData_t &configData )
 		if ( !pFindKey )
 		{
 			Warning( "The default video config has changed, config key '%s=%s' is no longer default.\n", pszTestName, pTestKey->GetString() );
-			bufDiagnostic.Printf( "config key '%s=%s' is no longer default.\n", pszTestName, pTestKey->GetString() );
+			bufDiagnostic.printf( "config key '%s=%s' is no longer default.\n", pszTestName, pTestKey->GetString() );
 			if ( VerifyVideoConfigSettingRequired( pszTestName ) )
 				bEqual = false;
 		}
 		else if ( V_stricmp( pFindKey->GetString(), pTestKey->GetString() ) )
 		{
 			Warning( "The default video config has changed, config key '%s=%s' is no longer default '%s'.\n", pszTestName, pTestKey->GetString(), pFindKey->GetString() );
-			bufDiagnostic.Printf( "config key '%s=%s' is no longer default '%s'.\n", pszTestName, pTestKey->GetString(), pFindKey->GetString() );
+			bufDiagnostic.printf( "config key '%s=%s' is no longer default '%s'.\n", pszTestName, pTestKey->GetString(), pFindKey->GetString() );
 			if ( VerifyVideoConfigSettingRequired( pszTestName ) )
 				bEqual = false;
 		}
@@ -630,7 +630,7 @@ bool VerifyDefaultVideoConfig( VidMatConfigData_t &configData )
 			if ( !pFindKey )
 			{
 				Warning( "The default video config has changed, config key '%s=%s' has been added.\n", pszTestName, pTestKey->GetString() );
-				bufDiagnostic.Printf( "config key '%s=%s' has been added.\n", pszTestName, pTestKey->GetString() );
+				bufDiagnostic.printf( "config key '%s=%s' has been added.\n", pszTestName, pTestKey->GetString() );
 				if ( VerifyVideoConfigSettingRequired( pszTestName ) )
 					bEqual = false;
 			}
@@ -642,11 +642,11 @@ bool VerifyDefaultVideoConfig( VidMatConfigData_t &configData )
 	{
 		Warning( "VerifyDefaultVideoConfig: The default video config for the machine has changed, updating the current config to match.\n" );
 
-		bufDiagnostic.Printf( "--ConfigData--\n" );
+		bufDiagnostic.printf( "--ConfigData--\n" );
 		configData.pConfigKeys->RecursiveSaveToFile( bufDiagnostic, 0 );
-		bufDiagnostic.Printf( "--Defaults--\n" );
+		bufDiagnostic.printf( "--Defaults--\n" );
 		pDefaultKeys->RecursiveSaveToFile( bufDiagnostic, 0 );
-		bufDiagnostic.Printf( "----\n" );
+		bufDiagnostic.printf( "----\n" );
 	
 		char chBuffer[64] = {};
 		struct tm tmNow;
@@ -655,7 +655,7 @@ bool VerifyDefaultVideoConfig( VidMatConfigData_t &configData )
 		WriteVideoCfgDataToFile( chBuffer, bufDiagnostic );
 
 		// Create the file.
-		CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
+		ks::text_writer buf;
 		configData.pConfigKeys->RecursiveSaveToFile( buf, 0 );
 		WriteVideoCfgDataToFile( VIDEOCONFIG_DEFAULT_FILENAME, buf );
 
@@ -706,7 +706,7 @@ bool VerifyDefaultVideoConfig( VidMatConfigData_t &configData )
 			}
 		}
 		kvPreviousVideoCfg->deleteThis();
-		buf.Purge();
+		buf.clear();
 		configData.pConfigKeys->RecursiveSaveToFile( buf, 0 );
 		WriteVideoCfgDataToFile( VIDEOCONFIG_FILENAME, buf );
 	}
@@ -739,7 +739,7 @@ bool CopyDefaultVideoToCurrentVideoConfig( const char *pszDefaultFileName, const
 	}
 
 	// Create the file.
-	CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
+	ks::text_writer buf;
 	pDefaultKeys->RecursiveSaveToFile( buf, 0 );
 	WriteVideoCfgDataToFile( pszCurrentFileName, buf );
 
@@ -759,7 +759,7 @@ bool CreateDefaultVideoConfig( VidMatConfigData_t &configData )
 		return false;
 
 	// Create the file with default settings
-	CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
+	ks::text_writer buf;
 	configData.pConfigKeys->RecursiveSaveToFile( buf, 0 );
 	WriteVideoCfgDataToFile( VIDEOCONFIG_DEFAULT_FILENAME, buf );
 
@@ -779,7 +779,7 @@ bool CreateDefaultVideoConfig( VidMatConfigData_t &configData )
 			}
 		}
 	}
-	buf.Purge();
+	buf.clear();
 	configData.pConfigKeys->RecursiveSaveToFile( buf, 0 );
 	WriteVideoCfgDataToFile( VIDEOCONFIG_FILENAME, buf );
 
@@ -962,7 +962,7 @@ bool UpdateCurrentVideoConfig( int nWidth, int nHeight, int nAspectRatioMode, bo
 
 	// Write out the file.
 	// Create the file.
-	CUtlBuffer buf( 0, 0, CUtlBuffer::TEXT_BUFFER );
+	ks::text_writer buf;
 	pVideoConfigKeys->RecursiveSaveToFile( buf, 0 );
 	WriteVideoCfgDataToFile( VIDEOCONFIG_FILENAME, buf );
 

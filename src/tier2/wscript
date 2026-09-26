@@ -29,7 +29,6 @@ def build(bld):
         "tier2_logging.cpp",
         "tokenreader.cpp",
         "util_init.cpp",
-        "utlstreambuffer.cpp",
         "vconfig.cpp",
         "schemaclassbinding.cpp",
         "socketcreator.cpp",

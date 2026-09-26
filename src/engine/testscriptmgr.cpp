@@ -18,9 +18,6 @@
 #include "host.h"
 #include <stdlib.h>
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define TESTSCRIPT_COLOR	Color( 0, 255, 255 )
 
 CTestScriptMgr g_TestScriptMgr;
@@ -288,7 +285,7 @@ void CTestScriptMgr::CheckPoint( const char *pName )
 		}
 	}
 
-	m_CheckPointsHit.Insert( pName, 0 ); // Remember that we hit this checkpoint.
+	m_CheckPointsHit.insert( pName ); // Remember that we hit this checkpoint.
 
 	if ( m_NextCheckPoint[0] )
 	{
@@ -416,10 +413,10 @@ void CTestScriptMgr::SetWaitTime( float flSeconds )
 
 CLoopInfo* CTestScriptMgr::FindLoop( const char *pLoopName )
 {
-	FOR_EACH_LL( m_Loops, i )
+	for ( auto &pLoop : m_Loops )
 	{
-		if ( Q_stricmp( pLoopName, m_Loops[i]->m_Name ) == 0 )
-			return m_Loops[i];
+		if ( Q_stricmp( pLoopName, pLoop->m_Name ) == 0 )
+			return pLoop.get();
 	}
 	return nullptr;
 }
@@ -434,12 +431,11 @@ void CTestScriptMgr::StartLoop( const char *pLoopName )
 		Error( "CTestScriptMgr::StartLoop( %s ): loop already exists.", pLoopName );
 	}
 
-	CLoopInfo *pLoop = new CLoopInfo;
+	CLoopInfo *pLoop = m_Loops.emplace_back( std::make_unique< CLoopInfo >() ).get();
 	Q_strncpy( pLoop->m_Name, pLoopName, sizeof( pLoop->m_Name ) );
 	pLoop->m_nCount = 0;
 	pLoop->m_flStartTime = Sys_FloatTime();
 	pLoop->m_iNextCommandPos = g_pFileSystem->Tell( m_hFile );
-	pLoop->m_ListIndex = m_Loops.AddToTail( pLoop );
 }
 
 
@@ -464,8 +460,7 @@ void CTestScriptMgr::LoopCount( const char *pLoopName, int nTimes )
 	}
 	else
 	{
-		m_Loops.Remove( pLoop->m_ListIndex );
-		delete pLoop;
+		std::erase_if( m_Loops, [pLoop]( const auto &p ) { return p.get() == pLoop; } );
 	}
 }
 
@@ -489,8 +484,7 @@ void CTestScriptMgr::LoopForNumSeconds( const char *pLoopName, double nSeconds )
 	}
 	else
 	{
-		m_Loops.Remove( pLoop->m_ListIndex );
-		delete pLoop;
+		std::erase_if( m_Loops, [pLoop]( const auto &p ) { return p.get() == pLoop; } );
 	}
 }
 
@@ -515,7 +509,7 @@ void CTestScriptMgr::SetWaitCheckPoint( const char *pCheckPointName, bool bOnce 
 	}
 	
 	// Don't wait on this checkpoint if we alereayd
-	if ( bOnce && m_CheckPointsHit.Find( pCheckPointName ) != m_CheckPointsHit.InvalidIndex() )
+	if ( bOnce && m_CheckPointsHit.contains( pCheckPointName ) )
 		return;
 
 	Q_strncpy( m_NextCheckPoint, pCheckPointName, sizeof( m_NextCheckPoint ) );

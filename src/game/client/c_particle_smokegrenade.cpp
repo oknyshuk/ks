@@ -21,9 +21,6 @@
 #include "c_cs_player.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // ------------------------------------------------------------------------- //
 // Definitions
 // ------------------------------------------------------------------------- //
@@ -390,7 +387,7 @@ void C_ParticleSmokeGrenade::Start(CParticleMgr *pParticleMgr, IPrototypeArgAcce
 
 	if ( pPlayer )
 	{
-		 pPlayer->m_SmokeGrenades.AddToTail( this );
+		 pPlayer->m_SmokeGrenades.push_back( this );
 	}
 #endif
 		 
@@ -681,7 +678,7 @@ inline void C_ParticleSmokeGrenade::ApplyDynamicLight( const Vector &vParticlePo
 		}
 	
 		// Rescale the color..
-		float flMax = MAX( color.x, MAX( color.y, color.z ) );
+		float flMax = std::max( color.x, std::max( color.y, color.z ) );
 		if ( flMax > 1 )
 		{
 			color /= flMax;
@@ -790,7 +787,7 @@ void C_ParticleSmokeGrenade::NotifyRemove()
 
 	if ( pPlayer )
 	{
-		 pPlayer->m_SmokeGrenades.FindAndRemove( this );
+		 ks::erase_first( pPlayer->m_SmokeGrenades, this );
 	}
 #endif
 

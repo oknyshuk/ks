@@ -8,18 +8,21 @@
 #ifndef RESPONSE_TYPES_H
 #define RESPONSE_TYPES_H
 
-#include "tier1/utlrbtree.h"
-#include "tier1/utlsymbol.h"
+#include <algorithm>
+#include <functional>
+#include <string_view>
+#include <vector>
+#include "tier1/intern_pool.h"
+#include "tier1/string_ops.h"
 #include "tier2/interval.h"
 #include "mathlib/compressed_vector.h"
 #include "datamap.h"
 #include "soundflags.h"
-#include "tier1/utlsymbol.h"
 
 namespace ResponseRules 
 {
 	/// Custom symbol table for the response rules.
-	extern CUtlSymbolTable g_RS;
+	extern ks::intern_pool g_RS;
 };
 
 #ifdef _MANAGED
@@ -147,7 +150,7 @@ namespace ResponseRules
 	class CriteriaSet
 	{
 	public:
-		typedef CUtlSymbol CritSymbol_t; ///< just to make it clear that some symbols come out of our special static table
+		typedef std::string_view CritSymbol_t; ///< only views from sm_CriteriaSymbols (ComputeCriteriaSymbol): compared by identity
 	public:
 		CriteriaSet();
 		CriteriaSet( const CriteriaSet& src );
@@ -216,7 +219,6 @@ namespace ResponseRules
 		struct CritEntry_t
 		{
 			CritEntry_t() :
-		criterianame( UTL_INVAL_SYMBOL ),
 			weight( 0.0f )
 		{
 			value[ 0 ] = 0;
@@ -242,11 +244,6 @@ namespace ResponseRules
 			return *this;
 		}
 
-		static bool LessFunc( const CritEntry_t& lhs, const CritEntry_t& rhs )
-		{
-			return lhs.criterianame < rhs.criterianame;
-		}
-
 		void SetValue( char const *str )
 		{
 			if ( !str )
@@ -264,16 +261,22 @@ namespace ResponseRules
 		float		weight;
 		};
 
-		static CUtlSymbolTable sm_CriteriaSymbols;
-	    typedef CUtlRBTree< CritEntry_t, short > Dict_t;
+		static ks::intern_pool sm_CriteriaSymbols;
+	    // Sorted by criterianame's pooled address; criterion indices are positions in it.
+	    typedef std::vector< CritEntry_t > Dict_t;
 	    Dict_t m_Lookup;
+	    Dict_t::const_iterator LowerBound( CritSymbol_t criteria ) const
+	    {
+		    return std::lower_bound( m_Lookup.begin(), m_Lookup.end(), criteria,
+			    []( const CritEntry_t &e, CritSymbol_t c ) { return std::less< const char * >()( e.criterianame.data(), c.data() ); } );
+	    }
 	    int m_nNumPrefixedContexts; // number of contexts prefixed with kAPPLYTOWORLDPREFIX
 		bool m_bOverrideOnAppend;
 	};
 
 	inline void CriteriaSet::EnsureCapacity( int num )
 	{
-		m_Lookup.EnsureCapacity(num);
+		m_Lookup.reserve(num);
 	}
 
 	//-----------------------------------------------------------------------------
@@ -371,7 +374,7 @@ namespace ResponseRules
 		virtual ~IResponseSystem() {}
 
 		virtual bool FindBestResponse( const CriteriaSet& set, CRR_Response& response, IResponseFilter *pFilter = nullptr ) = 0;
-		virtual void GetAllResponses( CUtlVector<CRR_Response> *pResponses ) = 0;
+		virtual void GetAllResponses( std::vector< CRR_Response > *pResponses ) = 0;
 		virtual void PrecacheResponses( bool bEnable ) = 0;
 	};
 
@@ -387,22 +390,22 @@ namespace ResponseRules
 
 	inline bool CriteriaSet::IsValidIndex( int index ) const
 	{
-		return ( index >= 0 && index < ((int)(m_Lookup.Count())) );
+		return ( index >= 0 && index < ((int)(m_Lookup.size())) );
 	}
 
     inline int CriteriaSet::Head() const
     {
-	    return m_Lookup.FirstInorder();
+	    return m_Lookup.empty() ? -1 : 0;
     }
     
     inline int CriteriaSet::Next( int i ) const
     {
-	    return m_Lookup.NextInorder(i);
+	    return i + 1 < (int)m_Lookup.size() ? i + 1 : -1;
     }
     
     inline const char *CriteriaSet::SymbolToStr( const CritSymbol_t &symbol )
     {
-	    return sm_CriteriaSymbols.String(symbol);
+	    return ks::nz( symbol.data() );
     }
 
 }

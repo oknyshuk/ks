@@ -82,7 +82,7 @@ struct PropDesc
 	SendTableProxyFn tableProxy = nullptr;
 
 	ArrayLengthSendProxyFn lenProxy = nullptr;   // ArrayInner
-	EnsureCapacityFn        ensure   = nullptr;  // UtlVector
+	WireVecOps              vec;                 // UtlVector
 	int                     max      = 0;        // UtlVector: nMaxElements
 	const char             *excludeProp = nullptr;  // Exclude: the prop being excluded
 
@@ -316,13 +316,13 @@ constexpr void push_utl_vec( std::vector<PropDesc> &out )
 	}
 
 	PropDesc d;
-	d.kind   = PropKind::UtlVector;
-	d.name   = nm;
-	d.offset = off;
-	d.size   = (int)sizeof( typename WV::elem_type );
-	d.ensure = WV::ensure();
-	d.max    = Max;
-	d.elem   = (int)out.size() - 1;
+	d.kind     = PropKind::UtlVector;
+	d.name     = nm;
+	d.offset   = off;
+	d.size     = (int)sizeof( typename WV::elem_type );
+	d.vec      = WV::ops();
+	d.max      = Max;
+	d.elem     = (int)out.size() - 1;
 	out.push_back( d );
 }
 
@@ -514,14 +514,12 @@ consteval std::vector<PropDesc> build_desc()
 	// interleaved: the compare is keyed by name, so position does not matter.
 	template for ( constexpr auto ann : std::define_static_array( from_annotations_in( ^^C, Table, WireSide::Send ) ) )
 	{
-		constexpr auto args = std::define_static_array( std::meta::template_arguments_of( ann ) );
+		constexpr FromEntry fe = from_entry( ann );
 		// A dotted path is the prop's wire name, as SENDINFO/RECVINFO stringify it.
-		constexpr auto ref  = require_member( ^^C, std::meta::extract<name_t>( args[0] ) );
+		constexpr auto ref  = require_member( ^^C, fe.name );
 		// A bracketed path resolved to one element; the Net has to say so, because the kind
 		// and the size are the element's, not the array's.
-		constexpr Net  n    = with_elem( wire_from_path( std::meta::extract<Net>( args[1] ),
-		                                                std::meta::extract<name_t>( args[0] ) ),
-		                                 ref.elem );
+		constexpr Net  n    = with_elem( wire_from_path( fe.net, fe.name ), ref.elem );
 		// An inherited member can be indexed too: CFuncRotating re-sends the three components
 		// of CBaseEntity's m_angRotation. desc_of already names and sizes a component; the
 		// offset is the one thing it cannot know, because it is relative to the sending class.
@@ -530,37 +528,35 @@ consteval std::vector<PropDesc> build_desc()
 		constexpr int off = n.raw ? (int)ref.offset + comp
 		                          : offset_with_nv_flags<ref.member>( (int)ref.offset + comp );
 		constexpr PropDesc d = desc_of<ref.member>(
-		    n, off, extract_fn<SendVarProxyFn>( args[2] ) );
+		    n, off, extract_fn<SendVarProxyFn>( fe.proxy ) );
 
-		if constexpr ( d.kind == PropKind::Table )
+		if constexpr ( fe.table != std::meta::info{} )
 		{
-			// Either the embedded type is migrated and we generate its table, or the legacy
-			// sub-table was named in the annotation. Silently generating an empty table for an
-			// unmigrated type would be the worst of the three.
-			constexpr SendTable *pNamed = extract_fn<SendTable *>( args[3] );
-			if constexpr ( pNamed != nullptr )
-				out.push_back( table_prop( d.name, d.offset & SENDPROP_OFFSET_MASK,
-				                           +[]() -> SendTable * { return pNamed; }, nullptr ) );
-			else
-			{
-				// ^^Sub would reflect the *alias*, whose own annotation list is empty, so the
-				// check has to be made on the reflection of the class itself.
-				constexpr std::meta::info sub =
-				    embedded_class_of( std::meta::type_of( ref.member ) );
-				static_assert( has<NetTable>( sub ),
-				    "embedded member is neither migrated nor given its legacy sub-table" );
-				out.push_back( table_prop( d.name, d.offset & SENDPROP_OFFSET_MASK,
-				                           +[]() -> SendTable * { return &table<typename [: sub :]>(); },
-				                           nullptr ) );
-			}
+			// FromTable<>: use the named table rather than regenerating one.
+			static_assert( d.kind == PropKind::Table, "FromTable<> on a non-embedded member" );
+			constexpr SendTable *pTable = std::meta::extract<SendTable *>( fe.table );
+			out.push_back( table_prop( d.name, d.offset & SENDPROP_OFFSET_MASK,
+			                           +[]() -> SendTable * { return pTable; }, nullptr ) );
+		}
+		else if constexpr ( d.kind == PropKind::Table )
+		{
+			// The embedded type must be migrated. ^^Sub would reflect the *alias*, whose own
+			// annotation list is empty, so check the class's reflection.
+			constexpr std::meta::info sub =
+			    embedded_class_of( std::meta::type_of( ref.member ) );
+			static_assert( has<NetTable>( sub ),
+			    "embedded member is neither migrated nor given its legacy sub-table" );
+			out.push_back( table_prop( d.name, d.offset & SENDPROP_OFFSET_MASK,
+			                           +[]() -> SendTable * { return &table<typename [: sub :]>(); },
+			                           nullptr ) );
 		}
 		else if constexpr ( d.kind == PropKind::Array )
 		{
 			// An inherited array cannot be annotated on the member: that would put the prop in
 			// the *base* class's table. CBasePlayer re-sends CBaseCombatCharacter::m_iAmmo.
-			constexpr PropDesc elem = [&args] {
+			constexpr PropDesc elem = [&fe] {
 				PropDesc e = desc_of<ref.member>( n, (int)ref.offset,
-				                                  extract_fn<SendVarProxyFn>( args[2] ) );
+				                                  extract_fn<SendVarProxyFn>( fe.proxy ) );
 				e.kind = element_kind_of( ref.member );
 				e.size = e.stride;
 				e.bits = n.bits == kBitsDefault ? default_bits( e.kind ) : n.bits;

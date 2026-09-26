@@ -18,9 +18,6 @@
 #include "basecombatweapon.h"
 #include "baseviewmodel.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //----------------------------------------------------------------
 // Spawn flags
 //----------------------------------------------------------------

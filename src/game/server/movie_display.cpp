@@ -12,9 +12,6 @@
 #include "fmtstr.h"
 #include "filesystem.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 class [[= ks::reflect::NetTable{ .name = "DT_MovieDisplay" } ]]
       CMovieDisplay : public CBaseEntity
 {
@@ -159,7 +156,7 @@ int CMovieDisplay::UpdateTransmitState()
 void CMovieDisplay::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
 {
 	// Are we already marked for transmission?
-	if ( pInfo->m_pTransmitEdict->Get( entindex() ) )
+	if ( (*pInfo->m_pTransmitEdict)[ entindex() ] )
 		return;
 
 	BaseClass::SetTransmit( pInfo, bAlways );

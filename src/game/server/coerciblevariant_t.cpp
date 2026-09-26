@@ -8,10 +8,6 @@
 #include "coerciblevariant_t.h"
 #include "entitylist.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
-#pragma warning(disable: 4800) // yes, we really do want to coerce ints to bools, 
 							   // that's the whole point of this class.
 
 coerciblevariant_t::~coerciblevariant_t()

@@ -40,8 +40,8 @@ struct LightmapTransformInfo_t
 	model_t *pModel;
 	matrix3x4_t xform;
 };
-extern CUtlVector<LightmapUpdateInfo_t> g_LightmapUpdateList;
-extern CUtlVector<LightmapTransformInfo_t> g_LightmapTransformList;
+extern std::vector< LightmapUpdateInfo_t > g_LightmapUpdateList;
+extern std::vector< LightmapTransformInfo_t > g_LightmapTransformList;
 
 //-----------------------------------------------------------------------------
 // Helper class to iterate over leaves
@@ -176,7 +176,7 @@ inline void BuildIndicesForWorldSurface( CIndexBuilder &meshBuilder, SurfaceHand
 }
 
 // each surface has an index to the first vertex in the depth fill VB
-extern CUtlVector<uint16> g_DepthFillVBFirstVertexForSurface;
+extern std::vector< uint16 > g_DepthFillVBFirstVertexForSurface;
 
 inline int BuildDepthFillIndicesForSurface( CIndexBuilder &meshBuilder, SurfaceHandle_t surfID )
 {

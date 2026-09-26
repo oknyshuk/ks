@@ -21,8 +21,6 @@
 #include "vaudio/ivaudio.h"
 #include "../../client.h"
 #include "../../cl_main.h"
-#include "utldict.h"
-#include "mempool.h"
 #include "../../enginetrace.h"			// for traceline
 #include "../../public/bspflags.h"		// for traceline
 #include "../../public/gametrace.h"		// for traceline
@@ -40,9 +38,7 @@
 #include "snd_mixgroups.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 
 extern ConVar dsp_volume;
 // extern ConVar volume;
@@ -286,8 +282,8 @@ void MXR_SetSoloActive(void)
 
 		for (int i = 0; i < CMXRGROUPMAX; i++)
 		{
-			g_soloActive = MAX(g_soloActive, pmixer->mapMixgroupidToSolo[i]);
-			g_soloActive = MAX(g_soloActive, g_mastermixlayer.mapMixgroupidToSolo[i]);
+			g_soloActive = std::max(g_soloActive, pmixer->mapMixgroupidToSolo[i]);
+			g_soloActive = std::max(g_soloActive, g_mastermixlayer.mapMixgroupidToSolo[i]);
 		}
 	}
 }
@@ -680,13 +676,13 @@ void MXR_UpdateAllDuckerVolumes( void )
 				continue;
 			int	grouprulesid = g_mapMixgroupidToGrouprulesid[j];
 
-			maxTriggerLevel =  MAX(maxTriggerLevel, playertriggers->fmixamount[j]);
+			maxTriggerLevel =  std::max(maxTriggerLevel, playertriggers->fmixamount[j]);
 			if(g_grouprules[grouprulesid].trigger_vol > playertriggers->fthreshold[j])
 			{
-				maxNewLevel =  MAX(maxNewLevel, playertriggers->fmixamount[j]);
+				maxNewLevel =  std::max(maxNewLevel, playertriggers->fmixamount[j]);
 			}
-			maxAttack = MAX(playertriggers->fattack[j], maxAttack);
-			maxRelease = MAX(playertriggers->frelease[j], maxRelease);
+			maxAttack = std::max(playertriggers->fattack[j], maxAttack);
+			maxRelease = std::max(playertriggers->frelease[j], maxRelease);
 		}
 
 		if(maxNewLevel != curMixLevel)
@@ -722,7 +718,7 @@ void MXR_UpdateAllDuckerVolumes( void )
 	}
 
 
-	// TODO: THIS IS DESIGNED FOR MULTIPLE TRIGGERS (MAX(a,b) IS PROBABLY BEST)
+	// TODO: THIS IS DESIGNED FOR MULTIPLE TRIGGERS (std::max(a,b) IS PROBABLY BEST)
 /*	for (int i = 0; i < CMXRGROUPMAX; i++)
 	{
 		int	grouprulesid = g_mapMixgroupidToGrouprulesid[i];
@@ -1204,14 +1200,14 @@ void MXR_GetValuesFromMixGroupIndex( mixervalues_t *mixValues, int imixgroup )
 		mixValues->volume = pmixer->mapMixgroupidToVolume[imixgroup] * g_mastermixlayer.mapMixgroupidToVolume[imixgroup];
 
 		// check for muting
-		mixValues->volume *= (1.0 - (MAX(pmixer->mapMixgroupidToMute[imixgroup], g_mastermixlayer.mapMixgroupidToMute[imixgroup])));
+		mixValues->volume *= (1.0 - (std::max(pmixer->mapMixgroupidToMute[imixgroup], g_mastermixlayer.mapMixgroupidToMute[imixgroup])));
 
 		// If any group is solo'd && not this one, mute.
 		if(g_soloActive > 0.0)
 		{
 			// by definition current solo value is less than g_soloActive (max of mixer)
 			// not positive this math is the right approach
-			float factor = 1.0 - ((1.0 - (MAX(pmixer->mapMixgroupidToSolo[imixgroup], g_mastermixlayer.mapMixgroupidToSolo[imixgroup]) / g_soloActive)) * g_soloActive);
+			float factor = 1.0 - ((1.0 - (std::max(pmixer->mapMixgroupidToSolo[imixgroup], g_mastermixlayer.mapMixgroupidToSolo[imixgroup]) / g_soloActive)) * g_soloActive);
 			mixValues->volume *= factor;
 		}
 	}
@@ -1354,7 +1350,7 @@ int MXR_AddClassname( const char *pName )
 		Assert(g_cgroupclass < CMXRCLASSMAX);
 		return -1;
 	}
-	Q_memcpy(g_groupclasslist[g_cgroupclass].szclassname, pName, MIN(CMXRNAMEMAX-1, strlen(pName)));
+	Q_memcpy(g_groupclasslist[g_cgroupclass].szclassname, pName, ( std::min<std::common_type_t<int, size_t>>(CMXRNAMEMAX-1, strlen(pName)) ));
 	g_cgroupclass++;
 	return g_cgroupclass-1;
 }
@@ -1401,7 +1397,7 @@ const char *MXR_ParseMixGroup(const char *pstart)
 	// if no value specified, set to 0 length string
 	if(parse_debug)
 		DevMsg("MixGroup %s:\n", com_token);
-	Q_memcpy(pgroup->szmixgroup, com_token, MIN(CMXRNAMEMAX-1, strlen(com_token)));
+	Q_memcpy(pgroup->szmixgroup, com_token, ( std::min<std::common_type_t<int, size_t>>(CMXRNAMEMAX-1, strlen(com_token)) ));
 
 	// make sure all copied strings are null terminated
 	pgroup->szmixgroup[CMXRNAMEMAX-1]	= 0;
@@ -1412,7 +1408,7 @@ const char *MXR_ParseMixGroup(const char *pstart)
 		pstart = COM_Parse( pstart );
 		if (com_token[0])
 		{
-			Q_memcpy(pgroup->szdir, com_token, MIN(CMXRNAMEMAX-1, strlen(com_token)));
+			Q_memcpy(pgroup->szdir, com_token, ( std::min<std::common_type_t<int, size_t>>(CMXRNAMEMAX-1, strlen(com_token)) ));
 			V_strlower( pgroup->szdir );
 			// HACK to find group that affects voice channels
 			if ( V_strstr(pgroup->szdir, "?voice") )
@@ -1648,11 +1644,11 @@ const char *MXR_ParseSoundMixer(const char *pstart, soundmixer_t *pmixer)
 					DevMsg("MixGroup %s: %f : %f : %f : %f : %f \n", szgroupname, volume, level, dsp, solo, mute);
 
 				// store value for mixgroupid
-				pmixer->mapMixgroupidToVolume[g_grouprules[i].mixgroupid] = MAX(volume, 0.0);
-				pmixer->mapMixgroupidToLevel[g_grouprules[i].mixgroupid] = MAX(level, 0.0);
-				pmixer->mapMixgroupidToDsp[g_grouprules[i].mixgroupid] = MAX(dsp, 0.0);
-				pmixer->mapMixgroupidToSolo[g_grouprules[i].mixgroupid] = MAX(solo, 0.0);
-				pmixer->mapMixgroupidToMute[g_grouprules[i].mixgroupid] = MAX(mute, 0.0);
+				pmixer->mapMixgroupidToVolume[g_grouprules[i].mixgroupid] = std::max<std::common_type_t<float, double>>(volume, 0.0);
+				pmixer->mapMixgroupidToLevel[g_grouprules[i].mixgroupid] = std::max<std::common_type_t<float, double>>(level, 0.0);
+				pmixer->mapMixgroupidToDsp[g_grouprules[i].mixgroupid] = std::max<std::common_type_t<float, double>>(dsp, 0.0);
+				pmixer->mapMixgroupidToSolo[g_grouprules[i].mixgroupid] = std::max<std::common_type_t<float, double>>(solo, 0.0);
+				pmixer->mapMixgroupidToMute[g_grouprules[i].mixgroupid] = std::max<std::common_type_t<float, double>>(mute, 0.0);
 			}
 		}
 	}
@@ -1973,7 +1969,7 @@ bool MXR_LoadAllSoundMixers( void )
 
 			currentMxrParse = MXRPARSE_SOUNDMIXERGROUPS;
 
-			Q_memcpy(pmixer->szsoundmixer, com_token, MIN(CMXRNAMEMAX-1, strlen(com_token)));
+			Q_memcpy(pmixer->szsoundmixer, com_token, ( std::min<std::common_type_t<int, size_t>>(CMXRNAMEMAX-1, strlen(com_token)) ));
 		}
 		else if ( currentMxrParse == MXRPARSE_SOUNDMIXERGROUPS &&  currentParseLevel == 2 )
 		{
@@ -1997,7 +1993,7 @@ bool MXR_LoadAllSoundMixers( void )
 
 			currentMxrParse = MXRPARSE_MIXLAYERGROUPS;
 
-			Q_memcpy(pmixlayer->szsoundmixer, com_token, MIN(CMXRNAMEMAX-1, strlen(com_token)));
+			Q_memcpy(pmixlayer->szsoundmixer, com_token, ( std::min<std::common_type_t<int, size_t>>(CMXRNAMEMAX-1, strlen(com_token)) ));
 
 		}
 		else if ( currentMxrParse == MXRPARSE_MIXLAYERGROUPS &&  currentParseLevel == 2 )
@@ -2009,7 +2005,7 @@ bool MXR_LoadAllSoundMixers( void )
 	bResult = true;
 
 // loadmxr_exit:
-	free( pbuffer );
+	g_pMemAlloc->Free( pbuffer );
 	return bResult;
 }
 

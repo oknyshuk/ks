@@ -56,8 +56,10 @@ SCRIPT_LOADED_CALLBACK SetScriptLoadedCallback( SCRIPT_LOADED_CALLBACK pfnNewScr
 
 #include "tier1/utlstring.h"
 #include "tier1/utlvector.h"
-
-class CUtlBuffer;
+#include <cstddef>
+#include <optional>
+#include <span>
+#include <vector>
 
 enum DiskWriteMode_t
 {
@@ -68,16 +70,16 @@ enum DiskWriteMode_t
 
 struct fileList_t
 {
-	CUtlString	fileName;
+	std::string	fileName;
 	time_t		timeWrite;
 };
 
 class IScriptLib
 {
 public:
-	virtual bool ReadFileToBuffer( const char *pSourceName, CUtlBuffer &buffer, bool bText = false, bool bNoOpenFailureWarning = false ) = 0;
-	virtual bool WriteBufferToFile( const char *pTargetName, CUtlBuffer &buffer, DiskWriteMode_t writeMode ) = 0;
-	virtual int	FindFiles( char* pFileMask, bool bRecurse, CUtlVector<fileList_t> &fileList ) = 0;
+	virtual std::optional< std::vector< std::byte > > ReadFileToBuffer( const char *pSourceName, bool bNoOpenFailureWarning = false ) = 0;
+	virtual bool WriteBufferToFile( const char *pTargetName, std::span< const std::byte > data, DiskWriteMode_t writeMode ) = 0;
+	virtual int	FindFiles( char* pFileMask, bool bRecurse, std::vector< fileList_t > &fileList ) = 0;
 	virtual char *MakeTemporaryFilename( char const *pchModPath, char *pPath, int pathSize ) = 0;
 	virtual void DeleteTemporaryFiles( const char *pFileMask ) = 0;
 	virtual int CompareFileTime( const char *pFilenameA, const char *pFilenameB ) = 0;

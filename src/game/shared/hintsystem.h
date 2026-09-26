@@ -13,7 +13,8 @@
 	#include "player.h"
 #endif
 
-#include "bitvec.h"
+#include <algorithm>
+#include <vector>
 
 class CHintMessageQueue;
 class CHintMessageTimers;
@@ -71,7 +72,7 @@ public:
 	// Returns true if the hint has been played already
 	bool				HasPlayedHint( int iHintID );
 	void				PlayedAHint( void );
-	void				ClearHintHistory( void ) { m_HintHistory.ClearAll(); }
+	void				ClearHintHistory( void ) { std::ranges::fill( m_HintHistory, false ); }
 
 	// Not really an optimal solution, but saves us querying the hud element,
 	// which wouldn't be easy with derived versions in different mods.
@@ -85,7 +86,7 @@ private:
 
 	float				m_flLastHintPlayedAt;
 	bool				m_bShowHints;
-	CVarBitVec			m_HintHistory;
+	std::vector< bool >	m_HintHistory;
 	const char			**m_pszHintMessages;
 	CHintMessageQueue	*m_pHintMessageQueue;
 	CHintMessageTimers	*m_pHintMessageTimers;
@@ -97,7 +98,7 @@ private:
 		bool				bOnlyIfClear;
 		HintTimerCallback	pfnCallback;
 	};
-	CUtlVector<onresethints_t>	m_RegisteredResetHints;
+	std::vector< onresethints_t >	m_RegisteredResetHints;
 };
 
 #ifdef CLIENT_DLL

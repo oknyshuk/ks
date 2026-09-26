@@ -12,9 +12,6 @@
 #include "spatialentitymgr.h"
 #include "c_env_ambient_light.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 static ConVar cl_ambient_light_disableentities( "cl_ambient_light_disableentities", "0", FCVAR_NONE, "Disable map ambient light entities." );
 

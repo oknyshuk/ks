@@ -12,9 +12,6 @@
 #include "filesystem.h"
 #include "game.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define SOUNDSCAPE_MANIFEST_FILE				"scripts/soundscapes_manifest.txt"
 
 CON_COMMAND(soundscape_flush, "Flushes the server & client side soundscapes")
@@ -99,7 +96,7 @@ CON_COMMAND_F(sv_soundscape_printdebuginfo, "print soundscapes", FCVAR_CHEAT)
 void CSoundscapeSystem::PrintDebugInfo()
 {
 	Msg( "\n------- SERVER SOUNDSCAPES -------\n" );
-	for ( int key=m_soundscapes.First(); key != m_soundscapes.InvalidIndex(); key = m_soundscapes.Next( key ) )
+	for ( auto key=m_soundscapes.First(); key != m_soundscapes.InvalidIndex(); key = m_soundscapes.Next( key ) )
 	{
 		int id = m_soundscapes.GetIDForKey( key );
 		const char *pName = m_soundscapes.GetStringForKey( key );
@@ -107,7 +104,7 @@ void CSoundscapeSystem::PrintDebugInfo()
 		Msg( "- %d: %s\n", id, pName );
 	}
 	Msg( "-------- SOUNDSCAPE ENTITIES -----\n" );
-	for( int entityIndex = 0; entityIndex < m_soundscapeEntities.Count(); ++entityIndex )
+	for( int entityIndex = 0; entityIndex < std::ssize( m_soundscapeEntities ); ++entityIndex )
 	{
 		CEnvSoundscape *currentSoundscape = m_soundscapeEntities[entityIndex];
 		Msg("- %d: %s x:%.4f y:%.4f z:%.4f\n", 
@@ -176,7 +173,7 @@ void CSoundscapeSystem::FlushSoundscapes( void )
 void CSoundscapeSystem::Shutdown()
 {
 	FlushSoundscapes();
-	m_soundscapeEntities.RemoveAll();
+	m_soundscapeEntities.clear();
 	m_activeIndex = 0;
 
 }
@@ -189,23 +186,23 @@ void CSoundscapeSystem::LevelInitPreEntity()
 
 void CSoundscapeSystem::LevelInitPostEntity()
 {
-	CUtlVector<bbox_t> clusterbounds;
+	std::vector< bbox_t > clusterbounds;
 	int clusterCount = engine->GetClusterCount();
-	clusterbounds.SetCount( clusterCount );
-	engine->GetAllClusterBounds( clusterbounds.Base(), clusterCount );
-	m_soundscapesInCluster.SetCount(clusterCount);
+	clusterbounds.assign( clusterCount, {} );
+	engine->GetAllClusterBounds( clusterbounds.data(), clusterCount );
+	m_soundscapesInCluster.assign( clusterCount, {} );
 	for ( int i = 0; i < clusterCount; i++ )
 	{
 		m_soundscapesInCluster[i].soundscapeCount = 0;
 		m_soundscapesInCluster[i].firstSoundscape = 0;
 	}
 	unsigned char myPVS[16 * 1024];
-	CUtlVector<short> clusterIndexList;
-	CUtlVector<short> soundscapeIndexList;
+	std::vector< short > clusterIndexList;
+	std::vector< short > soundscapeIndexList;
 
 	// find the clusters visible from each soundscape
 	// add this soundscape to the list of soundscapes for that cluster, clip cluster bounds to radius
-	for ( int i = 0; i < m_soundscapeEntities.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_soundscapeEntities ); i++ )
 	{
 		Vector position = m_soundscapeEntities[i]->GetAbsOrigin();
 		float radius = m_soundscapeEntities[i]->m_flRadius;
@@ -219,9 +216,9 @@ void CSoundscapeSystem::LevelInitPostEntity()
 				if ( distSq < radiusSq )
 				{
 					m_soundscapesInCluster[j].soundscapeCount++;
-					clusterIndexList.AddToTail(j);
+					clusterIndexList.push_back( j );
 					// UNDONE: Technically you just need a soundscape index and a count for this list.
-					soundscapeIndexList.AddToTail(i);
+					soundscapeIndexList.push_back( i );
 				}
 			}
 		}
@@ -229,7 +226,7 @@ void CSoundscapeSystem::LevelInitPostEntity()
 
 	// basically this part is like a radix sort
 	// this is how many entries we need in the soundscape index list
-	m_soundscapeIndexList.SetCount(soundscapeIndexList.Count());
+	m_soundscapeIndexList.assign( std::ssize( soundscapeIndexList ), {} );
 
 	// now compute the starting index of each cluster
 	int firstSoundscape = 0;
@@ -242,7 +239,7 @@ void CSoundscapeSystem::LevelInitPostEntity()
 	// now add each soundscape index to the appropriate cluster's list
 	// The resulting list is precomputing all soundscapes that need to be checked for a player
 	// in each cluster.  This is used to accelerate the per-frame operations
-	for ( int i = 0; i < soundscapeIndexList.Count(); i++ )
+	for ( int i = 0; i < std::ssize( soundscapeIndexList ); i++ )
 	{
 		int cluster = clusterIndexList[i];
 		int outIndex = m_soundscapesInCluster[cluster].soundscapeCount + m_soundscapesInCluster[cluster].firstSoundscape;
@@ -265,22 +262,22 @@ bool CSoundscapeSystem::IsValidIndex( int index )
 
 void CSoundscapeSystem::AddSoundscapeEntity( CEnvSoundscape *pSoundscape )
 {
-	if ( m_soundscapeEntities.Find( pSoundscape ) == -1 )
+	if ( ks::find_index( m_soundscapeEntities, pSoundscape ) == -1 )
 	{
-		int index = m_soundscapeEntities.AddToTail( pSoundscape );
+		int index = std::ssize( m_soundscapeEntities ); m_soundscapeEntities.push_back( pSoundscape );
 		pSoundscape->m_soundscapeEntityId = index + 1;
 	}
 }
 
 void CSoundscapeSystem::RemoveSoundscapeEntity( CEnvSoundscape *pSoundscape )
 {
-	m_soundscapeEntities.FindAndRemove( pSoundscape );
+	ks::erase_first( m_soundscapeEntities, pSoundscape );
 	pSoundscape->m_soundscapeEntityId = -1;
 }
 
 void CSoundscapeSystem::FrameUpdatePostEntityThink()
 {
-	int total = m_soundscapeEntities.Count();
+	int total = std::ssize( m_soundscapeEntities );
 	if ( total > 0 )
 	{
 		int traceCount = 0;
@@ -311,7 +308,7 @@ void CSoundscapeSystem::FrameUpdatePostEntityThink()
 				// if we got this far, we're looking at an entity that is contending
 				// for current player sound. the closest entity to player wins.
 				CEnvSoundscape *pCurrent = nullptr;
-				if ( audio.entIndex > 0 && audio.entIndex <= m_soundscapeEntities.Count() )
+				if ( audio.entIndex > 0 && audio.entIndex <= std::ssize( m_soundscapeEntities ) )
 				{
 					int ssIndex = audio.entIndex - 1;
 					pCurrent = m_soundscapeEntities[ssIndex];
@@ -330,7 +327,7 @@ void CSoundscapeSystem::FrameUpdatePostEntityThink()
 
 				int clusterIndex = engine->GetClusterForOrigin( update.playerPosition );
 			
-				if ( clusterIndex >= 0 && clusterIndex < m_soundscapesInCluster.Count() )
+				if ( clusterIndex >= 0 && clusterIndex < std::ssize( m_soundscapesInCluster ) )
 				{
 					// find all soundscapes that could possibly attach to this player and update them
 					for ( int j = 0; j < m_soundscapesInCluster[clusterIndex].soundscapeCount; j++ )

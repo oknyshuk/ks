@@ -8,9 +8,6 @@
 #include "fx_impact.h"
 #include "engine/IEngineSound.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Handle weapon impacts

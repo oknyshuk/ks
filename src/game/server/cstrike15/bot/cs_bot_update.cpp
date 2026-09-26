@@ -13,9 +13,6 @@
 #include "fmtstr.h"
 #include "cs_simple_hostage.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------------------------------------
 float CCSBot::GetMoveSpeed( void )
 {

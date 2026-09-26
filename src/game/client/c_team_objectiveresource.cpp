@@ -12,9 +12,6 @@
 #include "teamplayroundbased_gamerules.h"
 #include "c_baseplayer.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define RESOURCE_THINK_TIME		0.1
 
 extern ConVar mp_capstyle;

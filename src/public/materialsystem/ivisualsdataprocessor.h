@@ -10,8 +10,11 @@
 
 #include "refcount.h"
 
+#include <cstddef>
+#include <span>
+#include <vector>
+
 class KeyValues;
-class CUtlBuffer;
 
 //
 // Visuals Data Interface
@@ -25,8 +28,8 @@ class IVisualsDataCompare
 {
 public:
 	virtual void FillCompareBlob() = 0;
-	virtual const CUtlBuffer &GetCompareBlob() const = 0;
-	virtual bool Compare( const CUtlBuffer &pOther ) = 0;
+	virtual const std::vector< std::byte > &GetCompareBlob() const = 0;
+	virtual bool Compare( std::span< const std::byte > other ) = 0;
 };
 
 class IVisualsDataProcessor : public CRefCounted<>

@@ -560,6 +560,7 @@ template < typename Tdst, typename Tsrc > FORCEINLINE Tdst size_cast( Tsrc val )
 //-----------------------------------------------------------------------------
 
 #include <bit>		// std::endian, std::byteswap, std::bit_cast, std::rotl/rotr
+#include <utility>
 
 //-------------------------------------
 // Basic swaps
@@ -917,35 +918,6 @@ public:
 };
 
 //-----------------------------------------------------------------------------
-// C++11 helpers
-//-----------------------------------------------------------------------------
-#define VALVE_CPP11 1
-
-#if VALVE_CPP11
-template <class T> struct C11RemoveReference { typedef T Type; };
-template <class T> struct C11RemoveReference<T&> { typedef T Type;  };
-template <class T> struct C11RemoveReference<T&&> { typedef T Type;  };
-
-template <class T>
-inline typename C11RemoveReference<T>::Type&& Move( T&& obj )
-{
-	return static_cast< typename C11RemoveReference<T>::Type&& >( obj );
-}
-
-template <class T>
-inline T&& Forward( typename C11RemoveReference<T>::Type& obj )
-{
-	return static_cast< T&& >( obj );
-}
-
-template <class T>
-inline T&& Forward( typename C11RemoveReference<T>::Type&& obj )
-{
-	return static_cast< T&& >( obj );
-}
-#endif
-
-//-----------------------------------------------------------------------------
 // Methods to invoke the constructor, copy constructor, and destructor
 //-----------------------------------------------------------------------------
 
@@ -994,7 +966,7 @@ inline T* CopyConstruct( T* pMemory, T const& src )
 template <class T>
 inline T* MoveConstruct( T* pMemory, T&& src )
 {
-	return ::new( pMemory ) T( Move(src) );
+	return ::new( pMemory ) T( std::move( src ) );
 }
 
 // [will] - Fixing a clang compile: unable to create a pseudo-destructor (aka a destructor that does nothing) for float __attribute__((__vector_size__(16)))
@@ -1238,7 +1210,7 @@ int	_V_stricmp_NegativeForUnequal	  ( const char *s1, const char *s2 );
 #define strnicmp V_strncasecmp 
 #endif
 
-// Use AlignedByteArray_t if you need an appropriately aligned array of T with no constructor (e.g CUtlMemoryFixed):
+// Use AlignedByteArray_t if you need an appropriately aligned array of T with no constructor (e.g. an inline buffer):
 //  - usage:		AlignedByteArray_t< NUM, T >
 //  - same as:		byte[ NUM*sizeof(T) ]
 //  - BUT:			avoids calling T's constructor
@@ -1274,7 +1246,7 @@ inline void ValidateAlignmentExplicit(void)
 {
 	// Alignment must be a power of two
 	ALIGN_ASSERT((ALIGN & (ALIGN - 1)) == 0);
-	// Alignment must not imply gaps in the array (which the CUtlMemory pattern does not allow for)
+	// Alignment must not imply gaps in the array (which array-of-T storage does not allow for)
 	ALIGN_ASSERT(ALIGN <= sizeof(T));
 	// Alignment must be a multiple of the size of the object type, or elements will *NOT* be aligned!
 	ALIGN_ASSERT((sizeof(T) % ALIGN) == 0);

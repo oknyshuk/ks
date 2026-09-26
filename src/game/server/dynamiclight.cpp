@@ -11,9 +11,6 @@
 #include "reflect_annotations.h"
 #include "dlight.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 #define NUM_DL_EXPONENT_BITS	8
 #define MIN_DL_EXPONENT_VALUE	-((1 << (NUM_DL_EXPONENT_BITS-1)) - 1)

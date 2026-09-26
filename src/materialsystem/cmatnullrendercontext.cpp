@@ -12,9 +12,6 @@
 #include "cmatrendercontext.h"
 #include "itextureinternal.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 class CMatNullRenderContext : public CMatRenderContextBase
 {
@@ -113,10 +110,10 @@ public:
 	void GetViewport( int& x, int& y, int& width, int& height ) const
 	{
 		// Verify valid top of RT stack
-		Assert ( m_RenderTargetStack.Count() > 0 );
+		Assert ( !m_RenderTargetStack.empty() );
 
 		// Grab the top of stack
-		const RenderTargetStackElement_t& element = m_RenderTargetStack.Top();
+		const RenderTargetStackElement_t& element = m_RenderTargetStack.back();
 
 		// If either dimension is negative, set to full bounds of current target
 		if ( (element.m_nViewW < 0) || (element.m_nViewH < 0) )

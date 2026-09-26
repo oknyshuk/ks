@@ -20,9 +20,6 @@
 //#include "server.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 /*
 ====================
 NET_ErrorString
@@ -168,7 +165,7 @@ void CSocketCreator::ProcessAccept()
 	}
 
 	// new connection TCP request, put in accepted queue
-	int nIndex = m_hAcceptedSockets.AddToTail();
+	int nIndex = std::ssize( m_hAcceptedSockets ); m_hAcceptedSockets.emplace_back();
 	AcceptedSocket_t *pNewEntry = &m_hAcceptedSockets[nIndex];
 	pNewEntry->m_hSocket = newSocket;
 	pNewEntry->m_Address = adr;
@@ -247,7 +244,7 @@ int CSocketCreator::ConnectSocket( const netadr_t &netAdr, bool bSingleSocket )
 
 	// new connection TCP request, put in accepted queue
 	void *pData = nullptr;
-	int nIndex = m_hAcceptedSockets.AddToTail();
+	int nIndex = std::ssize( m_hAcceptedSockets ); m_hAcceptedSockets.emplace_back();
 	AcceptedSocket_t *pNewEntry = &m_hAcceptedSockets[nIndex];
 	pNewEntry->m_hSocket = hSocket;
 	pNewEntry->m_Address = netAdr;
@@ -277,7 +274,7 @@ void CSocketCreator::CloseListenSocket()
 
 void CSocketCreator::CloseAcceptedSocket( int nIndex )
 {
-	if ( nIndex >= m_hAcceptedSockets.Count() )
+	if ( nIndex >= std::ssize( m_hAcceptedSockets ) )
 		return;
 
 	AcceptedSocket_t& connected = m_hAcceptedSockets[nIndex];
@@ -286,12 +283,12 @@ void CSocketCreator::CloseAcceptedSocket( int nIndex )
 		m_pListener->OnSocketClosed( connected.m_hSocket, connected.m_Address, connected.m_pData );
 	}
 	closesocket( connected.m_hSocket );
-	m_hAcceptedSockets.Remove( nIndex );
+	m_hAcceptedSockets.erase( m_hAcceptedSockets.begin() + nIndex );
 }
 
 void CSocketCreator::CloseAllAcceptedSockets()
 {
-	int nCount = m_hAcceptedSockets.Count();
+	int nCount = std::ssize( m_hAcceptedSockets );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		AcceptedSocket_t& connected = m_hAcceptedSockets[i];
@@ -301,7 +298,7 @@ void CSocketCreator::CloseAllAcceptedSockets()
 		}
 		closesocket( connected.m_hSocket );
 	}
-	m_hAcceptedSockets.RemoveAll();
+	m_hAcceptedSockets.clear();
 }
 
 
@@ -329,7 +326,7 @@ void CSocketCreator::RunFrame()
 //-----------------------------------------------------------------------------
 int CSocketCreator::GetAcceptedSocketCount() const
 {
-	return m_hAcceptedSockets.Count();
+	return std::ssize( m_hAcceptedSockets );
 }
 
 SocketHandle_t CSocketCreator::GetAcceptedSocketHandle( int nIndex ) const

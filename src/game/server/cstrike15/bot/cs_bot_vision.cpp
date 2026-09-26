@@ -14,9 +14,6 @@
 
 #include "mapinfo.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar bot_max_vision_distance_override( "bot_max_vision_distance_override", "-1", FCVAR_CHEAT | FCVAR_REPLICATED, "Max distance bots can see targets.", true, -1, false, 0 );
 ConVar bot_ignore_players( "bot_ignore_players", "0", FCVAR_CHEAT, "Bots will not see non-bot players." );
 ConVar bot_coop_idle_max_vision_distance( "bot_coop_idle_max_vision_distance", "1400", FCVAR_CHEAT | FCVAR_REPLICATED, "Max distance bots can see targets (in coop) when they are idle, dormant, hiding or asleep.", true, -1, false, 0 );
@@ -707,9 +704,9 @@ void CCSBot::UpdatePeripheralVision()
 		const SpotOrder *spotOrder;
 		Vector pos;
 
-		FOR_EACH_VEC( m_spotEncounter->spots, it )
+		for ( const SpotOrder &order : m_spotEncounter->spots )
 		{
-			spotOrder = &m_spotEncounter->spots[ it ];
+			spotOrder = &order;
 
 			const Vector &spotPos = spotOrder->spot->GetPosition();
 
@@ -925,9 +922,9 @@ void CCSBot::UpdateLookAround( bool updateNow )
 
 			const float checkTime = 10.0f;
 			const SpotOrder *spotOrder;
-			FOR_EACH_VEC( m_spotEncounter->spots, it )
+			for ( const SpotOrder &order : m_spotEncounter->spots )
 			{
-				spotOrder = &(m_spotEncounter->spots[ it ]);
+				spotOrder = &order;
 
 				// if we have seen this spot recently, we don't need to look at it
 				if (gpGlobals->curtime - GetHidingSpotCheckTimestamp( spotOrder->spot ) <= checkTime)

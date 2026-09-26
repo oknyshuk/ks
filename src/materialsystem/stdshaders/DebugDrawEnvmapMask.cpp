@@ -9,9 +9,6 @@
 #include "debugdrawenvmapmask_ps20.inc"
 #include "debugdrawenvmapmask_ps20b.inc"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 BEGIN_VS_SHADER_FLAGS( DebugDrawEnvmapMask, "Help for DebugDrawEnvmapMask", SHADER_NOT_EDITABLE )
 			  
 	BEGIN_SHADER_PARAMS

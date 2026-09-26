@@ -9,9 +9,6 @@
 #include "reflect_annotations.h"
 #include "c_sun.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 void RecvProxy_SunHDRColorScale( const CRecvProxyData *pData, void *pStruct, void *pOut )
 {
 	C_Sun *pSun = ( C_Sun * )pStruct;
@@ -47,7 +44,7 @@ void C_Sun::OnDataChanged( DataUpdateType_t updateType )
 	// for the sun, which should always be completely opaque at its core.  Here, we renormalize the
 	// components to make sure only hue is altered.
 	color24 c = GetRenderColor();
-	float maxComponent = MAX( c.r, MAX( c.g, c.b ) );
+	float maxComponent = std::max( c.r, std::max( c.g, c.b ) );
 
 	Vector vOverlayColor;
 	Vector vMainColor;

@@ -11,9 +11,6 @@
 #include "tier0/dbg.h"
 #include "iframeencoder.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 #ifndef min
 	#define min(a,b) ((a) < (b) ? (a) : (b))

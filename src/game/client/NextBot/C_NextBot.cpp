@@ -11,9 +11,6 @@
 #include <bitbuf.h>
 #include "viewrender.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #undef NextBot
 
 ConVar NextBotShadowDist( "nb_shadow_dist", "400" );
@@ -163,14 +160,14 @@ C_NextBotManager::~C_NextBotManager()
 //--------------------------------------------------------------------------------------------------------
 void C_NextBotManager::Register( C_NextBotCombatCharacter *bot )
 {
-	m_botList.AddToTail( bot );
+	m_botList.push_back( bot );
 }
 
 
 //--------------------------------------------------------------------------------------------------------
 void C_NextBotManager::UnRegister( C_NextBotCombatCharacter *bot )
 {
-	m_botList.FindAndRemove( bot );
+	ks::erase_first( m_botList, bot );
 }
 
 //-----------------------------------------------------------------------------

@@ -16,9 +16,6 @@
 #endif
 #include "c_env_cascade_light.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 ConVar cl_disable_water_render_targets( "cl_disable_water_render_targets", "0" );
 
 ITexture* CBaseClientRenderTargets::CreateWaterReflectionTexture( IMaterialSystem* pMaterialSystem, int iSize )

@@ -53,7 +53,7 @@ private:
     void UnloadDocument();
 
     // Input helpers (native input handles editing, we handle special keys)
-    CUtlString GetInputValue() const;
+    std::string GetInputValue() const;
     void SetInputValue(const char* text);
     void SetInputValueAndMoveCursorToEnd(const char* text);
     void MoveCursorToEnd();
@@ -92,26 +92,26 @@ private:
     bool m_bInitialized;
 
     // Command history
-    CUtlVector<CUtlString> m_CommandHistory;
+    std::vector< std::string > m_CommandHistory;
     int m_iHistoryPos;  // -1 = not browsing history
-    CUtlString m_szSavedInput;  // Saved when browsing history
+    std::string m_szSavedInput;  // Saved when browsing history
 
     // Autocomplete
     struct CompletionItem {
-        CUtlString name;
-        CUtlString value;
+        std::string name;
+        std::string value;
         bool isCommand;
     };
-    CUtlVector<CompletionItem> m_CompletionList;
+    std::vector< CompletionItem > m_CompletionList;
     int m_iCompletionIndex;
     bool m_bCompletionVisible;
 
     // Output buffer (for replay on document load)
     struct OutputLine {
-        CUtlString text;
+        std::string text;
         Color color;
     };
-    CUtlVector<OutputLine> m_OutputBuffer;
+    std::vector< OutputLine > m_OutputBuffer;
     static const int MAX_OUTPUT_LINES = 1000;
     static const size_t MAX_OUTPUT_SIZE = 64 * 1024;  // ~64KB scrollback, FIFO-trimmed (bounded geometry when visible)
 

@@ -12,7 +12,10 @@
 #include "net.h"
 #include "client.h"
 #include "utlvector.h"
-#include "utllinkedlist.h"
+#include <cstddef>
+#include <deque>
+#include <span>
+#include <vector>
 #include "netadr.h"
 #include "sv_remoteaccess.h"
 #include "tier2/socketcreator.h"
@@ -52,20 +55,30 @@ public:
 	virtual void OnSocketClosed( SocketHandle_t hSocket, const netadr_t & netAdr, void* pData );
 
 private:
+	struct PendingSend_t
+	{
+		explicit PendingSend_t( std::span< const std::byte > bytes ) : data( bytes.begin(), bytes.end() ) {}
+
+		std::span< const std::byte > Remaining() const { return std::span( data ).subspan( nSent ); }
+
+		std::vector< std::byte >	data;
+		size_t						nSent = 0;
+	};
+
 	struct ConnectedRConSocket_t
 	{
 		bool			authed;
 		int				lastRequestID;
 		ra_listener_id	listenerID;
-		CUtlBuffer		packetbuffer; // data buffer containing pending incoming data for this connection
-		CUtlLinkedList< CUtlBuffer > m_OutstandingSends; // packets pending to be send (queued because of WSAEWOULDBLOCK )
+		std::vector< std::byte >	packetbuffer; // data buffer containing pending incoming data for this connection
+		std::deque< PendingSend_t > m_OutstandingSends; // packets pending to be send (queued because of WSAEWOULDBLOCK )
 	};
 
 	struct FailedRCon_t
 	{
 		int								badPasswordCount;
 		netadr_t						adr;
-		CUtlLinkedList< float >			badPasswordTimes;
+		std::deque< float >				badPasswordTimes;	// oldest first
 		bool operator==( const FailedRCon_t &rhs ) const { return ( adr.CompareAdr( rhs.adr) == 0 ); }
 		bool operator<( const FailedRCon_t &rhs ) const;
 	};
@@ -78,8 +91,8 @@ private:
 	bool SendRCONResponse( int nIndex, const void *data, int len, bool fromQueue = false );	
 
 	CSocketCreator m_Socket;
-	CUtlVector< FailedRCon_t >	m_failedRcons;
-	CUtlString m_Password;
+	std::vector< FailedRCon_t >	m_failedRcons;
+	std::string m_Password;
 	netadr_t m_Address;
 	bool m_bSocketDeleted;
 };

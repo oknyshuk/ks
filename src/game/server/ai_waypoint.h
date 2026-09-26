@@ -9,7 +9,7 @@
 #define AI_WAYPOINT_H
 
 
-#include <mempool.h>
+#include "tier1/fixed_pool.h"
 
 // ----------------------------------------------------------------------------
 // Forward declarations

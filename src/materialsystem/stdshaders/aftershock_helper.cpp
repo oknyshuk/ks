@@ -10,9 +10,6 @@
 #include "aftershock_ps20.inc"
 #include "aftershock_ps20b.inc"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 void InitParamsAftershock( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, AftershockVars_t &info )
 {

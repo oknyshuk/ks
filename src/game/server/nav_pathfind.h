@@ -216,7 +216,7 @@ bool NavAreaBuildPath( CNavArea *startArea, CNavArea *goalArea, const Vector *go
 			if ( searchWhere == SEARCH_FLOOR )
 			{
 				// if exhausted adjacent connections in current direction, begin checking next direction
-				if ( searchIndex >= floorList->Count() )
+				if ( searchIndex >= std::ssize( *floorList ) )
 				{
 					++dir;
 
@@ -239,7 +239,7 @@ bool NavAreaBuildPath( CNavArea *startArea, CNavArea *goalArea, const Vector *go
 					continue;
 				}
 
-				const NavConnect &floorConnect = floorList->Element( searchIndex );
+				const NavConnect &floorConnect = (*floorList)[ searchIndex ];
 				newArea = floorConnect.area;
 				length = floorConnect.length;
 				how = (NavTraverseType)dir;
@@ -248,7 +248,7 @@ bool NavAreaBuildPath( CNavArea *startArea, CNavArea *goalArea, const Vector *go
 			}
 			else if ( searchWhere == SEARCH_LADDERS )
 			{
-				if ( searchIndex >= ladderList->Count() )
+				if ( searchIndex >= std::ssize( *ladderList ) )
 				{
 					if ( !ladderUp )
 					{
@@ -269,7 +269,7 @@ bool NavAreaBuildPath( CNavArea *startArea, CNavArea *goalArea, const Vector *go
 
 				if ( ladderUp )
 				{
-					ladder = ladderList->Element( searchIndex ).ladder;
+					ladder = (*ladderList)[ searchIndex ].ladder;
 
 					// do not use BEHIND connection, as its very hard to get to when going up a ladder
 					if ( ladderTopDir == AHEAD )
@@ -296,9 +296,9 @@ bool NavAreaBuildPath( CNavArea *startArea, CNavArea *goalArea, const Vector *go
 				}
 				else
 				{
-					newArea = ladderList->Element( searchIndex ).ladder->m_bottomArea;
+					newArea = (*ladderList)[ searchIndex ].ladder->m_bottomArea;
 					how = GO_LADDER_DOWN;
-					ladder = ladderList->Element(searchIndex).ladder;
+					ladder = (*ladderList)[ searchIndex ].ladder;
 					++searchIndex;
 				}
 
@@ -529,10 +529,8 @@ void SearchSurroundingAreas( CNavArea *startArea, const Vector &startPos, Functo
 				{
 					const NavConnectVector *list = area->GetIncomingConnections( (NavDirType)dir );
 
-					FOR_EACH_VEC( (*list), it )
+					for ( NavConnect connect : *list )
 					{
-						NavConnect connect = (*list)[ it ];				
-						
 						AddAreaToOpenList( connect.area, area, startPos, maxRange );
 					}
 				}
@@ -545,9 +543,9 @@ void SearchSurroundingAreas( CNavArea *startArea, const Vector &startPos, Functo
 			const NavLadderConnectVector *ladderList = area->GetLadders( CNavLadder::LADDER_UP );
 			if (ladderList)
 			{
-				FOR_EACH_VEC( (*ladderList), it )
+				for ( const NavLadderConnect &ladderConnect : *ladderList )
 				{
-					const CNavLadder *ladder = (*ladderList)[ it ].ladder;
+					const CNavLadder *ladder = ladderConnect.ladder;
 
 					// do not use BEHIND connection, as its very hard to get to when going up a ladder
 					AddAreaToOpenList( ladder->m_topForwardArea, area, startPos, maxRange );
@@ -560,9 +558,9 @@ void SearchSurroundingAreas( CNavArea *startArea, const Vector &startPos, Functo
 			ladderList = area->GetLadders( CNavLadder::LADDER_DOWN );
 			if (ladderList)
 			{
-				FOR_EACH_VEC( (*ladderList), it )
+				for ( const NavLadderConnect &ladderConnect : *ladderList )
 				{
-					const CNavLadder *ladder = (*ladderList)[ it ].ladder;
+					const CNavLadder *ladder = ladderConnect.ladder;
 
 					AddAreaToOpenList( ladder->m_bottomArea, area, startPos, maxRange );
 				}
@@ -665,7 +663,7 @@ inline void SearchSurroundingAreas( CNavArea *startArea, ISearchSurroundingAreas
 		startArea->SetParent( nullptr );
 		startArea->Mark();
 
-		CUtlVector< CNavArea * > adjVector;
+		std::vector< CNavArea * > adjVector;
 
 		while( !CNavArea::IsOpenListEmpty() )
 		{
@@ -744,10 +742,8 @@ CNavArea *FindMinimumCostArea( CNavArea *startArea, CostFunctor &costFunc )
 	cheapAreaSet[ NUM_CHEAP_AREAS ];
 	int cheapAreaSetCount = 0;
 
-	FOR_EACH_VEC( TheNavAreas, iter )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[iter];
-
 		// skip the small areas
 		if ( area->GetSizeX() < minSize || area->GetSizeY() < minSize)
 			continue;
@@ -786,13 +782,13 @@ CNavArea *FindMinimumCostArea( CNavArea *startArea, CostFunctor &costFunc )
 	else
 	{
 		// degenerate case - no decent sized areas - pick a random area
-		int numAreas = TheNavAreas.Count();
+		int numAreas = std::ssize( TheNavAreas );
 		int which = RandomInt( 0, numAreas-1 );
 
-		FOR_EACH_VEC( TheNavAreas, iter )
+		for ( CNavArea *area : TheNavAreas )
 		{
 			if (which-- == 0)
-				return TheNavAreas[iter];
+				return area;
 		}
 
 	}

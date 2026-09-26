@@ -10,7 +10,6 @@
 
 
 #include "igamesystem.h"
-#include "tier1/UtlStringMap.h"
 #include "datacache/iprecachesystem.h"
 #include "tier2/tier2.h"
 

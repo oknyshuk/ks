@@ -14,9 +14,6 @@
 #include "dt_utlvector_common.h"
 #include "networkvar.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 
 static CNonModifiedPointerProxy *s_pNonModifiedPointerProxyHead = nullptr;

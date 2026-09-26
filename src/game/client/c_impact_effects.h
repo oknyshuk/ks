@@ -7,8 +7,6 @@
 #ifndef C_IMPACT_EFFECTS_H
 #define C_IMPACT_EFFECTS_H
 
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: DustParticle emitter 
 //-----------------------------------------------------------------------------
@@ -81,7 +79,5 @@ private:
 };
 
 void GetColorForSurface( trace_t *trace, Vector *color );
-
-#include "tier0/memdbgoff.h"
 
 #endif // C_IMPACT_EFFECTS_H

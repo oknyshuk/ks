@@ -9,16 +9,10 @@
 #include "bitbuf_errorhandler.h"
 #include "tier0/dbg.h"
 #include "tier0/threadtools.h"
-#include "utlsymbol.h"
+#include "tier1/intern_pool.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
-static CUtlSymbolTable g_ErrorNames[BITBUFERROR_NUM_ERRORS];
-
-// This is needed to make bf_write / bf_read thread safe;
-// this error case is expected to happen rarely.
-static CThreadRWLock g_ErrorNamesLock;
+// Thread-safe so bf_write / bf_read stay thread safe; this error case is expected to happen rarely.
+static ks::intern_pool_mt g_ErrorNames[BITBUFERROR_NUM_ERRORS];
 
 void EngineBitBufErrorHandler( BitBufErrorType errorType, const char *pDebugName )
 {
@@ -28,15 +22,9 @@ void EngineBitBufErrorHandler( BitBufErrorType errorType, const char *pDebugName
 	}
 
 	// Only print an error a couple times.
-	g_ErrorNamesLock.LockForRead();
-	CUtlSymbol sym = g_ErrorNames[ errorType ].Find( pDebugName );
-	g_ErrorNamesLock.UnlockRead();
-
-	if ( UTL_INVAL_SYMBOL == sym )
+	if ( !g_ErrorNames[ errorType ].contains( pDebugName ) )
 	{
-		g_ErrorNamesLock.LockForWrite();
-		g_ErrorNames[ errorType ].AddString( pDebugName );
-		g_ErrorNamesLock.UnlockWrite();
+		g_ErrorNames[ errorType ].intern( pDebugName );
 
 		if ( errorType == BITBUFERROR_VALUE_OUT_OF_RANGE )
 		{

@@ -90,7 +90,6 @@
             nativeBuildInputs = nativeBuildInputs ++ [
               pkgs.waf
               pkgs.ccache
-              pkgs.clang-tools
             ];
             inherit buildInputs;
             shellHook = ''

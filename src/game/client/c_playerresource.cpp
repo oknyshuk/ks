@@ -14,10 +14,8 @@
 #include "hltvreplaysystem.h"
 #include "rocketui/rocketui.h"
 #include "tier1/fmtstr.h"
+#include "tier1/map_ops.h"
 #include "localize/ilocalize.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 const float PLAYER_RESOURCE_THINK_INTERVAL = 0.2f;
 #define PLAYER_DEBUG_NAME "WWWWWWWWWWWWWWW"
@@ -134,19 +132,19 @@ void C_PlayerResource::UpdateXuids( void )
 
 void C_PlayerResource::UpdateAsLocalizedFakePlayerName( int slot, char const *pchPlayerName )
 {
-	static CUtlStringMap< CUtlString > s_mapLocalizedNames;
-	UtlSymId_t symName = s_mapLocalizedNames.Find( pchPlayerName );
-	if ( symName == UTL_INVAL_SYMBOL )
+	static ks::idict< std::string > s_mapLocalizedNames;	// m_szName points into the values
+	auto symName = s_mapLocalizedNames.find( pchPlayerName );
+	if ( symName == s_mapLocalizedNames.end() )
 	{
 		// Need to localize it from scratch
-		CUtlVector< char * > arrLocTokens;
-		CFmtStr1024 strComposite;
+		std::vector< std::string > arrLocTokens;
 		V_SplitString( pchPlayerName, " ", arrLocTokens );
-		FOR_EACH_VEC( arrLocTokens, i )
+		CFmtStr1024 strComposite;
+		for ( int i = 0; i < std::ssize( arrLocTokens ); i++ )
 		{
 			if ( i ) strComposite.Append( " " );
 
-			if ( wchar_t const * const kwszLocalizedToken = g_pLocalize->Find( CFmtStr( "#CSGO_FakePlayer_%s", arrLocTokens[ i ] ) ) )
+			if ( wchar_t const * const kwszLocalizedToken = g_pLocalize->Find( CFmtStr( "#CSGO_FakePlayer_%s", arrLocTokens[ i ].c_str() ) ) )
 			{
 				char chUtf8token[ MAX_PLAYER_NAME_LENGTH ] = {};
 				V_UnicodeToUTF8( kwszLocalizedToken, chUtf8token, sizeof( chUtf8token ) );
@@ -154,17 +152,14 @@ void C_PlayerResource::UpdateAsLocalizedFakePlayerName( int slot, char const *pc
 			}
 			else
 			{
-				strComposite.Append( arrLocTokens[ i ] );
-				Warning( "Failed to localize fake player name '#CSGO_FakePlayer_%s'\n", arrLocTokens[ i ] );
+				strComposite.Append( arrLocTokens[ i ].c_str() );
+				Warning( "Failed to localize fake player name '#CSGO_FakePlayer_%s'\n", arrLocTokens[ i ].c_str() );
 			}
 		}
-		symName = s_mapLocalizedNames.Insert( pchPlayerName, strComposite.Access() );
-		arrLocTokens.PurgeAndDeleteElements();
+		symName = s_mapLocalizedNames.emplace( pchPlayerName, strComposite.Access() ).first;
 	}
 
-	Assert( symName != UTL_INVAL_SYMBOL );
-
-	m_szName[ slot ] = s_mapLocalizedNames[ symName ];
+	m_szName[ slot ] = symName->second.c_str();
 }
 
 void C_PlayerResource::UpdatePlayerName( int slot )
@@ -251,10 +246,10 @@ protected:
 public:
 	void InitializeNames()
 	{
-		CUtlVector< const char * > arrNamesOptions;
+		std::vector< const char * > arrNamesOptions;
 #define RANDOM_FAKE_PLAYER_NAME_UTF8_ARRAY_LOCALIZED( englishName ) { \
 	STATIC_PLAYER_NAME_UTF8_ARRAY_LOCALIZED( s_utf8Name##englishName, "#CSGO_FakePlayer_" #englishName, #englishName ); \
-	arrNamesOptions.AddToTail( s_utf8Name##englishName ); }
+	arrNamesOptions.push_back( s_utf8Name##englishName ); }
 		RANDOM_FAKE_PLAYER_NAME_UTF8_ARRAY_LOCALIZED( Albatross );
 		RANDOM_FAKE_PLAYER_NAME_UTF8_ARRAY_LOCALIZED( Alpha );
 		RANDOM_FAKE_PLAYER_NAME_UTF8_ARRAY_LOCALIZED( Anchor );
@@ -325,11 +320,11 @@ public:
 #undef RANDOM_FAKE_PLAYER_NAME_UTF8_ARRAY_LOCALIZED
 		for ( int k = 0; k < MAX_PLAYERS + 1; ++ k )
 		{
-			if ( !arrNamesOptions.Count() )
+			if ( arrNamesOptions.empty() )
 				Error( "Insufficient random names pool!\n" );
-			int iRandomChoice = RandomInt( 0, arrNamesOptions.Count() - 1 );
-			m_szNames[k] = arrNamesOptions.Element( iRandomChoice );
-			arrNamesOptions.Remove( iRandomChoice );
+			int iRandomChoice = RandomInt( 0, std::ssize( arrNamesOptions ) - 1 );
+			m_szNames[k] = arrNamesOptions[ iRandomChoice ];
+			arrNamesOptions.erase( arrNamesOptions.begin() + iRandomChoice );
 		}
 		m_bInitialized = true;
 	}
@@ -382,7 +377,7 @@ const char *C_PlayerResource::GetPlayerName( int iIndex )
 	}
 
 	// This gets updated in ClientThink, so it could be up to 1 second out of date, oh well.
-	return m_szName[iIndex];
+	return m_szName[iIndex] ? m_szName[iIndex] : "";
 }
 
 bool C_PlayerResource::IsAlive(int iIndex )

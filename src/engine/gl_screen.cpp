@@ -31,8 +31,6 @@
 #include "tier0/icommandline.h"
 #include "matchmaking/imatchframework.h"
 #include "cl_steamauth.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 ConVar g_cv_miniprofiler_dump( "miniprofiler_dump", "0" );
 DLL_IMPORT void PublishAllMiniProfilers(int nHistoryMax);

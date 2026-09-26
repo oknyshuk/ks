@@ -8,9 +8,6 @@
 #include "cbase.h"
 #include "fx_fleck.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 // enable this to have the fleck_merge cvar as well as the current system count displayed as it changes (for profiling)
 #define REPORT_MERGED_FLECKS 0
@@ -131,7 +128,7 @@ CParticleMergeList< CFleckParticles, CMergeSameNameBbox<CFleckParticles> > g_Fle
 //
 // CFleckParticles
 //
-CSmartPtr<CFleckParticles> CFleckParticles::Create( const char *pDebugName, const Vector &vCenter, const Vector &extents )
+ks::intrusive_ptr<CFleckParticles> CFleckParticles::Create( const char *pDebugName, const Vector &vCenter, const Vector &extents )
 {
 	CFleckParticles *pMerge = g_FleckMergeList.FindAndMergeParticleSystem( pDebugName, vCenter, extents );
 	if ( pMerge )

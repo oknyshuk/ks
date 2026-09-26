@@ -20,7 +20,7 @@
 #include "engine/ivmodelrender.h"
 #include "engine/IClientLeafSystem.h"
 #include "ispatialpartitioninternal.h"
-#include "utlbuffer.h"
+#include "tier1/byte_reader.h"
 #include "utlvector.h"
 #include "filesystem.h"
 #include "gl_model_private.h"
@@ -52,8 +52,7 @@
 #include "iclientalphaproperty.h"
 #include "engineui.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include <vector>
 
 //-----------------------------------------------------------------------------
 // Convars!
@@ -131,6 +130,10 @@ class CStaticProp : public IClientUnknown, public IClientRenderable, public ICol
 public:
 	CStaticProp();
 	~CStaticProp();
+
+	// Registered by address (KD tree, leaf lists, model instance, render handle), so never copied or moved.
+	CStaticProp( const CStaticProp & ) = delete;
+	CStaticProp &operator=( const CStaticProp & ) = delete;
 
 	// IHandleEntity overrides
 public:
@@ -399,9 +402,9 @@ public:
 
 	//Changes made specifically to support the Portal mod (smack Dave Kircher if something breaks)
 	//===================================================================
-	virtual void GetAllStaticProps( CUtlVector<ICollideable *> *pOutput );
-	virtual void GetAllStaticPropsInAABB( const Vector &vMins, const Vector &vMaxs, CUtlVector<ICollideable *> *pOutput );
-	virtual void GetAllStaticPropsInOBB( const Vector &ptOrigin, const Vector &vExtent1, const Vector &vExtent2, const Vector &vExtent3, CUtlVector<ICollideable *> *pOutput );
+	virtual void GetAllStaticProps( std::vector< ICollideable * > *pOutput );
+	virtual void GetAllStaticPropsInAABB( const Vector &vMins, const Vector &vMaxs, std::vector< ICollideable * > *pOutput );
+	virtual void GetAllStaticPropsInOBB( const Vector &ptOrigin, const Vector &vExtent1, const Vector &vExtent2, const Vector &vExtent3, std::vector< ICollideable * > *pOutput );
 	//===================================================================
 
 	virtual void GetLightingOrigins( Vector *pLightingOrigins, int nOriginStride, int nCount, IClientRenderable **ppRenderable, int nRenderableStride ); 
@@ -423,9 +426,9 @@ private:
 	void UpdatePropVisibility( int nCPULevel, int nGPULevel );
 
 	// Methods associated with unserializing static props
-	void UnserializeModelDict( CUtlBuffer& buf );
-	void UnserializeLeafList( CUtlBuffer& buf );
-	void UnserializeModels( CUtlBuffer& buf );
+	void UnserializeModelDict( ks::byte_reader& buf );
+	void UnserializeLeafList( ks::byte_reader& buf );
+	void UnserializeModels( ks::byte_reader& buf );
 	void UnserializeStaticProps();
 
 	int HandleEntityToIndex( IHandleEntity *pHandleEntity ) const;
@@ -434,9 +437,9 @@ private:
 	// Unique static prop models
 
 	// The list of all static props
-	CUtlVector <model_t *>			m_StaticPropDict;
-	CUtlVector <CStaticProp>		m_StaticProps;
-	CUtlVector <StaticPropLeafLump_t> m_StaticPropLeaves;
+	std::vector< model_t * >			m_StaticPropDict;
+	std::vector <CStaticProp>		m_StaticProps;	// sized once per level; see CStaticProp
+	std::vector< StaticPropLeafLump_t > m_StaticPropLeaves;
 
 	bool							m_bLevelInitialized;
 	bool							m_bClientInitialized;
@@ -1374,7 +1377,7 @@ void CStaticPropMgr::UpdatePropVisibility( int nCPULevel, int nGPULevel )
 	if ( !m_bClientInitialized )
 		return;
 
-	int nCount = m_StaticProps.Count();
+	int nCount = std::ssize( m_StaticProps );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		CStaticProp &prop = m_StaticProps[i];
@@ -1421,10 +1424,10 @@ void CStaticPropMgr::UpdatePropVisibility( int nCPULevel, int nGPULevel )
 //-----------------------------------------------------------------------------
 // Unserialize static prop model dictionary
 //-----------------------------------------------------------------------------
-void CStaticPropMgr::UnserializeModelDict( CUtlBuffer& buf )
+void CStaticPropMgr::UnserializeModelDict( ks::byte_reader& buf )
 {
-	int count = buf.GetInt();
-	m_StaticPropDict.AddMultipleToTail( count );
+	int count = buf.read< int >();
+	m_StaticPropDict.resize( m_StaticPropDict.size() + count );
 
 	COM_TimestampedLog( "Starting UnserializeModelDict for %d models\n", count );
 	for ( int i=0; i < count; i++ )
@@ -1437,25 +1440,25 @@ void CStaticPropMgr::UnserializeModelDict( CUtlBuffer& buf )
 #endif
 
 		StaticPropDictLump_t lump;
-		buf.Get( &lump, sizeof(StaticPropDictLump_t) );
+		buf.read_bytes( &lump, sizeof(StaticPropDictLump_t) );
 
 		m_StaticPropDict[i] = modelloader->GetModelForName( lump.m_Name, IModelLoader::FMODELLOADER_STATICPROP );
 	}
 	COM_TimestampedLog( "Finished UnserializeModelDict\n" );
 }
 
-void CStaticPropMgr::UnserializeLeafList( CUtlBuffer& buf )
+void CStaticPropMgr::UnserializeLeafList( ks::byte_reader& buf )
 {
-	int nCount = buf.GetInt();
-	m_StaticPropLeaves.Purge();
+	int nCount = buf.read< int >();
+	m_StaticPropLeaves.clear(); m_StaticPropLeaves.shrink_to_fit();
 	if ( nCount > 0 )
 	{
-		m_StaticPropLeaves.AddMultipleToTail( nCount );
-		buf.Get( m_StaticPropLeaves.Base(), nCount * sizeof(StaticPropLeafLump_t) );
+		m_StaticPropLeaves.resize( m_StaticPropLeaves.size() + nCount );
+		buf.read_bytes( m_StaticPropLeaves.data(), nCount * sizeof(StaticPropLeafLump_t) );
 	}
 }
 
-void CStaticPropMgr::UnserializeModels( CUtlBuffer& buf )
+void CStaticPropMgr::UnserializeModels( ks::byte_reader& buf )
 {
 	// Version check
 	int nLumpVersion = Mod_GameLumpVersion( GAMELUMP_STATIC_PROPS );
@@ -1465,22 +1468,18 @@ void CStaticPropMgr::UnserializeModels( CUtlBuffer& buf )
 		return;
 	}
 
-	int count = buf.GetInt();
+	int count = buf.read< int >();
 
-	// Gotta preallocate the static props here so no rellocations take place
-	// the leaf list stores pointers to these tricky little guys.
-	bool bSkip = false;
-	m_StaticProps.EnsureCapacity(count);
+	// Constructed in place, all at once: props can't move (see CStaticProp).
+	Assert( m_StaticProps.empty() );
+	m_StaticProps = std::vector< CStaticProp >( count );
 	for ( int i = 0; i < count; ++i )
 	{
-		// Reset every loop.
-		bSkip = false;
-
 		StaticPropLump_t lump;
 		switch ( nLumpVersion )
 		{
 		case 4:
-			buf.Get( &lump, sizeof(StaticPropLumpV4_t) );
+			buf.read_bytes( &lump, sizeof(StaticPropLumpV4_t) );
 			lump.m_flForcedFadeScale = 1.0f;
 			lump.m_nMinCPULevel = lump.m_nMaxCPULevel = lump.m_nMinGPULevel = lump.m_nMaxGPULevel = 0;
 			lump.m_DiffuseModulation.r = lump.m_DiffuseModulation.g = lump.m_DiffuseModulation.b = lump.m_DiffuseModulation.a = 255; // default color/alpha modulation to identity
@@ -1489,7 +1488,7 @@ void CStaticPropMgr::UnserializeModels( CUtlBuffer& buf )
 			break;
 
 		case 5:
-			buf.Get( &lump, sizeof(StaticPropLumpV5_t) );
+			buf.read_bytes( &lump, sizeof(StaticPropLumpV5_t) );
 			lump.m_nMinCPULevel = lump.m_nMaxCPULevel = lump.m_nMinGPULevel = lump.m_nMaxGPULevel = 0;
 			lump.m_DiffuseModulation.r = lump.m_DiffuseModulation.g = lump.m_DiffuseModulation.b = lump.m_DiffuseModulation.a = 255; // default color/alpha modulation to identity
 			lump.m_bDisableX360 = false;
@@ -1497,7 +1496,7 @@ void CStaticPropMgr::UnserializeModels( CUtlBuffer& buf )
 			break;
 
 		case 6:
-			buf.Get( &lump, sizeof( StaticPropLumpV6_t ) );
+			buf.read_bytes( &lump, sizeof( StaticPropLumpV6_t ) );
 			lump.m_nMinCPULevel = lump.m_nMaxCPULevel = lump.m_nMinGPULevel = lump.m_nMaxGPULevel = 0;
 			lump.m_DiffuseModulation.r = lump.m_DiffuseModulation.g = lump.m_DiffuseModulation.b = lump.m_DiffuseModulation.a = 255; // default color/alpha modulation to identity
 			lump.m_bDisableX360 = false;
@@ -1505,33 +1504,33 @@ void CStaticPropMgr::UnserializeModels( CUtlBuffer& buf )
 			break;
 
 		case 7:
-			buf.Get( &lump, sizeof( StaticPropLumpV7_t ) );
+			buf.read_bytes( &lump, sizeof( StaticPropLumpV7_t ) );
 			lump.m_nMinCPULevel = lump.m_nMaxCPULevel = lump.m_nMinGPULevel = lump.m_nMaxGPULevel = 0;
 			lump.m_bDisableX360 = false;
 			lump.m_FlagsEx = 0;
 			break;
 
 		case 8:
-			buf.Get( &lump, sizeof( StaticPropLumpV8_t ) );
+			buf.read_bytes( &lump, sizeof( StaticPropLumpV8_t ) );
 			lump.m_bDisableX360 = false;
 			lump.m_FlagsEx = 0;
 			break;
 
 		case 9:
-			buf.Get( &lump, sizeof( StaticPropLumpV9_t ) );
+			buf.read_bytes( &lump, sizeof( StaticPropLumpV9_t ) );
 			lump.m_FlagsEx = 0;
 			break;
 		
 		case 10:
-			buf.Get( &lump, sizeof( StaticPropLump_t ) );
+			buf.read_bytes( &lump, sizeof( StaticPropLump_t ) );
 			break;
 		}
 
-		int j = m_StaticProps.AddToTail();
-		m_StaticProps[j].Init( j, lump, m_StaticPropDict[lump.m_PropType] );
+		CStaticProp &prop = m_StaticProps[i];
+		prop.Init( i, lump, m_StaticPropDict[lump.m_PropType] );
 
 		// Add the prop to the K-D tree for collision
-		m_StaticProps[j].InsertPropIntoKDTree( );
+		prop.InsertPropIntoKDTree( );
 
 #ifndef DEDICATED
 		if ( !(i % 10 ) )
@@ -1547,7 +1546,7 @@ void CStaticPropMgr::OutputLevelStats( void )
 	// STATS
 	int i;
 	int totalVerts = 0;
-	for( i = 0; i < m_StaticProps.Count(); i++ )
+	for( i = 0; i < std::ssize( m_StaticProps ); i++ )
 	{
 		CStaticProp *pStaticProp = &m_StaticProps[i];
 		model_t *pModel = (model_t*)pStaticProp->GetModel();
@@ -1569,8 +1568,8 @@ void CStaticPropMgr::OutputLevelStats( void )
 			}
 		}
 	}
-	Log_Warning( LOG_StaticPropManager, "%d static prop instances in map\n", ( int )m_StaticProps.Count() );
-	Log_Warning( LOG_StaticPropManager, "%d static prop models in map\n", ( int )m_StaticPropDict.Count() );
+	Log_Warning( LOG_StaticPropManager, "%d static prop instances in map\n", ( int )std::ssize( m_StaticProps ) );
+	Log_Warning( LOG_StaticPropManager, "%d static prop models in map\n", ( int )std::ssize( m_StaticPropDict ) );
 	Log_Warning( LOG_StaticPropManager, "%d static prop verts in map\n", ( int )totalVerts );
 }
 
@@ -1588,10 +1587,10 @@ void CStaticPropMgr::UnserializeStaticProps()
 	COM_TimestampedLog( "UnserializeStaticProps - start");
 
 	MEM_ALLOC_CREDIT();
-	CUtlBuffer buf( 0, size );
-	if ( Mod_LoadGameLump( GAMELUMP_STATIC_PROPS, buf.PeekPut(), size ))
+	std::vector< std::byte > lumpData( size );
+	if ( Mod_LoadGameLump( GAMELUMP_STATIC_PROPS, lumpData.data(), size ))
 	{
-		buf.SeekPut( CUtlBuffer::SEEK_HEAD, size );
+		ks::byte_reader buf( lumpData );
 		COM_TimestampedLog( "UnserializeModelDict" );
 		UnserializeModelDict( buf );
 		COM_TimestampedLog( "UnserializeLeafList" );
@@ -1638,13 +1637,13 @@ void CStaticPropMgr::LevelShutdown()
 
 	m_bLevelInitialized = false;
 
-	m_StaticProps.Purge();
+	m_StaticProps = std::vector< CStaticProp >();	// frees; no element moves
 
-	FOR_EACH_VEC( m_StaticPropDict, i )
+	for ( model_t *pModel : m_StaticPropDict )
 	{
-		modelloader->UnreferenceModel( m_StaticPropDict[i], IModelLoader::FMODELLOADER_STATICPROP );
+		modelloader->UnreferenceModel( pModel, IModelLoader::FMODELLOADER_STATICPROP );
 	}
-	m_StaticPropDict.Purge();
+	m_StaticPropDict.clear(); m_StaticPropDict.shrink_to_fit();
 }
 
 void CStaticPropMgr::LevelInitClient()
@@ -1666,7 +1665,7 @@ void CStaticPropMgr::LevelInitClient()
 
 	// Since the client will be ready at a later time than the server
 	// to set up its data, we need a separate call to handle that
-	int nCount = m_StaticProps.Count();
+	int nCount = std::ssize( m_StaticProps );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		CStaticProp &prop = m_StaticProps[i];
@@ -1702,7 +1701,7 @@ void CStaticPropMgr::LevelShutdownClient()
 
 	Assert( m_bLevelInitialized );
 
-	for (int i = m_StaticProps.Count(); --i >= 0; )
+	for (int i = std::ssize( m_StaticProps ); --i >= 0; )
 	{
 		m_StaticProps[i].CleanUpAlphaProperty();
 		m_StaticProps[i].CleanUpRenderHandle( );
@@ -1723,7 +1722,7 @@ void CStaticPropMgr::LevelShutdownClient()
 void CStaticPropMgr::CreateVPhysicsRepresentations( IPhysicsEnvironment	*pPhysEnv, IVPhysicsKeyHandler *pDefaults, void *pGameData )
 {
 	// Walk through the static props + make collideable thingies for them.
-	int nCount = m_StaticProps.Count();
+	int nCount = std::ssize( m_StaticProps );
 	for ( int i = nCount; --i >= 0; )
 	{
 		m_StaticProps[i].CreateVPhysics( pPhysEnv, pDefaults, pGameData );
@@ -1748,7 +1747,7 @@ ICollideable *CStaticPropMgr::GetStaticProp( IHandleEntity *pHandleEntity )
 	}
 
 	int nIndex = pHandleEntity ? pHandleEntity->GetRefEHandle().GetEntryIndex() : -1;
-	if ( nIndex < 0 || nIndex > m_StaticProps.Count() )
+	if ( nIndex < 0 || nIndex > std::ssize( m_StaticProps ) )
 	{
 		return nullptr;
 	}
@@ -1758,7 +1757,7 @@ ICollideable *CStaticPropMgr::GetStaticProp( IHandleEntity *pHandleEntity )
 
 ICollideable *CStaticPropMgr::GetStaticPropByIndex( int propIndex )
 {
-	if ( propIndex < m_StaticProps.Count() )
+	if ( propIndex < std::ssize( m_StaticProps ) )
 	{
 		return &m_StaticProps[propIndex];
 	}
@@ -1771,22 +1770,22 @@ ICollideable *CStaticPropMgr::GetStaticPropByIndex( int propIndex )
 //-----------------------------------------------------------------------------
 // Get large amounts of handles to static props
 //-----------------------------------------------------------------------------
-void CStaticPropMgr::GetAllStaticProps( CUtlVector<ICollideable *> *pOutput )
+void CStaticPropMgr::GetAllStaticProps( std::vector< ICollideable * > *pOutput )
 {
 	if ( pOutput == nullptr ) return;
-	int iPropVectorSize = m_StaticProps.Count();
+	int iPropVectorSize = std::ssize( m_StaticProps );
 
 	int counter;
 	for ( counter = 0; counter != iPropVectorSize; ++counter )
 	{
-		pOutput->AddToTail( &m_StaticProps[counter] );
+		pOutput->push_back( &m_StaticProps[counter] );
 	}
 }
 
-void CStaticPropMgr::GetAllStaticPropsInAABB( const Vector &vMins, const Vector &vMaxs, CUtlVector<ICollideable *> *pOutput )
+void CStaticPropMgr::GetAllStaticPropsInAABB( const Vector &vMins, const Vector &vMaxs, std::vector< ICollideable * > *pOutput )
 {
 	if ( pOutput == nullptr ) return;
-	int iPropVectorSize = m_StaticProps.Count();
+	int iPropVectorSize = std::ssize( m_StaticProps );
 
 	int counter;
 	for ( counter = 0; counter != iPropVectorSize; ++counter )
@@ -1804,11 +1803,11 @@ void CStaticPropMgr::GetAllStaticPropsInAABB( const Vector &vMins, const Vector 
 		if( vPropMins.y > vMaxs.y ) continue;
 		if( vPropMins.z > vMaxs.z ) continue;
 
-		pOutput->AddToTail( pProp );
+		pOutput->push_back( pProp );
 	}
 }
 
-void CStaticPropMgr::GetAllStaticPropsInOBB( const Vector &ptOrigin, const Vector &vExtent1, const Vector &vExtent2, const Vector &vExtent3, CUtlVector<ICollideable *> *pOutput )
+void CStaticPropMgr::GetAllStaticPropsInOBB( const Vector &ptOrigin, const Vector &vExtent1, const Vector &vExtent2, const Vector &vExtent3, std::vector< ICollideable * > *pOutput )
 {
 	if ( pOutput == nullptr ) 
 		return;
@@ -1858,7 +1857,7 @@ void CStaticPropMgr::GetAllStaticPropsInOBB( const Vector &ptOrigin, const Vecto
 	vOBBPlaneNormals[5] = -vOBBPlaneNormals[4];
 	fOBBPlaneDists[5] = vOBBPlaneNormals[5].Dot( ptOrigin );
 
-	int iPropVectorSize = m_StaticProps.Count();
+	int iPropVectorSize = std::ssize( m_StaticProps );
 
 	for ( counter = 0; counter != iPropVectorSize; ++counter )
 	{
@@ -1923,7 +1922,7 @@ void CStaticPropMgr::GetAllStaticPropsInOBB( const Vector &ptOrigin, const Vecto
 
 			//FIXME: Halfspace elimination will never remove props that do intersect, but leaves some false positives in some cases.
 
-			pOutput->AddToTail( pProp );
+			pOutput->push_back( pProp );
 		}
 	}
 }
@@ -1971,7 +1970,7 @@ void CStaticPropMgr::PrecacheLighting()
 
 	int numVerts = 0;
 
-	int total = m_StaticProps.Count();
+	int total = std::ssize( m_StaticProps );
 	for ( int i = 0; i < total; i++ )
 	{
 		MDLCACHE_CRITICAL_SECTION_( g_pMDLCache );
@@ -1986,7 +1985,7 @@ void CStaticPropMgr::PrecacheLighting()
 
 void CStaticPropMgr::RecomputeStaticLighting( )
 {
-	int i = m_StaticProps.Count();
+	int i = std::ssize( m_StaticProps );
 	while ( --i >= 0 )
 	{
 		if ( m_StaticProps[i].RenderHandle() == INVALID_CLIENT_RENDER_HANDLE )
@@ -2011,7 +2010,7 @@ bool CStaticPropMgr::IsPropInPVS( IHandleEntity *pHandleEntity, const byte *pVis
 	int end = prop.FirstLeaf() + prop.LeafCount();
 	for( i = prop.FirstLeaf(); i < end; i++ )
 	{
-		Assert( i >= 0 && i < m_StaticPropLeaves.Count() );
+		Assert( i >= 0 && i < std::ssize( m_StaticPropLeaves ) );
 		int clusterID = CM_LeafCluster( m_StaticPropLeaves[i].m_Leaf );
 		if( pVis[ clusterID >> 3 ] & ( 1 << ( clusterID & 7 ) ) )
 		{
@@ -2185,7 +2184,7 @@ void CStaticPropMgr::AddDecalToStaticProp( Vector const& rayStart, Vector const&
 {
 #ifndef DEDICATED
 	// Invalid static prop? Blow it off! 
-	if (staticPropIndex >= m_StaticProps.Count())
+	if (staticPropIndex >= std::ssize( m_StaticProps ))
 	{
 		memset( &tr, 0, sizeof(trace_t) );
 		tr.fraction = 1.0f;
@@ -2282,7 +2281,7 @@ void CStaticPropMgr::RemoveAllShadowsFromStaticProp( IClientRenderable* pRendera
 void CStaticPropMgr::DisableCSMRenderingForStaticProp( int staticPropIndex )
 {
 	// Invalid static prop? Blow it off! 
-	if ( staticPropIndex >= m_StaticProps.Count() )
+	if ( staticPropIndex >= std::ssize( m_StaticProps ) )
 	{
 		return;
 	}
@@ -2305,7 +2304,7 @@ void CStaticPropMgr::GetStaticPropMaterialColorAndLighting( trace_t* pTrace,
 {
 #ifndef DEDICATED
 	// Invalid static prop? Blow it off! 
-	if (staticPropIndex >= m_StaticProps.Count())
+	if (staticPropIndex >= std::ssize( m_StaticProps ))
 	{
 		lighting.Init( 0, 0, 0 );
 		matColor.Init( 1, 1, 1 );

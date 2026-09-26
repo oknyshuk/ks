@@ -14,9 +14,7 @@
 #include "SoundEmitterSystem/isoundemittersystembase.h"
 #include <bitbuf.h>
 #include "precache_register.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include <ranges>
 
 #define PLANTEDC4_MSG_JUSTBLEW 1
 #define TIME_TO_DETONATE_WARNING 10
@@ -29,12 +27,12 @@ IMPLEMENT_REFLECT_CLIENTCLASS( C_PlantedC4, DT_PlantedC4, CPlantedC4 )
 // PRECACHE( PARTICLE_SYSTEM, "bomb_explosion_huge" )
 // PRECACHE_REGISTER_END()
 
-CUtlVector< C_PlantedC4* > g_PlantedC4s;
+std::vector< C_PlantedC4* > g_PlantedC4s;
 
 C_PlantedC4::C_PlantedC4() :
 	m_GlowObject( this, Vector( 1.0f, 1.0f, 1.0f ), 0.0f, false, false )
 {
-	g_PlantedC4s.AddToTail( this );
+	g_PlantedC4s.push_back( this );
 
 	m_flNextRadarFlashTime = gpGlobals->curtime;
 	m_bRadarFlash = true;
@@ -49,7 +47,7 @@ C_PlantedC4::C_PlantedC4() :
 
 C_PlantedC4::~C_PlantedC4()
 {
-	g_PlantedC4s.FindAndRemove( this );
+	ks::erase_first( g_PlantedC4s, this );
 }
 
 void C_PlantedC4::SetDormant( bool bDormant )
@@ -59,13 +57,13 @@ void C_PlantedC4::SetDormant( bool bDormant )
 	// Remove us from the list of planted C4s.
 	if ( bDormant )
 	{
-		g_PlantedC4s.FindAndRemove( this );
+		ks::erase_first( g_PlantedC4s, this );
 		m_bTenSecWarning = false;
 	}
 	else
 	{
-		if ( g_PlantedC4s.Find( this ) == -1 )
-			g_PlantedC4s.AddToTail( this );
+		if ( ks::find_index( g_PlantedC4s, this ) == -1 )
+			g_PlantedC4s.push_back( this );
 	}
 }
 
@@ -92,12 +90,12 @@ void C_PlantedC4::Spawn( void )
 
 void C_PlantedC4::DestroyDefuserRopes( void )
 {
-	FOR_EACH_VEC_BACK( m_hDefuserRopes, i )
+	for ( auto &hRope : m_hDefuserRopes | std::views::reverse )
 	{
-		if ( m_hDefuserRopes[i] )
-			UTIL_Remove( m_hDefuserRopes[i] );
+		if ( hRope )
+			UTIL_Remove( hRope );
 	}
-	m_hDefuserRopes.RemoveAll();
+	m_hDefuserRopes.clear();
 	
 	if ( m_hDefuserMultimeter )
 		UTIL_Remove( m_hDefuserMultimeter );
@@ -163,7 +161,7 @@ bool C_PlantedC4::CreateDefuserRopes( void )
 		pRopeA->AddRopeFlags( ROPE_USE_WIND );
 		pRopeA->SetSlack( 142 );
 		pRopeA->AddToLeafSystem();
-		m_hDefuserRopes[ m_hDefuserRopes.AddToTail() ] = pRopeA;
+		m_hDefuserRopes.emplace_back() = pRopeA;
 		//pRopeA->AddEffects( EF_NORECEIVESHADOW );
 	}
 	else
@@ -178,7 +176,7 @@ bool C_PlantedC4::CreateDefuserRopes( void )
 		pRopeB->AddRopeFlags( ROPE_USE_WIND );
 		pRopeB->SetSlack( 142 );
 		pRopeB->AddToLeafSystem();
-		m_hDefuserRopes[ m_hDefuserRopes.AddToTail() ] = pRopeB;
+		m_hDefuserRopes.emplace_back() = pRopeB;
 		//pRopeA->AddEffects( EF_NORECEIVESHADOW );
 	}
 	else
@@ -204,7 +202,7 @@ void C_PlantedC4::ClientThink( void )
 	C_CSPlayer *pLocalPlayer = GetLocalOrInEyeCSPlayer();
 	if ( pDefusingPlayer && ( pDefusingPlayer != pLocalPlayer || pLocalPlayer->ShouldDraw() ) )
 	{
-		if ( m_hDefuserRopes.Count() == 0 )
+		if ( m_hDefuserRopes.empty() )
 		{
 			CreateDefuserRopes();
 		}
@@ -272,7 +270,7 @@ void C_PlantedC4::ClientThink( void )
 		
 		fComplete = clamp( fComplete, 0.0f, 1.0f );
 
-		attenuation = MIN( 0.3 + 0.6 * fComplete, 1.0 );
+		attenuation = std::min( 0.3 + 0.6 * fComplete, 1.0 );
 		
 		CSoundParameters params;
 
@@ -285,7 +283,7 @@ void C_PlantedC4::ClientThink( void )
 			EmitSound( filter, SOUND_FROM_WORLD, ep );
 		}
 
-		freq = MAX( 0.1 + 0.9 * fComplete, 0.15 );
+		freq = std::max( 0.1 + 0.9 * fComplete, 0.15 );
 
 		m_flNextBeep = gpGlobals->curtime + freq;
 	}

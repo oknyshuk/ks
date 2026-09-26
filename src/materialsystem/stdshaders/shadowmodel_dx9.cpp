@@ -12,9 +12,6 @@
 #include "shadowmodel_ps20.inc"
 #include "shadowmodel_vs20.inc"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 DEFINE_FALLBACK_SHADER( ShadowModel, ShadowModel_DX9 )
 
 

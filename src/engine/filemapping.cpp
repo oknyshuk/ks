@@ -11,9 +11,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 bool CFileMapping::Map( const char *pszAbsolutePath )
 {
 	Unmap();

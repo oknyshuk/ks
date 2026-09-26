@@ -9,17 +9,12 @@
 #include "filesystem.h"
 #include "tier2/tier2.h"
 #include "tier2/fileutils.h"
-#include "tier1/utlbuffer.h"
-#include "tier1/UtlStringMap.h"
 #include "tier1/strtools.h"
 #include "dmxloader/dmxloader.h"
 #include "dmxloader/utlsoacontainer_serialization.h"
 #include "tier1/lzmaDecoder.h"
 #include "tier0/vprof.h"
 #include "particles_internal.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 // This macro is used to process the attribute mapping parameters, for both vararg versions of Init():
@@ -91,8 +86,8 @@ bool CParticleSnapshot::ValidateAttributeMapping( int nFieldNumber, int nParticl
 //-----------------------------------------------------------------------------
 bool CParticleSnapshot::Init( int nX, int nY, int nZ, const AttributeMapVector &attributeMaps )
 {
-	Assert( attributeMaps.Count() > 0 );
-	if ( attributeMaps.Count() <= 0 )
+	Assert( std::ssize( attributeMaps ) > 0 );
+	if ( std::ssize( attributeMaps ) <= 0 )
 		return false;
 	Assert( ( nX >= 1 ) && ( nY >= 1 ) && ( nZ >= 1 ) );
 	if ( ( nX < 1 ) || ( nY < 1 ) || ( nZ < 1 ) )
@@ -101,7 +96,7 @@ bool CParticleSnapshot::Init( int nX, int nY, int nZ, const AttributeMapVector &
 	Purge();
 	m_pContainer = &m_Container;
 
-	for ( int i = 0; i < attributeMaps.Count(); i++ )
+	for ( int i = 0; i < std::ssize( attributeMaps ); i++ )
 	{
 		int nFieldNumber       = attributeMaps[ i ].m_nContainerAttribute;
 		int nParticleAttribute = attributeMaps[ i ].m_nParticleAttribute;
@@ -126,7 +121,7 @@ bool CParticleSnapshot::Init( int nX, int nY, int nZ, ... )
 	AttributeMapVector attributeMaps;
 	ATTRIBUTE_MAPPING_LOOP( nZ )
 	//{
-		attributeMaps.AddToTail( AttributeMap( nFieldNumber, nParticleAttribute ) );
+		attributeMaps.push_back( AttributeMap( nFieldNumber, nParticleAttribute ) );
 	}
 	return Init( nX, nY, nZ, attributeMaps );
 }
@@ -136,14 +131,14 @@ bool CParticleSnapshot::Init( int nX, int nY, int nZ, ... )
 //-----------------------------------------------------------------------------
 bool CParticleSnapshot::InitExternal( CSOAContainer *pContainer, const AttributeMapVector &attributeMaps )
 {
-	Assert( attributeMaps.Count() > 0 );
-	if ( attributeMaps.Count() <= 0 )
+	Assert( std::ssize( attributeMaps ) > 0 );
+	if ( std::ssize( attributeMaps ) <= 0 )
 		return false;
 
 	Purge();
 	m_pContainer = pContainer;
 
-	for ( int i = 0; i < attributeMaps.Count(); i++ )
+	for ( int i = 0; i < std::ssize( attributeMaps ); i++ )
 	{
 		int nFieldNumber       = attributeMaps[ i ].m_nContainerAttribute;
 		int nParticleAttribute = attributeMaps[ i ].m_nParticleAttribute;
@@ -164,7 +159,7 @@ bool CParticleSnapshot::InitExternal( CSOAContainer *pContainer, ... )
 	AttributeMapVector attributeMaps;
 	ATTRIBUTE_MAPPING_LOOP( pContainer )
 	//{
-		attributeMaps.AddToTail( AttributeMap( nFieldNumber, nParticleAttribute ) );
+		attributeMaps.push_back( AttributeMap( nFieldNumber, nParticleAttribute ) );
 	}
 	return InitExternal( pContainer, attributeMaps );
 }

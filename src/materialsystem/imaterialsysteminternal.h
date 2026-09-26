@@ -33,9 +33,9 @@ public:
 		static int nStackCount = 0;
 		CFmtStr stackName( "CMatCallQueue.m_Allocator[%d]", nStackCount++ );
 #ifdef DEDICATED
-		m_Allocator.Init( (const char *)stackName, 2*1024, 0, 0, 4 );
+		m_Allocator.Init( (const char *)stackName, 2*1024, 0, 0, 16 );
 #else
-		m_Allocator.Init( (const char *)stackName, 2*1024*1024, 64*1024, 256*1024, 4 );
+		m_Allocator.Init( (const char *)stackName, 2*1024*1024, 64*1024, 256*1024, 16 );
 #endif
 		m_FunctorFactory.SetAllocator( &m_Allocator );
 		m_pHead = m_pTail = nullptr;

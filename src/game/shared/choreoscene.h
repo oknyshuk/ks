@@ -13,14 +13,14 @@ class CChoreoChannel;
 class CChoreoActor;
 class IChoreoEventCallback;
 class CEventRelativeTag;
-class CUtlBuffer;
+namespace ks { class byte_reader; class byte_writer; class text_writer; }
 class CFlexAnimationTrack;
 class ISceneTokenProcessor;
 class IChoreoStringPool;
 
 #include "tier1/utlvector.h"
-#include "tier1/utldict.h"
-#include "bitvec.h"
+#include "tier1/map_ops.h"
+#include <bitset>
 #include "expressionsample.h"
 #include "choreoevent.h"
 
@@ -51,9 +51,9 @@ public:
 
 	// Binary serialization
 	bool			SaveBinary( char const *pszBinaryFileName, char const *pPathID, unsigned int nTextVersionCRC, IChoreoStringPool *pStringPool );
-	void			SaveToBinaryBuffer( CUtlBuffer& buf, unsigned int nTextVersionCRC, IChoreoStringPool *pStringPool );
-	bool			RestoreFromBinaryBuffer( CUtlBuffer& buf, char const *filename, IChoreoStringPool *pStringPool );
-	static bool		GetCRCFromBinaryBuffer( CUtlBuffer& buf, unsigned int& crc );
+	void			SaveToBinaryBuffer( ks::byte_writer& buf, unsigned int nTextVersionCRC, IChoreoStringPool *pStringPool );
+	bool			RestoreFromBinaryBuffer( ks::byte_reader& buf, char const *filename, IChoreoStringPool *pStringPool );
+	static bool		GetCRCFromBinaryBuffer( ks::byte_reader& buf, unsigned int& crc );
 
 	// We do some things differently while restoring from a save.
 	inline void		SetRestoring( bool bRestoring );
@@ -79,11 +79,11 @@ public:
 	// Merges two .vcd's together, returns true if any data was merged
 	bool			Merge( CChoreoScene *other );
 
-	static void		FileSaveFlexAnimationTrack( CUtlBuffer& buf, int level, CFlexAnimationTrack *track, int nDefaultCurveType );
-	static void		FileSaveFlexAnimations( CUtlBuffer& buf, int level, CChoreoEvent *e );
-	static void		FileSaveRamp( CUtlBuffer& buf, int level, CChoreoEvent *e );
-	void			FileSaveSceneRamp( CUtlBuffer& buf, int level );
-	static void		FileSaveScaleSettings( CUtlBuffer& buf, int level, CChoreoScene *scene );
+	static void		FileSaveFlexAnimationTrack( ks::text_writer& buf, int level, CFlexAnimationTrack *track, int nDefaultCurveType );
+	static void		FileSaveFlexAnimations( ks::text_writer& buf, int level, CChoreoEvent *e );
+	static void		FileSaveRamp( ks::text_writer& buf, int level, CChoreoEvent *e );
+	void			FileSaveSceneRamp( ks::text_writer& buf, int level );
+	static void		FileSaveScaleSettings( ks::text_writer& buf, int level, CChoreoScene *scene );
 
 	static void		ParseFlexAnimations( ISceneTokenProcessor *tokenizer, CChoreoEvent *e, bool removeold = true );
 	static void		ParseRamp( ISceneTokenProcessor *tokenizer, CChoreoEvent *e );
@@ -171,7 +171,7 @@ public:
 	char const		*GetMapname( void );
 	void			SetMapname( const char *name );
 
-	void			ExportEvents( const char *filename, CUtlVector< CChoreoEvent * >& events );
+	void			ExportEvents( const char *filename, std::vector< CChoreoEvent * >& events );
 	void			ImportEvents( ISceneTokenProcessor *tokenizer, CChoreoActor *actor, CChoreoChannel *channel );
 
 	// Subscene support
@@ -200,10 +200,6 @@ public:
 
 	int				GetTimeZoom( char const *tool );
 	void			SetTimeZoom( char const *tool, int tz );
-	int				TimeZoomFirst();
-	int				TimeZoomNext( int i );
-	int				TimeZoomInvalid() const;
-	char const		*TimeZoomName( int i );
 
 	void			ReconcileCloseCaption();
 
@@ -294,12 +290,12 @@ private:
 
 	// File I/O
 public:
-	static void		FilePrintf( CUtlBuffer& buf, int level, PRINTF_FORMAT_STRING const char *fmt, ... );
+	static void		FilePrintf( ks::text_writer& buf, int level, PRINTF_FORMAT_STRING const char *fmt, ... );
 private:
-	void			FileSaveEvent( CUtlBuffer& buf, int level, CChoreoEvent *e );
-	void			FileSaveChannel( CUtlBuffer& buf, int level, CChoreoChannel *c );
-	void			FileSaveActor( CUtlBuffer& buf, int level, CChoreoActor *a );
-	void			FileSaveHeader( CUtlBuffer& buf );
+	void			FileSaveEvent( ks::text_writer& buf, int level, CChoreoEvent *e );
+	void			FileSaveChannel( ks::text_writer& buf, int level, CChoreoChannel *c );
+	void			FileSaveActor( ks::text_writer& buf, int level, CChoreoActor *a );
+	void			FileSaveHeader( ks::text_writer& buf );
 
 	// Object destruction
 	void			DestroyActor( CChoreoActor *actor );
@@ -312,16 +308,16 @@ private:
 	void			InternalDetermineEventTypes();
 
 	// Global object storage
-	CUtlVector < CChoreoEvent * >	m_Events;
-	CUtlVector < CChoreoActor * >	m_Actors;
-	CUtlVector < CChoreoChannel	* >	m_Channels;
+	std::vector< CChoreoEvent * >	m_Events;
+	std::vector< CChoreoActor * >	m_Actors;
+	std::vector< CChoreoChannel	* >	m_Channels;
 
 	// These are just pointers, the actual objects are in m_Events
-	CUtlVector < CChoreoEvent * >	m_ResumeConditions;
+	std::vector< CChoreoEvent * >	m_ResumeConditions;
 	// These are just pointers, the actual objects are in m_Events
-	CUtlVector < CChoreoEvent * >	m_ActiveResumeConditions;
+	std::vector< CChoreoEvent * >	m_ActiveResumeConditions;
 	// These are just pointers, the actual objects are in m_Events
-	CUtlVector < CChoreoEvent * >	m_PauseEvents;
+	std::vector< CChoreoEvent * >	m_PauseEvents;
 
 	// Current simulation time
 	float			m_flCurrentTime;
@@ -359,10 +355,10 @@ private:
 
 	CCurveData		m_SceneRamp;
 
-	CUtlDict< int, int >	m_TimeZoomLookup;
+	ks::idict< int >	m_TimeZoomLookup;
 	char			m_szFileName[ MAX_SCENE_FILENAME ];
 
-	CBitVec< CChoreoEvent::NUM_TYPES > m_bitvecHasEventOfType;
+	std::bitset< CChoreoEvent::NUM_TYPES > m_bitvecHasEventOfType;
 
 	// tag to suppress vcd when others are playing
 	bool			m_bIsBackground : 1;

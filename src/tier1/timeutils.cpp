@@ -2,16 +2,15 @@
 #include "tier1/timeutils.h"
 
 #include "tier0/dbg.h"
-#include "tier1/utlbuffer.h"
-#include "tier1/utlbufferutil.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
+#include "tier1/text_reader.h"
+#include "tier1/text_writer.h"
 #include "mathlib/mathlib.h"
 
 #include <ctype.h>
 
 #include <math.h>
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -217,40 +216,38 @@ int DmeTime_t::RoundSecondsToTMS( double sec )
 }
 
 
-bool Serialize( CUtlBuffer &buf, const DmeTime_t &src )
+bool Serialize( ks::byte_writer &buf, const DmeTime_t &src )
 {
-	int tms = src.GetTenthsOfMS();
-
-	if ( buf.IsText() )
-	{
-		double tms = src.GetTenthsOfMS();
-		buf.Printf( "%.04f", tms / 10000 );
-	}
-	else
-	{
-		buf.PutInt( tms );
-	}
-	return buf.IsValid();
+	buf.write< int >( src.GetTenthsOfMS() );
+	return buf.ok();
 }
 
-bool Unserialize( CUtlBuffer &buf, DmeTime_t &dest )
+bool Serialize( ks::text_writer &buf, const DmeTime_t &src )
 {
-	if ( buf.IsText() )
-	{
-		buf.EatWhiteSpace();
-		double tms = buf.GetDouble() * 10000;
-		if ( !buf.IsValid() )
-			return false;
+	double tms = src.GetTenthsOfMS();
+	buf.printf( "%.04f", tms / 10000 );
+	return true;
+}
 
-		if ( tms < INT_MIN || tms > INT_MAX )
-			return false;
+bool Unserialize( ks::text_reader &buf, DmeTime_t &dest )
+{
+	buf.skip_whitespace();
+	if ( !buf.ok() || buf.at_end() )
+		return false;
 
-		dest.SetTenthsOfMS( ( int )floor( tms + 0.5 ) );
-		return true;
-	}
+	double tms = buf.read< double >() * 10000;
 
-	int tms = buf.GetInt();
-	if ( !buf.IsValid() )
+	if ( tms < INT_MIN || tms > INT_MAX )
+		return false;
+
+	dest.SetTenthsOfMS( ( int )floor( tms + 0.5 ) );
+	return true;
+}
+
+bool Unserialize( ks::byte_reader &buf, DmeTime_t &dest )
+{
+	int tms = buf.read< int >();
+	if ( !buf.ok() )
 		return false;
 
 	dest.SetTenthsOfMS( tms );

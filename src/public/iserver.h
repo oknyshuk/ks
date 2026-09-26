@@ -8,7 +8,6 @@
 #define ISERVER_H
 
 #include <inetmsghandler.h>
-#include <bitvec.h>
 #include <const.h>
 
 class INetMessage;

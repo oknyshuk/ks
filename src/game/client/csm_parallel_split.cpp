@@ -6,9 +6,6 @@
 #include "cbase.h"
 #include "csm_parallel_split.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 // We don't currently support smooth cascade transitioning on Gameconsoles. This convar must be adjusted if we ever do.
 ConVar cl_csm_shadow_split_lerp_factor_range( "cl_csm_shadow_split_lerp_factor_range", ".2", FCVAR_DEVELOPMENTONLY );
 ConVar cl_csm_shadow_split_radial_dist_lerp_factor_multiplier( "cl_csm_shadow_split_radial_dist_lerp_factor_multiplier", ".85", FCVAR_DEVELOPMENTONLY );
@@ -156,7 +153,7 @@ float CCSMParallelSplit::CalculateSplitPlaneDistance( int nSplit, int nShadowSpl
 	Assert( flZFar > flZNear );
 	// http://appsrv.cse.cuhk.edu.hk/~fzhang/pssm_vrcia/shadow_vrcia.pdf
 	const float fIM = (float)nSplit / (float)nShadowSplits;
-	const float f = MIN( flMaxShadowDistance, flZFar );
+	const float f = std::min( flMaxShadowDistance, flZFar );
 	const float n = flZNear;
 	const float fBias = 0.1f;
 
@@ -389,7 +386,7 @@ void CCSMParallelSplit::CalculateShadowFrustaParallelSplits(
 		
 	float flSplitPlaneDistances[MAX_SUN_LIGHT_SHADOW_CASCADE_SIZE];
 
-	float flSceneZNear = MAX( 0.125f, sceneFrustum.GetCameraNearPlane() );
+	float flSceneZNear = std::max( 0.125f, sceneFrustum.GetCameraNearPlane() );
 	float flSceneZFar = sceneFrustum.GetCameraFarPlane();
 					
 	for ( int nCascadeIndex = 0; nCascadeIndex < nMaxCascadeSize; ++nCascadeIndex )
@@ -415,8 +412,8 @@ void CCSMParallelSplit::CalculateShadowFrustaParallelSplits(
 	// flMaxDistanceBetweenAnyCasterAndReceiver is only needed to capture all potential invisible shadow casters.
 	// We don't have the scene's bounds so there's a big fudge factor here to account for large terrains and low sun angles.
 	// We wouldn't need to push back the near plane so much if we where using pancaking.
-	//const float flMaxDistanceBetweenAnyCasterAndReceiver = MAX( flOutActualMaxShadowDist, MAX( MAX( flMaxVisibleDistance, flMaxShadowDistance ), 15000.0f ) );
-	const float flMaxDistanceBetweenAnyCasterAndReceiver = MAX( flOutActualMaxShadowDist, MAX( MAX( flMaxVisibleDistance, flMaxShadowDistance ), 2000.0f ) );
+	//const float flMaxDistanceBetweenAnyCasterAndReceiver = std::max( flOutActualMaxShadowDist, std::max( std::max( flMaxVisibleDistance, flMaxShadowDistance ), 15000.0f ) );
+	const float flMaxDistanceBetweenAnyCasterAndReceiver = std::max( flOutActualMaxShadowDist, std::max( std::max( flMaxVisibleDistance, flMaxShadowDistance ), 2000.0f ) );
 
 	//flOutActualMaxShadowDist = flMaxSubfrustumDiagonalLength; // sqrt(2) - account for dist from center to corner of square texture
 		
@@ -498,8 +495,8 @@ void CCSMParallelSplit::CalculateShadowFrustaParallelSplits(
 		{
 			Vector vLightPoint;
 			shadowWorldToViewRot.V3Mul( vSubfrustumWorldPoints[i] + vDirToLight * flMaxDistanceBetweenAnyCasterAndReceiver, vLightPoint );
-			vShadowFocusRegionMin.z = MIN( vShadowFocusRegionMin.z, vLightPoint.z );
-			vShadowFocusRegionMax.z = MAX( vShadowFocusRegionMax.z, vLightPoint.z );
+			vShadowFocusRegionMin.z = std::min( vShadowFocusRegionMin.z, vLightPoint.z );
+			vShadowFocusRegionMax.z = std::max( vShadowFocusRegionMax.z, vLightPoint.z );
 		}
 
 		// Now expand the Z near/far range so it fully encompasses the actual worldspace area that could be shadowed with this cascade's texture (this must take into account the shadow distance fading in the shader).
@@ -508,12 +505,12 @@ void CCSMParallelSplit::CalculateShadowFrustaParallelSplits(
 		{
 			Vector vLightPoint;
 			shadowWorldToViewRot.V3Mul( vWorldFrustumVertsAtMaxShadowDist[i], vLightPoint );
-			vShadowFocusRegionMin.z = MIN( vShadowFocusRegionMin.z, vLightPoint.z );
-			vShadowFocusRegionMax.z = MAX( vShadowFocusRegionMax.z, vLightPoint.z );
+			vShadowFocusRegionMin.z = std::min( vShadowFocusRegionMin.z, vLightPoint.z );
+			vShadowFocusRegionMax.z = std::max( vShadowFocusRegionMax.z, vLightPoint.z );
 		}
 
-		flCascadeShadowViewMinZ = MIN( vShadowFocusRegionMin.z, flCascadeShadowViewMinZ );
-		flCascadeShadowViewMaxZ = MAX( vShadowFocusRegionMax.z, flCascadeShadowViewMaxZ );
+		flCascadeShadowViewMinZ = std::min( vShadowFocusRegionMin.z, flCascadeShadowViewMinZ );
+		flCascadeShadowViewMaxZ = std::max( vShadowFocusRegionMax.z, flCascadeShadowViewMaxZ );
 	}
 
 	// Important note: Source1 uses right handed ortho projection matrices, so negative viewspace Z is actually inside the frustum. This is opposite from the CSM code in Source2.
@@ -560,8 +557,8 @@ void CCSMParallelSplit::CalculateShadowFrustaParallelSplits(
 		{
 			Vector vLightPoint;
 			shadowWorldToViewRot.V3Mul( vSubfrustumWorldPoints[i] + vDirToLight * flMaxDistanceBetweenAnyCasterAndReceiver, vLightPoint );
-			vShadowFocusRegionMin.z = MIN( vShadowFocusRegionMin.z, vLightPoint.z );
-			vShadowFocusRegionMax.z = MAX( vShadowFocusRegionMax.z, vLightPoint.z );
+			vShadowFocusRegionMin.z = std::min( vShadowFocusRegionMin.z, vLightPoint.z );
+			vShadowFocusRegionMax.z = std::max( vShadowFocusRegionMax.z, vLightPoint.z );
 		}
 		
 		// Now expand the Z near/far range so it fully encompasses the actual worldspace area that could be shadowed with this cascade's texture (this must take into account the shadow distance fading in the shader).
@@ -570,8 +567,8 @@ void CCSMParallelSplit::CalculateShadowFrustaParallelSplits(
 		{
 			Vector vLightPoint;
 			shadowWorldToViewRot.V3Mul( vWorldFrustumVertsAtMaxShadowDist[i], vLightPoint );
-			vShadowFocusRegionMin.z = MIN( vShadowFocusRegionMin.z, vLightPoint.z );
-			vShadowFocusRegionMax.z = MAX( vShadowFocusRegionMax.z, vLightPoint.z );
+			vShadowFocusRegionMin.z = std::min( vShadowFocusRegionMin.z, vLightPoint.z );
+			vShadowFocusRegionMax.z = std::max( vShadowFocusRegionMax.z, vLightPoint.z );
 		}
 
 		// Set all cascades to the same MinZ/MaxZ so we only need to transform into ortho Z once in the shader (not per cascade). This is doable with 24-bit Z.
@@ -791,7 +788,7 @@ bool CCSMParallelSplit::Update( const SunLightViewState_t &viewState )
 	static bool bDebugBreak = false;
 			
 	float flMaxVisibleDist = m_viewState.m_flMaxVisibleDist;
-	flMaxVisibleDist = MIN( flMaxVisibleDist, 7500.0f );	// arbitrary limit - where did I get this from?
+	flMaxVisibleDist = std::min( flMaxVisibleDist, 7500.0f );	// arbitrary limit - where did I get this from?
 
 	if ( g_flDebugForcedMaxVisibleRadius )
 	{
@@ -800,7 +797,7 @@ bool CCSMParallelSplit::Update( const SunLightViewState_t &viewState )
 	
 	ComputeCascadeProjToTexMatrices( m_lightState );
 
-	uint nMaxCascades = MIN( (int)m_nShadowCascadeMaxSize, (int)m_viewState.m_nMaxCascadeSize );
+	uint nMaxCascades = std::min( (int)m_nShadowCascadeMaxSize, (int)m_viewState.m_nMaxCascadeSize );
 	if ( !nMaxCascades ) 
 	{
 		nMaxCascades = 1;

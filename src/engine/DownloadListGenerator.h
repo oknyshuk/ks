@@ -9,7 +9,7 @@
 
 #include "filesystem.h"
 #include "utlvector.h"
-#include "utlsymbol.h"
+#include "tier1/intern_pool.h"
 #include "networkstringtable.h"
 
 #define DOWNLOADABLE_FILE_TABLENAME	"downloadables"
@@ -63,7 +63,7 @@ private:
 	char m_gameDir[256];
 	char m_mapName[MAX_PATH];
 	FileHandle_t m_hReslistFile;
-	CUtlSymbolTable m_AlreadyWrittenFileNames;
+	ks::intern_pool m_AlreadyWrittenFileNames;
 	INetworkStringTable *m_pStringTable;
 };
 

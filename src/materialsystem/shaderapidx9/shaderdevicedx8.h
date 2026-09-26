@@ -11,6 +11,7 @@
 
 
 
+#include <mutex>
 #include "shaderdevicebase.h"
 #include "shaderapidx8_global.h"
 #include "tier1/utlvector.h"
@@ -313,7 +314,7 @@ protected:
 
 	// Used for x360 only
 	NonInteractiveRefreshState_t m_NonInteractiveRefresh;
-	CThreadFastMutex m_nonInteractiveModeMutex;
+	std::recursive_mutex m_nonInteractiveModeMutex;
 	friend class CShaderDeviceMgrDx8;
 
 	int	m_numReleaseResourcesRefCount;		// This is holding the number of ReleaseResources calls queued up,

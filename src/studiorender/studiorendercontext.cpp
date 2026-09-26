@@ -20,9 +20,7 @@
 #include "cmodel.h"
 #include "tier0/vprof.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 // garymcthack - this should go elsewhere
 #define MAX_NUM_BONE_INDICES 4
 
@@ -669,8 +667,8 @@ template <VertexCompressionType_t T> bool CStudioRenderContext::R_AddVertexToMes
 	/*
 	if( vert.m_vecNormal.Length() < .9f || vert.m_vecNormal.Length() > 1.1f )
 	{
-	static CUtlStringMap<bool> errorMessages;
-	if( !errorMessages.Defined( pModelName ) )
+	static ks::idict<bool> errorMessages;
+	if( !errorMessages.contains( pModelName ) )
 	{
 	errorMessages[pModelName] = true;
 	Warning( "MODELBUG %s: bad normal\n", pModelName );
@@ -696,8 +694,8 @@ template <VertexCompressionType_t T> bool CStudioRenderContext::R_AddVertexToMes
 		float w = tangentS.w;
 		if( !( w == 1.0f || w == -1.0f ) )
 		{
-		static CUtlStringMap<bool> errorMessages;
-		if( !errorMessages.Defined( pModelName ) )
+		static ks::idict<bool> errorMessages;
+		if( !errorMessages.contains( pModelName ) )
 		{
 		errorMessages[pModelName] = true;
 		Warning( "MODELBUG %s: bad tangent sign\n", pModelName );
@@ -709,8 +707,8 @@ template <VertexCompressionType_t T> bool CStudioRenderContext::R_AddVertexToMes
 		float len = tangentS.AsVector3D().Length();
 		if( len < .9f || len > 1.1f )
 		{
-		static CUtlStringMap<bool> errorMessages;
-		if( !errorMessages.Defined( pModelName ) )
+		static ks::idict<bool> errorMessages;
+		if( !errorMessages.contains( pModelName ) )
 		{
 		errorMessages[pModelName] = true;
 		Warning( "MODELBUG %s: bad tangent vector\n", pModelName );
@@ -725,8 +723,8 @@ template <VertexCompressionType_t T> bool CStudioRenderContext::R_AddVertexToMes
 		float dot = DotProduct( vert.m_vecNormal, tangentS.AsVector3D() );
 		if( dot > .95 || dot < -.95 )
 		{
-		static CUtlStringMap<bool> errorMessages;
-		if( !errorMessages.Defined( pModelName ) )
+		static ks::idict<bool> errorMessages;
+		if( !errorMessages.contains( pModelName ) )
 		{
 		errorMessages[pModelName] = true;
 		// this is crashing for some reason. .need to investigate.
@@ -1064,7 +1062,7 @@ void CStudioRenderContext::R_StudioBuildMeshStrips( studiomeshgroup_t* pMeshGrou
 			sizeof(OptimizedModel::BoneStateChangeHeader_t);
 	}
 
-	pMeshGroup->m_pStripData = (OptimizedModel::StripHeader_t*)malloc(stripDataSize);
+	pMeshGroup->m_pStripData = (OptimizedModel::StripHeader_t*)MemAlloc_Alloc(stripDataSize);
 
 	// Copy over the strip info
 	int boneStateChangeOffset = pStripGroup->numStrips * sizeof(OptimizedModel::StripHeader_t);
@@ -1103,7 +1101,7 @@ int CStudioRenderContext::GetNumBoneWeights( const OptimizedModel::StripGroupHea
 	for (int i = 0;i < pGroup->numStrips; i++)
 	{
 		OptimizedModel::StripHeader_t * pStrip = pGroup->pStrip( i );
-		nBoneWeightsMax = MAX( nBoneWeightsMax, pStrip->numBones );
+		nBoneWeightsMax = std::max<std::common_type_t<int, short int>>( nBoneWeightsMax, pStrip->numBones );
 	}
 
 	return nBoneWeightsMax;
@@ -1479,7 +1477,7 @@ void CStudioRenderContext::R_StudioDestroyStaticMeshes( int numStudioMeshes, stu
 
 			if ( pGroup->m_pStripData )
 			{
-				free( pGroup->m_pStripData );
+				g_pMemAlloc->Free( pGroup->m_pStripData );
 				pGroup->m_pStripData = 0;
 			}
 		}
@@ -1493,7 +1491,7 @@ void CStudioRenderContext::R_StudioDestroyStaticMeshes( int numStudioMeshes, stu
 
 	if ( *ppStudioMeshes )
 	{
-		delete 	*ppStudioMeshes;
+		delete [] 	*ppStudioMeshes;
 		*ppStudioMeshes = 0;
 	}
 }
@@ -1650,7 +1648,7 @@ bool CStudioRenderContext::LoadModel( studiohdr_t *pStudioHdr, void *pVtxBuffer,
 
 	// Create static meshes
 	Assert( pVertexHdr->numLODs );
-	pStudioHWData->m_RootLOD = MIN( pStudioHdr->rootLOD, pVertexHdr->numLODs-1 );
+	pStudioHWData->m_RootLOD = std::min<std::common_type_t<byte, int>>( pStudioHdr->rootLOD, pVertexHdr->numLODs-1 );
 	pStudioHWData->m_NumLODs = pVertexHdr->numLODs;
 	pStudioHWData->m_pLODs   = new studioloddata_t[pVertexHdr->numLODs];
 	memset( pStudioHWData->m_pLODs, 0, pVertexHdr->numLODs * sizeof( studioloddata_t ));
@@ -1927,10 +1925,10 @@ int CStudioRenderContext::GetMaterialListFromBodyAndSkin( MDLHandle_t studio, in
 //-----------------------------------------------------------------------------
 // Returns perf stats about a particular model
 //-----------------------------------------------------------------------------
-void CStudioRenderContext::GetPerfStats( DrawModelResults_t *pResults, const DrawModelInfo_t &info, CUtlBuffer *pSpewBuf ) const
+void CStudioRenderContext::GetPerfStats( DrawModelResults_t *pResults, const DrawModelInfo_t &info, ks::text_writer *pSpewBuf ) const
 {
 	pResults->m_ActualTriCount = pResults->m_TextureMemoryBytes = 0;
-	pResults->m_Materials.RemoveAll();
+	pResults->m_Materials.clear();
 
 	Assert( info.m_Lod >= 0 );
 	if ( info.m_Lod < 0 || !info.m_pHardwareData->m_pLODs )
@@ -1939,8 +1937,8 @@ void CStudioRenderContext::GetPerfStats( DrawModelResults_t *pResults, const Dra
 	studiomeshdata_t *pStudioMeshes = info.m_pHardwareData->m_pLODs[info.m_Lod].m_pMeshData;
 
 	// Set up an array that keeps up with the number of used hardware bones in the models.
-	CUtlVector<bool> hardwareBonesUsed;
-	hardwareBonesUsed.EnsureCount( info.m_pStudioHdr->numbones );
+	std::vector< bool > hardwareBonesUsed;
+	ks::ensure_size( hardwareBonesUsed, info.m_pStudioHdr->numbones );
 	int i;
 	for( i = 0; i < info.m_pStudioHdr->numbones; i++ )
 	{
@@ -1979,11 +1977,11 @@ void CStudioRenderContext::GetPerfStats( DrawModelResults_t *pResults, const Dra
 			if( pMeshData->m_NumGroup == 0 )
 				continue;
 
-			Assert( pResults->m_NumMaterials == pResults->m_Materials.Count() );
+			Assert( pResults->m_NumMaterials == std::ssize( pResults->m_Materials ) );
 			pResults->m_NumMaterials++;
 			if( pResults->m_NumMaterials < MAX_DRAW_MODEL_INFO_MATERIALS )
 			{
-				pResults->m_Materials.AddToTail( pMaterial );
+				pResults->m_Materials.push_back( pMaterial );
 			}
 			else
 			{
@@ -1991,18 +1989,18 @@ void CStudioRenderContext::GetPerfStats( DrawModelResults_t *pResults, const Dra
 			}
 			if( pSpewBuf )
 			{
-				pSpewBuf->Printf( "    material: %s\n", pMaterial->GetName() );
+				pSpewBuf->printf( "    material: %s\n", pMaterial->GetName() );
 			}
 			int numPasses = m_RC.m_pForcedMaterial[ 0 ] ? m_RC.m_pForcedMaterial[ 0 ]->GetNumPasses() : pMaterial->GetNumPasses();
 			if( pSpewBuf )
 			{
-				pSpewBuf->Printf( "        numPasses:%d\n", numPasses );
+				pSpewBuf->printf( "        numPasses:%d\n", numPasses );
 			}
 			int bytes = pMaterial->GetTextureMemoryBytes();
 			pResults->m_TextureMemoryBytes += bytes;
 			if( pSpewBuf )
 			{
-				pSpewBuf->Printf( "        texture memory: %d (Only valid in a rendering app)\n", bytes );
+				pSpewBuf->printf( "        texture memory: %d (Only valid in a rendering app)\n", bytes );
 			}
 
 			// Iterate over all stripgroups
@@ -2015,7 +2013,7 @@ void CStudioRenderContext::GetPerfStats( DrawModelResults_t *pResults, const Dra
 
 				if( pSpewBuf )
 				{
-					pSpewBuf->Printf( "        %d batch(es):\n", ( int )pMeshGroup->m_NumStrips );
+					pSpewBuf->printf( "        %d batch(es):\n", ( int )pMeshGroup->m_NumStrips );
 				}
 				// Iterate over all strips. . . each strip potentially changes bones states.
 				int stripID;
@@ -2044,15 +2042,15 @@ void CStudioRenderContext::GetPerfStats( DrawModelResults_t *pResults, const Dra
 					int numPrims = pStripData->numIndices / nNumVerts;
 					if( pSpewBuf )
 					{
-						pSpewBuf->Printf( "            %s%s", bIsFlexed ? "flexed " : "nonflexed ",
+						pSpewBuf->printf( "            %s%s", bIsFlexed ? "flexed " : "nonflexed ",
 							bIsHWSkinned ? "hwskinned " : "swskinned " );
 
 						if ( nNumVerts == 3 )
-							pSpewBuf->Printf( "tris: %d ", numPrims );
+							pSpewBuf->printf( "tris: %d ", numPrims );
 						else
-							pSpewBuf->Printf( "quads: %d ", numPrims );
+							pSpewBuf->printf( "quads: %d ", numPrims );
 
-						pSpewBuf->Printf( "bone changes: %d bones/strip: %d\n", pStripData->numBoneStateChanges,
+						pSpewBuf->printf( "bone changes: %d bones/strip: %d\n", pStripData->numBoneStateChanges,
 							( int )pStripData->numBones );
 					}
 					pResults->m_ActualTriCount += numPrims * numPasses;
@@ -2060,12 +2058,6 @@ void CStudioRenderContext::GetPerfStats( DrawModelResults_t *pResults, const Dra
 			}
 		}
 	}
-	if( pSpewBuf )
-	{
-		char nil = '\0';
-		pSpewBuf->Put( &nil, 1 );;
-	}
-
 	pResults->m_NumHardwareBones = 0;
 	for( i = 0; i < info.m_pStudioHdr->numbones; i++ )
 	{
@@ -2694,7 +2686,7 @@ void CStudioRenderContext::DrawModelArrayStaticProp( const DrawModelInfo_t& info
 
 		if ( pColorMeshes )
 		{
-			pCallQueue->QueueFunctor( StudioRenderFunctor( g_pStudioRenderImp, &CStudioRender::DrawModelArrayStaticProp, info, m_RC, nInstanceCount, pQueuedInstanceData, CUtlEnvelope<ColorMeshInfo_t *>(pColorMeshes, nInstanceCount) ) );
+			pCallQueue->QueueFunctor( StudioRenderFunctor( g_pStudioRenderImp, &CStudioRender::DrawModelArrayStaticProp, info, m_RC, nInstanceCount, pQueuedInstanceData, ks::envelope<ColorMeshInfo_t *>(pColorMeshes, nInstanceCount) ) );
 		}
 		else
 		{

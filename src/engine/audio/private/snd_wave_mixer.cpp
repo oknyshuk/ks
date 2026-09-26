@@ -6,9 +6,6 @@
 
 #include "audio_pch.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern bool FUseHighQualityPitch( channel_t *pChannel );
 
 //-----------------------------------------------------------------------------
@@ -277,7 +274,7 @@ int CAudioMixerWave::SkipSamples( channel_t *pChannel, int sampleCount, int outp
 static uint AppendToBuffer( char *pBuffer, const char *pSampleData, int nBytes, const char *pBufferEnd )
 {
 	int nAvail = pBufferEnd - pBuffer;
-	int nCopy = MIN( nBytes, nAvail );
+	int nCopy = std::min( nBytes, nAvail );
 	Q_memcpy( pBuffer, pSampleData, nCopy );
 	return nCopy;
 }
@@ -489,7 +486,7 @@ char *CAudioMixerWave::LoadMixBuffer( channel_t *pChannel, int sample_load_reque
 
 		int nAvail = pCopyBufferEnd - pCopy;
 		int nFill = samples_zero_fill * samplesize;
-		nFill = MIN( nAvail, nFill );
+		nFill = std::min( nAvail, nFill );
 		Q_memset( pCopy, 0, nFill );
 		pCopy += nFill;
 		samples_loaded += samples_zero_fill;
@@ -656,7 +653,7 @@ int CAudioMixerWave::MixDataToDevice_( channel_t *pChannel, int sampleCount, int
 		VPROF_( bInterpolated_pitch ? "CAudioMixerWave::MixData innerloop interpolated" : "CAudioMixerWave::MixData innerloop not interpolated", 2, VPROF_BUDGETGROUP_OTHER_SOUND, false, BUDGETFLAG_OTHER );
 
 		// process samples in paintbuffer-sized batches
-		int sampleCountOut = MIN( sampleCount, PAINTBUFFER_SIZE );
+		int sampleCountOut = std::min( sampleCount, PAINTBUFFER_SIZE );
 	
 		// cap rate so that we never overflow the input copy buffer.
 		rate = MIX_GetMaxRate( rate_max, sampleCountOut );
@@ -666,7 +663,7 @@ int CAudioMixerWave::MixDataToDevice_( channel_t *pChannel, int sampleCount, int
 			// If we are preceding sample playback with a delay, 
 			// just fill data buffer with 0 value samples.
 			// Because there is no pitch shift applied, outputSampleCount == sampleCountOut.
-			int num_zero_samples = MIN( m_delaySamples, sampleCountOut );
+			int num_zero_samples = std::min( m_delaySamples, sampleCountOut );
 
 			// Decrement delay counter
 			m_delaySamples -= num_zero_samples;

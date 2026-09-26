@@ -368,7 +368,7 @@ public:
 	virtual bool		CreateCombinedModel( MDLHandle_t handle ) = 0;
 
 	// Sets the models for the combining process
-	virtual bool		SetCombineModels( MDLHandle_t handle, const CUtlVector< SCombinerModelInput_t > &vecModelsToCombine ) = 0;
+	virtual bool		SetCombineModels( MDLHandle_t handle, const std::vector< SCombinerModelInput_t > &vecModelsToCombine ) = 0;
 
 	// Indicates that you are done with the setup of the combining process.  You must specify a callback function and optionally
 	// a user pointer that will be supplied to you in the callback

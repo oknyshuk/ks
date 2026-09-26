@@ -9,7 +9,7 @@
 #define ENGINESINGLEUSERFILTER_H
 
 #include "irecipientfilter.h"
-#include "bitvec.h"
+#include <bitset>
 #include "utlvector.h"
 
 //-----------------------------------------------------------------------------
@@ -45,7 +45,7 @@ private:
 
 	bool				m_bInit;
 	bool				m_bReliable;
-	CUtlVector< int >	m_Recipients;
+	std::vector< int >	m_Recipients;
 };
 
 //-----------------------------------------------------------------------------

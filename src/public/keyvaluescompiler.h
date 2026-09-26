@@ -8,9 +8,13 @@
 #define KEYVALUESCOMPILER_H
 
 #include "tier0/platform.h"
-#include "tier1/utlbuffer.h"
-#include "tier1/utlsymbol.h"
-#include "tier1/utldict.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
+#include "tier1/filename_table.h"
+#include <map>
+#include <set>
+#include <string>
+#include <vector>
 
 class KeyValues;
 
@@ -101,14 +105,30 @@ private:
 
 	void BuildKVData_R( KeyValues *kv, int parent );
 
-	void WriteStringTable( CUtlBuffer& buf );
-	void WriteData( CUtlBuffer& buf );
-	void WriteFiles( CUtlBuffer &buf );
+	void WriteStringTable( ks::byte_writer &buf );
+	void WriteData( ks::byte_writer &buf );
+	void WriteFiles( ks::byte_writer &buf );
 
-	CUtlVector< KVFile_t >		m_Files;
-	CUtlVector< KVInfo_t >		m_Data;
+	std::vector< KVFile_t >		m_Files;
+	std::vector< KVInfo_t >		m_Data;
 
-	CUtlSymbolTable				m_StringTable;
+	// Dense ids in insertion order: they are written to the compiled file.
+	struct StringTable_t
+	{
+		int AddString( const char *pString )
+		{
+			auto [it, bNew] = m_Index.try_emplace( pString, (int)m_Strings.size() );
+			if ( bNew )
+				m_Strings.emplace_back( pString );
+			return it->second;
+		}
+		const char *String( int i ) const	{ return m_Strings[i].c_str(); }
+		int GetNumStrings() const			{ return (int)m_Strings.size(); }
+
+		std::vector< std::string >					m_Strings;
+		std::map< std::string, int, std::less<> >	m_Index;
+	};
+	StringTable_t				m_StringTable;
 };
 
 
@@ -116,11 +136,11 @@ class CRunTimeKeyValuesStringTable
 {
 public:
 
-	bool ReadStringTable( int numStrings, CUtlBuffer& buf );
+	bool ReadStringTable( int numStrings, ks::byte_reader &buf );
 	
 	inline int Count() const
 	{
-		return m_Strings.Count();
+		return std::ssize( m_Strings );
 	}
 
 	inline char const *Lookup( short index )
@@ -129,7 +149,7 @@ public:
 	}
 
 private:
-	CUtlVector< const char * >	m_Strings; 
+	std::vector< const char * >	m_Strings; 
 };
 
 class CCompiledKeyValuesReader
@@ -144,6 +164,7 @@ public:
 	bool		InstanceInPlace( KeyValues& head, char const *kvfilename );
 	bool		LookupKeyValuesRootKeyName( char const *kvfilename, char *outbuf, size_t bufsize );
 
+	// Indices are in-order positions.
 	int			First() const;
 	int			Next( int i ) const;
 	int			InvalidIndex() const;
@@ -164,22 +185,25 @@ private:
 		short				nFirstIndex;
 		short				nCount;
 
-		static bool Less( const FileInfo_t& lhs, const FileInfo_t& rhs )
+		struct Less
 		{
-			return lhs.hFile < rhs.hFile;
-		}
+			bool operator()( const FileInfo_t& lhs, const FileInfo_t& rhs ) const
+			{
+				return lhs.hFile < rhs.hFile;
+			}
+		};
 	};
 
 	KeyValues *CreateFromData( const FileInfo_t& info );
 	bool CreateInPlaceFromData( KeyValues& head, const FileInfo_t& info );
 
 	// Now get the actual files
-	CUtlRBTree< FileInfo_t, unsigned short >	m_Dict;
-	CUtlVector< KVInfo_t >		m_Data;
+	std::multiset< FileInfo_t, FileInfo_t::Less >	m_Dict;
+	std::vector< KVInfo_t >		m_Data;
 
 	CRunTimeKeyValuesStringTable		m_StringTable;
 
-	CUtlBuffer							m_LoadBuffer;
+	std::vector< std::byte >			m_LoadBuffer;
 };
 
 #endif // KEYVALUESCOMPILER_H

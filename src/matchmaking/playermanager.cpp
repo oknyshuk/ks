@@ -7,12 +7,9 @@
 #include "mm_framework.h"
 
 #include "fmtstr.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
+#include <map>
 
 
-#pragma warning (disable : 4355 )
 
 static ConVar mm_player_search_requests_limit( "mm_player_search_requests_limit", "-1", FCVAR_DEVELOPMENTONLY, "How many friend requests are displayed." );
 static ConVar mm_player_search_update_interval( "mm_player_search_update_interval", "10", FCVAR_DEVELOPMENTONLY, "Interval between players searches." );
@@ -41,7 +38,7 @@ PlayerManager::~PlayerManager()
 
 	// We are leaking player objects here, but it's during destruction of a global (app shutdown).
 	// We don't want to Destroy() because doing so may call into Xbox libs that have already shutdown.
-	mFriendsList.Purge();
+	mFriendsList.clear(); mFriendsList.shrink_to_fit();
 }
 
 static PlayerManager g_PlayerManager;
@@ -59,12 +56,12 @@ IPlayerLocal * PlayerManager::GetLocalPlayer(int playerIndex)
 
 int PlayerManager::GetNumFriends()
 {
-	return mFriendsList.Count();
+	return std::ssize( mFriendsList );
 }
 
 IPlayerFriend * PlayerManager::GetFriendByIndex( int index )
 {
-	return mFriendsList.IsValidIndex( index ) ? mFriendsList[ index ] : nullptr;
+	return ks::is_valid_index( mFriendsList, index ) ? mFriendsList[ index ] : nullptr;
 }
 
 IPlayerFriend * PlayerManager::GetFriendByXUID( XUID xuid )
@@ -85,7 +82,7 @@ IPlayer * PlayerManager::FindPlayer( XUID xuid )
 
 PlayerFriend * PlayerManager::FindPlayerFriend( XUID xuid )
 {
-	for ( int iIndex = 0; iIndex < mFriendsList.Count(); ++ iIndex )
+	for ( int iIndex = 0; iIndex < std::ssize( mFriendsList ); ++ iIndex )
 	{
 		PlayerFriend *player = mFriendsList[iIndex];
 		if ( player && player->GetXUID() == xuid )
@@ -109,7 +106,7 @@ PlayerLocal * PlayerManager::FindPlayerLocal( XUID xuid )
 
 void PlayerManager::MarkOldFriends()
 {
-	for ( int iIndex = 0; iIndex < mFriendsList.Count(); iIndex++ )
+	for ( int iIndex = 0; iIndex < std::ssize( mFriendsList ); iIndex++ )
 	{
 		PlayerFriend &player = * mFriendsList[iIndex];
 		player.SetIsStale( true );
@@ -120,19 +117,20 @@ void PlayerManager::MarkOldFriends()
 void PlayerManager::RemoveOldFriends()
 {
 	static bool bPerfectWorld = !!CommandLine()->FindParm( "-perfectworld" );
-	CUtlMap< int, PlayerFriend*, int, CDefLess< int > > mapFriendRequests;
-	for ( int iIndex = 0; iIndex < mFriendsList.Count(); iIndex++ )
+	// Many friends share a level.
+	std::multimap< int, PlayerFriend* > mapFriendRequests;
+	for ( int iIndex = 0; iIndex < std::ssize( mFriendsList ); iIndex++ )
 	{
 		PlayerFriend &player = * mFriendsList[iIndex];
 		if ( player.GetIsStale() || !player.GetFriendMark() )
 		{
-			mFriendsList.FastRemove( iIndex -- );
+			ks::swap_remove( mFriendsList, iIndex -- );
 			player.Destroy();
 		}
 		else if ( !bPerfectWorld && ( player.GetTitleID() == uint64( -3 ) || player.GetTitleID() == uint64( -2 ) ) )
 		{
 			int nLevel = steamapicontext->SteamFriends()->GetFriendSteamLevel( player.GetXUID() );
-			mapFriendRequests.Insert( nLevel, &player );
+			mapFriendRequests.emplace( nLevel, &player );
 			if ( !nLevel ) // force the information to be downloaded
 				steamapicontext->SteamFriends()->RequestUserInformation( player.GetXUID(), false );
 		}
@@ -140,13 +138,12 @@ void PlayerManager::RemoveOldFriends()
 	int nLimit = mm_player_search_requests_limit.GetInt();
 	if ( !bPerfectWorld && ( nLimit >= 0 ) )
 	{
-		while ( mapFriendRequests.Count() > nLimit )
+		while ( std::ssize( mapFriendRequests ) > nLimit )
 		{
-			int iMap = mapFriendRequests.FirstInorder();
-			PlayerFriend *pCullFriendRequest = mapFriendRequests.Element( iMap );
-			mapFriendRequests.RemoveAt( iMap );
+			PlayerFriend *pCullFriendRequest = mapFriendRequests.begin()->second;
+			mapFriendRequests.erase( mapFriendRequests.begin() );
 
-			if ( mFriendsList.FindAndFastRemove( pCullFriendRequest ) )
+			if ( ks::swap_erase_first( mFriendsList, pCullFriendRequest ) )
 				pCullFriendRequest->Destroy();
 		}
 	}
@@ -154,7 +151,7 @@ void PlayerManager::RemoveOldFriends()
 
 void PlayerManager::OnLocalPlayerDisconnectedFromLive( int iCtrlr )
 {
-	for ( int iIndex = 0; iIndex < mFriendsList.Count(); iIndex++ )
+	for ( int iIndex = 0; iIndex < std::ssize( mFriendsList ); iIndex++ )
 	{
 		PlayerFriend &player = * mFriendsList[iIndex];
 		
@@ -163,7 +160,7 @@ void PlayerManager::OnLocalPlayerDisconnectedFromLive( int iCtrlr )
 
 		if ( !uiMask )
 		{
-			mFriendsList.FastRemove( iIndex -- );
+			ks::swap_remove( mFriendsList, iIndex -- );
 			player.Destroy();
 		}
 		else
@@ -215,7 +212,7 @@ void PlayerManager::Update()
 								if( ! player )
 								{
 									player = new PlayerFriend( xuidFriend );
-									mFriendsList.AddToTail( player );
+									mFriendsList.push_back( player );
 								}
 								player->SetIsStale( false );
 
@@ -321,7 +318,7 @@ void PlayerManager::Update()
 			player->Update();
 	}
 
-	for ( int iIndex = 0; iIndex < mFriendsList.Count(); ++ iIndex )
+	for ( int iIndex = 0; iIndex < std::ssize( mFriendsList ); ++ iIndex )
 	{
 		PlayerFriend *player = mFriendsList[iIndex];
 		if ( player )
@@ -471,7 +468,7 @@ void PlayerManager::OnEvent( KeyValues *pEvent )
 			if ( !player )
 			{
 				player = new PlayerFriend( xuid );
-				mFriendsList.AddToTail( player );
+				mFriendsList.push_back( player );
 			}
 			player->SetIsStale( false );
 			player->SetFriendMark( ~0u );
@@ -733,14 +730,14 @@ void PlayerManager::OnGameUsersChanged()
 	//
 	// Cleanup all players currently created
 	//
-	for ( int k = 0; k < mFriendsList.Count(); ++ k )
+	for ( int k = 0; k < std::ssize( mFriendsList ); ++ k )
 	{
 		PlayerFriend *&player = mFriendsList[ k ];
 		if ( player )
 			player->Destroy();
 		player = nullptr;
 	}
-	mFriendsList.RemoveAll();
+	mFriendsList.clear();
 	for ( int k = 0; k < ARRAYSIZE( mLocalPlayer ); ++ k )
 	{
 		PlayerLocal *&player = mLocalPlayer[k];

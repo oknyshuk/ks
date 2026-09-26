@@ -96,6 +96,8 @@
 #include "netmessages_schema.h"
 #include "playerdecals_signature.h"
 #include "cs_item_inventory.h"
+#include <bitset>
+#include "tier1/bit_ops.h"
 
 #if defined( CLIENT_DLL )
 
@@ -105,13 +107,9 @@
 #endif
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // HPE TEMP - REMOVE WHEN DONE TESTING
 #define REPORT_PLAYER_DAMAGE 0
 
-#pragma warning( disable : 4355 )
 
 // Minimum interval between rate-limited commands that players can run.
 #define CS_COMMAND_MAX_RATE 0.3
@@ -414,8 +412,6 @@ IMPLEMENT_REFLECT_DATAMAP( CCSPlayer )
 
 // has to be included after above macros
 #include "cs_bot.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 
@@ -797,7 +793,7 @@ void CCSPlayer::Precache()
 	PrecacheScriptSound( "Player.DamageHelmet" );
 	//PrecacheScriptSound( "Player.DamageHelmetOtherFar" );
 	PrecacheScriptSound( "Player.DamageHeadShot" );
-	PrecacheScriptSound( "Player.DamageHeadShotOtherFar" );
+	//PrecacheScriptSound( "Player.DamageHeadShotOtherFar" );
 	PrecacheScriptSound( "Flesh.BulletImpact" );
 	PrecacheScriptSound( "Player.DamageKevlar" );
 	PrecacheScriptSound( "Player.PickupWeapon" );
@@ -997,7 +993,7 @@ void CCSPlayer::RunPlayerMove( const QAngle& viewangles, float forwardmove, floa
 	this->SetTimeBase( flTimeBase );
 
 	CUserCmd lastUserCmd = *GetLastUserCommand();
-	Q_memset( &cmd, 0, sizeof( cmd ) );
+	cmd.Reset();
 
 	if ( !RunMimicCommand( cmd ) )
 	{
@@ -1142,7 +1138,7 @@ void CCSPlayer::SetCSSpawnLocation( Vector position, QAngle angle )
 
 void CCSPlayer::Spawn()
 {
-	m_RateLimitLastCommandTimes.Purge();
+	m_RateLimitLastCommandTimes.clear();
 
 	// Get rid of the progress bar...
 	SetProgressBarTime( 0 );
@@ -1496,8 +1492,8 @@ void CCSPlayer::Spawn()
 		if ( CSGameRules()->IsPlayingGunGameProgressive() )
 		{
 			int nCurWepKills = GetNumGunGameKillsWithCurrentWeapon();
-			m_iNumRoundKills = MIN( nCurWepKills, m_iNumRoundKills );
-			m_iNumRoundKillsHeadshots = MIN( nCurWepKills, m_iNumRoundKillsHeadshots );
+			m_iNumRoundKills = std::min<std::common_type_t<int, CNetworkVarBase<int, CCSPlayer::NetworkVar_m_iNumRoundKills>>>( nCurWepKills, m_iNumRoundKills );
+			m_iNumRoundKillsHeadshots = std::min<std::common_type_t<int, CNetworkVarBase<int, CCSPlayer::NetworkVar_m_iNumRoundKillsHeadshots>>>( nCurWepKills, m_iNumRoundKillsHeadshots );
 		}
 		else
 		{
@@ -1747,12 +1743,12 @@ void CCSPlayer::GiveDefaultItems()
 						GiveNamedItem( "item_heavyassaultsuit" );
 
 					const char *szWepsToGive = pEnemySpawnSpot->GetWeaponsToGive();
-					CUtlVector< char* > msgStrs;
+					std::vector< std::string > msgStrs;
 					V_SplitString( szWepsToGive, ",", msgStrs );
 					//run through and give all of the items specified
-					FOR_EACH_VEC( msgStrs, nCurrMsg )
+					for ( std::string &msgStr : msgStrs )
 					{
-						char* szWeapon = msgStrs[ nCurrMsg ];
+						char* szWeapon = msgStr.data();	// stripped in place
 						V_StripLeadingWhitespace( szWeapon );
 						V_StripTrailingWhitespace( szWeapon );
 						pBot->GiveWeapon( szWeapon );
@@ -2696,7 +2692,7 @@ void CCSPlayer::Event_Killed( const CTakeDamageInfo &info )
 bool CCSPlayer::IsCloseToActiveBomb( void )
 {
 	float bombCheckDistSq = AchievementConsts::KillEnemyNearBomb_MaxDistance * AchievementConsts::KillEnemyNearBomb_MaxDistance;
-	for ( int i=0; i < g_PlantedC4s.Count(); i++ )
+	for ( int i=0; i < std::ssize( g_PlantedC4s ); i++ )
 	{
 		CPlantedC4 *pC4 = g_PlantedC4s[i];
 
@@ -2717,7 +2713,7 @@ bool CCSPlayer::IsCloseToActiveBomb( void )
 bool CCSPlayer::IsCloseToHostage( void )
 {
 	float hostageCheckDistSq = AchievementConsts::KillEnemyNearHostage_MaxDistance * AchievementConsts::KillEnemyNearHostage_MaxDistance;
-	for ( int i=0; i < g_Hostages.Count(); i++ )
+	for ( int i=0; i < std::ssize( g_Hostages ); i++ )
 	{
 		CHostage *pHostage = g_Hostages[i];
 		if ( pHostage && pHostage->IsValid() )
@@ -3323,7 +3319,7 @@ void CCSPlayer::SprayPaint( ks::net::CCSUsrMsg_PlayerDecalDigitalSignature const
 		// Matches code in QcCreatePreviewDecal, update that if you touch this.
 		data.m_vecStart = tr.endpos + tr.plane.normal;
 
-		CSGameRules()->m_arrServerPlayerDecalData.AddToTail( data );
+		CSGameRules()->m_arrServerPlayerDecalData.push_back( data );
 
 		CSingleUserRecipientFilter filter( this );
 		ks::net::CCSUsrMsg_PlayerDecalDigitalSignature askuser;
@@ -3342,10 +3338,10 @@ void CCSPlayer::SprayPaint( ks::net::CCSUsrMsg_PlayerDecalDigitalSignature const
 		data.m_unAccountID = m_uiAccountId;
 		data.InitFromMsg( msg );
 		{
-			int idx = CSGameRules()->m_arrServerPlayerDecalData.Find( data );
+			int idx = ks::find_index( CSGameRules()->m_arrServerPlayerDecalData, data );
 			if ( idx < 0 )
 				return;
-			CSGameRules()->m_arrServerPlayerDecalData.FastRemove( idx );
+			ks::swap_remove( CSGameRules()->m_arrServerPlayerDecalData, idx );
 		}
 
 		// Verify the signature of the user's spray paint
@@ -3374,11 +3370,11 @@ void CCSPlayer::SprayPaint( ks::net::CCSUsrMsg_PlayerDecalDigitalSignature const
 	}
 
 	// Expire any digital signature requests that are too old
-	CUtlVector< CCSGameRules::ServerPlayerDecalData_t > &arrData = CSGameRules()->m_arrServerPlayerDecalData;
-	FOR_EACH_VEC( arrData, i )
+	std::vector< CCSGameRules::ServerPlayerDecalData_t > &arrData = CSGameRules()->m_arrServerPlayerDecalData;
+	for ( int i = 0; i < std::ssize( arrData ); i++ )
 	{	// everything that is 5+ minutes old will never come back
 		if ( arrData[ i ].m_flCreationTime + 5 * 60 < gpGlobals->curtime )
-			arrData.FastRemove( i-- );
+			ks::swap_remove( arrData, i-- );
 	}
 
 	//
@@ -3547,7 +3543,7 @@ CBaseEntity* CCSPlayer::FindNextObserverTarget( bool bReverse )
 	//	then try to place the camera near any planted bomb
 	if ( !pTarget )
 	{
-		if ( g_PlantedC4s.Count() > 0 )
+		if ( !g_PlantedC4s.empty() )
 		{
 			// Immediately change the observer target, so we can handle SetObserverMode appropriately
 			SetObserverTarget( g_PlantedC4s[0] );
@@ -3711,9 +3707,9 @@ void CCSPlayer::ProcessSpottedEntityUpdate()
 	GatherNonPVSSpottedEntitiesFunctor NonPVSSpottable( this );
 	ForEachEntity( NonPVSSpottable );
 
-	const CBitVec<MAX_EDICTS> & entities = NonPVSSpottable.GetSpotted( );
+	const std::bitset<MAX_EDICTS> & entities = NonPVSSpottable.GetSpotted( );
 
-	int nIndex = entities.FindNextSetBit( 0 );
+	int nIndex = ks::next_set_bit( entities, 0 );
 
 	CSingleUserRecipientFilter user( this );
 	ks::net::CCSUsrMsg_ProcessSpottedEntityUpdate msg;
@@ -3740,7 +3736,7 @@ void CCSPlayer::ProcessSpottedEntityUpdate()
 			nMessageEntityCount++;
 		}
 
-		nIndex = entities.FindNextSetBit( nIndex + 1 );
+		nIndex = ks::next_set_bit( entities, nIndex + 1 );
 	}
 
 	SendUserMessage( user, ks::net::CS_UM_ProcessSpottedEntityUpdate, msg );
@@ -4117,7 +4113,7 @@ void CCSPlayer::PostThink()
 			if ( CSGameRules()->IsHostageRescueMap() )
 			{
 				Vector vecStartSpot = Vector( 0, 0, 0 );
-				for ( int iHostage = 0; iHostage < g_Hostages.Count(); iHostage++ )
+				for ( int iHostage = 0; iHostage < std::ssize( g_Hostages ); iHostage++ )
 				{
 					CHostage *pHostage = g_Hostages[iHostage];
 					if ( pHostage )
@@ -4143,7 +4139,7 @@ void CCSPlayer::PostThink()
 			bCanHurt = true;
 
 		if ( IsAlive() && flDistMin > 0 )
-			m_flGuardianTooFarDistFrac = MAX( 0, ( flDistance - flDistMin ) / ( flDistMax - flDistMin ) );
+			m_flGuardianTooFarDistFrac = std::max<std::common_type_t<int, float>>( 0, ( flDistance - flDistMin ) / ( flDistMax - flDistMin ) );
 		else
 			m_flGuardianTooFarDistFrac = 0;
 
@@ -4276,10 +4272,10 @@ void CCSPlayer::OnSwitchWeapons( CBaseCombatWeapon* pBaseWeapon )
 
 			if ( weaponType != WEAPONTYPE_KNIFE && weaponType != WEAPONTYPE_C4 && weaponType != WEAPONTYPE_GRENADE )
 			{
-				if ( m_WeaponTypesHeld.Find( weaponID ) == -1 )
+				if ( ks::find_index( m_WeaponTypesHeld, weaponID ) == -1 )
 				{
 					// Add this weapon to the list of weapons used by the player
-					m_WeaponTypesHeld.AddToTail( weaponID );
+					m_WeaponTypesHeld.push_back( weaponID );
 				}
 			}
 
@@ -4468,20 +4464,20 @@ private:
 };
 
 
-static CUtlVector< CCSPlayer::ITakeDamageListener * > s_arrTakeDamageListeners;
+static std::vector< CCSPlayer::ITakeDamageListener * > s_arrTakeDamageListeners;
 CCSPlayer::ITakeDamageListener::ITakeDamageListener()
 {
-	s_arrTakeDamageListeners.AddToTail( this );
+	s_arrTakeDamageListeners.push_back( this );
 }
 CCSPlayer::ITakeDamageListener::~ITakeDamageListener()
 {
-	Verify( s_arrTakeDamageListeners.FindAndRemove( this ) );
+	Verify( ks::erase_first( s_arrTakeDamageListeners, this ) );
 }
 
 int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 {
 	CTakeDamageInfo info = inputInfo;
-	FOR_EACH_VEC_BACK( s_arrTakeDamageListeners, idxTDL )
+	for ( int idxTDL = (int)std::ssize( s_arrTakeDamageListeners ) - 1; idxTDL >= 0; idxTDL-- )
 	{
 		s_arrTakeDamageListeners[idxTDL]->OnTakeDamageListenerCallback( this, info );
 	}
@@ -4825,12 +4821,12 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 		{
 			float flScale = 1.0f - ( fDamageToHealth / 40.0f );
 			flFlinchModLarge += ( flScale * 1.05 );
-			flFlinchModLarge = MIN( 1.5f, flFlinchModLarge );
+			flFlinchModLarge = std::min( 1.5f, flFlinchModLarge );
 		}
 
 		// apply the minimum large flinch amount on the first hit and on subsequent hits,
 		// apply a portion of the small amount - less as we apply more
-		m_flFlinchStack = MIN( m_flFlinchStack, MIN( flFlinchModLarge, flFlinchModLarge - ( 1.0 - m_flFlinchStack ) * flFlinchModSmall ) );
+		m_flFlinchStack = std::min( m_flFlinchStack, std::min( flFlinchModLarge, flFlinchModLarge - ( 1.0f - m_flFlinchStack ) * flFlinchModSmall ) );
 
 		// don't modify m_flFlinchStack, keep it raw because it will decay in Think
 		fFlinchModifier = m_flFlinchStack;
@@ -4850,16 +4846,16 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 
 		// this is the value we use to scale the above fFlinchModifier -
 		// knives receive less, AKs receive a bit more, etc
- 		float flLocalWepScaler = MAX( 0.15, ( flWepMaxSpeed - 120 ) / ( nKnifeSpeed - 120 ) ) * 0.8f;
+		float flLocalWepScaler = std::max( 0.15f, ( flWepMaxSpeed - 120 ) / ( nKnifeSpeed - 120 ) ) * 0.8f;
 		flLocalWepScaler += 0.08;
 		fFlinchModifier = ( fFlinchModifier * flLocalWepScaler );
 
 		// the held weapon also determines what the tagging cap should be
 		// since it's accumulative, we want to be able to cap it so we don't keep getting more
 		// tagged the more someone shoots us
-		float flRatio = (MIN( 1.0, ( ( flWepMaxSpeed - 80 ) / ( nKnifeSpeed - 80 ) ) ) * 1.2f) - 0.08f;
-		//float flClampMin = MAX( 0.2, flRatio - ( 0.65 * ( 1 + ( 1.0 - flRatio ) ) ) );
-		float flClampMin = MAX( 0.2, (flRatio / 4) );
+		float flRatio = (std::min( 1.0f, ( ( flWepMaxSpeed - 80 ) / ( nKnifeSpeed - 80 ) ) ) * 1.2f) - 0.08f;
+		//float flClampMin = std::max( 0.2, flRatio - ( 0.65 * ( 1 + ( 1.0 - flRatio ) ) ) );
+		float flClampMin = std::max( 0.2f, (flRatio / 4) );
 
 		float flClampMax = ( flFlinchModLarge > 0.65 ) ? flFlinchModLarge : 0.65;
 		// do the clamp
@@ -4944,9 +4940,9 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 		if( pAttacker && IsOtherEnemy( pAttacker ) )
 		{
 			//Verify that the killer has not done damage to this player beforehand
-			FOR_EACH_LL( m_DamageList, i )
+			for ( const auto &pDamageRecord : m_DamageList )
 			{
-				if ( m_DamageList[i]->GetPlayerRecipientPtr() == this && m_DamageList[i]->GetPlayerDamagerPtr() == pAttacker )
+				if ( pDamageRecord->GetPlayerRecipientPtr() == this && pDamageRecord->GetPlayerDamagerPtr() == pAttacker )
 				{
 					onlyDamage = false;
 					break;
@@ -5049,22 +5045,22 @@ int CCSPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 			// we need to check to see how much damage our attacker has done to teammates during this round and warm or kick as needed
 			int nDamageGivenThisRound = 0;
 			//CDamageRecord *pDamageList = pAttacker->GetDamageGivenList();
-			FOR_EACH_LL( pAttacker->GetDamageList(), i )
+			for ( const auto &pDamageRecord : pAttacker->GetDamageList() )
 			{
-				if ( !pAttacker->GetDamageList()[i] )
+				if ( !pDamageRecord )
 					continue;
 
-				if ( pAttacker->GetDamageList()[i]->GetPlayerDamagerPtr() != pAttacker )
+				if ( pDamageRecord->GetPlayerDamagerPtr() != pAttacker )
 					continue;
 
-				CCSPlayer *pDamageGivenListPlayer = pAttacker->GetDamageList()[i]->GetPlayerRecipientPtr();
+				CCSPlayer *pDamageGivenListPlayer = pDamageRecord->GetPlayerRecipientPtr();
 				if ( !pDamageGivenListPlayer )
 					continue;
 
 				int nGivenTeam = pDamageGivenListPlayer->GetTeamNumber();
 				if( ( pDamageGivenListPlayer != pAttacker ) && pAttacker->IsOtherSameTeam( nGivenTeam ) && !IsOtherEnemy( pDamageGivenListPlayer ) )
 				{
-					nDamageGivenThisRound += pAttacker->GetDamageList()[i]->GetActualHealthRemoved();
+					nDamageGivenThisRound += pDamageRecord->GetActualHealthRemoved();
 				}
 			}
 
@@ -5488,7 +5484,7 @@ void CCSPlayer::Reset( bool resetScore )
 		m_iRoundsWon = 0;
 
 		m_bLastKillUsedUniqueWeaponMatch = 0;
-		m_uniqueKillWeaponsMatch.RemoveAll();
+		m_uniqueKillWeaponsMatch.clear();
 	}
 
 	ResetDamageCounters();
@@ -6127,7 +6123,7 @@ void CCSPlayer::Blind( float holdTime, float fadeTime, float startingAlpha )
 	// estimate when we can see again
 	float oldBlindUntilTime = m_blindUntilTime;
 	float oldBlindStartTime = m_blindStartTime;
-	m_blindUntilTime = MAX( m_blindUntilTime, gpGlobals->curtime + holdTime + 0.5f * fadeTime );
+	m_blindUntilTime = std::max( m_blindUntilTime, gpGlobals->curtime + holdTime + 0.5f * fadeTime );
 	m_blindStartTime = gpGlobals->curtime;
 
 	fadeTime /= 1.4f;
@@ -7026,7 +7022,7 @@ void CCSPlayer::TransferInventory( CCSPlayer* pTargetPlayer )
 
 	if (dev_reportmoneychanges.GetBool())
 	{
-		Msg("-- %s\t\t\t(total: %d)\tTransferInventory to %s\n", GetPlayerName(), pTargetPlayer->m_iAccount, pTargetPlayer->GetPlayerName());
+		Msg("-- %s\t\t\t(total: %d)\tTransferInventory to %s\n", GetPlayerName(), (int)pTargetPlayer->m_iAccount, pTargetPlayer->GetPlayerName());
 	}
 
 	// as part of transferring inventory, remove what WE have
@@ -7209,7 +7205,7 @@ void CCSPlayer::UpdateFreezetimeEndEquipmentValue( void )
 	{
 		if ( pDef == pRandomAppearanceDef )
 		{
-			CUtlVector< const CCStrike15ItemDefinition* > vecAppearances;
+			std::vector< const CCStrike15ItemDefinition* > vecAppearances;
 
 			// Make a list of all appearances and randomly choose
 			const CEconItemSchema::ItemDefinitionMap_t &mapItems = GetItemSchema()->GetItemDefinitionMap();
@@ -8358,7 +8354,7 @@ void CCSPlayer::NoteWeaponFired()
 }
 
 
-bool CCSPlayer::WantsLagCompensationOnEntity( const CBaseEntity *entity, const CUserCmd *pCmd, const CBitVec<MAX_EDICTS> *pEntityTransmitBits ) const
+bool CCSPlayer::WantsLagCompensationOnEntity( const CBaseEntity *entity, const CUserCmd *pCmd, const std::bitset<MAX_EDICTS> *pEntityTransmitBits ) const
 {
 	// No need to lag compensate at all if we're not attacking in this command and
 	// we haven't attacked recently.
@@ -8519,20 +8515,19 @@ bool CCSPlayer::ShouldRunRateLimitedCommand( const CCommand &args )
 {
 	const char *pcmd = args[0];
 
-	int i = m_RateLimitLastCommandTimes.Find( pcmd );
-	if ( i == m_RateLimitLastCommandTimes.InvalidIndex() )
+	auto [it, bInserted] = m_RateLimitLastCommandTimes.try_emplace( pcmd, gpGlobals->curtime );
+	if ( bInserted )
 	{
-		m_RateLimitLastCommandTimes.Insert( pcmd, gpGlobals->curtime );
 		return true;
 	}
-	else if ( (gpGlobals->curtime - m_RateLimitLastCommandTimes[i] ) < CS_COMMAND_MAX_RATE )
+	else if ( (gpGlobals->curtime - it->second ) < CS_COMMAND_MAX_RATE )
 	{
 		// Too fast.
 		return false;
 	}
 	else
 	{
-		m_RateLimitLastCommandTimes[i] = gpGlobals->curtime;
+		it->second = gpGlobals->curtime;
 		return true;
 	}
 }
@@ -11645,7 +11640,7 @@ void CCSPlayer::AddToRebuy( CSWeaponID weaponId, int nPos )
 
 void CCSPlayer::AddToGrenadeRebuy( CSWeaponID weaponId )
 {
-	int iQueueSize = MIN( ammo_grenade_limit_total.GetInt(), m_rebuyStruct.numGrenades() );
+	int iQueueSize = std::min( ammo_grenade_limit_total.GetInt(), m_rebuyStruct.numGrenades() );
 
 	// see if it's already in the list
 	for ( int i = 0; i < iQueueSize; ++i )
@@ -11794,7 +11789,7 @@ BuyResult_e CCSPlayer::RebuyTaser()
 
 BuyResult_e CCSPlayer::RebuyGrenade( CSWeaponID weaponId )
 {
-	int iQueueSize = MIN( ammo_grenade_limit_total.GetInt(), m_rebuyStructLastRound.numGrenades() );
+	int iQueueSize = std::min( ammo_grenade_limit_total.GetInt(), m_rebuyStructLastRound.numGrenades() );
 
 	// is it in the rebuy list
 	for ( int i = 0; i < iQueueSize; ++i )
@@ -11897,8 +11892,8 @@ void CCSPlayer::BuyRandom( void )
 
 	m_bIsInAutoBuy = true;
 	// Make lists of primary and secondary weapons.
-	CUtlVector< int > primaryweapons;
-	CUtlVector< int > secondaryweapons;
+	std::vector< int > primaryweapons;
+	std::vector< int > secondaryweapons;
 
 	for ( int w = WEAPON_FIRST; w < WEAPON_LAST; w++ )
 	{
@@ -11912,11 +11907,11 @@ void CCSPlayer::BuyRandom( void )
 
 			if ( isRifle && isTeamAppropriate )
 			{
-				primaryweapons.AddToTail( w );
+				primaryweapons.push_back( w );
 			}
 			else if ( isPistol && isTeamAppropriate )
 			{
-				secondaryweapons.AddToTail( w );
+				secondaryweapons.push_back( w );
 			}
 
 //			Msg( "%i, %s, %s, %i\n", w, pWeaponInfo->szClassName, ( isRifle ? "primary" : ( isPistol ? "secondary" : "other" ) ), isTeamAppropriate );
@@ -11928,8 +11923,8 @@ void CCSPlayer::BuyRandom( void )
 	}
 
 	// randomly pick one of each.
-	int primaryToBuy = random->RandomInt( 1, primaryweapons.Count() );
-	int secondaryToBuy = random->RandomInt( 1, secondaryweapons.Count() );
+	int primaryToBuy = random->RandomInt( 1, std::ssize( primaryweapons ) );
+	int secondaryToBuy = random->RandomInt( 1, std::ssize( secondaryweapons ) );
 
 //	Msg( "random pick: p: %i, s: %i", primaryweapons[primaryToBuy], secondaryweapons[secondaryToBuy] );
 
@@ -12063,7 +12058,7 @@ void CCSPlayer::StockPlayerAmmo( CBaseCombatWeapon *pNewWeapon )
 	}
 }
 
-void CCSPlayer::FindMatchingWeaponsForTeamLoadout( const char *pchName, int nTeam, bool bMustBeTeamSpecific, CUtlVector< CEconItemView* > &matchingWeapons )
+void CCSPlayer::FindMatchingWeaponsForTeamLoadout( const char *pchName, int nTeam, bool bMustBeTeamSpecific, std::vector< CEconItemView* > &matchingWeapons )
 {
 	// Only process items that exist in the schema (weapons, not equipment like item_assaultsuit)
     CEconItemDefinition *itemDef = GEconItemSchema().GetItemDefinitionByName( pchName );
@@ -12124,7 +12119,7 @@ void CCSPlayer::FindMatchingWeaponsForTeamLoadout( const char *pchName, int nTea
                 if( !bMustBeTeamSpecific ||
                 (slotItrItem->GetStaticData()->GetUsedByTeam() == nTeam || slotItrItem->GetStaticData()->GetUsedByTeam() == TEAM_UNASSIGNED ) )
                 {
-                    matchingWeapons.AddToTail( slotItrItem );
+                    matchingWeapons.push_back( slotItrItem );
                 }
             }
             return;
@@ -12139,7 +12134,7 @@ void CCSPlayer::FindMatchingWeaponsForTeamLoadout( const char *pchName, int nTea
             if( !bMustBeTeamSpecific ||
             (slotItem->GetStaticData()->GetUsedByTeam() == nTeam || slotItem->GetStaticData()->GetUsedByTeam() == TEAM_UNASSIGNED ) )
             {
-                matchingWeapons.AddToTail( slotItem );
+                matchingWeapons.push_back( slotItem );
             }
         }
     }
@@ -12155,21 +12150,21 @@ CBaseEntity	*CCSPlayer::GiveNamedItem( const char *pchName, int iSubType /*= 0*/
 
 	if ( ( !pScriptItem || !pScriptItem->IsValid() ) && !( CSGameRules() && CSGameRules()->IsPlayingTraining() ) )
 	{
-		CUtlVector< CEconItemView* > matchingWeapons;
+		std::vector< CEconItemView* > matchingWeapons;
 		FindMatchingWeaponsForTeamLoadout( pchName, GetTeamNumber(), false, matchingWeapons );
 
-		if ( matchingWeapons.Count() )
+		if ( !matchingWeapons.empty() )
 		{
-			pScriptItem = matchingWeapons[ RandomInt( 0, matchingWeapons.Count() - 1 ) ];
+			pScriptItem = matchingWeapons[ RandomInt( 0, std::ssize( matchingWeapons ) - 1 ) ];
 		}
 		else if ( CSGameRules() && CSGameRules()->IsPlayingGunGame() )
 		{
 			// In gun game it can give the painted version of team specific items
 			FindMatchingWeaponsForTeamLoadout( pchName, ( GetTeamNumber() != TEAM_TERRORIST ? TEAM_TERRORIST : TEAM_CT ), true, matchingWeapons );
 
-			if ( matchingWeapons.Count() )
+			if ( !matchingWeapons.empty() )
 			{
-				pScriptItem = matchingWeapons[ RandomInt( 0, matchingWeapons.Count() - 1 ) ];
+				pScriptItem = matchingWeapons[ RandomInt( 0, std::ssize( matchingWeapons ) - 1 ) ];
 			}
 		}
 	}
@@ -13135,28 +13130,26 @@ bool CDamageRecord::IsDamageRecordStillValidForDamagerAndRecipient( CCSPlayer * 
 //=======================================================
 void CCSPlayer::RecordDamage( CCSPlayer* damageDealer, CCSPlayer* damageTaker, int iDamageDealt, int iActualHealthRemoved )
 {
-	FOR_EACH_LL( m_DamageList, i )
+	for ( const auto &pDamageRecord : m_DamageList )
 	{
 
-		if ( m_DamageList[i]->IsDamageRecordStillValidForDamagerAndRecipient( damageDealer, damageTaker ) )
+		if ( pDamageRecord->IsDamageRecordStillValidForDamagerAndRecipient( damageDealer, damageTaker ) )
 		{
-			m_DamageList[i]->AddDamage( iDamageDealt, s_BulletGroupCounter, iActualHealthRemoved );
+			pDamageRecord->AddDamage( iDamageDealt, s_BulletGroupCounter, iActualHealthRemoved );
 			return;
 		}
 	}
 
-	CDamageRecord *record = new CDamageRecord( damageDealer, damageTaker, iDamageDealt, s_BulletGroupCounter, iActualHealthRemoved );
-	int k = m_DamageList.AddToTail();
-	m_DamageList[k] = record;
+	m_DamageList.push_back( std::make_unique< CDamageRecord >( damageDealer, damageTaker, iDamageDealt, s_BulletGroupCounter, iActualHealthRemoved ) );
 }
 
 int CCSPlayer::GetNumAttackersFromDamageList( void )
 {
 	//Doesn't distinguish friend or enemy, this will return total friendly and enemy attackers
 	int nTotalAttackers = 0;
-	FOR_EACH_LL( m_DamageList, i )
+	for ( const auto &pDamageRecord : m_DamageList )
 	{
-		if ( m_DamageList[i]->GetPlayerDamagerPtr() && m_DamageList[i]->GetPlayerRecipientPtr() == this )
+		if ( pDamageRecord->GetPlayerDamagerPtr() && pDamageRecord->GetPlayerRecipientPtr() == this )
 			nTotalAttackers++;
 	}
 	return nTotalAttackers;
@@ -13165,12 +13158,12 @@ int CCSPlayer::GetNumAttackersFromDamageList( void )
 int CCSPlayer::GetMostNumHitsDamageRecordFrom( CCSPlayer *pAttacker )
 {
 	int iNumHits = 0;
-	FOR_EACH_LL( m_DamageList, i )
+	for ( const auto &pDamageRecord : m_DamageList )
 	{
-		if ( m_DamageList[i]->GetPlayerDamagerPtr() == pAttacker )
+		if ( pDamageRecord->GetPlayerDamagerPtr() == pAttacker )
 		{
-			if ( m_DamageList[i]->GetNumHits() >= iNumHits )
-				iNumHits = m_DamageList[i]->GetNumHits();
+			if ( pDamageRecord->GetNumHits() >= iNumHits )
+				iNumHits = pDamageRecord->GetNumHits();
 		}
 	}
 	return iNumHits;
@@ -13181,31 +13174,23 @@ int CCSPlayer::GetMostNumHitsDamageRecordFrom( CCSPlayer *pAttacker )
 //=======================================================
 void CCSPlayer::ResetDamageCounters()
 {
-	m_DamageList.PurgeAndDeleteElements();
+	m_DamageList.clear();
 }
 
 void CCSPlayer::RemoveSelfFromOthersDamageCounters()
 {
 	// Now clear out any reference of this player in other players' damage lists.
-	CUtlVector< CCSPlayer * > playerVector;
+	std::vector< CCSPlayer * > playerVector;
 	CollectPlayers( &playerVector );
 
-	FOR_EACH_VEC( playerVector, i )
+	for ( CCSPlayer *player : playerVector )
 	{
-		CCSPlayer *player = playerVector[ i ];
-
-		if ( playerVector[ i ] == this )
+		if ( player == this )
 			continue;
 
-		FOR_EACH_LL( player->m_DamageList, j )
-		{
-			if ( player->m_DamageList[j]->GetPlayerDamagerPtr() == this || player->m_DamageList[j]->GetPlayerRecipientPtr() == this )
-			{
-				delete player->m_DamageList[ j ];
-				player->m_DamageList.Remove( j );
-				break;
-			}
-		}
+		auto it = std::ranges::find_if( player->m_DamageList, [this]( const auto &pDamageRecord ) { return pDamageRecord->GetPlayerDamagerPtr() == this || pDamageRecord->GetPlayerRecipientPtr() == this; } );
+		if ( it != player->m_DamageList.end() )
+			player->m_DamageList.erase( it );
 	}
 }
 
@@ -13222,7 +13207,7 @@ void CCSPlayer::OutputDamageTaken( void )
 	char buf[64];
 	int msg_dest = HUD_PRINTCONSOLE;
 
-	FOR_EACH_LL( m_DamageList, i )
+	for ( const auto &pDamageRecord : m_DamageList )
 	{
 		if( bPrintHeader )
 		{
@@ -13230,7 +13215,7 @@ void CCSPlayer::OutputDamageTaken( void )
 			ClientPrint( this, msg_dest, "-------------------------\n" );
 			bPrintHeader = false;
 		}
-		pRecord = m_DamageList[i];
+		pRecord = pDamageRecord.get();
 
 		if( pRecord && pRecord->GetPlayerRecipientPtr() == this )
 		{
@@ -13254,16 +13239,16 @@ void CCSPlayer::OutputDamageGiven( void )
 {
 	int nDamageGivenThisRound = 0;
 	//CDamageRecord *pDamageList = pAttacker->GetDamageGivenList();
-	FOR_EACH_LL( m_DamageList, i )
+	for ( const auto &pDamageRecord : m_DamageList )
 	{
-		if ( m_DamageList[i]->GetPlayerDamagerPtr() &&
-			m_DamageList[i]->GetPlayerDamagerPtr() == this &&
-			m_DamageList[i]->GetPlayerRecipientPtr() &&
-			m_DamageList[i]->GetPlayerRecipientPtr() != this &&
-			IsOtherSameTeam( m_DamageList[i]->GetPlayerRecipientPtr()->GetTeamNumber() ) &&
-			!IsOtherEnemy( m_DamageList[i]->GetPlayerRecipientPtr() ) )
+		if ( pDamageRecord->GetPlayerDamagerPtr() &&
+			pDamageRecord->GetPlayerDamagerPtr() == this &&
+			pDamageRecord->GetPlayerRecipientPtr() &&
+			pDamageRecord->GetPlayerRecipientPtr() != this &&
+			IsOtherSameTeam( pDamageRecord->GetPlayerRecipientPtr()->GetTeamNumber() ) &&
+			!IsOtherEnemy( pDamageRecord->GetPlayerRecipientPtr() ) )
 		{
-			nDamageGivenThisRound += m_DamageList[i]->GetActualHealthRemoved();
+			nDamageGivenThisRound += pDamageRecord->GetActualHealthRemoved();
 		}
 	}
 
@@ -13278,7 +13263,7 @@ void CCSPlayer::OutputDamageGiven( void )
 	char buf[64];
 	int msg_dest = HUD_PRINTCONSOLE;
 
-	FOR_EACH_LL( m_DamageList, i )
+	for ( const auto &pDamageRecord : m_DamageList )
 	{
 		if( bPrintHeader )
 		{
@@ -13287,7 +13272,7 @@ void CCSPlayer::OutputDamageGiven( void )
 			bPrintHeader = false;
 		}
 
-		pRecord = m_DamageList[i];
+		pRecord = pDamageRecord.get();
 
 		if( pRecord && pRecord->GetPlayerDamagerPtr() == this )
 		{
@@ -13313,19 +13298,19 @@ void CCSPlayer::SendLastKillerDamageToClient( CCSPlayer *pLastKiller )
 	int nDamageTaken = 0;
 	if ( sv_damage_print_enable.GetBool() )
 	{
-		FOR_EACH_LL( m_DamageList, i )
+		for ( const auto &pDamageRecord : m_DamageList )
 		{
-			if( m_DamageList[i]->IsDamageRecordValidPlayerToPlayer() )
+			if( pDamageRecord->IsDamageRecordValidPlayerToPlayer() )
 			{
-				if ( m_DamageList[i]->IsDamageRecordStillValidForDamagerAndRecipient( this, pLastKiller ) )
+				if ( pDamageRecord->IsDamageRecordStillValidForDamagerAndRecipient( this, pLastKiller ) )
 				{
-					nDamageGiven = m_DamageList[i]->GetDamage();
-					nNumHitsGiven = m_DamageList[i]->GetNumHits();
+					nDamageGiven = pDamageRecord->GetDamage();
+					nNumHitsGiven = pDamageRecord->GetNumHits();
 				}
-				if ( m_DamageList[i]->IsDamageRecordStillValidForDamagerAndRecipient( pLastKiller, this ) )
+				if ( pDamageRecord->IsDamageRecordStillValidForDamagerAndRecipient( pLastKiller, this ) )
 				{
-					nDamageTaken = m_DamageList[i]->GetDamage();
-					nNumHitsTaken = m_DamageList[i]->GetNumHits();
+					nDamageTaken = pDamageRecord->GetDamage();
+					nNumHitsTaken = pDamageRecord->GetNumHits();
 				}
 			}
 		}
@@ -13695,7 +13680,7 @@ void CCSPlayer::ResetRoundBasedAchievementVariables()
 	m_KillingSpreeStartTime = -1;
 
 	int numCTPlayers = 0, numTPlayers = 0;
-	for (int i = 0; i < g_Teams.Count(); i++ )
+	for (int i = 0; i < std::ssize( g_Teams ); i++ )
 	{
 		if(g_Teams[i] )
 		{
@@ -13731,13 +13716,13 @@ void CCSPlayer::ResetRoundBasedAchievementVariables()
 	}
 
 	//Clear list of weapons used to get kills
-	m_killWeapons.RemoveAll();
+	m_killWeapons.clear();
 
 	//Clear sliding window of kill times
-	m_killTimes.RemoveAll();
+	m_killTimes.clear();
 
 	//clear round kills
-	m_enemyPlayersKilledThisRound.RemoveAll();
+	m_enemyPlayersKilledThisRound.clear();
 
 	m_killsWhileBlind = 0;
 	m_bombCarrierkills = 0;
@@ -13773,10 +13758,10 @@ void CCSPlayer::ResetRoundBasedAchievementVariables()
 
 	WieldingKnifeAndKilledByGun(false );
 	SetWasKilledThisRound(false );
-	m_WeaponTypesUsed.RemoveAll();
-	m_WeaponTypesHeld.RemoveAll();
-	m_WeaponTypesRunningOutOfAmmo.RemoveAll();
-	m_BurnDamageDeltVec.RemoveAll();
+	m_WeaponTypesUsed.clear();
+	m_WeaponTypesHeld.clear();
+	m_WeaponTypesRunningOutOfAmmo.clear();
+	m_BurnDamageDeltVec.clear();
 	m_bPickedUpDefuser = false;
 	m_bPickedUpWeapon = false;
 	m_bDefusedWithPickedUpKit = false;
@@ -13907,10 +13892,10 @@ void CCSPlayer::PlayerUsedFirearm( CBaseCombatWeapon* pBaseWeapon )
 
 			if ( weaponType != WEAPONTYPE_KNIFE && weaponType != WEAPONTYPE_C4 && weaponType != WEAPONTYPE_GRENADE )
 			{
-				if ( m_WeaponTypesUsed.Find( weaponID ) == -1 )
+				if ( ks::find_index( m_WeaponTypesUsed, weaponID ) == -1 )
 				{
 					// Add this weapon to the list of weapons used by the player
-					m_WeaponTypesUsed.AddToTail( weaponID );
+					m_WeaponTypesUsed.push_back( weaponID );
 				}
 			}
 		}
@@ -13919,10 +13904,10 @@ void CCSPlayer::PlayerUsedFirearm( CBaseCombatWeapon* pBaseWeapon )
 
 void CCSPlayer::AddBurnDamageDelt( int entityIndex )
 {
-	if ( m_BurnDamageDeltVec.Find( entityIndex ) == -1 )
+	if ( ks::find_index( m_BurnDamageDeltVec, entityIndex ) == -1 )
 	{
 		// Add this index to the list
-		m_BurnDamageDeltVec.AddToTail( entityIndex );
+		m_BurnDamageDeltVec.push_back( entityIndex );
 	}
 
 }
@@ -13930,7 +13915,7 @@ void CCSPlayer::AddBurnDamageDelt( int entityIndex )
 
 int CCSPlayer::GetNumPlayersDamagedWithFire()
 {
-	return m_BurnDamageDeltVec.Count();
+	return std::ssize( m_BurnDamageDeltVec );
 }
 void CCSPlayer::PlayerEmptiedAmmoForFirearm( CBaseCombatWeapon* pBaseWeapon )
 {
@@ -13945,10 +13930,10 @@ void CCSPlayer::PlayerEmptiedAmmoForFirearm( CBaseCombatWeapon* pBaseWeapon )
 
 			if ( weaponType != WEAPONTYPE_KNIFE && weaponType != WEAPONTYPE_C4 && weaponType != WEAPONTYPE_GRENADE )
 			{
-				if ( m_WeaponTypesRunningOutOfAmmo.Find( weaponID ) == -1 )
+				if ( ks::find_index( m_WeaponTypesRunningOutOfAmmo, weaponID ) == -1 )
 				{
 					// Add this weapon to the list of weapons used by the player
-					m_WeaponTypesRunningOutOfAmmo.AddToTail( weaponID );
+					m_WeaponTypesRunningOutOfAmmo.push_back( weaponID );
 				}
 			}
 		}
@@ -13968,7 +13953,7 @@ bool CCSPlayer::DidPlayerEmptyAmmoForWeapon( CBaseCombatWeapon* pBaseWeapon )
 
 			if ( weaponType != WEAPONTYPE_KNIFE && weaponType != WEAPONTYPE_C4 && weaponType != WEAPONTYPE_GRENADE )
 			{
-				if ( m_WeaponTypesRunningOutOfAmmo.Find( weaponID ) != -1 )
+				if ( ks::find_index( m_WeaponTypesRunningOutOfAmmo, weaponID ) != -1 )
 				{
 					return true;
 
@@ -14072,17 +14057,17 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 		}
 
 		// [menglish] Achievement check for doing 95% or more damage to a player and having another player kill them
-		FOR_EACH_LL( pVictim->m_DamageList, i )
+		for ( const auto &pDamageRecord : pVictim->m_DamageList )
 		{
-			if ( pVictim->m_DamageList[i]->IsDamageRecordValidPlayerToPlayer() &&
-				 pVictim->m_DamageList[i]->GetPlayerRecipientPtr() == pVictim &&
-				 pVictim->m_DamageList[i]->GetPlayerDamagerPtr() != pAttacker &&
-				 (pVictim->m_DamageList[i]->GetDamage() >= pVictim->GetMaxHealth() - AchievementConsts::DamageNoKill_MaxHealthLeftOnKill ) &&
-				 pVictim->IsOtherEnemy( pVictim->m_DamageList[i]->GetPlayerDamagerPtr() ) &&
-				 !pVictim->m_DamageList[i]->GetPlayerDamagerPtr()->HasControlledBotThisRound() &&
-				 !pVictim->m_DamageList[i]->GetPlayerDamagerPtr()->HasBeenControlledThisRound() )
+			if ( pDamageRecord->IsDamageRecordValidPlayerToPlayer() &&
+				 pDamageRecord->GetPlayerRecipientPtr() == pVictim &&
+				 pDamageRecord->GetPlayerDamagerPtr() != pAttacker &&
+				 (pDamageRecord->GetDamage() >= pVictim->GetMaxHealth() - AchievementConsts::DamageNoKill_MaxHealthLeftOnKill ) &&
+				 pVictim->IsOtherEnemy( pDamageRecord->GetPlayerDamagerPtr() ) &&
+				 !pDamageRecord->GetPlayerDamagerPtr()->HasControlledBotThisRound() &&
+				 !pDamageRecord->GetPlayerDamagerPtr()->HasBeenControlledThisRound() )
 			{
-				pVictim->m_DamageList[i]->GetPlayerDamagerPtr()->AwardAchievement( CSDamageNoKill );
+				pDamageRecord->GetPlayerDamagerPtr()->AwardAchievement( CSDamageNoKill );
 			}
 		}
 
@@ -14092,13 +14077,13 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 			pAttacker->m_maxNumEnemiesKillStreak = pAttacker->m_NumEnemiesKilledThisSpawn;
 
 		//store a list of kill times for spree tracking
-		pAttacker->m_killTimes.AddToTail(gpGlobals->curtime );
+		pAttacker->m_killTimes.push_back( gpGlobals->curtime );
 
 		//Add the victim to the list of players killed this round
-		pAttacker->m_enemyPlayersKilledThisRound.AddToTail( pVictim );
+		pAttacker->m_enemyPlayersKilledThisRound.push_back( pVictim );
 
 		//Calculate Avenging for all players the victim has killed
-		for ( int avengedIndex = 0; avengedIndex < pVictim->m_enemyPlayersKilledThisRound.Count(); avengedIndex++ )
+		for ( int avengedIndex = 0; avengedIndex < std::ssize( pVictim->m_enemyPlayersKilledThisRound ); avengedIndex++ )
 		{
 			CCSPlayer* avengedPlayer = pVictim->m_enemyPlayersKilledThisRound[avengedIndex];
 
@@ -14115,13 +14100,13 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 
 
 		//remove elements older than a certain time
-		while ( pAttacker->m_killTimes.Count() > 0 && pAttacker->m_killTimes[0] + AchievementConsts::KillingSpree_WindowTime < gpGlobals->curtime )
+		while ( !pAttacker->m_killTimes.empty() && pAttacker->m_killTimes[0] + AchievementConsts::KillingSpree_WindowTime < gpGlobals->curtime )
 		{
-			pAttacker->m_killTimes.Remove(0 );
+			pAttacker->m_killTimes.erase( pAttacker->m_killTimes.begin() + 0 );
 		}
 
 		//If we killed enough players in the time window, award the achievement
-		if ( CSGameRules()->IsPlayingClassic() && pAttacker->m_killTimes.Count() >= AchievementConsts::KillingSpree_Kills && bIsAttackerEligibleForAchievements )
+		if ( CSGameRules()->IsPlayingClassic() && std::ssize( pAttacker->m_killTimes ) >= AchievementConsts::KillingSpree_Kills && bIsAttackerEligibleForAchievements )
 		{
 			pAttacker->m_KillingSpreeStartTime = gpGlobals->curtime;
 			pAttacker->AwardAchievement( CSKillingSpree );
@@ -14207,12 +14192,12 @@ void CCSPlayer::ProcessPlayerDeathAchievements( CCSPlayer *pAttacker, CCSPlayer 
 		//see if this is a unique weapon
 		if ( attackerWeaponId != WEAPON_NONE  )
 		{
-			if ( pAttacker->m_killWeapons.Find(attackerWeaponId ) == -1 )
+			if ( ks::find_index( pAttacker->m_killWeapons, attackerWeaponId ) == -1 )
 			{
 				pAttacker->m_bLastKillUsedUniqueWeapon = true;
 
-				pAttacker->m_killWeapons.AddToTail(attackerWeaponId );
-				if (pAttacker->m_killWeapons.Count() >= AchievementConsts::KillsWithMultipleGuns_MinWeapons &&
+				pAttacker->m_killWeapons.push_back( attackerWeaponId );
+				if (std::ssize( pAttacker->m_killWeapons ) >= AchievementConsts::KillsWithMultipleGuns_MinWeapons &&
 					bIsAttackerEligibleForAchievements && !CSGameRules()->IsPlayingGunGameProgressive() )
 				{
 					pAttacker->AwardAchievement( CSKillsWithMultipleGuns );
@@ -14649,9 +14634,9 @@ void CCSPlayer::OnPreResetRound()
 			InitializeAccount( CSGameRules()->GetStartMoney() );
 
 			// For queued matchmaking mode reset money for start
-			FOR_EACH_MAP( CSGameRules()->m_mapQueuedMatchmakingPlayersData, idxQueuedPlayer )
+			for ( auto &[uiAccountID, pQMM] : CSGameRules()->m_mapQueuedMatchmakingPlayersData )
 			{
-				CSGameRules()->m_mapQueuedMatchmakingPlayersData.Element( idxQueuedPlayer )->m_cash = CSGameRules()->GetStartMoney();
+				pQMM->m_cash = CSGameRules()->GetStartMoney();
 			}
 
 			// Make sure player doesn't receive any winnings from the prior round
@@ -14758,18 +14743,11 @@ uint32 Helper_AddMusicKitMVPsPendingSend( CEconItemView *pEconItemView, CCSGameR
 	if ( !pEconItemView->FindAttribute( pAttr_KillEater, &unCurrent ) )
 		return 0;
 
-	CCSGameRules::CQMMPlayerData_t::StattrakMusicKitValues_t::IndexType_t idx = pQMM->m_mapMusicKitUpdates.Find( pEconItemView->GetItemID() );
-	if ( idx != CCSGameRules::CQMMPlayerData_t::StattrakMusicKitValues_t::InvalidIndex() )
-	{
-		pQMM->m_mapMusicKitUpdates[ idx ] += nIncBy;
-	}
-	else
-	{
-		idx = pQMM->m_mapMusicKitUpdates.Insert( pEconItemView->GetItemID() );
-		pQMM->m_mapMusicKitUpdates[idx] = nIncBy;
-	}
+	// a new entry starts at zero
+	attrib_value_t &unPending = pQMM->m_mapMusicKitUpdates[ pEconItemView->GetItemID() ];
+	unPending += nIncBy;
 
-	return unCurrent + pQMM->m_mapMusicKitUpdates[idx];
+	return unCurrent + unPending;
 }
 
 extern ConVar sv_matchend_drops_enabled;
@@ -14905,11 +14883,11 @@ void CCSPlayer::DecrementProgressiveWeaponFromSuicide( void )
 int CCSPlayer::GetNumEnemyDamagers()
 {
 	int numberOfEnemyDamagers = 0;
-	FOR_EACH_LL( m_DamageList, i )
+	for ( const auto &pDamageRecord : m_DamageList )
 	{
-		if ( m_DamageList[i]->IsDamageRecordValidPlayerToPlayer() &&
-			 m_DamageList[i]->GetPlayerRecipientPtr() == this &&
-			 IsOtherEnemy( m_DamageList[i]->GetPlayerDamagerPtr() ) )
+		if ( pDamageRecord->IsDamageRecordValidPlayerToPlayer() &&
+			 pDamageRecord->GetPlayerRecipientPtr() == this &&
+			 IsOtherEnemy( pDamageRecord->GetPlayerDamagerPtr() ) )
 		{
 			numberOfEnemyDamagers++;
 		}
@@ -14921,11 +14899,11 @@ int CCSPlayer::GetNumEnemyDamagers()
 int CCSPlayer::GetNumEnemiesDamaged()
 {
 	int numberOfEnemiesDamaged = 0;
-	FOR_EACH_LL( m_DamageList, i )
+	for ( const auto &pDamageRecord : m_DamageList )
 	{
-		if ( m_DamageList[i]->IsDamageRecordValidPlayerToPlayer() &&
-			m_DamageList[i]->GetPlayerDamagerPtr() == this &&
-			IsOtherEnemy( m_DamageList[i]->GetPlayerRecipientPtr() ) )
+		if ( pDamageRecord->IsDamageRecordValidPlayerToPlayer() &&
+			pDamageRecord->GetPlayerDamagerPtr() == this &&
+			IsOtherEnemy( pDamageRecord->GetPlayerRecipientPtr() ) )
 		{
 			numberOfEnemiesDamaged++;
 		}
@@ -14936,13 +14914,13 @@ int CCSPlayer::GetNumEnemiesDamaged()
 int CCSPlayer::GetTotalActualHealthRemovedFromEnemies()
 {
 	int totalDamage = 0;
-	FOR_EACH_LL( m_DamageList, i )
+	for ( const auto &pDamageRecord : m_DamageList )
 	{
-		if ( m_DamageList[i]->IsDamageRecordValidPlayerToPlayer() &&
-			m_DamageList[i]->GetPlayerDamagerPtr() == this &&
-			IsOtherEnemy( m_DamageList[i]->GetPlayerRecipientPtr() ) )
+		if ( pDamageRecord->IsDamageRecordValidPlayerToPlayer() &&
+			pDamageRecord->GetPlayerDamagerPtr() == this &&
+			IsOtherEnemy( pDamageRecord->GetPlayerRecipientPtr() ) )
 		{
-			totalDamage += m_DamageList[i]->GetActualHealthRemoved();
+			totalDamage += pDamageRecord->GetActualHealthRemoved();
 		}
 	}
 	return totalDamage;
@@ -14989,10 +14967,10 @@ void CCSPlayer::GiveHealthAndArmorForGuardianMode( bool bAdditive )
 		int nHealthToGive = 50;
 		if ( nRoundsPlayed > 3 )
 		{
-			nHealthToGive = MIN( GetMaxHealth(), 50 + ( ( nRoundsPlayed - 3 ) * 15 ) );
+			nHealthToGive = std::min( GetMaxHealth(), 50 + ( ( nRoundsPlayed - 3 ) * 15 ) );
 		}
 
-		m_iHealth = MIN( nStartHealth + nHealthToGive, GetMaxHealth() );
+		m_iHealth = std::min( nStartHealth + nHealthToGive, GetMaxHealth() );
 	}
 
 	// armor?
@@ -15002,11 +14980,11 @@ void CCSPlayer::GiveHealthAndArmorForGuardianMode( bool bAdditive )
 	{
 		if ( nRoundsPlayed > 3 )
 		{
-			nArmorToGive = MIN( 100, 20 + ( ( nRoundsPlayed - 3 ) * 20 ) );
+			nArmorToGive = std::min( 100, 20 + ( ( nRoundsPlayed - 3 ) * 20 ) );
 		}
 	}
 
-	int nArmor = MIN( nStartArmor + nArmorToGive, 100 );
+	int nArmor = std::min( nStartArmor + nArmorToGive, 100 );
 	SetArmorValue( nArmor );
 }
 
@@ -15411,7 +15389,7 @@ bool CCSPlayer::TakeControlOfBot( CCSBot *pBot, bool bSkipTeamCheck )
 	if ( pBot->IsRescuing() )
 	{
 		// Tell the hostages controlled by the bot that they should now follow this player
-		for ( int iHostage=0; iHostage < g_Hostages.Count(); iHostage++ )
+		for ( int iHostage=0; iHostage < std::ssize( g_Hostages ); iHostage++ )
 		{
 			CHostage *pHostage = g_Hostages[iHostage];
 

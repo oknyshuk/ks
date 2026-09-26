@@ -13,7 +13,7 @@
 
 #include "mathlib/vector4d.h"
 #include "tier0/dbg.h"
-#include "tier1/utlsymbol.h"
+#include "tier1/filename_table.h"
 #include "idispinfo.h"
 #include "shadowmgr.h"
 #include "vcollide.h"

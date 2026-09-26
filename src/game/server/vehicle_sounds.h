@@ -87,8 +87,8 @@ struct vehiclesounds_t
 {
 	void Init( void )
 	{
-		pGears.Purge();
-		crashSounds.Purge();
+		pGears.clear(); pGears.shrink_to_fit();
+		crashSounds.clear(); crashSounds.shrink_to_fit();
 		
 		for ( int i = 0; i < VS_NUM_SOUNDS; i++ )
 		{
@@ -103,8 +103,8 @@ struct vehiclesounds_t
 	}
 
 
-	CUtlVector<vehicle_gear_t>	pGears;
-	CUtlVector<vehicle_crashsound_t> crashSounds;
+	std::vector< vehicle_gear_t >	pGears;
+	std::vector< vehicle_crashsound_t > crashSounds;
 	string_t					iszSound[ VS_NUM_SOUNDS ];
 	string_t					iszStateSounds[SS_NUM_STATES];
 	float						minStateTime[SS_NUM_STATES];

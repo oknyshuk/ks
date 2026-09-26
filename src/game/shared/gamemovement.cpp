@@ -11,6 +11,7 @@
 #include "decals.h"
 #include "coordsize.h"
 #include "rumble_shared.h"
+#include "tier1/map_ops.h"
 #include "cstrike15/basecsgrenade_projectile.h"
 
 
@@ -18,9 +19,6 @@
 #if (PREDICTION_ERROR_CHECK_LEVEL > 0) && (PREDICTION_ERROR_CHECK_STACKS_FOR_MISSING > 0)
 #include "tier0/stacktools.h"
 #endif
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 
 #define	STOP_EPSILON		0.1
@@ -218,26 +216,17 @@ class CDiffInfo
 {
 public:
 	CDiffInfo() : m_nCommandNumber( 0 ) {}
-	CDiffInfo( const CDiffInfo& src )
-	{
-		m_nCommandNumber = src.m_nCommandNumber;
-		for ( int i = 0; i < src.m_Lines.Count(); ++i )
-		{
-			m_Lines.AddToTail( src.m_Lines[ i ] );
-		}
-	}
 
-	static bool Less( const CDiffInfo& lhs, const CDiffInfo& rhs )
-	{
-		return lhs.m_nCommandNumber < rhs.m_nCommandNumber;
-	}
 	int							m_nCommandNumber;
-	CUtlVector< CDiffStr >	m_Lines;
+	std::vector< CDiffStr >	m_Lines;
 	bool						m_bChecked;
 };
 
 class CDiffManager : public IDiffMgr
 {
+	// keyed by command number
+	using DiffMap_t = std::map< int, CDiffInfo >;
+
 public:
 	CDiffManager() : 
 		m_flLastSpew( -1.0f )
@@ -263,19 +252,11 @@ public:
 
 		Assert( CBaseEntity::IsServer() );
 
-		CUtlRBTree< CDiffInfo, int >& rb = bServer ? m_Data[ nSlot ].m_Server : m_Data[ nSlot ].m_Client;
+		DiffMap_t& rb = bServer ? m_Data[ nSlot ].m_Server : m_Data[ nSlot ].m_Client;
 
-		CDiffInfo search;
-		search.m_nCommandNumber = nCommandNumber;
-
-		int idx = rb.Find( search );
-		if ( idx == rb.InvalidIndex() )
-		{
-			idx = rb.Insert( search );
-		}
-
-		CDiffInfo *slot = &rb[ idx ];
-		slot->m_Lines.RemoveAll();
+		CDiffInfo *slot = &rb[ nCommandNumber ];
+		slot->m_nCommandNumber = nCommandNumber;
+		slot->m_Lines.clear();
 	}
 
 	virtual void AddToDiff( int nSlot, bool bServer, int nCommandNumber, char const *string )
@@ -293,20 +274,13 @@ public:
 
 		// Msg( "%s Add %d %s\n", bServer ? "sv" : "cl", nCommandNumber, string );
 
-		CUtlRBTree< CDiffInfo, int >& rb = bServer ? m_Data[ nSlot ].m_Server : m_Data[ nSlot ].m_Client;
+		DiffMap_t& rb = bServer ? m_Data[ nSlot ].m_Server : m_Data[ nSlot ].m_Client;
 
-		CDiffInfo search;
-		search.m_nCommandNumber = nCommandNumber;
-		int idx = rb.Find( search );
-		if ( idx == rb.InvalidIndex() )
-		{
-			Assert( 0 );
-			idx = rb.Insert( search );
-		}
-
-		CDiffInfo *slot = &rb[ idx ];
+		Assert( rb.contains( nCommandNumber ) );
+		CDiffInfo *slot = &rb[ nCommandNumber ];
+		slot->m_nCommandNumber = nCommandNumber;
 		CDiffStr line( string );
-		slot->m_Lines.AddToTail( line );
+		slot->m_Lines.push_back( line );
 	}
 
 	enum EMismatched
@@ -318,45 +292,38 @@ public:
 
 	bool ClientRecordExists( int nSlot, int cmd )
 	{
-		CDiffInfo clsearch;
-		clsearch.m_nCommandNumber = cmd;
-		int clidx = m_Data[ nSlot ].m_Client.Find( clsearch );
-		return m_Data[ nSlot ].m_Client.IsValidIndex( clidx );
+		return m_Data[ nSlot ].m_Client.contains( cmd );
 	}
 
-	EMismatched IsMismatched( int nSlot, int svidx )
+	EMismatched IsMismatched( int nSlot, DiffMap_t::iterator svidx )
 	{
-		CDiffInfo *serverslot = &m_Data[ nSlot ].m_Server[ svidx ];
+		CDiffInfo *serverslot = &svidx->second;
 
 		// Now find the client version of this one
-		CDiffInfo clsearch;
-		clsearch.m_nCommandNumber = serverslot->m_nCommandNumber;
-		int clidx = m_Data[ nSlot ].m_Client.Find( clsearch );
-		if ( clidx == m_Data[ nSlot ].m_Client.InvalidIndex() )
+		CDiffInfo *clientslot = ks::find_ptr( m_Data[ nSlot ].m_Client, serverslot->m_nCommandNumber );
+		if ( !clientslot )
 			return DIFFCHECK_NOTREADY;
 
 		// Now compare them
-		CDiffInfo *clientslot = &m_Data[ nSlot ].m_Client[ clidx ];
-
 		bool bSpew = false;
-		if ( serverslot->m_Lines.Count() != 
-			clientslot->m_Lines.Count() )
+		if ( serverslot->m_Lines.size() != 
+			clientslot->m_Lines.size() )
 		{
 			return DIFFCHECK_DIFFERS;
 		}
 
-		int maxSlot = MAX( serverslot->m_Lines.Count(), clientslot->m_Lines.Count() );
+		int maxSlot = (int)std::max( serverslot->m_Lines.size(), clientslot->m_Lines.size() );
 		if ( !bSpew )
 		{
 			for ( int i = 0; i < maxSlot; ++i )
 			{
 				CDiffStr *sv = nullptr;
 				CDiffStr *cl = nullptr;
-				if ( i < serverslot->m_Lines.Count() )
+				if ( i < (int)serverslot->m_Lines.size() )
 				{
 					sv = &serverslot->m_Lines[ i ];
 				}
-				if ( i < clientslot->m_Lines.Count() )
+				if ( i < (int)clientslot->m_Lines.size() )
 				{
 					cl = &clientslot->m_Lines[ i ];
 				}
@@ -396,10 +363,10 @@ public:
 			return;
 
 		// Find the last server command number
-		if ( m_Data[ nSlot ].m_Server.Count() <= 0 )
+		if ( m_Data[ nSlot ].m_Server.empty() )
 			return;
 
-		int svidx = m_Data[ nSlot ].m_Server.LastInorder();
+		DiffMap_t::iterator svidx = std::prev( m_Data[ nSlot ].m_Server.end() );
 		EMismatched eMisMatched = IsMismatched( nSlot, svidx );
 		if ( eMisMatched == DIFFCHECK_NOTREADY )
 		{
@@ -408,52 +375,47 @@ public:
 
 		if ( eMisMatched == DIFFCHECK_DIFFERS )
 		{
-			CUtlVector< int > vecPrev;
+			std::vector< DiffMap_t::iterator > vecPrev;
 
-			int nCur = svidx;
+			DiffMap_t::iterator nCur = svidx;
 			do 
 			{
-				int prev = m_Data[ nSlot ].m_Server.PrevInorder( nCur );
-				if ( m_Data[ nSlot ].m_Server.IsValidIndex( prev ) && 
-					ClientRecordExists( nSlot, m_Data[ nSlot ].m_Server[ prev ].m_nCommandNumber ) )
+				if ( nCur != m_Data[ nSlot ].m_Server.begin() && 
+					ClientRecordExists( nSlot, std::prev( nCur )->second.m_nCommandNumber ) )
 				{
+					DiffMap_t::iterator prev = std::prev( nCur );
 					//SpewRecords( "prev", prev );
-					vecPrev.AddToHead( prev );
+					vecPrev.insert( vecPrev.begin(), prev );
+					nCur = prev;
 				}
 				else
 				{
 					break;
 				}
-
-				nCur = prev;
-			} while ( vecPrev.Count() < 10 );
+			} while ( vecPrev.size() < 10 );
 
 			Msg( "-----\n" );
 
-			for ( int p = 0; p < vecPrev.Count(); ++p )
+			for ( DiffMap_t::iterator prev : vecPrev )
 			{
-				SpewRecords( nSlot, "prev", vecPrev[ p ] );
+				SpewRecords( nSlot, "prev", prev );
 			}
 
 			SpewRecords( nSlot, "bad ", svidx );
 		}
 	}
 
-	void SpewRecords( int nSlot, char const *prefix, int svidx )
+	void SpewRecords( int nSlot, char const *prefix, DiffMap_t::iterator svidx )
 	{
-		CDiffInfo *serverslot = &m_Data[ nSlot ].m_Server[ svidx ];
+		CDiffInfo *serverslot = &svidx->second;
 
 		// Now find the client version of this one
-		CDiffInfo clsearch;
-		clsearch.m_nCommandNumber = serverslot->m_nCommandNumber;
-		int clidx = m_Data[ nSlot ].m_Client.Find( clsearch );
-		if ( clidx == m_Data[ nSlot ].m_Client.InvalidIndex() )
+		CDiffInfo *clientslot = ks::find_ptr( m_Data[ nSlot ].m_Client, serverslot->m_nCommandNumber );
+		if ( !clientslot )
 			return;
 
 		// Now compare them
-		CDiffInfo *clientslot = &m_Data[ nSlot ].m_Client[ clidx ];
-
-		int maxSlot = MAX( serverslot->m_Lines.Count(), clientslot->m_Lines.Count() );
+		int maxSlot = (int)std::max( serverslot->m_Lines.size(), clientslot->m_Lines.size() );
 
 		for ( int i = 0; i < maxSlot; ++i )
 		{
@@ -464,14 +426,14 @@ public:
 			int iHaveString = 0;
 #endif
 
-			if ( i < serverslot->m_Lines.Count() )
+			if ( i < (int)serverslot->m_Lines.size() )
 			{
 				sv = serverslot->m_Lines[ i ].String();
 #if PREDICTION_ERROR_CHECK_STACKS_FOR_MISSING > 0
 				iHaveString |= 1;
 #endif
 			}
-			if ( i < clientslot->m_Lines.Count() )
+			if ( i < (int)clientslot->m_Lines.size() )
 			{
 				cl = clientslot->m_Lines[ i ].String();
 #if PREDICTION_ERROR_CHECK_STACKS_FOR_MISSING > 0
@@ -504,14 +466,8 @@ private:
 
 	struct User_t
 	{
-		User_t() :
-			m_Client( 0, 0, CDiffInfo::Less ),
-			m_Server( 0, 0, CDiffInfo::Less )
-		{
-		}
-
-		CUtlRBTree< CDiffInfo, int >	m_Server;
-		CUtlRBTree< CDiffInfo, int >	m_Client;
+		DiffMap_t	m_Server;
+		DiffMap_t	m_Client;
 	};
 
 	User_t							m_Data[ MAX_SPLITSCREEN_PLAYERS ];
@@ -1126,7 +1082,7 @@ void CGameMovement::CheckParameters( void )
 		maxspeed = mv->m_flClientMaxSpeed;
 		if ( maxspeed != 0.0 )
 		{
-			mv->m_flMaxSpeed = MIN( maxspeed, mv->m_flMaxSpeed );
+			mv->m_flMaxSpeed = std::min( maxspeed, mv->m_flMaxSpeed );
 		}
 
 		// Slow down by the speed factor
@@ -2050,7 +2006,7 @@ void CGameMovement::Accelerate( Vector& wishdir, float wishspeed, float accel )
 	if (addspeed <= 0)
 		return;
 
-	const float kAccelerationScale = MAX(250.0f, wishspeed);
+	const float kAccelerationScale = std::max(250.0f, wishspeed);
 
 	// Determine amount of acceleration.
 	accelspeed = accel * gpGlobals->frametime * kAccelerationScale * player->m_surfaceFriction;
@@ -3423,7 +3379,7 @@ int CGameMovement::ClipVelocity( Vector& in, Vector& normal, Vector& out, float 
 	if( adjust < 0.0f )
 	{
 		// min this against a small number (but no further from zero than -DIST_EPSILON) to account for crossing a plane with a near-parallel normal
-		adjust = MIN( adjust, -DIST_EPSILON );
+		adjust = std::min<std::common_type_t<float, double>>( adjust, -DIST_EPSILON );
 		out -= ( normal * adjust );
 //		Msg( "Adjustment = %lf\n", adjust );
 	}
@@ -3942,7 +3898,7 @@ void TracePlayerBBoxForGround( ITraceListData *pTraceListData, const Vector& sta
 
 	// Check the -x, -y quadrant
 	mins = minsSrc;
-	maxs.Init( MIN( 0, maxsSrc.x ), MIN( 0, maxsSrc.y ), maxsSrc.z );
+	maxs.Init( std::min<std::common_type_t<int, vec_t>>( 0, maxsSrc.x ), std::min<std::common_type_t<int, vec_t>>( 0, maxsSrc.y ), maxsSrc.z );
 	ray.Init( start, end, mins, maxs );
 	DoTrace( pTraceListData, ray, fMask, filter, &pm, pCounter );
 	if ( pm.Ent<CBaseEntity>() && pm.plane.normal[2] >= minGroundNormalZ)
@@ -3956,7 +3912,7 @@ void TracePlayerBBoxForGround( ITraceListData *pTraceListData, const Vector& sta
 	}
 
 	// Check the +x, +y quadrant
-	mins.Init( MAX( 0, minsSrc.x ), MAX( 0, minsSrc.y ), minsSrc.z );
+	mins.Init( std::max<std::common_type_t<int, vec_t>>( 0, minsSrc.x ), std::max<std::common_type_t<int, vec_t>>( 0, minsSrc.y ), minsSrc.z );
 	maxs = maxsSrc;
 	ray.Init( start, end, mins, maxs );
 	DoTrace( pTraceListData, ray, fMask, filter, &pm, pCounter );
@@ -3971,8 +3927,8 @@ void TracePlayerBBoxForGround( ITraceListData *pTraceListData, const Vector& sta
 	}
 
 	// Check the -x, +y quadrant
-	mins.Init( minsSrc.x, MAX( 0, minsSrc.y ), minsSrc.z );
-	maxs.Init( MIN( 0, maxsSrc.x ), maxsSrc.y, maxsSrc.z );
+	mins.Init( minsSrc.x, std::max<std::common_type_t<int, vec_t>>( 0, minsSrc.y ), minsSrc.z );
+	maxs.Init( std::min<std::common_type_t<int, vec_t>>( 0, maxsSrc.x ), maxsSrc.y, maxsSrc.z );
 	ray.Init( start, end, mins, maxs );
 	DoTrace( pTraceListData, ray, fMask, filter, &pm, pCounter );
 	if ( pm.Ent<CBaseEntity>() && pm.plane.normal[2] >= 0.7)
@@ -3986,8 +3942,8 @@ void TracePlayerBBoxForGround( ITraceListData *pTraceListData, const Vector& sta
 	}
 
 	// Check the +x, -y quadrant
-	mins.Init( MAX( 0, minsSrc.x ), minsSrc.y, minsSrc.z );
-	maxs.Init( maxsSrc.x, MIN( 0, maxsSrc.y ), maxsSrc.z );
+	mins.Init( std::max<std::common_type_t<int, vec_t>>( 0, minsSrc.x ), minsSrc.y, minsSrc.z );
+	maxs.Init( maxsSrc.x, std::min<std::common_type_t<int, vec_t>>( 0, maxsSrc.y ), maxsSrc.z );
 	ray.Init( start, end, mins, maxs );
 	DoTrace( pTraceListData, ray, fMask, filter, &pm, pCounter );
 	if ( pm.Ent<CBaseEntity>() && pm.plane.normal[2] >= minGroundNormalZ)
@@ -4298,7 +4254,7 @@ void CGameMovement::PlayerRoughLandingEffects( float fvol )
 		player->m_flStepSoundTime = 400;
 
 		// Play step sound for current texture.
-		player->PlayStepSound( (Vector &)mv->GetAbsOrigin(), player->m_pSurfaceData, MAX( fvol, 0.1f ), false );
+		player->PlayStepSound( (Vector &)mv->GetAbsOrigin(), player->m_pSurfaceData, std::max( fvol, 0.1f ), false );
 
 		//
 		// Knock the screen around a little bit, temporary effect.
@@ -4453,7 +4409,7 @@ void CGameMovement::UpdateDuckJumpEyeOffset( void )
 {
 	if ( player->m_Local.m_nDuckJumpTimeMsecs != 0 )
 	{
-		int nDuckMilliseconds = MAX( 0, GAMEMOVEMENT_DUCK_TIME - player->m_Local.m_nDuckJumpTimeMsecs );
+		int nDuckMilliseconds = std::max( 0, GAMEMOVEMENT_DUCK_TIME - player->m_Local.m_nDuckJumpTimeMsecs );
 		if ( nDuckMilliseconds > TIME_TO_UNDUCK_MSECS )
 		{
 			player->m_Local.m_nDuckJumpTimeMsecs = 0;
@@ -4691,7 +4647,7 @@ void CGameMovement::Duck( void )
 			// The player is in duck transition and not duck-jumping.
 			if ( player->m_Local.m_bDucking && !bDuckJump && !bDuckJumpTime )
 			{
-				int nDuckMilliseconds = MAX( 0, GAMEMOVEMENT_DUCK_TIME - player->m_Local.m_nDuckTimeMsecs );
+				int nDuckMilliseconds = std::max( 0, GAMEMOVEMENT_DUCK_TIME - player->m_Local.m_nDuckTimeMsecs );
 				
 				// Finish in duck transition when transition time is over, in "duck", in air.
 				if ( ( nDuckMilliseconds > TIME_TO_DUCK_MSECS ) || bInDuck || bInAir )
@@ -4786,7 +4742,7 @@ void CGameMovement::Duck( void )
 					// or unducking
 					if ( ( player->m_Local.m_bDucking || player->m_Local.m_bDucked ) )
 					{
-						int nDuckMilliseconds = MAX( 0, GAMEMOVEMENT_DUCK_TIME - player->m_Local.m_nDuckTimeMsecs );
+						int nDuckMilliseconds = std::max( 0, GAMEMOVEMENT_DUCK_TIME - player->m_Local.m_nDuckTimeMsecs );
 						
 						// Finish ducking immediately if duck time is over or not on ground
 						if ( nDuckMilliseconds > TIME_TO_UNDUCK_MSECS || ( bInAir && !bDuckJump ) )
@@ -5145,7 +5101,6 @@ void CGameMovement::FullTossMove( void )
 // Purpose: TF2 commander mode movement logic
 //-----------------------------------------------------------------------------
 
-#pragma warning (disable : 4701)
 
 void CGameMovement::IsometricMove( void )
 {
@@ -5180,7 +5135,6 @@ void CGameMovement::IsometricMove( void )
 	mv->m_vecVelocity.Init();
 }
 
-#pragma warning (default : 4701)
 
 
 bool CGameMovement::GameHasLadders() const

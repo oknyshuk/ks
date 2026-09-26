@@ -9,9 +9,6 @@
 #include "localize/ilocalize.h"
 #include "tier3/tier3.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 CCSInventoryManager g_CSInventoryManager;
@@ -59,7 +56,7 @@ void CCSInventoryManager::UpdateLocalInventory( void )
 //-----------------------------------------------------------------------------
 // Purpose: Fills out pList with all inventory items that could fit into the specified loadout slot for a given class
 //-----------------------------------------------------------------------------
-int	CCSInventoryManager::GetAllUsableItemsForSlot( int iClass, int iSlot, CUtlVector<CScriptCreatedItem*> *pList )
+int	CCSInventoryManager::GetAllUsableItemsForSlot( int iClass, int iSlot, std::vector< CScriptCreatedItem* > *pList )
 {
 	return 0;
 }

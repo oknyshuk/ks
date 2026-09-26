@@ -7,17 +7,16 @@
 //===========================================================================//
 
 #include "audio_pch.h"
-#include "utllinkedlist.h"
-#include "utldict.h"
+#include <mutex>
+#include <list>
+#include "tier1/slot_pool.h"
 #include "cdll_int.h"
-#include "mempool.h"
 #include "memstack.h"
 #include "ienginetoolinternal.h"
 #include "vstdlib/jobthread.h"
 #include "tier3/tier3.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include <map>
+#include <set>
 
 extern IVEngineClient *engineClient;
 extern IFileSystem *g_pFileSystem;
@@ -73,8 +72,6 @@ extern ConVar snd_report_loop_sound;
 
 void MaybeReportMissingWav( char const *wav );
 
-// xbox pools its transient fixed sized streaming buffers
-static CUtlMemoryPool *g_pAudioStreamPool;
 static CMemoryStack *g_pAudioStaticPool;
 
 
@@ -140,7 +137,6 @@ public:
 	float				m_arrival;			// time at data arrival
 	FileNameHandle_t	m_hFileNameHandle;
 	int					m_nBufferBytes;		// size of any pre-allocated target buffer
-	BufferHandle_t		m_hBuffer;			// used to dequeue the buffer after lru
 	unsigned int		m_bLoaded : 1;
 	unsigned int		m_bMissing : 1;
 	unsigned int		m_bPostProcessed : 1;
@@ -170,7 +166,7 @@ struct WaveCache_t
 	unsigned int	m_nDataSize;
 	unsigned int	m_nAgeStamp;
 	unsigned int	m_nLockCount;
-	int				m_hUnlock;
+	std::list< WaveCacheHandle_t >::iterator m_hUnlock;	// end() of the unlocked list when locked
 };
 
 // Replacement for wavedata hosted by datacache which had some costlier aspects. When small purges needed
@@ -189,7 +185,7 @@ public:
 
 		// reserve the 0 entry, want to use 0 as invalid to remain compliant to datacache code
 		// which used 0 as an invalid handle
-		WaveCacheHandle_t hData = m_HandleTable.AddHandle();
+		WaveCacheHandle_t hData = m_HandleTable.add();
 		Assert( hData == 0 );
 		hData;
 	}
@@ -216,9 +212,9 @@ public:
 			return nullptr;
 		}
 
-		AUTO_LOCK_FM( m_WaveCacheMutex );
+		std::scoped_lock lock( m_WaveCacheMutex );
 
-		WaveCache_t *pCacheData = m_HandleTable.GetHandle( hData );
+		WaveCache_t *pCacheData = m_HandleTable.get( hData );
 		if ( !pCacheData )
 			return nullptr;
 
@@ -235,9 +231,9 @@ public:
 			return nullptr;
 		}
 
-		AUTO_LOCK_FM( m_WaveCacheMutex );
+		std::scoped_lock lock( m_WaveCacheMutex );
 
-		WaveCache_t *pCacheData = m_HandleTable.GetHandle( hData );
+		WaveCache_t *pCacheData = m_HandleTable.get( hData );
 		if ( !pCacheData )
 			return nullptr;
 
@@ -252,20 +248,20 @@ public:
 			return nullptr;
 		}
 
-		AUTO_LOCK_FM( m_WaveCacheMutex );
+		std::scoped_lock lock( m_WaveCacheMutex );
 
-		WaveCache_t *pCacheData = m_HandleTable.GetHandle( hData );
+		WaveCache_t *pCacheData = m_HandleTable.get( hData );
 		if ( !pCacheData )
 			return nullptr;
 
 		pCacheData->m_nAgeStamp = m_nAgeStamp++;
 
 		pCacheData->m_nLockCount++;
-		if ( pCacheData->m_nLockCount == 1 && pCacheData->m_hUnlock != m_UnlockedList.InvalidIndex() )
+		if ( pCacheData->m_nLockCount == 1 && pCacheData->m_hUnlock != m_UnlockedList.end() )
 		{
 			// remove from unlocked list
-			m_UnlockedList.Remove( pCacheData->m_hUnlock );
-			pCacheData->m_hUnlock = m_UnlockedList.InvalidIndex();
+			m_UnlockedList.erase( pCacheData->m_hUnlock );
+			pCacheData->m_hUnlock = m_UnlockedList.end();
 		}
 
 		return pCacheData->m_pWaveData;
@@ -279,9 +275,9 @@ public:
 			return 0;
 		}
 
-		AUTO_LOCK_FM( m_WaveCacheMutex );
+		std::scoped_lock lock( m_WaveCacheMutex );
 
-		WaveCache_t *pCacheData = m_HandleTable.GetHandle( hData );
+		WaveCache_t *pCacheData = m_HandleTable.get( hData );
 		if ( !pCacheData )
 			return 0;
 
@@ -291,7 +287,7 @@ public:
 			if ( pCacheData->m_nLockCount == 0 )
 			{
 				// add to unlocked list
-				pCacheData->m_hUnlock = m_UnlockedList.AddToTail( hData );
+				pCacheData->m_hUnlock = m_UnlockedList.insert( m_UnlockedList.end(), hData );
 			}
 		}
 
@@ -300,7 +296,7 @@ public:
 
 	WaveCacheHandle_t CacheCreate( asyncwaveparams_t params, WaveCacheAddFlags_t flags = WCAF_DEFAULT )
 	{
-		AUTO_LOCK_FM( m_WaveCacheMutex );
+		std::scoped_lock lock( m_WaveCacheMutex );
 
 		if ( m_nMaxMemorySize != UINT_MAX )
 		{
@@ -332,20 +328,20 @@ public:
 
 		m_nCurrentMemorySize += pCacheData->m_nDataSize;
 
-		WaveCacheHandle_t hData = m_HandleTable.AddHandle();
+		WaveCacheHandle_t hData = m_HandleTable.add();
 
 		if ( flags & WCAF_LOCK )
 		{
 			pCacheData->m_nLockCount = 1;
-			pCacheData->m_hUnlock = m_UnlockedList.InvalidIndex();
+			pCacheData->m_hUnlock = m_UnlockedList.end();
 		}
 		else
 		{
 			pCacheData->m_nLockCount = 0;
-			pCacheData->m_hUnlock = m_UnlockedList.AddToTail( hData );
+			pCacheData->m_hUnlock = m_UnlockedList.insert( m_UnlockedList.end(), hData );
 		}
 
-		m_HandleTable.SetHandle( hData, pCacheData );
+		m_HandleTable.set( hData, pCacheData );
 
 		return hData;
 	}
@@ -358,9 +354,9 @@ public:
 			return false;
 		}
 
-		AUTO_LOCK_FM( m_WaveCacheMutex );
+		std::scoped_lock lock( m_WaveCacheMutex );
 
-		WaveCache_t *pCacheData = m_HandleTable.GetHandle( hData );
+		WaveCache_t *pCacheData = m_HandleTable.get( hData );
 		if ( !pCacheData || pCacheData->m_nLockCount != 0 )
 			return false;
 
@@ -373,12 +369,12 @@ public:
 
 		m_nCurrentMemorySize -= pCacheData->m_nDataSize;
 		
-		if ( pCacheData->m_hUnlock != m_UnlockedList.InvalidIndex() )
+		if ( pCacheData->m_hUnlock != m_UnlockedList.end() )
 		{
-			m_UnlockedList.Remove( pCacheData->m_hUnlock );
+			m_UnlockedList.erase( pCacheData->m_hUnlock );
 		}
 
-		m_HandleTable.RemoveHandle(	hData );
+		m_HandleTable.remove(	hData );
 
 		delete pCacheData;
 
@@ -393,9 +389,9 @@ public:
 			return;
 		}
 
-		AUTO_LOCK_FM( m_WaveCacheMutex );
+		std::scoped_lock lock( m_WaveCacheMutex );
 
-		WaveCache_t *pCacheData = m_HandleTable.GetHandle( hData );
+		WaveCache_t *pCacheData = m_HandleTable.get( hData );
 		if ( !pCacheData )
 			return;
 
@@ -404,7 +400,7 @@ public:
 			pCacheData->m_nLockCount = 0;
 
 			// add to unlocked list
-			pCacheData->m_hUnlock = m_UnlockedList.AddToTail( hData );
+			pCacheData->m_hUnlock = m_UnlockedList.insert( m_UnlockedList.end(), hData );
 		}
 	}
 
@@ -416,9 +412,9 @@ public:
 			return;
 		}
 
-		AUTO_LOCK_FM( m_WaveCacheMutex );
+		std::scoped_lock lock( m_WaveCacheMutex );
 
-		WaveCache_t *pCacheData = m_HandleTable.GetHandle( hData );
+		WaveCache_t *pCacheData = m_HandleTable.get( hData );
 		if ( !pCacheData )
 			return;
 
@@ -434,9 +430,9 @@ public:
 			return 0;
 		}
 
-		AUTO_LOCK_FM( m_WaveCacheMutex );
+		std::scoped_lock lock( m_WaveCacheMutex );
 
-		WaveCache_t *pCacheData = m_HandleTable.GetHandle( hData );
+		WaveCache_t *pCacheData = m_HandleTable.get( hData );
 		if ( !pCacheData )
 			return 0;
 
@@ -451,9 +447,9 @@ public:
 			return 0;
 		}
 
-		AUTO_LOCK_FM( m_WaveCacheMutex );
+		std::scoped_lock lock( m_WaveCacheMutex );
 
-		WaveCache_t *pCacheData = m_HandleTable.GetHandle( hData );
+		WaveCache_t *pCacheData = m_HandleTable.get( hData );
 		if ( !pCacheData )
 			return 0;
 
@@ -462,7 +458,7 @@ public:
 
 	void Purge( unsigned int nBytesToPurge )
 	{
-		AUTO_LOCK_FM( m_WaveCacheMutex );
+		std::scoped_lock lock( m_WaveCacheMutex );
 
 		// keep purging the oldest unlocked until desired memory is available
 		// trying to keep this as cheap as possible, so no sorting, just an iteration to find oldest
@@ -472,10 +468,9 @@ public:
 			unsigned int nCandidateSize = 0;
 			unsigned int nCandidateAge = UINT_MAX;
 			WaveCacheHandle_t hCandidate = INVALID_WAVECACHE_HANDLE;
-			for ( int hUnlock = m_UnlockedList.Head(); hUnlock != m_UnlockedList.InvalidIndex(); hUnlock = m_UnlockedList.Next( hUnlock ) )
+			for ( WaveCacheHandle_t hData : m_UnlockedList )
 			{
-				WaveCacheHandle_t hData = m_UnlockedList[hUnlock];
-				WaveCache_t *pCacheData = m_HandleTable.GetHandle( hData );
+				WaveCache_t *pCacheData = m_HandleTable.get( hData );
 				if ( pCacheData && pCacheData->m_nAgeStamp < nCandidateAge )
 				{
 					nCandidateAge = pCacheData->m_nAgeStamp;
@@ -499,16 +494,12 @@ public:
 
 	void Flush()
 	{
-		AUTO_LOCK_FM( m_WaveCacheMutex );
+		std::scoped_lock lock( m_WaveCacheMutex );
 
-		CUtlVector< WaveCacheHandle_t > purgeList( 0, m_UnlockedList.Count() );
-		for ( int hUnlock = m_UnlockedList.Head(); hUnlock != m_UnlockedList.InvalidIndex(); hUnlock = m_UnlockedList.Next( hUnlock ) )
-		{
-			purgeList.AddToTail( m_UnlockedList[hUnlock] );
-		}
+		std::vector< WaveCacheHandle_t > purgeList( m_UnlockedList.begin(), m_UnlockedList.end() );
 
 		// remove all unlocked resources
-		for ( int i = 0; i < purgeList.Count(); i++ )
+		for ( int i = 0; i < std::ssize( purgeList ); i++ )
 		{
 			CacheRemove( purgeList[i] );
 		}
@@ -516,12 +507,12 @@ public:
 
 	void CacheLockMutex()
 	{
-		m_WaveCacheMutex.Lock();
+		m_WaveCacheMutex.lock();
 	}
 
 	void CacheUnlockMutex()
 	{
-		m_WaveCacheMutex.Unlock();
+		m_WaveCacheMutex.unlock();
 	}
 
 	void GetStatus( WaveCacheStatus_t *pStatus, WaveCacheLimits_t *pLimits )
@@ -536,12 +527,12 @@ private:
 
 	unsigned int m_nAgeStamp;
 
-	CThreadFastMutex m_WaveCacheMutex;
+	std::recursive_mutex m_WaveCacheMutex;
 
 	// 2048 simultaneous sound handles in the cache
-	CUtlHandleTable< WaveCache_t, 11 > m_HandleTable;
+	ks::handle_table< WaveCache_t, 11 > m_HandleTable;
 
-	CUtlLinkedList< WaveCacheHandle_t > m_UnlockedList;
+	std::list< WaveCacheHandle_t > m_UnlockedList;
 };
 CWaveCache s_WaveCache;
 
@@ -553,7 +544,6 @@ CAsyncWaveData::CAsyncWaveData() :
 	m_nReadSize( 0 ),
 	m_pvData( 0 ),
 	m_pAlloc( 0 ),
-	m_hBuffer( INVALID_BUFFER_HANDLE ),
 	m_nBufferBytes( 0 ),
 	m_hAsyncControl( nullptr ),
 	m_bLoaded( false ),
@@ -999,7 +989,6 @@ public:
 	virtual void			CloseStreamedLoad( StreamHandle_t hStream );
 	virtual int				CopyStreamedDataIntoMemory( StreamHandle_t hStream, void *pBuffer, int bufferSize, int copyStartPos, int bytesToCopy );
 	virtual bool			IsStreamedDataReady( StreamHandle_t hStream );
-	virtual void			MarkBufferDiscarded( BufferHandle_t hBuffer );
 	virtual void			*GetStreamedDataPointer( StreamHandle_t hStream, bool bSync );
 
 	virtual	void			Flush( bool bTearDownStaticPool = false );
@@ -1021,17 +1010,6 @@ public:
 private:
 	void					Clear();
 
-	struct CacheEntry_t
-	{
-		CacheEntry_t() :
-			name( 0 ),
-			handle( 0 )
-		{
-		}
-		FileNameHandle_t	name;
-		WaveCacheHandle_t	handle;
-	};
-
 	// tags the signature of a buffer inside a rb tree for faster than linear find
 	struct BufferEntry_t
 	{
@@ -1042,27 +1020,31 @@ private:
 		unsigned int		m_bCanBeShared : 1;
 	};
 
-	static bool BufferHandleLessFunc( const BufferEntry_t& lhs, const BufferEntry_t& rhs )
+	struct BufferEntryLess
 	{
-		if ( lhs.m_bIsTransient != rhs.m_bIsTransient )
+		bool operator()( const BufferEntry_t& lhs, const BufferEntry_t& rhs ) const
 		{
-			return lhs.m_bIsTransient < rhs.m_bIsTransient;
+			if ( lhs.m_bIsTransient != rhs.m_bIsTransient )
+			{
+				return lhs.m_bIsTransient < rhs.m_bIsTransient;
+			}
+
+			if ( lhs.m_hName != rhs.m_hName )
+			{
+				return lhs.m_hName < rhs.m_hName;
+			}
+
+			if ( lhs.m_StartPos != rhs.m_StartPos )
+			{
+				return lhs.m_StartPos < rhs.m_StartPos;
+			}
+
+			return lhs.m_bCanBeShared < rhs.m_bCanBeShared;
 		}
+	};
 
-		if ( lhs.m_hName != rhs.m_hName )
-		{
-			return lhs.m_hName < rhs.m_hName;
-		}
-
-		if ( lhs.m_StartPos != rhs.m_StartPos )
-		{
-			return lhs.m_StartPos < rhs.m_StartPos;
-		}
-
-		return lhs.m_bCanBeShared < rhs.m_bCanBeShared;
-	}
-
-	CUtlRBTree< BufferEntry_t, BufferHandle_t >	m_BufferList;
+	// A signature is re-added whenever its buffer was evicted, so it can repeat.
+	std::multiset< BufferEntry_t, BufferEntryLess >	m_BufferList;
 
 	// encapsulates (n) buffers for a streamed wave object
 	struct StreamedEntry_t
@@ -1080,13 +1062,9 @@ private:
 		bool				m_bSinglePlay;		// hint to keep same buffers
 		bool				m_bIsTransient;		// hint for buffer lifetime
 	};
-	CUtlLinkedList< StreamedEntry_t, StreamHandle_t >	m_StreamedHandles;
+	ks::slot_pool< StreamedEntry_t, StreamHandle_t >	m_StreamedHandles;
 
-	static bool CacheHandleLessFunc( const CacheEntry_t& lhs, const CacheEntry_t& rhs )
-	{
-		return lhs.name < rhs.name;
-	}
-	CUtlRBTree< CacheEntry_t, int >	m_CacheHandles;
+	std::map< FileNameHandle_t, WaveCacheHandle_t >	m_CacheHandles;
 
 	// these are buffers that were still in-flight at time of stream closure
 	// we track these until we can remove an outstanding lock
@@ -1096,7 +1074,7 @@ private:
 		WaveCacheHandle_t	hWaveData;
 		bool				bSinglePlay;
 	};
-	CUtlVector< DeadBufferEntry_t >	m_DeadBuffers;
+	std::vector< DeadBufferEntry_t >	m_DeadBuffers;
 
 	WaveCacheHandle_t		FindOrCreateBuffer( asyncwaveparams_t &params, bool bFind );		
 	void					CleanupDeadBuffers( bool bSync );
@@ -1120,8 +1098,6 @@ private:
 // Purpose: 
 //-----------------------------------------------------------------------------
 CAsyncWavDataCache::CAsyncWavDataCache() :  
-	m_CacheHandles( 0, 0, CacheHandleLessFunc ),
-	m_BufferList( 0, 0, BufferHandleLessFunc ),
 	m_bInitialized( false )
 {
 }
@@ -1162,8 +1138,6 @@ void CAsyncWavDataCache::Shutdown()
 
 	s_WaveCache.Shutdown();
 
-	delete g_pAudioStreamPool;
-
 	m_bInitialized = false;
 }
 
@@ -1181,22 +1155,11 @@ WaveCacheHandle_t CAsyncWavDataCache::AsyncLoadCache( char const *filename, int 
 
 	FileNameHandle_t fnh = g_pFileSystem->FindOrAddFileName( filename );
 
-	CacheEntry_t search;
-	search.name = fnh;
-	search.handle = 0;
-
 	// find or create the handle
-	int idx = m_CacheHandles.Find( search );
-	if ( idx == m_CacheHandles.InvalidIndex() )
-	{
-		idx = m_CacheHandles.Insert( search );
-		Assert( idx != m_CacheHandles.InvalidIndex() );
-	}
-
-	CacheEntry_t &entry = m_CacheHandles[idx];
+	WaveCacheHandle_t &handle = m_CacheHandles.try_emplace( fnh, 0 ).first->second;
 
 	// Try and pull it into cache
-	CAsyncWaveData *data = s_WaveCache.CacheGet( entry.handle );
+	CAsyncWaveData *data = s_WaveCache.CacheGet( handle );
 	if ( !data )
 	{
 		// Try and reload it
@@ -1205,10 +1168,10 @@ WaveCacheHandle_t CAsyncWavDataCache::AsyncLoadCache( char const *filename, int 
 		params.datasize = datasize;
 		params.seekpos = startpos;
 		params.bPrefetch = bIsPrefetch;
-		entry.handle = s_WaveCache.CacheCreate( params );
+		handle = s_WaveCache.CacheCreate( params );
 	}
 
-	return entry.handle;
+	return handle;
 }
 
 
@@ -1219,7 +1182,6 @@ WaveCacheHandle_t CAsyncWavDataCache::FindOrCreateBuffer( asyncwaveparams_t &par
 {
 	CAsyncWaveData *pWaveData;
 	BufferEntry_t	search;
-	BufferHandle_t	hBuffer;
 
 	search.m_hName = params.hFilename;
 	search.m_StartPos = params.seekpos;
@@ -1230,11 +1192,11 @@ WaveCacheHandle_t CAsyncWavDataCache::FindOrCreateBuffer( asyncwaveparams_t &par
 	if ( bFind )
 	{
 		// look for an existing buffer that matches signature (same file, offset, etc)
-		int hBuffer = m_BufferList.Find( search );
-		if ( hBuffer != m_BufferList.InvalidIndex() )
+		auto [itFirst, itEnd] = m_BufferList.equal_range( search );
+		if ( itFirst != itEnd )
 		{
-			// found
-			search.m_hWaveData = m_BufferList[hBuffer].m_hWaveData;
+			// found; the newest duplicate is the one most likely still resident
+			search.m_hWaveData = std::prev( itEnd )->m_hWaveData;
 			if ( snd_async_stream_spew.GetInt() >= 2 )
 			{
 				char tempBuff[MAX_PATH];
@@ -1277,7 +1239,7 @@ WaveCacheHandle_t CAsyncWavDataCache::FindOrCreateBuffer( asyncwaveparams_t &par
 				Assert( 0 );
 				if ( snd_async_stream_fail.GetBool() )
 				{
-					Warning( "Stream pool: No buffers available! (dead:%d)\n", m_DeadBuffers.Count() );
+					Warning( "Stream pool: No buffers available! (dead:%d)\n", (int)std::ssize( m_DeadBuffers ) );
 				}
 				return INVALID_WAVECACHE_HANDLE;
 			}
@@ -1294,13 +1256,7 @@ WaveCacheHandle_t CAsyncWavDataCache::FindOrCreateBuffer( asyncwaveparams_t &par
 		}
 
 		// add the buffer to our managed list
-		hBuffer = m_BufferList.Insert( search );
-		Assert( hBuffer != m_BufferList.InvalidIndex() );
-
-		// store the handle into our managed list
-		// used during a lru discard as a means to keep the list in-sync
-		pWaveData = s_WaveCache.CacheGet( search.m_hWaveData );
-		pWaveData->m_hBuffer = hBuffer;
+		m_BufferList.insert( search );
 	}
 	else
 	{
@@ -1412,8 +1368,8 @@ StreamHandle_t CAsyncWavDataCache::OpenStreamedLoad( char const *pFileName, int 
 	}
 
 	// get a unique handle for each stream request
-	hStream = m_StreamedHandles.AddToTail( streamedEntry );
-	Assert( hStream != m_StreamedHandles.InvalidIndex() );
+	hStream = m_StreamedHandles.emplace( streamedEntry );
+	Assert( hStream != m_StreamedHandles.invalid );
 
 	if ( bFailed )
 	{
@@ -1477,7 +1433,7 @@ void CAsyncWavDataCache::CloseStreamedLoad( StreamHandle_t hStream )
 			{
 				// still in flight, add to list of dead buffers
 				// have to now track these to remove our lock when they async-finish
-				int iEntryIndex = m_DeadBuffers.AddToTail();
+				int iEntryIndex = std::ssize( m_DeadBuffers ); m_DeadBuffers.emplace_back();
 				m_DeadBuffers[iEntryIndex].hWaveData = hWaveData;
 				m_DeadBuffers[iEntryIndex].bSinglePlay =  streamedEntry.m_bSinglePlay;
 				continue;
@@ -1495,7 +1451,7 @@ void CAsyncWavDataCache::CloseStreamedLoad( StreamHandle_t hStream )
 		}
 	}
 
-	m_StreamedHandles.Remove( hStream );
+	m_StreamedHandles.erase( hStream );
 }
 
 //-----------------------------------------------------------------------------
@@ -1544,20 +1500,16 @@ bool CAsyncWavDataCache::CopyDataIntoMemory( char const *filename, int datasize,
 
 	FileNameHandle_t fnh = g_pFileSystem->FindOrAddFileName( filename );
 
-	CacheEntry_t search;
-	search.name = fnh;
-	search.handle = 0;
-
 	// Now look it up, it should be in the system
-	int idx = m_CacheHandles.Find( search );
-	if ( idx == m_CacheHandles.InvalidIndex() )
+	auto it = m_CacheHandles.find( fnh );
+	if ( it == m_CacheHandles.end() )
 	{
 		Assert( 0 );
 		return bret;
 	}
 
 	// Now see if the handle has been paged out...
-	return CopyDataIntoMemory( m_CacheHandles[ idx ].handle, filename, datasize, startpos, buffer, bufsize, copystartpos, bytestocopy, pbPostProcessed );
+	return CopyDataIntoMemory( it->second, filename, datasize, startpos, buffer, bufsize, copystartpos, bytestocopy, pbPostProcessed );
 }
 
 
@@ -1586,13 +1538,9 @@ bool CAsyncWavDataCache::CopyDataIntoMemory( WaveCacheHandle_t& handle, char con
 	{
 		FileNameHandle_t fnh = g_pFileSystem->FindOrAddFileName( filename );
 
-		CacheEntry_t search;
-		search.name = fnh;
-		search.handle = 0;
-
 		// Now look it up, it should be in the system
-		int idx = m_CacheHandles.Find( search );
-		if ( idx == m_CacheHandles.InvalidIndex() )
+		auto it = m_CacheHandles.find( fnh );
+		if ( it == m_CacheHandles.end() )
 		{
 			Assert( 0 );
 			return false;
@@ -1604,7 +1552,7 @@ bool CAsyncWavDataCache::CopyDataIntoMemory( WaveCacheHandle_t& handle, char con
 		params.datasize = datasize;
 		params.seekpos = startpos;
 
-		handle = m_CacheHandles[ idx ].handle = s_WaveCache.CacheCreate( params );
+		handle = it->second = s_WaveCache.CacheCreate( params );
 		data = s_WaveCache.CacheLock( handle );
 		if ( !data )
 		{
@@ -1974,15 +1922,6 @@ bool CAsyncWavDataCache::IsStreamedDataReady( int hStream )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: Dequeue the buffer entry (backdoor for list management)
-//-----------------------------------------------------------------------------
-void CAsyncWavDataCache::MarkBufferDiscarded( BufferHandle_t hBuffer )
-{
-	m_BufferList.RemoveAt( hBuffer );
-}
-
-
-//-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : handle - 
 //			proc - 
@@ -2036,12 +1975,8 @@ bool CAsyncWavDataCache::GetDataPointer( WaveCacheHandle_t& handle, char const *
 	{
 		FileNameHandle_t fnh = g_pFileSystem->FindOrAddFileName( filename );
 
-		CacheEntry_t search;
-		search.name = fnh;
-		search.handle = 0;
-
-		int idx = m_CacheHandles.Find( search );
-		if ( idx == m_CacheHandles.InvalidIndex() )
+		auto it = m_CacheHandles.find( fnh );
+		if ( it == m_CacheHandles.end() )
 		{
 			Assert( 0 );
 			return bret;
@@ -2053,7 +1988,7 @@ bool CAsyncWavDataCache::GetDataPointer( WaveCacheHandle_t& handle, char const *
 		params.datasize = datasize;
 		params.seekpos = startpos;
 
-		handle = m_CacheHandles[ idx ].handle = s_WaveCache.CacheCreate( params );
+		handle = it->second = s_WaveCache.CacheCreate( params );
 		data = s_WaveCache.CacheLock( handle );
 		if ( !data )
 		{
@@ -2182,10 +2117,10 @@ void CAsyncWavDataCache::SpewMemoryUsage( MemoryUsageType level )
 
 	if ( level != SPEW_BASIC )
 	{
-		for ( int i = m_CacheHandles.FirstInorder(); m_CacheHandles.IsValidIndex(i); i = m_CacheHandles.NextInorder(i) )
+		for ( auto &[hName, handle] : m_CacheHandles )
 		{
 			char name[MAX_PATH];
-			if ( !g_pFileSystem->String( m_CacheHandles[ i ].name, name, sizeof( name ) ) )
+			if ( !g_pFileSystem->String( hName, name, sizeof( name ) ) )
 			{
 				Assert( 0 );
 				continue;
@@ -2194,7 +2129,6 @@ void CAsyncWavDataCache::SpewMemoryUsage( MemoryUsageType level )
 			if ( level == SPEW_MUSIC_NONSTREAMING && V_stristr( name, "music" ) == nullptr )
 				continue;
 
-			WaveCacheHandle_t &handle = m_CacheHandles[ i ].handle;
 			CAsyncWaveData *data = s_WaveCache.CacheGetNoTouch( handle );
 			if ( data )
 			{
@@ -2218,7 +2152,7 @@ void CAsyncWavDataCache::SpewMemoryUsage( MemoryUsageType level )
 	{
 		percent = 100.0f * (float)bytesUsed / (float)bytesTotal;
 	}
-	Msg( "CAsyncWavDataCache:  %i .wavs total %s, %.2f %% of capacity\n", m_CacheHandles.Count(), Q_pretifymem( bytesUsed, 2 ), percent );
+	Msg( "CAsyncWavDataCache:  %i .wavs total %s, %.2f %% of capacity\n", (int)m_CacheHandles.size(), Q_pretifymem( bytesUsed, 2 ), percent );
 	
 }
 
@@ -2228,34 +2162,31 @@ void CAsyncWavDataCache::SpewMemoryUsage( MemoryUsageType level )
 //-----------------------------------------------------------------------------
 void CAsyncWavDataCache::Clear()
 {
-	int i;
-	for ( i = m_CacheHandles.FirstInorder(); m_CacheHandles.IsValidIndex(i); i = m_CacheHandles.NextInorder(i) )
+	for ( auto &[hName, handle] : m_CacheHandles )
 	{
-		CacheEntry_t& dat = m_CacheHandles[i];
-		s_WaveCache.CacheRemove( dat.handle );
+		s_WaveCache.CacheRemove( handle );
 	}
-	m_CacheHandles.RemoveAll();
+	m_CacheHandles.clear();
 
-	FOR_EACH_LL( m_StreamedHandles, i )
+	for ( StreamedEntry_t &dat : m_StreamedHandles )
 	{
-		StreamedEntry_t &dat = m_StreamedHandles[i];
 		for ( int j=0; j<dat.m_numBuffers; ++j )
 		{
 			s_WaveCache.BreakLock( dat.m_hWaveData[j] );
 			s_WaveCache.CacheRemove( dat.m_hWaveData[j] );
 		}
 	}
-	m_StreamedHandles.RemoveAll();
+	m_StreamedHandles.clear();
 
-	for ( int i = 0; i < m_DeadBuffers.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_DeadBuffers ); i++ )
 	{
 		s_WaveCache.BreakLock( m_DeadBuffers[i].hWaveData );
 		s_WaveCache.CacheRemove( m_DeadBuffers[i].hWaveData );
 		
 	}
-	m_DeadBuffers.Purge();
+	m_DeadBuffers.clear(); m_DeadBuffers.shrink_to_fit();
 
-	m_BufferList.RemoveAll();
+	m_BufferList.clear();
 }
 
 

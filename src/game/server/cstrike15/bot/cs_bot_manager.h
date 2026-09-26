@@ -239,19 +239,19 @@ public:
 			return nullptr;
 
 		int i;
-		CUtlVector< const Zone * > unblockedZones;
+		std::vector< const Zone * > unblockedZones;
 		for ( i=0; i<m_zoneCount; ++i )
 		{
 			if ( m_zone[i].m_isBlocked )
 				continue;
 
-			unblockedZones.AddToTail( &(m_zone[i]) );
+			unblockedZones.push_back( &(m_zone[i]) );
 		}
 
-		if ( unblockedZones.Count() == 0 )
+		if ( unblockedZones.empty() )
 			return nullptr;
 
-		return unblockedZones[ RandomInt( 0, unblockedZones.Count()-1 ) ];
+		return unblockedZones[ RandomInt( 0, std::ssize( unblockedZones )-1 ) ];
 	}
 
 
@@ -424,7 +424,7 @@ private:
 
 	DECLARE_CSBOTMANAGER_EVENT_LISTENER( ServerShutdown,		server_shutdown )
 
-	CUtlVector< BotEventInterface * > m_commonEventListeners;	// These event listeners fire often, and can be disabled for performance gains when no bots are present.
+	std::vector< BotEventInterface * > m_commonEventListeners;	// These event listeners fire often, and can be disabled for performance gains when no bots are present.
 	bool m_eventListenersEnabled;
 	void EnableEventListeners( bool enable );
 };

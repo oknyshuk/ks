@@ -7,8 +7,8 @@
 
 #include "tier0/dbg.h"
 #include "memstack.h"
-#include "utlmap.h"
-#include "tier0/memdbgon.h"
+#include <map>
+#include "tier0/memalloc.h"
 
 
 static volatile bool bSpewAllocations = false; // TODO: Register CMemoryStacks with g_pMemAlloc, so it can spew a summary
@@ -41,7 +41,7 @@ CMemoryStack::CMemoryStack()
 #endif
 {
 	AddMemoryInfoCallback( this );
-	m_pszAllocOwner = strdup( "CMemoryStack unattributed" );
+	m_pszAllocOwner = MemAlloc_StrDup( "CMemoryStack unattributed" );
 }
 	
 //-------------------------------------
@@ -52,7 +52,7 @@ CMemoryStack::~CMemoryStack()
 		Term();
 
 	RemoveMemoryInfoCallback( this );
-	free( m_pszAllocOwner );
+	g_pMemAlloc->Free( m_pszAllocOwner );
 }
 
 //-------------------------------------
@@ -236,8 +236,8 @@ void CMemoryStack::SetAllocOwner( const char *pszAllocOwner )
 {
 	if ( !pszAllocOwner || !Q_strcmp( m_pszAllocOwner, pszAllocOwner ) )
 		return;
-	free( m_pszAllocOwner );
-	m_pszAllocOwner = strdup( pszAllocOwner );
+	g_pMemAlloc->Free( m_pszAllocOwner );
+	m_pszAllocOwner = MemAlloc_StrDup( pszAllocOwner );
 }
 
 void CMemoryStack::RegisterAllocation()
@@ -284,7 +284,7 @@ void CMemoryStack::FreeToAllocPoint( MemoryStackMark_t mark, bool bDecommit )
 #ifdef MEMSTACK_VIRTUAL_MEMORY_AVAILABLE
 		if ( bDecommit )
 		{
-			CommitTo( MAX( m_pNextAlloc, (m_pBase + m_minCommit) ) );
+			CommitTo( std::max( m_pNextAlloc, (m_pBase + m_minCommit) ) );
 		}
 #endif
 	}

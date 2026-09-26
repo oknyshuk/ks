@@ -21,9 +21,6 @@
 #include "tier0/vprof.h"
 #include "c_te_effect_dispatch.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //Precahce the effects
 PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffectImpacts )
 PRECACHE( MATERIAL, "effects/fleck_cement1" )
@@ -159,14 +156,14 @@ static void CreateFleckParticles( const Vector& origin, const Vector &color, tra
 {
 	Vector	spawnOffset	= trace->endpos + ( trace->plane.normal * 1.0f );
 
-	CSmartPtr<CFleckParticles> fleckEmitter = CFleckParticles::Create( "FX_DebrisFlecks", spawnOffset, Vector(5,5,5) );
+	ks::intrusive_ptr<CFleckParticles> fleckEmitter = CFleckParticles::Create( "FX_DebrisFlecks", spawnOffset, Vector(5,5,5) );
 
 	if ( !fleckEmitter )
 		return;
 
 	// Handle increased scale
 	float flMaxSpeed = FLECK_MAX_SPEED * iScale;
-	float flAngularSpray = MAX( 0.2, FLECK_ANGULAR_SPRAY - ( (float)iScale * 0.2f) ); // More power makes the spray more controlled
+	float flAngularSpray = std::max<std::common_type_t<double, float>>( 0.2, FLECK_ANGULAR_SPRAY - ( (float)iScale * 0.2f) ); // More power makes the spray more controlled
 	// Setup our collision information
 	fleckEmitter->m_ParticleCollision.Setup( spawnOffset, &trace->plane.normal, flAngularSpray, FLECK_MIN_SPEED, flMaxSpeed, FLECK_GRAVITY, FLECK_DAMPEN );
 
@@ -217,9 +214,9 @@ static void CreateFleckParticles( const Vector& origin, const Vector &color, tra
 
 		colorRamp = random->RandomFloat( 0.75f, 1.25f );
 
-		pFleckParticle->m_uchColor[0] = MIN( 1.0f, color[0]*colorRamp )*255.0f;
-		pFleckParticle->m_uchColor[1] = MIN( 1.0f, color[1]*colorRamp )*255.0f;
-		pFleckParticle->m_uchColor[2] = MIN( 1.0f, color[2]*colorRamp )*255.0f;
+		pFleckParticle->m_uchColor[0] = std::min( 1.0f, color[0]*colorRamp )*255.0f;
+		pFleckParticle->m_uchColor[1] = std::min( 1.0f, color[1]*colorRamp )*255.0f;
+		pFleckParticle->m_uchColor[2] = std::min( 1.0f, color[2]*colorRamp )*255.0f;
 	}
 }
 
@@ -279,9 +276,9 @@ void FX_DebrisFlecks( const Vector& origin, trace_t *tr, char materialType, int 
 
 		float colorRamp = random->RandomFloat( 0.5f, 1.25f );
 
-		newParticle.m_uchColor[0] = MIN( 1.0f, color[0]*colorRamp )*255.0f;
-		newParticle.m_uchColor[1] = MIN( 1.0f, color[1]*colorRamp )*255.0f;
-		newParticle.m_uchColor[2] = MIN( 1.0f, color[2]*colorRamp )*255.0f;
+		newParticle.m_uchColor[0] = std::min( 1.0f, color[0]*colorRamp )*255.0f;
+		newParticle.m_uchColor[1] = std::min( 1.0f, color[1]*colorRamp )*255.0f;
+		newParticle.m_uchColor[2] = std::min( 1.0f, color[2]*colorRamp )*255.0f;
 
 		AddSimpleParticle( &newParticle, g_Mat_DustPuff[0] );
 	}
@@ -313,9 +310,9 @@ void FX_DebrisFlecks( const Vector& origin, trace_t *tr, char materialType, int 
 
 		float colorRamp = random->RandomFloat( 0.5f, 1.25f );
 
-		newParticle.m_uchColor[0] = MIN( 1.0f, color[0]*colorRamp )*255.0f;
-		newParticle.m_uchColor[1] = MIN( 1.0f, color[1]*colorRamp )*255.0f;
-		newParticle.m_uchColor[2] = MIN( 1.0f, color[2]*colorRamp )*255.0f;
+		newParticle.m_uchColor[0] = std::min( 1.0f, color[0]*colorRamp )*255.0f;
+		newParticle.m_uchColor[1] = std::min( 1.0f, color[1]*colorRamp )*255.0f;
+		newParticle.m_uchColor[2] = std::min( 1.0f, color[2]*colorRamp )*255.0f;
 
 		AddSimpleParticle( &newParticle, g_Mat_BloodPuff[0] );
 	}
@@ -347,9 +344,9 @@ void FX_DebrisFlecks( const Vector& origin, trace_t *tr, char materialType, int 
 
 	float colorRamp = random->RandomFloat( 0.5f, 1.25f );
 
-	newParticle.m_uchColor[0] = MIN( 1.0f, color[0]*colorRamp )*255.0f;
-	newParticle.m_uchColor[1] = MIN( 1.0f, color[1]*colorRamp )*255.0f;
-	newParticle.m_uchColor[2] = MIN( 1.0f, color[2]*colorRamp )*255.0f;
+	newParticle.m_uchColor[0] = std::min( 1.0f, color[0]*colorRamp )*255.0f;
+	newParticle.m_uchColor[1] = std::min( 1.0f, color[1]*colorRamp )*255.0f;
+	newParticle.m_uchColor[2] = std::min( 1.0f, color[2]*colorRamp )*255.0f;
 
 	AddSimpleParticle( &newParticle, g_Mat_DustPuff[0] );
 }
@@ -372,7 +369,7 @@ void GlassImpactCallback( const CEffectData &data )
 	Vector pos = data.m_vOrigin;
 	Vector normal = data.m_vNormal;
 
-	CSmartPtr<CSimple3DEmitter> pGlassEmitter = CSimple3DEmitter::Create( "FX_GlassImpact" );
+	ks::intrusive_ptr<CSimple3DEmitter> pGlassEmitter = CSimple3DEmitter::Create( "FX_GlassImpact" );
 	pGlassEmitter->SetSortOrigin( pos );
 
 	Vector vecColor;
@@ -459,9 +456,9 @@ void GlassImpactCallback( const CEffectData &data )
 
 		colorRamp = random->RandomFloat( 0.5f, 1.25f );
 
-		newParticle.m_uchColor[0] = MIN( 1.0f, color[0]*colorRamp )*255.0f;
-		newParticle.m_uchColor[1] = MIN( 1.0f, color[1]*colorRamp )*255.0f;
-		newParticle.m_uchColor[2] = MIN( 1.0f, color[2]*colorRamp )*255.0f;
+		newParticle.m_uchColor[0] = std::min( 1.0f, color[0]*colorRamp )*255.0f;
+		newParticle.m_uchColor[1] = std::min( 1.0f, color[1]*colorRamp )*255.0f;
+		newParticle.m_uchColor[2] = std::min( 1.0f, color[2]*colorRamp )*255.0f;
 
 		AddSimpleParticle( &newParticle, g_Mat_BloodPuff[0] );
 	}
@@ -492,9 +489,9 @@ void GlassImpactCallback( const CEffectData &data )
 
 	colorRamp = random->RandomFloat( 0.5f, 1.25f );
 
-	newParticle.m_uchColor[0] = MIN( 1.0f, color[0]*colorRamp )*255.0f;
-	newParticle.m_uchColor[1] = MIN( 1.0f, color[1]*colorRamp )*255.0f;
-	newParticle.m_uchColor[2] = MIN( 1.0f, color[2]*colorRamp )*255.0f;
+	newParticle.m_uchColor[0] = std::min( 1.0f, color[0]*colorRamp )*255.0f;
+	newParticle.m_uchColor[1] = std::min( 1.0f, color[1]*colorRamp )*255.0f;
+	newParticle.m_uchColor[2] = std::min( 1.0f, color[2]*colorRamp )*255.0f;
 
 	AddSimpleParticle( &newParticle, g_Mat_DustPuff[0] );
 }
@@ -512,7 +509,7 @@ void FX_AntlionImpact( const Vector &pos, trace_t *trace )
 
 	VPROF_BUDGET( "FX_AntlionImpact", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
 
-	CSmartPtr<CSimple3DEmitter> fleckEmitter = CSimple3DEmitter::Create( "FX_DebrisFlecks" );
+	ks::intrusive_ptr<CSimple3DEmitter> fleckEmitter = CSimple3DEmitter::Create( "FX_DebrisFlecks" );
 	if ( fleckEmitter == nullptr )
 		return;
 
@@ -590,7 +587,7 @@ void FX_AntlionImpact( const Vector &pos, trace_t *trace )
 
 	SimpleParticle	*pParticle;
 
-	CSmartPtr<CSimpleEmitter> dustEmitter = CSimpleEmitter::Create( "FX_DebrisFlecks" );					
+	ks::intrusive_ptr<CSimpleEmitter> dustEmitter = CSimpleEmitter::Create( "FX_DebrisFlecks" );					
 	if ( !dustEmitter )
 		return;
 
@@ -626,9 +623,9 @@ void FX_AntlionImpact( const Vector &pos, trace_t *trace )
 
 		colorRamp = random->RandomFloat( 0.5f, 1.0f );
 
-		pParticle->m_uchColor[0] = MIN( 1.0f, color[0]*colorRamp )*255.0f;
-		pParticle->m_uchColor[1] = MIN( 1.0f, color[1]*colorRamp )*255.0f;
-		pParticle->m_uchColor[2] = MIN( 1.0f, color[2]*colorRamp )*255.0f;
+		pParticle->m_uchColor[0] = std::min( 1.0f, color[0]*colorRamp )*255.0f;
+		pParticle->m_uchColor[1] = std::min( 1.0f, color[1]*colorRamp )*255.0f;
+		pParticle->m_uchColor[2] = std::min( 1.0f, color[2]*colorRamp )*255.0f;
 	}
 
 
@@ -649,7 +646,7 @@ void FX_BugBlood( Vector &pos, Vector &dir, Vector &vWorldMins, Vector &vWorldMa
 {
 	VPROF_BUDGET( "FX_BugBlood", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
 
-	CSmartPtr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "FX_BugBlood" );
+	ks::intrusive_ptr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "FX_BugBlood" );
 	if ( !pSimple )
 		return;
 
@@ -763,7 +760,7 @@ void FX_Blood( Vector &pos, Vector &dir, float r, float g, float b, float a )
 	VPROF_BUDGET( "FX_Blood", VPROF_BUDGETGROUP_PARTICLE_RENDERING );
 
 	// Cloud
-	CSmartPtr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "FX_Blood" );
+	ks::intrusive_ptr<CSimpleEmitter> pSimple = CSimpleEmitter::Create( "FX_Blood" );
 	if ( !pSimple )
 		return;
 	pSimple->SetSortOrigin( pos );
@@ -856,7 +853,7 @@ void FX_DustImpact( const Vector &origin, trace_t *tr, float flScale )
 	Vector	offset;
 	float	spread = 0.2f;
 	
-	CSmartPtr<CDustParticle> pSimple = CDustParticle::Create( "dust" );
+	ks::intrusive_ptr<CDustParticle> pSimple = CDustParticle::Create( "dust" );
 	pSimple->SetSortOrigin( origin );
 
 	SimpleParticle	*pParticle;
@@ -888,9 +885,9 @@ void FX_DustImpact( const Vector &origin, trace_t *tr, float flScale )
 			
 			colorRamp = random->RandomFloat( 0.75f, 1.25f );
 
-			pParticle->m_uchColor[0]	= MIN( 1.0f, color[0] * colorRamp ) * 255.0f;
-			pParticle->m_uchColor[1]	= MIN( 1.0f, color[1] * colorRamp ) * 255.0f;
-			pParticle->m_uchColor[2]	= MIN( 1.0f, color[2] * colorRamp ) * 255.0f;
+			pParticle->m_uchColor[0]	= std::min( 1.0f, color[0] * colorRamp ) * 255.0f;
+			pParticle->m_uchColor[1]	= std::min( 1.0f, color[1] * colorRamp ) * 255.0f;
+			pParticle->m_uchColor[2]	= std::min( 1.0f, color[2] * colorRamp ) * 255.0f;
 			
 			// scaled
 			pParticle->m_uchStartSize	= ( unsigned char )( flScale * random->RandomInt( 3, 4 ) * (i+1) );
@@ -927,9 +924,9 @@ void FX_DustImpact( const Vector &origin, trace_t *tr, float flScale )
 			
 			colorRamp = random->RandomFloat( 0.75f, 1.25f );
 
-			pParticle->m_uchColor[0]	= MIN( 1.0f, color[0] * colorRamp ) * 255.0f;
-			pParticle->m_uchColor[1]	= MIN( 1.0f, color[1] * colorRamp ) * 255.0f;
-			pParticle->m_uchColor[2]	= MIN( 1.0f, color[2] * colorRamp ) * 255.0f;
+			pParticle->m_uchColor[0]	= std::min( 1.0f, color[0] * colorRamp ) * 255.0f;
+			pParticle->m_uchColor[1]	= std::min( 1.0f, color[1] * colorRamp ) * 255.0f;
+			pParticle->m_uchColor[2]	= std::min( 1.0f, color[2] * colorRamp ) * 255.0f;
 			
 			pParticle->m_uchStartSize	= random->RandomInt( 2, 4 ) * (i+1);
 			pParticle->m_uchEndSize		= pParticle->m_uchStartSize * 2;
@@ -969,9 +966,9 @@ void FX_DustImpact( const Vector &origin, trace_t *tr, float flScale )
 			
 			colorRamp = random->RandomFloat( 0.75f, 1.25f );
 
-			pParticle->m_uchColor[0]	= MIN( 1.0f, color[0] * colorRamp ) * 255.0f;
-			pParticle->m_uchColor[1]	= MIN( 1.0f, color[1] * colorRamp ) * 255.0f;
-			pParticle->m_uchColor[2]	= MIN( 1.0f, color[2] * colorRamp ) * 255.0f;
+			pParticle->m_uchColor[0]	= std::min( 1.0f, color[0] * colorRamp ) * 255.0f;
+			pParticle->m_uchColor[1]	= std::min( 1.0f, color[1] * colorRamp ) * 255.0f;
+			pParticle->m_uchColor[2]	= std::min( 1.0f, color[2] * colorRamp ) * 255.0f;
 			
 			pParticle->m_uchStartSize	= random->RandomInt( 1, 4 );
 			pParticle->m_uchEndSize		= pParticle->m_uchStartSize * 4;
@@ -1007,7 +1004,7 @@ void FX_GaussExplosion( const Vector &pos, const Vector &dir, int type )
 	//
 	// PC version
 	//
-	CSmartPtr<CTrailParticles> pSparkEmitter = CTrailParticles::Create( "FX_ElectricSpark" );
+	ks::intrusive_ptr<CTrailParticles> pSparkEmitter = CTrailParticles::Create( "FX_ElectricSpark" );
 
 	if ( !pSparkEmitter )
 	{

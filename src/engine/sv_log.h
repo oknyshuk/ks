@@ -60,7 +60,7 @@ private:
 		netadr_t m_adr;
 		uint64 m_ullToken;
 	};
-	CUtlVector< LogAddressDestination_t >	m_LogAddrDestinations;		// Server frag log stream is sent to the address(es) in this list
+	std::vector< LogAddressDestination_t >	m_LogAddrDestinations;		// Server frag log stream is sent to the address(es) in this list
 	FileHandle_t			m_hLogFile;        // File where frag log is put.
 	double					m_flLastLogFlush;
 	bool					m_bFlushLog;

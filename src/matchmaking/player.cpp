@@ -6,16 +6,12 @@
 
 #include "mm_framework.h"
 
-#include "smartptr.h"
 #include "utlvector.h"
 
 #include "igameevents.h"
 
 #include "GameUI/IGameUI.h"
 #include "filesystem.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 #define STEAM_PACK_BITFIELDS
 
@@ -104,18 +100,18 @@ MM_XWriteOpportunity GetXWriteOpportunity( int iCtrlr )
 		return MMXWO_NONE;
 }
 
-static CUtlVector< XUID > s_arrSessionSearchesQueue;
+static std::vector< XUID > s_arrSessionSearchesQueue;
 static int s_numSearchesOutstanding = 0;
 
 ConVar mm_player_search_count( "mm_player_search_count", "5", FCVAR_DEVELOPMENTONLY );
 
 void PumpSessionSearchQueue()
 {
-	while ( s_arrSessionSearchesQueue.Count() > 0 &&
+	while ( !s_arrSessionSearchesQueue.empty() &&
 		    s_numSearchesOutstanding < mm_player_search_count.GetInt() )
 	{
 		XUID xid = s_arrSessionSearchesQueue[0];
-		s_arrSessionSearchesQueue.Remove( 0 );
+		s_arrSessionSearchesQueue.erase( s_arrSessionSearchesQueue.begin() + 0 );
 
 		if ( PlayerFriend *player = g_pPlayerManager->FindPlayerFriend( xid ) )
 		{
@@ -306,7 +302,7 @@ void PlayerFriend::AbortSearch()
 	m_CallbackOnLobbyDataUpdate.Unregister();
 
 	// Clean up the queue
-	while ( s_arrSessionSearchesQueue.FindAndRemove( m_xuid ) )
+	while ( ks::erase_first( s_arrSessionSearchesQueue, m_xuid ) )
 		continue;
 
 	bool bAbortedSearch = false;
@@ -461,9 +457,9 @@ void PlayerFriend::StartSearchForSessionInfo()
 	m_eSearchState = SEARCH_QUEUED;
 
 	// Check if we are not already in the queue
-	if ( s_arrSessionSearchesQueue.Find( m_xuid ) == s_arrSessionSearchesQueue.InvalidIndex() )
+	if ( ks::find_index( s_arrSessionSearchesQueue, m_xuid ) == -1 )
 	{
-		s_arrSessionSearchesQueue.AddToTail( m_xuid );
+		s_arrSessionSearchesQueue.push_back( m_xuid );
 	}
 
 	PumpSessionSearchQueue();
@@ -694,8 +690,8 @@ void PlayerLocal::Steam_OnUserStatsReceived( UserStatsReceived_t *pParam )
 		bool bAchieved;
 		if ( steamapicontext->SteamUserStats()->GetAchievement( pAchievement->m_szAchievementName, &bAchieved ) && bAchieved )
 		{
-			m_arrAchievementsEarned.FindAndFastRemove( pAchievement->m_idAchievement );
-			m_arrAchievementsEarned.AddToTail( pAchievement->m_idAchievement );
+			ks::swap_erase_first( m_arrAchievementsEarned, pAchievement->m_idAchievement );
+			m_arrAchievementsEarned.push_back( pAchievement->m_idAchievement );
 		}
 	}
 
@@ -1356,7 +1352,7 @@ void PlayerLocal::GetAwardsData( KeyValues *pAwardsData )
 		// If title is requesting all achievement IDs
 		if ( !Q_stricmp( "@achievements", szName ) )
 		{
-			for ( int k = 0; k < m_arrAchievementsEarned.Count(); ++ k )
+			for ( int k = 0; k < std::ssize( m_arrAchievementsEarned ); ++ k )
 			{
 				KeyValues *kvAchValue = new KeyValues( "" );
 				kvAchValue->SetInt( nullptr, m_arrAchievementsEarned[k] );
@@ -1368,7 +1364,7 @@ void PlayerLocal::GetAwardsData( KeyValues *pAwardsData )
 		// If title is requesting all awards IDs
 		if ( !Q_stricmp( "@awards", szName ) )
 		{
-			for ( int k = 0; k < m_arrAvatarAwardsEarned.Count(); ++ k )
+			for ( int k = 0; k < std::ssize( m_arrAvatarAwardsEarned ); ++ k )
 			{
 				KeyValues *kvAchValue = new KeyValues( "" );
 				kvAchValue->SetInt( nullptr, m_arrAvatarAwardsEarned[k] );
@@ -1383,7 +1379,7 @@ void PlayerLocal::GetAwardsData( KeyValues *pAwardsData )
 		{
 			if ( !Q_stricmp( szName, pAchievement->m_szAchievementName ) )
 			{
-				kvValue->SetInt( "", ( m_arrAchievementsEarned.Find( pAchievement->m_idAchievement ) != m_arrAchievementsEarned.InvalidIndex() ) ? 1 : 0 );
+				kvValue->SetInt( "", ( ks::find_index( m_arrAchievementsEarned, pAchievement->m_idAchievement ) != -1 ) ? 1 : 0 );
 				szName = nullptr;
 				break;
 			}
@@ -1397,7 +1393,7 @@ void PlayerLocal::GetAwardsData( KeyValues *pAwardsData )
 		{
 			if ( !Q_stricmp( szName, pAvAward->m_szAvatarAwardName ) )
 			{
-				kvValue->SetInt( "", ( m_arrAvatarAwardsEarned.Find( pAvAward->m_idAvatarAward ) != m_arrAvatarAwardsEarned.InvalidIndex() ) ? 1 : 0 );
+				kvValue->SetInt( "", ( ks::find_index( m_arrAvatarAwardsEarned, pAvAward->m_idAvatarAward ) != -1 ) ? 1 : 0 );
 				szName = nullptr;
 				break;
 			}
@@ -1437,13 +1433,13 @@ void PlayerLocal::UpdateAwardsData( KeyValues *pAwardsData )
 			if ( !Q_stricmp( szName, pAchievement->m_szAchievementName ) )
 			{
 				// Found the achievement to award
-				if ( m_arrAchievementsEarned.Find( pAchievement->m_idAchievement ) == m_arrAchievementsEarned.InvalidIndex() )
+				if ( ks::find_index( m_arrAchievementsEarned, pAchievement->m_idAchievement ) == -1 )
 				{
 					bool bSteamResult = steamapicontext->SteamUserStats()->SetAchievement( pAchievement->m_szAchievementName );
 					if ( bSteamResult )
 					{
 						m_bSaveTitleData[0] = true; // signal that stats must be stored
-						m_arrAchievementsEarned.AddToTail( pAchievement->m_idAchievement );
+						m_arrAchievementsEarned.push_back( pAchievement->m_idAchievement );
 						DevMsg( "pPlayerLocal(%s)->UpdateAwardsData(%s) set achievement and stored stats.\n", GetName(), pAchievement->m_szAchievementName );
 						
 						KeyValues *kvAwardedEvent = new KeyValues( "OnPlayerAward" );
@@ -1474,7 +1470,7 @@ void PlayerLocal::UpdateAwardsData( KeyValues *pAwardsData )
 			if ( !Q_stricmp( szName, pAvAward->m_szAvatarAwardName ) )
 			{
 				// Found the avaward to award
-				if ( m_arrAvatarAwardsEarned.Find( pAvAward->m_idAvatarAward ) == m_arrAvatarAwardsEarned.InvalidIndex() )
+				if ( ks::find_index( m_arrAvatarAwardsEarned, pAvAward->m_idAvatarAward ) == -1 )
 				{
 					DevMsg( "pPlayerLocal(%s)->UpdateAwardsData(%s) skipped.\n", GetName(), pAvAward->m_szAvatarAwardName );
 				}
@@ -1509,7 +1505,7 @@ void PlayerLocal::EvaluateAwardsStateBasedOnStats()
 	{
 		if ( pAchievement->m_numComponents <= 1 )
 			continue;
-		if ( m_arrAchievementsEarned.Find( pAchievement->m_idAchievement ) != m_arrAchievementsEarned.InvalidIndex() )
+		if ( ks::find_index( m_arrAchievementsEarned, pAchievement->m_idAchievement ) != -1 )
 			continue;
 		TitleDataFieldsDescription_t const *fdBitfield = TitleDataFieldsDescriptionFindByString( pTitleDataStorage,
 			CFmtStr( "%s[1]", pAchievement->m_szAchievementName ) );
@@ -1554,8 +1550,8 @@ void PlayerLocal::EvaluateAwardsStateBasedOnStats()
 		{
 			if ( TitleDataFieldsDescriptionGetBit( fdBitfield, this ) )
 			{
-				m_arrAvatarAwardsEarned.FindAndFastRemove( pAvatarAward->m_idAvatarAward );
-				m_arrAvatarAwardsEarned.AddToTail( pAvatarAward->m_idAvatarAward );
+				ks::swap_erase_first( m_arrAvatarAwardsEarned, pAvatarAward->m_idAvatarAward );
+				m_arrAvatarAwardsEarned.push_back( pAvatarAward->m_idAvatarAward );
 			}
 		}
 	}

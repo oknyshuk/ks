@@ -10,9 +10,6 @@
 #include "tier0/dbg.h"
 #include "tier2/fileutils.h"
 
-// Must be last
-#include "tier0/memdbgon.h"
-
 
 #define RESOURCE_ID_HASH_SEED 0xEDABCDEF
 

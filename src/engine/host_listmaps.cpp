@@ -10,15 +10,12 @@
 #include "host.h"
 #include "sys.h"
 #include "filesystem_engine.h"
-#include "utldict.h"
+#include "tier1/map_ops.h"
 #include "demo.h"
 #include "tier2/fileutils.h"
 #ifndef DEDICATED
 #include "engineui.h"
 #endif
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 // Imported from other .cpp files
 void Host_Map_f( const CCommand &args );
@@ -163,10 +160,8 @@ public:
 	// See if it's time to revisit the items in the list
 	void			RefreshList( void );
 
-	// Get item count, etc
-	int				GetMapCount( void ) const;
-	int				IsMapValid( int index ) const;
-	char const 		*GetMapName( int index ) const;
+	// Map filename -> item
+	const ks::idict< CMapListItem > &GetMaps( void ) const { return m_Items; }
 
 	void			Think( void );
 
@@ -178,7 +173,7 @@ private:
 
 private:
 	// Dictionary of items
-	CUtlDict< CMapListItem, int > m_Items;
+	ks::idict< CMapListItem > m_Items;
 
 	// Time of last update
 	float			m_flLastRefreshTime;
@@ -227,19 +222,17 @@ void CMapListManager::Think( void )
 		return;
 #endif
 
-	int i;
-
 	m_bDirty = false;
 		
-	for ( i = m_Items.Count() - 1; i >= 0 ; i-- )
+	for ( auto it = m_Items.rbegin(); it != m_Items.rend(); ++it )
 	{
-		CMapListItem *item = &m_Items[ i ];
+		CMapListItem *item = &it->second;
 		if ( item->GetValid() != CMapListItem::PENDING )
 		{
 			continue;
 		}
 
-		char const *filename = m_Items.GetElementName( i );
+		char const *filename = it->first.c_str();
 
 		item->SetValid( CMapListItem::CheckFSHeaderVersion( filename ) );
 
@@ -270,26 +263,26 @@ void CMapListManager::RefreshList( void )
 		char mapwild[MAX_QPATH];
 		Q_snprintf( mapwild, sizeof( mapwild ), "*.%sbsp", "" );
 
-		CUtlVector<CUtlString> outList;
+		std::vector< std::string > outList;
 		RecursiveFindFilesMatchingName( &outList, "maps", mapwild, "GAME" );
 
-		FOR_EACH_VEC( outList, i )
+		for ( auto &mapName : outList )
 		{
-			const char* curMap = outList[i].Access();
-			int idx = m_Items.Find( curMap );
-			if ( idx == m_Items.InvalidIndex() )
+			const char* curMap = mapName.data();
+			auto idx = m_Items.find( curMap );
+			if ( idx == m_Items.end() )
 			{
 				CMapListItem item;
 				item.SetFileTimestamp( item.GetFSTimeStamp( curMap ) );
 				item.SetValid( CMapListItem::PENDING );
 				// Insert into dictionary
-				m_Items.Insert( curMap, item );
+				m_Items.emplace( curMap, item );
 
 				m_bDirty = true;
 			}
 			else
 			{
-				CMapListItem *item = &m_Items[ idx ];
+				CMapListItem *item = &idx->second;
 				Assert( item );
 
 				// Make sure data is up to date
@@ -322,20 +315,20 @@ void CMapListManager::RefreshList( void )
 			char sz[ MAX_QPATH ];
 			Q_snprintf( sz, sizeof( sz ), "maps/%s", findfn );
 
-			int idx = m_Items.Find( sz );
-			if ( idx == m_Items.InvalidIndex() )
+			auto idx = m_Items.find( sz );
+			if ( idx == m_Items.end() )
 			{
 				CMapListItem item;
 				item.SetFileTimestamp( item.GetFSTimeStamp( sz ) );
 				item.SetValid( CMapListItem::PENDING );
 				// Insert into dictionary
-				m_Items.Insert( sz, item );
+				m_Items.emplace( sz, item );
 
 				m_bDirty = true;
 			}
 			else
 			{
-				CMapListItem *item = &m_Items[ idx ];
+				CMapListItem *item = &idx->second;
 				Assert( item );
 
 				// Make sure data is up to date
@@ -360,48 +353,11 @@ void CMapListManager::RefreshList( void )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
-// Output : int
-//-----------------------------------------------------------------------------
-int CMapListManager::GetMapCount( void ) const
-{
-	return m_Items.Count();
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : index - 
-// Output : Returns true on success, false on failure.
-//-----------------------------------------------------------------------------
-int CMapListManager::IsMapValid( int index ) const
-{
-	if ( !m_Items.IsValidIndex( index ) )
-		return false;
-
-	CMapListItem const *item = &m_Items[ index ];
-	Assert( item );
-	return item->GetValid();
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : index - 
-// Output : char const
-//-----------------------------------------------------------------------------
-char const *CMapListManager::GetMapName( int index ) const
-{
-	if ( !m_Items.IsValidIndex( index ) )
-		return "Invalid!!!";
-
-	return m_Items.GetElementName( index );
-}
-
-//-----------------------------------------------------------------------------
 // Purpose: Wipe the list
 //-----------------------------------------------------------------------------
 void CMapListManager::ClearList( void )
 {
-	m_Items.Purge();
+	m_Items.clear();
 	m_bDirty = false;
 }
 
@@ -418,12 +374,12 @@ void CMapListManager::BuildList( void )
 		char mapwild[MAX_QPATH];
 		Q_snprintf( mapwild, sizeof( mapwild ), "*.%sbsp", "" );
 
-		CUtlVector<CUtlString> outList;
+		std::vector< std::string > outList;
 		RecursiveFindFilesMatchingName( &outList, "maps", mapwild, "GAME" );
 
-		FOR_EACH_VEC( outList, i )
+		for ( auto &mapName : outList )
 		{
-			const char* curMap = outList[i].Access();
+			const char* curMap = mapName.data();
 			if ( V_stristr( curMap, ".360.bsp" ) )
 			{
 				// ignore 360 bsp
@@ -435,11 +391,7 @@ void CMapListManager::BuildList( void )
 			item.SetValid( CMapListItem::PENDING );
 
 			// Insert into dictionary
-			int idx = m_Items.Find( curMap );
-			if ( idx == m_Items.InvalidIndex() )
-			{
-				m_Items.Insert( curMap, item );
-			}
+			m_Items.emplace( curMap, item );
 		}
 	} 
 	else
@@ -465,11 +417,7 @@ void CMapListManager::BuildList( void )
 			item.SetValid( CMapListItem::PENDING );
 
 			// Insert into dictionary
-			int idx = m_Items.Find( sz );
-			if ( idx == m_Items.InvalidIndex() )
-			{
-				m_Items.Insert( sz, item );
-			}
+			m_Items.emplace( sz, item );
 
 			findfn = Sys_FindNext( nullptr, 0 );
 		}
@@ -548,16 +496,16 @@ static int MapList_CountMaps( const char *pszSubString, bool listobsolete, int& 
 	int showOutdated;
 	for( showOutdated = listobsolete ? 1 : 0; showOutdated >= 0; showOutdated-- )
 	{
-		for ( int i = 0; i < g_MapListMgr.GetMapCount(); i++ )
+		for ( const auto &[name, item] : g_MapListMgr.GetMaps() )
 		{
-			char const *mapname = g_MapListMgr.GetMapName( i );
-			int valid = g_MapListMgr.IsMapValid( i );
+			char const *mapname = name.c_str();
+			int valid = item.GetValid();
 
 			if ( !substringlength || ( V_stristr( &mapname[ 5 ], pszSubString ) != nullptr ) )
 			{
 				if ( MapList_CheckPrintMap( "(fs)", &mapname[ 5 ], valid, showOutdated ? true : false, false ) )
 				{
-					maxitemlength = MAX( maxitemlength, (int)( strlen( &mapname[ 5 ] ) + 1 ) );
+					maxitemlength = std::max( maxitemlength, (int)( strlen( &mapname[ 5 ] ) + 1 ) );
 					count++;
 				}
 			}
@@ -598,13 +546,13 @@ static int MapList_ListMaps( const char *pszSubString, bool listobsolete, bool v
 			break;
 
 		//search the directory structure.
-		for ( int i = 0; i < g_MapListMgr.GetMapCount(); i++ )
+		for ( const auto &[name, item] : g_MapListMgr.GetMaps() )
 		{
 			if ( count >= maxcount )
 				break;
 
-			char const *mapname = g_MapListMgr.GetMapName( i );
-			int valid = g_MapListMgr.IsMapValid( i );
+			char const *mapname = name.c_str();
+			int valid = item.GetValid();
 
 			if ( !substringlength || ( V_stristr( &mapname[ 5 ], pszSubString ) != nullptr ) )
 			{
@@ -641,7 +589,7 @@ int _Host_Map_f_CompletionFunc( char const *cmdname, char const *partial, char c
 	}
 
 	int longest = 0;
-	int count = MIN( MapList_CountMaps( substring, false, longest ), COMMAND_COMPLETION_MAXITEMS );
+	int count = std::min( MapList_CountMaps( substring, false, longest ), COMMAND_COMPLETION_MAXITEMS );
 	if ( count > 0 )
 	{
 		MapList_ListMaps( substring, false, false, COMMAND_COMPLETION_MAXITEMS, longest, commands );

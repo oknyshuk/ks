@@ -9,9 +9,6 @@
 #include "reflect_annotations.h"
 #include "c_movie_display.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 IMPLEMENT_REFLECT_CLIENTCLASS( C_MovieDisplay, DT_MovieDisplay, CMovieDisplay )
 
 C_MovieDisplay::C_MovieDisplay()

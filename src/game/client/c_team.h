@@ -74,7 +74,7 @@ public:
 public:
 
 	// Data received from the server
-	CUtlVector< int > m_aPlayers;
+	std::vector< int > m_aPlayers;
 	[[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] [[= ks::reflect::Net{} ]] char	m_szTeamname[ MAX_TEAM_NAME_LENGTH ];
 	[[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] [[= ks::reflect::Net{} ]] char	m_szClanTeamname[ MAX_TEAM_NAME_LENGTH ];
 	[[= ks::reflect::Pred{ .flags = FTYPEDESC_PRIVATE } ]] [[= ks::reflect::Net{} ]] char	m_szTeamFlagImage[ MAX_TEAM_FLAG_ICON_LENGTH ];
@@ -99,7 +99,7 @@ public:
 
 
 // Global list of client side team entities
-extern CUtlVector< C_Team * > g_Teams;
+extern std::vector< C_Team * > g_Teams;
 
 // Global team handling functions
 C_Team *GetLocalTeam( void );

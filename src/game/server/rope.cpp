@@ -15,9 +15,6 @@
 #include "te_effect_dispatch.h"
 #include "videocfg/videocfg.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //--------------------------------------------
 // Rope Spawn Flags
 //--------------------------------------------
@@ -410,7 +407,7 @@ void CRopeKeyframe::DieAtNextRest( void )
 
 void CRopeKeyframe::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
 {
-	if ( !pInfo->m_pTransmitEdict->Get( entindex() ) )
+	if ( !(*pInfo->m_pTransmitEdict)[ entindex() ] )
 	{	
 		BaseClass::SetTransmit( pInfo, bAlways );
 	

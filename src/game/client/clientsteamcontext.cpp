@@ -1,9 +1,6 @@
 #include "cbase.h"
 #include "clientsteamcontext.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static CClientSteamContext g_ClientSteamContext;
 CClientSteamContext  &ClientSteamContext()
 {
@@ -104,20 +101,22 @@ void CClientSteamContext::OnSteamServersConnected( SteamServersConnected_t *pCon
 	Msg( "CClientSteamContext OnSteamServersConnected logged on = %d\n", m_bLoggedOn );
 }
 
-void CClientSteamContext::InstallCallback( CUtlDelegate< void ( const SteamLoggedOnChange_t & ) > delegate )
+int CClientSteamContext::InstallCallback( LoggedOnCallback_t callback )
 {
-	m_LoggedOnCallbacks.AddToTail( delegate );
+	const int nToken = m_nNextCallbackToken++;
+	m_LoggedOnCallbacks.push_back( { nToken, std::move( callback ) } );
+	return nToken;
 }
 
-void CClientSteamContext::RemoveCallback( CUtlDelegate< void ( const SteamLoggedOnChange_t & ) > delegate )
+void CClientSteamContext::RemoveCallback( int nToken )
 {
-	m_LoggedOnCallbacks.FindAndRemove( delegate );
+	std::erase_if( m_LoggedOnCallbacks, [nToken]( const LoggedOnCallbackEntry_t &e ) { return e.nToken == nToken; } );
 }
 
 void CClientSteamContext::InvokeCallbacks( const SteamLoggedOnChange_t &loggedOnStatus )
 {
-	for ( int i = 0; i < m_LoggedOnCallbacks.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_LoggedOnCallbacks ); ++i )
 	{
-		m_LoggedOnCallbacks[i]( loggedOnStatus );
+		m_LoggedOnCallbacks[i].fn( loggedOnStatus );
 	}
 }

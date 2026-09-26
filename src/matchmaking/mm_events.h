@@ -31,15 +31,15 @@ public:
 	~CMatchEventsSubscription();
 
 protected:
-	CUtlVector< IMatchEventsSink * > m_arrSinks;
-	CUtlVector< int > m_arrRefCount;
-	CUtlVector< int > m_arrIteratorsOutstanding;
+	std::vector< IMatchEventsSink * > m_arrSinks;
+	std::vector< int > m_arrRefCount;
+	std::vector< int > m_arrIteratorsOutstanding;
 
 	bool m_bBroadcasting;
 	bool m_bAllowNestedBroadcasts;
-	CUtlVector< KeyValues * > m_arrQueuedEvents;
-	CUtlVector< KeyValues * > m_arrEventData;
-	CUtlVector< KeyValues * > m_arrSentEvents;
+	std::vector< KeyValues * > m_arrQueuedEvents;
+	std::vector< KeyValues * > m_arrEventData;
+	std::vector< KeyValues * > m_arrSentEvents;
 };
 
 // Match events subscription singleton

@@ -6,9 +6,6 @@
 //=============================================================================//
 #include "client_pch.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar cl_entityreport( "cl_entityreport", "0", FCVAR_CHEAT, "For debugging, draw entity states to console" );
 
 // How quickly to move rolling average for entityreport
@@ -76,7 +73,7 @@ public:
 	CEntityBits *Base();
 
 private:
-	CUtlVector< CEntityBits > m_EntityBits;
+	std::vector< CEntityBits > m_EntityBits;
 };
 
 static CEntityReportManager g_EntityReportMgr;
@@ -111,7 +108,7 @@ void CL_RecordDeleteEntity( int entnum, ClientClass *pclass )
 //-----------------------------------------------------------------------------
 void CEntityReportManager::Reset()
 {
-	m_EntityBits.RemoveAll();
+	m_EntityBits.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -126,7 +123,7 @@ void CEntityReportManager::Record( int entnum, int bitcount )
 		return;
 	}
 
-	m_EntityBits.EnsureCount( entnum + 1 );
+	ks::ensure_size( m_EntityBits, entnum + 1 );
 
 	CEntityBits *slot = &m_EntityBits[ entnum ];
 
@@ -159,7 +156,7 @@ void CEntityReportManager::Add( int entnum )
 		return;
 	}
 
-	m_EntityBits.EnsureCount( entnum + 1 );
+	ks::ensure_size( m_EntityBits, entnum + 1 );
 
 	CEntityBits *slot = &m_EntityBits[ entnum ];
 	slot->flags = FENTITYBITS_ADD;
@@ -177,7 +174,7 @@ void CEntityReportManager::LeavePVS( int entnum )
 		return;
 	}
 
-	m_EntityBits.EnsureCount( entnum + 1 );
+	ks::ensure_size( m_EntityBits, entnum + 1 );
 
 	CEntityBits *slot = &m_EntityBits[ entnum ];
 	slot->flags = FENTITYBITS_LEAVEPVS;
@@ -196,7 +193,7 @@ void CEntityReportManager::DeleteEntity( int entnum, ClientClass *pclass )
 		return;
 	}
 
-	m_EntityBits.EnsureCount( entnum + 1 );
+	ks::ensure_size( m_EntityBits, entnum + 1 );
 
 	CEntityBits *slot = &m_EntityBits[ entnum ];
 	slot->flags = FENTITYBITS_DELETE;
@@ -206,10 +203,10 @@ void CEntityReportManager::DeleteEntity( int entnum, ClientClass *pclass )
 
 int CEntityReportManager::Count()
 {
-	return m_EntityBits.Count();
+	return std::ssize( m_EntityBits );
 }
 
 CEntityBits *CEntityReportManager::Base()
 {
-	return m_EntityBits.Base();
+	return m_EntityBits.data();
 }

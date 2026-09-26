@@ -12,7 +12,7 @@
 #include "reflect_annotations.h"
 
 #include "ai_initutils.h"
-#include "tier1/utlmap.h"
+#include <map>
 
 //Flags for FindHintNode
 #define bits_HINT_NODE_NONE						0x00000000
@@ -151,8 +151,8 @@ public:
 	bool		MatchesHintType( int hintType, string_t iszGenericType = NULL_STRING ) const;
 	bool		MatchesSingleHintType() const;
 
-	bool		HasIncludeZones( void )	const	{ return ( m_zoneInclude.Count() != 0 ); }
-	bool		HasExcludeZones( void )	const	{ return ( m_zoneExclude.Count() != 0 ); }
+	bool		HasIncludeZones( void )	const	{ return ( !m_zoneInclude.empty() ); }
+	bool		HasExcludeZones( void )	const	{ return ( !m_zoneExclude.empty() ); }
 	
 	void		AddIncludePosition( const Vector &position, float radius );
 	void		AddExcludePosition( const Vector &position, float radius );
@@ -174,12 +174,12 @@ private:
 		float		radiussqr;
 	};
 
-	typedef CUtlVector < hintZone_t >	zoneList_t;
+	typedef std::vector< hintZone_t >	zoneList_t;
 
 	void		AddZone( zoneList_t &list, const Vector &position, float radius );
 	bool		InZone( const zoneList_t &zone, const Vector &testPosition ) const;
 
-	CUtlVector<int> m_HintTypes;
+	std::vector< int > m_HintTypes;
 
 	int			m_iFlags;
 	int			m_iFirstHintType;
@@ -202,21 +202,21 @@ class CAI_Node;
 
 DECLARE_POINTER_HANDLE(AIHintIter_t);
 
-class CAIHintVector : public CUtlVector< CAI_Hint * >
+class CAIHintVector : public std::vector< CAI_Hint * >
 {
 public:
-	CAIHintVector() : CUtlVector< CAI_Hint * >( 1, 0 )
+	CAIHintVector()
 	{
 	}
 
 	CAIHintVector( const CAIHintVector& src )
 	{
-		CopyArray( src.Base(), src.Count() );
+		this->assign( src.begin(), src.end() );
 	}
 
 	CAIHintVector &operator=( const CAIHintVector &src )
 	{
-		CopyArray( src.Base(), src.Count() );
+		this->assign( src.begin(), src.end() );
 		return *this;
 	}
 };
@@ -242,9 +242,9 @@ public:
 
 	// Purpose: Finds a random suitable hint within the requested radious of the npc
 	static CAI_Hint		*FindHintRandom( CAI_BaseNPC *pNPC, const Vector &position, const CHintCriteria &hintCriteria );
-	static int			FindAllHints( CAI_BaseNPC *pNPC, const Vector &position, const CHintCriteria &hintCriteria, CUtlVector<CAI_Hint *> *pResult );
-	static int			FindAllHints( const Vector &position, const CHintCriteria &hintCriteria, CUtlVector<CAI_Hint *> *pResult )	{ return FindAllHints( nullptr, position, hintCriteria, pResult ); }
-	static int			FindAllHints( CAI_BaseNPC *pNPC, const CHintCriteria &hintCriteria, CUtlVector<CAI_Hint *> *pResult )		{ return FindAllHints( pNPC, pNPC->GetAbsOrigin(), hintCriteria, pResult ); }
+	static int			FindAllHints( CAI_BaseNPC *pNPC, const Vector &position, const CHintCriteria &hintCriteria, std::vector< CAI_Hint * > *pResult );
+	static int			FindAllHints( const Vector &position, const CHintCriteria &hintCriteria, std::vector< CAI_Hint * > *pResult )	{ return FindAllHints( nullptr, position, hintCriteria, pResult ); }
+	static int			FindAllHints( CAI_BaseNPC *pNPC, const CHintCriteria &hintCriteria, std::vector< CAI_Hint * > *pResult )		{ return FindAllHints( pNPC, pNPC->GetAbsOrigin(), hintCriteria, pResult ); }
 	static int			GetFlags( const char *token );
 
 	static CAI_Hint		*GetFirstHint( AIHintIter_t *pIter );					
@@ -272,7 +272,7 @@ private:
 	static int			gm_nFoundHintIndex;
 	static CAI_Hint		*gm_pLastFoundHints[ HINT_HISTORY ];			// Last used hint 
 	static CAIHintVector gm_AllHints;				// A linked list of all hints
-	static CUtlMap< int,  CAIHintVector >	gm_TypedHints;
+	static std::map< int,  CAIHintVector >	gm_TypedHints;
 };
 
 //-----------------------------------------------------------------------------

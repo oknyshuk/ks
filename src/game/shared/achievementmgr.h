@@ -10,7 +10,8 @@
 #include "baseachievement.h"
 #include "GameEventListener.h"
 #include "iachievementmgr.h"
-#include "utlmap.h"
+#include <map>
+#include <memory>
 #include "usermessages.h"
 
 #include "steam/steam_api.h"
@@ -50,7 +51,8 @@ public:
 	int GetAchievementCount( bool bAssets=false );
 
 	CBaseAchievement *GetAchievementByID( int iAchievementID, int nUserSlot );
-	CUtlMap<int, CBaseAchievement *> &GetAchievements( int nUserSlot ) { return m_mapAchievement[nUserSlot]; }
+	typedef std::map< int, std::unique_ptr< CBaseAchievement > > AchievementMap_t;
+	AchievementMap_t &GetAchievements( int nUserSlot ) { return m_mapAchievement[nUserSlot]; }
 
 	CBaseAchievement *GetAchievementByName( const char *pchName, int nUserSlot );
 
@@ -98,7 +100,7 @@ public:
 	bool WereCheatsEverOn( void ) { return m_bCheatsEverOn; }
 
 	STEAM_CALLBACK( CAchievementMgr, Steam_OnUserStatsStored, UserStatsStored_t, m_CallbackUserStatsStored );
-	const CUtlVector<int>& GetAchievedDuringCurrentGame( int nPlayerSlot );
+	const std::vector< int >& GetAchievedDuringCurrentGame( int nPlayerSlot );
 	void ResetAchievedDuringCurrentGame( int nPlayerSlot );
 
 	// [sbodenbender] brought over from orange box
@@ -126,14 +128,14 @@ private:
 	void OnKillEvent( CBaseEntity *pVictim, CBaseEntity *pAttacker, CBaseEntity *pInflictor, IGameEvent *event );
 	void ResetAchievement_Internal( CBaseAchievement *pAchievement );
 
-	CUtlMap<int, CBaseAchievement *> m_mapAchievement[MAX_SPLITSCREEN_PLAYERS];			// map of all achievements
-	CUtlVector<CBaseAchievement *>	 m_vecAchievement[MAX_SPLITSCREEN_PLAYERS];			// vector of all achievements for accessing by index
-	CUtlVector<CBaseAchievement *>	 m_vecAward[MAX_SPLITSCREEN_PLAYERS];				// vector of all asset award achievements for accessing by index
-	CUtlVector<CBaseAchievement *> m_vecKillEventListeners[MAX_SPLITSCREEN_PLAYERS];	// vector of achievements that are listening for kill events
-	CUtlVector<CBaseAchievement *> m_vecMapEventListeners[MAX_SPLITSCREEN_PLAYERS];		// vector of achievements that are listening for map events
-	CUtlVector<CBaseAchievement *> m_vecComponentListeners[MAX_SPLITSCREEN_PLAYERS];	// vector of achievements that are listening for components that make up an achievement
-	CUtlVector<CBaseAchievement *>	 m_vecAchievementInOrder[MAX_SPLITSCREEN_PLAYERS];	// vector of all achievements for accessing by display order
-	CUtlVector<CBaseAchievement *>	 m_vecAwardInOrder[MAX_SPLITSCREEN_PLAYERS];		// vector of all asset award achievements for accessing by display order
+	AchievementMap_t m_mapAchievement[MAX_SPLITSCREEN_PLAYERS];			// map of all achievements (owning)
+	std::vector< CBaseAchievement * >	 m_vecAchievement[MAX_SPLITSCREEN_PLAYERS];			// vector of all achievements for accessing by index
+	std::vector< CBaseAchievement * >	 m_vecAward[MAX_SPLITSCREEN_PLAYERS];				// vector of all asset award achievements for accessing by index
+	std::vector< CBaseAchievement * > m_vecKillEventListeners[MAX_SPLITSCREEN_PLAYERS];	// vector of achievements that are listening for kill events
+	std::vector< CBaseAchievement * > m_vecMapEventListeners[MAX_SPLITSCREEN_PLAYERS];		// vector of achievements that are listening for map events
+	std::vector< CBaseAchievement * > m_vecComponentListeners[MAX_SPLITSCREEN_PLAYERS];	// vector of achievements that are listening for components that make up an achievement
+	std::vector< CBaseAchievement * >	 m_vecAchievementInOrder[MAX_SPLITSCREEN_PLAYERS];	// vector of all achievements for accessing by display order
+	std::vector< CBaseAchievement * >	 m_vecAwardInOrder[MAX_SPLITSCREEN_PLAYERS];		// vector of all asset award achievements for accessing by display order
 
 	// [sbodenbender] brought over from orange box
 	struct achievementthink_t
@@ -141,7 +143,7 @@ private:
 		float			 m_flThinkTime;
 		CBaseAchievement *pAchievement;
 	};
-	CUtlVector<achievementthink_t> m_vecThinkListeners;					// vector of achievements that are actively thinking
+	std::vector< achievementthink_t > m_vecThinkListeners;					// vector of achievements that are actively thinking
 
 	float m_flLevelInitTime[MAX_SPLITSCREEN_PLAYERS];
 	float m_flLastClassChangeTime[MAX_SPLITSCREEN_PLAYERS];		// Time when player last changed class
@@ -157,8 +159,8 @@ private:
 	bool m_bReadingFromTitleData;
 
 
-	CUtlVector<int> m_AchievementsAwarded[MAX_SPLITSCREEN_PLAYERS];
-	CUtlVector<int> m_AchievementsAwardedDuringCurrentGame[MAX_SPLITSCREEN_PLAYERS];
+	std::vector< int > m_AchievementsAwarded[MAX_SPLITSCREEN_PLAYERS];
+	std::vector< int > m_AchievementsAwardedDuringCurrentGame[MAX_SPLITSCREEN_PLAYERS];
 	void ClearAchievementData( int nUserSlot );
 };
 
@@ -175,7 +177,7 @@ public:
 	virtual void OnMapEvent( const char *pchEventName, int nPlayerSlot ) { m_pDelegate->CAchievementMgr::OnMapEvent( pchEventName, nPlayerSlot ); }
 	virtual void SaveGlobalStateIfDirty( ) { m_pDelegate->CAchievementMgr::SaveGlobalState(); }
 	virtual bool HasAchieved( const char *pchName, int nPlayerSlot ) { return m_pDelegate->CAchievementMgr::HasAchieved( pchName, nPlayerSlot ); }
-	virtual const CUtlVector<int>& GetAchievedDuringCurrentGame( int nPlayerSlot ) { return m_pDelegate->CAchievementMgr::GetAchievedDuringCurrentGame( nPlayerSlot ); }
+	virtual const std::vector< int >& GetAchievedDuringCurrentGame( int nPlayerSlot ) { return m_pDelegate->CAchievementMgr::GetAchievedDuringCurrentGame( nPlayerSlot ); }
 	virtual bool WereCheatsEverOn() { return m_pDelegate->CAchievementMgr::WereCheatsEverOn(); }
 
 	virtual UIProfileInfo* GetUIProfileInfo() { return m_pDelegate->CAchievementMgr::GetUIProfileInfo(); }

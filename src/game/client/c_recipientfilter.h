@@ -11,7 +11,7 @@
 #include "irecipientfilter.h"
 #include "utlvector.h"
 #include "soundflags.h"
-#include "bitvec.h"
+#include <bitset>
 
 class C_BasePlayer;
 class C_Team;
@@ -66,7 +66,7 @@ private:
 
 	bool				m_bReliable;
 	bool				m_bInitMessage;
-	CUtlVector< int >	m_Recipients;
+	std::vector< int >	m_Recipients;
 	// If using prediction rules, the filter itself suppresses local player
 	bool				m_bUsingPredictionRules;
 	// If ignoring prediction cull, then external systems can determine

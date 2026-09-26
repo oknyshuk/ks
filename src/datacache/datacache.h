@@ -9,8 +9,10 @@
 
 
 #include "datamanager.h"
-#include "utlhash.h"
-#include "mempool.h"
+#include <unordered_map>
+#include <atomic>
+#include <mutex>
+#include "tier1/fixed_pool.h"
 #include "tier0/tslist.h"
 #include "datacache_common.h"
 #include "tier3/tier3.h"
@@ -62,7 +64,7 @@ struct DataCacheItem_t : DataCacheItemData_t
 
 //-------------------------------------
 
-typedef CDataManager<DataCacheItem_t, DataCacheItemData_t, DataCacheItem_t *, CThreadFastMutex> CDataCacheLRU;
+typedef CDataManager<DataCacheItem_t, DataCacheItemData_t, DataCacheItem_t *, std::recursive_mutex> CDataCacheLRU;
 
 //-----------------------------------------------------------------------------
 // CDataCacheSection
@@ -195,7 +197,7 @@ private:
 	CTSSimpleList<FrameLock_t> m_FreeFrameLocks;
 
 protected:
-	CThreadFastMutex &	m_mutex;
+	std::recursive_mutex &	m_mutex;
 };
 
 
@@ -211,7 +213,7 @@ public:
 	CDataCacheSectionFastFind(CDataCache *pSharedCache, IDataCacheClient *pClient, const char *pszName )
 		: CDataCacheSection( pSharedCache, pClient, pszName )
 	{
-		m_Handles.Init( 1024 );
+		m_Handles.reserve( 1024 );
 	}
 
 private:
@@ -219,7 +221,7 @@ private:
 	virtual void OnAdd( DataCacheClientID_t clientId, DataCacheHandle_t hCacheItem );
 	virtual void OnRemove( DataCacheClientID_t clientId );
 
-	CUtlHashFast<DataCacheHandle_t> m_Handles;
+	std::unordered_map<DataCacheClientID_t, DataCacheHandle_t> m_Handles;
 };
 
 
@@ -304,9 +306,9 @@ private:
 
 	CDataCacheLRU					m_LRU;
 	DataCacheStatus_t				m_status;
-	CUtlVector<CDataCacheSection *>	m_Sections;
+	std::vector< CDataCacheSection * >	m_Sections;
 	bool							m_bInFlush;
-	CThreadFastMutex &				m_mutex;
+	std::recursive_mutex &				m_mutex;
 };
 
 //---------------------------------------------------------
@@ -340,8 +342,8 @@ inline void CDataCacheSection::NoteSizeChanged( int oldSize, int newSize )
 
 	m_status.nBytes += nBytes;
 	m_status.nBytesLocked += nBytes;
-	ThreadInterlockedExchangeAdd( &m_pSharedCache->m_status.nBytes, nBytes );
-	ThreadInterlockedExchangeAdd( &m_pSharedCache->m_status.nBytesLocked, nBytes );
+	std::atomic_ref<unsigned>( m_pSharedCache->m_status.nBytes ).fetch_add( nBytes );
+	std::atomic_ref<unsigned>( m_pSharedCache->m_status.nBytesLocked ).fetch_add( nBytes );
 }
 
 inline void CDataCacheSection::NoteAdd( int size )
@@ -349,8 +351,8 @@ inline void CDataCacheSection::NoteAdd( int size )
 	m_status.nBytes += size;
 	m_status.nItems++;
 
-	ThreadInterlockedExchangeAdd( &m_pSharedCache->m_status.nBytes, size );
-	ThreadInterlockedIncrement( &m_pSharedCache->m_status.nItems );
+	std::atomic_ref<unsigned>( m_pSharedCache->m_status.nBytes ).fetch_add( size );
+	++std::atomic_ref<unsigned>( m_pSharedCache->m_status.nItems );
 }
 
 inline void CDataCacheSection::NoteRemove( int size )
@@ -358,8 +360,8 @@ inline void CDataCacheSection::NoteRemove( int size )
 	m_status.nBytes -= size;
 	m_status.nItems--;
 
-	ThreadInterlockedExchangeAdd( &m_pSharedCache->m_status.nBytes, -size );
-	ThreadInterlockedDecrement( &m_pSharedCache->m_status.nItems );
+	std::atomic_ref<unsigned>( m_pSharedCache->m_status.nBytes ).fetch_add( -size );
+	--std::atomic_ref<unsigned>( m_pSharedCache->m_status.nItems );
 }
 
 inline void CDataCacheSection::NoteLock( int size )
@@ -367,8 +369,8 @@ inline void CDataCacheSection::NoteLock( int size )
 	m_status.nBytesLocked += size;
 	m_status.nItemsLocked++;
 
-	ThreadInterlockedExchangeAdd( &m_pSharedCache->m_status.nBytesLocked, size );
-	ThreadInterlockedIncrement( &m_pSharedCache->m_status.nItemsLocked );
+	std::atomic_ref<unsigned>( m_pSharedCache->m_status.nBytesLocked ).fetch_add( size );
+	++std::atomic_ref<unsigned>( m_pSharedCache->m_status.nItemsLocked );
 }
 
 inline void CDataCacheSection::NoteUnlock( int size )
@@ -376,8 +378,8 @@ inline void CDataCacheSection::NoteUnlock( int size )
 	m_status.nBytesLocked -= size;
 	m_status.nItemsLocked--;
 
-	ThreadInterlockedExchangeAdd( &m_pSharedCache->m_status.nBytesLocked, -size );
-	ThreadInterlockedDecrement( &m_pSharedCache->m_status.nItemsLocked );
+	std::atomic_ref<unsigned>( m_pSharedCache->m_status.nBytesLocked ).fetch_add( -size );
+	--std::atomic_ref<unsigned>( m_pSharedCache->m_status.nItemsLocked );
 
 	// something has been unlocked, assume cached pointers are now invalid
 	m_nFrameUnlockCounter++;

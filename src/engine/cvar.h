@@ -16,7 +16,7 @@
 class ConVar;
 class ConCommandBase;
 class CCommand;
-class CUtlBuffer;
+namespace ks { class text_writer; }
 
 #define COMMAND_COMPLETION_MAXITEMS		64
 #define COMMAND_COMPLETION_ITEM_LENGTH	64
@@ -31,7 +31,7 @@ public:
 
 	// Writes lines containing "set variable value" for all variables
 	// with the archive flag set to true.
-	void WriteVariables( CUtlBuffer *buff, const int iSplitscreenSlot = -1, bool bSlotRequired = false, void *pConvarsList = 0 );
+	void WriteVariables( ks::text_writer *buff, const int iSplitscreenSlot = -1, bool bSlotRequired = false, void *pConvarsList = 0 );
 
 	// Returns the # of cvars with the server flag set.
 	int	CountVariablesWithFlags( int flags );

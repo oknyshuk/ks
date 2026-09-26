@@ -10,9 +10,6 @@
 #include "colorcorrectionmgr.h"
 #include "clientmode.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 //------------------------------------------------------------------------------
 // Singleton access
@@ -22,8 +19,8 @@ CColorCorrectionMgr *g_pColorCorrectionMgr = &s_ColorCorrectionMgr;
 
 static ConVar mat_colcorrection_editor( "mat_colcorrection_editor", "0" );
 
-static CUtlVector<C_ColorCorrection *> g_ColorCorrectionList;
-static CUtlVector<C_ColorCorrectionVolume *> g_ColorCorrectionVolumeList;
+static std::vector< C_ColorCorrection * > g_ColorCorrectionList;
+static std::vector< C_ColorCorrectionVolume * > g_ColorCorrectionVolumeList;
 
 //------------------------------------------------------------------------------
 // Constructor
@@ -83,8 +80,8 @@ ClientCCHandle_t CColorCorrectionMgr::AddColorCorrectionEntity( C_ColorCorrectio
 	ClientCCHandle_t h = AddColorCorrection(pName, pFileName);
 	if ( h != INVALID_CLIENT_CCHANDLE )
 	{
-		Assert(g_ColorCorrectionList.Find(pEntity) == -1);
-		g_ColorCorrectionList.AddToTail(pEntity);
+		Assert(ks::find_index( g_ColorCorrectionList, pEntity ) == -1);
+		g_ColorCorrectionList.push_back( pEntity );
 	}
 	return h;
 }
@@ -92,7 +89,7 @@ ClientCCHandle_t CColorCorrectionMgr::AddColorCorrectionEntity( C_ColorCorrectio
 void CColorCorrectionMgr::RemoveColorCorrectionEntity( C_ColorCorrection *pEntity, ClientCCHandle_t h)
 {
 	RemoveColorCorrection(h);
-	g_ColorCorrectionList.FindAndFastRemove(pEntity);
+	ks::swap_erase_first( g_ColorCorrectionList, pEntity );
 }
 
 ClientCCHandle_t CColorCorrectionMgr::AddColorCorrectionVolume( C_ColorCorrectionVolume *pVolume, const char *pName, const char *pFileName )
@@ -100,8 +97,8 @@ ClientCCHandle_t CColorCorrectionMgr::AddColorCorrectionVolume( C_ColorCorrectio
 	ClientCCHandle_t h = AddColorCorrection(pName, pFileName);
 	if ( h != INVALID_CLIENT_CCHANDLE )
 	{
-		Assert(g_ColorCorrectionVolumeList.Find(pVolume) == -1);
-		g_ColorCorrectionVolumeList.AddToTail(pVolume);
+		Assert(ks::find_index( g_ColorCorrectionVolumeList, pVolume ) == -1);
+		g_ColorCorrectionVolumeList.push_back( pVolume );
 	}
 	return h;
 }
@@ -109,7 +106,7 @@ ClientCCHandle_t CColorCorrectionMgr::AddColorCorrectionVolume( C_ColorCorrectio
 void CColorCorrectionMgr::RemoveColorCorrectionVolume( C_ColorCorrectionVolume *pVolume, ClientCCHandle_t h)
 {
 	RemoveColorCorrection(h);
-	g_ColorCorrectionVolumeList.FindAndFastRemove(pVolume);
+	ks::swap_erase_first( g_ColorCorrectionVolumeList, pVolume );
 }
 
 //------------------------------------------------------------------------------
@@ -120,7 +117,7 @@ void CColorCorrectionMgr::SetColorCorrectionWeight( ClientCCHandle_t h, float fl
 	if ( h != INVALID_CLIENT_CCHANDLE )
 	{
 		SetWeightParams_t params = { h, flWeight, bExclusive };
-		m_colorCorrectionWeights.AddToTail( params );
+		m_colorCorrectionWeights.push_back( params );
 		if( bExclusive && m_bHaveExclusiveWeight && ( flWeight != 0.0f ) )
 		{
 			DevWarning( "Found multiple active color_correction entities with exclusive setting enabled. This is invalid.\n" );
@@ -137,7 +134,7 @@ void CColorCorrectionMgr::CommitColorCorrectionWeights()
 {
 	CMatRenderContextPtr pRenderContext( g_pMaterialSystem );
 
-	for ( int i = 0; i < m_colorCorrectionWeights.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_colorCorrectionWeights ); i++ )
 	{
 		ColorCorrectionHandle_t ccHandle = reinterpret_cast<ColorCorrectionHandle_t>( m_colorCorrectionWeights[i].handle );
 		float flWeight = m_colorCorrectionWeights[i].flWeight;
@@ -155,7 +152,7 @@ void CColorCorrectionMgr::CommitColorCorrectionWeights()
 			++m_nActiveWeightCount;
 		}
 	}
-	m_colorCorrectionWeights.RemoveAll();
+	m_colorCorrectionWeights.clear();
 }
 
 void CColorCorrectionMgr::ResetColorCorrectionWeights()
@@ -169,7 +166,7 @@ void CColorCorrectionMgr::ResetColorCorrectionWeights()
 	m_nActiveWeightCount = 0;
 	m_bHaveExclusiveWeight = false;
 	m_flExclusiveWeight = 0.0f;
-	m_colorCorrectionWeights.RemoveAll();
+	m_colorCorrectionWeights.clear();
 }
 
 void CColorCorrectionMgr::SetResetable( ClientCCHandle_t h, bool bResetable )
@@ -210,7 +207,7 @@ void CColorCorrectionMgr::UpdateColorCorrection()
 	pClientMode->OnColorCorrectionWeightsReset();
 	float ccScale = pClientMode->GetColorCorrectionScale();
 
-	UpdateColorCorrectionEntities( pPlayer, ccScale, g_ColorCorrectionList.Base(), g_ColorCorrectionList.Count() );
-	UpdateColorCorrectionVolumes( pPlayer, ccScale, g_ColorCorrectionVolumeList.Base(), g_ColorCorrectionVolumeList.Count() );
+	UpdateColorCorrectionEntities( pPlayer, ccScale, g_ColorCorrectionList.data(), std::ssize( g_ColorCorrectionList ) );
+	UpdateColorCorrectionVolumes( pPlayer, ccScale, g_ColorCorrectionVolumeList.data(), std::ssize( g_ColorCorrectionVolumeList ) );
 	CommitColorCorrectionWeights();
 }

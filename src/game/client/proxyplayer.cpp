@@ -19,8 +19,6 @@
 #include "cstrike15_gcconstants.h"
 
 #include "imaterialproxydict.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Returns the proximity of the player to the entity
@@ -291,7 +289,6 @@ void CEntityRandomProxy::OnBind( void *pC_BaseEntity )
 
 EXPOSE_MATERIAL_PROXY( CEntityRandomProxy, EntityRandom );
 
-#include "utlrbtree.h"
 
 //-----------------------------------------------------------------------------
 // StatTrak 'kill odometer' support: given a numerical value expressed as a string, pick a texture frame to represent a given digit
@@ -384,7 +381,7 @@ void CStatTrakDigitProxy::OnBind( void *pC_BaseEntity )
 	}
 
 	// get the [0-9] value of the digit we want
-	int iDigitCount = MIN( iDesiredDigit, 10 );
+	int iDigitCount = std::min( iDesiredDigit, 10 );
 	for ( int i=0; i<iDigitCount; i++ )
 	{
 		nKillEaterAltScore /= 10;

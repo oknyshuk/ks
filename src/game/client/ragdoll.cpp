@@ -20,9 +20,6 @@
 #include "vphysics/constraints.h"
 #include "clientalphaproperty.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #ifdef _DEBUG
 extern ConVar r_FadeProps;
 #endif
@@ -838,7 +835,7 @@ struct ragdoll_remember_t
 
 struct ragdoll_memory_list_t
 {
-	CUtlVector<ragdoll_remember_t>	list;
+	std::vector< ragdoll_remember_t >	list;
 
 	int tickCount;
 
@@ -846,22 +843,22 @@ struct ragdoll_memory_list_t
 	{
 		if ( tickCount > gpGlobals->tickcount )
 		{
-			list.RemoveAll();
+			list.clear();
 			return;
 		}
 
-		for ( int i = list.Count()-1; i >= 0; --i )
+		for ( int i = std::ssize( list )-1; i >= 0; --i )
 		{
 			if ( list[i].tickCount != gpGlobals->tickcount )
 			{
-				list.FastRemove(i);
+				ks::swap_remove( list, i );
 			}
 		}
 	}
 
 	bool IsInList( C_BaseEntity *pRagdoll )
 	{
-		for ( int i = list.Count()-1; i >= 0; --i )
+		for ( int i = std::ssize( list )-1; i >= 0; --i )
 		{
 			if ( list[i].ragdoll == pRagdoll )
 				return true;
@@ -872,7 +869,7 @@ struct ragdoll_memory_list_t
 	void AddToList( C_BaseEntity *pRagdoll )
 	{
 		Update();
-		int index = list.AddToTail();
+		int index = std::ssize( list ); list.emplace_back();
 		list[index].ragdoll = pRagdoll;
 		list[index].tickCount = gpGlobals->tickcount;
 	}

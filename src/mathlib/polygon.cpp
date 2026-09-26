@@ -8,22 +8,22 @@
 #include "quadric.h"
 
 // Assumes that points are ordered clockwise when looking at the face of the polygon
-void SimplifyPolygon( CUtlVector< Vector > *pPoints, const Vector &vNormal, float flMaximumDeviation )
+void SimplifyPolygon( std::vector< Vector > *pPoints, const Vector &vNormal, float flMaximumDeviation )
 {
-	if ( pPoints->Count() < 3 )
+	if ( std::ssize( *pPoints ) < 3 )
 	{
 		return;
 	}
 
-	int nVertices = pPoints->Count();
-	Vector vPrevious = pPoints->Element( nVertices - 1 );
-	Vector vCurrent = pPoints->Element( 0 );
+	int nVertices = std::ssize( *pPoints );
+	Vector vPrevious = (*pPoints)[ nVertices - 1 ];
+	Vector vCurrent = (*pPoints)[ 0 ];
 	Vector vNext;
 	
 	// Walk around the polygon removing redundant vertices
 	for ( int i = 0; i < nVertices; ++ i )
 	{
-		vNext = pPoints->Element( ( i + 1 ) % nVertices );
+		vNext = (*pPoints)[ ( i + 1 ) % nVertices ];
 
 		// Is the current vertex redundant?
 
@@ -36,7 +36,7 @@ void SimplifyPolygon( CUtlVector< Vector > *pPoints, const Vector &vNormal, floa
 		if ( flAreaDeviation >= 0.0f && flAreaDeviation < flMaximumDeviation )
 		{
 			// redundant
-			pPoints->Remove( i );
+			pPoints->erase( pPoints->begin() + i );
 			-- nVertices;
 			-- i;
 		}
@@ -49,9 +49,9 @@ void SimplifyPolygon( CUtlVector< Vector > *pPoints, const Vector &vNormal, floa
 	}
 }
 
-static void ComputeQuadric( const CUtlVector< Vector > &points, int nVertex, const Vector &vNormal, CQuadricError *pError )
+static void ComputeQuadric( const std::vector< Vector > &points, int nVertex, const Vector &vNormal, CQuadricError *pError )
 {
-	int nVertices = points.Count();
+	int nVertices = std::ssize( points );
 	Vector vPrevious = points[( nVertex + nVertices - 1 ) % nVertices];
 	Vector vCurrent = points[nVertex];
 	Vector vNext = points[( nVertex + 1 ) % nVertices];
@@ -66,28 +66,28 @@ static void ComputeQuadric( const CUtlVector< Vector > &points, int nVertex, con
 	*pError += line2;
 }
 
-void SimplifyPolygonQEM( CUtlVector< Vector > *pPoints, const Vector &vNormal, float flMaximumSquaredError, bool bUseOptimalPointPlacement )
+void SimplifyPolygonQEM( std::vector< Vector > *pPoints, const Vector &vNormal, float flMaximumSquaredError, bool bUseOptimalPointPlacement )
 {
-	if ( pPoints->Count() < 3 )
+	if ( std::ssize( *pPoints ) < 3 )
 	{
 		return;
 	}
 	
-	CUtlVector< CQuadricError > quadrics;
-	quadrics.EnsureCapacity( pPoints->Count() );
+	std::vector< CQuadricError > quadrics;
+	quadrics.reserve( std::ssize( *pPoints ) );
 	
-	int nVertices = pPoints->Count();
-	Vector vPrevious = pPoints->Element( nVertices - 1 );
-	Vector vCurrent = pPoints->Element( 0 );
+	int nVertices = std::ssize( *pPoints );
+	Vector vPrevious = (*pPoints)[ nVertices - 1 ];
+	Vector vCurrent = (*pPoints)[ 0 ];
 	Vector vNext;
 
 	// Compute quadric error functions for each vertex
 	for ( int i = 0; i < nVertices; ++ i )
 	{
-		vNext = pPoints->Element( ( i + 1 ) % nVertices );
+		vNext = (*pPoints)[ ( i + 1 ) % nVertices ];
 
 		Vector vAbove = vCurrent + vNormal;
-		quadrics.AddToTail();
+		quadrics.emplace_back();
 		quadrics[i].InitFromPlane( vNormal, -DotProduct( vNormal, vCurrent ), 1.0f );
 		CQuadricError line1, line2;
 		line1.InitFromTriangle( vPrevious, vCurrent, vAbove, 0.0f );
@@ -101,7 +101,7 @@ void SimplifyPolygonQEM( CUtlVector< Vector > *pPoints, const Vector &vNormal, f
 
 	// @TODO: use a sorted heap instead of pseudo-bubble-sort
 	// We like quadrilaterals...don't try to go simpler than that
-	while ( pPoints->Count() > 4 )
+	while ( std::ssize( *pPoints ) > 4 )
 	{
 		float flLowestError = flMaximumSquaredError;
 		Vector vBestCollapse;
@@ -126,7 +126,7 @@ void SimplifyPolygonQEM( CUtlVector< Vector > *pPoints, const Vector &vNormal, f
 			else
 			{
 				// Only collapse to endpoints
-				Vector vA = pPoints->Element( i );
+				Vector vA = (*pPoints)[ i ];
 				float flErrorA = sum.ComputeError( vA );
 				if ( flErrorA < flLowestError )
 				{
@@ -134,7 +134,7 @@ void SimplifyPolygonQEM( CUtlVector< Vector > *pPoints, const Vector &vNormal, f
 					vBestCollapse = vA;
 					nCollapseIndex = i;
 				}
-				Vector vB = pPoints->Element( nNextIndex );
+				Vector vB = (*pPoints)[ nNextIndex ];
 				float flErrorB = sum.ComputeError( vB );
 				if ( flErrorB < flLowestError )
 				{
@@ -147,11 +147,11 @@ void SimplifyPolygonQEM( CUtlVector< Vector > *pPoints, const Vector &vNormal, f
 
 		if ( nCollapseIndex != -1 )
 		{
-			pPoints->Element( nCollapseIndex ) = vBestCollapse;
+			(*pPoints)[ nCollapseIndex ] = vBestCollapse;
 			int nNextIndex = ( nCollapseIndex + 1 ) % nVertices;
 			
-			pPoints->Remove( nNextIndex );
-			quadrics.Remove( nNextIndex );
+			pPoints->erase( pPoints->begin() + nNextIndex );
+			quadrics.erase( quadrics.begin() + nNextIndex );
 			-- nVertices;
 			
 			if ( nNextIndex < nCollapseIndex ) 
@@ -210,12 +210,12 @@ bool IsConcave( const Vector *pPolygonPoints, int nPointCount, const Vector &vNo
 	return false;
 }
 
-static bool IsPointInPolygon( const CUtlVector< Vector > &polygonPoints, const SubPolygon_t &convexRegion, const Vector &vNormal, const Vector &vPoint )
+static bool IsPointInPolygon( const std::vector< Vector > &polygonPoints, const SubPolygon_t &convexRegion, const Vector &vNormal, const Vector &vPoint )
 {
-	int nIndex = convexRegion.m_Indices[convexRegion.m_Indices.Count() - 1];
+	int nIndex = convexRegion.m_Indices[std::ssize( convexRegion.m_Indices ) - 1];
 	Vector v0 = SubPolygon_t::GetPoint( polygonPoints, nIndex );
 
-	for ( int i = 0; i < convexRegion.m_Indices.Count(); ++ i )
+	for ( int i = 0; i < std::ssize( convexRegion.m_Indices ); ++ i )
 	{
 		nIndex = convexRegion.m_Indices[i];
 		Vector v1 = SubPolygon_t::GetPoint( polygonPoints, nIndex );
@@ -233,14 +233,14 @@ static bool IsPointInPolygon( const CUtlVector< Vector > &polygonPoints, const S
 	return true;
 }
 
-static bool PointsInsideConvexArea( const CUtlVector< Vector > &polygonPoints, const SubPolygon_t &originalPolygon, const Vector &vNormal, int nFirstIndex, int nLastIndex, const SubPolygon_t &convexRegion )
+static bool PointsInsideConvexArea( const std::vector< Vector > &polygonPoints, const SubPolygon_t &originalPolygon, const Vector &vNormal, int nFirstIndex, int nLastIndex, const SubPolygon_t &convexRegion )
 {
-	nFirstIndex %= originalPolygon.m_Indices.Count();
-	nLastIndex %= originalPolygon.m_Indices.Count();
-	if ( nFirstIndex < 0 ) nFirstIndex += originalPolygon.m_Indices.Count();
-	if ( nLastIndex < 0 ) nLastIndex += originalPolygon.m_Indices.Count();
+	nFirstIndex %= std::ssize( originalPolygon.m_Indices );
+	nLastIndex %= std::ssize( originalPolygon.m_Indices );
+	if ( nFirstIndex < 0 ) nFirstIndex += std::ssize( originalPolygon.m_Indices );
+	if ( nLastIndex < 0 ) nLastIndex += std::ssize( originalPolygon.m_Indices );
 
-	for ( int i = nFirstIndex; i != nLastIndex; i = ( i + 1 ) % originalPolygon.m_Indices.Count() )
+	for ( int i = nFirstIndex; i != nLastIndex; i = ( i + 1 ) % std::ssize( originalPolygon.m_Indices ) )
 	{
 		int nVertex = originalPolygon.GetVertexIndex( i );
 		Vector vPoint = SubPolygon_t::GetPoint( polygonPoints, nVertex );
@@ -248,7 +248,7 @@ static bool PointsInsideConvexArea( const CUtlVector< Vector > &polygonPoints, c
 		{
 			bool bIsDoubleVertex = false;
 			// Allow points on the boundary of the convex region if they are coincident with one of the points of the region itself
-			for ( int j = 0; j < convexRegion.m_Indices.Count(); ++ j )
+			for ( int j = 0; j < std::ssize( convexRegion.m_Indices ); ++ j )
 			{
 				Vector vConvexRegionTestPoint = SubPolygon_t::GetPoint( polygonPoints, convexRegion.GetVertexIndex( j ) );
 				if ( VectorsAreEqual( vConvexRegionTestPoint, vPoint, POINT_IN_POLYGON_EPSILON ) )
@@ -311,15 +311,15 @@ static const float LINE_INTERSECT_EPSILON = 1e-3f;
 // then the line segment vA-vHoleB must not intersect any other part of 
 // the hole polygon.
 //-----------------------------------------------------------------------------
-static bool LineSegmentIntersectsPolygon( const CUtlVector< Vector > &polygonPoints, const Vector &vNormal, const Vector &vA, const Vector &vB, const SubPolygon_t &hole, float *pLowestTimeOfIntersection, Vector *pA, Vector *pB, int *pHoleVertexIndex )
+static bool LineSegmentIntersectsPolygon( const std::vector< Vector > &polygonPoints, const Vector &vNormal, const Vector &vA, const Vector &vB, const SubPolygon_t &hole, float *pLowestTimeOfIntersection, Vector *pA, Vector *pB, int *pHoleVertexIndex )
 {
 	*pLowestTimeOfIntersection = 2.0f; // a valid time is between 0 and 1, anything outside the range is considered invalid
 	float flTimeOfIntersection;
-	Vector vPrev = SubPolygon_t::GetPoint( polygonPoints, hole.m_Indices[hole.m_Indices.Count() - 1] );
+	Vector vPrev = SubPolygon_t::GetPoint( polygonPoints, hole.m_Indices[std::ssize( hole.m_Indices ) - 1] );
 	bool bIntersect = false;
 	Vector vInside = ( vB - vA ).Cross( vNormal );
 	
-	for ( int i = 0; i < hole.m_Indices.Count(); ++ i )
+	for ( int i = 0; i < std::ssize( hole.m_Indices ); ++ i )
 	{
 		float flOtherTimeOfIntersection;
 		Vector vCurrent = SubPolygon_t::GetPoint( polygonPoints, hole.m_Indices[i] );
@@ -347,7 +347,7 @@ static bool LineSegmentIntersectsPolygon( const CUtlVector< Vector > &polygonPoi
 				}
 				else
 				{
-					*pHoleVertexIndex = ( i + hole.m_Indices.Count() - 1 ) % hole.m_Indices.Count();					
+					*pHoleVertexIndex = ( i + std::ssize( hole.m_Indices ) - 1 ) % std::ssize( hole.m_Indices );					
 				}
 				
 				bIntersect = true;
@@ -358,14 +358,14 @@ static bool LineSegmentIntersectsPolygon( const CUtlVector< Vector > &polygonPoi
 	return bIntersect;
 }
 
-void FindLineSegmentIntersectingDiagonal( const CUtlVector< Vector > &polygonPoints, const Vector &vNormal, const CUtlVector< SubPolygon_t > &holes, const Vector &vA, const Vector &vB, Vector *pHoleSegmentA, Vector *pHoleSegmentB, int *pHoleIndex, int *pHoleVertexIndex )
+void FindLineSegmentIntersectingDiagonal( const std::vector< Vector > &polygonPoints, const Vector &vNormal, const std::vector< SubPolygon_t > &holes, const Vector &vA, const Vector &vB, Vector *pHoleSegmentA, Vector *pHoleSegmentB, int *pHoleIndex, int *pHoleVertexIndex )
 {
 	float flLowestTimeOfIntersection = 2.0f;
 	int nHoleVertexIndex;
 	*pHoleIndex = -1;
 
 	// Test for holes
-	for ( int i = 0; i < holes.Count(); ++ i )
+	for ( int i = 0; i < std::ssize( holes ); ++ i )
 	{
 		float flTimeOfIntersection;
 		Vector vTempA, vTempB;
@@ -383,19 +383,19 @@ void FindLineSegmentIntersectingDiagonal( const CUtlVector< Vector > &polygonPoi
 	}
 }
 
-void DecomposePolygon_Step( const CUtlVector< Vector > &polygonPoints, const Vector &vNormal, CUtlVector< SubPolygon_t > *pHoles, SubPolygon_t *pNewPartition, SubPolygon_t *pOriginalPolygon, int *pFirstIndex )
+void DecomposePolygon_Step( const std::vector< Vector > &polygonPoints, const Vector &vNormal, std::vector< SubPolygon_t > *pHoles, SubPolygon_t *pNewPartition, SubPolygon_t *pOriginalPolygon, int *pFirstIndex )
 {
-	Assert( *pFirstIndex >= 0 && *pFirstIndex < pOriginalPolygon->m_Indices.Count() );
+	Assert( *pFirstIndex >= 0 && *pFirstIndex < std::ssize( pOriginalPolygon->m_Indices ) );
 	
 	// Always start decomposition on a notch
 	Vector vPrev = SubPolygon_t::GetPoint( polygonPoints, pOriginalPolygon->GetVertexIndex( *pFirstIndex - 1 ) );
 	Vector vCurrent = SubPolygon_t::GetPoint( polygonPoints, pOriginalPolygon->GetVertexIndex( *pFirstIndex ) );
 	Vector vNext = SubPolygon_t::GetPoint( polygonPoints, pOriginalPolygon->GetVertexIndex( *pFirstIndex + 1 ) );
-	for ( int i = 0; i < pOriginalPolygon->m_Indices.Count(); ++ i )
+	for ( int i = 0; i < std::ssize( pOriginalPolygon->m_Indices ); ++ i )
 	{
 		if ( IsConcave( vPrev, vCurrent, vNext, vNormal) )
 		{
-			*pFirstIndex = ( *pFirstIndex + i ) % pOriginalPolygon->m_Indices.Count();
+			*pFirstIndex = ( *pFirstIndex + i ) % std::ssize( pOriginalPolygon->m_Indices );
 			break;
 		}
 		else
@@ -415,20 +415,20 @@ void DecomposePolygon_Step( const CUtlVector< Vector > &polygonPoints, const Vec
 	{
 		bool bClockwise = ( i == 0 );
 
-		pNewPartition->m_Indices.RemoveAll();
+		pNewPartition->m_Indices.clear();
 
 		// Grab the first 2 vertices from the remaining polygon and add to the new potential convex partition
 		int nFirstVertex = pOriginalPolygon->GetVertexIndex( *pFirstIndex );
 		int nSecondVertex = pOriginalPolygon->GetVertexIndex( *pFirstIndex + ( bClockwise ? 1 : -1 ) );
 		if ( bClockwise )
 		{
-			pNewPartition->m_Indices.AddToTail( nFirstVertex );
-			pNewPartition->m_Indices.AddToTail( nSecondVertex );
+			pNewPartition->m_Indices.push_back( nFirstVertex );
+			pNewPartition->m_Indices.push_back( nSecondVertex );
 		}
 		else
 		{
-			pNewPartition->m_Indices.AddToTail( nSecondVertex );
-			pNewPartition->m_Indices.AddToTail( nFirstVertex );
+			pNewPartition->m_Indices.push_back( nSecondVertex );
+			pNewPartition->m_Indices.push_back( nFirstVertex );
 		}		
 
 		Vector vFirst = SubPolygon_t::GetPoint( polygonPoints, nFirstVertex );
@@ -443,7 +443,7 @@ void DecomposePolygon_Step( const CUtlVector< Vector > &polygonPoints, const Vec
 		// and nNextIndex refers to 1 past the index of the last vertex from the original polygon that is in the partition.
 		// If clockwise, you can find the new convex partition by iterating indices in original polygon from [*pFirstIndex, nNextIndex-1], 
 		// if counter-clockwise, iterate from [nNextIndex+1, *pFirstIndex].
-		while ( pNewPartition->m_Indices.Count() < pOriginalPolygon->m_Indices.Count() ) 
+		while ( std::ssize( pNewPartition->m_Indices ) < std::ssize( pOriginalPolygon->m_Indices ) ) 
 		{
 			vCurrent = SubPolygon_t::GetPoint( polygonPoints, nNextVertex );
 
@@ -466,12 +466,12 @@ void DecomposePolygon_Step( const CUtlVector< Vector > &polygonPoints, const Vec
 			{
 				if ( bClockwise )
 				{
-					pNewPartition->m_Indices.AddToTail( nNextVertex );
+					pNewPartition->m_Indices.push_back( nNextVertex );
 					++ nNextIndex;
 				}
 				else
 				{
-					pNewPartition->m_Indices.AddToHead( nNextVertex );				
+					pNewPartition->m_Indices.insert( pNewPartition->m_Indices.begin(), nNextVertex );				
 					-- nNextIndex;
 				}
 
@@ -485,25 +485,25 @@ void DecomposePolygon_Step( const CUtlVector< Vector > &polygonPoints, const Vec
 		int nLastIndexInRemainingPolygon = bClockwise ? *pFirstIndex : nNextIndex + 1;
 		
 		// Test to see if any points in the remaining polygon are within the bounds of the convex polygon we're about to peel off.
-		while ( pNewPartition->m_Indices.Count() >= 3 && PointsInsideConvexArea( polygonPoints, *pOriginalPolygon, vNormal, nFirstIndexInRemainingPolygon, nLastIndexInRemainingPolygon, *pNewPartition ) )
+		while ( std::ssize( pNewPartition->m_Indices ) >= 3 && PointsInsideConvexArea( polygonPoints, *pOriginalPolygon, vNormal, nFirstIndexInRemainingPolygon, nLastIndexInRemainingPolygon, *pNewPartition ) )
 		{
 			if ( bClockwise )
 			{
-				pNewPartition->m_Indices.RemoveMultipleFromTail( 1 );
+				pNewPartition->m_Indices.resize( pNewPartition->m_Indices.size() - 1 );
 				-- nNextIndex;
 			}
 			else
 			{
-				pNewPartition->m_Indices.RemoveMultipleFromHead( 1 );
+				pNewPartition->m_Indices.erase( pNewPartition->m_Indices.begin(), pNewPartition->m_Indices.begin() + 1 );
 				++ nNextIndex;
 			}
 		}
 		
 		// Found a convex chunk of the original concave polygon, now check for
 		// holes or concavities which intersect this convex chunk.
-		if ( pNewPartition->m_Indices.Count() >= 3 )
+		if ( std::ssize( pNewPartition->m_Indices ) >= 3 )
 		{
-			Vector vA = SubPolygon_t::GetPoint( polygonPoints, pNewPartition->m_Indices[pNewPartition->m_Indices.Count() - 1] );
+			Vector vA = SubPolygon_t::GetPoint( polygonPoints, pNewPartition->m_Indices[std::ssize( pNewPartition->m_Indices ) - 1] );
 			Vector vB = SubPolygon_t::GetPoint( polygonPoints, pNewPartition->m_Indices[0] );
 			Vector vHoleSegmentA, vHoleSegmentB;
 			int nHoleIndex = -1;
@@ -519,7 +519,7 @@ void DecomposePolygon_Step( const CUtlVector< Vector > &polygonPoints, const Vec
 				do 
 				{
 					nLastHoleIndex = nHoleIndex;
-					vB = SubPolygon_t::GetPoint( polygonPoints, pHoles->Element( nHoleIndex ).GetVertexIndex( nHoleVertexIndex ) );
+					vB = SubPolygon_t::GetPoint( polygonPoints, (*pHoles)[ nHoleIndex ].GetVertexIndex( nHoleVertexIndex ) );
 					FindLineSegmentIntersectingDiagonal( polygonPoints, vNormal, *pHoles, vA, vB, &vHoleSegmentA, &vHoleSegmentB, &nHoleIndex, &nHoleVertexIndex );
 
 					Assert( nHoleIndex != -1 );
@@ -531,9 +531,9 @@ void DecomposePolygon_Step( const CUtlVector< Vector > &polygonPoints, const Vec
 			{
 				Vector vHolePoint;
 				int nHoleInRegionIndex = -1;
-				for ( int i = 0; i < pHoles->Count(); ++ i )
+				for ( int i = 0; i < std::ssize( *pHoles ); ++ i )
 				{
-					vHolePoint = SubPolygon_t::GetPoint( polygonPoints, pHoles->Element( i ).m_Indices[0] );
+					vHolePoint = SubPolygon_t::GetPoint( polygonPoints, (*pHoles)[ i ].m_Indices[0] );
 					if ( IsPointInPolygon( polygonPoints, *pNewPartition, vNormal, vHolePoint ) )
 					{
 						// hole is within the region
@@ -556,7 +556,7 @@ void DecomposePolygon_Step( const CUtlVector< Vector > &polygonPoints, const Vec
 						do 
 						{
 							nLastHoleIndex = nHoleIndex;
-							vB = SubPolygon_t::GetPoint( polygonPoints, pHoles->Element( nHoleIndex ).GetVertexIndex( nHoleVertexIndex ) );
+							vB = SubPolygon_t::GetPoint( polygonPoints, (*pHoles)[ nHoleIndex ].GetVertexIndex( nHoleVertexIndex ) );
 							FindLineSegmentIntersectingDiagonal( polygonPoints, vNormal, *pHoles, vA, vB, &vHoleSegmentA, &vHoleSegmentB, &nHoleIndex, &nHoleVertexIndex );
 							Assert( nHoleIndex != -1 );
 						} while ( nHoleIndex != nLastHoleIndex );
@@ -571,36 +571,36 @@ void DecomposePolygon_Step( const CUtlVector< Vector > &polygonPoints, const Vec
 				// We have a refined diagonal; absorb the hole into the original polygon.
 				// Reject this partition but add the hole's vertices to the original polygon.
 
-				int nInsertAfterIndex = ( bClockwise ? nNextIndex + pOriginalPolygon->m_Indices.Count() - 1 : *pFirstIndex ) % pOriginalPolygon->m_Indices.Count();
-				const SubPolygon_t *pHolePolygon = &pHoles->Element( nHoleIndex );
+				int nInsertAfterIndex = ( bClockwise ? nNextIndex + std::ssize( pOriginalPolygon->m_Indices ) - 1 : *pFirstIndex ) % std::ssize( pOriginalPolygon->m_Indices );
+				const SubPolygon_t *pHolePolygon = &(*pHoles)[ nHoleIndex ];
 				int nConnectBackToVertex = pOriginalPolygon->m_Indices[nInsertAfterIndex];
-				for ( int i = 0; i < pHolePolygon->m_Indices.Count(); ++ i )
+				for ( int i = 0; i < std::ssize( pHolePolygon->m_Indices ); ++ i )
 				{
-					pOriginalPolygon->m_Indices.InsertAfter( nInsertAfterIndex, pHolePolygon->m_Indices[( i + nHoleVertexIndex ) % pHolePolygon->m_Indices.Count()] );
+					pOriginalPolygon->m_Indices.insert( pOriginalPolygon->m_Indices.begin() + nInsertAfterIndex + 1, pHolePolygon->m_Indices[( i + nHoleVertexIndex ) % std::ssize( pHolePolygon->m_Indices )] );
 					++ nInsertAfterIndex;
 				}
-				pOriginalPolygon->m_Indices.InsertAfter( nInsertAfterIndex, pHolePolygon->m_Indices[nHoleVertexIndex] );
+				pOriginalPolygon->m_Indices.insert( pOriginalPolygon->m_Indices.begin() + nInsertAfterIndex + 1, pHolePolygon->m_Indices[nHoleVertexIndex] );
 				++ nInsertAfterIndex;
-				pOriginalPolygon->m_Indices.InsertAfter( nInsertAfterIndex, nConnectBackToVertex );
+				pOriginalPolygon->m_Indices.insert( pOriginalPolygon->m_Indices.begin() + nInsertAfterIndex + 1, nConnectBackToVertex );
 				
-				pNewPartition->m_Indices.RemoveAll();
-				pHoles->Remove( nHoleIndex );
+				pNewPartition->m_Indices.clear();
+				pHoles->erase( pHoles->begin() + nHoleIndex );
 			}
 			else
 			{
 				// We have the original, valid diagonal.
 				// Remove the corresponding indices from the original polygon to peel off the new convex region
-				int nIndexToRemove = ( ( bClockwise ? *pFirstIndex : nNextIndex + 1 ) + 1 ) % pOriginalPolygon->m_Indices.Count();
-				if ( nIndexToRemove < 0 ) nIndexToRemove += pOriginalPolygon->m_Indices.Count();
+				int nIndexToRemove = ( ( bClockwise ? *pFirstIndex : nNextIndex + 1 ) + 1 ) % std::ssize( pOriginalPolygon->m_Indices );
+				if ( nIndexToRemove < 0 ) nIndexToRemove += std::ssize( pOriginalPolygon->m_Indices );
 
-				for ( int i = 1; i < pNewPartition->m_Indices.Count() - 1; ++ i )
+				for ( int i = 1; i < std::ssize( pNewPartition->m_Indices ) - 1; ++ i )
 				{
-					nIndexToRemove = nIndexToRemove % pOriginalPolygon->m_Indices.Count();
+					nIndexToRemove = nIndexToRemove % std::ssize( pOriginalPolygon->m_Indices );
 					Assert( pOriginalPolygon->m_Indices[nIndexToRemove] == pNewPartition->m_Indices[i] );
-					pOriginalPolygon->m_Indices.Remove( nIndexToRemove );
+					pOriginalPolygon->m_Indices.erase( pOriginalPolygon->m_Indices.begin() + nIndexToRemove );
 				}
 
-				*pFirstIndex = nIndexToRemove % pOriginalPolygon->m_Indices.Count();
+				*pFirstIndex = nIndexToRemove % std::ssize( pOriginalPolygon->m_Indices );
 			}
 
 			// Done!
@@ -609,28 +609,28 @@ void DecomposePolygon_Step( const CUtlVector< Vector > &polygonPoints, const Vec
 	}
 
 	// Couldn't find a match either clockwise or counter-clockwise
-	*pFirstIndex = ( *pFirstIndex + 1 ) % pOriginalPolygon->m_Indices.Count();
+	*pFirstIndex = ( *pFirstIndex + 1 ) % std::ssize( pOriginalPolygon->m_Indices );
 }
 
-void DecomposePolygon( const CUtlVector< Vector > &polygonPoints, const Vector &vNormal, SubPolygon_t *pOriginalPolygon, CUtlVector< SubPolygon_t > *pHoles, CUtlVector< SubPolygon_t > *pPartitions )
+void DecomposePolygon( const std::vector< Vector > &polygonPoints, const Vector &vNormal, SubPolygon_t *pOriginalPolygon, std::vector< SubPolygon_t > *pHoles, std::vector< SubPolygon_t > *pPartitions )
 {
 	int nFirstIndex = 0; // The Nth vertex in the remaining polygon
 
 	SubPolygon_t *pNewPartition = nullptr;
-	while ( pOriginalPolygon->m_Indices.Count() >= 3 )
+	while ( std::ssize( pOriginalPolygon->m_Indices ) >= 3 )
 	{
 		if ( !pNewPartition )
 		{
-			pNewPartition = &pPartitions->Element( pPartitions->AddToTail() );
+			pNewPartition = &pPartitions->emplace_back();
 		}
 		DecomposePolygon_Step( polygonPoints, vNormal, pHoles, pNewPartition, pOriginalPolygon, &nFirstIndex );
-		if ( pNewPartition->m_Indices.Count() >= 3 )
+		if ( std::ssize( pNewPartition->m_Indices ) >= 3 )
 		{
 			pNewPartition = nullptr;
 		}
 		else
 		{
-			pNewPartition->m_Indices.RemoveAll();
+			pNewPartition->m_Indices.clear();
 		}
 	}
 }

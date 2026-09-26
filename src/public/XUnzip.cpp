@@ -146,9 +146,7 @@ typedef unsigned char BYTE;
 #include "tier1/strtools.h"
 #include "tier0/dbg.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 
 
 // THIS FILE is almost entirely based upon code by Jean-loup Gailly
@@ -210,9 +208,9 @@ typedef unsigned char BYTE;
 // for more info about .ZIP format, see ftp://ftp.cdrom.com/pub/infozip/doc/appnote-970311-iz.zip
 //   PkWare has also a specification at ftp://ftp.pkware.com/probdesc.zip
 
-#define zmalloc(len) malloc(len)
+#define zmalloc(len) MemAlloc_Alloc(len)
 
-#define zfree(p) free(p)
+#define zfree(p) g_pMemAlloc->Free(p)
 
 /*
 void *zmalloc(unsigned int len)
@@ -245,7 +243,6 @@ void zfree(void *buf)
 }
 */
 
-#pragma warning(disable : 4702)   // unreachable code
 
 typedef struct tm_unz_s
 { unsigned int tm_sec;            // seconds after the minute - [0,59]
@@ -2417,7 +2414,7 @@ const char * zError(int err)
 voidpf zcalloc (voidpf opaque, unsigned items, unsigned size)
 {
     if (opaque) items += size - size; // make compiler happy
-    return (voidpf)calloc(items, size);
+    return (voidpf)MemAlloc_Calloc(items, size);
 }
 
 void  zcfree (voidpf opaque, voidpf ptr)

@@ -11,9 +11,6 @@
 #include "filesystem_engine.h"
 #include "tier1/strtools.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: Implements Audio IO on the engine's COMMON filesystem
 //-----------------------------------------------------------------------------

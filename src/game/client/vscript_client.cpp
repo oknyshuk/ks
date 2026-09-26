@@ -7,7 +7,6 @@
 #include "cbase.h"
 #include "vscript_client.h"
 #include "icommandline.h"
-#include "tier1/utlbuffer.h"
 #include "tier1/fmtstr.h"
 #include "filesystem.h"
 #include "characterset.h"

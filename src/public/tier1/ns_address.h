@@ -198,11 +198,6 @@ struct ns_address
 
 	ns_address() : m_AddrType( NSAT_NETADR ){}
 
-	~ns_address()
-	{
-		Clear();
-	}
-
 	void Clear ( )
 	{
 		m_AddrType = NSAT_NETADR;

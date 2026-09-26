@@ -7,9 +7,6 @@
 #include "cbase.h"
 #include "mp_shareddefs.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 const char *g_pszMPConcepts[] =
 {

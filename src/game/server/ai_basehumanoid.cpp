@@ -14,9 +14,6 @@
 #include "ai_memory.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Purpose:  This is a generic function (to be implemented by sub-classes) to

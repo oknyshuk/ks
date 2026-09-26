@@ -18,9 +18,6 @@
 #include "materialsystem/materialsystem_config.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //#define CsmDbgMsg Msg
 #define CsmDbgMsg(x)
 
@@ -226,7 +223,7 @@ static void DebugRenderConvexPolyhedron( const Vector4D *pPlanes, uint nNumPlane
 	uint nLastPlane = cl_csm_viz_numplanes.GetInt();
 	if ( nLastPlane < 0 )
 		nLastPlane = nNumPlanes;
-	nLastPlane = MIN( nLastPlane, nNumPlanes );
+	nLastPlane = std::min( nLastPlane, nNumPlanes );
 
 	const float Q = cl_csm_viz_polyhedron_quad_size.GetFloat();
 
@@ -372,17 +369,17 @@ static void	ScreenText( int x, int y, int r, int g, int b, int a, const char *te
 
 CDebugPrimRenderer2D::CDebugPrimRenderer2D()
 {
-	m_debugLines.EnsureCapacity( 128 );
+	m_debugLines.reserve( 128 );
 }
 
 void CDebugPrimRenderer2D::Clear()
 {
-	m_debugLines.SetCount( 0 );
+	m_debugLines.assign( 0, {} );
 }
 
 void CDebugPrimRenderer2D::AddNormalizedLine2D( float sx, float sy, float ex, float ey, uint r, uint g, uint b )
 {
-	int nIndex = m_debugLines.AddToTail();
+	int nIndex = std::ssize( m_debugLines ); m_debugLines.emplace_back();
 	m_debugLines[nIndex].m_EndPoints[0].Init( sx, sy );
 	m_debugLines[nIndex].m_EndPoints[1].Init( ex, ey );
 	m_debugLines[nIndex].m_nColor[0] = r; 
@@ -397,7 +394,7 @@ void CDebugPrimRenderer2D::AddScreenspaceLine2D( float sx, float sy, float ex, f
 	materials->GetBackBufferDimensions( nBackBufWidth, nBackBufHeight );
 	float flInvBackBufWidth = 1.0f / nBackBufWidth, flInvBackBufHeight = 1.0f / nBackBufHeight;
 
-	int nIndex = m_debugLines.AddToTail();
+	int nIndex = std::ssize( m_debugLines ); m_debugLines.emplace_back();
 	m_debugLines[nIndex].m_EndPoints[0].Init( sx * flInvBackBufWidth, sy * flInvBackBufHeight );
 	m_debugLines[nIndex].m_EndPoints[1].Init( ex * flInvBackBufWidth, ey * flInvBackBufHeight );
 	m_debugLines[nIndex].m_nColor[0] = r; 
@@ -422,7 +419,7 @@ void CDebugPrimRenderer2D::AddScreenspaceLineList2D( uint nCount, const Vector2D
 
 	for ( uint i = 0; i < nCount; ++i )
 	{
-		int nIndex = m_debugLines.AddToTail();
+		int nIndex = std::ssize( m_debugLines ); m_debugLines.emplace_back();
 		m_debugLines[nIndex].m_EndPoints[0].Init( pVerts[0].x * flInvBackBufWidth, pVerts[0].y * flInvBackBufHeight );
 		m_debugLines[nIndex].m_EndPoints[1].Init( pVerts[1].x * flInvBackBufWidth, pVerts[1].y * flInvBackBufHeight );
 		m_debugLines[nIndex].m_nColor[0] = color.r;
@@ -508,9 +505,9 @@ void CDebugPrimRenderer2D::RenderScreenspaceDepthTexture( float sx, float sy, fl
 
 void CDebugPrimRenderer2D::Render2D( )
 {
-	if ( m_debugLines.Count() )
+	if ( !m_debugLines.empty() )
 	{
-		RenderDebugLines2D( m_debugLines.Count(), &m_debugLines[0] );
+		RenderDebugLines2D( std::ssize( m_debugLines ), &m_debugLines[0] );
 	}
 }
 

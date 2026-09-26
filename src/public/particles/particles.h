@@ -13,6 +13,8 @@
 #pragma GCC diagnostic ignored "-Wignored-attributes"
 #endif
 
+#include <atomic>
+#include <memory>
 #include "mathlib/mathlib.h"
 #include "mathlib/vector.h"
 #include "mathlib/ssemath.h"
@@ -21,11 +23,10 @@
 #include "materialsystem/MaterialSystemUtil.h"
 
 #include "dmxloader/dmxelement.h"
-#include "tier1/utlintrusivelist.h"
+#include "tier1/intrusive_list.h"
 #include "vstdlib/random.h"
-#include "tier1/utlobjectreference.h"
-#include "tier1/UtlStringMap.h"
-#include "tier1/utlmap.h"
+#include "tier1/tracked_ref.h"
+#include "tier1/map_ops.h"
 #include "trace.h"
 #include "tier1/utlsoacontainer.h"
 #include "raytrace.h"
@@ -41,8 +42,13 @@ struct DmxElementUnpackStructure_t;
 class CParticleSystemDefinition;
 class CParticleCollection;
 class CParticleOperatorInstance;
+typedef std::vector< std::unique_ptr< CParticleOperatorInstance > > ParticleOperatorList_t;
 class CParticleSystemDictionary;
-class CUtlBuffer;
+namespace ks
+{
+	class byte_reader;
+	class byte_writer;
+}
 class IParticleOperatorDefinition;
 class CSheet;
 class CMeshBuilder;
@@ -60,8 +66,8 @@ extern float s_pRandomFloats[];
 //-----------------------------------------------------------------------------
 
 // Get a list of the files inside the particle manifest file
-void GetParticleManifest( CUtlVector<CUtlString>& list );
-void GetParticleManifest( CUtlVector<CUtlString>& list, const char *pFile );
+void GetParticleManifest( std::vector< std::string >& list );
+void GetParticleManifest( std::vector< std::string >& list, const char *pFile );
 
 //-----------------------------------------------------------------------------
 // Particle attributes
@@ -447,6 +453,7 @@ public:
 //
 //-----------------------------------------------------------------------------
 typedef int ParticleSystemHandle_t;
+inline constexpr ParticleSystemHandle_t INVALID_PARTICLE_SYSTEM_HANDLE = 0xFFFF;
 
 class CParticleSystemMgr
 {
@@ -469,12 +476,12 @@ public:
 
 	// Read a particle config file, add it to the list of particle configs
 	bool ReadParticleConfigFile( const char *pFileName, bool bPrecache, bool bDecommitTempMemory = true );
-	bool ReadParticleConfigFile( CUtlBuffer &buf, bool bPrecache, bool bDecommitTempMemory = true, const char *pFileName = nullptr );
+	bool ReadParticleConfigFile( ks::byte_reader &buf, bool bPrecache, bool bDecommitTempMemory = true, const char *pFileName = nullptr );
 	void DecommitTempMemory();
 
-	// For recording, write a specific particle system to a CUtlBuffer in DMX format
-	bool WriteParticleConfigFile( const char *pParticleSystemName, CUtlBuffer &buf, bool bPreventNameBasedLookup = false );
-	bool WriteParticleConfigFile( const DmObjectId_t& id, CUtlBuffer &buf, bool bPreventNameBasedLookup = false );
+	// For recording, write a specific particle system in binary DMX format
+	bool WriteParticleConfigFile( const char *pParticleSystemName, ks::byte_writer &buf, bool bPreventNameBasedLookup = false );
+	bool WriteParticleConfigFile( const DmObjectId_t& id, ks::byte_writer &buf, bool bPreventNameBasedLookup = false );
 
 	// create a particle system by name. returns null if one of that name does not exist
 	CParticleCollection *CreateParticleCollection( const char *pParticleSystemName, float flDelay = 0.0f, int nRandomSeed = 0 );
@@ -502,10 +509,10 @@ public:
 
 	// call to get available particle operator definitions
 	// NOTE: FUNCTION_CHILDREN will return a faked one, for ease of writing the editor
-	CUtlVector< IParticleOperatorDefinition *> &GetAvailableParticleOperatorList( ParticleFunctionType_t nWhichList );
+	std::vector< IParticleOperatorDefinition * > &GetAvailableParticleOperatorList( ParticleFunctionType_t nWhichList );
 
-	void GetParticleSystemsInFile( const char *pFileName, CUtlVector<CUtlString> *pOutSystemNameList );
-	void GetParticleSystemsInBuffer( CUtlBuffer &buf, CUtlVector<CUtlString> *pOutSystemNameList );
+	void GetParticleSystemsInFile( const char *pFileName, std::vector< std::string > *pOutSystemNameList );
+	void GetParticleSystemsInBuffer( ks::byte_reader &buf, std::vector< std::string > *pOutSystemNameList );
 
 	// Returns the unpack structure for a particle system definition
 	const DmxElementUnpackStructure_t *GetParticleSystemDefinitionUnpackStructure();
@@ -584,7 +591,7 @@ private:
 	struct RenderCache_t
 	{
 		IMaterial *m_pMaterial;
-		CUtlVector< CParticleCollection * > m_ParticleCollections;
+		std::vector< CParticleCollection * > m_ParticleCollections;
 	};
 
 	struct BatchStep_t
@@ -601,7 +608,7 @@ private:
 	{
 		int m_nVertCount;
 		int m_nIndexCount;
-		CUtlVector< BatchStep_t > m_BatchStep; 
+		std::vector< BatchStep_t > m_BatchStep; 
 	};
 
 	struct ParticleAttribute_t
@@ -611,27 +618,27 @@ private:
 	};
 
 	// Unserialization-related methods
-	bool ReadParticleDefinitions( CUtlBuffer &buf, const char *pFileName, bool bPrecache, bool bDecommitTempMemory );
+	bool ReadParticleDefinitions( ks::byte_reader &buf, const char *pFileName, bool bPrecache, bool bDecommitTempMemory );
 	void AddParticleSystem( CDmxElement *pParticleSystem );
 
 	// Serialization-related methods
 	CDmxElement *CreateParticleDmxElement( const DmObjectId_t &id );
 	CDmxElement *CreateParticleDmxElement( const char *pParticleSystemName );
 
-	bool WriteParticleConfigFile( CDmxElement *pParticleSystem, CUtlBuffer &buf, bool bPreventNameBasedLookup );
+	bool WriteParticleConfigFile( CDmxElement *pParticleSystem, ks::byte_writer &buf, bool bPreventNameBasedLookup );
 
 	// Builds a list of batches to render
-	void BuildBatchList( int iRenderCache, IMatRenderContext *pRenderContext, CUtlVector< Batch_t >& batches );
+	void BuildBatchList( int iRenderCache, IMatRenderContext *pRenderContext, std::vector< Batch_t >& batches );
 
 	// Known operators
-	CUtlVector<IParticleOperatorDefinition *> m_ParticleOperators[PARTICLE_FUNCTION_COUNT];
+	std::vector< IParticleOperatorDefinition * > m_ParticleOperators[PARTICLE_FUNCTION_COUNT];
 
 	// Particle system dictionary
 	CParticleSystemDictionary *m_pParticleSystemDictionary;
 	
-	// typedef CUtlMap< ITexture *, CSheet* > SheetsCache;
-	typedef CUtlStringMap< CSheet* > SheetsCache_t;
-	SheetsCache_t m_SheetList;
+	// Sheets by texture name, in first-load order: indices are the sheet symbols cached by definitions.
+	std::vector< std::unique_ptr< CSheet > > m_SheetList;
+	ks::idict< int > m_SheetIndex;
 
 	// attaching and dtaching killlists. when simulating, a particle system gets a kill list. after
 	// simulating, the memory for that will be used for the next particle system.  This matters for
@@ -647,13 +654,13 @@ private:
 	CParticleCollection *m_pVisualizedParticles;
 	DmObjectId_t m_VisualizedOperatorId;
 	IParticleSystemQuery *m_pQuery;
-	CUtlVector< RenderCache_t > m_RenderCache;
+	std::vector< RenderCache_t > m_RenderCache;
 	IMaterial *m_pShadowDepthMaterial;
 	float m_flLastSimulationTime;
 	float m_flLastSimulationDuration;
 
-	CUtlVector< ParticleSystemHandle_t > m_PrecacheLookup;
-	CUtlVector< ParticleSystemHandle_t > m_ClientPrecacheLookup;
+	std::vector< ParticleSystemHandle_t > m_PrecacheLookup;
+	std::vector< ParticleSystemHandle_t > m_ClientPrecacheLookup;
 
 	bool m_bDidInit;
 	bool m_bUsingDefaultQuery;
@@ -729,7 +736,7 @@ public:
 	FORCEINLINE void RecordExecutionTime( float flETime )
 	{
 		m_flUncomittedTime += flETime;
-		m_flMaxExecutionTime = MAX( m_flMaxExecutionTime, flETime );
+		m_flMaxExecutionTime = std::max( m_flMaxExecutionTime, flETime );
 	}
 
 	FORCEINLINE float TotalRecordedExecutionTime( void ) const
@@ -1457,7 +1464,7 @@ public:
 		AttributeMap( int nContainerAttribute, int nParticleAttribute ) : m_nContainerAttribute( nContainerAttribute ), m_nParticleAttribute( nParticleAttribute ) {}
 		int m_nContainerAttribute, m_nParticleAttribute;
 	};
-	typedef CUtlVector< AttributeMap > AttributeMapVector;
+	typedef std::vector< AttributeMap > AttributeMapVector;
 
 	// Has the CParticleSnapshot been fully initialized?
 	bool IsValid( void ) { return !!m_pContainer; }
@@ -1562,8 +1569,8 @@ struct CPathParameters
 
 	void ClampControlPointIndices( void )
 	{
-		m_nStartControlPointNumber = MAX(0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nStartControlPointNumber ) );
-		m_nEndControlPointNumber = MAX(0, MIN( MAX_PARTICLE_CONTROL_POINTS-1, m_nEndControlPointNumber ) );
+		m_nStartControlPointNumber = std::max(0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nStartControlPointNumber ) );
+		m_nEndControlPointNumber = std::max(0, std::min( MAX_PARTICLE_CONTROL_POINTS-1, m_nEndControlPointNumber ) );
 	}
 };
 
@@ -1951,7 +1958,7 @@ public:
 
 	CParticleCollection *GetNextCollectionUsingSameDef() { return m_pNextDef; }
 
-	CUtlReference< CSheet > m_Sheet;
+	ks::tracked_ref< CSheet > m_Sheet;
 	bool m_bTriedLoadingSheet;
 
 
@@ -2056,7 +2063,7 @@ public:
 	float m_flNextSleepTime;								// time to go to sleep if not drawn
 
 
-	CUtlReference< CParticleSystemDefinition > m_pDef;
+	ks::tracked_ref< CParticleSystemDefinition > m_pDef;
 	int m_nAllocatedParticles;
 	int m_nMaxAllowedParticles;
 	bool m_bDormant;
@@ -2089,7 +2096,7 @@ public:
 
 	CParticleCollection *m_pParent;
 	
-	CUtlIntrusiveDList<CParticleCollection>  m_Children;	// list for all child particle systems
+	ks::intrusive_dlist<CParticleCollection>  m_Children;	// list for all child particle systems, owned
 	Vector m_Center;										// average of particle centers
 	void *m_pRenderable;									// for use by client
 
@@ -2426,12 +2433,12 @@ inline void CParticleCollection::SwapPosAndPrevPos( void )
 FORCEINLINE CParticleControlPoint &CParticleCollection::ControlPoint( int nIdx ) const
 {
 	Assert( nIdx >= 0 && nIdx < m_nNumControlPointsAllocated );
-	return m_pCPInfo[ MAX(0, MIN( nIdx, m_nNumControlPointsAllocated - 1 )) ].m_ControlPoint;
+	return m_pCPInfo[ std::max(0, std::min( nIdx, m_nNumControlPointsAllocated - 1 )) ].m_ControlPoint;
 }
 
 FORCEINLINE CModelHitBoxesInfo &CParticleCollection::ControlPointHitBox( int nIdx ) const
 {
-	return m_pCPInfo[ MAX(0, MIN( nIdx, m_nNumControlPointsAllocated - 1 )) ].m_CPHitBox;
+	return m_pCPInfo[ std::max(0, std::min( nIdx, m_nNumControlPointsAllocated - 1 )) ].m_CPHitBox;
 }
 
 inline void CParticleCollection::LoanKillListTo( CParticleCollection *pBorrower ) const
@@ -2461,9 +2468,9 @@ inline void CParticleCollection::SetControlPoint( int nWhichPoint, const Vector 
 	if ( nWhichPoint < m_nNumControlPointsAllocated )
 	{
 		ControlPoint( nWhichPoint ).m_Position = v;
-		m_nHighestCP = MAX( m_nHighestCP, nWhichPoint );
+		m_nHighestCP = std::max( m_nHighestCP, nWhichPoint );
 	}
-	for( CParticleCollection *i = m_Children.m_pHead; i; i=i->m_pNext )
+	for( CParticleCollection *i = m_Children.head(); i; i=i->m_pNext )
 	{
 		i->SetControlPoint( nWhichPoint, v );
 	}
@@ -2475,9 +2482,9 @@ inline void CParticleCollection::SetControlPointObject( int nWhichPoint, void *p
 	if ( nWhichPoint < m_nNumControlPointsAllocated ) 
 	{
 		ControlPoint( nWhichPoint ).m_pObject = pObject;
-		m_nHighestCP = MAX( m_nHighestCP, nWhichPoint );
+		m_nHighestCP = std::max( m_nHighestCP, nWhichPoint );
 	}
-	for( CParticleCollection *i = m_Children.m_pHead; i; i=i->m_pNext )
+	for( CParticleCollection *i = m_Children.head(); i; i=i->m_pNext )
 	{
 		i->SetControlPointObject( nWhichPoint, pObject );
 	}
@@ -2498,10 +2505,10 @@ inline void CParticleCollection::SetControlPointOrientation( int nWhichPoint, co
 		ControlPoint( nWhichPoint ).m_ForwardVector = forward;
 		ControlPoint( nWhichPoint ).m_UpVector = up;
 		ControlPoint( nWhichPoint ).m_RightVector = right;
-		m_nHighestCP = MAX( m_nHighestCP, nWhichPoint );
+		m_nHighestCP = std::max( m_nHighestCP, nWhichPoint );
 	}
 	// make sure all children are finished
-	for( CParticleCollection *i = m_Children.m_pHead; i; i=i->m_pNext )
+	for( CParticleCollection *i = m_Children.head(); i; i=i->m_pNext )
 	{
 		i->SetControlPointOrientation( nWhichPoint, forward, right, up );
 	}
@@ -2537,9 +2544,9 @@ inline void CParticleCollection::SetControlPointForwardVector( int nWhichPoint, 
 	if ( nWhichPoint < m_nNumControlPointsAllocated ) 
 	{
 		ControlPoint( nWhichPoint ).m_ForwardVector = v;
-		m_nHighestCP = MAX( m_nHighestCP, nWhichPoint );
+		m_nHighestCP = std::max( m_nHighestCP, nWhichPoint );
 	}
-	for( CParticleCollection *i = m_Children.m_pHead; i; i=i->m_pNext )
+	for( CParticleCollection *i = m_Children.head(); i; i=i->m_pNext )
 	{
 		i->SetControlPointForwardVector( nWhichPoint, v );
 	}
@@ -2551,9 +2558,9 @@ inline void CParticleCollection::SetControlPointUpVector( int nWhichPoint, const
 	if ( nWhichPoint < m_nNumControlPointsAllocated ) 
 	{
 		ControlPoint( nWhichPoint ).m_UpVector = v;
-		m_nHighestCP = MAX( m_nHighestCP, nWhichPoint );
+		m_nHighestCP = std::max( m_nHighestCP, nWhichPoint );
 	}
-	for( CParticleCollection *i = m_Children.m_pHead; i; i=i->m_pNext )
+	for( CParticleCollection *i = m_Children.head(); i; i=i->m_pNext )
 	{
 		i->SetControlPointUpVector( nWhichPoint, v );
 	}
@@ -2565,9 +2572,9 @@ inline void CParticleCollection::SetControlPointRightVector( int nWhichPoint, co
 	if ( nWhichPoint < m_nNumControlPointsAllocated )
 	{
 		ControlPoint( nWhichPoint ).m_RightVector = v;
-		m_nHighestCP = MAX( m_nHighestCP, nWhichPoint );
+		m_nHighestCP = std::max( m_nHighestCP, nWhichPoint );
 	}
-	for( CParticleCollection *i = m_Children.m_pHead; i; i=i->m_pNext )
+	for( CParticleCollection *i = m_Children.head(); i; i=i->m_pNext )
 	{
 		i->SetControlPointRightVector( nWhichPoint, v );
 	}
@@ -2579,9 +2586,9 @@ inline void CParticleCollection::SetControlPointParent( int nWhichPoint, int n )
 	if ( nWhichPoint < m_nNumControlPointsAllocated )
 	{
 		ControlPoint( nWhichPoint ).m_nParent = n;
-		m_nHighestCP = MAX( m_nHighestCP, nWhichPoint );
+		m_nHighestCP = std::max( m_nHighestCP, nWhichPoint );
 	}
-	for( CParticleCollection *i = m_Children.m_pHead; i; i=i->m_pNext )
+	for( CParticleCollection *i = m_Children.head(); i; i=i->m_pNext )
 	{
 		i->SetControlPointParent( nWhichPoint, n );
 	}
@@ -2594,7 +2601,7 @@ inline void CParticleCollection::SetControlPointSnapshot( int nWhichPoint, CPart
 	{
 		ControlPoint( nWhichPoint ).m_pSnapshot = pSnapshot;
 	}
-	for( CParticleCollection *i = m_Children.m_pHead; i; i=i->m_pNext )
+	for( CParticleCollection *i = m_Children.head(); i; i=i->m_pNext )
 	{
 		i->SetControlPointSnapshot( nWhichPoint, pSnapshot );
 	}
@@ -2971,7 +2978,7 @@ struct ParticleChildrenInfo_t
 class CParticleSystemDefinition
 {
 	DECLARE_DMXELEMENT_UNPACK();
-	DECLARE_REFERENCED_CLASS( CParticleSystemDefinition );
+	KS_TRACKED_CLASS( CParticleSystemDefinition );
 
 	
 public:
@@ -3037,10 +3044,10 @@ public:
 	float GetMaxTailLength() const;
 	void  SetMaxTailLength( float flMaxTailLength );
 	// Sheet symbols (used to avoid string->symbol conversions when effects are created)
-	void InvalidateSheetSymbol();
-	void CacheSheetSymbol( CUtlSymbol sheetSymbol );
-	bool IsSheetSymbolCached() const;
-	CUtlSymbol GetSheetSymbol() const;
+	void InvalidateSheetIndex();
+	void CacheSheetIndex( int nSheetIndex );	// index into CParticleSystemMgr::m_SheetList, -1 for none
+	bool IsSheetIndexCached() const;
+	int GetSheetIndex() const;
 
 
 private:
@@ -3053,11 +3060,11 @@ private:
 	void SetupContextData( );
 	void ParseChildren( CDmxElement *pElement );
 	void ParseOperators( const char *pszName, ParticleFunctionType_t nFunctionType,
-		CDmxElement *pElement, CUtlVector<CParticleOperatorInstance *> &out_list );
+		CDmxElement *pElement, ParticleOperatorList_t &out_list );
 	void WriteChildren( CDmxElement *pElement );
 	void WriteOperators( CDmxElement *pElement, const char *pOpKeyName,
-		const CUtlVector<CParticleOperatorInstance *> &inList );
-	CUtlVector<CParticleOperatorInstance *> *GetOperatorList( ParticleFunctionType_t type );
+		const ParticleOperatorList_t &inList );
+	ParticleOperatorList_t *GetOperatorList( ParticleFunctionType_t type );
 	CParticleOperatorInstance *FindOperatorById( ParticleFunctionType_t type, const DmObjectId_t &id );
 	CParticleOperatorInstance *FindOperatorByName( const char *pOperatorName ); // SLOW!
 
@@ -3071,11 +3078,11 @@ private:
 	uint64 m_nControlPointNonPositionalMask;
 	Vector m_BoundingBoxMin;
 	Vector m_BoundingBoxMax;
-	CUtlString m_MaterialName;
+	std::string m_MaterialName;
 	CMaterialReference m_Material;
 	Vector4D m_vecMaterialModulation;
 	CParticleCollection *m_pFirstCollection;
-	CUtlString m_CullReplacementName;
+	std::string m_CullReplacementName;
 	float m_flCullRadius;
 	float m_flCullFillCost;
 	int m_nCullControlPoint;
@@ -3084,10 +3091,10 @@ private:
 	float m_flMaxTailLength;
 
 	// Fallbacks for exceeding maximum number of the same type of system at once.
-	CUtlString m_FallbackReplacementName;
+	std::string m_FallbackReplacementName;
 	int m_nFallbackMaxCount;
 	int m_nFallbackCurrentCount;
-	CUtlReference< CParticleSystemDefinition > m_pFallback;
+	ks::tracked_ref< CParticleSystemDefinition > m_pFallback;
 
 	// Default attribute values
 	Color m_ConstantColor;
@@ -3115,9 +3122,9 @@ private:
 	bool m_bViewModelEffect;
 	bool m_bScreenSpaceEffect;
 	bool m_bDrawThroughLeafSystem;
-	bool m_bSheetSymbolCached;
+	bool m_bSheetIndexCached;
 
-	CUtlSymbol m_SheetSymbol;
+	int m_nSheetIndex;
 
 	size_t m_nContextDataSize;
 	DmObjectId_t m_Id;
@@ -3140,22 +3147,22 @@ public:
 	float m_flAggregateRadius;								// aggregate particles if this system is within radius n
 	float m_flStopSimulationAfterTime;						// stop ( freeze ) simulation after this time
 
-	CUtlString m_Name;
+	std::string m_Name;
 
-	CUtlVector<CParticleOperatorInstance *> m_Operators;
-	CUtlVector<CParticleOperatorInstance *> m_Renderers;
-	CUtlVector<CParticleOperatorInstance *> m_Initializers;
-	CUtlVector<CParticleOperatorInstance *> m_Emitters;
-	CUtlVector<CParticleOperatorInstance *> m_ForceGenerators;
-	CUtlVector<CParticleOperatorInstance *> m_Constraints;
-	CUtlVector<ParticleChildrenInfo_t> m_Children;
+	ParticleOperatorList_t m_Operators;
+	ParticleOperatorList_t m_Renderers;
+	ParticleOperatorList_t m_Initializers;
+	ParticleOperatorList_t m_Emitters;
+	ParticleOperatorList_t m_ForceGenerators;
+	ParticleOperatorList_t m_Constraints;
+	std::vector< ParticleChildrenInfo_t > m_Children;
 
-	CUtlVector<size_t> m_nOperatorsCtxOffsets;
-	CUtlVector<size_t> m_nRenderersCtxOffsets;
-	CUtlVector<size_t> m_nInitializersCtxOffsets;
-	CUtlVector<size_t> m_nEmittersCtxOffsets;
-	CUtlVector<size_t> m_nForceGeneratorsCtxOffsets;
-	CUtlVector<size_t> m_nConstraintsCtxOffsets;
+	std::vector< size_t > m_nOperatorsCtxOffsets;
+	std::vector< size_t > m_nRenderersCtxOffsets;
+	std::vector< size_t > m_nInitializersCtxOffsets;
+	std::vector< size_t > m_nEmittersCtxOffsets;
+	std::vector< size_t > m_nForceGeneratorsCtxOffsets;
+	std::vector< size_t > m_nConstraintsCtxOffsets;
 
 
 #if MEASURE_PARTICLE_PERF
@@ -3169,8 +3176,8 @@ public:
 
 	uint m_nPerParticleOutlineMaterialVarToken;
 
-	CInterlockedInt m_nNumIntersectionTests;	 // the number of particle intersectio queries done
-	CInterlockedInt m_nNumActualRayTraces;			 // the total number of ray intersections done.
+	std::atomic<int> m_nNumIntersectionTests;	 // the number of particle intersectio queries done
+	std::atomic<int> m_nNumActualRayTraces;			 // the total number of ray intersections done.
 
 	int m_nMaximumActiveParticles;
 	bool m_bShouldSort;
@@ -3189,8 +3196,8 @@ public:
 inline CParticleSystemDefinition::CParticleSystemDefinition( void )
 {
 	m_vecMaterialModulation.Init( 1.0f, 1.0f, 1.0f, 1.0f );
-	m_SheetSymbol = UTL_INVAL_SYMBOL;
-	m_bSheetSymbolCached = false;
+	m_nSheetIndex = -1;
+	m_bSheetIndexCached = false;
 	m_nControlPointReadMask = 0;
 	m_nControlPointNonPositionalMask = 0;
 	m_nInitialAttributeReadMask = 0;
@@ -3232,12 +3239,6 @@ inline CParticleSystemDefinition::~CParticleSystemDefinition( void )
 	m_Material.Shutdown();
 
 	UnlinkAllCollections();
-	m_Operators.PurgeAndDeleteElements();
-	m_Renderers.PurgeAndDeleteElements();
-	m_Initializers.PurgeAndDeleteElements();
-	m_Emitters.PurgeAndDeleteElements();
-	m_ForceGenerators.PurgeAndDeleteElements();
-	m_Constraints.PurgeAndDeleteElements();
 }
 
 // Used to iterate over all particle collections using the same def
@@ -3258,7 +3259,7 @@ inline float CParticleSystemDefinition::GetCullFillCost() const
 
 inline const char *CParticleSystemDefinition::GetCullReplacementDefinition() const
 {
-	return m_CullReplacementName;
+	return m_CullReplacementName.c_str();
 }
 
 inline int CParticleSystemDefinition::GetCullControlPoint() const
@@ -3340,7 +3341,7 @@ inline void CParticleSystemDefinition::SetMaxTailLength( float flMaxTailLength )
 
 inline const char *CParticleSystemDefinition::MaterialName() const
 {
-	return m_MaterialName;
+	return m_MaterialName.c_str();
 }
 
 inline const DmObjectId_t& CParticleSystemDefinition::GetId() const

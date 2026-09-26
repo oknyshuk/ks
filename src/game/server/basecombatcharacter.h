@@ -12,7 +12,6 @@
 #include "reflect_annotations.h"
 #include "baseflex.h"
 #include "damagemodifier.h"
-#include "utllinkedlist.h"
 #include "ai_hull.h"
 #include "ai_utils.h"
 #include "physics_impact_damage.h"
@@ -408,7 +407,7 @@ public:
 
 	// Factions
 	static int			GetNumFactions( void );
-	static CUtlVector<EHANDLE> *GetEntitiesInFaction( int nFaction );
+	static std::vector< EHANDLE > *GetEntitiesInFaction( int nFaction );
 	int					GetFaction( void ) const { return m_nFaction; }
 	virtual void		ChangeFaction( int nNewFaction );
 
@@ -505,7 +504,7 @@ protected:
 	static int					m_lastInteraction;	// Last registered interaction #
 	static Relationship_t**		m_DefaultRelationship;
 	static Relationship_t**		m_FactionRelationship;
-	static CUtlVector< CUtlVector< EHANDLE> > m_aFactions;
+	static std::vector< std::vector< EHANDLE > > m_aFactions;
 
 public:
 	// attack/damage
@@ -522,12 +521,12 @@ private:
 	// ---------------
 	//  Relationships
 	// ---------------
-	CUtlVector<Relationship_t>		m_Relationship;						// Array of relationships
+	std::vector< Relationship_t >		m_Relationship;						// Array of relationships
 	int								m_nFaction;
 
 	// Used by trigger_fog to manage when the character is touching multiple fog triggers simultaneously.
 	// The one at the HEAD of the list is always the current fog trigger for the character.
-	CUtlVector<EHANDLE> m_hTriggerFogList;
+	std::vector< EHANDLE > m_hTriggerFogList;
 	EHANDLE m_hLastFogTrigger;
 protected:
 	// shared ammo slots

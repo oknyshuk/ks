@@ -49,9 +49,6 @@ ConVar spec_overwatch_skip_idle_ticks( "spec_overwatch_skip_idle_ticks", "10", F
 
 extern ConVar view_recoil_tracking;
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define CHASE_CAM_DISTANCE		76.0f
 #define WALL_OFFSET				6.0f
 
@@ -486,7 +483,7 @@ Vector C_HLTVCamera::CalcIdealOverviewPosition( Vector vecStartPos, Vector vOldO
 	float flDist = (vOldOverviewPos-vecNewPos).Length();
 	float flDistScaler = clamp( 1+((flDist - 200) / 500), 1, 2 );
 
-	m_flIdealOverviewScale = MAX( 0.1, (MIN( flFarthestEntDist, 1024 ) / 1024) ) * (1.5 * flDistScaler);
+	m_flIdealOverviewScale = std::max<std::common_type_t<double, float>>( 0.1, (std::min<std::common_type_t<float, int>>( flFarthestEntDist, 1024 ) / 1024) ) * (1.5 * flDistScaler);
 
 	return vecNewPos;
 }
@@ -647,7 +644,7 @@ void C_HLTVCamera::CalcChaseOverview( CViewSetup &pSetup )
 			{
 				trace_t	tr;
 				UTIL_TraceLine( pPlayer->GetAbsOrigin(), pPlayer->GetAbsOrigin() + Vector( 0, 0, 512 ), MASK_SOLID_BRUSHONLY, pPlayer, COLLISION_GROUP_NONE, &tr );
-				m_vIdealOverviewPos.z = MAX( tr.endpos.z - 32.0f, pPlayer->GetAbsOrigin().z + 80.0f );
+				m_vIdealOverviewPos.z = std::max( tr.endpos.z - 32.0f, pPlayer->GetAbsOrigin().z + 80.0f );
 			}
 		}
 

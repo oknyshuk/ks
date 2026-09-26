@@ -67,8 +67,7 @@ struct PropDesc
 	DataTableRecvVarProxyFn tableProxy = nullptr;
 
 	ArrayLengthRecvProxyFn lenProxy = nullptr;   // ArrayInner
-	ResizeUtlVectorFn      resizeFn = nullptr;   // UtlVector
-	EnsureCapacityFn       ensure   = nullptr;   // UtlVector
+	WireVecOps             vec;                  // UtlVector
 	int                    max      = 0;         // UtlVector: nMaxElements
 
 	// Array and UtlVector take their element prop by value, so the element is one more descriptor
@@ -324,8 +323,9 @@ constexpr void push_utl_vec( std::vector<PropDesc> &out )
 	d.name     = nm;
 	d.offset   = off;
 	d.size     = (int)sizeof( typename WV::elem_type );
-	d.resizeFn = Fn != nullptr ? (ResizeUtlVectorFn)Fn : WV::resize();
-	d.ensure   = WV::ensure();
+	d.vec      = WV::ops();
+	if ( Fn != nullptr )
+		d.vec.resize = (ResizeUtlVectorFn)Fn;
 	d.max      = Max;
 	d.elem     = (int)out.size() - 1;
 	out.push_back( d );
@@ -487,41 +487,37 @@ consteval std::vector<PropDesc> build_desc()
 	// the decoder resolves by name -- so these are simply appended.
 	template for ( constexpr auto ann : std::define_static_array( from_annotations_in( ^^C, Table, WireSide::Recv ) ) )
 	{
-		constexpr auto args = std::define_static_array( std::meta::template_arguments_of( ann ) );
+		constexpr FromEntry fe = from_entry( ann );
 		// A dotted path is the prop's wire name, as SENDINFO/RECVINFO stringify it.
-		constexpr auto ref  = require_member( ^^C, std::meta::extract<name_t>( args[0] ) );
+		constexpr auto ref  = require_member( ^^C, fe.name );
 		// A bracketed path resolved to one element; the Net has to say so, because the kind
 		// and the size are the element's, not the array's.
-		constexpr Net  n    = with_elem( wire_from_path( std::meta::extract<Net>( args[1] ),
-		                                                std::meta::extract<name_t>( args[0] ) ),
-		                                 ref.elem );
+		constexpr Net  n    = with_elem( wire_from_path( fe.net, fe.name ), ref.elem );
 		constexpr PropDesc d = desc_from<ref.member>( n, static_cast<int>( ref.offset ),
-		                                              extract_fn<RecvVarProxyFn>( args[2] ) );
-		if constexpr ( d.kind == PropKind::Table )
+		                                              extract_fn<RecvVarProxyFn>( fe.proxy ) );
+		if constexpr ( fe.table != std::meta::info{} )
 		{
-			// As on the send side: either the embedded type is migrated, or the legacy sub-table was
-			// named. Generating an empty table for an unmigrated type is the one outcome worth
-			// refusing outright.
-			constexpr RecvTable *pNamed = extract_fn<RecvTable *>( args[3] );
-			if constexpr ( pNamed != nullptr )
-				out.push_back( table_prop( d.name, d.offset, d.flags,
-				                           +[]() -> RecvTable * { return pNamed; }, nullptr ) );
-			else
-			{
-				// ^^ on an alias reflects the alias, whose annotations are empty; check the class.
-				constexpr std::meta::info sub = embedded_class_of( std::meta::type_of( ref.member ) );
-				static_assert( has<NetTable>( sub ),
-				    "embedded member is neither migrated nor given its legacy sub-table" );
-				out.push_back( table_prop( d.name, d.offset, d.flags,
-				                           +[]() -> RecvTable * { return &table<typename [: sub :]>(); },
-				                           nullptr ) );
-			}
+			// FromTable<>: use the named table rather than regenerating one.
+			static_assert( d.kind == PropKind::Table, "FromTable<> on a non-embedded member" );
+			constexpr RecvTable *pTable = std::meta::extract<RecvTable *>( fe.table );
+			out.push_back( table_prop( d.name, d.offset, d.flags,
+			                           +[]() -> RecvTable * { return pTable; }, nullptr ) );
+		}
+		else if constexpr ( d.kind == PropKind::Table )
+		{
+			// The embedded type must be migrated; an empty table is the one outcome worth refusing.
+			constexpr std::meta::info sub = embedded_class_of( std::meta::type_of( ref.member ) );
+			static_assert( has<NetTable>( sub ),
+			    "embedded member is neither migrated nor given its legacy sub-table" );
+			out.push_back( table_prop( d.name, d.offset, d.flags,
+			                           +[]() -> RecvTable * { return &table<typename [: sub :]>(); },
+			                           nullptr ) );
 		}
 		else if constexpr ( d.kind == PropKind::Array )
 		{
-			constexpr PropDesc elem = [&args] {
+			constexpr PropDesc elem = [&fe] {
 				PropDesc e = desc_from<ref.member>( n, static_cast<int>( ref.offset ),
-				                                    extract_fn<RecvVarProxyFn>( args[2] ) );
+				                                    extract_fn<RecvVarProxyFn>( fe.proxy ) );
 				e.kind = element_kind_of( ref.member );
 				e.size = e.stride;
 				return e;

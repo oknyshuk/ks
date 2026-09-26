@@ -16,9 +16,6 @@
 #include "toolframework/itoolframework.h"
 #include "replayserver.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //----------------------------------------------------------------------------------------
 
 CON_COMMAND_F( loadsfm, "Test -- Loads the SFM", 0 )	// TEST
@@ -93,7 +90,7 @@ CON_COMMAND_F( request_replay_demo, "Request a replay demo from the server.", FC
 
 	// Already downloading a file?
 	// TODO: need to keep track of a user who is constantly requesting or is that automatic behavior?
-	if ( replay->m_vecClientsDownloading.IsBitSet( cmd_clientslot ) )
+	if ( replay->m_vecClientsDownloading[ cmd_clientslot ] )
 	{
 		SVC_Print msg( "Request denied.  You are already downloading.\n" );
 		CEngineSingleUserFilter filter( cmd_clientslot + 1, true );

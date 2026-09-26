@@ -36,11 +36,7 @@ ConVar snd_max_pitch_shift_inaccuracy("snd_max_pitch_shift_inaccuracy", "0.08", 
 #include "c_rumble.h"
 #include "inputsystem/iinputsystem.h"
 
-// Steam API must be included before memdbgon.h
 #include "steam/steam_api.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 	// this is a cheap ripoff from CBaseCombatWeapon::WeaponSound():
 	void FX_WeaponSound(
@@ -96,7 +92,7 @@ ConVar snd_max_pitch_shift_inaccuracy("snd_max_pitch_shift_inaccuracy", "0.08", 
 		Vector m_vPos;
 	};
 
-	CUtlVector<CGroupedSound> g_GroupedSounds;
+	std::vector< CGroupedSound > g_GroupedSounds;
 
 	
 	// Called by the ImpactSound function.
@@ -104,7 +100,7 @@ ConVar snd_max_pitch_shift_inaccuracy("snd_max_pitch_shift_inaccuracy", "0.08", 
 	{
 		int i;
 		// Don't play the sound if it's too close to another impact sound.
-		for ( i=0; i < g_GroupedSounds.Count(); i++ )
+		for ( i=0; i < std::ssize( g_GroupedSounds ); i++ )
 		{
 			CGroupedSound *pSound = &g_GroupedSounds[i];
 
@@ -119,7 +115,7 @@ ConVar snd_max_pitch_shift_inaccuracy("snd_max_pitch_shift_inaccuracy", "0.08", 
 		CLocalPlayerFilter filter;
 		C_BaseEntity::EmitSound( filter, 0, pSoundName, &vEndPos );
 
-		i = g_GroupedSounds.AddToTail();
+		i = std::ssize( g_GroupedSounds ); g_GroupedSounds.emplace_back();
 		g_GroupedSounds[i].m_SoundName = pSoundName;
 		g_GroupedSounds[i].m_vPos = vEndPos;
 	}
@@ -127,14 +123,14 @@ ConVar snd_max_pitch_shift_inaccuracy("snd_max_pitch_shift_inaccuracy", "0.08", 
 
 	void StartGroupingSounds()
 	{
-		Assert( g_GroupedSounds.Count() == 0 );
+		Assert( std::ssize( g_GroupedSounds ) == 0 );
 		SetImpactSoundRoute( ShotgunImpactSoundGroup );
 	}
 
 
 	void EndGroupingSounds()
 	{
-		g_GroupedSounds.Purge();
+		g_GroupedSounds.clear(); g_GroupedSounds.shrink_to_fit();
 		SetImpactSoundRoute( nullptr );
 	}
 
@@ -510,9 +506,9 @@ void FX_FireBullets(
 
 				if ( infoTweakable.GetDamageType() & DMG_HEADSHOT )
 				{
-					m_rbHsPlayers.InsertIfNotFound( pVictim );	// remember that at least one pellet hit a headshot
+					m_rbHsPlayers.insert( pVictim );	// remember that at least one pellet hit a headshot
 				}
-				else if ( m_rbHsPlayers.Find( pVictim ) != m_rbHsPlayers.InvalidIndex() )
+				else if ( m_rbHsPlayers.contains( pVictim ) )
 				{
 					infoTweakable.SetDamageType( infoTweakable.GetDamageType() | DMG_HEADSHOT );	// since previous pellets hit a headshot we visualize it as a headshot
 				}
@@ -549,7 +545,7 @@ void FX_FireBullets(
 		CCSPlayer *m_pPlayerShooting;
 		bool m_bEnemyHit;
 		bool m_bShotFiredAndOnTargetRecorded;
-		CUtlRBTree< CCSPlayer *, int, CDefLess< CCSPlayer * > > m_rbHsPlayers;	// players who were dinked in the head as part of this bullet batch
+		std::set< CCSPlayer * > m_rbHsPlayers;	// players who were dinked in the head as part of this bullet batch
 	} fbtdl( pPlayer );
 #endif
 

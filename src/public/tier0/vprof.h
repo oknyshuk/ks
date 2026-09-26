@@ -14,11 +14,7 @@
 #include "tier0/l2cache.h"
 #include "tier0/threadtools.h"
 #include "tier0/vprof_sn.h"
-#if defined( USE_TRACY )
-#include "tier0/vprof_tracy.h"
-#else
 #include "tier0/vprof_telemetry.h"
-#endif
 
 // VProf is enabled by default in all configurations
 #define VPROF_ENABLED
@@ -136,20 +132,9 @@
 #define VPROF_SCOPE_VARIABLE_NAME( prefix, line ) prefix##line
 #define VPROF_SCOPE_VARIABLE_DECL( name, level, group, assertAccounted, budgetFlags, line ) CVProfScope VPROF_SCOPE_VARIABLE_NAME( VProf_,line )(name, level, group, assertAccounted, budgetFlags)
 
-//lwss: swap out TM_ZONE if we are using tracy instead
-#ifdef USE_TRACY
-#define	VPROF_0(name,group,assertAccounted,budgetFlags)	TRACY_ZONE( #name ); VPROF_SCOPE_VARIABLE_DECL(name, 0, group, assertAccounted, budgetFlags, __LINE__ );
-#else
 #define	VPROF_0(name,group,assertAccounted,budgetFlags)	TM_ZONE( TELEMETRY_LEVEL2, TMZF_NONE, "(%s)%s", group, name ); VPROF_SCOPE_VARIABLE_DECL(name, 0, group, assertAccounted, budgetFlags, __LINE__ );
-#endif
-//lwss end
 
-    //lwss: swap out TM_ZONE if we are using tracy instead
-    #ifdef USE_TRACY
-        #define	VPROF_1(name,group,assertAccounted,budgetFlags)	TRACY_ZONE( #name ); VPROF_SCOPE_VARIABLE_DECL(name, 1, group, assertAccounted, budgetFlags, __LINE__ );
-    #else
-        #define	VPROF_1(name,group,assertAccounted,budgetFlags)	TM_ZONE( TELEMETRY_LEVEL3, TMZF_NONE, "(%s)%s", group, name ); VPROF_SCOPE_VARIABLE_DECL(name, 1, group, assertAccounted, budgetFlags, __LINE__ );
-    #endif
+    #define	VPROF_1(name,group,assertAccounted,budgetFlags)	TM_ZONE( TELEMETRY_LEVEL3, TMZF_NONE, "(%s)%s", group, name ); VPROF_SCOPE_VARIABLE_DECL(name, 1, group, assertAccounted, budgetFlags, __LINE__ );
 
 #    define	VPROF_2(name,group,assertAccounted,budgetFlags)	((void)0)
 

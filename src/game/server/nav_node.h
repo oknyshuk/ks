@@ -66,7 +66,6 @@ public:
 	bool IsOnDisplacement( void ) const				{ return m_isOnDisplacement; }
 
 private:
-	CNavNode() {}													// constructor used only for hash lookup
 	friend class CNavMesh;
 
 	bool TestForCrouchArea( NavCornerType cornerNum, const Vector& mins, const Vector& maxs, float *groundHeightAboveNode );

@@ -13,9 +13,6 @@
 #include "iinput.h"
 
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 void StopAllRumbleEffects( int userID );
 
 
@@ -172,9 +169,12 @@ void GenerateSquareWaveEffect( RumbleWaveform_t *pWaveform, const WaveGenParams_
 
 	int steps = ((float)NUM_WAVE_SAMPLES) / (params.cycles*2.0f);
 
+	if ( steps <= 0 )
+		return;
+
 	while( i < NUM_WAVE_SAMPLES )
 	{
-		for( j = 0 ; j < steps ; j++ )
+		for( j = 0 ; j < steps && i < NUM_WAVE_SAMPLES ; j++ )
 		{
 			if( params.leftChannel )
 			{
@@ -185,7 +185,7 @@ void GenerateSquareWaveEffect( RumbleWaveform_t *pWaveform, const WaveGenParams_
 				pWaveform->amplitude_right[i++] = params.minAmplitude;
 			}
 		}
-		for( j = 0 ; j < steps ; j++ )
+		for( j = 0 ; j < steps && i < NUM_WAVE_SAMPLES ; j++ )
 		{
 			if( params.leftChannel )
 			{

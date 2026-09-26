@@ -79,7 +79,7 @@ public:
 
 protected:
 
-	CUtlVector< CBasePlayer * >				m_Players;
+	std::vector< CBasePlayer * >				m_Players;
 	int										m_nScore;
 };
 
@@ -234,7 +234,7 @@ protected:
 	float m_flIntermissionStartTime;
 	static int m_nMapCycleTimeStamp;
 	static int m_nMapCycleindex;
-	static CUtlStringList m_MapList;
+	static std::vector< std::string > m_MapList;
 	const char* m_szNextLevelName;
 	
 #else
@@ -246,7 +246,7 @@ protected:
 #endif	
 
 	private:
-		CUtlVector< CUtlVector< VoiceCommandMenuItem_t > > m_VoiceCommandMenus;
+		std::vector< std::vector< VoiceCommandMenuItem_t > > m_VoiceCommandMenus;
 		
 };
 

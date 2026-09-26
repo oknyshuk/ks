@@ -18,9 +18,6 @@
 #include "networkstringtable_clientdll.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern void StartParticleEffect( const CEffectData &data, int nSplitScreenPlayerSlot = -1 );
 
 //-----------------------------------------------------------------------------
@@ -64,13 +61,13 @@ void ParseParticleEffects( bool bLoadSheets )
 
 	g_pParticleSystemMgr->ShouldLoadSheets( bLoadSheets );
 
-	CUtlVector<CUtlString> files;
+	std::vector< std::string > files;
 	GetParticleManifest( files );
 
-	int nCount = files.Count();
+	int nCount = std::ssize( files );
 	for ( int i = 0; i < nCount; ++i )
 	{
-		g_pParticleSystemMgr->ReadParticleConfigFile( files[i], false, false );
+		g_pParticleSystemMgr->ReadParticleConfigFile( files[i].c_str(), false, false );
 	}
 
 	g_pParticleSystemMgr->DecommitTempMemory();

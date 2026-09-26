@@ -13,9 +13,6 @@
 #include "debugluxel_vs20.inc"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 BEGIN_SHADER_FLAGS( DebugLuxels, "Help for DebugLuxels", SHADER_NOT_EDITABLE )
 			  
 	BEGIN_SHADER_PARAMS

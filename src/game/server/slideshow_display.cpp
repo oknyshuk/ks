@@ -12,9 +12,6 @@
 #include "fmtstr.h"
 #include "filesystem.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 #define SLIDESHOW_LIST_BUFFER_MAX 8192
 
@@ -81,7 +78,7 @@ private:
 	CNetworkString( m_szSlideshowDirectory, 128, [[= ks::reflect::Net{} ]] );
 	[[= ks::reflect::Key{ .name = "directory" } ]] string_t	m_String_tSlideshowDirectory;
 
-	CUtlVector<SlideKeywordList_t*>		m_SlideKeywordList;
+	std::vector< SlideKeywordList_t* >		m_SlideKeywordList;
 	CNetworkArray( unsigned char, m_chCurrentSlideLists, 16, [[= ks::reflect::Net{ .bits = 8, .flags = SPROP_UNSIGNED } ]] );
 
 	CNetworkVar( float, m_fMinSlideTime, [[= ks::reflect::Net{ .bits = 11, .low = 0.0f, .high = 20.0f } ]] [[= ks::reflect::Key{ .name = "minslidetime" } ]] );
@@ -162,7 +159,7 @@ int CSlideshowDisplay::UpdateTransmitState()
 void CSlideshowDisplay::SetTransmit( CCheckTransmitInfo *pInfo, bool bAlways )
 {
 	// Are we already marked for transmission?
-	if ( pInfo->m_pTransmitEdict->Get( entindex() ) )
+	if ( (*pInfo->m_pTransmitEdict)[ entindex() ] )
 		return;
 
 	BaseClass::SetTransmit( pInfo, bAlways );
@@ -259,13 +256,13 @@ void CSlideshowDisplay::InputAddSlides( inputdata_t &inputdata )
 {
 	// Find the list with the current keyword
 	int iList;
-	for ( iList = 0; iList < m_SlideKeywordList.Count(); ++iList )
+	for ( iList = 0; iList < std::ssize( m_SlideKeywordList ); ++iList )
 	{
 		if ( Q_strcmp( m_SlideKeywordList[ iList ]->szSlideKeyword, inputdata.value.String() ) == 0 )
 			break;
 	}
 
-	if ( iList < m_SlideKeywordList.Count() )
+	if ( iList < std::ssize( m_SlideKeywordList ) )
 	{
 		// Found the keyword list, so add this index to the selected lists
 		int iNumCurrentSlideLists;
@@ -384,16 +381,16 @@ void CSlideshowDisplay::BuildSlideShowImagesList( void )
 
 				// Find the list with the current keyword
 				int iList;
-				for ( iList = 0; iList < m_SlideKeywordList.Count(); ++iList )
+				for ( iList = 0; iList < std::ssize( m_SlideKeywordList ); ++iList )
 				{
 					if ( Q_strcmp( m_SlideKeywordList[ iList ]->szSlideKeyword, pchKeyword ) == 0 )
 						break;
 				}
 
-				if ( iList >= m_SlideKeywordList.Count() )
+				if ( iList >= std::ssize( m_SlideKeywordList ) )
 				{
 					// Couldn't find the list, so create it
-					iList = m_SlideKeywordList.AddToTail( new SlideKeywordList_t );
+					iList = std::ssize( m_SlideKeywordList ); m_SlideKeywordList.push_back( new SlideKeywordList_t );
 					Q_strcpy( m_SlideKeywordList[ iList ]->szSlideKeyword, pchKeyword );
 				}
 
@@ -405,16 +402,16 @@ void CSlideshowDisplay::BuildSlideShowImagesList( void )
 
 		// Find the generic list
 		int iList;
-		for ( iList = 0; iList < m_SlideKeywordList.Count(); ++iList )
+		for ( iList = 0; iList < std::ssize( m_SlideKeywordList ); ++iList )
 		{
 			if ( Q_strcmp( m_SlideKeywordList[ iList ]->szSlideKeyword, "" ) == 0 )
 				break;
 		}
 
-		if ( iList >= m_SlideKeywordList.Count() )
+		if ( iList >= std::ssize( m_SlideKeywordList ) )
 		{
 			// Couldn't find the generic list, so create it
-			iList = m_SlideKeywordList.AddToHead( new SlideKeywordList_t );
+			m_SlideKeywordList.insert( m_SlideKeywordList.begin(), new SlideKeywordList_t ); iList = 0;
 			Q_strcpy( m_SlideKeywordList[ iList ]->szSlideKeyword, "" );
 		}
 

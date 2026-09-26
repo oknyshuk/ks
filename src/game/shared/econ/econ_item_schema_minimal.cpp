@@ -9,9 +9,6 @@
 #include "econ_item_schema_minimal.h"
 #include "filesystem.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Loadout slot string table
 //-----------------------------------------------------------------------------
@@ -340,34 +337,7 @@ CEconItemSchema::CEconItemSchema()
 
 CEconItemSchema::~CEconItemSchema()
 {
-	// Clean up item definitions
-	for ( int i = 0; i < m_mapItems.MaxElement(); i++ )
-	{
-		if ( m_mapItems.IsValidIndex( i ) )
-			delete m_mapItems[i];
-	}
-	m_mapItems.Purge();
-	m_dictItemsByName.Purge();
-
-	// Clean up prefabs
-	for ( int i = m_dictPrefabs.First(); i != m_dictPrefabs.InvalidIndex(); i = m_dictPrefabs.Next( i ) )
-	{
-		if ( m_dictPrefabs[i] )
-		{
-			m_dictPrefabs[i]->deleteThis();
-		}
-	}
-	m_dictPrefabs.Purge();
-
-	// Clean up merged prefabs
-	for ( int i = m_dictMergedPrefabs.First(); i != m_dictMergedPrefabs.InvalidIndex(); i = m_dictMergedPrefabs.Next( i ) )
-	{
-		if ( m_dictMergedPrefabs[i] )
-		{
-			m_dictMergedPrefabs[i]->deleteThis();
-		}
-	}
-	m_dictMergedPrefabs.Purge();
+	m_dictItemsByName.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -404,7 +374,7 @@ bool CEconItemSchema::BInit( const char *pszFilename )
 
 	pKV->deleteThis();
 	m_bInitialized = true;
-	DevMsg( "CEconItemSchema::BInit - Loaded %d item definitions\n", m_mapItems.Count() );
+	DevMsg( "CEconItemSchema::BInit - Loaded %d item definitions\n", ( int )m_vecItems.size() );
 
 	return true;
 }
@@ -459,8 +429,9 @@ bool CEconItemSchema::BInitPrefabs( KeyValues *pKVPrefabs )
 		const char *pszPrefabName = pPrefab->GetName();
 		if ( pszPrefabName && *pszPrefabName )
 		{
-			// Store a copy of the prefab
-			m_dictPrefabs.Insert( pszPrefabName, pPrefab->MakeCopy() );
+			// Store a copy of the prefab; a repeated name keeps the first
+			if ( !m_dictPrefabs.contains( pszPrefabName ) )
+				m_dictPrefabs.emplace( pszPrefabName, pPrefab->MakeCopy() );
 		}
 	}
 
@@ -476,20 +447,20 @@ KeyValues *CEconItemSchema::GetMergedPrefab( const char *pszPrefabName )
 		return nullptr;
 
 	// Check if we've already merged this prefab
-	int iCached = m_dictMergedPrefabs.Find( pszPrefabName );
-	if ( iCached != m_dictMergedPrefabs.InvalidIndex() )
+	auto itCached = m_dictMergedPrefabs.find( pszPrefabName );
+	if ( itCached != m_dictMergedPrefabs.end() )
 	{
-		return m_dictMergedPrefabs[iCached];
+		return itCached->second.get();
 	}
 
 	// Find the base prefab
-	int iBase = m_dictPrefabs.Find( pszPrefabName );
-	if ( iBase == m_dictPrefabs.InvalidIndex() )
+	auto itBase = m_dictPrefabs.find( pszPrefabName );
+	if ( itBase == m_dictPrefabs.end() )
 	{
 		return nullptr;
 	}
 
-	KeyValues *pBasePrefab = m_dictPrefabs[iBase];
+	KeyValues *pBasePrefab = itBase->second.get();
 	if ( !pBasePrefab )
 		return nullptr;
 
@@ -519,7 +490,7 @@ KeyValues *CEconItemSchema::GetMergedPrefab( const char *pszPrefabName )
 	}
 
 	// Cache the merged prefab
-	m_dictMergedPrefabs.Insert( pszPrefabName, pMerged );
+	m_dictMergedPrefabs.emplace( pszPrefabName, pMerged );
 
 	return pMerged;
 }
@@ -588,32 +559,23 @@ bool CEconItemSchema::BInitItems( KeyValues *pKVItems )
 		}
 
 		// Store by def index
-		int idx = m_mapItems.Find( pDef->GetDefinitionIndex() );
-		if ( idx == m_mapItems.InvalidIndex() )
+		auto [itSlot, bInserted] = m_mapItems.try_emplace( pDef->GetDefinitionIndex(), ( int )m_vecItems.size() );
+		if ( bInserted )
 		{
-			m_mapItems.Insert( pDef->GetDefinitionIndex(), pDef );
+			m_vecItems.emplace_back( pDef );
 		}
 		else
 		{
-			// Duplicate def index - replace
-			delete m_mapItems[idx];
-			m_mapItems[idx] = pDef;
+			// Duplicate def index - replace in place
+			m_vecItems[itSlot->second].reset( pDef );
 		}
 
 		// Store by name
 		const char *pszName = pDef->GetDefinitionName();
 		if ( pszName && *pszName )
 		{
-			int iNameIdx = m_dictItemsByName.Find( pszName );
-			if ( iNameIdx == m_dictItemsByName.InvalidIndex() )
-			{
-				m_dictItemsByName.Insert( pszName, pDef );
-			}
-			else
-			{
-				// Duplicate name - replace
-				m_dictItemsByName[iNameIdx] = pDef;
-			}
+			// Duplicate name - replace
+			m_dictItemsByName.insert_or_assign( pszName, pDef );
 		}
 
 		// Clean up merged KV (item took a copy)
@@ -628,11 +590,11 @@ bool CEconItemSchema::BInitItems( KeyValues *pKVItems )
 //-----------------------------------------------------------------------------
 CEconItemDefinition *CEconItemSchema::GetItemDefinition( uint16 nDefIndex ) const
 {
-	int idx = m_mapItems.Find( nDefIndex );
-	if ( idx == m_mapItems.InvalidIndex() )
+	auto it = m_mapItems.find( nDefIndex );
+	if ( it == m_mapItems.end() )
 		return nullptr;
 
-	return m_mapItems[idx];
+	return m_vecItems[it->second].get();
 }
 
 //-----------------------------------------------------------------------------
@@ -643,11 +605,11 @@ CEconItemDefinition *CEconItemSchema::GetItemDefinitionByName( const char *pszNa
 	if ( !pszName || !*pszName )
 		return nullptr;
 
-	int idx = m_dictItemsByName.Find( pszName );
-	if ( idx == m_dictItemsByName.InvalidIndex() )
+	auto it = m_dictItemsByName.find( pszName );
+	if ( it == m_dictItemsByName.end() )
 		return nullptr;
 
-	return m_dictItemsByName[idx];
+	return it->second;
 }
 
 //-----------------------------------------------------------------------------
@@ -655,10 +617,10 @@ CEconItemDefinition *CEconItemSchema::GetItemDefinitionByName( const char *pszNa
 //-----------------------------------------------------------------------------
 CEconItemDefinition *CEconItemSchema::GetItemDefinitionByMapIndex( int index ) const
 {
-	if ( index < 0 || index >= m_mapItems.Count() )
+	if ( index < 0 || index >= std::ssize( m_vecItems ) )
 		return nullptr;
 
-	return m_mapItems.Element( index );
+	return m_vecItems[index].get();
 }
 
 #ifndef CLIENT_DLL
@@ -667,9 +629,8 @@ CEconItemDefinition *CEconItemSchema::GetItemDefinitionByMapIndex( int index ) c
 //-----------------------------------------------------------------------------
 void CEconItemSchema::PrecacheItemDefinitionModels() const
 {
-	FOR_EACH_MAP_FAST( m_mapItems, i )
+	for ( const auto &pDef : m_vecItems )
 	{
-		CEconItemDefinition *pDef = m_mapItems[i];
 		if ( !pDef )
 			continue;
 

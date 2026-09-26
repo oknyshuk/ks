@@ -8,6 +8,7 @@
 #define ENTS_SHARED_H
 
 #include <protocol.h>
+#include "tier1/bit_ops.h"
 #include <iserver.h>
 #include "clientframe.h"
 #include "packed_entity.h"
@@ -87,7 +88,7 @@ public:
 	{
 		if ( m_pFrom )
 		{
-			m_nOldEntity = m_pFrom->transmit_entity.FindNextSetBit( m_nOldEntity+1 );
+			m_nOldEntity = ks::next_set_bit( m_pFrom->transmit_entity, m_nOldEntity+1 );
 
 			if ( m_nOldEntity < 0 )
 			{
@@ -105,7 +106,7 @@ public:
 	{
 		if ( m_pFrom )
 		{
-			int nextEntity = m_pFrom->transmit_entity.FindNextSetBit( startEntity+1 );
+			int nextEntity = ks::next_set_bit( m_pFrom->transmit_entity, startEntity+1 );
 
 			if ( nextEntity < 0 )
 			{
@@ -122,7 +123,7 @@ public:
 
 	inline void	NextNewEntity( void ) 
 	{
-		m_nNewEntity = m_pTo->transmit_entity.FindNextSetBit( m_nNewEntity+1 );
+		m_nNewEntity = ks::next_set_bit( m_pTo->transmit_entity, m_nNewEntity+1 );
 
 		if ( m_nNewEntity < 0 )
 		{

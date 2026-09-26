@@ -5,9 +5,12 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include <set>
+#include <vector>
+#include <algorithm>
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
-#include "tier1/utllinkedlist.h"
+#include <list>
 #include "bitstring.h"
 #include "utlvector.h"
 #include "ai_navigator.h"
@@ -20,9 +23,6 @@
 #include "ndebugoverlay.h"
 #include "ai_senses.h"
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 ConVar	ai_debug_follow( "ai_debug_follow", "0" );
 ConVar	ai_follow_use_points( "ai_follow_use_points", "1" );
@@ -61,8 +61,8 @@ struct AI_FollowGroup_t
 {
 	AI_FollowFormation_t *	pFormation;
 	EHANDLE 				hFollowTarget;
-	CUtlFixedLinkedList<AI_Follower_t>	followers;
-	CVarBitVec				slotUsage;
+	std::list<AI_Follower_t>	followers;	// stable: AI_FollowManagerInfoHandle_t points into it
+	std::vector< bool >		slotUsage;
 };
 
 
@@ -73,7 +73,7 @@ class CAI_FollowManager
 public:
 	~CAI_FollowManager()
 	{
-		for ( int i = 0; i < m_groups.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_groups ); i++ )
 			delete m_groups[i];
 	}
 
@@ -91,7 +91,7 @@ public:
 			return 0;
 		}
 
-		return pGroup->followers.Count();
+		return (int)pGroup->followers.size();
 	}
 
 	int CountFollowers( CBaseEntity *pFollowTarget, string_t iszClassname )
@@ -105,14 +105,14 @@ public:
 
 		if ( iszClassname == NULL_STRING )
 		{
-			return pGroup->followers.Count();
+			return (int)pGroup->followers.size();
 		}
 		else
 		{
 			int result = 0;
-			for ( intp i = pGroup->followers.Head(); i != pGroup->followers.InvalidIndex(); i = pGroup->followers.Next( i ) )
+			for ( const AI_Follower_t &follower : pGroup->followers )
 			{
-				if ( pGroup->followers[i].hFollower && pGroup->followers[i].hFollower->ClassMatches( iszClassname ) )
+				if ( follower.hFollower && follower.hFollower->ClassMatches( iszClassname ) )
 				{
 					result++;
 				}
@@ -130,17 +130,12 @@ public:
 			return 0;
 		}
 
-		intp h = pGroup->followers.Head();
-
-		while( h != pGroup->followers.InvalidIndex() )
+		for ( const AI_Follower_t &follower : pGroup->followers )
 		{
-			AI_Follower_t *it = &pGroup->followers[h];
-			if ( it->hFollower.Get() == pFollower )
+			if ( follower.hFollower.Get() == pFollower )
 			{
-				return it->slot;
+				return follower.slot;
 			}
-
-			h = pGroup->followers.Next( h );
 		}
 
 		return 0;
@@ -158,7 +153,7 @@ private:
 	
 	//---------------------------------
 	
-	CUtlVector<AI_FollowGroup_t *> m_groups;
+	std::vector< AI_FollowGroup_t * > m_groups;
 };
 
 //-------------------------------------
@@ -191,7 +186,7 @@ CAI_FollowBehavior::CAI_FollowBehavior( const AI_FollowParams_t &params )
 	
 	m_FollowDelay.Set( 1.0, 3.0 );
 	m_hFollowManagerInfo.m_pGroup = nullptr;
-	m_hFollowManagerInfo.m_hFollower = 0;
+	m_hFollowManagerInfo.m_pFollower = nullptr;
 	
 	m_TimeBlockUseWaitPoint.Set( 0.5, 1.5 );
 	m_TimeCheckForWaitPoint.Set( 1.0 );
@@ -460,14 +455,14 @@ bool CAI_FollowBehavior::IsFollowTargetInRange( float rangeMultiplier )
 
 	if( GetNpcState() == NPC_STATE_COMBAT )
 	{
-		if( IsFollowGoalInRange( MAX( m_FollowNavGoal.coverTolerance, m_FollowNavGoal.enemyLOSTolerance ) * rangeMultiplier, GetGoalZRange(), GetGoalFlags() ) )
+		if( IsFollowGoalInRange( std::max( m_FollowNavGoal.coverTolerance, m_FollowNavGoal.enemyLOSTolerance ) * rangeMultiplier, GetGoalZRange(), GetGoalFlags() ) )
 		{
 			return true;
 		}
 	}
 	else
 	{
-		if( IsFollowGoalInRange( MAX( m_FollowNavGoal.tolerance, GetGoalRange() ) * rangeMultiplier, GetGoalZRange(), GetGoalFlags() ) )
+		if( IsFollowGoalInRange( std::max( m_FollowNavGoal.tolerance, GetGoalRange() ) * rangeMultiplier, GetGoalZRange(), GetGoalFlags() ) )
 		{
 			if ( m_FollowNavGoal.flags & AIFF_REQUIRE_LOS_OUTSIDE_COMBAT )
 			{
@@ -857,7 +852,7 @@ CAI_Hint *CAI_FollowBehavior::FindFollowPoint()
 	hintCriteria.SetFlag( bits_HINT_NODE_VISIBLE | bits_HINT_NODE_NEAREST );
 
 	// Add the search position
-	hintCriteria.AddIncludePosition( GetGoalPosition(), MAX( m_FollowNavGoal.followPointTolerance, GetGoalRange() ) );
+	hintCriteria.AddIncludePosition( GetGoalPosition(), std::max( m_FollowNavGoal.followPointTolerance, GetGoalRange() ) );
 	hintCriteria.AddExcludePosition( GetGoalPosition(), (GetFollowTarget()->WorldAlignMins().AsVector2D() - GetFollowTarget()->WorldAlignMaxs().AsVector2D()).Length());
 
 	return CAI_HintManager::FindHint( GetOuter(), hintCriteria );
@@ -869,7 +864,7 @@ bool CAI_FollowBehavior::IsFollowPointInRange()
 {
 	return ( GetHintNode() && 
 			 GetHintNode()->HintType() == HINT_FOLLOW_WAIT_POINT && 
-			 (GetHintNode()->GetAbsOrigin() - GetFollowTarget()->GetAbsOrigin()).LengthSqr() < Square(MAX(m_FollowNavGoal.followPointTolerance, GetGoalRange())) );
+			 (GetHintNode()->GetAbsOrigin() - GetFollowTarget()->GetAbsOrigin()).LengthSqr() < Square(std::max(m_FollowNavGoal.followPointTolerance, GetGoalRange())) );
 }
 
 
@@ -1437,7 +1432,7 @@ void CAI_FollowBehavior::StartTask( const Task_t *pTask )
 			if ( pLeader )
 			{
 				Vector coverPos = vec3_invalid;
-				float coverRadius = MIN( GetOuter()->CoverRadius(), m_FollowNavGoal.coverTolerance );
+				float coverRadius = std::min( GetOuter()->CoverRadius(), m_FollowNavGoal.coverTolerance );
 				
 				if ( FindCoverFromEnemyAtFollowTarget( coverRadius, &coverPos ) )
 				{
@@ -1526,7 +1521,7 @@ void CAI_FollowBehavior::RunTask( const Task_t *pTask )
 					{
 						Assert( GetOuter()->m_vInterruptSavePosition == vec3_invalid );
 						Vector coverPos = vec3_invalid;
-						float coverRadius = MIN( (float)12*12, m_FollowNavGoal.coverTolerance );
+						float coverRadius = std::min( (float)12*12, m_FollowNavGoal.coverTolerance );
 						if ( FindCoverFromEnemyAtFollowTarget( coverRadius, &coverPos ) )
 						{
 							GetOuter()->m_vInterruptSavePosition = coverPos;
@@ -2482,23 +2477,21 @@ bool CAI_FollowManager::AddFollower( CBaseEntity *pTarget, CAI_BaseNPC *pFollowe
 
 		AI_FollowSlot_t *pSlot 		= &pGroup->pFormation->pSlots[slot];
 
-		intp i = pGroup->followers.AddToTail( );
-
-		AI_Follower_t *iterNode = &pGroup->followers[i];
+		AI_Follower_t *iterNode = &pGroup->followers.emplace_back();
 		iterNode->hFollower 	= pFollower;
 		iterNode->slot 			= slot;
 		iterNode->pGroup		= pGroup;
 
-		pGroup->slotUsage.Set( slot );
+		pGroup->slotUsage[slot] = true;
 		
 		CalculateFieldsFromSlot( pSlot, &iterNode->navInfo );
 		
-		pHandle->m_hFollower = i;
+		pHandle->m_pFollower = iterNode;
 		pHandle->m_pGroup = pGroup;
 		return true;
 	}
 
-	pHandle->m_hFollower = 0;
+	pHandle->m_pFollower = nullptr;
 	pHandle->m_pGroup = nullptr;
 	return false;
 }
@@ -2507,13 +2500,13 @@ bool CAI_FollowManager::AddFollower( CBaseEntity *pTarget, CAI_BaseNPC *pFollowe
 
 bool CAI_FollowManager::CalcFollowPosition( AI_FollowManagerInfoHandle_t& hInfo, AI_FollowNavInfo_t *pNavInfo )
 {
-	if ( hInfo.m_pGroup && hInfo.m_hFollower )
+	if ( hInfo.m_pGroup && hInfo.m_pFollower )
 	{
 		AI_FollowGroup_t *pGroup = hInfo.m_pGroup;
 		Assert( pGroup->hFollowTarget.Get() );
 		CBaseEntity *pTarget = pGroup->hFollowTarget;
 
-		AI_Follower_t *iterNode = &pGroup->followers[hInfo.m_hFollower];
+		AI_Follower_t *iterNode = hInfo.m_pFollower;
 		if ( iterNode->navInfo.position != vec3_origin )
 		{
 			QAngle angles = pTarget->GetLocalAngles();
@@ -2552,49 +2545,44 @@ bool CAI_FollowManager::RedistributeSlots( AI_FollowGroup_t *pGroup )
 {
 	bool result = false;
 
-	CUtlRBTree<CBaseEntity *> movedFollowers;
-	SetDefLessFunc( movedFollowers );
+	std::set<CBaseEntity *> movedFollowers;
 
 	const Vector &originFollowed = pGroup->hFollowTarget->GetAbsOrigin();
 	int 		  bestSlot;
 
-	while ( ( bestSlot = FindBestSlot( pGroup ) ) != -1 && ((int)movedFollowers.Count() < pGroup->followers.Count()) )
+	while ( ( bestSlot = FindBestSlot( pGroup ) ) != -1 && (movedFollowers.size() < pGroup->followers.size()) )
 	{
 		AI_FollowSlot_t *  pSlot 	  = &pGroup->pFormation->pSlots[bestSlot];
 		Vector			   slotPos	  = originFollowed + pSlot->position;
-		intp  h			= pGroup->followers.Head();
-		intp  hBest 		= pGroup->followers.InvalidIndex();
+		AI_Follower_t *	   pBest	  = nullptr;
 		float 			   distSqBest = FLT_MAX;
 		
-		while ( h != pGroup->followers.InvalidIndex() )
+		for ( AI_Follower_t &follower : pGroup->followers )
 		{
-			AI_Follower_t *p = &pGroup->followers[h];
+			AI_Follower_t *p = &follower;
 
-			if ( movedFollowers.Find( p->hFollower ) == movedFollowers.InvalidIndex() && 
+			if ( !movedFollowers.contains( p->hFollower.Get() ) && 
 				 ( p->slot == -1 || pSlot->priority > pGroup->pFormation->pSlots[p->slot].priority ) )
 			{
 				float distSqCur = ( p->hFollower->GetAbsOrigin() - slotPos ).LengthSqr();
 				if ( distSqCur < distSqBest )
 				{
-					hBest = h;
+					pBest = p;
 				}
 			}
-
-			h = pGroup->followers.Next( h );
 		}
 		
-		if ( hBest == pGroup->followers.InvalidIndex() )
+		if ( !pBest )
 			break;
 		
-		AI_Follower_t *pBest = &pGroup->followers[hBest];
 		if ( pBest->slot != -1 )
 		{
-			pGroup->slotUsage.Clear( pBest->slot );
+			pGroup->slotUsage[pBest->slot] = false;
 		}
 		pBest->slot = bestSlot;
 		CalculateFieldsFromSlot( pSlot, &pBest->navInfo );
-		pGroup->slotUsage.Set( bestSlot );
-		movedFollowers.Insert( pBest->hFollower );
+		pGroup->slotUsage[bestSlot] = true;
+		movedFollowers.insert( pBest->hFollower.Get() );
 		result = true;
 	}
 	return result;
@@ -2604,7 +2592,7 @@ bool CAI_FollowManager::RedistributeSlots( AI_FollowGroup_t *pGroup )
 
 void CAI_FollowManager::ChangeFormation( AI_FollowManagerInfoHandle_t& hInfo, AI_Formations_t formation )
 {
-	if ( !hInfo.m_pGroup || !hInfo.m_hFollower )
+	if ( !hInfo.m_pGroup || !hInfo.m_pFollower )
 		return;
 
 	AI_FollowGroup_t *pGroup = hInfo.m_pGroup;
@@ -2612,13 +2600,11 @@ void CAI_FollowManager::ChangeFormation( AI_FollowManagerInfoHandle_t& hInfo, AI
 	if ( pNewFormation == pGroup->pFormation )
 		return;
 
-	intp h = pGroup->followers.Head();
-		
-	while ( h != pGroup->followers.InvalidIndex() )
+	for ( AI_Follower_t &follower : pGroup->followers )
 	{
 		CAI_FollowBehavior *pFollowBehavior;
 		
-		AI_Follower_t *p = &pGroup->followers[h];
+		AI_Follower_t *p = &follower;
 		p->slot = -1;
 		p->hFollower->GetBehavior( &pFollowBehavior );
 		Assert( pFollowBehavior );
@@ -2629,23 +2615,18 @@ void CAI_FollowManager::ChangeFormation( AI_FollowManagerInfoHandle_t& hInfo, AI
 			pFollowBehavior->SetCondition( CAI_FollowBehavior::COND_TARGET_MOVED_FROM_MARK );
 			pFollowBehavior->m_bTargetUnreachable = false;
 		}
-		
-		h = pGroup->followers.Next( h );
 	}
 	
-	pGroup->slotUsage.ClearAll();
+	std::ranges::fill( pGroup->slotUsage, false );
 	pGroup->pFormation = pNewFormation;
-	pGroup->slotUsage.Resize( pGroup->pFormation->nSlots );
+	pGroup->slotUsage.resize( pGroup->pFormation->nSlots );
 	
 	RedistributeSlots( pGroup );
 	
 #ifdef DEBUG
-	h = pGroup->followers.Head();
-	while ( h != pGroup->followers.InvalidIndex() )
+	for ( const AI_Follower_t &follower : pGroup->followers )
 	{
-		AI_Follower_t *p = &pGroup->followers[h];
-		Assert( p->slot != -1 );
-		h = pGroup->followers.Next( h );
+		Assert( follower.slot != -1 );
 	}
 #endif
 }
@@ -2654,15 +2635,15 @@ void CAI_FollowManager::ChangeFormation( AI_FollowManagerInfoHandle_t& hInfo, AI
 
 void CAI_FollowManager::RemoveFollower( AI_FollowManagerInfoHandle_t& hInfo )
 {
-	if ( hInfo.m_pGroup && hInfo.m_hFollower )
+	if ( hInfo.m_pGroup && hInfo.m_pFollower )
 	{
 		AI_FollowGroup_t *pGroup = hInfo.m_pGroup;
-		AI_Follower_t* iterNode = &pGroup->followers[hInfo.m_hFollower];
+		AI_Follower_t* iterNode = hInfo.m_pFollower;
 
 		int slot = iterNode->slot;
-		pGroup->slotUsage.Clear( slot );
-		pGroup->followers.Remove( hInfo.m_hFollower );
-		if ( pGroup->followers.Count() == 0 )
+		pGroup->slotUsage[slot] = false;
+		pGroup->followers.remove_if( [iterNode]( const AI_Follower_t &f ) { return &f == iterNode; } );
+		if ( pGroup->followers.empty() )
 		{
 			RemoveGroup( pGroup );
 		}
@@ -2688,7 +2669,7 @@ int CAI_FollowManager::FindBestSlot( AI_FollowGroup_t *pGroup )
 	
 	for ( int i = 0; i < nSlots; i++ )
 	{
-		if ( !pGroup->slotUsage.IsBitSet( i ) && pGroup->pFormation->pSlots[i].priority > bestPriority )
+		if ( !pGroup->slotUsage[i] && pGroup->pFormation->pSlots[i].priority > bestPriority )
 		{
 			bestPriority = pGroup->pFormation->pSlots[i].priority;
 			best = i;
@@ -2725,10 +2706,10 @@ AI_FollowGroup_t *CAI_FollowManager::FindCreateGroup( CBaseEntity *pTarget, AI_F
 		}
 		
 		pGroup->pFormation = AIGetFormation( formation );
-		pGroup->slotUsage.Resize( pGroup->pFormation->nSlots );
+		pGroup->slotUsage.resize( pGroup->pFormation->nSlots );
 		pGroup->hFollowTarget = pTarget;
 		
-		m_groups.AddToHead( pGroup );
+		m_groups.insert( m_groups.begin(), pGroup );
 	}
 	
 	return pGroup;
@@ -2738,12 +2719,12 @@ AI_FollowGroup_t *CAI_FollowManager::FindCreateGroup( CBaseEntity *pTarget, AI_F
 
 void CAI_FollowManager::RemoveGroup( AI_FollowGroup_t *pGroup )
 {
-	for ( int i = 0; i < m_groups.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_groups ); i++ )
 	{
 		if ( m_groups[i] == pGroup )
 		{
 			delete m_groups[i];
-			m_groups.FastRemove(i);
+			ks::swap_remove( m_groups, i );
 			return;
 		}
 	}
@@ -2753,7 +2734,7 @@ void CAI_FollowManager::RemoveGroup( AI_FollowGroup_t *pGroup )
 
 AI_FollowGroup_t *CAI_FollowManager::FindGroup( CBaseEntity *pTarget )
 {
-	for ( int i = 0; i < m_groups.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_groups ); i++ )
 	{
 		if ( m_groups[i]->hFollowTarget == pTarget )
 			return m_groups[i];
@@ -2765,15 +2746,12 @@ AI_FollowGroup_t *CAI_FollowManager::FindGroup( CBaseEntity *pTarget )
 
 AI_FollowGroup_t *CAI_FollowManager::FindFollowerGroup( CBaseEntity *pFollower )
 {
-	for ( int i = 0; i < m_groups.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_groups ); i++ )
 	{
-		intp h = m_groups[i]->followers.Head();
-		while( h != m_groups[i]->followers.InvalidIndex() )
+		for ( const AI_Follower_t &follower : m_groups[i]->followers )
 		{
-			AI_Follower_t *p = &m_groups[i]->followers[h];
-			if ( p->hFollower.Get() == pFollower )
+			if ( follower.hFollower.Get() == pFollower )
 				return m_groups[i];
-			h = m_groups[i]->followers.Next( h );
 		}
 	}
 	return nullptr;

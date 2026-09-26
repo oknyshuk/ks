@@ -6,11 +6,13 @@
 //
 //===========================================================================//
 
+#include <mutex>
 #include "IOcclusionSystem.h"
 #include "mathlib/vector.h"
-#include "utlsortvector.h"
-#include "utllinkedlist.h"
+#include <algorithm>
+#include <flat_set>
 #include "utlvector.h"
+#include <inplace_vector>
 #include "collisionutils.h"
 #include "filesystem.h"
 #include "gl_model_private.h"
@@ -20,9 +22,6 @@
 #include "materialsystem/imesh.h"
 #include "tier0/vprof.h"
 #include "tier0/icommandline.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 // Uncomment this if you want to get a whole bunch of paranoid error checking
 // #define DEBUG_OCCLUSION_SYSTEM 1
@@ -68,7 +67,7 @@ struct EdgeVisualizationInfo_t
 //-----------------------------------------------------------------------------
 // Queued up rendering
 //-----------------------------------------------------------------------------
-static CUtlVector<EdgeVisualizationInfo_t> g_EdgeVisualization;
+static std::vector< EdgeVisualizationInfo_t > g_EdgeVisualization;
 
 
 //-----------------------------------------------------------------------------
@@ -175,8 +174,8 @@ private:
 	float m_flNextDiscontinuity;
 	int m_nCurrentEdgeIndex;
 
-	CUtlVector< WingedEdge_t > m_WingedEdges;
-	CUtlVector< Surface_t > m_Surfaces;
+	std::vector< WingedEdge_t > m_WingedEdges;
+	std::vector< Surface_t > m_Surfaces;
 };
 
 
@@ -184,7 +183,7 @@ private:
 //-----------------------------------------------------------------------------
 // Constructor
 //-----------------------------------------------------------------------------
-CWingedEdgeList::CWingedEdgeList() : m_WingedEdges( 0, 64 )
+CWingedEdgeList::CWingedEdgeList()
 {
 	m_StartTerminal.m_vecPosition.Init( -FLT_MAX, -FLT_MAX, -FLT_MAX );
 	m_StartTerminal.m_vecPositionEnd.Init( -FLT_MAX, FLT_MAX, -FLT_MAX );
@@ -216,8 +215,8 @@ CWingedEdgeList::CWingedEdgeList() : m_WingedEdges( 0, 64 )
 //-----------------------------------------------------------------------------
 void CWingedEdgeList::Clear()
 {
-	m_WingedEdges.RemoveAll();
-	m_Surfaces.RemoveAll();
+	m_WingedEdges.clear();
+	m_Surfaces.clear();
 }
 
 
@@ -226,7 +225,7 @@ void CWingedEdgeList::Clear()
 //-----------------------------------------------------------------------------
 inline int CWingedEdgeList::EdgeCount() const 
 { 
-	return m_WingedEdges.Count(); 
+	return std::ssize( m_WingedEdges ); 
 }
 
 inline CWingedEdgeList::WingedEdge_t &CWingedEdgeList::WingedEdge( int i )
@@ -240,7 +239,7 @@ inline CWingedEdgeList::WingedEdge_t &CWingedEdgeList::WingedEdge( int i )
 //-----------------------------------------------------------------------------
 inline int CWingedEdgeList::AddEdge( )
 {
-	int i = m_WingedEdges.AddToTail();
+	int i = std::ssize( m_WingedEdges ); m_WingedEdges.emplace_back();
 
 	WingedEdge_t &newEdge = m_WingedEdges[i];
 	newEdge.m_pPrevActiveEdge = nullptr;
@@ -260,7 +259,7 @@ int CWingedEdgeList::AddEdge( const Vector &vecStartVert, const Vector &vecEndVe
 	if (dy == 0.0f)
 		return -1;
 
-	int i = m_WingedEdges.AddToTail();
+	int i = std::ssize( m_WingedEdges ); m_WingedEdges.emplace_back();
 	WingedEdge_t &newEdge = m_WingedEdges[i];
 
 	newEdge.m_flOODy = 1.0f / dy;
@@ -281,7 +280,7 @@ int CWingedEdgeList::AddEdge( const Vector &vecStartVert, const Vector &vecEndVe
 //-----------------------------------------------------------------------------
 int CWingedEdgeList::AddSurface( const cplane_t &plane )
 {
-	int i = m_Surfaces.AddToTail();
+	int i = std::ssize( m_Surfaces ); m_Surfaces.emplace_back();
 	m_Surfaces[i].m_Plane = plane;
 	return i;
 }
@@ -437,7 +436,7 @@ void CWingedEdgeList::ResetActiveEdgeList()
 
 	// Don't bother with edges below the screen edge
 	m_flNextDiscontinuity = WingedEdge( 0 ).m_vecPosition.y;
-	m_flNextDiscontinuity = MAX( m_flNextDiscontinuity, -1.0f );
+	m_flNextDiscontinuity = std::max( m_flNextDiscontinuity, -1.0f );
 
 	m_StartTerminal.m_pNextActiveEdge = &m_EndTerminal;
 	m_EndTerminal.m_pPrevActiveEdge = &m_StartTerminal;
@@ -457,11 +456,11 @@ void CWingedEdgeList::SpewActiveEdgeList( float y, bool bHex )
 	{
 		if (!bHex)
 		{
-			Msg( "(%d %.3f [%d/%d]) ", (int)(pEdge - m_WingedEdges.Base()), pEdge->m_flX, pEdge->m_nLeaveSurfID, pEdge->m_nEnterSurfID );
+			Msg( "(%d %.3f [%d/%d]) ", (int)(pEdge - m_WingedEdges.data()), pEdge->m_flX, pEdge->m_nLeaveSurfID, pEdge->m_nEnterSurfID );
 		}
 		else
 		{
-			Msg( "(%d %X [%d/%d]) ", (int)(pEdge - m_WingedEdges.Base()), *(int*)&pEdge->m_flX, pEdge->m_nLeaveSurfID, pEdge->m_nEnterSurfID );
+			Msg( "(%d %X [%d/%d]) ", (int)(pEdge - m_WingedEdges.data()), *(int*)&pEdge->m_flX, pEdge->m_nLeaveSurfID, pEdge->m_nEnterSurfID );
 		}
 		pEdge = pEdge->m_pNextActiveEdge;
 	}
@@ -688,7 +687,7 @@ bool CWingedEdgeList::IsOccludingEdgeList( CWingedEdgeList &testList )
 
 		float flTestY = testList.NextDiscontinuity();
 		float flOccluderY = NextDiscontinuity();
-		flCurrentY = MIN( flTestY, flOccluderY );
+		flCurrentY = std::min( flTestY, flOccluderY );
 
 		// NOTE: This check here is to help occlusion @ the top of the screen
 		// We cut the occluders off at y = 1.0 + epsilon, which means there's
@@ -719,8 +718,8 @@ void CWingedEdgeList::QueueVisualization( unsigned char *pColor )
 	if ( !r_visocclusion.GetInt() )
 		return;
 
-	int nFirst = g_EdgeVisualization.AddMultipleToTail( m_WingedEdges.Count() );
-	for ( int i = m_WingedEdges.Count(); --i >= 0; )
+	int nFirst = std::ssize( g_EdgeVisualization ); g_EdgeVisualization.resize( g_EdgeVisualization.size() + ( std::ssize( m_WingedEdges ) ) );
+	for ( int i = std::ssize( m_WingedEdges ); --i >= 0; )
 	{
 		WingedEdge_t *pEdge = &m_WingedEdges[i];
 		EdgeVisualizationInfo_t &info = g_EdgeVisualization[nFirst + i];
@@ -759,10 +758,10 @@ void CWingedEdgeList::Visualize( unsigned char *pColor )
 
 	IMesh *pMesh = pRenderContext->GetDynamicMesh( );
 	CMeshBuilder meshBuilder;
-	meshBuilder.Begin( pMesh, MATERIAL_LINES, m_WingedEdges.Count() );
+	meshBuilder.Begin( pMesh, MATERIAL_LINES, std::ssize( m_WingedEdges ) );
 
 	int i;
-	int nCount = m_WingedEdges.Count();
+	int nCount = std::ssize( m_WingedEdges );
 	for ( i = nCount; --i >= 0; )
 	{
 		WingedEdge_t *pEdge = &m_WingedEdges[i];
@@ -869,7 +868,7 @@ private:
 		MAX_EDGE_CROSSINGS = 64
 	};
 
-	typedef CUtlVector<Edge_t> EdgeList_t;
+	typedef std::vector< Edge_t > EdgeList_t;
 	 
 private:
 	// Gets an edge
@@ -936,13 +935,13 @@ private:
 	// Checks consistency of the edge list...
 	void CheckConsistency();
 
-	class EdgeLess
+	struct EdgeLess
 	{
-	public:
-        bool Less( const unsigned short& src1, const unsigned short& src2, void *pCtx );
+		const EdgeList_t *m_pEdges;
+		bool operator()( unsigned short src1, unsigned short src2 ) const;
 	};
 
-	static int __cdecl SurfCompare( const void *elem1, const void *elem2 );
+	static int SurfCompare( const void *elem1, const void *elem2 );
 
 private:
 	// Used to sort surfaces by screen area
@@ -950,14 +949,14 @@ private:
 
 	// List of all edges
 	EdgeList_t m_Edges;
-	CUtlSortVector<unsigned short, EdgeLess > m_OrigSortIndices;
-	CUtlVector<unsigned short> m_SortIndices;
+	std::flat_multiset< unsigned short, EdgeLess > m_OrigSortIndices;
+	std::vector< unsigned short > m_SortIndices;
 	Edge_t m_StartTerminal;
 	Edge_t m_EndTerminal;
 
 	// Surfaces
-	CUtlVector< Surface_t > m_Surfaces;
-	CUtlVector< int > m_SurfaceSort;
+	std::vector< Surface_t > m_Surfaces;
+	std::vector< int > m_SurfaceSort;
 	Surface_t m_StartSurfTerminal;
 	Surface_t m_EndSurfTerminal;
 
@@ -982,12 +981,10 @@ private:
 //-----------------------------------------------------------------------------
 // Used to sort the edge list
 //-----------------------------------------------------------------------------
-bool CEdgeList::EdgeLess::Less( const unsigned short& src1, const unsigned short& src2, void *pCtx )
+bool CEdgeList::EdgeLess::operator()( unsigned short src1, unsigned short src2 ) const
 {
-	EdgeList_t *pEdgeList = (EdgeList_t*)pCtx;
-
-	const Edge_t &e1 = pEdgeList->Element(src1);
-	const Edge_t &e2 = pEdgeList->Element(src2);
+	const Edge_t &e1 = (*m_pEdges)[ src1 ];
+	const Edge_t &e2 = (*m_pEdges)[ src2 ];
 
 	if ( e1.m_vecPosition.y < e2.m_vecPosition.y )
 		return true;
@@ -1003,16 +1000,15 @@ bool CEdgeList::EdgeLess::Less( const unsigned short& src1, const unsigned short
 
 	// This makes it so that if two edges start on the same point,
 	// the leftmost edge is always selected
-	return ( e1.m_flDxDy <= e2.m_flDxDy );
+	return ( e1.m_flDxDy < e2.m_flDxDy );
 }
 
 
 //-----------------------------------------------------------------------------
 // Constructor
 //-----------------------------------------------------------------------------
-CEdgeList::CEdgeList() : m_Edges( 0, 32 ), m_OrigSortIndices( 0, 32 )
+CEdgeList::CEdgeList() : m_OrigSortIndices( EdgeLess{ &m_Edges } )
 {
-	m_OrigSortIndices.SetLessContext( &m_Edges );
 
 	m_StartTerminal.m_vecPosition.Init( -FLT_MAX, -FLT_MAX, -FLT_MAX );
 	m_StartTerminal.m_vecPositionEnd.Init( -FLT_MAX, FLT_MAX, -FLT_MAX );
@@ -1053,12 +1049,12 @@ CEdgeList::CEdgeList() : m_Edges( 0, 32 ), m_OrigSortIndices( 0, 32 )
 //-----------------------------------------------------------------------------
 inline int CEdgeList::EdgeCount() const
 {
-	return m_Edges.Count();
+	return std::ssize( m_Edges );
 }
 
 inline int CEdgeList::ActualEdgeCount() const
 {
-	return m_SortIndices.Count();
+	return std::ssize( m_SortIndices );
 }
 
 inline const CEdgeList::Edge_t &CEdgeList::EdgeFromSortIndex( int nSortIndex ) const
@@ -1190,7 +1186,7 @@ inline void CEdgeList::ComputePointAlongEdge( const Edge_t *pEdge, int nSurfID, 
 //-----------------------------------------------------------------------------
 int CEdgeList::AddSurface( const cplane_t &plane )
 {
-	int nIndex = m_Surfaces.AddToTail();
+	int nIndex = std::ssize( m_Surfaces ); m_Surfaces.emplace_back();
 
 	Surface_t &surf = m_Surfaces[nIndex];
 	surf.m_flOOz = 0.0f;
@@ -1199,7 +1195,7 @@ int CEdgeList::AddSurface( const cplane_t &plane )
 	surf.m_pPrevSurface = nullptr;
 	surf.m_nSurfID = nIndex;
 
-	m_SurfaceSort.AddToTail(nIndex);
+	m_SurfaceSort.push_back( nIndex );
 
 	return nIndex;
 }
@@ -1223,7 +1219,7 @@ void CEdgeList::AddEdge( Vector **ppEdgeVertices, int nSurfID )
 	if (dy == 0.0f)
 		return;
 
-	int i = m_Edges.AddToTail();
+	int i = std::ssize( m_Edges ); m_Edges.emplace_back();
 	Edge_t &newEdge = m_Edges[i];
 
 	newEdge.m_flOODy = 1.0f / dy;
@@ -1235,7 +1231,7 @@ void CEdgeList::AddEdge( Vector **ppEdgeVertices, int nSurfID )
 	newEdge.m_pNextActiveEdge = nullptr;
 
 	// Insert it into the sorted list
-	m_OrigSortIndices.Insert( i );
+	m_OrigSortIndices.insert( i );
 }
 
 
@@ -1243,7 +1239,7 @@ void CEdgeList::AddEdge( Vector **ppEdgeVertices, int nSurfID )
 // Used to sort the surfaces
 //-----------------------------------------------------------------------------
 CEdgeList::Surface_t *CEdgeList::s_pSortSurfaces = nullptr;
-int __cdecl CEdgeList::SurfCompare( const void *elem1, const void *elem2 )
+int CEdgeList::SurfCompare( const void *elem1, const void *elem2 )
 {
 	int nSurfID1 = *(int*)elem1;
 	float flArea1 = s_pSortSurfaces[nSurfID1].m_flArea;
@@ -1266,9 +1262,9 @@ void CEdgeList::CullSmallOccluders()
 {	 
 	// Cull out all surfaces with too small of a screen area...
 	// Sort the surfaces by screen area, in descending order
-	int nSurfCount = m_Surfaces.Count();
-	s_pSortSurfaces = m_Surfaces.Base();
-	qsort( m_SurfaceSort.Base(), nSurfCount, sizeof(int), SurfCompare );
+	int nSurfCount = std::ssize( m_Surfaces );
+	s_pSortSurfaces = m_Surfaces.data();
+	qsort( m_SurfaceSort.data(), nSurfCount, sizeof(int), SurfCompare );
 
 	// We're going to keep the greater of r_occludermin + All surfaces with a screen area >= r_occluderarea
 	int nMinSurfaces = r_occludermincount.GetInt();
@@ -1294,15 +1290,13 @@ void CEdgeList::CullSmallOccluders()
 
 	MEM_ALLOC_CREDIT();
 
-	int nEdgeCount = m_OrigSortIndices.Count();
-	m_SortIndices.RemoveAll();
-	m_SortIndices.EnsureCapacity( nEdgeCount );
-	for( i = 0; i < nEdgeCount; ++i )
+	m_SortIndices.clear();
+	m_SortIndices.reserve( m_OrigSortIndices.size() );
+	for ( int nEdgeIndex : m_OrigSortIndices )
 	{
-		int nEdgeIndex = m_OrigSortIndices[i];
 		if ( bUseSurface[ m_Edges[ nEdgeIndex ].m_nSurfID ] )
 		{
-			m_SortIndices.AddToTail( nEdgeIndex ); 
+			m_SortIndices.push_back( nEdgeIndex ); 
 		}
 	}
 }
@@ -1313,11 +1307,11 @@ void CEdgeList::CullSmallOccluders()
 //-----------------------------------------------------------------------------
 void CEdgeList::RemoveAll()
 {
-	m_Edges.RemoveAll();
-	m_SortIndices.RemoveAll();
-	m_OrigSortIndices.RemoveAll();
-	m_Surfaces.RemoveAll();
-	m_SurfaceSort.RemoveAll();
+	m_Edges.clear();
+	m_SortIndices.clear();
+	m_OrigSortIndices.clear();
+	m_Surfaces.clear();
+	m_SurfaceSort.clear();
 }
 
 
@@ -1828,11 +1822,11 @@ void CEdgeList::SpewActiveEdgeList( float y, bool bHex)
 	{
 		if (!bHex)
 		{
-			Msg( "(%d %.3f [%d]) ", (int)(pEdge - m_Edges.Base()), pEdge->m_flX, pEdge->m_nSurfID );
+			Msg( "(%d %.3f [%d]) ", (int)(pEdge - m_Edges.data()), pEdge->m_flX, pEdge->m_nSurfID );
 		}
 		else
 		{
-			Msg( "(%d %X [%d]) ", (int)(pEdge - m_Edges.Base()), *(int*)&pEdge->m_flX, pEdge->m_nSurfID );
+			Msg( "(%d %X [%d]) ", (int)(pEdge - m_Edges.data()), *(int*)&pEdge->m_flX, pEdge->m_nSurfID );
 		}
 		pEdge = pEdge->m_pNextActiveEdge;
 	}
@@ -1871,7 +1865,7 @@ void CEdgeList::ReduceActiveList( CWingedEdgeList &newEdgeList )
 		return;
 
 	// Copy the surfaces over
-	int nCount = m_Surfaces.Count();
+	int nCount = std::ssize( m_Surfaces );
 //	newEdgeList.m_Surfaces.EnsureCapacity( nCount );
 	for ( int i = 0; i < nCount; ++i )
 	{
@@ -1971,8 +1965,8 @@ void CEdgeList::QueueVisualization( unsigned char *pColor )
 	if ( !r_visocclusion.GetInt() )
 		return;
 
-	int nFirst = g_EdgeVisualization.AddMultipleToTail( m_Edges.Count() );
-	for ( int i = m_Edges.Count(); --i >= 0; )
+	int nFirst = std::ssize( g_EdgeVisualization ); g_EdgeVisualization.resize( g_EdgeVisualization.size() + ( std::ssize( m_Edges ) ) );
+	for ( int i = std::ssize( m_Edges ); --i >= 0; )
 	{
 		EdgeVisualizationInfo_t &info = g_EdgeVisualization[nFirst + i];
 		info.m_vecPoint[0] = m_Edges[i].m_vecPosition;
@@ -2007,10 +2001,10 @@ void CEdgeList::Visualize( unsigned char *pColor )
 
 	IMesh *pMesh = pRenderContext->GetDynamicMesh( );
 	CMeshBuilder meshBuilder;
-	meshBuilder.Begin( pMesh, MATERIAL_LINES, m_Edges.Count() );
+	meshBuilder.Begin( pMesh, MATERIAL_LINES, std::ssize( m_Edges ) );
 
 	int i;
-	for ( i = m_Edges.Count(); --i >= 0; )
+	for ( i = std::ssize( m_Edges ); --i >= 0; )
 	{
 		meshBuilder.Position3fv( m_Edges[i].m_vecPosition.Base() );
 		meshBuilder.Color4ubv( pColor );
@@ -2118,7 +2112,7 @@ private:
 	
 	CEdgeList m_EdgeList;
 	CWingedEdgeList m_WingedEdgeList;
-	CUtlVector< Vector > m_ClippedVerts;
+	std::vector< Vector > m_ClippedVerts;
 
 	float m_flMaxOccludeeArea;
 	float m_flMinOccluderArea;
@@ -2144,7 +2138,7 @@ IOcclusionSystem *OcclusionSystem()
 //-----------------------------------------------------------------------------
 // Constructor, destructor
 //-----------------------------------------------------------------------------
-COcclusionSystem::COcclusionSystem() : m_ClippedVerts( 0, 64 )
+COcclusionSystem::COcclusionSystem()
 {
 	m_nCurrentViewId = 0;
 	for (int i = 0; i < OCCLUSION_SYSTEM_VIEWDATA_MAX; ++i)
@@ -2354,7 +2348,7 @@ void COcclusionSystem::StitchClippedVertices( Vector *pVertices, int nCount )
 			continue;
 
 		int j;
-		for ( j = m_ClippedVerts.Count(); --j >= 0; )
+		for ( j = std::ssize( m_ClippedVerts ); --j >= 0; )
 		{
 			if ( VectorsAreEqual( pVertices[i], m_ClippedVerts[j], 1e-3 ) )
 			{
@@ -2367,7 +2361,7 @@ void COcclusionSystem::StitchClippedVertices( Vector *pVertices, int nCount )
 		{
 			MEM_ALLOC_CREDIT();
 			// No match found...
-			m_ClippedVerts.AddToTail( pVertices[i] );
+			m_ClippedVerts.push_back( pVertices[i] );
 		}
 	}
 }
@@ -2481,7 +2475,7 @@ void COcclusionSystem::RecomputeOccluderEdgeList( ViewData_t& viewData )
 	viewData.m_bEdgeListDirty = false;
 	m_EdgeList.RemoveAll();
 	m_WingedEdgeList.Clear();
-	m_ClippedVerts.RemoveAll();
+	m_ClippedVerts.clear();
 
 	mvertex_t *pVertices = host_state.worldbrush->vertexes;
 	int *pIndices = host_state.worldbrush->occludervertindices;
@@ -2595,7 +2589,7 @@ void COcclusionSystem::SetView( const Vector &vecCameraPos, float flFOV, const V
 	pActiveView->m_flNearPlaneDist = -( DotProduct( vecCameraPos, pActiveView->m_NearClipPlane.normal ) - pActiveView->m_NearClipPlane.dist );
 	// Due to FP precision issues this value can sometimes drop slightly below 0.0f (during CSM shadow rendering).
 	Assert( pActiveView->m_flNearPlaneDist > -0.125f );
-	pActiveView->m_flNearPlaneDist = MAX( pActiveView->m_flNearPlaneDist, 0.0f );
+	pActiveView->m_flNearPlaneDist = std::max( pActiveView->m_flNearPlaneDist, 0.0f );
 	pActiveView->m_flFOVFactor = pActiveView->m_flNearPlaneDist * tan( flFOV * 0.5f * M_PI / 180.0f );
 	pActiveView->m_flFOVFactor = pActiveView->m_flNearPlaneDist / pActiveView->m_flFOVFactor;
 	pActiveView->m_flFOVFactor *= pActiveView->m_flFOVFactor;
@@ -2690,18 +2684,18 @@ static int s_pFaceEdges[6][4] =
 //-----------------------------------------------------------------------------
 static CWingedEdgeList s_WingedTestEdgeList;
 
-class WingedEdgeLessFunc
+struct WingedEdgeLess
 {
-public:
-	bool Less( const int& src1, const int& src2, void *pCtx )
+	const Vector *pVertices;
+
+	bool operator()( int src1, int src2 ) const
 	{
-		Vector *pVertices = (Vector*)pCtx;
 
 		EdgeInfo_t *pEdge1 = &s_pEdges[ src1 ];
 		EdgeInfo_t *pEdge2 = &s_pEdges[ src2 ];
 
-		Vector *pV1 = &pVertices[ pEdge1->m_nVert[ pEdge1->m_nMinVert ] ];
-		Vector *pV2 = &pVertices[ pEdge2->m_nVert[ pEdge2->m_nMinVert ] ];
+		const Vector *pV1 = &pVertices[ pEdge1->m_nVert[ pEdge1->m_nMinVert ] ];
+		const Vector *pV2 = &pVertices[ pEdge2->m_nVert[ pEdge2->m_nMinVert ] ];
 
 		if (pV1->y < pV2->y)
 			return true;
@@ -2713,14 +2707,14 @@ public:
 			return false;
 
 		// This is the same as the following line:
-	//	return (pEdge1->m_flDxDy <= pEdge2->m_flDxDy);
+	//	return (pEdge1->m_flDxDy < pEdge2->m_flDxDy);
 		Vector2D dEdge1, dEdge2;
 		Vector2DSubtract( pVertices[ pEdge1->m_nVert[ 1 - pEdge1->m_nMinVert ] ].AsVector2D(), pV1->AsVector2D(), dEdge1 );
 		Vector2DSubtract( pVertices[ pEdge2->m_nVert[ 1 - pEdge2->m_nMinVert ] ].AsVector2D(), pV2->AsVector2D(), dEdge2 );
 		Assert( dEdge1.y >= 0.0f );
 		Assert( dEdge2.y >= 0.0f );
 
-		return dEdge1.x * dEdge2.y <= dEdge1.y * dEdge2.x;
+		return dEdge1.x * dEdge2.y < dEdge1.y * dEdge2.x;
 	}
 };
 
@@ -2737,8 +2731,8 @@ bool COcclusionSystem::IsOccluded( int occlusionViewId, const Vector &vecAbsMins
 	VPROF_BUDGET( "COcclusionSystem::IsOccluded", VPROF_BUDGETGROUP_OCCLUSION );
 
 	// @MULTICORE (toml 9/11/2006): need to eliminate this mutex
-	static CThreadFastMutex mutex;
-	AUTO_LOCK( mutex );
+	static std::recursive_mutex mutex;
+	std::scoped_lock lock( mutex );
 
 	RecomputeOccluderEdgeList( *pActiveView );
 
@@ -2869,9 +2863,8 @@ bool COcclusionSystem::IsOccluded( int occlusionViewId, const Vector &vecAbsMins
 	}
 
 	// Sort edges by minimum Y + dx/dy...
-	int pEdgeSort[12];
-	CUtlSortVector< int, WingedEdgeLessFunc > edgeSort( pEdgeSort, 12 );
-	edgeSort.SetLessContext( pVecProjectedVertex );
+	std::inplace_vector< int, 12 > edgeSort;
+	WingedEdgeLess edgeLess{ pVecProjectedVertex };
 	for ( i = 0; i < 12; ++i )
 	{
 		// Skip non-visible edges
@@ -2880,14 +2873,13 @@ bool COcclusionSystem::IsOccluded( int occlusionViewId, const Vector &vecAbsMins
 			continue;
 
 		pEdge->m_nMinVert = ( pVecProjectedVertex[ pEdge->m_nVert[0] ].y >= pVecProjectedVertex[ pEdge->m_nVert[1] ].y );
-		edgeSort.Insert( i );
+		edgeSort.insert( std::ranges::upper_bound( edgeSort, i, edgeLess ), i );
 	}
 
 	// Now add them into the winged edge list, in sorted order...
-	int nEdgeCount = edgeSort.Count();
-	for ( i = 0; i < nEdgeCount; ++i )
+	for ( int nEdge : edgeSort )
 	{
-		EdgeInfo_t *pEdge = &s_pEdges[edgeSort[i]];
+		EdgeInfo_t *pEdge = &s_pEdges[nEdge];
 
 		// The enter + leave ids depend entirely on which edge is further up
 		// This works because the edges listed in s_pEdges show the edges as they
@@ -2923,7 +2915,7 @@ bool COcclusionSystem::IsOccluded( int occlusionViewId, const Vector &vecAbsMins
 void VisualizeQueuedEdges( )
 {
 #ifndef DEDICATED
-	if ( !g_EdgeVisualization.Count() )
+	if ( g_EdgeVisualization.empty() )
 		return;
 
 	CMatRenderContextPtr pRenderContext( materials );
@@ -2944,10 +2936,10 @@ void VisualizeQueuedEdges( )
 
 	IMesh *pMesh = pRenderContext->GetDynamicMesh( );
 	CMeshBuilder meshBuilder;
-	meshBuilder.Begin( pMesh, MATERIAL_LINES, g_EdgeVisualization.Count() );
+	meshBuilder.Begin( pMesh, MATERIAL_LINES, std::ssize( g_EdgeVisualization ) );
 
 	int i;
-	for ( i = g_EdgeVisualization.Count(); --i >= 0; )
+	for ( i = std::ssize( g_EdgeVisualization ); --i >= 0; )
 	{
 		EdgeVisualizationInfo_t &info = g_EdgeVisualization[i];
 
@@ -2976,7 +2968,7 @@ void VisualizeQueuedEdges( )
 	pRenderContext->MatrixMode( MATERIAL_PROJECTION );
 	pRenderContext->PopMatrix();
 
-	g_EdgeVisualization.RemoveAll();
+	g_EdgeVisualization.clear();
 #endif
 }
 

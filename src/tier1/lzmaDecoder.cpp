@@ -11,9 +11,7 @@
 #include "tier0/dbg.h"
 #include "tier1/lzmaDecoder.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 #ifndef _7ZIP_BYTE_DEFINED
 #define _7ZIP_BYTE_DEFINED
 typedef unsigned char Byte;
@@ -1199,7 +1197,7 @@ unsigned int CLZMA::Uncompress( unsigned char *pInput, unsigned char *pOutput, L
 	{
 		Assert( 0 );
 	}
-	state.Probs = (CProb *)malloc( LzmaGetNumProbs( &state.Properties ) * sizeof( CProb ) );
+	state.Probs = (CProb *)MemAlloc_Alloc( LzmaGetNumProbs( &state.Properties ) * sizeof( CProb ) );
 
 	unsigned int lzmaSize = LittleLong( ((lzma_header_t *)pInput)->lzmaSize );
 
@@ -1207,7 +1205,7 @@ unsigned int CLZMA::Uncompress( unsigned char *pInput, unsigned char *pOutput, L
 	SizeT outProcessed;
 	int result = LzmaDecode( &state, pInput + sizeof( lzma_header_t ), lzmaSize, &inProcessed, pOutput, actualSize, &outProcessed, pCallback );
 
-	free( state.Probs );
+	g_pMemAlloc->Free( state.Probs );
 
 	if ( result != LZMA_RESULT_OK || outProcessed != (SizeT)actualSize )
 	{

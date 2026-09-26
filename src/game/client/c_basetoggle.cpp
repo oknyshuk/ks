@@ -7,9 +7,6 @@
 #include "reflect_annotations.h"
 #include "c_basetoggle.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 IMPLEMENT_REFLECT_CLIENTCLASS( C_BaseToggle, DT_BaseToggle, CBaseToggle )
 
 IMPLEMENT_REFLECT_PREDMAP( C_BaseToggle );

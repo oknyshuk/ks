@@ -9,12 +9,12 @@
 #define CHOREOCHANNEL_H
 
 #include "tier1/utlvector.h"
-#include "tier1/utlrbtree.h"
+#include <vector>
 
 class CChoreoEvent;
 class CChoreoActor;
 class CChoreoScene;
-class CUtlBuffer;
+namespace ks { class byte_reader; class byte_writer; }
 class IChoreoStringPool;
 
 //-----------------------------------------------------------------------------
@@ -31,8 +31,8 @@ public:
 	CChoreoChannel&	operator=(const CChoreoChannel& src );
 
 	// Serialization
-	void			SaveToBuffer( CUtlBuffer& buf, CChoreoScene *pScene, IChoreoStringPool *pStringPool );
-	bool			RestoreFromBuffer( CUtlBuffer& buf, CChoreoScene *pScene, CChoreoActor *pActor, IChoreoStringPool *pStringPool );
+	void			SaveToBuffer( ks::byte_writer& buf, CChoreoScene *pScene, IChoreoStringPool *pStringPool );
+	bool			RestoreFromBuffer( ks::byte_reader& buf, CChoreoScene *pScene, CChoreoActor *pActor, IChoreoStringPool *pStringPool );
 
 	// Accessors
 	void			SetName( const char *name );
@@ -64,7 +64,8 @@ public:
 
 	void			MarkForSaveAll( bool mark );
 
-	bool			GetSortedCombinedEventList( char const *cctoken, CUtlRBTree< CChoreoEvent * >& sorted );
+	// sorted by start time
+	bool			GetSortedCombinedEventList( char const *cctoken, std::vector< CChoreoEvent * >& sorted );
 
 private:
 	// Initialize fields
@@ -81,7 +82,7 @@ private:
 	char			m_szName[ MAX_CHANNEL_NAME ];
 
 	// All of the events for this channel
-	CUtlVector < CChoreoEvent * > m_Events;
+	std::vector< CChoreoEvent * > m_Events;
 
 	bool			m_bActive;
 

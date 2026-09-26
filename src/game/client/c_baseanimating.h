@@ -8,6 +8,7 @@
 #ifndef C_BASEANIMATING_H
 #define C_BASEANIMATING_H
 
+#include <mutex>
 #include "reflect_annotations.h"
 #include "dt_recv.h"
 
@@ -138,7 +139,7 @@ public:
 	~C_BaseAnimating();
 
 #ifdef DEBUG
-	CUtlVector<float> m_flBoneSetupPerfHistory;
+	std::vector< float > m_flBoneSetupPerfHistory;
 #endif
 
 	virtual C_BaseAnimating*		GetBaseAnimating() { return this; }
@@ -502,7 +503,7 @@ public:
 
 	// For prediction
 	int								SelectWeightedSequence ( int activity );
-	int								SelectWeightedSequenceFromModifiers( Activity activity, CUtlSymbol *pActivityModifiers, int iModifierCount );
+	int								SelectWeightedSequenceFromModifiers( Activity activity, const ActivityModifierSym_t *pActivityModifiers, int iModifierCount );
 	void							ResetSequenceInfo( void );
 	float							SequenceDuration( void );
 	float							SequenceDuration( CStudioHdr *pStudioHdr, int iSequence );
@@ -666,7 +667,7 @@ protected:
 	static bool						s_bEnableNewBoneSetupRequest;
 
 	CBoneAccessor					m_BoneAccessor;
-	CThreadFastMutex				m_BoneSetupLock;
+	std::recursive_mutex				m_BoneSetupLock;
 
 	ClientSideAnimationListHandle_t	m_ClientSideAnimationListHandle;
 
@@ -675,7 +676,7 @@ protected:
 
 	// Bone attachments. Used for attaching one BaseAnimating to another's bones.
 	// Client side only.
-	CUtlVector<CHandle<C_BaseAnimating> > m_BoneAttachments;
+	std::vector< CHandle<C_BaseAnimating> > m_BoneAttachments;
 	int								m_boneIndexAttached;
 	Vector							m_bonePosition;
 	QAngle							m_boneAngles;
@@ -703,7 +704,7 @@ private:
 	CNetworkVar( ModelScaleType_t, m_ScaleType, [[= ks::reflect::Net{} ]] );
 
 	// Ropes that got spawned when the model was created.
-	CUtlLinkedList<C_RopeKeyframe*,unsigned short> m_Ropes;
+	std::vector<C_RopeKeyframe*> m_Ropes;
 
 	// event processing info
 	float							m_flPrevEventCycle;
@@ -756,13 +757,13 @@ private:
 	CBoneMergeCache					*m_pBoneMergeCache = nullptr;	// This caches the strcmp lookups that it has to do
 														// when merg
 
-	CUtlVector< matrix3x4a_t, CUtlMemoryAligned<matrix3x4a_t,16> >		m_CachedBoneData; // never access this directly. Use m_BoneAccessor.
+	std::vector< matrix3x4a_t >		m_CachedBoneData; // never access this directly. Use m_BoneAccessor.
 	float							m_flLastBoneSetupTime = 0.0f;
 	CJiggleBones					*m_pJiggleBones = nullptr;
 	bool							m_isJiggleBonesEnabled;
 
 	// Calculated attachment points
-	CUtlVector<CAttachmentData>		m_Attachments;
+	std::vector< CAttachmentData >		m_Attachments;
 
 	void							SetupBones_AttachmentHelper( CStudioHdr *pStudioHdr );
 	[[= ks::reflect::Net{} ]] EHANDLE							m_hLightingOrigin;
@@ -779,9 +780,9 @@ private:
 private:
 	mutable CStudioHdr				*m_pStudioHdr;
 	mutable MDLHandle_t				m_hStudioHdr;
-	CThreadFastMutex				m_StudioHdrInitLock;
+	std::recursive_mutex				m_StudioHdrInitLock;
 
-	CUtlReference<CNewParticleEffect>	m_ejectBrassEffect;
+	ks::tracked_ref<CNewParticleEffect>	m_ejectBrassEffect;
 	int								m_iEjectBrassAttachment;
 
 	Vector							m_vecRenderOriginOverride;

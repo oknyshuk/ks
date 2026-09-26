@@ -12,9 +12,6 @@
 #include "materialsystem/imaterialsystem.h"
 #include "tier1/keyvalues.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Little utility class to deal with material references
 //-----------------------------------------------------------------------------
@@ -137,7 +134,7 @@ CTextureReference::CTextureReference( const CTextureReference &ref ) : m_pTextur
 	Init( ref.m_pTexture );
 }
 
-const CTextureReference& CTextureReference::operator=( CTextureReference &ref )
+const CTextureReference& CTextureReference::operator=( const CTextureReference &ref )
 {
 	Init( ref.m_pTexture );
 	return *this;

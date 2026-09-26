@@ -11,8 +11,6 @@
 #include "mathlib/ssemath.h"
 #include "tier0/vprof.h"
 
-#define ALIGN(n) __declspec( align( n ) )
-
 // Undef this to use the unoptimized conversion routines
 #define USE_OPT
 

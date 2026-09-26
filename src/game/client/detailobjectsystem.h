@@ -32,7 +32,7 @@ struct DetailRenderableInfo_t
 };
 
 
-typedef CUtlVectorFixedGrowable< DetailRenderableInfo_t, 2048 > DetailRenderableList_t;
+typedef ks::small_vector< DetailRenderableInfo_t, 2048 > DetailRenderableList_t;
 
 
 //-----------------------------------------------------------------------------

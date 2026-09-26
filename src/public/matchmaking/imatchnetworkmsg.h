@@ -8,7 +8,7 @@
 #ifndef IMATCHNETWORKMSG_H
 #define IMATCHNETWORKMSG_H
 
-
+namespace ks { class byte_writer; }
 
 struct MM_QOS_t
 {
@@ -38,7 +38,7 @@ public:
 	virtual KeyValues * UnpackGameDetailsFromQOS( MM_GameDetails_QOS_t const *pvQosReply ) = 0;
 	virtual KeyValues * UnpackGameDetailsFromSteamLobby( uint64 uiLobbyID ) = 0;
 
-	virtual void PackageGameDetailsForQOS( KeyValues *pSettings, CUtlBuffer &buf ) = 0;
+	virtual void PackageGameDetailsForQOS( KeyValues *pSettings, ks::byte_writer &buf ) = 0;
 
 	virtual KeyValues * PackageGameDetailsForReservation( KeyValues *pSettings ) = 0;
 };

@@ -5,6 +5,7 @@
 // $NoKeywords: $
 //===========================================================================//
 #include "cbase.h"
+#include <mutex>
 #include "reflect_recvtable.h"
 #include "reflect_predmap.h"
 #include "reflect_annotations.h"
@@ -63,9 +64,6 @@
 #ifdef DEMOPOLISH_ENABLED
 #include "demo_polish/demo_polish.h"
 #endif
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 static ConVar cl_SetupAllBones( "cl_SetupAllBones", "0" );
 ConVar r_sequence_debug( "r_sequence_debug", "" );
@@ -135,7 +133,7 @@ struct clientanimating_t
 
 const unsigned int FCLIENTANIM_SEQUENCE_CYCLE = 0x00000001;
 
-static CUtlVector< clientanimating_t >	g_ClientSideAnimationList;
+static std::vector< clientanimating_t >	g_ClientSideAnimationList;
 
 IMPLEMENT_REFLECT_TABLE_IN( C_BaseAnimating, DT_ServerAnimationData );
 
@@ -440,7 +438,7 @@ void C_ClientRagdoll::FadeOut( void )
 	int iAlpha = GetRenderAlpha();
 	int iFadeSpeed = ( g_RagdollLVManager.IsLowViolence() ) ? g_ragdoll_lvfadespeed.GetInt() : g_ragdoll_fadespeed.GetInt();
 
-	iAlpha = MAX( iAlpha - ( iFadeSpeed * gpGlobals->frametime ), 0 );
+	iAlpha = std::max<std::common_type_t<float, int>>( iAlpha - ( iFadeSpeed * gpGlobals->frametime ), 0 );
 
 	SetRenderMode( kRenderTransAlpha );
 	SetRenderAlpha( iAlpha );
@@ -569,7 +567,7 @@ void C_ClientRagdoll::Release( void )
 // Incremented each frame in InvalidateModelBones. Models compare this value to what it
 // was last time they setup their bones to determine if they need to re-setup their bones.
 static unsigned long	g_iModelBoneCounter = 0;
-CUtlVector<C_BaseAnimating *> g_PreviousBoneSetups;
+std::vector< C_BaseAnimating * > g_PreviousBoneSetups;
 static unsigned long	g_iPreviousBoneCounter = (unsigned)-1;
 
 unsigned int g_nNumBonesSetupBlendingRulesOnly;
@@ -582,10 +580,10 @@ class C_BaseAnimatingGameSystem : public CAutoGameSystem
 	void LevelShutdownPostEntity()
 	{
 		g_iPreviousBoneCounter = (unsigned)-1;
-		if ( g_PreviousBoneSetups.Count() != 0 )
+		if ( !g_PreviousBoneSetups.empty() )
 		{
-			Msg( "%d entities in bone setup array. Should have been cleaned up by now\n", g_PreviousBoneSetups.Count() );
-			g_PreviousBoneSetups.RemoveAll();
+			Msg( "%d entities in bone setup array. Should have been cleaned up by now\n", (int)std::ssize( g_PreviousBoneSetups ) );
+			g_PreviousBoneSetups.clear();
 		}
 	}
 } g_BaseAnimatingGameSystem;
@@ -704,14 +702,14 @@ C_BaseAnimating::~C_BaseAnimating()
 	Assert( !g_bInThreadedBoneSetup );
 	if ( m_iMostRecentBoneSetupRequest == g_iPreviousBoneCounter )
 	{
-		int i = g_PreviousBoneSetups.Find( this );
+		int i = ks::find_index( g_PreviousBoneSetups, this );
 		Assert( i != -1 );
 		if ( i != -1 )
-			g_PreviousBoneSetups.FastRemove( i );
+			ks::swap_remove( g_PreviousBoneSetups, i );
 	}
 	else
 	{
-		Assert( g_PreviousBoneSetups.Find( this ) == -1 );
+		Assert( ks::find_index( g_PreviousBoneSetups, this ) == -1 );
 	}
 
 	RemoveFromClientSideAnimationList();
@@ -876,7 +874,7 @@ void C_BaseAnimating::RemoveBaseAnimatingInterpolatedVars()
 
 void C_BaseAnimating::LockStudioHdr()
 {
-	AUTO_LOCK( m_StudioHdrInitLock );
+	std::scoped_lock studioHdrInitLock( m_StudioHdrInitLock );
 	const model_t *mdl = GetModel();
 	if (mdl)
 	{
@@ -985,15 +983,15 @@ CStudioHdr *C_BaseAnimating::OnNewModel()
 	}
 
 	// Make sure m_CachedBones has space.
-	if ( m_CachedBoneData.Count() != hdr->numbones() )
+	if ( std::ssize( m_CachedBoneData ) != hdr->numbones() )
 	{
-		m_CachedBoneData.SetSize( hdr->numbones() );
+		m_CachedBoneData.assign( hdr->numbones(), {} );
 		for ( int i=0; i < hdr->numbones(); i++ )
 		{
 			SetIdentityMatrix( m_CachedBoneData[i] );
 		}
 	}
-	m_BoneAccessor.Init( this, m_CachedBoneData.Base() ); // Always call this in case the studiohdr_t has changed.
+	m_BoneAccessor.Init( this, m_CachedBoneData.data() ); // Always call this in case the studiohdr_t has changed.
 
 	// Free any IK data
 	if (m_pIk)
@@ -1003,12 +1001,12 @@ CStudioHdr *C_BaseAnimating::OnNewModel()
 	}
 
 	// Don't reallocate unless a different size. 
-	if ( m_Attachments.Count() != hdr->GetNumAttachments() )
+	if ( std::ssize( m_Attachments ) != hdr->GetNumAttachments() )
 	{
-		m_Attachments.SetSize( hdr->GetNumAttachments() );
+		m_Attachments.assign( hdr->GetNumAttachments(), {} );
 
 		// This is to make sure we don't use the attachment before its been set up
-		for ( int i=0; i < m_Attachments.Count(); i++ )
+		for ( int i=0; i < std::ssize( m_Attachments ); i++ )
 		{
 			m_Attachments[i].m_bAnglesComputed = false;
 			m_Attachments[i].m_nLastFramecount = 0;
@@ -1039,7 +1037,7 @@ CStudioHdr *C_BaseAnimating::OnNewModel()
 		}
 	}
 
-	int boneControllerCount = MIN( hdr->numbonecontrollers(), ARRAYSIZE( m_flEncodedController ) );
+	int boneControllerCount = std::min<std::common_type_t<int, long unsigned int>>( hdr->numbonecontrollers(), ARRAYSIZE( m_flEncodedController ) );
 
 	m_iv_flEncodedController.SetMaxCount( gpGlobals->curtime, boneControllerCount );
 
@@ -1240,7 +1238,7 @@ void C_BaseAnimating::ParseModelEffects( KeyValues *modelKeyValues )
 		for ( KeyValues *pSingleCable = pkvAllCables->GetFirstSubKey(); pSingleCable; pSingleCable = pSingleCable->GetNextKey() )
 		{
 			C_RopeKeyframe *pRope = C_RopeKeyframe::CreateFromKeyValues( this, pSingleCable );
-			m_Ropes.AddToTail( pRope );
+			m_Ropes.push_back( pRope );
 		}
 	}
 
@@ -1286,7 +1284,7 @@ void C_BaseAnimating::ParseModelEffects( KeyValues *modelKeyValues )
 				vecOffset = Vector( flVec[0], flVec[1], flVec[2] );
 			}
 
-			CUtlReference<CNewParticleEffect> hModelEffect;
+			ks::tracked_ref<CNewParticleEffect> hModelEffect;
 			// Spawn the particle effectw
 			hModelEffect = ParticleProp()->Create( pszParticleEffect, (ParticleAttachment_t)iAttachType, iAttachment, vecOffset );
 
@@ -1339,12 +1337,12 @@ void C_BaseAnimating::ParseModelEffects( KeyValues *modelKeyValues )
 
 void C_BaseAnimating::TermRopes()
 {
-	FOR_EACH_LL( m_Ropes, i )
+	for ( C_RopeKeyframe *pRope : m_Ropes )
 	{
-		UTIL_Remove( m_Ropes[i] );
+		UTIL_Remove( pRope );
 	}
 
-	m_Ropes.Purge();
+	m_Ropes.clear();
 }
 
 
@@ -1909,7 +1907,7 @@ void C_BaseAnimating::MaintainSequenceTransitions( IBoneSetup &boneSetup, float 
 
 
 	// process previous sequences
-	for (int i = m_SequenceTransitioner.m_animationQueue.Count() - 2; i >= 0; i--)
+	for (int i = std::ssize( m_SequenceTransitioner.m_animationQueue ) - 2; i >= 0; i--)
 	{
 		CAnimationLayer *blend = &m_SequenceTransitioner.m_animationQueue[i];
 
@@ -2056,7 +2054,7 @@ void C_BaseAnimating::StandardBlendingRules( CStudioHdr *hdr, BoneVector pos[], 
 //-----------------------------------------------------------------------------
 bool C_BaseAnimating::PutAttachment( int number, const matrix3x4_t &attachmentToWorld )
 {
-	if ( number < 1 || number > m_Attachments.Count() )
+	if ( number < 1 || number > std::ssize( m_Attachments ) )
 		return false;
 
 	CAttachmentData *pAtt = &m_Attachments[number-1];
@@ -2087,7 +2085,7 @@ bool C_BaseAnimating::PutAttachment( int number, const matrix3x4_t &attachmentTo
 void C_BaseAnimating::InvalidateAttachments()
 {
 	int frameCount = -1;
-	for ( int i = 0; i < m_Attachments.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Attachments ); i++ )
 	{
 		m_Attachments[i].m_nLastFramecount = frameCount;
 	}
@@ -2155,7 +2153,7 @@ bool C_BaseAnimating::GetAttachment( int number, Vector &origin, QAngle &angles 
 	// Note: this could be more efficient, but we want the matrix3x4_t version of GetAttachment to be the origin of
 	// attachment generation, so a derived class that wants to fudge attachments only 
 	// has to reimplement that version. This also makes it work like the server in that regard.
-	if ( number < 1 || number > m_Attachments.Count() || !CalcAttachments() )
+	if ( number < 1 || number > std::ssize( m_Attachments ) || !CalcAttachments() )
 	{
 		// Set this to the model origin/angles so that we don't have stack fungus in origin and angles.
 		origin = GetAbsOrigin();
@@ -2177,7 +2175,7 @@ bool C_BaseAnimating::GetAttachment( int number, Vector &origin, QAngle &angles 
 
 bool C_BaseAnimating::GetAttachment( int number, matrix3x4_t& matrix )
 {
-	if ( number < 1 || number > m_Attachments.Count() )
+	if ( number < 1 || number > std::ssize( m_Attachments ) )
 		return false;
 
 	if ( !CalcAttachments() )
@@ -2237,7 +2235,7 @@ bool C_BaseAnimating::ComputeLightingOrigin( int nAttachmentIndex, Vector modelL
 
 bool C_BaseAnimating::GetAttachmentVelocity( int number, Vector &originVel, Quaternion &angleVel )
 {
-	if ( number < 1 || number > m_Attachments.Count() )
+	if ( number < 1 || number > std::ssize( m_Attachments ) )
 	{
 		return false;
 	}
@@ -2383,7 +2381,7 @@ void C_BaseAnimating::UpdateIKLocks( float currentTime )
 	if (!m_pIk) 
 		return;
 
-	int targetCount = m_pIk->m_target.Count();
+	int targetCount = std::ssize( m_pIk->m_target );
 	if ( targetCount == 0 )
 		return;
 
@@ -2416,7 +2414,7 @@ void C_BaseAnimating::CalculateIKLocks( float currentTime )
 	if (!m_pIk)  
 		return;
 
-	int targetCount = m_pIk->m_target.Count();
+	int targetCount = std::ssize( m_pIk->m_target );
 	if ( targetCount == 0 )
 		return;
 
@@ -2669,9 +2667,10 @@ void C_BaseAnimating::MarkForThreadedBoneSetup()
 #endif
 
 				m_iMostRecentBoneSetupRequest = g_iPreviousBoneCounter;
-				LOCAL_THREAD_LOCK();
-				Assert( g_PreviousBoneSetups.Find( this ) == -1 );
-				g_PreviousBoneSetups.AddToTail( this );
+				static std::recursive_mutex autoMutex;
+				std::scoped_lock lock( autoMutex );
+				Assert( ks::find_index( g_PreviousBoneSetups, this ) == -1 );
+				g_PreviousBoneSetups.push_back( this );
 			}
 		}
 	}
@@ -2683,7 +2682,7 @@ void C_BaseAnimating::ThreadedBoneSetup()
 	g_bDoThreadedBoneSetup = ( g_pBoneSetupThreadPool && g_pBoneSetupThreadPool->NumThreads() && cl_threaded_bone_setup.GetInt() );
 	if ( g_bDoThreadedBoneSetup )
 	{
-		int nCount = g_PreviousBoneSetups.Count();
+		int nCount = std::ssize( g_PreviousBoneSetups );
 		if ( nCount > 1 )
 		{
 			VPROF_BUDGET( "C_BaseAnimating::ThreadedBoneSetup", "Client_Animation_Threaded" );
@@ -2694,10 +2693,10 @@ void C_BaseAnimating::ThreadedBoneSetup()
 #endif
 			// This loop is here rather than the mark function so we don't have to worry about the list being threadsafe, or worry about entity destruction
 #ifdef _DEBUG
-			CUtlVector<C_BaseAnimating *> test;
-			test.AddVectorToTail( g_PreviousBoneSetups );
+			std::vector< C_BaseAnimating * > test;
+			test.append_range( g_PreviousBoneSetups );
 #endif
-			for ( int i = g_PreviousBoneSetups.Count() - 1; i >= 0; i-- )
+			for ( int i = std::ssize( g_PreviousBoneSetups ) - 1; i >= 0; i-- )
 			{
 				C_BaseAnimating *pAnimating = g_PreviousBoneSetups[i];
 				C_BaseAnimating *pDependancy;
@@ -2712,23 +2711,23 @@ void C_BaseAnimating::ThreadedBoneSetup()
 					
 					pAnimating->m_pNextForThreadedBoneSetup = pDependancy->m_pNextForThreadedBoneSetup;
 					pDependancy->m_pNextForThreadedBoneSetup = pAnimating;
-					g_PreviousBoneSetups.FastRemove( i );
+					ks::swap_remove( g_PreviousBoneSetups, i );
 					if ( pDependancy->m_iMostRecentBoneSetupRequest != g_iPreviousBoneCounter )
 					{
-						Assert( g_PreviousBoneSetups.Find( pDependancy ) == -1 );
+						Assert( ks::find_index( g_PreviousBoneSetups, pDependancy ) == -1 );
 						pDependancy->m_iMostRecentBoneSetupRequest = g_iPreviousBoneCounter;
-						g_PreviousBoneSetups.AddToTail( pDependancy );
+						g_PreviousBoneSetups.push_back( pDependancy );
 					}
 				}
 			}
-			nCount = g_PreviousBoneSetups.Count();
+			nCount = std::ssize( g_PreviousBoneSetups );
 
 			g_bInThreadedBoneSetup = true;
 			if ( cl_threaded_bone_setup.GetInt() == 1 )
 			{
 				CParallelProcessor<C_BaseAnimating *, CFuncJobItemProcessor<C_BaseAnimating *>, 2 > processor;
 				processor.m_ItemProcessor.Init( &SetupBonesOnBaseAnimating, &PreThreadedBoneSetup, &PostThreadedBoneSetup );
-				processor.Run( g_PreviousBoneSetups.Base(), nCount, 1, INT_MAX, g_pBoneSetupThreadPool );
+				processor.Run( g_PreviousBoneSetups.data(), nCount, 1, INT_MAX, g_pBoneSetupThreadPool );
 			}
 			else
 			{
@@ -2741,7 +2740,7 @@ void C_BaseAnimating::ThreadedBoneSetup()
 			g_bInThreadedBoneSetup = false;
 
 #ifdef _DEBUG
-			for ( int i = test.Count() - 1; i > 0; i-- )
+			for ( int i = std::ssize( test ) - 1; i > 0; i-- )
 			{
 				Assert( test[i]->m_pNextForThreadedBoneSetup == nullptr );
 			}
@@ -2753,7 +2752,7 @@ void C_BaseAnimating::ThreadedBoneSetup()
 		}
 	}
 	g_iPreviousBoneCounter++;
-	g_PreviousBoneSetups.RemoveAll();
+	g_PreviousBoneSetups.clear();
 }
 
 
@@ -2880,18 +2879,18 @@ bool C_BaseAnimating::SetupBones( matrix3x4a_t *pBoneToWorldOut, int nMaxBones, 
 	{
 //		boneMask |= ( BONE_USED_BY_ATTACHMENT | BONE_USED_BY_BONE_MERGE | BONE_USED_BY_HITBOX );
 
-		if ( !m_BoneSetupLock.TryLock() )
+		if ( !m_BoneSetupLock.try_lock() )
 		{
 			// someone else is handling
 			// bones are in some intermediate state, wait until the other thread is done.  
 			// If they've setup what bones we want, it'll early out down below
-			m_BoneSetupLock.Lock();
+			m_BoneSetupLock.lock();
 		}
 		// else, we have the lock
 	}
 	else
 	{
-		m_BoneSetupLock.Lock();
+		m_BoneSetupLock.lock();
 	}
 
 	// If we're setting up LOD N, we have set up all lower LODs also
@@ -2911,13 +2910,13 @@ bool C_BaseAnimating::SetupBones( matrix3x4a_t *pBoneToWorldOut, int nMaxBones, 
 #ifdef DEBUG_BONE_SETUP_THREADING
 	if ( cl_warn_thread_contested_bone_setup.GetBool() )
 	{
-		if ( !m_BoneSetupLock.TryLock() )
+		if ( !m_BoneSetupLock.try_lock() )
 		{
 			Msg( "Contested bone setup in frame %d!\n", gpGlobals->framecount );
 		}
 		else
 		{
-			m_BoneSetupLock.Unlock();
+			m_BoneSetupLock.unlock();
 		}
 	}
 #endif	
@@ -2992,7 +2991,7 @@ bool C_BaseAnimating::SetupBones( matrix3x4a_t *pBoneToWorldOut, int nMaxBones, 
 		CStudioHdr *hdr = GetModelPtr();
 		if ( !hdr || !hdr->SequencesAvailable() )
 		{
-			m_BoneSetupLock.Unlock();
+			m_BoneSetupLock.unlock();
 			return false;
 		}
 
@@ -3144,7 +3143,7 @@ bool C_BaseAnimating::SetupBones( matrix3x4a_t *pBoneToWorldOut, int nMaxBones, 
 				memcpy( pos, m_pos_cached, sizeof( BoneVector ) * hdr->numbones() );
 				memcpy( q, m_q_cached, sizeof( BoneQuaternionAligned ) * hdr->numbones() );
 
-				boneComputed.ClearAll(); // because we need to re-BuildTransformations on all our bones with a new root xform
+				boneComputed.reset(); // because we need to re-BuildTransformations on all our bones with a new root xform
 				boneMask = m_BoneAccessor.GetWritableBones();
 			}
 
@@ -3237,19 +3236,19 @@ bool C_BaseAnimating::SetupBones( matrix3x4a_t *pBoneToWorldOut, int nMaxBones, 
 	{
 		AssertMsgOnce( !IsEFlagSet( EFL_DIRTY_ABSTRANSFORM ), "Cached bone data has old abs origin/angles" );
 		//AssertMsgOnce( (m_vBoneSetupCachedOrigin == GetRenderOrigin()) && (m_qBoneSetupCachedAngles == GetRenderAngles()), "Renderable moved since cached" );
-		if ( nMaxBones >= m_CachedBoneData.Count() )
+		if ( nMaxBones >= std::ssize( m_CachedBoneData ) )
 		{
-			Plat_FastMemcpy( pBoneToWorldOut, m_CachedBoneData.Base(), sizeof( matrix3x4_t ) * m_CachedBoneData.Count() );
+			Plat_FastMemcpy( pBoneToWorldOut, m_CachedBoneData.data(), sizeof( matrix3x4_t ) * std::ssize( m_CachedBoneData ) );
 		}
 		else
 		{
-			Warning( "SetupBones: invalid bone array size (%d - needs %d)\n", nMaxBones, m_CachedBoneData.Count() );
-			m_BoneSetupLock.Unlock();
+			Warning( "SetupBones: invalid bone array size (%d - needs %d)\n", nMaxBones, (int)std::ssize( m_CachedBoneData ) );
+			m_BoneSetupLock.unlock();
 			return false;
 		}
 	}
 
-	m_BoneSetupLock.Unlock();
+	m_BoneSetupLock.unlock();
 	return true;
 }
 
@@ -3330,7 +3329,7 @@ struct BoneAccess
 	char const *tag;
 };
 
-static CUtlVector< BoneAccess >		g_BoneAccessStack;
+static std::vector< BoneAccess >		g_BoneAccessStack;
 static BoneAccess g_BoneAcessBase;
 
 bool C_BaseAnimating::IsBoneAccessAllowed() const
@@ -3354,9 +3353,9 @@ void C_BaseAnimating::PushAllowBoneAccess( bool bAllowForNormalModels, bool bAll
 		return;
 	}
 	BoneAccess save = g_BoneAcessBase;
-	g_BoneAccessStack.AddToTail( save );
+	g_BoneAccessStack.push_back( save );
 
-	Assert( g_BoneAccessStack.Count() < 32 ); // Most likely we are leaking "PushAllowBoneAccess" calls if PopBoneAccess is never called. Consider using AutoAllowBoneAccess.
+	Assert( std::ssize( g_BoneAccessStack ) < 32 ); // Most likely we are leaking "PushAllowBoneAccess" calls if PopBoneAccess is never called. Consider using AutoAllowBoneAccess.
 	g_BoneAcessBase.bAllowBoneAccessForNormalModels = bAllowForNormalModels;
 	g_BoneAcessBase.bAllowBoneAccessForViewModels = bAllowForViewModels;
 	g_BoneAcessBase.tag = tagPush;
@@ -3370,14 +3369,14 @@ void C_BaseAnimating::PopBoneAccess( char const *tagPop )
 	}
 	// Validate that pop matches the push
 	Assert( ( g_BoneAcessBase.tag == tagPop ) || ( g_BoneAcessBase.tag && g_BoneAcessBase.tag != ( char const * ) 1 && tagPop && tagPop != ( char const * ) 1 && !strcmp( g_BoneAcessBase.tag, tagPop ) ) );
-	int lastIndex = g_BoneAccessStack.Count() - 1;
+	int lastIndex = std::ssize( g_BoneAccessStack ) - 1;
 	if ( lastIndex < 0 )
 	{
 		Assert( !"C_BaseAnimating::PopBoneAccess:  Stack is empty!!!" );
 		return;
 	}
 	g_BoneAcessBase = g_BoneAccessStack[lastIndex ];
-	g_BoneAccessStack.Remove( lastIndex );
+	g_BoneAccessStack.erase( g_BoneAccessStack.begin() + lastIndex );
 }
 
 C_BaseAnimating::AutoAllowBoneAccess::AutoAllowBoneAccess( bool bAllowForNormalModels, bool bAllowForViewModels )
@@ -3594,7 +3593,7 @@ bool C_BaseAnimating::HitboxToWorldTransforms( matrix3x4_t *pHitboxToWorld[MAXST
 		SetupBones( nullptr, -1, BONE_USED_BY_HITBOX, gpGlobals->curtime );
 	}
 
-	for ( int i = 0; i < m_CachedBoneData.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_CachedBoneData ); i++ )
 	{
 		// UNDONE: Some of these bones haven't been set up.  Is it necessary to check each
 		// one for membership in the hitbox set and NULL it if it isn't present?
@@ -3842,7 +3841,7 @@ void C_BaseAnimating::ProcessMuzzleFlashEvent()
 	if ( muzzleflash_light.GetBool() )
 	{
 		//FIXME: We should really use a named attachment for this
-		if ( m_Attachments.Count() > 0 )
+		if ( !m_Attachments.empty() )
 		{
 			Vector vAttachment;
 			QAngle dummyAngles;
@@ -4382,7 +4381,7 @@ void C_BaseAnimating::FireEvent( const Vector& origin, const QAngle& angles, int
 			
 			CLocalPlayerFilter filter;
 
-			if ( m_Attachments.Count() > 0)
+			if ( !m_Attachments.empty())
 			{
 				GetAttachment( 1, attachOrigin, attachAngles );
 				EmitSound( filter, GetSoundSourceIndex(), options, &attachOrigin );
@@ -4472,7 +4471,7 @@ void C_BaseAnimating::FireEvent( const Vector& origin, const QAngle& angles, int
 
 	// Eject brass
 	case CL_EVENT_EJECTBRASS1:
-		if ( m_Attachments.Count() > 0 )
+		if ( !m_Attachments.empty() )
 		{
 			DevWarning( "Unhandled eject brass animevent\n" );
 		}
@@ -4665,7 +4664,7 @@ void C_BaseAnimating::FireObsoleteEvent( const Vector& origin, const QAngle& ang
 				iParam = atoi(token);
 			}
 
-			if ( iAttachment != -1 && m_Attachments.Count() >= iAttachment )
+			if ( iAttachment != -1 && std::ssize( m_Attachments ) >= iAttachment )
 			{
 				GetAttachment( iAttachment, attachOrigin, attachAngles );
 
@@ -4741,7 +4740,7 @@ void C_BaseAnimating::FireObsoleteEvent( const Vector& origin, const QAngle& ang
 				break;
 			}
 
-			if ( iAttachment != -1 && m_Attachments.Count() > iAttachment )
+			if ( iAttachment != -1 && std::ssize( m_Attachments ) > iAttachment )
 			{
 				GetAttachment( iAttachment+1, attachOrigin, attachAngles );
 
@@ -4812,7 +4811,7 @@ void C_BaseAnimating::FireObsoleteEvent( const Vector& origin, const QAngle& ang
 				break;
 			}
 
-			if ( iAttachment != -1 && m_Attachments.Count() > iAttachment )
+			if ( iAttachment != -1 && std::ssize( m_Attachments ) > iAttachment )
 			{
 				GetAttachment( iAttachment+1, attachOrigin, attachAngles );
 				int entId = render->GetViewEntity();
@@ -4837,7 +4836,7 @@ void C_BaseAnimating::FireObsoleteEvent( const Vector& origin, const QAngle& ang
 		{
 			CLocalPlayerFilter filter;
 
-			if ( m_Attachments.Count() > 0)
+			if ( !m_Attachments.empty())
 			{
 				GetAttachment( 1, attachOrigin, attachAngles );
 				EmitSound( filter, GetSoundSourceIndex(), options, &attachOrigin );
@@ -5265,7 +5264,7 @@ void C_BaseAnimating::GetRagdollInitBoneArrays( matrix3x4a_t *pDeltaBones0, matr
 	}
 	else
 	{
-		Plat_FastMemcpy( pCurrentBones, m_CachedBoneData.Base(), sizeof( matrix3x4a_t ) * m_CachedBoneData.Count() );
+		Plat_FastMemcpy( pCurrentBones, m_CachedBoneData.data(), sizeof( matrix3x4a_t ) * std::ssize( m_CachedBoneData ) );
 	}
 }
 
@@ -5341,9 +5340,9 @@ C_BaseAnimating *C_BaseAnimating::CreateRagdollCopy()
 
 void C_BaseAnimating::CopySequenceTransitions( C_BaseAnimating *pCopyFrom )
 {
-	m_SequenceTransitioner.m_animationQueue.RemoveAll();
-	int count = pCopyFrom->m_SequenceTransitioner.m_animationQueue.Count();
-	m_SequenceTransitioner.m_animationQueue.EnsureCount(count);
+	m_SequenceTransitioner.m_animationQueue.clear();
+	int count = std::ssize( pCopyFrom->m_SequenceTransitioner.m_animationQueue );
+	ks::ensure_size( m_SequenceTransitioner.m_animationQueue, count );
 	for ( int i = 0; i < count; i++ )
 	{
 		m_SequenceTransitioner.m_animationQueue[i] = pCopyFrom->m_SequenceTransitioner.m_animationQueue[i];
@@ -5609,7 +5608,7 @@ void C_BaseAnimating::ClientSideAnimationChanged()
 
 	MDLCACHE_CRITICAL_SECTION();
 	
-	clientanimating_t &anim = g_ClientSideAnimationList.Element(m_ClientSideAnimationListHandle);
+	clientanimating_t &anim = g_ClientSideAnimationList[ m_ClientSideAnimationListHandle ];
 	Assert(anim.pAnimating == this);
 	anim.flags = ComputeClientSideAnimationFlags();
 
@@ -5784,7 +5783,7 @@ float C_BaseAnimating::GetAnimTimeInterval( void ) const
 {
 #define MAX_ANIMTIME_INTERVAL 0.2f
 
-	float flInterval = MIN( gpGlobals->curtime - m_flAnimTime, MAX_ANIMTIME_INTERVAL );
+	float flInterval = std::min( gpGlobals->curtime - m_flAnimTime, MAX_ANIMTIME_INTERVAL );
 	return flInterval;
 }
 
@@ -6019,7 +6018,7 @@ void C_BaseAnimating::GetBlendedLinearVelocity( Vector *pVec )
 	VectorScale( vecDist, 1.0 / flDuration, *pVec );
 
 	Vector tmp;
-	for (int i = m_SequenceTransitioner.m_animationQueue.Count() - 2; i >= 0; i--)
+	for (int i = std::ssize( m_SequenceTransitioner.m_animationQueue ) - 2; i >= 0; i--)
 	{
 		CAnimationLayer *blend = &m_SequenceTransitioner.m_animationQueue[i];
 		float flWeight = blend->GetFadeout( gpGlobals->curtime );
@@ -6186,7 +6185,7 @@ float C_BaseAnimating::FrameAdvance( float flInterval )
 			addcycle = (serverAdvance + addcycle) / 2;
 
 			const float MAX_CYCLE_ADJUSTMENT = 0.1f;
-			addcycle = MIN( MAX_CYCLE_ADJUSTMENT, addcycle );// Don't do too big of a jump; it's too jarring as well.
+			addcycle = std::min( MAX_CYCLE_ADJUSTMENT, addcycle );// Don't do too big of a jump; it's too jarring as well.
 
 			DevMsg( 2, "(%d): Cycle latch used to correct %.2f in to %.2f instead of %.2f.\n",
 				entindex(), GetCycle(), GetCycle() + addcycle, GetCycle() + originalAdvance );
@@ -6521,7 +6520,7 @@ int C_BaseAnimating::SelectWeightedSequence ( int activity )
 
 }
 
-int C_BaseAnimating::SelectWeightedSequenceFromModifiers( Activity activity, CUtlSymbol *pActivityModifiers, int iModifierCount )
+int C_BaseAnimating::SelectWeightedSequenceFromModifiers( Activity activity, const ActivityModifierSym_t *pActivityModifiers, int iModifierCount )
 {
 	Assert( activity != ACT_INVALID );
 	Assert( GetModelPtr() );
@@ -7041,7 +7040,7 @@ void C_BaseAnimating::AddToClientSideAnimationList()
 		return;
 
 	clientanimating_t list( this, 0 );
-	m_ClientSideAnimationListHandle = g_ClientSideAnimationList.AddToTail( list );
+	m_ClientSideAnimationListHandle = std::ssize( g_ClientSideAnimationList ); g_ClientSideAnimationList.push_back( list );
 	ClientSideAnimationChanged();
 }
 
@@ -7051,7 +7050,7 @@ void C_BaseAnimating::RemoveFromClientSideAnimationList()
 	if ( INVALID_CLIENTSIDEANIMATION_LIST_HANDLE == m_ClientSideAnimationListHandle )
 		return;
 
-	unsigned int c = g_ClientSideAnimationList.Count();
+	unsigned int c = std::ssize( g_ClientSideAnimationList );
 
 	Assert( m_ClientSideAnimationListHandle < c );
 
@@ -7060,13 +7059,13 @@ void C_BaseAnimating::RemoveFromClientSideAnimationList()
 	if ( last == m_ClientSideAnimationListHandle )
 	{
 		// Just wipe the final entry
-		g_ClientSideAnimationList.FastRemove( last );
+		ks::swap_remove( g_ClientSideAnimationList, last );
 	}
 	else
 	{
 		clientanimating_t lastEntry = g_ClientSideAnimationList[ last ];
 		// Remove the last entry
-		g_ClientSideAnimationList.FastRemove( last );
+		ks::swap_remove( g_ClientSideAnimationList, last );
 
 		// And update it's handle to point to this slot.
 		lastEntry.pAnimating->m_ClientSideAnimationListHandle = m_ClientSideAnimationListHandle;
@@ -7084,10 +7083,10 @@ void C_BaseAnimating::UpdateClientSideAnimations()
 	SNPROF_ANIM( "C_BaseAnimating::UpdateClientSideAnimations" );
 	VPROF_BUDGET( "UpdateClientSideAnimations", VPROF_BUDGETGROUP_CLIENT_ANIMATION );
 
-	int c = g_ClientSideAnimationList.Count();
+	int c = std::ssize( g_ClientSideAnimationList );
 	for ( int i = 0; i < c ; ++i )
 	{
-		clientanimating_t &anim = g_ClientSideAnimationList.Element(i);
+		clientanimating_t &anim = g_ClientSideAnimationList[ i ];
 		if ( !(anim.flags & FCLIENTANIM_SEQUENCE_CYCLE) )
 			continue;
 		Assert( anim.pAnimating );
@@ -7370,7 +7369,7 @@ void C_BaseAnimating::AddBoneAttachment( C_BaseAnimating* newBoneAttachment )
 	if ( !newBoneAttachment )
 		return;
 
-	m_BoneAttachments.AddToTail( newBoneAttachment );
+	m_BoneAttachments.push_back( newBoneAttachment );
 }
 
 //-----------------------------------------------------------------------------
@@ -7381,7 +7380,7 @@ void C_BaseAnimating::RemoveBoneAttachment( C_BaseAnimating* boneAttachment )
 	if ( !boneAttachment )
 		return;
 
-	m_BoneAttachments.FindAndRemove( boneAttachment );
+	ks::erase_first( m_BoneAttachments, boneAttachment );
 }
 
 //-----------------------------------------------------------------------------
@@ -7389,7 +7388,7 @@ void C_BaseAnimating::RemoveBoneAttachment( C_BaseAnimating* boneAttachment )
 //-----------------------------------------------------------------------------
 int C_BaseAnimating::GetNumBoneAttachments()
 {
-	return m_BoneAttachments.Count();
+	return std::ssize( m_BoneAttachments );
 }
 
 //-----------------------------------------------------------------------------
@@ -7397,7 +7396,7 @@ int C_BaseAnimating::GetNumBoneAttachments()
 //-----------------------------------------------------------------------------
 C_BaseAnimating* C_BaseAnimating::GetBoneAttachment( int i )
 {
-	if ( m_BoneAttachments.IsValidIndex(i) )
+	if ( ks::is_valid_index( m_BoneAttachments, i ) )
 	{
 		return m_BoneAttachments[i];
 	}
@@ -7418,7 +7417,7 @@ void C_BaseAnimating::DestroyBoneAttachments()
 		}
 		else
 		{
-			m_BoneAttachments.Remove(0);
+			m_BoneAttachments.erase( m_BoneAttachments.begin() + 0 );
 		}
 	}
 }
@@ -7442,7 +7441,7 @@ void C_BaseAnimating::MoveBoneAttachments( C_BaseAnimating* attachTarget )
 		}
 		else
 		{
-			m_BoneAttachments.Remove(0);
+			m_BoneAttachments.erase( m_BoneAttachments.begin() + 0 );
 		}
 	}
 }

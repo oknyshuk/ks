@@ -363,10 +363,6 @@ bool CModelCombine::Resolve( )
 	m_pCombinedStudioData->m_Results.m_szErrorDetails[ 0 ] = 0;
 	m_pCombinedStudioData->m_Results.m_nDetailedError = COMBINED_DETAIL_ERROR_NOT_SPECIFIED;
 
-	memset( MDL_Data, 0, sizeof( MDL_Data ) );
-	memset( VTX_Data, 0, sizeof( VTX_Data ) );
-	memset( VVD_Data, 0, sizeof( VVD_Data ) );
-
 	try
 	{
 		if ( STRING(m_pCombinedStudioData->m_ModelInputData[ 0 ].m_iszModelName)[ 0 ] == 0 )
@@ -380,43 +376,41 @@ bool CModelCombine::Resolve( )
 
 		for( int nModel = 0; nModel < m_pCombinedStudioData->m_nNumModels; nModel++ )
 		{
-			bool bResult;
-
-			MDL_Data[ nModel ] = new CUtlBuffer();
 			V_strcpy_safe( szFileName, STRING(m_pCombinedStudioData->m_ModelInputData[ nModel ].m_iszModelName) );
 			Q_SetExtension( szFileName, ".mdl", sizeof( szFileName ) );
-			bResult = g_pFullFileSystem->ReadFile( szFileName, "GAME", *MDL_Data[ nModel ], 0 );
-			if ( !bResult )
+			auto mdlFile = g_pFullFileSystem->ReadFile( szFileName, "GAME" );
+			if ( !mdlFile )
 			{
 				Assert( 0 );
 				V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "Missing asset file: %s", szFileName );
 				throw( COMBINE_RESULT_FLAG_MISSING_ASSET_FILE );
 			}
-			m_pStudioHdr[ nModel ] = ( studiohdr_t * )MDL_Data[ nModel ]->PeekGet();
-			m_pStudioHdr2[ nModel ] = ( studiohdr2_t * )MDL_Data[ nModel ]->PeekGet( m_pStudioHdr[ nModel ]->studiohdr2index );
+			MDL_Data[ nModel ] = std::move( *mdlFile );
+			m_pStudioHdr[ nModel ] = ( studiohdr_t * )MDL_Data[ nModel ].data();
+			m_pStudioHdr2[ nModel ] = ( studiohdr2_t * )( MDL_Data[ nModel ].data() + m_pStudioHdr[ nModel ]->studiohdr2index );
 
-			VTX_Data[ nModel ] = new CUtlBuffer();
 			V_strcpy_safe( szFileName, STRING(m_pCombinedStudioData->m_ModelInputData[ nModel ].m_iszModelName) );
 			Q_SetExtension( szFileName, ".dx90.vtx", sizeof( szFileName ) );			// GetVTXExtension() private :(
-			bResult = g_pFullFileSystem->ReadFile( szFileName, "GAME", *VTX_Data[ nModel ], 0 );
-			if ( !bResult )
+			auto vtxFile = g_pFullFileSystem->ReadFile( szFileName, "GAME" );
+			if ( !vtxFile )
 			{
 				Assert( 0 );
 				V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "Missing asset file: %s", szFileName );
 				throw( COMBINE_RESULT_FLAG_MISSING_ASSET_FILE );
 			}
+			VTX_Data[ nModel ] = std::move( *vtxFile );
 
-			VVD_Data[ nModel ] = new CUtlBuffer();
 			V_strcpy_safe( szFileName, STRING(m_pCombinedStudioData->m_ModelInputData[ nModel ].m_iszModelName) );
 			Q_SetExtension( szFileName, ".vvd", sizeof( szFileName ) );
-			bResult = g_pFullFileSystem->ReadFile( szFileName, "GAME", *VVD_Data[ nModel ], 0 );
-			if ( !bResult )
+			auto vvdFile = g_pFullFileSystem->ReadFile( szFileName, "GAME" );
+			if ( !vvdFile )
 			{
 				Assert( 0 );
 				V_sprintf_safe( m_pCombinedStudioData->m_Results.m_szErrorMessage, "Missing asset file: %s", szFileName );
 				throw( COMBINE_RESULT_FLAG_MISSING_ASSET_FILE );
 			}
-			m_pVertexFileHeader[ nModel ] = ( vertexFileHeader_t * )VVD_Data[ nModel ]->PeekGet();
+			VVD_Data[ nModel ] = std::move( *vvdFile );
+			m_pVertexFileHeader[ nModel ] = ( vertexFileHeader_t * )VVD_Data[ nModel ].data();
 		}
 
 		m_pCombinedStudioData->m_Results.m_flModelLoadDuration += ( float )( Plat_FloatTime() - flStartLoadTime );
@@ -452,9 +446,9 @@ bool CModelCombine::Resolve( )
 
 	for( int i = 0; i < m_pCombinedStudioData->m_nNumModels; i++ )
 	{
-		delete MDL_Data[ i ];
-		delete VTX_Data[ i ];
-		delete VVD_Data[ i ];
+		std::vector< std::byte >().swap( MDL_Data[ i ] );
+		std::vector< std::byte >().swap( VTX_Data[ i ] );
+		std::vector< std::byte >().swap( VVD_Data[ i ] );
 	}
 
 	return ( m_pCombinedStudioData->m_Results.m_nCombinedResults == COMBINE_RESULT_FLAG_OK );
@@ -829,7 +823,7 @@ void CModelCombine::CombineMDL_Bones( )
 
 	for( int nModel = 0; nModel < m_pCombinedStudioData->m_nNumModels; nModel++ )
 	{
-		OptimizedModel::FileHeader_t	*pOrigHeader = ( OptimizedModel::FileHeader_t * )VTX_Data[ nModel ]->PeekGet();
+		OptimizedModel::FileHeader_t	*pOrigHeader = ( OptimizedModel::FileHeader_t * )VTX_Data[ nModel ].data();
 		int nBoneTest = 0;
 		int nBoneProp = 0;
 
@@ -1941,7 +1935,7 @@ void CModelCombine::CalcVTXInfo()
 {
 	for( int nModel = 0; nModel < m_pCombinedStudioData->m_nNumModels; nModel++ )
 	{
-		OptimizedModel::FileHeader_t *pOrigHeader = ( OptimizedModel::FileHeader_t * )VTX_Data[ nModel ]->PeekGet();
+		OptimizedModel::FileHeader_t *pOrigHeader = ( OptimizedModel::FileHeader_t * )VTX_Data[ nModel ].data();
 
 		if ( pOrigHeader->numBodyParts > m_MaxHardwareData.m_nMaxBodyParts )
 		{
@@ -2056,7 +2050,7 @@ void CModelCombine::WriteStrip( OptimizedModel::StripGroupHeader_t	*pNewStripGro
 	}
 
 //	OptimizedModel::Vertex_t *pTestVert = pOrigStripGroup->pVertex( 0 );
-//	OptimizedModel::FileHeader_t		*pPrimaryHeader = ( OptimizedModel::FileHeader_t * )VTX_Data[ 0 ]->PeekGet();
+//	OptimizedModel::FileHeader_t		*pPrimaryHeader = ( OptimizedModel::FileHeader_t * )VTX_Data[ 0 ].data();
 //	Msg( "%d / %d\n", ( char * )pNewVert - ( char * )m_pCombinedHardwareHeader, ( char * )pTestVert - ( char * )pPrimaryHeader );
 
 	for( int nVert = 0; nVert < pOrigStrip->numVerts; nVert++ )
@@ -2135,7 +2129,7 @@ void CModelCombine::WriteStripGroup( int nLOD, int nMaterialIndex, unsigned char
 
 	for( int nModel = 0; nModel < m_pCombinedStudioData->m_nNumModels; nModel++ )
 	{
-		OptimizedModel::FileHeader_t	*pOrigHeader = ( OptimizedModel::FileHeader_t * )VTX_Data[ nModel ]->PeekGet();
+		OptimizedModel::FileHeader_t	*pOrigHeader = ( OptimizedModel::FileHeader_t * )VTX_Data[ nModel ].data();
 
 		for( int nBodyPart = 0; nBodyPart < pOrigHeader->numBodyParts; nBodyPart++ )
 		{
@@ -2261,7 +2255,7 @@ void CModelCombine::WriteBodyPart( int nBodyPart )
 {
 	for( int nModel = 0; nModel < m_pCombinedStudioData->m_nNumModels; nModel++ )
 	{
-		OptimizedModel::FileHeader_t		*pOrigHeader = ( OptimizedModel::FileHeader_t * )VTX_Data[ nModel ]->PeekGet();
+		OptimizedModel::FileHeader_t		*pOrigHeader = ( OptimizedModel::FileHeader_t * )VTX_Data[ nModel ].data();
 		if ( pOrigHeader->numBodyParts > nBodyPart )
 		{
 			OptimizedModel::BodyPartHeader_t	*pOrigBodyPart = pOrigHeader->pBodyPart( nBodyPart );
@@ -2288,7 +2282,7 @@ void CModelCombine::CombineVTX( )
 
 	for( int nModel = 0; nModel < m_pCombinedStudioData->m_nNumModels; nModel++ )
 	{
-		nMaxSize += VTX_Data[ nModel ]->TellMaxPut();
+		nMaxSize += static_cast< int >( VTX_Data[ nModel ].size() );
 	}
 
 	g_CombinerWriter.AllocWrite( 256 );
@@ -2296,9 +2290,9 @@ void CModelCombine::CombineVTX( )
 	g_CombinerWriter.InitWriteArea( WRITE_AREA_VTX, g_CombinerWriter.GetWritePos() );
 	g_CombinerWriter.SetWriteArea( WRITE_AREA_VTX );
 
-	OptimizedModel::FileHeader_t	*pPrimaryHeader = ( OptimizedModel::FileHeader_t * )VTX_Data[ 0 ]->PeekGet();
+	OptimizedModel::FileHeader_t	*pPrimaryHeader = ( OptimizedModel::FileHeader_t * )VTX_Data[ 0 ].data();
 
-//	m_pCombinedHardwareHeader = ( OptimizedModel::FileHeader_t * )g_CombinerWriter.WriteBuffer( pPrimaryHeader, VTX_Data[ 0 ]->TellMaxPut() );
+//	m_pCombinedHardwareHeader = ( OptimizedModel::FileHeader_t * )g_CombinerWriter.WriteBuffer( pPrimaryHeader, VTX_Data[ 0 ].size() );
 //	return;
 
 
@@ -2384,11 +2378,11 @@ void CModelCombine::CombineVTX( )
 
 #endif // TEST_VTX_COMBINE
 
-//	int nSize = Min( 48916, VTX_Data[ 0 ]->TellMaxPut() );
-//	memcpy( m_pCombinedHardwareHeader, VTX_Data[ 0 ]->PeekGet(), nSize );
-//	memcpy( ( char * )m_pCombinedHardwareHeader + 48916, ( char * )VTX_Data[ 0 ]->PeekGet() + 48916, 688 );
+//	int nSize = Min( 48916, VTX_Data[ 0 ].size() );
+//	memcpy( m_pCombinedHardwareHeader, VTX_Data[ 0 ].data(), nSize );
+//	memcpy( ( char * )m_pCombinedHardwareHeader + 48916, ( char * )VTX_Data[ 0 ].data() + 48916, 688 );
 //	g_CombinerWriter.AlignWrite( 128 );
-//	m_pCombinedHardwareHeader = ( OptimizedModel::FileHeader_t * )g_CombinerWriter.WriteBuffer( VTX_Data[ 0 ]->PeekGet(), VTX_Data[ 0 ]->TellMaxPut() );
+//	m_pCombinedHardwareHeader = ( OptimizedModel::FileHeader_t * )g_CombinerWriter.WriteBuffer( VTX_Data[ 0 ].data(), VTX_Data[ 0 ].size() );
 }
 
 
@@ -2396,7 +2390,7 @@ void CModelCombine::CombineVTX( )
 
 void CModelCombine::TestCombineVTX( )
 {
-	OptimizedModel::FileHeader_t	*pPrimaryHeader = ( OptimizedModel::FileHeader_t * )VTX_Data[ 0 ]->PeekGet();
+	OptimizedModel::FileHeader_t	*pPrimaryHeader = ( OptimizedModel::FileHeader_t * )VTX_Data[ 0 ].data();
 
 	Assert( pPrimaryHeader->version == m_pCombinedHardwareHeader->version );
 	Assert( pPrimaryHeader->vertCacheSize == m_pCombinedHardwareHeader->vertCacheSize );

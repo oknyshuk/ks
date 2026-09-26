@@ -17,21 +17,18 @@
 #include "in_buttons.h"
 #include <keyvalues.h>
 #include "hudelement.h"
-#include "mempool.h"
+#include "tier1/fixed_pool.h"
 #include <keyvalues.h>
 #include "filesystem.h"
 	#include "c_cs_player.h"
 	#include "cs_gamerules.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
-static 	CClassMemoryPool< CHudTexture >	 g_HudTextureMemoryPool( 128 );
+static 	ks::object_pool< CHudTexture >	 g_HudTextureMemoryPool( 128 );
 
 //-----------------------------------------------------------------------------
 // Purpose: Parses the weapon txt files to get the sprites needed.
 //-----------------------------------------------------------------------------
-void LoadHudTextures( CUtlDict< CHudTexture *, int >& list, const char *szFilenameWithoutExtension, const unsigned char *pICEKey )
+void LoadHudTextures( CHudTextureList& list, const char *szFilenameWithoutExtension, const unsigned char *pICEKey )
 {
 	KeyValues *pTemp, *pTextureSection;
 
@@ -45,7 +42,8 @@ void LoadHudTextures( CUtlDict< CHudTexture *, int >& list, const char *szFilena
 			pTemp = pTextureSection->GetFirstSubKey();
 			while ( pTemp )
 			{
-				CHudTexture *tex = new CHudTexture();
+				auto pTex = std::make_unique< CHudTexture >();
+				CHudTexture *tex = pTex.get();
 				// Key Name is the sprite name
 				Q_strncpy( tex->szShortName, pTemp->GetName(), sizeof( tex->szShortName ) );
 
@@ -66,7 +64,7 @@ void LoadHudTextures( CUtlDict< CHudTexture *, int >& list, const char *szFilena
 					tex->rc.bottom	= pTemp->GetInt( "height", 0 )	+ tex->rc.top;
 				}
 
-				list.Insert( tex->szShortName, tex );
+				list.emplace( tex->szShortName, std::move( pTex ) );
 
 				pTemp = pTemp->GetNextKey();
 			}
@@ -77,22 +75,6 @@ void LoadHudTextures( CUtlDict< CHudTexture *, int >& list, const char *szFilena
 	// lwss - fix null deref
 	// pKeyValuesData->deleteThis();
 	// lwss end
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : * - 
-//			list - 
-//-----------------------------------------------------------------------------
-void FreeHudTextureList( CUtlDict< CHudTexture *, int >& list )
-{
-	int c = list.Count();
-	for ( int i = 0; i < c; i++ )
-	{
-		CHudTexture *tex = list[ i ];
-		delete tex;
-	}
-	list.RemoveAll();
 }
 
 
@@ -202,10 +184,10 @@ bool CHudElement::ShouldDraw( void )
 	if ( bShouldDraw )
 	{
 		// for each render group
-		int iNumGroups = m_HudRenderGroups.Count();
+		int iNumGroups = std::ssize( m_HudRenderGroups );
 		for ( int iGroupIndex = 0; iGroupIndex < iNumGroups; iGroupIndex++ )
 		{
-			if ( GetHud().IsRenderGroupLockedFor( this, m_HudRenderGroups.Element( iGroupIndex ) ) )
+			if ( GetHud().IsRenderGroupLockedFor( this, m_HudRenderGroups[ iGroupIndex ] ) )
 				return false;
 		}
 	}
@@ -239,9 +221,9 @@ void CHudElement::RegisterForRenderGroup( const char *pszGroupName )
 	int iGroupIndex = GetHud().RegisterForRenderGroup( pszGroupName );
 
 	// add group index to our list of registered groups
-	if ( m_HudRenderGroups.Find( iGroupIndex ) == m_HudRenderGroups.InvalidIndex() )
+	if ( ks::find_index( m_HudRenderGroups, iGroupIndex ) == -1 )
 	{
-		m_HudRenderGroups.AddToTail( iGroupIndex );
+		m_HudRenderGroups.push_back( iGroupIndex );
 	}
 }
 
@@ -249,7 +231,7 @@ void CHudElement::UnregisterForRenderGroup( const char *pszGroupName )
 {
 	int iGroupIndex = GetHud().RegisterForRenderGroup( pszGroupName );
 
-	m_HudRenderGroups.FindAndRemove( iGroupIndex );
+	ks::erase_first( m_HudRenderGroups, iGroupIndex );
 }
 
 //-----------------------------------------------------------------------------
@@ -329,9 +311,9 @@ public:
 
 	void Init()
 	{
-		m_UMCMsgResetHud.Bind< ks::net::CS_UM_ResetHud, ks::net::CCSUsrMsg_ResetHud >( UtlMakeDelegate( MsgFunc_ResetHUD ) );
+		m_UMCMsgResetHud.Bind< ks::net::CS_UM_ResetHud, ks::net::CCSUsrMsg_ResetHud >( MsgFunc_ResetHUD );
 #ifdef CSTRIKE_DLL
-		m_UMCMsgSendAudio.Bind< ks::net::CS_UM_SendAudio, ks::net::CCSUsrMsg_SendAudio >( UtlMakeDelegate( MsgFunc_SendAudio ) );
+		m_UMCMsgSendAudio.Bind< ks::net::CS_UM_SendAudio, ks::net::CCSUsrMsg_SendAudio >( MsgFunc_SendAudio );
 #endif
 	}
 
@@ -342,19 +324,17 @@ static CSplitHudHelper g_HudHelper;
 
 CHud::CHud()
 {
-	SetDefLessFunc( m_RenderGroups );
-
 	m_flScreenShotTime = -1;
 	m_nSplitScreenSlot = -1;
 	m_bEngineIsInGame = false;
 }
 
-CUtlVector< CHudElement * > &CHud::GetHudList()
+std::vector< CHudElement * > &CHud::GetHudList()
 {
 	return m_HudList;
 }
 
-const CUtlVector< CHudElement * > &CHud::GetHudList() const
+const std::vector< CHudElement * > &CHud::GetHudList() const
 {
 	return m_HudList;
 }
@@ -375,7 +355,7 @@ void CHud::Init( void )
 	CHudElementHelper::CreateAllElements();
 
 	// Initialize all created elements
-	for ( int i = 0; i < GetHudList().Count(); i++ )
+	for ( int i = 0; i < std::ssize( GetHudList() ); i++ )
 	{
 		GetHudList()[ i ]->Init();
 	}
@@ -393,12 +373,12 @@ void CHud::Init( void )
 void CHud::Shutdown( void )
 {
 	// Delete all the Hud elements
-	int iMax = GetHudList().Count();
+	int iMax = std::ssize( GetHudList() );
 	for ( int i = iMax-1; i >= 0; i-- )
 	{
 		delete GetHudList()[i];
 	}
-	GetHudList().Purge();
+	GetHudList().clear();
 
 	if ( GET_ACTIVE_SPLITSCREEN_SLOT() == 0 )
 	{
@@ -413,18 +393,17 @@ void CHud::Shutdown( void )
 void CHud::LevelInit( void )
 {
 	// Tell all the registered hud elements to LevelInit
-	for ( int i = 0; i < GetHudList().Count(); i++ )
+	for ( int i = 0; i < std::ssize( GetHudList() ); i++ )
 	{
 		GetHudList()[ i ]->LevelInit();
 	}
 
 	// Unhide all render groups
-	int iCount = m_RenderGroups.Count();
-	for ( int i = 0; i < iCount; i++ )
+	for ( auto &[iGroupIndex, group] : m_RenderGroups )
 	{
-		CHudRenderGroup *group = m_RenderGroups[ i ];
 		group->bHidden = false;
-		group->m_pLockingElements.Purge();
+		group->m_pLockingElements.clear();
+		group->m_pLockingElements.shrink_to_fit();
 	}
 }
 
@@ -434,7 +413,7 @@ void CHud::LevelInit( void )
 void CHud::LevelShutdown( void )
 {
 	// Tell all the registered hud elements to LevelInit
-	for ( int i = 0; i < GetHudList().Count(); i++ )
+	for ( int i = 0; i < std::ssize( GetHudList() ); i++ )
 	{
 		GetHudList()[ i ]->LevelShutdown();
 	}
@@ -445,13 +424,6 @@ void CHud::LevelShutdown( void )
 //-----------------------------------------------------------------------------
 CHud::~CHud()
 {
-	int c = m_RenderGroups.Count();
-	for ( int i = c - 1; i >= 0; i-- )
-	{
-		CHudRenderGroup *group = m_RenderGroups[ i ];
-		m_RenderGroups.RemoveAt( i );
-		delete group;
-	}
 }
 
 void CHudTexture::Precache( void )
@@ -513,7 +485,7 @@ void CHud::OnRestore()
 //-----------------------------------------------------------------------------
 void CHud::VidInit( void )
 {
-	for ( int i = 0; i < GetHudList().Count(); i++ )
+	for ( int i = 0; i < std::ssize( GetHudList() ); i++ )
 	{
 		GetHudList()[ i ]->VidInit();
 	}
@@ -526,7 +498,7 @@ void CHud::VidInit( void )
 //-----------------------------------------------------------------------------
 CHudElement *CHud::FindElement( const char *pName )
 {
-	for ( int i = 0; i < GetHudList().Count(); i++ )
+	for ( int i = 0; i < std::ssize( GetHudList() ); i++ )
 	{
 		if ( stricmp( GetHudList()[ i ]->GetName(), pName ) == 0 )
 			return GetHudList()[i];
@@ -545,7 +517,7 @@ void CHud::AddHudElement( CHudElement *pHudElement )
 	pHudElement->SetSplitScreenPlayerSlot( GET_ACTIVE_SPLITSCREEN_SLOT() );
 
 	// Add the hud element to the end of the array
-	GetHudList().AddToTail( pHudElement );
+	GetHudList().push_back( pHudElement );
 
 	pHudElement->SetHud( this );
 	pHudElement->SetNeedsRemove( true );
@@ -556,8 +528,8 @@ void CHud::AddHudElement( CHudElement *pHudElement )
 //-----------------------------------------------------------------------------
 void CHud::RemoveHudElement( CHudElement *pHudElement ) 
 {
-	int location = GetHudList().Find( pHudElement );
-	GetHudList().Remove( location );
+	int location = ks::find_index( GetHudList(), pHudElement );
+	{ auto &list = GetHudList(); list.erase( list.begin() + location ); }
 }
 
 //-----------------------------------------------------------------------------
@@ -681,9 +653,9 @@ void CHud::ProcessInput( bool bActive )
 
 int CHud::LookupRenderGroupIndexByName( const char *pszGroupName )
 {
-	int iIndex = m_RenderGroupNames.Find( pszGroupName );
+	int iIndex = ks::find_index( m_RenderGroupNames, pszGroupName );
 
-	Assert( m_RenderGroupNames.IsValidIndex( iIndex ) );
+	Assert( ks::is_valid_index( m_RenderGroupNames, iIndex ) );
 
 	return iIndex;
 }
@@ -698,11 +670,7 @@ bool CHud::LockRenderGroup( int iGroupIndex, CHudElement *pLocker /* = NULL */ )
 	if ( !DoesRenderGroupExist( iGroupIndex ) )
 		return false;
 
-	int i = m_RenderGroups.Find( iGroupIndex );
-
-	Assert( m_RenderGroups.IsValidIndex( i ) );
-
-	CHudRenderGroup *group = m_RenderGroups.Element( i );
+	CHudRenderGroup *group = m_RenderGroups.at( iGroupIndex ).get();
 
 	Assert( group );
 
@@ -715,21 +683,9 @@ bool CHud::LockRenderGroup( int iGroupIndex, CHudElement *pLocker /* = NULL */ )
 		}
 		else
 		{
-			bool bFound = false;
-			// See if we have it locked already
-			int iNumLockers = group->m_pLockingElements.Count();
-			for ( int i=0;i<iNumLockers;i++ )
-			{
-				if ( pLocker == group->m_pLockingElements.Element( i ) )
-				{
-					bFound = true;
-					break;
-				}
-			}
-
-			// otherwise lock us
-			if ( !bFound )
-				group->m_pLockingElements.Insert( pLocker );
+			// lock us unless we have it locked already
+			if ( !ks::contains( group->m_pLockingElements, pLocker ) )
+				ks::heap_push( group->m_pLockingElements, pLocker, RenderGroupLessFunc );
 		}
 
 		return true;
@@ -747,11 +703,7 @@ bool CHud::UnlockRenderGroup( int iGroupIndex, CHudElement *pLocker /* = NULL */
 	if ( !DoesRenderGroupExist( iGroupIndex ) )
 		return false;
 
-	int i = m_RenderGroups.Find( iGroupIndex );
-
-	Assert( m_RenderGroups.IsValidIndex( i ) );
-
-	CHudRenderGroup *group = m_RenderGroups.Element( i );
+	CHudRenderGroup *group = m_RenderGroups.at( iGroupIndex ).get();
 
 	if ( group )
 	{
@@ -762,14 +714,11 @@ bool CHud::UnlockRenderGroup( int iGroupIndex, CHudElement *pLocker /* = NULL */
 			return true;
 		}
 
-		int iNumLockers = group->m_pLockingElements.Count();
-		for ( int i=0;i<iNumLockers;i++ )
+		int i = ks::find_index( group->m_pLockingElements, pLocker );
+		if ( i >= 0 )
 		{
-			if ( pLocker == group->m_pLockingElements.Element( i ) )
-			{
-				group->m_pLockingElements.RemoveAt( i );
-				return true;
-			}
+			ks::heap_erase( group->m_pLockingElements, i, RenderGroupLessFunc );
+			return true;
 		}
 	}
 
@@ -786,11 +735,7 @@ bool CHud::IsRenderGroupLockedFor( CHudElement *pHudElement, int iGroupIndex )
 	if ( !DoesRenderGroupExist( iGroupIndex ) )
 		return false;
 
-	int i = m_RenderGroups.Find( iGroupIndex );
-
-	Assert( m_RenderGroups.IsValidIndex( i ) );
-
-	CHudRenderGroup *group = m_RenderGroups.Element( i );
+	CHudRenderGroup *group = m_RenderGroups.at( iGroupIndex ).get();
 
 	if ( !group )
 		return false;
@@ -799,13 +744,13 @@ bool CHud::IsRenderGroupLockedFor( CHudElement *pHudElement, int iGroupIndex )
 	if ( group->bHidden )
 		return true;
 
-	if ( group->m_pLockingElements.Count() == 0 )
+	if ( group->m_pLockingElements.empty() )
 		return false;
 
 	if ( !pHudElement )
 		return true;
 
-	CHudElement *pLocker = group->m_pLockingElements.ElementAtHead();
+	CHudElement *pLocker = group->m_pLockingElements.front();
 
 	return ( pLocker != pHudElement && pLocker->GetRenderGroupPriority() > pHudElement->GetRenderGroupPriority() );
 }
@@ -816,9 +761,9 @@ bool CHud::IsRenderGroupLockedFor( CHudElement *pHudElement, int iGroupIndex )
 //-----------------------------------------------------------------------------
 int CHud::RegisterForRenderGroup( const char *pszGroupName )
 {
-	int iGroupNameIndex = m_RenderGroupNames.Find( pszGroupName );
+	int iGroupNameIndex = ks::find_index( m_RenderGroupNames, pszGroupName );
 
-	if ( iGroupNameIndex != m_RenderGroupNames.InvalidIndex() )
+	if ( iGroupNameIndex != -1 )
 	{	
 		return iGroupNameIndex;
 	}
@@ -835,10 +780,11 @@ int CHud::AddHudRenderGroup( const char *pszGroupName )
 {
 	// we tried to register for a group but didn't find it, add a new one
 
-	int iGroupNameIndex = m_RenderGroupNames.AddToTail( pszGroupName );
+	int iGroupNameIndex = std::ssize( m_RenderGroupNames ); m_RenderGroupNames.push_back( pszGroupName );
 
-	CHudRenderGroup *group = new CHudRenderGroup();
-	return m_RenderGroups.Insert( iGroupNameIndex, group );
+	// Group indices are the keys: dense and never removed
+	m_RenderGroups.emplace( iGroupNameIndex, std::make_unique< CHudRenderGroup >() );
+	return iGroupNameIndex;
 }
 
 //-----------------------------------------------------------------------------
@@ -846,7 +792,7 @@ int CHud::AddHudRenderGroup( const char *pszGroupName )
 //-----------------------------------------------------------------------------
 bool CHud::DoesRenderGroupExist( int iGroupIndex )
 {
-	return ( m_RenderGroups.Find( iGroupIndex ) != m_RenderGroups.InvalidIndex() );
+	return m_RenderGroups.contains( iGroupIndex );
 }
 
 //-----------------------------------------------------------------------------
@@ -865,7 +811,7 @@ void CHud::UpdateHud( bool bActive )
 
 void CHud::OnSplitScreenStateChanged()
 {
-	for ( int i = 0; i < GetHudList().Count(); ++i )
+	for ( int i = 0; i < std::ssize( GetHudList() ); ++i )
 	{
 		GetHudList()[ i ]->OnSplitScreenStateChanged();
 	}
@@ -892,13 +838,11 @@ CHudIcons::CHudIcons() :
 
 CHudIcons::~CHudIcons()
 {
-	int c = m_Icons.Count();
-	for ( int i = c - 1; i >= 0; i-- )
+	for ( auto &[name, tex] : m_Icons )
 	{
-		CHudTexture *tex = m_Icons[ i ];
-		g_HudTextureMemoryPool.Free( tex );
+		g_HudTextureMemoryPool.free( tex );
 	}
-	m_Icons.Purge();
+	m_Icons.clear();
 }
 
 void CHudIcons::Init()
@@ -907,7 +851,7 @@ void CHudIcons::Init()
 		return;
 
 	m_bHudTexturesLoaded = true;
-	CUtlDict< CHudTexture *, int >	textureList;
+	CHudTextureList	textureList;
 
 	// check to see if we have sprites for this res; if not, step down
 	LoadHudTextures( textureList, "scripts/hud_textures", nullptr );
@@ -916,14 +860,10 @@ void CHudIcons::Init()
 	LoadHudTextures( textureList, "scripts/instructor_modtextures", nullptr );
 	// PORTAL2
 
-	int c = textureList.Count();
-	for ( int index = 0; index < c; index++ )
+	for ( auto &[name, tex] : textureList )
 	{
-		CHudTexture* tex = textureList[ index ];
 		AddSearchableHudIconToList( *tex );
 	}
-
-	FreeHudTextureList( textureList );
 }
 
 void CHudIcons::Shutdown()
@@ -956,13 +896,12 @@ CHudTexture *CHudIcons::AddUnsearchableHudIconToList( CHudTexture& texture )
 		return icon;
 	}
 
-	CHudTexture *newTexture = ( CHudTexture * )g_HudTextureMemoryPool.Alloc();
+	CHudTexture *newTexture = g_HudTextureMemoryPool.alloc();
 	*newTexture = texture;
 
 	SetupNewHudTexture( newTexture );
 
-	int idx = m_Icons.Insert( composedName, newTexture );
-	return m_Icons[ idx ];
+	return m_Icons.emplace( composedName, newTexture ).first->second;
 }
 
 //-----------------------------------------------------------------------------
@@ -976,13 +915,12 @@ CHudTexture *CHudIcons::AddSearchableHudIconToList( CHudTexture& texture )
 		return icon;
 	}
 
-	CHudTexture *newTexture = ( CHudTexture * )g_HudTextureMemoryPool.Alloc();
+	CHudTexture *newTexture = g_HudTextureMemoryPool.alloc();
 	*newTexture = texture;
 
 	SetupNewHudTexture( newTexture );
 
-	int idx = m_Icons.Insert( texture.szShortName, newTexture );
-	return m_Icons[ idx ];
+	return m_Icons.emplace( texture.szShortName, newTexture ).first->second;
 }
 
 //-----------------------------------------------------------------------------
@@ -990,11 +928,11 @@ CHudTexture *CHudIcons::AddSearchableHudIconToList( CHudTexture& texture )
 //-----------------------------------------------------------------------------
 CHudTexture *CHudIcons::GetIcon( const char *szIcon )
 {
-	int i = m_Icons.Find( szIcon );
-	if ( i == m_Icons.InvalidIndex() )
+	auto it = m_Icons.find( szIcon );
+	if ( it == m_Icons.end() )
 		return nullptr;
 
-	return m_Icons[ i ];
+	return it->second;
 }
 
 //-----------------------------------------------------------------------------
@@ -1024,7 +962,7 @@ void CHudIcons::RefreshHudTextures()
 		return;
 	}
 
-	CUtlDict< CHudTexture *, int >	textureList;
+	CHudTextureList	textureList;
 
 	// check to see if we have sprites for this res; if not, step down
 	LoadHudTextures( textureList, "scripts/hud_textures", nullptr );
@@ -1032,10 +970,9 @@ void CHudIcons::RefreshHudTextures()
 	LoadHudTextures( textureList, "scripts/instructor_textures", nullptr );
 
 	// fix up all the texture icons first
-	int c = textureList.Count();
-	for ( int index = 0; index < c; index++ )
+	for ( auto &[name, pTex] : textureList )
 	{
-		CHudTexture *tex = textureList[ index ];
+		CHudTexture *tex = pTex.get();
 		Assert( tex );
 
 		CHudTexture *icon = GetIcon( tex->szShortName );
@@ -1050,8 +987,6 @@ void CHudIcons::RefreshHudTextures()
 			icon->rc = tex->rc;
 		}
 	}
-
-	FreeHudTextureList( textureList );
 }
 
 

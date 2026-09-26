@@ -202,7 +202,7 @@ protected:
 
 	UserProfileData m_ProfileData;
 	MatchmakingData m_MatchmakingData;
-	CUtlVector<int> m_arrAchievementsEarned, m_arrAvatarAwardsEarned;
+	std::vector< int > m_arrAchievementsEarned, m_arrAvatarAwardsEarned;
 	char m_bufTitleData[TITLE_DATA_COUNT][XPROFILE_SETTING_MAX_SIZE];
 	bool m_bSaveTitleData[TITLE_DATA_COUNT];
 

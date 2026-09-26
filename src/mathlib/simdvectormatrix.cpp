@@ -13,9 +13,6 @@
 #include "mathlib/ssemath.h"
 #include "tier0/dbg.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 void CSIMDVectorMatrix::CreateFromCSOAAttributes( CSOAContainer const *pSrc,
 												  int nAttrIdx0, int nAttrIdx1, int nAttrIdx2 )
@@ -76,7 +73,7 @@ void CSIMDVectorMatrix::CreateFromRGBA_FloatImageData( int srcwidth, int srcheig
 			{
 				for( int cp = 0; cp < 4; cp++ )
 				{
-					int real_cp = MIN( cp, ntrailing_pixels_per_source_line - 1 );
+					int real_cp = std::min( cp, ntrailing_pixels_per_source_line - 1 );
 					data_out[4 * c + cp]= data_in[c + 4 * real_cp];
 				}
 			}

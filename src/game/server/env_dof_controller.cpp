@@ -14,9 +14,6 @@
 #include "env_dof_controller.h"
 #include "ai_utils.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 LINK_ENTITY_TO_CLASS( env_dof_controller, CEnvDOFController );
 
 IMPLEMENT_REFLECT_DATAMAP( CEnvDOFController )

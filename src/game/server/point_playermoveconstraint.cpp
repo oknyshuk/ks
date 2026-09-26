@@ -8,9 +8,6 @@
 #include "reflect_datamap.h"
 #include "reflect_annotations.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define	SF_TELEPORT_TO_SPAWN_POS	0x00000001
 
 //-----------------------------------------------------------------------------
@@ -34,7 +31,7 @@ private:
 	[[= ks::reflect::Key{ .name = "width" } ]] float				m_flConstraintWidth;
 	[[= ks::reflect::Key{ .name = "speedfactor" } ]] float				m_flSpeedFactor;
 	float				m_flRadiusSquared;	
-	CUtlVector<EHANDLE>	m_hConstrainedPlayers;
+	std::vector< EHANDLE >	m_hConstrainedPlayers;
 	[[= ks::reflect::Key{ .name = "OnConstraintBroken" } ]] COutputEvent		m_OnConstraintBroken;
 };
 
@@ -80,16 +77,16 @@ void CPointPlayerMoveConstraint::InputTurnOn( inputdata_t &inputdata )
 		Assert( pPlayer );
 		
 		// Only add him if he's not already constrained
-		if ( m_hConstrainedPlayers.Find( pPlayer ) == m_hConstrainedPlayers.InvalidIndex() )
+		if ( ks::find_index( m_hConstrainedPlayers, pPlayer ) == -1 )
 		{
-			m_hConstrainedPlayers.AddToTail( pPlayer );
+			m_hConstrainedPlayers.push_back( pPlayer );
 
 			pPlayer->ActivateMovementConstraint( this, GetAbsOrigin(), m_flRadius, m_flConstraintWidth, m_flSpeedFactor );
 		}
 	}
 
 	// Only think if we found any
-	if ( m_hConstrainedPlayers.Count() )
+	if ( !m_hConstrainedPlayers.empty() )
 	{
 		SetThink( &CPointPlayerMoveConstraint::ConstraintThink );
 		SetNextThink( gpGlobals->curtime + 0.1f );
@@ -101,7 +98,7 @@ void CPointPlayerMoveConstraint::InputTurnOn( inputdata_t &inputdata )
 //------------------------------------------------------------------------------
 void CPointPlayerMoveConstraint::InputTurnOff( inputdata_t &inputdata )
 {
-	int iCount = m_hConstrainedPlayers.Count();
+	int iCount = std::ssize( m_hConstrainedPlayers );
 	for ( int i = 0; i < iCount; i++ )
 	{
 		CBasePlayer *pPlayer = ToBasePlayer( m_hConstrainedPlayers[i] );
@@ -111,7 +108,7 @@ void CPointPlayerMoveConstraint::InputTurnOff( inputdata_t &inputdata )
 		}
 	}
 
-	m_hConstrainedPlayers.Purge();
+	m_hConstrainedPlayers.clear(); m_hConstrainedPlayers.shrink_to_fit();
 }
 
 //-----------------------------------------------------------------------------
@@ -119,7 +116,7 @@ void CPointPlayerMoveConstraint::InputTurnOff( inputdata_t &inputdata )
 //-----------------------------------------------------------------------------
 void CPointPlayerMoveConstraint::ConstraintThink( void )
 {
-	int iCount = m_hConstrainedPlayers.Count();
+	int iCount = std::ssize( m_hConstrainedPlayers );
 
 	// Count backwards, because we might drop them if they've broken the constraint
 	for ( int i = (iCount-1); i >= 0; i-- )
@@ -132,7 +129,7 @@ void CPointPlayerMoveConstraint::ConstraintThink( void )
 			{
 				// Break the constraint to this player
 				pPlayer->DeactivateMovementConstraint();
-				m_hConstrainedPlayers.Remove(i);
+				m_hConstrainedPlayers.erase( m_hConstrainedPlayers.begin() + i );
 
 				// Fire the broken output
 				m_OnConstraintBroken.FireOutput( this, pPlayer );
@@ -141,7 +138,7 @@ void CPointPlayerMoveConstraint::ConstraintThink( void )
 	}
 
 	// Only keep thinking if we any left
-	if ( m_hConstrainedPlayers.Count() )
+	if ( !m_hConstrainedPlayers.empty() )
 	{
 		SetNextThink( gpGlobals->curtime + 0.1f );
 	}

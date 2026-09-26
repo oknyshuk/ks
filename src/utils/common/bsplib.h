@@ -12,26 +12,27 @@
 
 
 
+#include <cstddef>
+#include <optional>
+#include <vector>
 #include "bspfile.h"
 #include "utlvector.h"
 #include "utlstring.h"
-#include "utllinkedlist.h"
 #include "mathlib/vector4d.h"
 #ifdef ENGINE_DLL
 #include "zone.h"
 #endif
 
 #ifdef ENGINE_DLL
-typedef CUtlVector<unsigned char, CHunkMemory<unsigned char> > CDispLightmapSamplePositions;
+typedef std::vector< unsigned char > CDispLightmapSamplePositions;
 #else
-typedef CUtlVector<unsigned char> CDispLightmapSamplePositions;
+typedef std::vector< unsigned char > CDispLightmapSamplePositions;
 #endif
 
 class ISpatialQuery;
 struct Ray_t;
 class Vector2D;
 struct portal_t;
-class CUtlBuffer;
 class IZip;
 
 // this is only true in vrad
@@ -66,15 +67,15 @@ extern	int			    visdatasize;
 extern	byte		    dvisdata[MAX_MAP_VISIBILITY];
 extern	dvis_t		    *dvis;
 
-extern	CUtlVector<byte> dlightdataHDR;
-extern	CUtlVector<byte> dlightdataLDR;
-extern	CUtlVector<byte> *pdlightdata;
-extern	CUtlVector<char> dentdata;
+extern	std::vector< byte > dlightdataHDR;
+extern	std::vector< byte > dlightdataLDR;
+extern	std::vector< byte > *pdlightdata;
+extern	std::vector< char > dentdata;
 
 extern	int			    numleafs;
 extern	dleaf_t			dleafs[MAX_MAP_LEAFS];
-extern	CUtlVector<dleafambientlighting_t> *g_pLeafAmbientLighting;
-extern	CUtlVector<dleafambientindex_t> *g_pLeafAmbientIndex;
+extern	std::vector< dleafambientlighting_t > *g_pLeafAmbientLighting;
+extern	std::vector< dleafambientindex_t > *g_pLeafAmbientIndex;
 extern	unsigned short  g_LeafMinDistToWater[MAX_MAP_LEAFS];
 
 extern	int			    numplanes;
@@ -92,16 +93,16 @@ extern	Vector			g_vertnormals[MAX_MAP_VERTNORMALS];
 extern	int			    numnodes;
 extern	dnode_t		    dnodes[MAX_MAP_NODES];
 
-extern  CUtlVector<texinfo_t> texinfo;
+extern  std::vector< texinfo_t > texinfo;
 
 extern	int			    numtexdata;
 extern	dtexdata_t	    dtexdata[MAX_MAP_TEXDATA];
 
 // displacement map .bsp file info
-extern  CUtlVector<ddispinfo_t>		g_dispinfo;
-extern  CUtlVector<CDispVert>		g_DispVerts;
-extern  CUtlVector<CDispTri>		g_DispTris;
-extern	CUtlVector<CDispMultiBlend>	g_DispMultiBlend;
+extern  std::vector< ddispinfo_t >		g_dispinfo;
+extern  std::vector< CDispVert >		g_DispVerts;
+extern  std::vector< CDispTri >		g_DispTris;
+extern	std::vector< CDispMultiBlend >	g_DispMultiBlend;
 extern  CDispLightmapSamplePositions g_DispLightmapSamplePositions; // LUMP_DISP_LIGHTMAP_SAMPLE_POSITIONS
 
 extern  int             numorigfaces;
@@ -120,9 +121,9 @@ extern	int			    numfaces;
 extern	dface_t		    dfaces[MAX_MAP_FACES];
 
 extern	int				numfaceids;
-extern	CUtlVector<dfaceid_t>	dfaceids;
-extern	CUtlVector<uint16>	dfacebrushes;
-extern	CUtlVector<dfacebrushlist_t>	dfacebrushlists;
+extern	std::vector< dfaceid_t >	dfaceids;
+extern	std::vector< uint16 >	dfacebrushes;
+extern	std::vector< dfacebrushlist_t >	dfacebrushlists;
 
 extern	int			    numfaces_hdr;
 extern	dface_t		    dfaces_hdr[MAX_MAP_FACES];
@@ -169,17 +170,17 @@ extern doverlaysystemlevel_t	g_OverlaySystemLevels[MAX_MAP_OVERLAYS]; // Paralle
 extern int				g_nWaterOverlayCount;
 extern dwateroverlay_t	g_WaterOverlays[MAX_MAP_WATEROVERLAYS];
 
-extern CUtlVector<char>	g_TexDataStringData;
-extern CUtlVector<int>	g_TexDataStringTable;
+extern std::vector< char >	g_TexDataStringData;
+extern std::vector< int >	g_TexDataStringTable;
 
 extern	int					numleafwaterdata;
 extern	dleafwaterdata_t	dleafwaterdata[MAX_MAP_LEAFWATERDATA]; 
 
-extern CUtlVector<CFaceMacroTextureInfo>	g_FaceMacroTextureInfos;
+extern std::vector< CFaceMacroTextureInfo >	g_FaceMacroTextureInfos;
 
-extern CUtlVector<doccluderdata_t>		g_OccluderData;
-extern CUtlVector<doccluderpolydata_t>	g_OccluderPolyData;
-extern CUtlVector<int>					g_OccluderVertexIndices;
+extern std::vector< doccluderdata_t >		g_OccluderData;
+extern std::vector< doccluderpolydata_t >	g_OccluderPolyData;
+extern std::vector< int >					g_OccluderVertexIndices;
 
 // level flags - see LVLFLAGS_xxx in bspfile.h
 extern uint32 g_LevelFlags;	
@@ -197,7 +198,7 @@ void				ClearPakFile( IZip *pak );
 void				AddFileToPak( IZip *pak, const char *pRelativeName, const char *fullpath );
 void				AddBufferToPak( IZip *pak, const char *pRelativeName, void *data, int length, bool bTextMode );
 bool				FileExistsInPak( IZip *pak, const char *pRelativeName );
-bool				ReadFileFromPak( IZip *pak, const char *pRelativeName, bool bTextMode, CUtlBuffer &buf );
+std::optional< std::vector< std::byte > >	ReadFileFromPak( IZip *pak, const char *pRelativeName, bool bTextMode );
 void				RemoveFileFromPak( IZip *pak, const char *pRelativeName );
 int					GetNextFilename( IZip *pak, int id, char *pBuffer, int bufferSize, int &fileSize );
 void				ForceAlignment( IZip *pak, bool bAlign, bool bCompatibleFormat, unsigned int alignmentSize );
@@ -213,7 +214,7 @@ struct GameLump_t
 	GameLumpId_t	m_Id;
 	unsigned short	m_Flags;
 	unsigned short	m_Version;
-	CUtlMemory< unsigned char >	m_Memory;
+	std::vector< unsigned char >	m_Memory;
 };
 
 //-----------------------------------------------------------------------------
@@ -254,11 +255,11 @@ public:
 	// Game lump creation/destruction method
 	//-----------------------------------------------------------------------------
 	GameLumpHandle_t	CreateGameLump( GameLumpId_t id, int size, int flags, int version );
-	void				DestroyGameLump( GameLumpHandle_t handle );
 	void				DestroyAllGameLumps();
 
 private:
-	CUtlLinkedList< GameLump_t, GameLumpHandle_t >	m_GameLumps;
+	// handle == index; lumps are only ever added or cleared all at once
+	std::vector< GameLump_t >	m_GameLumps;
 };
 
 extern CGameLump	g_GameLumps;
@@ -282,7 +283,7 @@ void	PrintBSPFileSizes(void);
 void	PrintBSPPackDirectory(void);
 void	ReleasePakFileLumps(void);
 void	WriteLumpToFile( char *filename, int lump );
-bool	GetBSPDependants( const char *pBSPFilename, CUtlVector< CUtlString > *pList );
+bool	GetBSPDependants( const char *pBSPFilename, std::vector< std::string > *pList );
 void	UnloadBSPFile();
 
 void	ParseEntities (void);
@@ -356,10 +357,10 @@ bool EnumerateNodesAlongRay( Ray_t const& ray, IBSPNodeEnumerator* pEnum, intp c
 struct clusterlist_t
 {
 	int				leafCount;
-	CUtlVector<int> leafs;
+	std::vector< int > leafs;
 };
 
-extern CUtlVector<clusterlist_t> g_ClusterLeaves;
+extern std::vector< clusterlist_t > g_ClusterLeaves;
 
 // Call this to build the mapping from cluster to leaves
 void BuildClusterTable( );

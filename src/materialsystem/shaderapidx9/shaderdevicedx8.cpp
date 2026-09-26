@@ -58,9 +58,6 @@ static double s_rdtsc_to_ms;
 #include "appframework/ilaunchermgr.h"
 #include "appframework/sdlwindow.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 // A logging channel used during engine initialization
 DECLARE_LOGGING_CHANNEL( LOG_EngineInitialization );
 
@@ -226,12 +223,12 @@ void CShaderDeviceMgrDx8::InitAdapterInfo()
 		return;
 
 	m_bAdapterInfoIntialized = true;
-	m_Adapters.RemoveAll();
+	m_Adapters.clear();
 
 	int nCount = m_pD3D->GetAdapterCount( );
 	for( int i = 0; i < nCount; ++i )
 	{
-		int j = m_Adapters.AddToTail();
+		int j = std::ssize( m_Adapters ); m_Adapters.emplace_back();
 		AdapterInfo_t &info = m_Adapters[j];
 
 #ifdef _DEBUG
@@ -644,7 +641,7 @@ bool CShaderDeviceMgrDx8::ComputeCapsFromD3D( HardwareCaps_t *pCaps, int nAdapte
 	pCaps->m_NumSamplers = 16;
 
 	// Clamp
-	pCaps->m_NumSamplers = MIN( pCaps->m_NumSamplers, MAX_SAMPLERS );
+	pCaps->m_NumSamplers = std::min<int>( pCaps->m_NumSamplers, MAX_SAMPLERS );
 	pCaps->m_SupportsCompressedTextures = COMPRESSED_TEXTURES_ON;
 
 	pCaps->m_bSupportsAnisotropicFiltering = (caps.TextureFilterCaps & D3DPTFILTERCAPS_MINFANISOTROPIC) != 0;
@@ -670,7 +667,7 @@ bool CShaderDeviceMgrDx8::ComputeCapsFromD3D( HardwareCaps_t *pCaps, int nAdapte
 		pCaps->m_NumVertexShaderConstants = caps.MaxVertexShaderConst;
 		if ( CommandLine()->FindParm( "-limitvsconst" ) )
 		{
-			pCaps->m_NumVertexShaderConstants = MIN( 256, pCaps->m_NumVertexShaderConstants );
+			pCaps->m_NumVertexShaderConstants = std::min( 256, pCaps->m_NumVertexShaderConstants );
 		}
 		pCaps->m_NumBooleanVertexShaderConstants = 16;	// 2.0 parts have 16 bool vs registers
 		pCaps->m_NumBooleanPixelShaderConstants = 16;	// 2.0 parts have 16 bool ps registers
@@ -713,7 +710,7 @@ bool CShaderDeviceMgrDx8::ComputeCapsFromD3D( HardwareCaps_t *pCaps, int nAdapte
 	pCaps->m_MaxTextureAspectRatio = caps.MaxTextureAspectRatio;
 	if ( pCaps->m_MaxTextureAspectRatio == 0 )
 	{
-		pCaps->m_MaxTextureAspectRatio = MAX( pCaps->m_MaxTextureWidth, pCaps->m_MaxTextureHeight);
+		pCaps->m_MaxTextureAspectRatio = std::max( pCaps->m_MaxTextureWidth, pCaps->m_MaxTextureHeight);
 	}
 	pCaps->m_MaxPrimitiveCount = caps.MaxPrimitiveCount;
 
@@ -1079,7 +1076,7 @@ int CShaderDeviceMgrDx8::GetAdapterCount() const
 	// FIXME: Remove call to InitAdapterInfo once Steam startup issues are resolved.
 	const_cast<CShaderDeviceMgrDx8*>( this )->InitAdapterInfo();
 
-	return m_Adapters.Count();
+	return std::ssize( m_Adapters );
 }
 
 
@@ -1091,7 +1088,7 @@ void CShaderDeviceMgrDx8::GetAdapterInfo( int nAdapter, MaterialAdapterInfo_t& i
 	// FIXME: Remove call to InitAdapterInfo once Steam startup issues are resolved.
 	const_cast<CShaderDeviceMgrDx8*>( this )->InitAdapterInfo();
 
-	Assert( ( nAdapter >= 0 ) && ( nAdapter < m_Adapters.Count() ) );
+	Assert( ( nAdapter >= 0 ) && ( nAdapter < std::ssize( m_Adapters ) ) );
 	const HardwareCaps_t &caps = m_Adapters[ nAdapter ].m_ActualCaps;
 	memcpy( &info, &caps, sizeof(MaterialAdapterInfo_t) );
 }
@@ -1770,7 +1767,7 @@ void CShaderDeviceDx8::SpewDriverInfo() const
 	hr = D3D()->GetAdapterIdentifier( m_nAdapter, D3DENUM_WHQL_LEVEL, &ident );
 
 	Warning("Shader API Driver Info:\n\nDriver : %s Version : %lld\n", 
-		ident.Driver, ident.DriverVersion.QuadPart );
+		ident.Driver, (long long)ident.DriverVersion.QuadPart );
 	Warning("Driver Description :  %s\n", ident.Description );
 	Warning("Chipset version %d %d %d %d\n\n", 
 		ident.VendorId, ident.DeviceId, ident.SubSysId, ident.Revision );
@@ -2745,7 +2742,7 @@ void CShaderDeviceDx8::OnDebugEvent( const char * pEvent )
 	double flSleepMilliseconds = g_mp_Present.GetTotalMilliseconds();
 	if( g_mp_Present.m_numCalls )
 	{
-		COM_TimestampedLog( "Present() Stats: %d flips / %.1f sec = ave %.1f fps. Sleep %.2f seconds = %.3fms/flip. %s\n", g_mp_Present.m_numCalls, timeDelta, timeDelta > 0.001 ? float( g_mp_Present.m_numCalls ) / timeDelta : 0.0f, flSleepMilliseconds * 1e-3f, g_mp_Present.m_numCalls ? flSleepMilliseconds / double( g_mp_Present.m_numCalls ) : 0.0f, pEvent );
+		COM_TimestampedLog( "Present() Stats: %llu flips / %.1f sec = ave %.1f fps. Sleep %.2f seconds = %.3fms/flip. %s\n", g_mp_Present.m_numCalls, timeDelta, timeDelta > 0.001 ? float( g_mp_Present.m_numCalls ) / timeDelta : 0.0f, flSleepMilliseconds * 1e-3f, g_mp_Present.m_numCalls ? flSleepMilliseconds / double( g_mp_Present.m_numCalls ) : 0.0f, pEvent );
 	}
 	else
 	{
@@ -2772,7 +2769,7 @@ void CShaderDeviceDx8::RefreshFrontBufferNonInteractive()
     g_bInSwap = true;
 
 	// Other code should not be talking to D3D at the same time as this
-	AUTO_LOCK_FM( m_nonInteractiveModeMutex );
+	std::scoped_lock lock( m_nonInteractiveModeMutex );
 
 
 	g_bInSwap = false;

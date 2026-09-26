@@ -16,9 +16,6 @@
 #include "ai_moveprobe.h"
 #include "keyvalues.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 //
 // class CAI_BlendedMotor
@@ -31,8 +28,8 @@ IMPLEMENT_REFLECT_DATAMAP_SIMPLE( CAI_BlendedMotor )
 void CAI_BlendedMotor::ResetMoveCalculations()
 {
 	BaseClass::ResetMoveCalculations();
-	m_scriptMove.RemoveAll();
-	m_scriptTurn.RemoveAll();
+	m_scriptMove.clear();
+	m_scriptTurn.clear();
 }
 
 //-------------------------------------
@@ -173,10 +170,10 @@ float CAI_BlendedMotor::GetMoveScriptDist( float &flNewSpeed )
 	float flTotalDist = 0;
 	float t = GetMoveInterval();
 
-	Assert( m_scriptMove.Count() > 1);
+	Assert( std::ssize( m_scriptMove ) > 1);
 
 	flNewSpeed = 0;
-	for (i = 0; i < m_scriptMove.Count()-1; i++)
+	for (i = 0; i < std::ssize( m_scriptMove )-1; i++)
 	{
 		if (t < m_scriptMove[i].flTime)
 		{
@@ -209,7 +206,7 @@ float CAI_BlendedMotor::GetMoveScriptTotalTime()
 {
 	float flDist = GetNavigator()->GetArrivalDistance();
 
-	int i = m_scriptMove.Count() - 1;
+	int i = std::ssize( m_scriptMove ) - 1;
 
 	if (i < 0)
 		return -1;
@@ -234,7 +231,7 @@ float CAI_BlendedMotor::GetMoveScriptYaw( void )
 	// interpolate desired angle
 	float flNewYaw = GetAbsAngles().y;
 	float t = GetMoveInterval();
-	for (i = 0; i < m_scriptTurn.Count()-1; i++)
+	for (i = 0; i < std::ssize( m_scriptTurn )-1; i++)
 	{
 		if (t < m_scriptTurn[i].flTime)
 		{
@@ -285,7 +282,7 @@ void CAI_BlendedMotor::SetMoveScriptAnim( float flNewSpeed )
 		flWeight = 0.0;
 	}
 	// Msg("weight %.3f rate %.3f\n", flWeight, m_flCurrRate );
-	m_flCurrRate = MIN( m_flCurrRate + (1.0 - m_flCurrRate) * 0.8, 1.0 );
+	m_flCurrRate = std::min( m_flCurrRate + (1.0 - m_flCurrRate) * 0.8, 1.0 );
 
 	if (m_nSavedGoalActivity == ACT_INVALID)
 	{
@@ -364,7 +361,7 @@ void CAI_BlendedMotor::SetMoveScriptAnim( float flNewSpeed )
 			m_flSecondaryWeight = 0.0;
 		}
 
-		m_flSecondaryWeight = MIN( m_flSecondaryWeight + 0.3, 1.0 );
+		m_flSecondaryWeight = std::min( m_flSecondaryWeight + 0.3, 1.0 );
 
 		if (m_flSecondaryWeight < 1.0)
 		{
@@ -727,8 +724,8 @@ void CAI_BlendedMotor::MoveJumpStart( const Vector &velocity )
 
 void CAI_BlendedMotor::BuildMoveScript( const AILocalMoveGoal_t &move, AIMoveTrace_t *pTraceResult )
 {
-	m_scriptMove.RemoveAll();
-	m_scriptTurn.RemoveAll();
+	m_scriptMove.clear();
+	m_scriptTurn.clear();
 
 	BuildVelocityScript( move );
 	BuildTurnScript( move );
@@ -781,13 +778,13 @@ void CAI_BlendedMotor::BuildTurnScript( const AILocalMoveGoal_t &move  )
 	// current location
 	script.vecLocation = GetAbsOrigin();
 	script.flYaw = GetAbsAngles().y;
-	m_scriptTurn.AddToTail( script );
+	m_scriptTurn.push_back( script );
 
 	//-------------------------
 
 	// insert default turn parameters, try to turn 80% to goal at all corners before getting there
 	int prev = 0;
-	for (i = 0; i < m_scriptMove.Count(); i++)
+	for (i = 0; i < std::ssize( m_scriptMove ); i++)
 	{
 		AI_Waypoint_t *pCurWaypoint = m_scriptMove[i].pWaypoint;
 		if (pCurWaypoint)
@@ -818,7 +815,7 @@ void CAI_BlendedMotor::BuildTurnScript( const AILocalMoveGoal_t &move  )
 				{
 					// turn to 80% of goal
 					script.flYaw = UTIL_ApproachAngle( y1, y2, deltaYaw * 0.8 );
-					m_scriptTurn.AddToTail( script );
+					m_scriptTurn.push_back( script );
 					// DevMsg("turn waypoint %.1f %.1f %.1f\n", script.vecLocation.x, script.vecLocation.y, script.vecLocation.z );
 					prev++;
 				}
@@ -827,7 +824,7 @@ void CAI_BlendedMotor::BuildTurnScript( const AILocalMoveGoal_t &move  )
 			{
 				Vector vecDir = GetNavigator()->GetArrivalDirection();
 				script.flYaw = UTIL_VecToYaw( vecDir );
-				m_scriptTurn.AddToTail( script );
+				m_scriptTurn.push_back( script );
 				// DevMsg("turn waypoint %.1f %.1f %.1f\n", script.vecLocation.x, script.vecLocation.y, script.vecLocation.z );
 				prev++;
 			}
@@ -837,7 +834,7 @@ void CAI_BlendedMotor::BuildTurnScript( const AILocalMoveGoal_t &move  )
 	// propagate ending facing back over any nearby nodes
 	// FIXME: this needs to minimize total turning, not just local/end turning.
 	// depending on waypoint spacing, complexity, it may turn the wrong way!
-	for (i = m_scriptTurn.Count()-1; i > 1; i--)
+	for (i = std::ssize( m_scriptTurn )-1; i > 1; i--)
 	{
 		float deltaYaw = UTIL_AngleDiff( m_scriptTurn[i-1].flYaw, m_scriptTurn[i].flYaw );
 	
@@ -849,7 +846,7 @@ void CAI_BlendedMotor::BuildTurnScript( const AILocalMoveGoal_t &move  )
 		}
 	}
 
-	for (i = 0; i < m_scriptTurn.Count() - 1; )
+	for (i = 0; i < std::ssize( m_scriptTurn ) - 1; )
 	{
 		i = i + BuildTurnScript( i, i + 1 ) + 1;
 	}
@@ -948,7 +945,7 @@ int CAI_BlendedMotor::BuildInsertNode( int i, float flTime )
 
 	Assert( flTime > 0.0 );
 
-	for (i; i < m_scriptTurn.Count() - 1; i++)
+	for (i; i < std::ssize( m_scriptTurn ) - 1; i++)
 	{
 		if (m_scriptTurn[i].flTime < flTime)
 		{
@@ -966,7 +963,7 @@ int CAI_BlendedMotor::BuildInsertNode( int i, float flTime )
 
 			script.vecLocation = m_scriptTurn[i].vecLocation * (1 - a) + m_scriptTurn[i+1].vecLocation * a;
 
-			m_scriptTurn.InsertAfter( i, script );
+			m_scriptTurn.insert( m_scriptTurn.begin() + i + 1, script );
 
 			return i + 1;
 		}
@@ -1007,7 +1004,7 @@ void CAI_BlendedMotor::BuildVelocityScript( const AILocalMoveGoal_t &move )
 	// set current location as start of script
 	script.vecLocation = GetAbsOrigin();
 	script.flMaxVelocity = GetCurSpeed();
-	m_scriptMove.AddToTail( script );
+	m_scriptMove.push_back( script );
 
 	//-------------------------
 
@@ -1080,7 +1077,7 @@ void CAI_BlendedMotor::BuildVelocityScript( const AILocalMoveGoal_t &move )
 		*/
 	}
 
-	idealVelocity = idealVelocity * MIN( m_flReactiveSpeedAdjust, m_flPredictiveSpeedAdjust );
+	idealVelocity = idealVelocity * std::min( m_flReactiveSpeedAdjust, m_flPredictiveSpeedAdjust );
 
 	//-------------------------
 
@@ -1120,7 +1117,7 @@ void CAI_BlendedMotor::BuildVelocityScript( const AILocalMoveGoal_t &move )
 			case NAV_FLY:
 				{
 					Vector d1 = pNext->vecLocation - script.vecLocation;
-					Vector d2 = script.vecLocation - m_scriptMove[m_scriptMove.Count()-1].vecLocation;
+					Vector d2 = script.vecLocation - m_scriptMove[std::ssize( m_scriptMove )-1].vecLocation;
 					
 					// remove very short, non terminal ground links
 					// FIXME: is this safe?  Maybe just check for co-located ground points?
@@ -1166,7 +1163,7 @@ void CAI_BlendedMotor::BuildVelocityScript( const AILocalMoveGoal_t &move )
 
 				{
 					float minJumpHeight = 0;
-					float maxHorzVel = MAX( GetCurSpeed(), 100 );
+					float maxHorzVel = std::max<std::common_type_t<float, int>>( GetCurSpeed(), 100 );
 					float gravity = sv_gravity.GetFloat() * GetOuter()->GetGravity();
 					Vector vecApex;
 					Vector rawJumpVel = GetMoveProbe()->CalcJumpLaunchVelocity(script.vecLocation, pNext->vecLocation, gravity, &minJumpHeight, maxHorzVel, &vecApex );
@@ -1205,7 +1202,7 @@ void CAI_BlendedMotor::BuildVelocityScript( const AILocalMoveGoal_t &move )
 			// Assert( script.flMaxVelocity == 0 );
 		}
 
-		m_scriptMove.AddToTail( script );
+		m_scriptMove.push_back( script );
 		pCurWaypoint = pNext;
 	}
 
@@ -1214,16 +1211,16 @@ void CAI_BlendedMotor::BuildVelocityScript( const AILocalMoveGoal_t &move )
 
 	// update distances
 	float flTotalDist = 0;
-	for (i = 0; i < m_scriptMove.Count() - 1; i++ )
+	for (i = 0; i < std::ssize( m_scriptMove ) - 1; i++ )
 	{
 		flTotalDist += m_scriptMove[i].flDist = (m_scriptMove[i+1].vecLocation - m_scriptMove[i].vecLocation).Length2D();
 	}
 
 	//-------------------------
 
-	if ( !m_bDeceleratingToGoal && m_scriptMove.Count() && flTotalDist > 0 )
+	if ( !m_bDeceleratingToGoal && std::ssize( m_scriptMove ) && flTotalDist > 0 )
 	{
-		float flNeededAccel = DeltaV( m_scriptMove[0].flMaxVelocity, m_scriptMove[m_scriptMove.Count() - 1].flMaxVelocity, flTotalDist );
+		float flNeededAccel = DeltaV( m_scriptMove[0].flMaxVelocity, m_scriptMove[std::ssize( m_scriptMove ) - 1].flMaxVelocity, flTotalDist );
 		m_bDeceleratingToGoal =  (flNeededAccel < -idealAccel);
 		//Assert( flNeededAccel != idealAccel);
 	}
@@ -1247,7 +1244,7 @@ void CAI_BlendedMotor::BuildVelocityScript( const AILocalMoveGoal_t &move )
 	}
 
 	// calc initial velocity based on immediate direction changes
-	if ( ai_path_adjust_speed_on_immediate_turns.GetBool() && m_scriptMove.Count() > 1)
+	if ( ai_path_adjust_speed_on_immediate_turns.GetBool() && std::ssize( m_scriptMove ) > 1)
 	{
 		/*
 		if ((GetOuter()->m_debugOverlays & OVERLAY_NPC_SELECTED_BIT))
@@ -1278,7 +1275,7 @@ void CAI_BlendedMotor::BuildVelocityScript( const AILocalMoveGoal_t &move )
 	}
 
 	// clamp forward velocities
-	for (i = 0; i < m_scriptMove.Count() - 1; i++ )
+	for (i = 0; i < std::ssize( m_scriptMove ) - 1; i++ )
 	{
 		// find needed acceleration
 		float dv = m_scriptMove[i+1].flMaxVelocity - m_scriptMove[i].flMaxVelocity;
@@ -1304,7 +1301,7 @@ void CAI_BlendedMotor::BuildVelocityScript( const AILocalMoveGoal_t &move )
 	}
 
 	// clamp decel velocities
-	for (i = m_scriptMove.Count() - 1; i > 0; i-- )
+	for (i = std::ssize( m_scriptMove ) - 1; i > 0; i-- )
 	{
 		// find needed deceleration
 		float dv = m_scriptMove[i].flMaxVelocity - m_scriptMove[i-1].flMaxVelocity;
@@ -1339,7 +1336,7 @@ void CAI_BlendedMotor::BuildVelocityScript( const AILocalMoveGoal_t &move )
 	*/
 
 	// insert intermediate ideal velocities
-	for (i = 0; i < m_scriptMove.Count() - 1;)
+	for (i = 0; i < std::ssize( m_scriptMove ) - 1;)
 	{
 		// accel to ideal
 		float t1 = (idealVelocity - m_scriptMove[i].flMaxVelocity) / idealAccel;
@@ -1366,7 +1363,7 @@ void CAI_BlendedMotor::BuildVelocityScript( const AILocalMoveGoal_t &move )
 				script.Init();
 				script.vecLocation = end * a + start * (1 - a);
 				script.flMaxVelocity = idealVelocity;
-				m_scriptMove.InsertAfter( i, script );
+				m_scriptMove.insert( m_scriptMove.begin() + i + 1, script );
 				i++;
 			}
 
@@ -1379,7 +1376,7 @@ void CAI_BlendedMotor::BuildVelocityScript( const AILocalMoveGoal_t &move )
 				script.Init();
 				script.vecLocation = end * a + start * (1 - a);
 				script.flMaxVelocity = idealVelocity;
-				m_scriptMove.InsertAfter( i, script );
+				m_scriptMove.insert( m_scriptMove.begin() + i + 1, script );
 				i++;
 			}
 
@@ -1427,7 +1424,7 @@ void CAI_BlendedMotor::BuildVelocityScript( const AILocalMoveGoal_t &move )
 					if (script.flMaxVelocity < idealVelocity)
 					{
 						// DevMsg("insert %.2f %.2f %.2f\n", m_scriptMove[i].flMaxVelocity, script.flMaxVelocity, m_scriptMove[i+1].flMaxVelocity ); 
-						m_scriptMove.InsertAfter( i, script );
+						m_scriptMove.insert( m_scriptMove.begin() + i + 1, script );
 						i += 1;
 					}
 				}
@@ -1437,14 +1434,14 @@ void CAI_BlendedMotor::BuildVelocityScript( const AILocalMoveGoal_t &move )
 	}
 
 	// clamp MIN velocities
-	for (i = 0; i < m_scriptMove.Count(); i++)
+	for (i = 0; i < std::ssize( m_scriptMove ); i++)
 	{
-		m_scriptMove[i].flMaxVelocity = MAX( m_scriptMove[i].flMaxVelocity, MIN_VELOCITY );
+		m_scriptMove[i].flMaxVelocity = std::max( m_scriptMove[i].flMaxVelocity, MIN_VELOCITY );
 	}
 
 	// rebuild fields
 	m_scriptMove[0].flElapsedTime = 0;
-	for (i = 0; i < m_scriptMove.Count() - 1; )
+	for (i = 0; i < std::ssize( m_scriptMove ) - 1; )
 	{
 		m_scriptMove[i].flDist = (m_scriptMove[i+1].vecLocation - m_scriptMove[i].vecLocation).Length2D();
 
@@ -1493,7 +1490,7 @@ void CAI_BlendedMotor::InsertSlowdown( float distToObstruction, float idealAccel
 	if (distToObstruction <= 0.0)
 		return;
 
-	for (i = 0; i <  m_scriptMove.Count() - 1; i++)
+	for (i = 0; i <  std::ssize( m_scriptMove ) - 1; i++)
 	{
 		if (m_scriptMove[i].flDist > 0 && distToObstruction - m_scriptMove[i].flDist < 0)
 		{
@@ -1509,7 +1506,7 @@ void CAI_BlendedMotor::InsertSlowdown( float distToObstruction, float idealAccel
 			// clamp the next velocity to the possible accel in the given distance
 			if (!bAlwaysSlowdown && SolveQuadratic( -0.5 * idealAccel, m_scriptMove[0].flMaxVelocity, -distToObstruction, r1, r2 ))
 			{
-				script.flMaxVelocity = MAX( 10, m_scriptMove[0].flMaxVelocity - idealAccel * r1 );
+				script.flMaxVelocity = std::max<std::common_type_t<int, float>>( 10, m_scriptMove[0].flMaxVelocity - idealAccel * r1 );
 			}
 			else
 			{
@@ -1520,7 +1517,7 @@ void CAI_BlendedMotor::InsertSlowdown( float distToObstruction, float idealAccel
 			script.pWaypoint = nullptr;
 			script.flDist = m_scriptMove[i].flDist - distToObstruction;
 			m_scriptMove[i].flDist = distToObstruction;
-			m_scriptMove.InsertAfter( i, script );
+			m_scriptMove.insert( m_scriptMove.begin() + i + 1, script );
 			break;
 		}
 		else

@@ -13,9 +13,7 @@
 #include "player.h"
 #include "ivoiceserver.h"
 #include "usermessages.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier1/bit_ops.h"
 
 #define UPDATE_INTERVAL	0.3
 
@@ -138,8 +136,8 @@ void CVoiceGameMgr::ClientConnected(struct edict_t *pEdict)
 	
 	// Clear out everything we use for deltas on this guy.
 	g_bWantModEnable[index] = true;
-	g_SentGameRulesMasks[index].Init(0);
-	g_SentBanMasks[index].Init(0);
+	g_SentGameRulesMasks[index].reset();
+	g_SentBanMasks[index].reset();
 }
 
 
@@ -163,7 +161,7 @@ bool CVoiceGameMgr::ClientCommand( CBasePlayer *pPlayer, const CCommand &args )
 			if( i <= VOICE_MAX_PLAYERS_DW )
 			{
 				VoiceServerDebug( "CVoiceGameMgr::ClientCommand: vban (0x%x) from %d\n", mask, playerClientIndex );
-				g_BanMasks[playerClientIndex].SetDWord(i-1, mask);
+				ks::set_word( g_BanMasks[playerClientIndex], i-1, mask );
 			}
 			else
 			{
@@ -247,8 +245,8 @@ void CVoiceGameMgr::UpdateMasks()
 			for(dw=0; dw < VOICE_MAX_PLAYERS_DW; dw++)
 			{
 				ks::net::CCSUsrMsg_VoiceMask::PlayerMask *playerMask = &msg.player_masks.emplace_back();
-				playerMask->game_rules_mask = gameRulesMask.GetDWord(dw);
-				playerMask->ban_masks = g_BanMasks[iClient].GetDWord(dw);
+				playerMask->game_rules_mask = ks::get_word( gameRulesMask, dw );
+				playerMask->ban_masks = ks::get_word( g_BanMasks[iClient], dw );
 			}
 			msg.player_mod_enable = !!g_PlayerModEnable[iClient];
 

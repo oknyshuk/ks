@@ -31,11 +31,8 @@
 // UNDONE: Reduce some dependency here!
 #include "physics_prop_ragdoll.h"
 #include "items.h"
-#include "utlsymbol.h"
+#include "tier1/intern_pool.h"
 #include "physobj.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 extern float			GetFloorZ(const Vector &origin);
 
@@ -759,9 +756,9 @@ CON_COMMAND( hammer_update_safe_entities, "Updates entities in the map that can 
 
 	// first look for any exclusion objects -- these are entities that list specific things to be ignored.
 	// All the names that are inside them, we store into a hash table (here implemented through a local
-	// CUtlSymbolTable)
+	// intern_pool)
 
-	CUtlSymbolTable ignoredNames(16,32,true); // grow 16 strings at a time. Case insensitive.
+	ks::intern_pool ignoredNames( true ); // Case insensitive.
 	while ( (pEnt = gEntList.FindEntityByClassname( pEnt, "hammer_updateignorelist" )) != nullptr )
 	{
 		// for each name in each of those strings, add it to the symbol table.
@@ -770,14 +767,14 @@ CON_COMMAND( hammer_update_safe_entities, "Updates entities in the map that can 
 		{
 			if (!!piglist->GetName(ii))  // if not null
 			{	// add to symtab
-				ignoredNames.AddString(piglist->GetName(ii).ToCStr());
+				ignoredNames.intern(piglist->GetName(ii).ToCStr());
 			}
 		}
 	}
 
-	if ( ignoredNames.GetNumStrings() > 0 )
+	if ( ignoredNames.size() > 0 )
 	{
-		Msg( "Ignoring %d specified targetnames.\n", ignoredNames.GetNumStrings() );
+		Msg( "Ignoring %d specified targetnames.\n", (int)ignoredNames.size() );
 	}
 
 
@@ -806,7 +803,7 @@ CON_COMMAND( hammer_update_safe_entities, "Updates entities in the map that can 
 			continue;
 
 		// explicitly excluded by designer?
-		if ( ignoredNames.Find(pEnt->GetEntityName().ToCStr()).IsValid() )
+		if ( ignoredNames.contains(pEnt->GetEntityName().ToCStr()) )
 			continue;
 
 		NWCEdit::UpdateEntityPosition( pEnt );

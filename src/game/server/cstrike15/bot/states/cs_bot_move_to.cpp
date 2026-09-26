@@ -12,9 +12,6 @@
 #include "cs_bot.h"
 #include "cs_gamerules.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern ConVar mp_hostages_moveable;
 
 //--------------------------------------------------------------------------------------------------------------

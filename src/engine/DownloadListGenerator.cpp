@@ -21,9 +21,6 @@
 #include <stdlib.h>
 #include <tier0/dbg.h>
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 CDownloadListGenerator g_DownloadListGenerator;
 CDownloadListGenerator &DownloadListGenerator()
 {
@@ -36,7 +33,7 @@ ConVar	sv_logdownloadlist( "sv_logdownloadlist", "0" );
 // Purpose: Constructor
 //-----------------------------------------------------------------------------
 CDownloadListGenerator::CDownloadListGenerator()
-	: m_AlreadyWrittenFileNames( 0, 0, true )
+	: m_AlreadyWrittenFileNames( true )
 {
 	m_hReslistFile = FILESYSTEM_INVALID_HANDLE;
 	m_pStringTable = nullptr;
@@ -51,7 +48,7 @@ void CDownloadListGenerator::SetStringTable( INetworkStringTable *pStringTable )
 	m_pStringTable = pStringTable;
 
 	// reset the duplication list
-	m_AlreadyWrittenFileNames.RemoveAll();
+	m_AlreadyWrittenFileNames.clear();
 
 	// add in the bsp file to the list, and its node graph and nav mesh
 	char path[_MAX_PATH];
@@ -102,7 +99,7 @@ void CDownloadListGenerator::OnLevelLoadStart(const char *levelName)
 	}
 
 	// reset the duplication list
-	m_AlreadyWrittenFileNames.RemoveAll();
+	m_AlreadyWrittenFileNames.clear();
 
 	if ( sv_logdownloadlist.GetBool() )
 	{
@@ -225,12 +222,11 @@ void CDownloadListGenerator::OnResourcePrecached( const char *pRelativePathFileN
 	Q_FixSlashes( pRelativePath, '/' );
 
 	// make sure the filename hasn't already been written
-	UtlSymId_t filename = m_AlreadyWrittenFileNames.Find( pRelativePath );
-	if ( filename != UTL_INVAL_SYMBOL )
+	if ( m_AlreadyWrittenFileNames.contains( pRelativePath ) )
 		return;
 
 	// record in list, so we don't write it again
-	m_AlreadyWrittenFileNames.AddString( pRelativePath );
+	m_AlreadyWrittenFileNames.intern( pRelativePath );
 
 	// don't allow files for download the server doesn't have
 	if ( !g_pFileSystem->FileExists( pRelativePath, "GAME" ) )

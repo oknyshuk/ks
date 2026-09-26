@@ -13,9 +13,6 @@
 #include "physics_bone_follower.h"
 #include "vcollide_parse.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 IMPLEMENT_REFLECT_DATAMAP_SIMPLE( physfollower_t )
 
@@ -45,7 +42,7 @@ CBoneFollowerManager::~CBoneFollowerManager()
 void CBoneFollowerManager::InitBoneFollowers( CBaseAnimating *pParentEntity, int iNumBones, const char **pFollowerBoneNames )
 {
 	m_iNumBones = iNumBones;
-	m_physBones.EnsureCount( iNumBones );
+	ks::ensure_size( m_physBones, iNumBones );
 
 	// Now init all the bones
 	for ( int i = 0; i < iNumBones; i++ )
@@ -61,7 +58,7 @@ void CBoneFollowerManager::AddBoneFollower( CBaseAnimating *pParentEntity, const
 {
 	m_iNumBones++;
 
-	int iIndex = m_physBones.AddToTail();
+	int iIndex = std::ssize( m_physBones ); m_physBones.emplace_back();
 	CreatePhysicsFollower( pParentEntity, m_physBones[iIndex], pFollowerBoneName, pSolid );
 }
 
@@ -170,7 +167,7 @@ void CBoneFollowerManager::DestroyBoneFollowers( void )
 		m_physBones[i].hFollower = nullptr;
 	}
 
-	m_physBones.Purge();
+	m_physBones.clear(); m_physBones.shrink_to_fit();
 	m_iNumBones = 0;
 }
 

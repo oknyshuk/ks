@@ -9,9 +9,6 @@
 #include "bugreporter/bugreporter.h"
 #include "tier1/interface.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static ConVar bugreporter_username( "bugreporter_username", "", FCVAR_ARCHIVE, "Username to use for bugreporter" );
 
 // Evil hack shim to expose convar to bugreporter_filequeue

@@ -37,9 +37,6 @@
 
 #include "fmtstr.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 void DisplayGameModeConvars( void );
 
 // The following convars depend on the order of the game types and modes in GameModes.txt.
@@ -100,10 +97,7 @@ GameTypes::GameType::GameType()
 // -------------------------------------------------------------------------------------------- //
 // Purpose: Destructor
 // -------------------------------------------------------------------------------------------- //
-GameTypes::GameType::~GameType()
-{
-	m_GameModes.PurgeAndDeleteElements();
-}
+GameTypes::GameType::~GameType() = default;	// out of line: GameMode is incomplete in the header
 
 // ============================================================================================ //
 // GameMode
@@ -214,8 +208,6 @@ EXPOSE_SINGLE_INTERFACE_GLOBALVAR( GameTypes, IGameTypes, VENGINE_GAMETYPES_VERS
 GameTypes::GameTypes()
 	: m_Initialized( false ),
 	m_pExtendedServerInfo( nullptr ),
-	m_pServerMap( nullptr ),
-	m_pServerMapGroup( nullptr ),
 	m_iCurrentServerNumSlots( 0 ),
 	m_bRunMapWithDefaultGametype( false ),
 	m_bLoadingScreenDataIsCorrect( true )
@@ -228,10 +220,10 @@ GameTypes::GameTypes()
 // -------------------------------------------------------------------------------------------- //
 GameTypes::~GameTypes()
 {
-	m_GameTypes.PurgeAndDeleteElements();
-	m_Maps.PurgeAndDeleteElements();
-	m_MapGroups.PurgeAndDeleteElements();
-	m_CustomBotDifficulties.PurgeAndDeleteElements();
+	m_GameTypes.clear();
+	m_Maps.clear();
+	m_MapGroups.clear();
+	m_CustomBotDifficulties.clear();
 
 	if ( m_pExtendedServerInfo )
 		m_pExtendedServerInfo->deleteThis();
@@ -242,13 +234,8 @@ GameTypes::~GameTypes()
 
 void GameTypes::ClearServerMapGroupInfo( void )
 {
-	if ( m_pServerMap )
-		delete m_pServerMap;
-	m_pServerMap = nullptr;
-
-	if ( m_pServerMapGroup )
-		delete m_pServerMapGroup;
-	m_pServerMapGroup = nullptr;
+	m_pServerMap.reset();
+	m_pServerMapGroup.reset();
 }
 
 // -------------------------------------------------------------------------------------------- //
@@ -264,9 +251,9 @@ bool GameTypes::Initialize( bool force /* = false*/ )
 		return true;
 	}
 
-	m_GameTypes.PurgeAndDeleteElements();
-	m_Maps.PurgeAndDeleteElements();
-	m_CustomBotDifficulties.PurgeAndDeleteElements();
+	m_GameTypes.clear();
+	m_Maps.clear();
+	m_CustomBotDifficulties.clear();
 
 	ClearServerMapGroupInfo();
 
@@ -411,12 +398,12 @@ void GameTypes::InitMapSidecars( KeyValues* pKV )
 
 	char mapwild[MAX_PATH];
 	Q_snprintf( mapwild, sizeof( mapwild ), "*.%sbsp", false ? "360." : "" );
-	CUtlVector<CUtlString> outList;
+	std::vector< std::string > outList;
 	// BEGIN Search the maps dir for .kv files that correspond to bsps.
 	RecursiveFindFilesMatchingName( &outList, "maps", mapwild, "GAME" );
-	FOR_EACH_VEC( outList, i )
+	for ( auto &mapName : outList )
 	{
-		const char* curMap = outList[i].Access();
+		const char* curMap = mapName.data();
 		AddMapKVs( pKVMaps, curMap );
 	}
 	 // END Search
@@ -494,7 +481,7 @@ void GameTypes::AddMapKVs( KeyValues* pKVMaps, const char* curMap )
 // -------------------------------------------------------------------------------------------- //
 // Purpose: Parse the given key values for the weapon progressions
 // -------------------------------------------------------------------------------------------- //
-void GameTypes::LoadWeaponProgression( KeyValues * pKV_WeaponProgression, CUtlVector< WeaponProgression > & vecWeaponProgression, const char * szGameType, const char * szGameMode )
+void GameTypes::LoadWeaponProgression( KeyValues * pKV_WeaponProgression, std::vector< WeaponProgression > & vecWeaponProgression, const char * szGameType, const char * szGameMode )
 {
 	if ( pKV_WeaponProgression )
 	{
@@ -502,7 +489,7 @@ void GameTypes::LoadWeaponProgression( KeyValues * pKV_WeaponProgression, CUtlVe
 		{
 			// Get the weapon name.
 			WeaponProgression wp;
-			wp.m_Name.Set( pKV_Weapon->GetName() );
+			wp.m_Name.assign( ks::nz( pKV_Weapon->GetName() ) );
 
 			// Get the kills.
 			const char *killsEntry = "kills";
@@ -513,10 +500,10 @@ void GameTypes::LoadWeaponProgression( KeyValues * pKV_WeaponProgression, CUtlVe
 				Warning( "GameTypes: missing %s entry for weapon \"%s\" for game type/mode (%s/%s).\n", killsEntry, pKV_Weapon->GetName(), szGameType, szGameMode );
 			}
 
-			vecWeaponProgression.AddToTail( wp );
+			vecWeaponProgression.push_back( wp );
 		}
 
-		if ( vecWeaponProgression.Count() == 0 )
+		if ( vecWeaponProgression.empty() )
 		{
 			Warning( "GameTypes: empty %s entry for game type/mode (%s/%s).\n", pKV_WeaponProgression->GetName(), szGameType, szGameMode );
 		}
@@ -526,11 +513,11 @@ void GameTypes::LoadWeaponProgression( KeyValues * pKV_WeaponProgression, CUtlVe
 // -------------------------------------------------------------------------------------------- //
 // Purpose: Finds the index at which the named weapon resides in the progression index.
 // -------------------------------------------------------------------------------------------- //
-int GameTypes::FindWeaponProgressionIndex( CUtlVector< WeaponProgression > & vecWeaponProgression, const char * szWeaponName )
+int GameTypes::FindWeaponProgressionIndex( std::vector< WeaponProgression > & vecWeaponProgression, const char * szWeaponName )
 {
-	FOR_EACH_VEC( vecWeaponProgression, tWeapon )
+	for ( int tWeapon = 0; tWeapon < std::ssize( vecWeaponProgression ); tWeapon++ )
 	{
-		if ( !V_strcmp( vecWeaponProgression[tWeapon].m_Name, szWeaponName ) )
+		if ( !V_strcmp( vecWeaponProgression[tWeapon].m_Name.c_str(), szWeaponName ) )
 		{
 			return tWeapon;			
 		}
@@ -549,10 +536,10 @@ bool GameTypes::LoadGameTypes( KeyValues *pKV )
 		return false;
 	}
 
-	Assert( m_GameTypes.Count() == 0 );
-	if ( m_GameTypes.Count() > 0 )
+	Assert( std::ssize( m_GameTypes ) == 0 );
+	if ( !m_GameTypes.empty() )
 	{
-		m_GameTypes.PurgeAndDeleteElements();
+		m_GameTypes.clear();
 	}
 
 	// Get the game types.
@@ -567,7 +554,8 @@ bool GameTypes::LoadGameTypes( KeyValues *pKV )
 	// Parse the game types.
 	for ( KeyValues *pKV_GameType = pKV_GameTypes->GetFirstTrueSubKey(); pKV_GameType; pKV_GameType = pKV_GameType->GetNextTrueSubKey() )
 	{
-		GameType *pGameType = new GameType();
+		auto pGameTypeOwned = std::make_unique< GameType >();
+		GameType *pGameType = pGameTypeOwned.get();
 
 		// Set the name.
 		V_strncpy( pGameType->m_Name, pKV_GameType->GetName(), sizeof( pGameType->m_Name ) );
@@ -591,7 +579,8 @@ bool GameTypes::LoadGameTypes( KeyValues *pKV )
 		{
 			for ( KeyValues *pKV_GameMode = pKV_GameModes->GetFirstTrueSubKey(); pKV_GameMode; pKV_GameMode = pKV_GameMode->GetNextTrueSubKey() )
 			{
-				GameMode *pGameMode = new GameMode();
+				auto pGameModeOwned = std::make_unique< GameMode >();
+				GameMode *pGameMode = pGameModeOwned.get();
 
 				// Set the name.
 				V_strncpy( pGameMode->m_Name, pKV_GameMode->GetName(), sizeof( pGameMode->m_Name ) );
@@ -699,10 +688,10 @@ bool GameTypes::LoadGameTypes( KeyValues *pKV )
 							continue;
 						}
 
-						pGameMode->m_MapGroupsSP.CopyAndAddToTail( pKV_MapGroup->GetName() );
+						pGameMode->m_MapGroupsSP.emplace_back( pKV_MapGroup->GetName() );
 					}
 
-					if ( pGameMode->m_MapGroupsSP.Count() == 0 )
+					if ( pGameMode->m_MapGroupsSP.empty() )
 					{
 						Warning( "GameTypes: empty %s entry for game type/mode (%s/%s).\n", mapgroupsEntrySP, pKV_GameType->GetName(), pKV_GameMode->GetName() );
 					}
@@ -727,7 +716,7 @@ bool GameTypes::LoadGameTypes( KeyValues *pKV )
 							continue;
 						}
 
-						pGameMode->m_MapGroupsMP.CopyAndAddToTail( pKV_MapGroup->GetName() );
+						pGameMode->m_MapGroupsMP.emplace_back( pKV_MapGroup->GetName() );
 					}
 				}
 				
@@ -750,8 +739,8 @@ bool GameTypes::LoadGameTypes( KeyValues *pKV )
 					pGameMode->m_NoResetVoteThresholdCT = FindWeaponProgressionIndex( pGameMode->m_WeaponProgressionCT, pKV_noResetVoteThresholdCT->GetString() );
 				}		
 
-				pGameMode->m_Index = pGameType->m_GameModes.Count();
-				pGameType->m_GameModes.AddToTail( pGameMode );
+				pGameMode->m_Index = std::ssize( pGameType->m_GameModes );
+				pGameType->m_GameModes.push_back( std::move( pGameModeOwned ) );
 			}				
 		}
 		else
@@ -759,16 +748,16 @@ bool GameTypes::LoadGameTypes( KeyValues *pKV )
 			Warning( "GameTypes: missing %s entry for game type %s.\n", gameModesEntry, pKV_GameType->GetName() );
 		}
 
-		if ( pGameType->m_GameModes.Count() == 0 )
+		if ( pGameType->m_GameModes.empty() )
 		{
 			Warning( "GameTypes: empty %s entry for game type %s.\n", gameModesEntry, pKV_GameType->GetName() );
 		}
 
-		pGameType->m_Index = m_GameTypes.Count();
-		m_GameTypes.AddToTail( pGameType );
+		pGameType->m_Index = std::ssize( m_GameTypes );
+		m_GameTypes.push_back( std::move( pGameTypeOwned ) );
 	}
 
-	if ( m_GameTypes.Count() == 0 )
+	if ( m_GameTypes.empty() )
 	{
 		Warning( "GameTypes: empty %s entry.\n", gameTypesEntry );
 	}
@@ -787,10 +776,10 @@ bool GameTypes::LoadMaps( KeyValues *pKV )
 		return false;
 	}
 
-	Assert( m_Maps.Count() == 0 );
-	if ( m_Maps.Count() > 0 )
+	Assert( std::ssize( m_Maps ) == 0 );
+	if ( !m_Maps.empty() )
 	{
-		m_Maps.PurgeAndDeleteElements();
+		m_Maps.clear();
 	}
 
 	// Get the maps.
@@ -808,7 +797,7 @@ bool GameTypes::LoadMaps( KeyValues *pKV )
 		LoadMapEntry( pKV_Map );
 	}
 
-	if ( m_Maps.Count() == 0 )
+	if ( m_Maps.empty() )
 	{
 		Warning( "GamesTypes: empty %s entry.\n", mapsEntry );
 	}
@@ -827,7 +816,8 @@ bool GameTypes::LoadMapEntry( KeyValues *pKV_Map )
 		return false;
 	}
 
-	Map *pMap = new Map();
+	auto pMapOwned = std::make_unique< Map >();
+	Map *pMap = pMapOwned.get();
 
 	// Set the name.
 	V_strcpy_safe( pMap->m_Name, pKV_Map->GetName() );
@@ -881,7 +871,7 @@ bool GameTypes::LoadMapEntry( KeyValues *pKV_Map )
 	{
 		for ( KeyValues *pKV_Model = pKV_TModels->GetFirstValue(); pKV_Model; pKV_Model = pKV_Model->GetNextValue() )
 		{
-			pMap->m_TModels.CopyAndAddToTail( pKV_Model->GetName() );
+			pMap->m_TModels.emplace_back( pKV_Model->GetName() );
 		}
 	}
 	else
@@ -896,7 +886,7 @@ bool GameTypes::LoadMapEntry( KeyValues *pKV_Map )
 	{
 		for ( KeyValues *pKV_Model = pKV_CTModels->GetFirstValue(); pKV_Model; pKV_Model = pKV_Model->GetNextValue() )
 		{
-			pMap->m_CTModels.CopyAndAddToTail( pKV_Model->GetName() );
+			pMap->m_CTModels.emplace_back( pKV_Model->GetName() );
 		}
 	}
 	else
@@ -905,8 +895,8 @@ bool GameTypes::LoadMapEntry( KeyValues *pKV_Map )
 	}
 
 	// Get names for the view model arms
-	pMap->m_TViewModelArms.Set( pKV_Map->GetString( "t_arms" ) );
-	pMap->m_CTViewModelArms.Set( pKV_Map->GetString( "ct_arms" ) );
+	pMap->m_TViewModelArms.assign( ks::nz( pKV_Map->GetString( "t_arms" ) ) );
+	pMap->m_CTViewModelArms.assign( ks::nz( pKV_Map->GetString( "ct_arms" ) ) );
 
 	pMap->m_nDefaultGameType = pKV_Map->GetInt( "default_game_type" );
 	pMap->m_nDefaultGameMode = pKV_Map->GetInt( "default_game_mode", 0 );
@@ -918,13 +908,13 @@ bool GameTypes::LoadMapEntry( KeyValues *pKV_Map )
 	{
 		for ( KeyValues *pKV_Model = pKV_HostageModels->GetFirstValue(); pKV_Model; pKV_Model = pKV_Model->GetNextValue() )
 		{
-			pMap->m_HostageModels.CopyAndAddToTail( pKV_Model->GetName() );
+			pMap->m_HostageModels.emplace_back( pKV_Model->GetName() );
 		}
 	}
 
 	// Add the map to the list.
-	pMap->m_Index = m_Maps.Count();
-	m_Maps.AddToTail( pMap );
+	pMap->m_Index = std::ssize( m_Maps );
+	m_Maps.push_back( std::move( pMapOwned ) );
 
 	return true;
 }
@@ -941,15 +931,14 @@ bool GameTypes::LoadMapGroups( KeyValues *pKV )
 	}
 
 	//Assert( m_MapGroups.Count() == 0 );
-	if ( m_MapGroups.Count() > 0 )
+	if ( !m_MapGroups.empty() )
 	{
 		//m_MapGroups.PurgeAndDeleteElements();
-		FOR_EACH_VEC_BACK( m_MapGroups, i )
+		for ( int i = (int)std::ssize( m_MapGroups ) - 1; i >= 0; i-- )
 		{
 			if ( !m_MapGroups[i]->m_bIsWorkshopMapGroup )
 			{
-				delete m_MapGroups[i];
-				m_MapGroups.Remove( i );
+				m_MapGroups.erase( m_MapGroups.begin() + i );
 			}
 		}
 	}
@@ -966,7 +955,8 @@ bool GameTypes::LoadMapGroups( KeyValues *pKV )
 	// Parse the mapgroups.
 	for ( KeyValues *pKV_MapGroup = pKV_MapGroups->GetFirstTrueSubKey(); pKV_MapGroup; pKV_MapGroup = pKV_MapGroup->GetNextTrueSubKey() )
 	{
-		MapGroup *pMapGroup = new MapGroup();
+		auto pMapGroupOwned = std::make_unique< MapGroup >();
+		MapGroup *pMapGroup = pMapGroupOwned.get();
 
 		// Set the name.
 		V_strncpy( pMapGroup->m_Name, pKV_MapGroup->GetName(), sizeof( pMapGroup->m_Name ) );
@@ -1002,7 +992,7 @@ bool GameTypes::LoadMapGroups( KeyValues *pKV )
 		{
 			for ( KeyValues *pKV_Map = pKV_Maps->GetFirstValue(); pKV_Map; pKV_Map = pKV_Map->GetNextValue() )
 			{
-				pMapGroup->m_Maps.CopyAndAddToTail( pKV_Map->GetName() );
+				pMapGroup->m_Maps.emplace_back( pKV_Map->GetName() );
 			}
 		}
 		else
@@ -1011,10 +1001,10 @@ bool GameTypes::LoadMapGroups( KeyValues *pKV )
 		}
 
 		// Add the map group to the list.
-		m_MapGroups.AddToTail( pMapGroup );
+		m_MapGroups.push_back( std::move( pMapGroupOwned ) );
 	}
 
-	if ( m_MapGroups.Count() == 0 )
+	if ( m_MapGroups.empty() )
 	{
 		Warning( "GamesTypes: empty %s entry.\n", mapGroupsEntry );
 	}
@@ -1033,10 +1023,10 @@ bool GameTypes::LoadCustomBotDifficulties( KeyValues *pKV )
 		return false;
 	}
 
-	Assert( m_CustomBotDifficulties.Count() == 0 );
-	if ( m_CustomBotDifficulties.Count() > 0 )
+	Assert( std::ssize( m_CustomBotDifficulties ) == 0 );
+	if ( !m_CustomBotDifficulties.empty() )
 	{
-		m_CustomBotDifficulties.PurgeAndDeleteElements();
+		m_CustomBotDifficulties.clear();
 	}
 
 	// Get the bot difficulty levels.
@@ -1051,7 +1041,8 @@ bool GameTypes::LoadCustomBotDifficulties( KeyValues *pKV )
 	// Parse the bot difficulty levels.
 	for ( KeyValues *pKV_BotDiff = pKV_BotDiffs->GetFirstTrueSubKey(); pKV_BotDiff; pKV_BotDiff = pKV_BotDiff->GetNextTrueSubKey() )
 	{
-		CustomBotDifficulty *pBotDiff = new CustomBotDifficulty();
+		auto pBotDiffOwned = std::make_unique< CustomBotDifficulty >();
+		CustomBotDifficulty *pBotDiff = pBotDiffOwned.get();
 
 		// Set the name.
 		V_strncpy( pBotDiff->m_Name, pKV_BotDiff->GetName(), sizeof( pBotDiff->m_Name ) );
@@ -1086,11 +1077,11 @@ bool GameTypes::LoadCustomBotDifficulties( KeyValues *pKV )
 			pBotDiff->m_HasBotQuota = ( pKV_Convars->GetInt( "bot_quota", g_invalidInteger ) != g_invalidInteger );
 		}
 
-		pBotDiff->m_Index = m_CustomBotDifficulties.Count();
-		m_CustomBotDifficulties.AddToTail( pBotDiff );
+		pBotDiff->m_Index = std::ssize( m_CustomBotDifficulties );
+		m_CustomBotDifficulties.push_back( std::move( pBotDiffOwned ) );
 	}
 
-	if ( m_CustomBotDifficulties.Count() == 0 )
+	if ( m_CustomBotDifficulties.empty() )
 	{
 		Warning( "GamesTypes: empty %s entry.\n", botDifficultyEntry );
 	}
@@ -1108,9 +1099,9 @@ GameTypes::GameType *GameTypes::GetGameType_Internal( const char *gameType )
 		 gameType[0] != '\0' )
 	{
 		// Find the game type.
-		FOR_EACH_VEC( m_GameTypes, iType )
+		for ( const auto &pGameTypeOwned : m_GameTypes )
 		{
-			GameType *pGameType = m_GameTypes[iType];
+			GameType *pGameType = pGameTypeOwned.get();
 			Assert( pGameType );
 			if ( pGameType &&
 				 V_stricmp( pGameType->m_Name, gameType ) == 0 )
@@ -1137,9 +1128,9 @@ GameTypes::GameMode *GameTypes::GetGameMode_Internal( GameType *pGameType, const
 		 gameMode[0] != '\0' )
 	{
 		// Find the game mode.
-		FOR_EACH_VEC( pGameType->m_GameModes, iMode )
+		for ( const auto &pGameModeOwned : pGameType->m_GameModes )
 		{
-			GameMode *pGameMode = pGameType->m_GameModes[iMode];
+			GameMode *pGameMode = pGameModeOwned.get();
 			Assert( pGameMode );
 			if ( pGameMode &&
 				 V_stricmp( pGameMode->m_Name, gameMode ) == 0 )
@@ -1161,20 +1152,20 @@ GameTypes::GameMode *GameTypes::GetGameMode_Internal( GameType *pGameType, const
 // -------------------------------------------------------------------------------------------- //
 GameTypes::GameType *GameTypes::GetCurrentGameType_Internal( void )
 {
-	if ( m_GameTypes.Count() == 0 )
+	if ( m_GameTypes.empty() )
 	{
 		Warning( "GamesTypes: no game types have been loaded.\n" );
 		return nullptr;
 	}
 
 	int gameType = game_type.GetInt();
-	if ( gameType < 0 || gameType >= m_GameTypes.Count() )
+	if ( gameType < 0 || gameType >= std::ssize( m_GameTypes ) )
 	{
-		Warning( "GamesTypes: game_type is set to an invalid value (%d). Range [%d,%d].\n", gameType, 0, m_GameTypes.Count() - 1 );
+		Warning( "GamesTypes: game_type is set to an invalid value (%d). Range [%d,%d].\n", gameType, 0, (int)std::ssize( m_GameTypes ) - 1 );
 		return nullptr;
 	}
 
-	return m_GameTypes[gameType];
+	return m_GameTypes[gameType].get();
 }
 
 // -------------------------------------------------------------------------------------------- //
@@ -1189,13 +1180,13 @@ GameTypes::GameMode *GameTypes::GetCurrentGameMode_Internal( GameType *pGameType
 	}
 
 	int gameMode = game_mode.GetInt();
-	if ( gameMode < 0 || gameMode >= pGameType->m_GameModes.Count() )
+	if ( gameMode < 0 || gameMode >= std::ssize( pGameType->m_GameModes ) )
 	{
-		Warning( "GamesTypes: game_mode is set to an invalid value (%d). Range [%d,%d].\n", gameMode, 0, pGameType->m_GameModes.Count() - 1 );
+		Warning( "GamesTypes: game_mode is set to an invalid value (%d). Range [%d,%d].\n", gameMode, 0, (int)std::ssize( pGameType->m_GameModes ) - 1 );
 		return nullptr;
 	}
 
-	return pGameType->m_GameModes[gameMode];
+	return pGameType->m_GameModes[gameMode].get();
 }
 
 // -------------------------------------------------------------------------------------------- //
@@ -1214,7 +1205,7 @@ GameTypes::MapGroup *GameTypes::GetMapGroup_Internal( const char *mapGroup )
 		{
 			if ( m_pServerMapGroup && V_stricmp( m_pServerMapGroup->m_Name, mapGroup ) == 0 )
 			{
-				return m_pServerMapGroup;
+				return m_pServerMapGroup.get();
 			}
 		}
 #endif
@@ -1229,9 +1220,9 @@ GameTypes::MapGroup *GameTypes::GetMapGroup_Internal( const char *mapGroup )
 			pchMapGroupToFind = pchCopy;
 		}
 
-		FOR_EACH_VEC( m_MapGroups, iMapGroup )
+		for ( const auto &pMapGroupOwned : m_MapGroups )
 		{
-			MapGroup *pMapGroup = m_MapGroups[iMapGroup];
+			MapGroup *pMapGroup = pMapGroupOwned.get();
 			Assert( pMapGroup );
 			if ( pMapGroup &&
 				 V_stricmp( pMapGroup->m_Name, pchMapGroupToFind ) == 0 )
@@ -1249,8 +1240,8 @@ GameTypes::MapGroup *GameTypes::GetMapGroup_Internal( const char *mapGroup )
 			CFmtStr fmtGroupName( "%llu", Q_atoui64( pszMapId ) );
 			char const *szIndividualMapName = pszWorkshopMapgroup + 1;
 			
-			CUtlStringList lstMapNames;
-			lstMapNames.CopyAndAddToTail( szIndividualMapName );
+			std::vector< std::string > lstMapNames;
+			lstMapNames.emplace_back( szIndividualMapName );
 			return CreateWorkshopMapGroupInternal( fmtGroupName, lstMapNames );
 		}
 
@@ -1266,7 +1257,7 @@ GameTypes::MapGroup *GameTypes::GetMapGroup_Internal( const char *mapGroup )
 // -------------------------------------------------------------------------------------------- //
 GameTypes::Map *GameTypes::GetMap_Internal( const char *mapName )
 {
-	if ( m_Maps.Count() == 0 )
+	if ( m_Maps.empty() )
 	{
 		Warning( "GamesTypes: no maps have been loaded.\n" );
 		return nullptr;
@@ -1308,15 +1299,15 @@ GameTypes::Map *GameTypes::GetMap_Internal( const char *mapName )
 	{
 		if( !V_stricmp( m_pServerMap->m_Name, mapNameNoExt ) || !V_stricmp( m_pServerMap->m_Name, mapName ) )
 		{
-			return m_pServerMap;
+			return m_pServerMap.get();
 		}
 	}
 #endif
 
 	// Find the map.
-	FOR_EACH_VEC( m_Maps, iMap )
+	for ( const auto &pMapOwned : m_Maps )
 	{
-		Map *pMap = m_Maps[iMap];
+		Map *pMap = pMapOwned.get();
 		Assert( pMap );
 		if ( pMap &&
 			 V_stricmp( pMap->m_Name, mapNameNoExt ) == 0 )
@@ -1337,20 +1328,20 @@ GameTypes::Map *GameTypes::GetMap_Internal( const char *mapName )
 // -------------------------------------------------------------------------------------------- //
 GameTypes::CustomBotDifficulty *GameTypes::GetCurrentCustomBotDifficulty_Internal( void )
 {
-	if ( m_CustomBotDifficulties.Count() == 0 )
+	if ( m_CustomBotDifficulties.empty() )
 	{
 		Warning( "GamesTypes: no bot difficulties have been loaded.\n" );
 		return nullptr;
 	}
 
 	int botDiff = custom_bot_difficulty.GetInt();
-	if ( botDiff < 0 || botDiff >= m_CustomBotDifficulties.Count() )
+	if ( botDiff < 0 || botDiff >= std::ssize( m_CustomBotDifficulties ) )
 	{
-		Warning( "GamesTypes: custom_bot_difficulty is set to an invalid value (%d). Range [%d,%d].\n", botDiff, 0, m_CustomBotDifficulties.Count() - 1 );
+		Warning( "GamesTypes: custom_bot_difficulty is set to an invalid value (%d). Range [%d,%d].\n", botDiff, 0, (int)std::ssize( m_CustomBotDifficulties ) - 1 );
 		return nullptr;
 	}
 
-	return m_CustomBotDifficulties[botDiff];
+	return m_CustomBotDifficulties[botDiff].get();
 }
 
 // -------------------------------------------------------------------------------------------- //
@@ -1469,11 +1460,11 @@ void GameTypes::SetAndParseExtendedServerInfo( KeyValues *pExtendedServerInfo )
 		//const char* szMapNameBase = V_GetFileName( m_pServerMap->m_Name );
 
 		m_iCurrentServerNumSlots = m_pExtendedServerInfo->GetInt( "numSlots", 0 );
-		m_pServerMap = new Map;
+		m_pServerMap = std::make_unique< Map >();
 		V_strncpy( m_pServerMap->m_Name, m_pExtendedServerInfo->GetString( "map", "" ), ARRAYSIZE(m_pServerMap->m_Name) );
 		V_FixSlashes( m_pServerMap->m_Name, '/' );
-		m_pServerMap->m_TViewModelArms.Set( m_pExtendedServerInfo->GetString( "t_arms", "" ) );
-		m_pServerMap->m_CTViewModelArms.Set( m_pExtendedServerInfo->GetString( "ct_arms", "" ) );
+		m_pServerMap->m_TViewModelArms.assign( ks::nz( m_pExtendedServerInfo->GetString( "t_arms", "" ) ) );
+		m_pServerMap->m_CTViewModelArms.assign( ks::nz( m_pExtendedServerInfo->GetString( "ct_arms", "" ) ) );
 		m_pServerMap->m_nDefaultGameType = m_pExtendedServerInfo->GetInt( "default_game_type" );
 		m_pServerMap->m_nDefaultGameMode = m_pExtendedServerInfo->GetInt( "default_game_mode", 0 );
 		KeyValues *pCTModels = m_pExtendedServerInfo->FindKey( "ct_models", false );
@@ -1481,7 +1472,7 @@ void GameTypes::SetAndParseExtendedServerInfo( KeyValues *pExtendedServerInfo )
 		{
 			for ( KeyValues *pKV = pCTModels->GetFirstValue(); pKV; pKV = pKV->GetNextValue() )
 			{
-				m_pServerMap->m_CTModels.CopyAndAddToTail( pKV->GetString() );
+				m_pServerMap->m_CTModels.emplace_back( pKV->GetString() );
 			}
 		}
 		KeyValues *pTModels = m_pExtendedServerInfo->FindKey( "t_models", false );
@@ -1489,7 +1480,7 @@ void GameTypes::SetAndParseExtendedServerInfo( KeyValues *pExtendedServerInfo )
 		{
 			for ( KeyValues *pKV = pTModels->GetFirstValue(); pKV; pKV = pKV->GetNextValue() )
 			{
-				m_pServerMap->m_TModels.CopyAndAddToTail( pKV->GetString() );
+				m_pServerMap->m_TModels.emplace_back( pKV->GetString() );
 			}
 		}
 		
@@ -1501,14 +1492,14 @@ void GameTypes::SetAndParseExtendedServerInfo( KeyValues *pExtendedServerInfo )
 			m_pServerMap->m_nRewardDropList = m_pExtendedServerInfo->GetInt( "reward_drop_list" );
 		}
 
-		m_pServerMapGroup = new MapGroup;
+		m_pServerMapGroup = std::make_unique< MapGroup >();
 		V_strncpy( m_pServerMapGroup->m_Name, m_pExtendedServerInfo->GetString( "mapgroup", "" ), ARRAYSIZE(m_pServerMapGroup->m_Name) );
 		KeyValues *pMapsInGroup = m_pExtendedServerInfo->FindKey( "maplist", false );
 		if ( pMapsInGroup )
 		{
 			for ( KeyValues *pKV = pMapsInGroup->GetFirstValue(); pKV; pKV = pKV->GetNextValue() )
 			{
-				m_pServerMapGroup->m_Maps.CopyAndAddToTail( pKV->GetString() );
+				m_pServerMapGroup->m_Maps.emplace_back( pKV->GetString() );
 			}
 		}
 
@@ -1858,7 +1849,7 @@ void GameTypes::DisplayConvarsForCurrentMode( void )
 // -------------------------------------------------------------------------------------------- //
 // Purpose: Returns the CT weapon progression for the current game type and mode.
 // -------------------------------------------------------------------------------------------- //
-const CUtlVector< IGameTypes::WeaponProgression > *GameTypes::GetWeaponProgressionForCurrentModeCT( void )
+const std::vector< IGameTypes::WeaponProgression > *GameTypes::GetWeaponProgressionForCurrentModeCT( void )
 {
 	GameType *pGameType = GetCurrentGameType_Internal();
 	Assert( pGameType );
@@ -1880,7 +1871,7 @@ const CUtlVector< IGameTypes::WeaponProgression > *GameTypes::GetWeaponProgressi
 // -------------------------------------------------------------------------------------------- //
 // Purpose: Returns the T weapon progression for the current game type and mode.
 // -------------------------------------------------------------------------------------------- //
-const CUtlVector< IGameTypes::WeaponProgression > *GameTypes::GetWeaponProgressionForCurrentModeT( void )
+const std::vector< IGameTypes::WeaponProgression > *GameTypes::GetWeaponProgressionForCurrentModeT( void )
 {
 	GameType *pGameType = GetCurrentGameType_Internal();
 	Assert( pGameType );
@@ -1924,14 +1915,14 @@ const char *GameTypes::GetRandomMapGroup( const char *gameType, const char *game
 		return nullptr;
 	}
 
-	if ( pGameMode->m_MapGroupsMP.Count() == 0 )
+	if ( pGameMode->m_MapGroupsMP.empty() )
 	{
 		return nullptr;
 	}
 
 	// Randomly choose a mapgroup from our map list.
-	int iRandom = m_randomStream.RandomInt( 0, pGameMode->m_MapGroupsMP.Count() - 1 );
-	return pGameMode->m_MapGroupsMP[iRandom];
+	int iRandom = m_randomStream.RandomInt( 0, std::ssize( pGameMode->m_MapGroupsMP ) - 1 );
+	return pGameMode->m_MapGroupsMP[iRandom].c_str();
 }
 
 
@@ -1953,12 +1944,12 @@ const char *GameTypes::GetFirstMap( const char *mapGroup )
 		return nullptr;
 	}
 
-	if ( pMapGroup->m_Maps.Count() == 0 )
+	if ( pMapGroup->m_Maps.empty() )
 	{
 		return nullptr;
 	}
 
-	return pMapGroup->m_Maps[0];
+	return pMapGroup->m_Maps[0].c_str();
 }
 
 // -------------------------------------------------------------------------------------------- //
@@ -1979,14 +1970,14 @@ const char *GameTypes::GetRandomMap( const char *mapGroup )
 		return nullptr;
 	}
 
-	if ( pMapGroup->m_Maps.Count() == 0 )
+	if ( pMapGroup->m_Maps.empty() )
 	{
 		return nullptr;
 	}
 
 	// Randomly choose a map from our map list.
-	int iRandom = m_randomStream.RandomInt( 0, pMapGroup->m_Maps.Count() - 1 );
-	return pMapGroup->m_Maps[iRandom];
+	int iRandom = m_randomStream.RandomInt( 0, std::ssize( pMapGroup->m_Maps ) - 1 );
+	return pMapGroup->m_Maps[iRandom].c_str();
 }
 
 // -------------------------------------------------------------------------------------------- //
@@ -2008,18 +1999,18 @@ const char *GameTypes::GetNextMap( const char *mapGroup, const char *mapName )
 		return nullptr;
 	}
 
-	if ( pMapGroup->m_Maps.Count() == 0 )
+	if ( pMapGroup->m_Maps.empty() )
 	{
 		return nullptr;
 	}
 
 	int mapIndex = 0;
-	for ( ; mapIndex < pMapGroup->m_Maps.Count(); ++mapIndex )
+	for ( ; mapIndex < std::ssize( pMapGroup->m_Maps ); ++mapIndex )
 	{
 		char szInputName[MAX_PATH];
 		V_strcpy_safe( szInputName, mapName );
 		V_FixSlashes( szInputName, '/' );
-		if ( mapName && !V_stricmp( mapName, pMapGroup->m_Maps[mapIndex] ) )
+		if ( mapName && !V_stricmp( mapName, pMapGroup->m_Maps[mapIndex].c_str() ) )
 		{
 			break;
 		}
@@ -2027,12 +2018,12 @@ const char *GameTypes::GetNextMap( const char *mapGroup, const char *mapName )
 
 	// get the next map in the list
 	mapIndex++;
-	if ( mapIndex >= pMapGroup->m_Maps.Count() )
+	if ( mapIndex >= std::ssize( pMapGroup->m_Maps ) )
 	{	// wrap to the beginning of the list, use first map if the passed map wasn't in the mapgroup
 		mapIndex = 0;
 	}
 
-	return pMapGroup->m_Maps[mapIndex];
+	return pMapGroup->m_Maps[mapIndex].c_str();
 }
 
 // -------------------------------------------------------------------------------------------- //
@@ -2099,10 +2090,10 @@ bool GameTypes::IsValidMapInMapGroup( const char * mapGroup, const char *mapName
 
 	char fileBase[MAX_MAP_NAME];
 	V_FileBase( mapName, fileBase, sizeof ( fileBase ) );
-	for ( int mapIndex = 0 ; mapIndex < pMapGroup->m_Maps.Count(); ++mapIndex )
+	for ( int mapIndex = 0 ; mapIndex < std::ssize( pMapGroup->m_Maps ); ++mapIndex )
 	{
-		if ( !V_stricmp( fileBase, pMapGroup->m_Maps[mapIndex] ) ||
-			 !V_stricmp( mapName, pMapGroup->m_Maps[mapIndex] ) ) 
+		if ( !V_stricmp( fileBase, pMapGroup->m_Maps[mapIndex].c_str() ) ||
+			 !V_stricmp( mapName, pMapGroup->m_Maps[mapIndex].c_str() ) ) 
 		{
 			return true;
 		}
@@ -2138,17 +2129,17 @@ bool GameTypes::IsValidMapGroupForTypeAndMode( const char * mapGroup, const char
 		return false;
 	}
 
-	for ( int i = 0 ; i < pGameMode->m_MapGroupsMP.Count(); ++i )
+	for ( int i = 0 ; i < std::ssize( pGameMode->m_MapGroupsMP ); ++i )
 	{
-		if ( V_strcmp( mapGroup, pGameMode->m_MapGroupsMP[i] ) == 0 )
+		if ( V_strcmp( mapGroup, pGameMode->m_MapGroupsMP[i].c_str() ) == 0 )
 		{
 			return true;
 		}
 	}
 
-	for ( int i = 0 ; i < pGameMode->m_MapGroupsSP.Count(); ++i )
+	for ( int i = 0 ; i < std::ssize( pGameMode->m_MapGroupsSP ); ++i )
 	{
-		if ( V_strcmp( mapGroup, pGameMode->m_MapGroupsSP[i] ) == 0 )
+		if ( V_strcmp( mapGroup, pGameMode->m_MapGroupsSP[i].c_str() ) == 0 )
 		{
 			return true;
 		}
@@ -2205,7 +2196,7 @@ bool GameTypes::GetMapInfo( const char *mapName, uint32 &richPresence )
 // -------------------------------------------------------------------------------------------- //
 // Purpose: Returns the available terrorist character model names for the given map.
 // -------------------------------------------------------------------------------------------- //
-const CUtlStringList *GameTypes::GetTModelsForMap( const char *mapName )
+const std::vector< std::string > *GameTypes::GetTModelsForMap( const char *mapName )
 {
 	Map *pMap = GetMap_Internal( mapName );
 	if ( !pMap )
@@ -2219,7 +2210,7 @@ const CUtlStringList *GameTypes::GetTModelsForMap( const char *mapName )
 // -------------------------------------------------------------------------------------------- //
 // Purpose: Returns the available counter-terrorist character model names for the given map.
 // -------------------------------------------------------------------------------------------- //
-const CUtlStringList *GameTypes::GetCTModelsForMap( const char *mapName )
+const std::vector< std::string > *GameTypes::GetCTModelsForMap( const char *mapName )
 {
 	Map *pMap = GetMap_Internal( mapName );
 	if ( !pMap )
@@ -2241,7 +2232,7 @@ const char *GameTypes::GetTViewModelArmsForMap( const char *mapName )
 		return nullptr;
 	}
 
-	return pMap->m_TViewModelArms.String();
+	return pMap->m_TViewModelArms.c_str();
 }
 
 // -------------------------------------------------------------------------------------------- //
@@ -2255,7 +2246,7 @@ const char *GameTypes::GetCTViewModelArmsForMap( const char *mapName )
 		return nullptr;
 	}
 
-	return pMap->m_CTViewModelArms.String();
+	return pMap->m_CTViewModelArms.c_str();
 }
 
 // Item requirements for the map
@@ -2306,7 +2297,7 @@ int GameTypes::GetRewardDropListForMap( const char *mapName )
 // -------------------------------------------------------------------------------------------- //
 // Purpose: Returns the available terrorist character model names for the given map.
 // -------------------------------------------------------------------------------------------- //
-const CUtlStringList *GameTypes::GetHostageModelsForMap( const char *mapName )
+const std::vector< std::string > *GameTypes::GetHostageModelsForMap( const char *mapName )
 {
 	Map *pMap = GetMap_Internal( mapName );
 	if ( !pMap )
@@ -2348,7 +2339,7 @@ const int GameTypes::GetDefaultGameModeForMap( const char *mapName )
 // -------------------------------------------------------------------------------------------- //
 // Purpose: Returns the maps for the given map group name.
 // -------------------------------------------------------------------------------------------- //
-const CUtlStringList *GameTypes::GetMapGroupMapList( const char *mapGroup )
+const std::vector< std::string > *GameTypes::GetMapGroupMapList( const char *mapGroup )
 {
 	Assert( mapGroup );
 	if ( !mapGroup || StringIsEmpty( mapGroup ) )
@@ -2380,9 +2371,9 @@ int GameTypes::GetCustomBotDifficulty( void )
 bool GameTypes::SetCustomBotDifficulty( int botDiff )
 {
 	if ( botDiff < 0 ||
-		 botDiff >= m_CustomBotDifficulties.Count() )
+		 botDiff >= std::ssize( m_CustomBotDifficulties ) )
 	{
-		Warning( "GameTypes: invalid custom bot difficulty (%d). Range [%d,%d].\n", botDiff, 0, m_CustomBotDifficulties.Count() - 1 );
+		Warning( "GameTypes: invalid custom bot difficulty (%d). Range [%d,%d].\n", botDiff, 0, (int)std::ssize( m_CustomBotDifficulties ) - 1 );
 		return false;
 	}
 
@@ -2395,9 +2386,9 @@ bool GameTypes::SetCustomBotDifficulty( int botDiff )
 const char* GameTypes::GetGameTypeFromInt( int gameType )
 {
 	// Find the game type.
-	FOR_EACH_VEC( m_GameTypes, iType )
+	for ( const auto &pGameTypeOwned : m_GameTypes )
 	{
-		GameType *pGameType = m_GameTypes[iType];
+		GameType *pGameType = pGameTypeOwned.get();
 		Assert( pGameType );
 		if ( pGameType && pGameType->m_Index == gameType )
 		{
@@ -2414,16 +2405,16 @@ const char* GameTypes::GetGameTypeFromInt( int gameType )
 const char* GameTypes::GetGameModeFromInt( int gameType, int gameMode )
 {
 	// Find the game type.
-	FOR_EACH_VEC( m_GameTypes, iType )
+	for ( const auto &pGameTypeOwned : m_GameTypes )
 	{
-		GameType *pGameType = m_GameTypes[iType];
+		GameType *pGameType = pGameTypeOwned.get();
 		Assert( pGameType );
 		if ( pGameType && pGameType->m_Index == gameType )
 		{
 			// Find the game mode.
-			FOR_EACH_VEC( pGameType->m_GameModes, iMode )
+			for ( const auto &pGameModeOwned : pGameType->m_GameModes )
 			{
-				GameMode *pGameMode = pGameType->m_GameModes[iMode];
+				GameMode *pGameMode = pGameModeOwned.get();
 				Assert( pGameMode );
 				if ( pGameMode && pGameMode->m_Index == gameMode )
 				{
@@ -2442,16 +2433,16 @@ const char* GameTypes::GetGameModeFromInt( int gameType, int gameMode )
 
 bool GameTypes::GetGameTypeFromMode( const char *szGameMode, const char *&pszGameTypeOut )
 {
-	FOR_EACH_VEC( m_GameTypes, iType )
+	for ( const auto &pGameTypeOwned : m_GameTypes )
 	{
-		GameType *pGameType = m_GameTypes[ iType ];
+		GameType *pGameType = pGameTypeOwned.get();
 		Assert( pGameType );
 		if ( pGameType )
 		{
 			// Find the game mode.
-			FOR_EACH_VEC( pGameType->m_GameModes, iMode )
+			for ( const auto &pGameModeOwned : pGameType->m_GameModes )
 			{
-				GameMode *pGameMode = pGameType->m_GameModes[ iMode ];
+				GameMode *pGameMode = pGameModeOwned.get();
 				Assert( pGameMode );
 				if ( pGameMode && !V_strcmp( pGameMode->m_Name, szGameMode ) )
 				{
@@ -2486,11 +2477,11 @@ bool GameTypes::GetGameModeAndTypeIntsFromStrings( const char* szGameType, const
 	{
 		if ( mode && type )
 		{
-			Assert( type->m_Index >= 0 && type->m_Index < m_GameTypes.Count() );
-			Assert( mode->m_Index >= 0 && mode->m_Index < type->m_GameModes.Count() );
+			Assert( type->m_Index >= 0 && type->m_Index < std::ssize( m_GameTypes ) );
+			Assert( mode->m_Index >= 0 && mode->m_Index < std::ssize( type->m_GameModes ) );
 
-			if ( type->m_Index >= 0 && type->m_Index < m_GameTypes.Count() &&
-				 mode->m_Index >= 0 && mode->m_Index < type->m_GameModes.Count() )						
+			if ( type->m_Index >= 0 && type->m_Index < std::ssize( m_GameTypes ) &&
+				 mode->m_Index >= 0 && mode->m_Index < std::ssize( type->m_GameModes ) )						
 			{
 				iOutGameType = type->m_Index;
 				iOutGameMode = mode->m_Index;
@@ -2615,19 +2606,18 @@ int GameTypes::GetCurrentServerSettingInt( const char *szSetting, int iDefaultVa
 	return m_pExtendedServerInfo->GetInt( szSetting, iDefaultValue );
 }
 
-bool GameTypes::CreateOrUpdateWorkshopMapGroup( const char* szName, const CUtlStringList & vecMapNames )
+bool GameTypes::CreateOrUpdateWorkshopMapGroup( const char* szName, const std::vector< std::string > & vecMapNames )
 {
 	return !!CreateWorkshopMapGroupInternal( szName, vecMapNames );
 }
 
-GameTypes::MapGroup * GameTypes::CreateWorkshopMapGroupInternal( const char* szName, const CUtlStringList & vecMapNames )
+GameTypes::MapGroup * GameTypes::CreateWorkshopMapGroupInternal( const char* szName, const std::vector< std::string > & vecMapNames )
 {
 	MapGroup *pMapGroup = GetMapGroup_Internal( szName );
 	if ( !pMapGroup )
 	{
-		pMapGroup = new MapGroup;
+		pMapGroup = m_MapGroups.emplace_back( std::make_unique< MapGroup >() ).get();
 		V_strcpy_safe( pMapGroup->m_Name, szName );
-		m_MapGroups.AddToTail( pMapGroup );
 	}
 
 	// Workshop map groups are named their publishfileid, so a nonzero integer. 
@@ -2635,13 +2625,13 @@ GameTypes::MapGroup * GameTypes::CreateWorkshopMapGroupInternal( const char* szN
 	pMapGroup->m_bIsWorkshopMapGroup = true;
 
 	// Clear old map list, stomp with new one
-	pMapGroup->m_Maps.PurgeAndDeleteElements();
+	pMapGroup->m_Maps.clear();
 
-	FOR_EACH_VEC( vecMapNames, i )
+	for ( const auto &mapName : vecMapNames )
 	{
-		const char* szMap = vecMapNames[i];
-		pMapGroup->m_Maps.CopyAndAddToTail( szMap );
-		V_FixSlashes( pMapGroup->m_Maps.Tail(), '/' );
+		const char* szMap = mapName.c_str();
+		pMapGroup->m_Maps.emplace_back( szMap );
+		V_FixSlashes( pMapGroup->m_Maps.back().data(), '/' );
 	}
 	return pMapGroup;
 }

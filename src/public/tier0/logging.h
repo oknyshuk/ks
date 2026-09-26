@@ -15,6 +15,7 @@
 #include "color.h"
 #include "icommandline.h"
 #include <stdio.h>
+#include <mutex>
 
 // For XBX_** functions
 
@@ -80,7 +81,6 @@
 //////////////////////////////////////////////////////////////////////////
 
 class CLoggingSystem;
-class CThreadFastMutex;
 
 //-----------------------------------------------------------------------------
 // Maximum length of a sprintf'ed logging message.
@@ -334,7 +334,7 @@ public:
 			{
 				nPrevColor = SetWin32ConsoleColor( &m_ColorContext,
 					pContext->m_Color.r(), pContext->m_Color.g(), pContext->m_Color.b(), 
-					MAX( MAX( pContext->m_Color.r(), pContext->m_Color.g() ), pContext->m_Color.b() ) > 128 );
+					std::max( std::max( pContext->m_Color.r(), pContext->m_Color.g() ), pContext->m_Color.b() ) > 128 );
 			}
 
 			_tprintf( _T("%s"), pMessage );
@@ -612,7 +612,7 @@ private:
 	// Protects all data in this class except the registered channels 
 	// (which are supposed to be registered using the macros at static/global init time).
 	// It is assumed that this mutex is reentrant safe on all platforms.
-	CThreadFastMutex *m_pStateMutex;
+	std::recursive_mutex *m_pStateMutex;
 	
 	// The index of the current "global" state of the logging system.  By default, all threads use this state
 	// for logging unless a given thread has pushed the logging state with bThreadLocal == true.

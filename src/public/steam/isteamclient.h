@@ -71,7 +71,7 @@ typedef int32 HSteamPipe;
 typedef int32 HSteamUser;
 // function prototype
 #define __cdecl
-extern "C" typedef void (__cdecl *SteamAPIWarningMessageHook_t)(int, const char *);
+extern "C" typedef void (*SteamAPIWarningMessageHook_t)(int, const char *);
 extern "C" typedef uint32 ( *SteamAPI_CheckCallbackRegistered_t )( int iCallbackNum );
 #if defined( __SNC__ )
 	#pragma diag_suppress=1700	   // warning 1700: class "%s" has virtual functions but non-virtual destructor

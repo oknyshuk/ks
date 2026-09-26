@@ -32,7 +32,7 @@ public:
 	virtual void OnParticleEffectDeleted( CNewParticleEffect *pParticleEffect );
 
 private:
-	CUtlReference<CNewParticleEffect> m_sensorgrenadeParticleEffect;
+	ks::tracked_ref<CNewParticleEffect> m_sensorgrenadeParticleEffect;
 
 };
 

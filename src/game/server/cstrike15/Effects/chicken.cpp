@@ -13,9 +13,6 @@
 #include "cs_simple_hostage.h"
 #include "cs_player_resource.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 IMPLEMENT_REFLECT_SERVERCLASS( CChicken, DT_CChicken )
 
@@ -535,13 +532,13 @@ void CChicken::Update( void )
 	m_updateTimer.Start( RandomFloat( 0.5f, 1.0f ) );
 
 	// find closest visible player
-	CUtlVector< CBasePlayer * > playerVector;
+	std::vector< CBasePlayer * > playerVector;
 	CollectPlayers( &playerVector, TEAM_ANY, COLLECT_ONLY_LIVING_PLAYERS );
 
 	float closeRangeSq = FLT_MAX;
 	CBasePlayer *close = nullptr;
 
-	for( int i=0; i<playerVector.Count(); ++i )
+	for( int i=0; i<std::ssize( playerVector ); ++i )
 	{
 		Vector toPlayer = playerVector[i]->GetAbsOrigin() - GetAbsOrigin();
 		float rangeSq = toPlayer.LengthSqr();
@@ -1107,7 +1104,7 @@ bool CChicken::GetSimpleGroundHeightWithFloor( const Vector &pos, float *height,
 		// our current nav area also serves as a ground polygon
 		if ( m_lastKnownArea && m_lastKnownArea->IsOverlapping( pos ) )
 		{
-			*height = MAX( ( *height ), m_lastKnownArea->GetZ( pos ) );
+			*height = std::max( ( *height ), m_lastKnownArea->GetZ( pos ) );
 		}
 
 		return true;

@@ -23,9 +23,6 @@
 #include "inputsystem/iinputstacksystem.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // up / down
 #define	PITCH	0
 // left / right
@@ -403,7 +400,7 @@ void CInput::ScaleMouse( int nSlot, float *x, float *y )
 	else if ( m_customaccel.GetInt() == 3 )
 	{
 		float raw_mouse_movement_distance_squared = mx * mx + my * my;
-		float fExp = MAX( 0.0f, ((m_customaccel_exponent.GetFloat() - 1.0f) / 2.0f) );
+		float fExp = std::max( 0.0f, ((m_customaccel_exponent.GetFloat() - 1.0f) / 2.0f) );
 		float accelerated_sensitivity = powf( raw_mouse_movement_distance_squared, fExp ) * mouse_sensitivity;
 
 		*x *= accelerated_sensitivity; 
@@ -674,11 +671,11 @@ void CInput::GetFullscreenMousePos( int *mx, int *my, int *unclampedx /*=NULL*/,
 	}
 
 	// Clamp
-	current_posx = MAX( 0, current_posx );
-	current_posx = MIN( ScreenWidth(), current_posx );
+	current_posx = std::max( 0, current_posx );
+	current_posx = std::min( ScreenWidth(), current_posx );
 
-	current_posy = MAX( 0, current_posy );
-	current_posy = MIN( ScreenHeight(), current_posy );
+	current_posy = std::max( 0, current_posy );
+	current_posy = std::min( ScreenHeight(), current_posy );
 
 	*mx = current_posx;
 	*my = current_posy;

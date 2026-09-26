@@ -4,12 +4,13 @@
 #define DBGINPUT_HDR
 
 #include "threadtools.h"
+#include <mutex>
 
 class CDebugInputThread: public CThread
 {
 public:
-	CThreadMutex m_mx;
-	CUtlString m_inputString;
+	std::recursive_mutex m_mx;
+	std::string m_inputString;
 	bool m_bStop;
 
 	CDebugInputThread()

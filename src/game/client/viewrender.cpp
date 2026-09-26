@@ -29,7 +29,7 @@
 #include "tier0/vprof.h"
 #include "tier0/perfstats.h"
 #include "tier0/threadtools.h"
-#include "tier1/mempool.h"
+#include "tier1/fixed_pool.h"
 #include "vstdlib/jobthread.h"
 #include "datacache/imdlcache.h"
 #include "engine/IEngineTrace.h"
@@ -54,6 +54,7 @@
 #include "renderparm.h"
 #include "modelrendersystem.h"
 #include "tier0/cache_hints.h"
+#include "tier1/intrusive_ptr.h"
 #include "c_env_cascade_light.h"
 
 #define PARTICLE_USAGE_DEMO									// uncomment to get particle bar thing
@@ -72,9 +73,7 @@
 #endif // USE_MONITORS
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 
 static void testfreezeframe_f( void )
 {
@@ -411,7 +410,7 @@ private:
 	virtual bool OnFinalRelease();
 
 	bool m_bPooledAlloc;
-	static CObjectPool<ClientWorldListInfo_t> gm_Pool;
+	static ks::reuse_pool<ClientWorldListInfo_t> gm_Pool;
 };
 
 //-----------------------------------------------------------------------------
@@ -425,24 +424,26 @@ public:
 	{
 
 	}
+	~CWorldListCache()
+	{
+		// Leak at exit: the list pools and the engine may already be gone.
+		while ( !m_Entries.empty() )
+			(void)m_Entries.extract( m_Entries.begin() ).value().release();
+	}
 	void Flush()
 	{
-		for ( int i = m_Entries.FirstInorder(); i != m_Entries.InvalidIndex(); i = m_Entries.NextInorder( i ) )
-		{
-			delete m_Entries[i];
-		}
-		m_Entries.RemoveAll();
+		m_Entries.clear();
 	}
 
 	bool Find( const CViewSetup &viewSetup, VisOverrideData_t *pVisOverrideData, int iForceViewLeaf, IWorldRenderList **ppList, ClientWorldListInfo_t **ppListInfo )
 	{
 		Entry_t lookup( viewSetup, pVisOverrideData, iForceViewLeaf );
 
-		int i = m_Entries.Find( &lookup );
+		auto i = m_Entries.find( &lookup );
 
-		if ( i != m_Entries.InvalidIndex() )
+		if ( i != m_Entries.end() )
 		{
-			Entry_t *pEntry = m_Entries[i];
+			Entry_t *pEntry = i->get();
 			*ppList = InlineAddRef( pEntry->pList );
 			*ppListInfo = InlineAddRef( pEntry->pListInfo );
 			return true;
@@ -453,7 +454,7 @@ public:
 
 	void Add( const CViewSetup &viewSetup, VisOverrideData_t *pVisOverrideData, int iForceViewLeaf, IWorldRenderList *pList, ClientWorldListInfo_t *pListInfo )
 	{
-		m_Entries.Insert( new Entry_t( viewSetup, pVisOverrideData, iForceViewLeaf, pList, pListInfo ) );
+		m_Entries.insert( std::make_unique< Entry_t >( viewSetup, pVisOverrideData, iForceViewLeaf, pList, pListInfo ) );
 	}
 
 private:
@@ -528,21 +529,20 @@ private:
 		ClientWorldListInfo_t *pListInfo;
 	};
 
-	class CEntryComparator
+	struct CEntryComparator
 	{
-	public:
-		// This class has to be implicitly constructible from int due to Valve's implementation of CUtlRbTree.
-		// cppcheck-suppress noExplicitConstructor
-		CEntryComparator( int ) {}
+		using is_transparent = void;
+		static const Entry_t *Get( const Entry_t *p ) { return p; }
+		static const Entry_t *Get( const std::unique_ptr< Entry_t > &p ) { return p.get(); }
 
-		bool operator!() const { return false; }
-		bool operator()( const Entry_t *lhs, const Entry_t *rhs ) const 
+		template < class L, class R >
+		bool operator()( const L &lhs, const R &rhs ) const 
 		{ 
-			return ( memcmp( lhs, rhs, sizeof(Entry_t) - ( sizeof(Entry_t) - offsetof(Entry_t, pList ) ) ) < 0 );
+			return ( memcmp( Get( lhs ), Get( rhs ), sizeof(Entry_t) - ( sizeof(Entry_t) - offsetof(Entry_t, pList ) ) ) < 0 );
 		}
 	};
 
-	CUtlRBTree<Entry_t *, unsigned short, CEntryComparator> m_Entries;
+	std::set< std::unique_ptr< Entry_t >, CEntryComparator > m_Entries;
 };
 
 CWorldListCache g_WorldListCache;
@@ -1207,7 +1207,7 @@ bool CViewRender::ShouldDrawViewModel( bool bDrawViewmodel )
 //-----------------------------------------------------------------------------
 bool CViewRender::UpdateRefractIfNeededByList( CViewModelRenderablesList::RenderGroups_t &list )
 {
-	int nCount = list.Count();
+	int nCount = std::ssize( list );
 	for( int i=0; i < nCount; ++i )
 	{
 		IClientRenderable *pRenderable = list[i].m_pRenderable;
@@ -1232,7 +1232,7 @@ void CViewRender::DrawRenderablesInList( CViewModelRenderablesList::RenderGroups
 	int nSlot = GET_ACTIVE_SPLITSCREEN_SLOT();
 #endif
 	Assert( m_pCurrentlyDrawingEntity == nullptr );
-	int nCount = renderGroups.Count();
+	int nCount = std::ssize( renderGroups );
 	for( int i=0; i < nCount; ++i )
 	{
 		IClientRenderable *pRenderable = renderGroups[i].m_pRenderable;
@@ -1268,7 +1268,7 @@ void CViewRender::DrawViewModelsShadowDepth( const CViewSetup &view )
 	// Move objects that aren't actually of the view model class into a different list so we can render them with normal FOV
 	bool bRemove = ToolsEnabled() && ( !bShouldDrawPlayerViewModel || !bShouldDrawToolViewModels );
 
-	int nOpaque = opaqueList.Count();
+	int nOpaque = std::ssize( opaqueList );
 	for ( int i = nOpaque-1; i >= 0; --i )
 	{
 		IClientRenderable *pRenderable = opaqueList[ i ].m_pRenderable;
@@ -1278,7 +1278,7 @@ void CViewRender::DrawViewModelsShadowDepth( const CViewSetup &view )
 			if ( ( bEntity && !bShouldDrawPlayerViewModel ) || ( !bEntity && !bShouldDrawToolViewModels ) )
 			{
 				// Remove it
-				opaqueList.FastRemove( i );
+				ks::swap_remove( opaqueList, i );
 				continue;
 			}
 		}
@@ -1286,8 +1286,8 @@ void CViewRender::DrawViewModelsShadowDepth( const CViewSetup &view )
 		if ( !dynamic_cast<C_BaseViewModel*>( pRenderable ) )
 		{
 			// Copy into the no VM FOV list
-			opaqueNormalFOVList.AddToTail( opaqueList[ i ] );
-			opaqueList.FastRemove( i );
+			opaqueNormalFOVList.push_back( opaqueList[ i ] );
+			ks::swap_remove( opaqueList, i );
 		}
 	}
 		
@@ -1295,7 +1295,7 @@ void CViewRender::DrawViewModelsShadowDepth( const CViewSetup &view )
 	DrawRenderablesInList( opaqueList );
 		
 	// Render objects that use normal FOV
-	if ( opaqueNormalFOVList.Count() > 0 )
+	if ( std::ssize( opaqueNormalFOVList ) > 0 )
 	{
 		// Update refract for opaque models & draw
 		DrawRenderablesInList( opaqueNormalFOVList );
@@ -1366,7 +1366,7 @@ void CViewRender::DrawViewModels( const CViewSetup &view, bool drawViewmodel )
 	// Move objects that aren't actually of the view model class into a different list so we can render them with normal FOV
 	bool bRemove = ToolsEnabled() && ( !bShouldDrawPlayerViewModel || !bShouldDrawToolViewModels );
 
-	int nOpaque = opaqueList.Count();
+	int nOpaque = std::ssize( opaqueList );
 	for ( int i = nOpaque-1; i >= 0; --i )
 	{
 		IClientRenderable *pRenderable = opaqueList[ i ].m_pRenderable;
@@ -1376,7 +1376,7 @@ void CViewRender::DrawViewModels( const CViewSetup &view, bool drawViewmodel )
 			if ( ( bEntity && !bShouldDrawPlayerViewModel ) || ( !bEntity && !bShouldDrawToolViewModels ) )
 			{
 				// Remove it
-				opaqueList.FastRemove( i );
+				ks::swap_remove( opaqueList, i );
 				continue;
 			}
 		}
@@ -1384,8 +1384,8 @@ void CViewRender::DrawViewModels( const CViewSetup &view, bool drawViewmodel )
 		if ( !dynamic_cast<C_BaseViewModel*>( pRenderable ) )
 		{
 			// Copy into the no VM FOV list
-			opaqueNormalFOVList.AddToTail( opaqueList[ i ] );
-			opaqueList.FastRemove( i );
+			opaqueNormalFOVList.push_back( opaqueList[ i ] );
+			ks::swap_remove( opaqueList, i );
 		}
 #ifdef IRONSIGHT
 		else
@@ -1398,7 +1398,7 @@ void CViewRender::DrawViewModels( const CViewSetup &view, bool drawViewmodel )
 #endif
 	}
 
-	int nTranslucent = translucentList.Count();
+	int nTranslucent = std::ssize( translucentList );
 	for ( int i = nTranslucent-1; i >= 0; --i )
 	{
 		IClientRenderable *pRenderable = translucentList[ i ].m_pRenderable;
@@ -1409,7 +1409,7 @@ void CViewRender::DrawViewModels( const CViewSetup &view, bool drawViewmodel )
 			if ( ( bEntity && !bShouldDrawPlayerViewModel ) || ( !bEntity && !bShouldDrawToolViewModels ) )
 			{
 				// Remove it
-				translucentList.FastRemove( i );
+				ks::swap_remove( translucentList, i );
 				continue;
 			}
 		}
@@ -1417,8 +1417,8 @@ void CViewRender::DrawViewModels( const CViewSetup &view, bool drawViewmodel )
 		if ( !dynamic_cast<C_BaseViewModel*>( pRenderable ) )
 		{
 			// Copy into the no VM FOV list
-			translucentNormalFOVList.AddToTail( translucentList[ i ] );
-			translucentList.FastRemove( i );
+			translucentNormalFOVList.push_back( translucentList[ i ] );
+			ks::swap_remove( translucentList, i );
 		}
 #ifdef IRONSIGHT
 		else
@@ -1451,7 +1451,7 @@ void CViewRender::DrawViewModels( const CViewSetup &view, bool drawViewmodel )
 	render->PopView( pRenderContext, GetFrustum() );
 
 	// Render objects that use normal FOV
-	if ( !bDrawScopeLensMask && (opaqueNormalFOVList.Count() > 0 || translucentNormalFOVList.Count() > 0) )
+	if ( !bDrawScopeLensMask && (std::ssize( opaqueNormalFOVList ) > 0 || std::ssize( translucentNormalFOVList ) > 0) )
 	{
 		viewModelSetup.fov = view.fov;
 		render->Push3DView( pRenderContext, viewModelSetup, 0, nullptr, GetFrustum() );
@@ -1710,10 +1710,10 @@ bool CViewRender::UpdateShadowDepthTexture( ITexture *pRenderTarget, ITexture *p
 	PIXEVENT( pRenderContext, szPIXEventName );
 #endif
 
-	CRefPtr<CShadowDepthView> pShadowDepthView = new CShadowDepthView( this );
+	ks::intrusive_ptr<CShadowDepthView> pShadowDepthView( new CShadowDepthView( this ), ks::adopt_ref );
 	pShadowDepthView->Setup( shadowViewIn, pRenderTarget, pDepthTexture, bRenderWorldAndObjects, bRenderViewModels );
 
-	AddViewToScene( pShadowDepthView );
+	AddViewToScene( pShadowDepthView.get() );
 
 	return true;
 }
@@ -1915,7 +1915,7 @@ static void GetFogColorTransition( fogparams_t *pFogParams, float *pColorPrimary
 
 	if ( pFogParams->lerptime >= gpGlobals->curtime )
 	{
-		float flPercent = MAX( 0, 1.0f - (( pFogParams->lerptime - gpGlobals->curtime ) / pFogParams->duration ) );
+		float flPercent = std::max<std::common_type_t<int, float>>( 0, 1.0f - (( pFogParams->lerptime - gpGlobals->curtime ) / pFogParams->duration ) );
 
 		float flPrimaryColorLerp[3] = { (float)pFogParams->colorPrimaryLerpTo.GetR(), (float)pFogParams->colorPrimaryLerpTo.GetG(), (float)pFogParams->colorPrimaryLerpTo.GetB() };
 		float flSecondaryColorLerp[3] = { (float)pFogParams->colorSecondaryLerpTo.GetR(), (float)pFogParams->colorSecondaryLerpTo.GetG(), (float)pFogParams->colorSecondaryLerpTo.GetB() };
@@ -2020,7 +2020,7 @@ static float GetFogStart( fogparams_t *pFogParams, bool ignoreOverride )
 			{
 				if ( pFogParams->lerptime > gpGlobals->curtime )
 				{
-					float flPercent = MAX( 0, 1.0f - (( pFogParams->lerptime - gpGlobals->curtime ) / pFogParams->duration ) );
+					float flPercent = std::max<std::common_type_t<int, float>>( 0, 1.0f - (( pFogParams->lerptime - gpGlobals->curtime ) / pFogParams->duration ) );
 
 					return FLerp( pFogParams->start, pFogParams->startLerpTo, flPercent );
 				}
@@ -2062,7 +2062,7 @@ static float GetFogEnd( fogparams_t *pFogParams, bool ignoreOverride )
 			{
 				if ( pFogParams->lerptime > gpGlobals->curtime )
 				{
-					float flPercent = MAX( 0, 1.0f - (( pFogParams->lerptime - gpGlobals->curtime ) / pFogParams->duration ) );
+					float flPercent = std::max<std::common_type_t<int, float>>( 0, 1.0f - (( pFogParams->lerptime - gpGlobals->curtime ) / pFogParams->duration ) );
 
 					float flEnd = pFogParams->end.Get();
 					float flLerpTo = pFogParams->endLerpTo.Get();
@@ -2142,7 +2142,7 @@ static float GetFogMaxDensity( fogparams_t *pFogParams, bool ignoreOverride )
 			{
 				if ( pFogParams->lerptime > gpGlobals->curtime )
 				{
-					float flPercent = MAX( 0, 1.0f - (( pFogParams->lerptime - gpGlobals->curtime ) / pFogParams->duration ) );
+					float flPercent = std::max<std::common_type_t<int, float>>( 0, 1.0f - (( pFogParams->lerptime - gpGlobals->curtime ) / pFogParams->duration ) );
 
 					return FLerp( pFogParams->maxdensity, pFogParams->maxdensityLerpTo, flPercent );
 				}
@@ -2349,20 +2349,20 @@ void CViewRender::RenderPlayerSprites()
 	GetClientVoiceMgr()->DrawHeadLabels();
 }
 
-void CViewRender::DrawLetterBoxRectangles( int nSlot, const CUtlVector< vrect_t >& vecLetterBoxRectangles )
+void CViewRender::DrawLetterBoxRectangles( int nSlot, const std::vector< vrect_t >& vecLetterBoxRectangles )
 {
 	CMatRenderContextPtr pRenderContext( materials );
 	pRenderContext->Bind( m_WhiteMaterial );
 	IMesh* pMesh = pRenderContext->GetDynamicMesh( true );
 
 	CMeshBuilder meshBuilder;
-	meshBuilder.Begin( pMesh, MATERIAL_QUADS, vecLetterBoxRectangles.Count() );
+	meshBuilder.Begin( pMesh, MATERIAL_QUADS, std::ssize( vecLetterBoxRectangles ) );
 
 	Color clr( 0, 0, 0, 255 );
 
 	float zpos = -99999;
 
-	for ( int i=0; i<vecLetterBoxRectangles.Count(); ++i )
+	for ( int i=0; i<std::ssize( vecLetterBoxRectangles ); ++i )
 	{
 		const vrect_t &r = vecLetterBoxRectangles[ i ];
 
@@ -2412,7 +2412,7 @@ void CViewRender::DrawLetterBoxRectangles( int nSlot, const CUtlVector< vrect_t 
 |										|
 -----------------------------------------
 */
-void CViewRender::GetLetterBoxRectangles( int nSlot, const CViewSetup &view, CUtlVector< vrect_t >& vecLetterBoxRectangles )
+void CViewRender::GetLetterBoxRectangles( int nSlot, const CViewSetup &view, std::vector< vrect_t >& vecLetterBoxRectangles )
 {
 	// This uses the full screen size, not the hud or 3d inset size
 	int x, y, w, h;
@@ -2436,7 +2436,7 @@ void CViewRender::GetLetterBoxRectangles( int nSlot, const CViewSetup &view, CUt
 		r.width = view.x + 1;
 		r.height = h;
 
-		vecLetterBoxRectangles.AddToTail( r );
+		vecLetterBoxRectangles.push_back( r );
 	}
 
 	// Need rect # 2?
@@ -2447,7 +2447,7 @@ void CViewRender::GetLetterBoxRectangles( int nSlot, const CViewSetup &view, CUt
 		r.width = view.width;
 		r.height = view.y + 1;
 
-		vecLetterBoxRectangles.AddToTail( r );
+		vecLetterBoxRectangles.push_back( r );
 	}
 
 	// Need rect # 3?
@@ -2458,7 +2458,7 @@ void CViewRender::GetLetterBoxRectangles( int nSlot, const CViewSetup &view, CUt
 		r.width = view.width;
 		r.height = bottom - vbottom + 1;
 
-		vecLetterBoxRectangles.AddToTail( r );
+		vecLetterBoxRectangles.push_back( r );
 	}
 
 	// Need rect # 4?
@@ -2469,7 +2469,7 @@ void CViewRender::GetLetterBoxRectangles( int nSlot, const CViewSetup &view, CUt
 		r.width = right - vright + 1;
 		r.height = h;
 
-		vecLetterBoxRectangles.AddToTail( r );
+		vecLetterBoxRectangles.push_back( r );
 	}
 }
 
@@ -2491,9 +2491,9 @@ void CViewRender::SetupMain3DView( int nSlot, const CViewSetup &view, const CVie
 
 	CMatRenderContextPtr pRenderContext( materials );
 	// See if this view needs borders
-	CUtlVector< vrect_t > letterbox;
+	std::vector< vrect_t > letterbox;
 	GetLetterBoxRectangles( nSlot, view, letterbox );
-	if ( letterbox.Count() )
+	if ( !letterbox.empty() )
 	{
 		CViewSetup letterBoxViewSetup;
 		letterBoxViewSetup.x = 0;
@@ -2677,9 +2677,9 @@ void CViewRender::RenderView( const CViewSetup &view, const CViewSetup &hudViewS
 
 	if ( !m_FreezeParams[ slot ].m_bTakeFreezeFrame && m_FreezeParams[ slot ].m_flFreezeFrameUntil > gpGlobals->curtime )
 	{
-		CRefPtr<CFreezeFrameView> pFreezeFrameView = new CFreezeFrameView( this );
+		ks::intrusive_ptr<CFreezeFrameView> pFreezeFrameView( new CFreezeFrameView( this ), ks::adopt_ref );
 		pFreezeFrameView->Setup( view );
-		AddViewToScene( pFreezeFrameView );
+		AddViewToScene( pFreezeFrameView.get() );
 
 		g_bRenderingView = true;
 		AllowCurrentViewAccess( true );
@@ -3353,18 +3353,18 @@ void CViewRender::DrawWorldAndEntities( bool bDrawSkybox, const CViewSetup &view
 		cplane_t glassReflectionPlane;
 		if ( IsReflectiveGlassInView( viewIn, glassReflectionPlane ) )
 		{								    
-			CRefPtr<CReflectiveGlassView> pGlassReflectionView = new CReflectiveGlassView( this );
+			ks::intrusive_ptr<CReflectiveGlassView> pGlassReflectionView( new CReflectiveGlassView( this ), ks::adopt_ref );
 			pGlassReflectionView->Setup( viewIn, VIEW_CLEAR_DEPTH | VIEW_CLEAR_COLOR, bDrawSkybox, fogVolumeInfo, info, glassReflectionPlane );
-			AddViewToScene( pGlassReflectionView );
+			AddViewToScene( pGlassReflectionView.get() );
 
-			CRefPtr<CRefractiveGlassView> pGlassRefractionView = new CRefractiveGlassView( this );
+			ks::intrusive_ptr<CRefractiveGlassView> pGlassRefractionView( new CRefractiveGlassView( this ), ks::adopt_ref );
 			pGlassRefractionView->Setup( viewIn, VIEW_CLEAR_DEPTH | VIEW_CLEAR_COLOR, bDrawSkybox, fogVolumeInfo, info, glassReflectionPlane );
-			AddViewToScene( pGlassRefractionView );
+			AddViewToScene( pGlassRefractionView.get() );
 		}
 
-		CRefPtr<CSimpleWorldView> pNoWaterView = new CSimpleWorldView( this );
+		ks::intrusive_ptr<CSimpleWorldView> pNoWaterView( new CSimpleWorldView( this ), ks::adopt_ref );
 		pNoWaterView->Setup( viewIn, nClearFlags, bDrawSkybox, fogVolumeInfo, info, pCustomVisibility );
-		AddViewToScene( pNoWaterView );
+		AddViewToScene( pNoWaterView.get() );
 
 		EnableWaterDepthFeathing( fogVolumeInfo.m_pFogVolumeMaterial, false );
 
@@ -3384,16 +3384,16 @@ void CViewRender::DrawWorldAndEntities( bool bDrawSkybox, const CViewSetup &view
 	// We can see water of some sort
 	if ( !fogVolumeInfo.m_bEyeInFogVolume )
 	{
-		CRefPtr<CAboveWaterView> pAboveWaterView = new CAboveWaterView( this );
+		ks::intrusive_ptr<CAboveWaterView> pAboveWaterView( new CAboveWaterView( this ), ks::adopt_ref );
 		pAboveWaterView->Setup( viewIn, bDrawSkybox, fogVolumeInfo, info );
-		AddViewToScene( pAboveWaterView );
+		AddViewToScene( pAboveWaterView.get() );
 	}
 	else
 	{
-		CRefPtr<CUnderWaterView> pUnderWaterView = new CUnderWaterView( this );
+		ks::intrusive_ptr<CUnderWaterView> pUnderWaterView( new CUnderWaterView( this ), ks::adopt_ref );
 		pUnderWaterView->Setup( viewIn, bDrawSkybox, fogVolumeInfo, info );
 
-		AddViewToScene( pUnderWaterView );
+		AddViewToScene( pUnderWaterView.get() );
 	}
 
 	EnableWaterDepthFeathing( fogVolumeInfo.m_pFogVolumeMaterial, false );
@@ -3617,7 +3617,7 @@ void CViewRender::ViewDrawScene_Intro( const CViewSetup &view, int nClearFlags, 
 	pRenderContext->LoadIdentity();
 	
 	int passID;
-	for( passID = 0; passID < introData.m_Passes.Count(); passID++ )
+	for( passID = 0; passID < std::ssize( introData.m_Passes ); passID++ )
 	{
 		const IntroDataBlendPass_t& pass = introData.m_Passes[passID];
 		if ( pass.m_Alpha == 0 )
@@ -3822,7 +3822,7 @@ void CViewRender::DrawMonitors( const CViewSetup &cameraView )
 
 ClientWorldListInfo_t *ClientWorldListInfo_t::AllocPooled( const ClientWorldListInfo_t &exemplar )
 {
-	ClientWorldListInfo_t *pResult = gm_Pool.GetObject();
+	ClientWorldListInfo_t *pResult = gm_Pool.get();
 
 	size_t nBytes = AlignValue( ( exemplar.m_LeafCount * (sizeof(WorldListLeafData_t) + sizeof(exemplar.m_pLeafDataList[0]))), 4096 );
 	byte *pMemory = (byte *)pResult->m_pLeafDataList;
@@ -3833,9 +3833,9 @@ ClientWorldListInfo_t *ClientWorldListInfo_t::AllocPooled( const ClientWorldList
 		pResult->AddRef();
 	}
 
-	if ( !pMemory || _msize( pMemory ) < nBytes )
+	if ( !pMemory || g_pMemAlloc->GetSize( pMemory ) < nBytes )
 	{
-		pMemory = (byte *)realloc( pMemory, nBytes );
+		pMemory = (byte *)g_pMemAlloc->Realloc( pMemory, nBytes );
 	}
 
 	pResult->m_pLeafDataList = (WorldListLeafData_t*)pMemory;
@@ -3851,7 +3851,7 @@ bool ClientWorldListInfo_t::OnFinalRelease()
 	if ( m_bPooledAlloc )
 	{
 		Assert( m_pLeafDataList );
-		gm_Pool.PutObject( this );
+		gm_Pool.put( this );
 		return false;
 	}
 	return true;
@@ -3882,7 +3882,7 @@ VPlane* CBase3dView::GetFrustum()
 }
 
 
-CObjectPool<ClientWorldListInfo_t> ClientWorldListInfo_t::gm_Pool;
+ks::reuse_pool<ClientWorldListInfo_t> ClientWorldListInfo_t::gm_Pool;
 
 
 //-----------------------------------------------------------------------------
@@ -4002,7 +4002,7 @@ void CRendering3dView::SetupRenderablesList( int viewID, bool bFastEntityRenderi
 	float fMaxDist = cl_maxrenderable_dist.GetFloat();
 
 	// Shadowing light typically has a smaller farz than cl_maxrenderable_dist
-	setupInfo.m_flRenderDistSq = (viewID == VIEW_SHADOW_DEPTH_TEXTURE) ? MIN(zFar, fMaxDist) : fMaxDist;
+	setupInfo.m_flRenderDistSq = (viewID == VIEW_SHADOW_DEPTH_TEXTURE) ? std::min(zFar, fMaxDist) : fMaxDist;
 	setupInfo.m_flRenderDistSq *= setupInfo.m_flRenderDistSq;
 
 	
@@ -4598,7 +4598,7 @@ static void SetupBonesOnBaseAnimating( C_BaseAnimating *&pBaseAnimating )
 
 static ConVar cl_brushfastpath( "cl_brushfastpath", "1", FCVAR_CHEAT );
 static ConVar r_drawbrushmodels( "r_drawbrushmodels", "1", FCVAR_CHEAT, "Render brush models. 0=Off, 1=Normal, 2=Wireframe" );
-static void DrawOpaqueRenderables_DrawBrushModels( CClientRenderablesList::CEntry **pBrushEntities, int nBrushEntityCount, ERenderDepthMode_t DepthMode, CUtlVector< CClientRenderablesList::CEntry * > *pDeferClippedOpaqueRenderables_Out )
+static void DrawOpaqueRenderables_DrawBrushModels( CClientRenderablesList::CEntry **pBrushEntities, int nBrushEntityCount, ERenderDepthMode_t DepthMode, std::vector< CClientRenderablesList::CEntry * > *pDeferClippedOpaqueRenderables_Out )
 {
 	// Skip if we're not rendering brush model entities
 	if ( !r_drawbrushmodels.GetBool() )
@@ -4609,7 +4609,8 @@ static void DrawOpaqueRenderables_DrawBrushModels( CClientRenderablesList::CEntr
 	if ( cl_brushfastpath.GetBool() )
 	{
 		nRemainingBrushes = 0;
-		CUtlVector< ModelRenderSystemData_t > arrBrushRenderables( (ModelRenderSystemData_t *)stackalloc( nBrushEntityCount * sizeof( ModelRenderSystemData_t ) ), nBrushEntityCount );
+		std::vector< ModelRenderSystemData_t > arrBrushRenderables;
+		arrBrushRenderables.reserve( nBrushEntityCount );
 		for ( int i = 0; i < nBrushEntityCount; ++i )
 		{
 			CClientRenderablesList::CEntry *itEntity = pBrushEntities[i];
@@ -4628,7 +4629,7 @@ static void DrawOpaqueRenderables_DrawBrushModels( CClientRenderablesList::CEntr
 			data.m_pRenderable = itEntity->m_pRenderable;
 			data.m_pModelRenderable = pModelRenderable;
 			data.m_InstanceData = itEntity->m_InstanceData;
-			arrBrushRenderables.AddToTail( data );
+			arrBrushRenderables.push_back( data );
 		}
 
 		ModelRenderMode_t nRenderMode = MODEL_RENDER_MODE_NORMAL;
@@ -4646,7 +4647,7 @@ static void DrawOpaqueRenderables_DrawBrushModels( CClientRenderablesList::CEntr
 		}
 
 
-		g_pModelRenderSystem->DrawBrushModels( arrBrushRenderables.Base(), arrBrushRenderables.Count(), nRenderMode );
+		g_pModelRenderSystem->DrawBrushModels( arrBrushRenderables.data(), std::ssize( arrBrushRenderables ), nRenderMode );
 	}
 
 	if( pDeferClippedOpaqueRenderables_Out )
@@ -4656,7 +4657,7 @@ static void DrawOpaqueRenderables_DrawBrushModels( CClientRenderablesList::CEntr
 			CClientRenderablesList::CEntry* pEntity = pBrushEntities[i];
 			if( pEntity->m_pRenderable && (pEntity->m_pRenderable->GetRenderClipPlane() != nullptr) )
 			{
-				pDeferClippedOpaqueRenderables_Out->AddToTail( pEntity );
+				pDeferClippedOpaqueRenderables_Out->push_back( pEntity );
 			}
 			else
 			{
@@ -4709,7 +4710,7 @@ static void DrawOpaqueRenderables_DrawStaticProps( int nCount, CClientRenderable
 		staticpropmgr->DrawStaticProps( pStatics, pInstances, numScheduled, DepthMode == DEPTH_MODE_SHADOW, vcollide_wireframe.GetBool() );
 }
 
-static void DrawOpaqueRenderables_Range( int nCount, CClientRenderablesList::CEntry **ppEntities, ERenderDepthMode_t DepthMode, CUtlVector< CClientRenderablesList::CEntry * > *pDeferClippedOpaqueRenderables_Out )
+static void DrawOpaqueRenderables_Range( int nCount, CClientRenderablesList::CEntry **ppEntities, ERenderDepthMode_t DepthMode, std::vector< CClientRenderablesList::CEntry * > *pDeferClippedOpaqueRenderables_Out )
 {
 	if( pDeferClippedOpaqueRenderables_Out )
 	{
@@ -4718,7 +4719,7 @@ static void DrawOpaqueRenderables_Range( int nCount, CClientRenderablesList::CEn
 			CClientRenderablesList::CEntry *itEntity = ppEntities[i]; 
 			if( itEntity->m_pRenderable && (itEntity->m_pRenderable->GetRenderClipPlane() != nullptr) )
 			{
-				pDeferClippedOpaqueRenderables_Out->AddToTail( itEntity );
+				pDeferClippedOpaqueRenderables_Out->push_back( itEntity );
 			}
 			else
 			{
@@ -4767,12 +4768,12 @@ static void	DrawOpaqueRenderables_ModelRenderables( int nCount, ModelRenderSyste
 	g_pModelRenderSystem->DrawModels( pModelRenderables, nCount, nRenderMode, bShadowDepthIncludeTranslucentMaterials );
 }
 
-static void	DrawOpaqueRenderables_NPCs( int nCount, CClientRenderablesList::CEntry **ppEntities, ERenderDepthMode_t DepthMode, CUtlVector< CClientRenderablesList::CEntry * > *pDeferClippedOpaqueRenderables_Out )
+static void	DrawOpaqueRenderables_NPCs( int nCount, CClientRenderablesList::CEntry **ppEntities, ERenderDepthMode_t DepthMode, std::vector< CClientRenderablesList::CEntry * > *pDeferClippedOpaqueRenderables_Out )
 {
 	DrawOpaqueRenderables_Range( nCount, ppEntities, DepthMode, pDeferClippedOpaqueRenderables_Out );
 }
 
-void CRendering3dView::DrawOpaqueRenderables( IMatRenderContext *pRenderContext, RenderablesRenderPath_t eRenderPath, ERenderDepthMode_t DepthMode, CUtlVector< CClientRenderablesList::CEntry * > *pDeferClippedOpaqueRenderables_Out, RenderGroup_t nGroup )
+void CRendering3dView::DrawOpaqueRenderables( IMatRenderContext *pRenderContext, RenderablesRenderPath_t eRenderPath, ERenderDepthMode_t DepthMode, std::vector< CClientRenderablesList::CEntry * > *pDeferClippedOpaqueRenderables_Out, RenderGroup_t nGroup )
 {
 	VPROF("CViewRender::DrawOpaqueRenderables" );
 	bool bShadowDepth = ( eRenderPath > 0 );
@@ -4840,8 +4841,10 @@ void CRendering3dView::DrawOpaqueRenderables( IMatRenderContext *pRenderContext,
 		//
 		// Sort everything that's not a static prop
 		//
-		CUtlVector< CClientRenderablesList::CEntry* > arrRenderEntsNpcsFirst( (CClientRenderablesList::CEntry **)stackalloc( nOtherCount * sizeof( CClientRenderablesList::CEntry ) ), nOtherCount );
-		CUtlVector< ModelRenderSystemData_t > arrModelRenderables( (ModelRenderSystemData_t *)stackalloc( ( nOtherCount + nStaticCount ) * sizeof( ModelRenderSystemData_t ) ), nOtherCount + nStaticCount );
+		std::vector< CClientRenderablesList::CEntry* > arrRenderEntsNpcsFirst;
+		arrRenderEntsNpcsFirst.reserve( nOtherCount );
+		std::vector< ModelRenderSystemData_t > arrModelRenderables;
+		arrModelRenderables.reserve( nOtherCount + nStaticCount );
 
 		// Queue up RENDER_GROUP_OPAQUE_ENTITY entities to be rendered later.
 		CClientRenderablesList::CEntry *itEntity;
@@ -4864,7 +4867,7 @@ void CRendering3dView::DrawOpaqueRenderables( IMatRenderContext *pRenderContext,
 					data.m_pRenderable = itEntity->m_pRenderable;
 					data.m_pModelRenderable = pModelRenderable;
 					data.m_InstanceData = itEntity->m_InstanceData;
-					arrModelRenderables.AddToTail( data );
+					arrModelRenderables.push_back( data );
 					continue;
 				}
 
@@ -4873,7 +4876,7 @@ void CRendering3dView::DrawOpaqueRenderables( IMatRenderContext *pRenderContext,
 				
 				if ( pEntity && pEntity->IsNPC() )
 				{
-					arrRenderEntsNpcsFirst.AddToTail( itEntity );
+					arrRenderEntsNpcsFirst.push_back( itEntity );
 					continue;
 				}
 				pOtherRenderables[nRemainingOther++] = itEntity;
@@ -4885,7 +4888,7 @@ void CRendering3dView::DrawOpaqueRenderables( IMatRenderContext *pRenderContext,
 		if ( bUseFastPath )
 		{
 			const int LOOKAHEAD_PREFETCH = 7;
-			int nPrefetchCount = MIN(nStaticCount, LOOKAHEAD_PREFETCH);
+			int nPrefetchCount = std::min(nStaticCount, LOOKAHEAD_PREFETCH);
 			for ( int i = 0; i < nPrefetchCount; i++ )
 			{
 				PREFETCH_128( pStaticProps[i]->m_pRenderable, 0 );
@@ -4912,7 +4915,7 @@ void CRendering3dView::DrawOpaqueRenderables( IMatRenderContext *pRenderContext,
 				data.m_pRenderable = itEntity->m_pRenderable;
 				data.m_pModelRenderable = pModelRenderable;
 				data.m_InstanceData = itEntity->m_InstanceData;
-				arrModelRenderables.AddToTail( data );
+				arrModelRenderables.push_back( data );
 			}
 		}
 		else
@@ -4923,7 +4926,7 @@ void CRendering3dView::DrawOpaqueRenderables( IMatRenderContext *pRenderContext,
 		//
 		// Draw model renderables now (ie. models that use the fast path)
 		//					 
-		DrawOpaqueRenderables_ModelRenderables( arrModelRenderables.Count(), arrModelRenderables.Base(), DepthMode, nGroup == RENDER_GROUP_TRANSLUCENT );
+		DrawOpaqueRenderables_ModelRenderables( std::ssize( arrModelRenderables ), arrModelRenderables.data(), DepthMode, nGroup == RENDER_GROUP_TRANSLUCENT );
 
 		// Turn off z pass here. Don't want non-fastpath models with potentially large dynamic VB requirements overwrite
 		// stuff in the dynamic VB ringbuffer. We're calling EndConsoleZPass again in DrawExecute, but that's not a problem.
@@ -4940,7 +4943,7 @@ void CRendering3dView::DrawOpaqueRenderables( IMatRenderContext *pRenderContext,
 		//
 		// Draw NPCs now. 7LS - TODO - don't draw NPC's into viewmodel cascade on console
 		//
-		DrawOpaqueRenderables_NPCs( arrRenderEntsNpcsFirst.Count(), arrRenderEntsNpcsFirst.Base(), DepthMode, pDeferClippedOpaqueRenderables_Out );
+		DrawOpaqueRenderables_NPCs( std::ssize( arrRenderEntsNpcsFirst ), arrRenderEntsNpcsFirst.data(), DepthMode, pDeferClippedOpaqueRenderables_Out );
 
 
 	//
@@ -4975,13 +4978,13 @@ void CRendering3dView::DrawOpaqueRenderables( IMatRenderContext *pRenderContext,
 
 
 
-void CRendering3dView::DrawDeferredClippedOpaqueRenderables( IMatRenderContext *pRenderContext, RenderablesRenderPath_t eRenderPath, ERenderDepthMode_t DepthMode, CUtlVector< CClientRenderablesList::CEntry * > *pDeferClippedOpaqueRenderables )
+void CRendering3dView::DrawDeferredClippedOpaqueRenderables( IMatRenderContext *pRenderContext, RenderablesRenderPath_t eRenderPath, ERenderDepthMode_t DepthMode, std::vector< CClientRenderablesList::CEntry * > *pDeferClippedOpaqueRenderables )
 {
 	if( pDeferClippedOpaqueRenderables )
 	{
 		//bool bShadowDepth = ( eRenderPath > 0 );
-		int nCount = pDeferClippedOpaqueRenderables->Count();
-		CClientRenderablesList::CEntry **ppEntities = pDeferClippedOpaqueRenderables->Base();
+		int nCount = std::ssize( *pDeferClippedOpaqueRenderables );
+		CClientRenderablesList::CEntry **ppEntities = pDeferClippedOpaqueRenderables->data();
 
 		for ( int i = 0; i < nCount; ++i )
 		{
@@ -5004,20 +5007,20 @@ void CRendering3dView::DrawTranslucentWorldInLeaves( IMatRenderContext *pRenderC
 
 	const ClientWorldListInfo_t& info = *m_pWorldListInfo;
 
-	CUtlVectorFixedGrowable<int, 32> transSortIndexList;
+	ks::small_vector< int, 32 > transSortIndexList;
 	for( int iCurLeafIndex = info.m_LeafCount - 1; iCurLeafIndex >= 0; iCurLeafIndex-- )
 	{
 		if ( info.m_pLeafDataList[iCurLeafIndex].translucentSurfaceCount )
 		{
 			int nActualLeafIndex = info.m_pOriginalLeafIndex ? info.m_pOriginalLeafIndex[ iCurLeafIndex ] : iCurLeafIndex;
 			Assert( nActualLeafIndex != INVALID_LEAF_INDEX );
-			transSortIndexList.AddToTail(nActualLeafIndex);
+			transSortIndexList.push_back( nActualLeafIndex );
 		}
 	}
-	if ( transSortIndexList.Count() )
+	if ( std::ssize( transSortIndexList ) )
 	{
 		// Now draw the surfaces in this leaf
-		render->DrawTranslucentSurfaces( pRenderContext, m_pWorldRenderList, transSortIndexList.Base(), transSortIndexList.Count(), m_DrawFlags );
+		render->DrawTranslucentSurfaces( pRenderContext, m_pWorldRenderList, transSortIndexList.data(), std::ssize( transSortIndexList ), m_DrawFlags );
 	}
 }
 
@@ -5030,7 +5033,7 @@ void CRendering3dView::DrawTranslucentWorldAndDetailPropsInLeaves( IMatRenderCon
 	if ( bShadowDepth )
 		return;
 
-	CUtlVectorFixedGrowable<int, 32> transSortIndexList;
+	ks::small_vector< int, 32 > transSortIndexList;
 	VPROF_BUDGET( "CViewRender::DrawTranslucentWorldAndDetailPropsInLeaves", VPROF_BUDGETGROUP_WORLD_RENDERING );
 	const ClientWorldListInfo_t& info = *m_pWorldListInfo;
 	CClientRenderablesList *pRenderablesList = m_pRenderables;
@@ -5046,25 +5049,25 @@ void CRendering3dView::DrawTranslucentWorldAndDetailPropsInLeaves( IMatRenderCon
 				DetailObjectSystem()->RenderTranslucentDetailObjects( pRenderablesList->m_DetailFade, CurrentViewOrigin(), CurrentViewForward(), CurrentViewRight(), CurrentViewUp(), nDetailLeafCount, pDetailLeafList );
 				nDetailLeafCount = 0;
 			}
-			transSortIndexList.AddToTail(nActualLeafIndex);
+			transSortIndexList.push_back( nActualLeafIndex );
 		}
 
 		// Queue up detail props that existed in this leaf
 		if ( ClientLeafSystem()->ShouldDrawDetailObjectsInLeaf( info.m_pLeafDataList[iCurLeafIndex].leafIndex, m_pMainView->BuildWorldListsNumber() ) )
 		{
-			if ( transSortIndexList.Count() )
+			if ( std::ssize( transSortIndexList ) )
 			{
 				// Now draw the surfaces in this leaf
-				render->DrawTranslucentSurfaces( pRenderContext, m_pWorldRenderList, transSortIndexList.Base(), transSortIndexList.Count(), nEngineDrawFlags );
+				render->DrawTranslucentSurfaces( pRenderContext, m_pWorldRenderList, transSortIndexList.data(), std::ssize( transSortIndexList ), nEngineDrawFlags );
 			}
 			pDetailLeafList[nDetailLeafCount] = info.m_pLeafDataList[iCurLeafIndex].leafIndex;
 			++nDetailLeafCount;
 		}
 	}
-	if ( transSortIndexList.Count() )
+	if ( std::ssize( transSortIndexList ) )
 	{
 		// Now draw the surfaces in this leaf
-		render->DrawTranslucentSurfaces( pRenderContext, m_pWorldRenderList, transSortIndexList.Base(), transSortIndexList.Count(), nEngineDrawFlags );
+		render->DrawTranslucentSurfaces( pRenderContext, m_pWorldRenderList, transSortIndexList.data(), std::ssize( transSortIndexList ), nEngineDrawFlags );
 	}
 }
 
@@ -5290,7 +5293,8 @@ void CRendering3dView::DrawTranslucentRenderables( bool bInSkybox, bool bShadowD
 		int iCurTranslucentEntity = nTranslucentRenderableCount - 1;
 
 		int *pFastPathIndex = (int*)stackalloc( nTranslucentRenderableCount * sizeof( int ) );
-		CUtlVector< ModelRenderSystemData_t > fastPathData( (ModelRenderSystemData_t *)stackalloc( nTranslucentRenderableCount * sizeof( ModelRenderSystemData_t ) ), nTranslucentRenderableCount );
+		std::vector< ModelRenderSystemData_t > fastPathData;
+		fastPathData.reserve( nTranslucentRenderableCount );
 		TranslucentInstanceRenderData_t *pRenderData = (TranslucentInstanceRenderData_t*)stackalloc( nTranslucentRenderableCount * sizeof( TranslucentInstanceRenderData_t ) );
 		TranslucentTempData_t tempData;
 		tempData.m_pColorMeshHandles = ( DataCacheHandle_t * )stackalloc( nTranslucentRenderableCount * sizeof( DataCacheHandle_t ) );
@@ -5308,7 +5312,7 @@ void CRendering3dView::DrawTranslucentRenderables( bool bInSkybox, bool bShadowD
 				// FIXME: Deal with brush models in the translucent path
 				if ( pModelRenderable && modelinfo->GetModelType( pRenderable->GetModel() ) == mod_studio )
 				{
-					int j = fastPathData.AddToTail( );
+					int j = std::ssize( fastPathData ); fastPathData.emplace_back();
 					ModelRenderSystemData_t &data = fastPathData[j];
 					data.m_pRenderable = pRenderable;
 					data.m_pModelRenderable = pModelRenderable;
@@ -5321,7 +5325,7 @@ void CRendering3dView::DrawTranslucentRenderables( bool bInSkybox, bool bShadowD
 				}
 			}
 
-			g_pModelRenderSystem->ComputeTranslucentRenderData( fastPathData.Base(), fastPathData.Count(), pRenderData, &tempData );
+			g_pModelRenderSystem->ComputeTranslucentRenderData( fastPathData.data(), std::ssize( fastPathData ), pRenderData, &tempData );
 		}
 
 		bool bRenderingWaterRenderTargets = ( m_DrawFlags & ( DF_RENDER_REFRACTION | DF_RENDER_REFLECTION ) ) ? true : false;
@@ -6047,8 +6051,8 @@ void CFreezeFrameView::Draw( void )
 
 		int iFadeAlpha = FREEZECAM_SNAPSHOT_FADE_SPEED * ( g_flFreezeFlash[ m_nSlot ] - gpGlobals->curtime );
 		
-		iFadeAlpha = MIN( iFadeAlpha, 255 );
-		iFadeAlpha = MAX( 0, iFadeAlpha );
+		iFadeAlpha = std::min( iFadeAlpha, 255 );
+		iFadeAlpha = std::max( 0, iFadeAlpha );
 		
 		pMaterial->AlphaModulate( iFadeAlpha * ( 1.0f / 255.0f ) );
 		pMaterial->ColorModulate( 1.0f,	1.0f, 1.0f );
@@ -6376,8 +6380,9 @@ void CBaseWorldView::DrawExecute( float waterHeight, view_id_t viewID, float wat
 
 	SYNC_BUILDRENDERABLES_JOB( savedViewID )
 
-	CUtlVector< CClientRenderablesList::CEntry * > arrFastClippedOpaqueRenderables( (CClientRenderablesList::CEntry **)stackalloc( m_pRenderables->m_RenderGroupCounts[RENDER_GROUP_OPAQUE] * sizeof( CClientRenderablesList::CEntry * ) ), m_pRenderables->m_RenderGroupCounts[RENDER_GROUP_OPAQUE] );
-	CUtlVector< CClientRenderablesList::CEntry * > *pArrFastClippedOpaqueRenderables = (r_deferopaquefastclipped.GetBool() && !m_bDrawWorldNormal && r_entityclips.GetBool() && materials->UsingFastClipping()) ? &arrFastClippedOpaqueRenderables : nullptr;
+	std::vector< CClientRenderablesList::CEntry * > arrFastClippedOpaqueRenderables;
+	arrFastClippedOpaqueRenderables.reserve( m_pRenderables->m_RenderGroupCounts[RENDER_GROUP_OPAQUE] );
+	std::vector< CClientRenderablesList::CEntry * > *pArrFastClippedOpaqueRenderables = (r_deferopaquefastclipped.GetBool() && !m_bDrawWorldNormal && r_entityclips.GetBool() && materials->UsingFastClipping()) ? &arrFastClippedOpaqueRenderables : nullptr;
 
 	m_DrawFlags &= ~DF_SKIP_WORLD_DECALS_AND_OVERLAYS;
 	if ( m_DrawFlags & DF_DRAW_ENTITITES )
@@ -7327,7 +7332,7 @@ void CConcurrentViewData::Purge()
 	SafeRelease( m_pRenderablesList );
 	SafeRelease( m_pBuildWorldListJob );
 	SafeRelease( m_pBuildRenderablesListJob );
-	m_AreaFrustums.RemoveAll();
+	m_AreaFrustums.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -7367,11 +7372,11 @@ void CConcurrentViewBuilder::Purge()
 	// in case we have a mismatched between the build and draw pass
 	// ie a job has been added in the build pass but we are not waiting for
 	// in the draw pass (ie it did not get drawn)
-	for (int i = 0; i < mJobsAddedToThreadPool.Count(); i++)
+	for (int i = 0; i < std::ssize( mJobsAddedToThreadPool ); i++)
 	{
 		mJobsAddedToThreadPool[i]->WaitForFinishAndRelease();
 	}
-	mJobsAddedToThreadPool.RemoveAll();
+	mJobsAddedToThreadPool.clear();
 	
 	
 	for( int lp = 0; lp < MAX_CONCURRENT_BUILDVIEWS; lp++ )
@@ -7472,7 +7477,7 @@ const CVolumeCuller* CConcurrentViewBuilder::GetBuildViewVolumeCuller( int build
 	}
 }
 
-void CConcurrentViewBuilder::CacheFrustumData( const Frustum_t& frustum, const CUtlVector< Frustum_t, CUtlMemoryAligned< Frustum_t,16 > >& aeraFrustums )
+void CConcurrentViewBuilder::CacheFrustumData( const Frustum_t& frustum, const std::vector< Frustum_t >& aeraFrustums )
 {
 	if( m_buildViewID == -1 )
 	{
@@ -7488,7 +7493,7 @@ void CConcurrentViewBuilder::CacheFrustumData( const Frustum_t& frustum, const C
 
 		// Setup frustum list used by the ClientLeafSystem
 		pViewData->m_frustumList[0] = &pViewData->m_Frustum;
-		int count = MIN( MAX_MAP_AREAS-1, pViewData->m_AreaFrustums.Count() );
+		int count = std::min<std::common_type_t<int, std::common_type_t<long int, long int>>>( MAX_MAP_AREAS-1, std::ssize( pViewData->m_AreaFrustums ) );
 		for ( int i = 0; i < count; i++ )
 		{
 			if ( engine->ShouldUseAreaFrustum( i ) )
@@ -7521,13 +7526,13 @@ void CConcurrentViewBuilder::CacheFrustumData( void )
 		{
 			for ( int i = 1; i < numFrustums; ++i )
 			{
-				pViewData->m_AreaFrustums.AddToTail( *pViewData->m_frustumList[i] );
+				pViewData->m_AreaFrustums.push_back( *pViewData->m_frustumList[i] );
 			}
 		}
 
 		// Regenerate frustum list
 		pViewData->m_frustumList[0] = &pViewData->m_Frustum;
-		int count = MIN( MAX_MAP_AREAS-1, pViewData->m_AreaFrustums.Count() );
+		int count = std::min<std::common_type_t<int, std::common_type_t<long int, long int>>>( MAX_MAP_AREAS-1, std::ssize( pViewData->m_AreaFrustums ) );
 		for ( int i = 0; i < count; i++ )
 		{
 			pViewData->m_frustumList[i+1] = &pViewData->m_AreaFrustums[i];
@@ -7549,7 +7554,7 @@ const Frustum_t* CConcurrentViewBuilder::GetBuildViewFrustum( int buildViewID /*
 	}
 }
 
-const CUtlVector< Frustum_t, CUtlMemoryAligned< Frustum_t,16 > >* CConcurrentViewBuilder::GetBuildViewAeraFrustums( int buildViewID /*= -1*/ ) const
+const std::vector< Frustum_t >* CConcurrentViewBuilder::GetBuildViewAeraFrustums( int buildViewID /*= -1*/ ) const
 {
 	int viewID = ( buildViewID >= 0 ) ? buildViewID : m_buildViewID;	
 	if( viewID == -1 )
@@ -7895,7 +7900,7 @@ void CConcurrentViewBuilder::WaitForCurrentSequentialJobAndRunPending()
 void CConcurrentViewBuilder::AddJobToThreadPool( CJob* pJob )
 {
 	// Keeps track of all jobs added to the thread pool
-	mJobsAddedToThreadPool.AddToTail( pJob );
+	mJobsAddedToThreadPool.push_back( pJob );
 	InlineAddRef( pJob );	// Get released in purge
 	
 	// Set JF_QUEUE flag to make sure that the job is not executed in CThreadPool::AddJob 
@@ -7915,7 +7920,7 @@ CConcurrentViewBuilder::SequentialJobs::SequentialJobs( CJob* pJob /* = NULL */ 
 
 CConcurrentViewBuilder::SequentialJobs::~SequentialJobs()
 {
-	for ( int i = 0; i < m_jobs.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_jobs ); i++ )
 	{
 		SafeRelease( m_jobs[i] );
 	}
@@ -7923,13 +7928,13 @@ CConcurrentViewBuilder::SequentialJobs::~SequentialJobs()
 
 void CConcurrentViewBuilder::SequentialJobs::AddJob( CJob* pJob )
 {
-	m_jobs.AddToTail( pJob );
+	m_jobs.push_back( pJob );
 	InlineAddRef( pJob );
 }
 
 JobStatus_t CConcurrentViewBuilder::SequentialJobs::DoExecute()
 {
-	for ( int i = 0; i < m_jobs.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_jobs ); i++ )
 	{
 		m_jobs[i]->Execute();
 	}

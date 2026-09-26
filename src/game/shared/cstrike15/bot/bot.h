@@ -241,7 +241,7 @@ public:
 	virtual char *Cmd_Argv( int argc );							///< Retrieves a specified token
 
 private:
-	CUtlVector< char * > m_args;
+	std::vector< char * > m_args;
 
 protected:
 	const BotProfile *m_profile;								///< the "personality" profile of this bot
@@ -781,7 +781,7 @@ inline bool CBot< PlayerType >::IsUsingScope( void )
 template < class PlayerType >
 inline void CBot< PlayerType >::BuildUserCmd( CUserCmd& cmd, const QAngle& viewangles, float forwardmove, float sidemove, float upmove, int buttons, byte impulse )
 {
-	Q_memset( &cmd, 0, sizeof( cmd ) );
+	cmd.Reset();
 	cmd.command_number = gpGlobals->tickcount;
 	cmd.forwardmove = forwardmove;
 	cmd.sidemove = sidemove;
@@ -872,11 +872,11 @@ inline bool CBot< PlayerType >::ClientCommand( const CCommand &args )
 {
 	// Remove old args
 	int i;
-	for ( i=0; i<m_args.Count(); ++i )
+	for ( i=0; i<std::ssize( m_args ); ++i )
 	{
 		delete[] m_args[i];
 	}
-	m_args.RemoveAll();
+	m_args.clear();
 
 	// parse individual args
 	const char *cmd = args.GetCommandString();
@@ -901,7 +901,7 @@ inline bool CBot< PlayerType >::ClientCommand( const CCommand &args )
 		if (!cmd)
 			break;
 
-		m_args.AddToTail( CloneString( SharedGetToken() ) );
+		m_args.push_back( CloneString( SharedGetToken() ) );
 	}
 
 	// and pass to the base class
@@ -916,7 +916,7 @@ inline bool CBot< PlayerType >::ClientCommand( const CCommand &args )
 template < class PlayerType >
 inline int CBot< PlayerType >::Cmd_Argc()
 {
-	return m_args.Count();
+	return std::ssize( m_args );
 }
 
 
@@ -927,7 +927,7 @@ inline int CBot< PlayerType >::Cmd_Argc()
 template < class PlayerType >
 inline char * CBot< PlayerType >::Cmd_Argv( int argc )
 {
-	if ( argc < 0 || argc >= m_args.Count() )
+	if ( argc < 0 || argc >= std::ssize( m_args ) )
 		return nullptr;
 	return m_args[argc];
 }

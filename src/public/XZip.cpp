@@ -121,9 +121,7 @@ static ZRESULT lasterrorZ=ZR_OK;
 #include "tier1/strtools.h"
 #include "tier0/dbg.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 
 typedef unsigned char uch;      // unsigned 8-bit value
 typedef unsigned short ush;     // unsigned 16-bit value
@@ -663,14 +661,8 @@ void AssertXZip(TState &state,bool cond, const char *msg)
 	state.err=msg;
 }
 
-// __cdecl appears to be undefined under linux.  Define it for the following functions to compile
-#if defined( __cdecl )
-  #undef __cdecl
-#endif
-#define __cdecl 
-
-void __cdecl Trace(const char *x, ...) {va_list paramList; va_start(paramList, x); paramList; va_end(paramList);}
-void __cdecl Tracec(bool ,const char *x, ...) {va_list paramList; va_start(paramList, x); paramList; va_end(paramList);}
+void Trace(const char *x, ...) {va_list paramList; va_start(paramList, x); paramList; va_end(paramList);}
+void Tracec(bool ,const char *x, ...) {va_list paramList; va_start(paramList, x); paramList; va_end(paramList);}
 
 
 // ===========================================================================
@@ -2295,7 +2287,7 @@ ZRESULT TZip::Create(void *z,unsigned int len,DWORD flags)
 			obuf=(char*)z;
 		else
 		{ 
-			obuf = (char*) calloc( len, 1 );
+			obuf = (char*) MemAlloc_Calloc( len, 1 );
 			hmapout = (void*)-1; // sentinel to let close know it's a file in posix.
 			if ( !obuf )
 				return ZR_NOALLOC;
@@ -2359,7 +2351,7 @@ ZRESULT TZip::Close()
   // then we do it now
   ZRESULT res=ZR_OK; if (!hasputcen) res=AddCentral(); hasputcen=true;
   if (obuf!=0 && hmapout!=0) 
-	free(obuf);
+	g_pMemAlloc->Free(obuf);
   obuf=0;
   return res;
 }

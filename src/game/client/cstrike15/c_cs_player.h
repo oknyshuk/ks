@@ -138,7 +138,7 @@ public:
 		m_bWeightlistInitialized = false;
 		m_bEnabled = false;
 		m_bCapturePending = false;
-		m_vecSubordinateSnapshots.RemoveAll();
+		m_vecSubordinateSnapshots.clear();
 		m_flDecayIdealDuration = 0.25f;
 		m_flDecayStartTime = 0;
 		m_flDecayEndTime = 0;
@@ -152,9 +152,9 @@ public:
 
 	void AddSubordinate( CBoneSnapshot* pSnapshot )
 	{
-		if ( !m_vecSubordinateSnapshots.HasElement(pSnapshot) )
+		if ( !ks::contains( m_vecSubordinateSnapshots, pSnapshot ) )
 		{
-			m_vecSubordinateSnapshots[ m_vecSubordinateSnapshots.AddToTail() ] = pSnapshot;
+			m_vecSubordinateSnapshots.emplace_back() = pSnapshot;
 		}
 	}
 
@@ -183,7 +183,7 @@ private:
 	float			m_flLastBoneSetupTimeIndex;
 	int				m_nStudioRenderHdrId;
 
-	CUtlVector<CBoneSnapshot*> m_vecSubordinateSnapshots;
+	std::vector< CBoneSnapshot* > m_vecSubordinateSnapshots;
 
 	void			CaptureSnapshot( void );
 	void			PlaybackSnapshot( void );
@@ -233,7 +233,7 @@ public:
 
 protected:
 	// List of sounds to play at start of round
-	CUtlVector<RoundStartSoundPlaybackData>	m_SoundEvents;
+	std::vector< RoundStartSoundPlaybackData >	m_SoundEvents;
 
 	// Time from start of round when the next added sound event can play
 	float	m_NextAvailableTime;
@@ -395,7 +395,7 @@ public:
 		
 	bool CreateMove( float flInputSampleTime, CUserCmd *pCmd );
 
-	CUtlVector< C_BaseParticleEntity* > m_SmokeGrenades;
+	std::vector< C_BaseParticleEntity* > m_SmokeGrenades;
 
 	virtual bool ShouldDraw( void );
 	virtual bool UpdateDispatchLayer( CAnimationLayer *pLayer, CStudioHdr *pWeaponStudioHdr, int iSequence ) OVERRIDE;
@@ -465,7 +465,7 @@ public:
 
 	void ClearSoundEvents()
 	{
-		m_SoundEvents.RemoveAll();
+		m_SoundEvents.clear();
 	}
 
 	CsMusicType_t GetCurrentMusic() { return m_nCurrentMusic; } const
@@ -523,7 +523,7 @@ public:
 	virtual void SetModelPointer( const model_t *pModel );
 
 protected:
-	CUtlReference< CNewParticleEffect > m_radioHeadIconParticleEffect;
+	ks::tracked_ref< CNewParticleEffect > m_radioHeadIconParticleEffect;
 
 // Called by shared code.
 public:
@@ -769,7 +769,7 @@ public:
 	bool IsFlashBangActive( void ) { return ( m_flFlashDuration > 0.0f ) && ( gpGlobals->curtime < m_flFlashBangTime ); }
 	bool IsFlashBangBuildUpActive( void ) { return m_bFlashBuildUp && IsFlashBangActive(); }
 	float GetFlashStartTime( void ) { return (m_flFlashBangTime - m_flFlashDuration); }
-	float GetFlashTimeElapsed( void ) { return MAX( gpGlobals->curtime - GetFlashStartTime(), 0.0f ); }
+	float GetFlashTimeElapsed( void ) { return std::max( gpGlobals->curtime - GetFlashStartTime(), 0.0f ); }
 
 	bool IsBlinded( void ) { return (m_flFlashBangTime - 1.0f) > gpGlobals->curtime; }
 	CNetworkVar( float, m_flFlashMaxAlpha, [[= ks::reflect::Net{} ]] );
@@ -852,7 +852,7 @@ public:
 	[[= ks::reflect::Net{} ]] int m_iMatchStats_UtilityDamage[ MAX_MATCH_STATS_ROUNDS ];
 	[[= ks::reflect::Net{} ]] int m_iMatchStats_EnemiesFlashed[ MAX_MATCH_STATS_ROUNDS ];
 
-	CUtlReference<CNewParticleEffect> m_ARScreenGlowEffect;
+	ks::tracked_ref<CNewParticleEffect> m_ARScreenGlowEffect;
 
 private:
 	void AnimateGlows( void );
@@ -981,7 +981,7 @@ private:
 		Vector m_SoundOrigin;
 		bool m_bHasSoundOrigin;
 	};
-	CUtlLinkedList<CCSSoundEvent,int> m_SoundEvents;
+	std::vector<CCSSoundEvent> m_SoundEvents;
 
 	// List of sounds to play at start of round
 	CStartOfRoundAudioPlayback	m_StartOfRoundSoundEvents;
@@ -992,13 +992,13 @@ private:
 	float m_flMusicRoundStartTime;
 	
 	// This is the list of addons hanging off the guy (grenades, C4, nightvision, etc).
-	CUtlLinkedList<CAddonModel, int> m_AddonModels;
+	std::vector<CAddonModel> m_AddonModels;
 	int m_iLastAddonBits;
 	int m_iLastPrimaryAddon;
 	int m_iLastSecondaryAddon;
 
-	CUtlReference<CNewParticleEffect> m_hC4AddonLED;
-	CUtlReference<CNewParticleEffect> m_hC4WeaponLED;
+	ks::tracked_ref<CNewParticleEffect> m_hC4AddonLED;
+	ks::tracked_ref<CNewParticleEffect> m_hC4WeaponLED;
 
 	[[= ks::reflect::Net{} ]] [[= ks::reflect::Proxy<&C_CSPlayer::RecvProxy_CycleLatch, ks::reflect::WireSide::Recv>{} ]] int m_cycleLatch;				// server periodically updates this to fix up our anims, here it is a 4 bit fixed point
 	float m_serverIntendedCycle;	// server periodically updates this to fix up our anims, here it is the float we want, or -1 for no override
@@ -1138,14 +1138,14 @@ private:
 public:
 	void	ClearAllBulletHitModels( void );
 	void	UpdateAllBulletHitModels( void );
-	CUtlVector< C_BulletHitModel* > m_vecBulletHitModels;
+	std::vector< C_BulletHitModel* > m_vecBulletHitModels;
 
 	// This code allowed us to measure discrepency between client and server bullet hits.
 	// It became obsolete when we started using a separate seed for client and server
 	// to eliminate 'rage' hacks.
 	//
- 	CUtlVector< clientHitVerify_t > m_vecBulletVerifyListClient;
- 	CUtlVector< clientHitVerify_t > m_vecBulletVerifyListServer;
+ 	std::vector< clientHitVerify_t > m_vecBulletVerifyListClient;
+ 	std::vector< clientHitVerify_t > m_vecBulletVerifyListServer;
  
  	void	CompareClientServerBulletHits( void );
  

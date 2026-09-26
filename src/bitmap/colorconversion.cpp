@@ -11,7 +11,6 @@
 #include <memory.h>
 #include "mathlib/mathlib.h"
 #include "mathlib/vector.h"
-#include "tier1/utlmemory.h"
 #include "tier1/strtools.h"
 #include "mathlib/compressed_vector.h"
 #include "nvtc.h"
@@ -22,9 +21,6 @@ typedef int32 *DWORD_PTR;
 
 #define STB_DXT_IMPLEMENTATION
 #include "bitmap/stb_dxt.h"
-
-// Should be last include
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Various important function types for each color format
@@ -991,9 +987,9 @@ void ConvertImageFormat_RGB323232F_To_RGBA16161616( float *pSrcImage, unsigned s
 	for ( ; pSrcScan < pSrcEnd; pSrcScan += 3, pDstScan += 4 )
 	{
 
-		pDstScan[0] = ( unsigned short )MIN( 65535.0f, ( pSrcScan[0] * ( ( ( float )( 1 << 12 ) ) ) ) );
-		pDstScan[1] = ( unsigned short )MIN( 65535.0f, ( pSrcScan[1] * ( ( ( float )( 1 << 12 ) ) ) ) );
-		pDstScan[2] = ( unsigned short )MIN( 65535.0f, ( pSrcScan[2] * ( ( ( float )( 1 << 12 ) ) ) ) );
+		pDstScan[0] = ( unsigned short )std::min( 65535.0f, ( pSrcScan[0] * ( ( ( float )( 1 << 12 ) ) ) ) );
+		pDstScan[1] = ( unsigned short )std::min( 65535.0f, ( pSrcScan[1] * ( ( ( float )( 1 << 12 ) ) ) ) );
+		pDstScan[2] = ( unsigned short )std::min( 65535.0f, ( pSrcScan[2] * ( ( ( float )( 1 << 12 ) ) ) ) );
 		pDstScan[3] = 65535;
 	}
 }
@@ -1162,8 +1158,8 @@ void ConvertImageFormat_RGBA16161616F_To_RGBA16161616( float16 *pSrcImage, unsig
 			float val;
 			val = pSrcScan[i].GetFloat();
 			val *= ( float )( 1 << 12 );
-			val = MAX( val, 0 );
-			val = MIN( val, 65535.0f );
+			val = std::max<std::common_type_t<float, int>>( val, 0 );
+			val = std::min( val, 65535.0f );
 			pDstScan[i] = ( unsigned short )val;
 		}
 	}
@@ -2359,10 +2355,10 @@ void RGBA16161616ToRGBA8888( const uint8 *src_, uint8 *dst, int numPixels )
 	unsigned short *pEndSrc = src + numPixels * 4;
 	for ( ; src < pEndSrc; src += 4, dst += 4 )
 	{
-		dst[0] = MIN( 255, src[0] >> 4 );
-		dst[1] = MIN( 255, src[1] >> 4 );
-		dst[2] = MIN( 255, src[2] >> 4 );
-		dst[3] = MIN( 255, src[3] >> 8 );
+		dst[0] = std::min( 255, src[0] >> 4 );
+		dst[1] = std::min( 255, src[1] >> 4 );
+		dst[2] = std::min( 255, src[2] >> 4 );
+		dst[3] = std::min( 255, src[3] >> 8 );
 	}
 }
 

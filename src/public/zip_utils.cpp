@@ -8,26 +8,30 @@
 #define INVALID_HANDLE_VALUE (void *)0
 #define FILE_BEGIN SEEK_SET
 #define FILE_END SEEK_END
-#include "utlbuffer.h"
-#include "utllinkedlist.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
+#include "utlvector.h"
 #include "zip_utils.h"
 #include "zip_uncompressed.h"
 #include "checksum_crc.h"
 #include "utlstring.h"
+#include <iterator>
+#include <map>
+#include <string>
+#include <string_view>
+#include <unordered_map>
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 
 // Data descriptions for byte swapping - only needed
 // for structures that are written to file for use by the game.
 class CWin32File
 {
 public:
-	static HANDLE CreateTempFile( CUtlString &WritePath, CUtlString &FileName )
+	static HANDLE CreateTempFile( std::string &WritePath, std::string &FileName )
 	{
 		char tempFileName[MAX_PATH];
-		if ( WritePath.IsEmpty() )
+		if ( WritePath.empty() )
 		{
 			// use a safe name in the cwd
 			char *pBuffer = tmpnam( nullptr );
@@ -52,7 +56,7 @@ public:
 			time_t now = time( nullptr );
 			struct tm *tm = localtime( &now );
 			V_sprintf_safe( uniqueFilename, "%d_%d_%d_%d_%d.tmp", tm->tm_wday, tm->tm_hour, tm->tm_min, tm->tm_sec, ++counter );                                                \
-			V_ComposeFileName( WritePath.String(), uniqueFilename, tempFileName, sizeof( tempFileName ) );
+			V_ComposeFileName( WritePath.c_str(), uniqueFilename, tempFileName, sizeof( tempFileName ) );
 		}
 
 		FileName = tempFileName;
@@ -86,7 +90,7 @@ public:
 
 //-----------------------------------------------------------------------------
 // Purpose: Interface to allow abstraction of zip file output methods, and
-// avoid duplication of code. Files may be written to a CUtlBuffer or a filestream
+// avoid duplication of code. Files may be written to a byte_writer or a filestream
 //-----------------------------------------------------------------------------
 abstract_class IWriteStream
 {
@@ -96,21 +100,21 @@ public:
 };
 
 //-----------------------------------------------------------------------------
-// Purpose: Wrapper for CUtlBuffer methods
+// Purpose: Wrapper for byte_writer methods
 //-----------------------------------------------------------------------------
 class CBufferStream : public IWriteStream
 {
 public:
-	CBufferStream( CUtlBuffer& buff ) : IWriteStream(), m_buff( &buff ) {}
+	CBufferStream( ks::byte_writer &buff ) : IWriteStream(), m_buff( &buff ) {}
 
 	// Implementing IWriteStream method
-	virtual void Put( const void* pMem, int size ) { m_buff->Put( pMem, size ); }
+	virtual void Put( const void* pMem, int size ) { m_buff->write_bytes( pMem, size ); }
 
 	// Implementing IWriteStream method
-	virtual unsigned int Tell( void ) { return m_buff->TellPut(); }
+	virtual unsigned int Tell( void ) { return m_buff->tell(); }
 
 private:
-	CUtlBuffer *m_buff;
+	ks::byte_writer *m_buff;
 };
 
 //-----------------------------------------------------------------------------
@@ -178,8 +182,8 @@ public:
 	bool			FileExistsInZip( const char *relativename );
 
 	// Reads a file from a zip file
-	bool			ReadFileFromZip( const char *relativename, bool bTextMode, CUtlBuffer &buf );
-	bool			ReadFileFromZip( HANDLE hZipFile, const char *relativename, bool bTextMode, CUtlBuffer &buf );
+	std::optional< std::vector< std::byte > >	ReadFileFromZip( const char *relativename, bool bTextMode );
+	std::optional< std::vector< std::byte > >	ReadFileFromZip( HANDLE hZipFile, const char *relativename, bool bTextMode );
 
 	// Initialize the zip file from a buffer
 	void			ParseFromBuffer( void *buffer, int bufferlength );
@@ -196,7 +200,7 @@ public:
 	int				GetNextFilename( int id, char *pBuffer, int bufferSize, int &fileSize );
 
 	// Write the zip to a buffer
-	void			SaveToBuffer( CUtlBuffer& buffer );
+	void			SaveToBuffer( ks::byte_writer &buffer );
 	// Write the zip to a filestream
 	void			SaveToDisk( FILE *fout );
 	void			SaveToDisk( HANDLE hOutFile );
@@ -213,9 +217,16 @@ private:
 		MAX_FILES_IN_ZIP = 32768,
 	};
 
+	// Entry name, pooled in m_Names. m_nOrder is first-seen order, which unsorted zips are written in.
+	struct ZipName_t
+	{
+		const char			*m_pName = "";
+		unsigned int		m_nOrder = 0;
+	};
+
 	typedef struct
 	{
-		CUtlSymbol			m_Name;
+		ZipName_t			m_Name;
 		unsigned int		filepos;
 		int					filelen;
 	} TmpFileInfo_t;
@@ -238,12 +249,8 @@ private:
 
 					CZipEntry( const CZipEntry& src );
 
-		// RB tree compare function
-		static bool ZipFileLessFunc( CZipEntry const& src1, CZipEntry const& src2 );
-		static bool ZipFileLessFunc_CaselessSort( CZipEntry const& src1, CZipEntry const& src2 );
-
 		// Name of entry
-		CUtlSymbol		m_Name;
+		ZipName_t		m_Name;
 
 		// Lenth of data element
 		int				m_Length;
@@ -260,14 +267,37 @@ private:
 		unsigned int	m_SourceDiskOffset;
 	};
 
-	// For fast name lookup and sorting
-	CUtlRBTree< CZipEntry, int > m_Files;
+	// Orders by first-seen order, or caselessly by name when sorting by name.
+	struct CZipNameLess
+	{
+		bool m_bCaseless;
+		bool operator()( const ZipName_t &a, const ZipName_t &b ) const
+		{
+			return m_bCaseless ? V_stricmp( a.m_pName, b.m_pName ) < 0 : a.m_nOrder < b.m_nOrder;
+		}
+	};
+
+	struct NameHash
+	{
+		using is_transparent = void;
+		size_t operator()( std::string_view s ) const { return std::hash< std::string_view >()( s ); }
+	};
+
+	// Name -> first-seen order. Never shrinks, so pooled names outlive the entries using them.
+	std::unordered_map< std::string, unsigned int, NameHash, std::equal_to<> > m_Names;
+
+	// For fast name lookup and sorting; keyed by CZipEntry::m_Name. Parsed zips may repeat names.
+	typedef std::multimap< ZipName_t, CZipEntry, CZipNameLess > ZipFiles_t;
+	ZipFiles_t m_Files;
+
+	ZipName_t				InternName( const char *pName );
+	ZipFiles_t::iterator	FindFile( const char *pName );
 
 	// Used to buffer zip data, instead of ram
 	bool				m_bUseDiskCacheForWrites;
 	HANDLE				m_hDiskCacheWriteFile;
-	CUtlString			m_DiskCacheName;
-	CUtlString			m_DiskCacheWritePath;
+	std::string			m_DiskCacheName;
+	std::string			m_DiskCacheWritePath;
 
 	bool				m_bIsUpdateFormat;
 };
@@ -277,7 +307,6 @@ private:
 //-----------------------------------------------------------------------------
 CZipFile::CZipEntry::CZipEntry( void )
 {
-	m_Name = "";
 	m_Length = 0;
 	m_pData = nullptr;
 	m_ZipOffset = 0;
@@ -297,7 +326,7 @@ CZipFile::CZipEntry::CZipEntry( const CZipFile::CZipEntry& src )
 
 	if ( src.m_Length > 0 && src.m_pData )
 	{
-		m_pData = malloc( src.m_Length );
+		m_pData = MemAlloc_Alloc( src.m_Length );
 		memcpy( m_pData, src.m_pData, src.m_Length );
 	}
 	else
@@ -318,7 +347,7 @@ CZipFile::CZipEntry::~CZipEntry( void )
 {
 	if ( m_pData )
 	{
-		free( m_pData );
+		g_pMemAlloc->Free( m_pData );
 	}
 }
 
@@ -326,7 +355,7 @@ CZipFile::CZipEntry::~CZipEntry( void )
 // Purpose: Construction
 //-----------------------------------------------------------------------------
 CZipFile::CZipFile( const char *pDiskCacheWritePath, bool bSortByName )
-: m_Files( 0, 32 )
+: m_Files( CZipNameLess{ bSortByName } )
 {
 	m_AlignmentSize = 0;
 	m_bForceAlignment = false;
@@ -334,17 +363,8 @@ CZipFile::CZipFile( const char *pDiskCacheWritePath, bool bSortByName )
 	m_bIsUpdateFormat = false;
 
 	m_bUseDiskCacheForWrites = ( pDiskCacheWritePath != nullptr );
-	m_DiskCacheWritePath = pDiskCacheWritePath;
+	m_DiskCacheWritePath = ks::nz( pDiskCacheWritePath );
 	m_hDiskCacheWriteFile = INVALID_HANDLE_VALUE;
-
-	if ( bSortByName )
-	{
-		m_Files.SetLessFunc( CZipEntry::ZipFileLessFunc_CaselessSort );
-	}
-	else
-	{
-		m_Files.SetLessFunc( CZipEntry::ZipFileLessFunc );
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -356,17 +376,38 @@ CZipFile::~CZipFile( void )
 	Reset();
 }
 
+CZipFile::ZipName_t CZipFile::InternName( const char *pName )
+{
+	auto it = m_Names.find( std::string_view( pName ) );
+	if ( it == m_Names.end() )
+		it = m_Names.emplace( pName, (unsigned int)m_Names.size() ).first;
+	return { it->first.c_str(), it->second };
+}
+
+CZipFile::ZipFiles_t::iterator CZipFile::FindFile( const char *pName )
+{
+	ZipName_t key{ pName, 0 };
+	if ( !m_Files.key_comp().m_bCaseless )
+	{
+		auto it = m_Names.find( std::string_view( pName ) );
+		if ( it == m_Names.end() )
+			return m_Files.end();
+		key.m_nOrder = it->second;
+	}
+	return m_Files.find( key );
+}
+
 //-----------------------------------------------------------------------------
 // Purpose: Delete all current data
 //-----------------------------------------------------------------------------
 void CZipFile::Reset( void )
 {
-	m_Files.RemoveAll();
+	m_Files.clear();
 
 	if ( m_hDiskCacheWriteFile != INVALID_HANDLE_VALUE )
 	{
 		fclose( (FILE *)m_hDiskCacheWriteFile );
-		unlink( m_DiskCacheName.String() );
+		unlink( m_DiskCacheName.c_str() );
 		m_hDiskCacheWriteFile = INVALID_HANDLE_VALUE;
 	}
 
@@ -374,22 +415,6 @@ void CZipFile::Reset( void )
 	{
 		m_hDiskCacheWriteFile = CWin32File::CreateTempFile( m_DiskCacheWritePath, m_DiskCacheName );
 	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Comparison for sorting entries
-// Input  : src1 - 
-//			src2 - 
-// Output : Returns true on success, false on failure.
-//-----------------------------------------------------------------------------
-bool CZipFile::CZipEntry::ZipFileLessFunc( CZipEntry const& src1, CZipEntry const& src2 )
-{
-	return ( src1.m_Name < src2.m_Name );
-}
-
-bool CZipFile::CZipEntry::ZipFileLessFunc_CaselessSort( CZipEntry const& src1, CZipEntry const& src2 )
-{
-	return ( V_stricmp( src1.m_Name.String(), src2.m_Name.String() ) < 0 );
 }
 
 void CZipFile::ForceAlignment( bool bAligned, bool bCompatibleFormat, unsigned int alignment )
@@ -437,18 +462,8 @@ void CZipFile::ParseFromBuffer( void *buffer, int bufferlength )
 	// Throw away old data
 	Reset();
 
-	// Initialize a buffer
-	CUtlBuffer buf( 0, bufferlength +1  );					// +1 for null termination
-
-	// need to swap bytes, so set the buffer opposite the machine's endian
-
-	buf.Put( buffer, bufferlength );
-
-	buf.SeekGet( CUtlBuffer::SEEK_TAIL, 0 );
-	unsigned int fileLen = buf.TellGet();
-
-	// Start from beginning
-	buf.SeekGet( CUtlBuffer::SEEK_HEAD, 0 );
+	ks::byte_reader buf( buffer, bufferlength );
+	unsigned int fileLen = bufferlength;
 
 	ZIP_EndOfCentralDirRecord rec = { 0 };
 
@@ -458,9 +473,9 @@ void CZipFile::ParseFromBuffer( void *buffer, int bufferlength )
 	// wrapped. This used to be a tautological >= 0 test.
 	for ( unsigned int startOffset = offset; offset <= startOffset; offset-- )
 	{
-		buf.SeekGet( CUtlBuffer::SEEK_HEAD, offset );
-		buf.GetObjects( &rec );
-		if ( rec.signature == PKID( 5, 6 ) )
+		buf.seek( offset );
+		rec = buf.read< ZIP_EndOfCentralDirRecord >();
+		if ( buf.ok() && rec.signature == PKID( 5, 6 ) )
 		{
 			bFoundEndOfCentralDirRecord = true;
 
@@ -468,8 +483,8 @@ void CZipFile::ParseFromBuffer( void *buffer, int bufferlength )
 			if ( rec.commentLength )
 			{
 				char commentString[128];
-				int commentLength = MIN( rec.commentLength, sizeof( commentString ) );
-				buf.Get( commentString, commentLength );
+				int commentLength = std::min<std::common_type_t<short unsigned int, long unsigned int>>( rec.commentLength, sizeof( commentString ) );
+				buf.read_bytes( commentString, commentLength );
 				commentString[commentLength] = '\0';
 				ParseXZipCommentString( commentString );
 			}
@@ -491,7 +506,7 @@ void CZipFile::ParseFromBuffer( void *buffer, int bufferlength )
 		return;
 	}
 
-	buf.SeekGet( CUtlBuffer::SEEK_HEAD, rec.startOfCentralDirOffset );
+	buf.seek( rec.startOfCentralDirOffset );
 
 	// Allocate space for directory
 	TmpFileInfo_t *newfiles = new TmpFileInfo_t[numzipfiles];
@@ -502,17 +517,17 @@ void CZipFile::ParseFromBuffer( void *buffer, int bufferlength )
 	for ( i = 0; i < rec.nCentralDirectoryEntries_Total; i++ )
 	{
 		ZIP_FileHeader zipFileHeader;
-		buf.GetObjects( &zipFileHeader );
+		zipFileHeader = buf.read< ZIP_FileHeader >();
 		Assert( zipFileHeader.signature == PKID( 1, 2 ) );
 		Assert( zipFileHeader.compressionMethod == 0 );
 		
 		char tmpString[1024];
-		buf.Get( tmpString, zipFileHeader.fileNameLength );
+		buf.read_bytes( tmpString, zipFileHeader.fileNameLength );
 		tmpString[zipFileHeader.fileNameLength] = '\0';
 		Q_strlower( tmpString );
 
 		// can determine actual filepos, assuming a well formed zip
-		newfiles[i].m_Name = tmpString;
+		newfiles[i].m_Name = InternName( tmpString );
 		newfiles[i].filelen = zipFileHeader.compressedSize;
 		newfiles[i].filepos = zipFileHeader.relativeOffsetOfLocalHeader +
 								sizeof( ZIP_LocalFileHeader ) + 
@@ -528,7 +543,7 @@ void CZipFile::ParseFromBuffer( void *buffer, int bufferlength )
 		{
 			nextOffset = 0;
 		}
-		buf.SeekGet( CUtlBuffer::SEEK_CURRENT, nextOffset );
+		buf.skip( nextOffset );
 	}
 
 	// Insert current data into rb tree
@@ -541,11 +556,11 @@ void CZipFile::ParseFromBuffer( void *buffer, int bufferlength )
 		// Make sure length is reasonable
 		if ( e.m_Length > 0 )
 		{
-			e.m_pData = malloc( e.m_Length );
+			e.m_pData = MemAlloc_Alloc( e.m_Length );
 
 			// Copy in data
-			buf.SeekGet( CUtlBuffer::SEEK_HEAD, newfiles[i].filepos );
-			buf.Get( e.m_pData, e.m_Length );
+			buf.seek( newfiles[i].filepos );
+			buf.read_bytes( e.m_pData, e.m_Length );
 		}
 		else
 		{
@@ -553,7 +568,7 @@ void CZipFile::ParseFromBuffer( void *buffer, int bufferlength )
 		}
 
 		// Add to tree
-		m_Files.Insert( e );
+		m_Files.emplace( e.m_Name, e );
 	}
 
 	// Through away directory
@@ -598,7 +613,7 @@ HANDLE CZipFile::ParseFromDisk( const char *pFilename )
 			if ( rec.commentLength )
 			{
 				char commentString[128];
-				int commentLength = MIN( rec.commentLength, sizeof( commentString ) );
+				int commentLength = std::min<std::common_type_t<short unsigned int, long unsigned int>>( rec.commentLength, sizeof( commentString ) );
 				CWin32File::FileRead( hFile, commentString, commentLength );
 				commentString[commentLength] = '\0';
 				ParseXZipCommentString( commentString );
@@ -624,15 +639,15 @@ HANDLE CZipFile::ParseFromDisk( const char *pFilename )
 	CWin32File::FileSeek( hFile, rec.startOfCentralDirOffset, FILE_BEGIN );
 
 	// read entire central dir into memory
-	CUtlBuffer zipDirBuff( 0, rec.centralDirectorySize, 0 );
-	CWin32File::FileRead( hFile, zipDirBuff.Base(), rec.centralDirectorySize );
-	zipDirBuff.SeekPut( CUtlBuffer::SEEK_HEAD, rec.centralDirectorySize );
+	std::vector< std::byte > zipDirData( rec.centralDirectorySize );
+	CWin32File::FileRead( hFile, zipDirData.data(), rec.centralDirectorySize );
+	ks::byte_reader zipDirBuff( zipDirData );
 
 	// build directory
 	for ( int i = 0; i < numZipFiles; i++ )
 	{
 		ZIP_FileHeader zipFileHeader;
-		zipDirBuff.GetObjects( &zipFileHeader );
+		zipFileHeader = zipDirBuff.read< ZIP_FileHeader >();
 
 		if ( zipFileHeader.signature != PKID( 1, 2 ) ||  zipFileHeader.compressionMethod != 0 )
 		{
@@ -642,20 +657,20 @@ HANDLE CZipFile::ParseFromDisk( const char *pFilename )
 		}
 		
 		char fileName[1024];
-		zipDirBuff.Get( fileName, zipFileHeader.fileNameLength );
+		zipDirBuff.read_bytes( fileName, zipFileHeader.fileNameLength );
 		fileName[zipFileHeader.fileNameLength] = '\0';
 		Q_strlower( fileName );
 
 		// can determine actual filepos, assuming a well formed zip
 		CZipEntry e;
-		e.m_Name = fileName;
+		e.m_Name = InternName( fileName );
 		e.m_Length = zipFileHeader.compressedSize;
 		e.m_SourceDiskOffset = zipFileHeader.relativeOffsetOfLocalHeader +
 								sizeof( ZIP_LocalFileHeader ) + 
 								zipFileHeader.fileNameLength + 
 								zipFileHeader.extraFieldLength;
 		// Add to tree
-		m_Files.Insert( e );
+		m_Files.emplace( e.m_Name, e );
 
 		int nextOffset;
 		if ( m_bCompatibleFormat )
@@ -667,7 +682,7 @@ HANDLE CZipFile::ParseFromDisk( const char *pFilename )
 			nextOffset = 0;
 		}
 
-		zipDirBuff.SeekGet( CUtlBuffer::SEEK_CURRENT, nextOffset );
+		zipDirBuff.skip( nextOffset );
 	}
 
 	return hFile;
@@ -696,9 +711,10 @@ static int GetLengthOfBinStringAsText( const char *pSrc, int srcSize )
 //-----------------------------------------------------------------------------
 // Copies text data from a form appropriate for disk to a normal string
 //-----------------------------------------------------------------------------
-static void ReadTextData( const char *pSrc, int nSrcSize, CUtlBuffer &buf )
+static std::vector< std::byte > ReadTextData( const char *pSrc, int nSrcSize )
 {
-	buf.EnsureCapacity( nSrcSize + 1 );
+	std::vector< std::byte > out;
+	out.reserve( nSrcSize );
 	const char *pSrcEnd = pSrc + nSrcSize;
 	for ( const char *pSrcScan = pSrc; pSrcScan < pSrcEnd; ++pSrcScan )
 	{
@@ -706,17 +722,16 @@ static void ReadTextData( const char *pSrc, int nSrcSize, CUtlBuffer &buf )
 		{
 			if ( pSrcScan[1] == '\n' )
 			{
-				buf.PutChar( '\n' );
+				out.push_back( std::byte{ '\n' } );
 				++pSrcScan;
 				continue;
 			}
 		}
 
-		buf.PutChar( *pSrcScan );
+		out.push_back( static_cast< std::byte >( *pSrcScan ) );
 	}
-	
-	// Null terminate
-	buf.PutChar( '\0' );
+
+	return out;
 }
 
 
@@ -773,27 +788,27 @@ void CZipFile::AddBufferToZip( const char *relativename, void *data, int length,
 	
 	// See if entry is in list already
 	CZipEntry e;
-	e.m_Name = name;
-	int index = m_Files.Find( e );
+	e.m_Name = InternName( name );
+	auto it = m_Files.find( e.m_Name );
 
 	// If already existing, throw away old data and update data and length
-	if ( index != m_Files.InvalidIndex() )
+	if ( it != m_Files.end() )
 	{
-		CZipEntry *update = &m_Files[ index ];
+		CZipEntry *update = &it->second;
 		if ( update->m_pData )
 		{
-			free( update->m_pData );
+			g_pMemAlloc->Free( update->m_pData );
 		}
 
 		if ( bTextMode )
 		{
-			update->m_pData = malloc( dstLength );
+			update->m_pData = MemAlloc_Alloc( dstLength );
 			CopyTextData( ( char * )update->m_pData, ( char * )data, dstLength, length );
 			update->m_Length = dstLength;
 		}
 		else
 		{
-			update->m_pData = malloc( length );
+			update->m_pData = MemAlloc_Alloc( length );
 			memcpy( update->m_pData, data, length );
 			update->m_Length = length;
 		}
@@ -802,7 +817,7 @@ void CZipFile::AddBufferToZip( const char *relativename, void *data, int length,
 		{
 			update->m_DiskCacheOffset = CWin32File::FileTell( m_hDiskCacheWriteFile );
 			CWin32File::FileWrite( m_hDiskCacheWriteFile, update->m_pData, update->m_Length );
-			free( update->m_pData );
+			g_pMemAlloc->Free( update->m_pData );
 			update->m_pData = nullptr;
 		}
 	}
@@ -814,12 +829,12 @@ void CZipFile::AddBufferToZip( const char *relativename, void *data, int length,
 		{
 			if ( bTextMode )
 			{
-				e.m_pData = malloc( dstLength );
+				e.m_pData = MemAlloc_Alloc( dstLength );
 				CopyTextData( (char *)e.m_pData, ( char * )data, dstLength, length );
 			}
 			else
 			{
-				e.m_pData = malloc( length );
+				e.m_pData = MemAlloc_Alloc( length );
 				memcpy( e.m_pData, data, length );
 			}
 	
@@ -827,7 +842,7 @@ void CZipFile::AddBufferToZip( const char *relativename, void *data, int length,
 			{
 				e.m_DiskCacheOffset = CWin32File::FileTell( m_hDiskCacheWriteFile );
 				CWin32File::FileWrite( m_hDiskCacheWriteFile, e.m_pData, e.m_Length );
-				free( e.m_pData );
+				g_pMemAlloc->Free( e.m_pData );
 				e.m_pData = nullptr;
 			}
 		}
@@ -836,7 +851,7 @@ void CZipFile::AddBufferToZip( const char *relativename, void *data, int length,
 			e.m_pData = nullptr;
 		}
 
-		m_Files.Insert( e );
+		m_Files.emplace( e.m_Name, e );
 	}
 }
 
@@ -844,7 +859,7 @@ void CZipFile::AddBufferToZip( const char *relativename, void *data, int length,
 //-----------------------------------------------------------------------------
 // Reads a file from the zip
 //-----------------------------------------------------------------------------
-bool CZipFile::ReadFileFromZip( const char *pRelativeName, bool bTextMode, CUtlBuffer &buf )
+std::optional< std::vector< std::byte > > CZipFile::ReadFileFromZip( const char *pRelativeName, bool bTextMode )
 {
 	// Lower case only
 	char pName[512];
@@ -852,34 +867,27 @@ bool CZipFile::ReadFileFromZip( const char *pRelativeName, bool bTextMode, CUtlB
 	Q_strlower( pName );
 
 	// See if entry is in list already
-	CZipEntry e;
-	e.m_Name = pName;
-	int nIndex = m_Files.Find( e );
-	if ( nIndex == m_Files.InvalidIndex() )
+	auto it = FindFile( pName );
+	if ( it == m_Files.end() )
 	{
 		// not found
-		return false;
+		return std::nullopt;
 	}
 
-	CZipEntry *pEntry = &m_Files[ nIndex ];
+	CZipEntry *pEntry = &it->second;
 	if ( bTextMode )
 	{
-		buf.SetBufferType( true, false );
-		ReadTextData( (char*)pEntry->m_pData, pEntry->m_Length, buf );
-	}
-	else
-	{
-		buf.SetBufferType( false, false );
-		buf.Put( pEntry->m_pData, pEntry->m_Length );
+		return ReadTextData( (char*)pEntry->m_pData, pEntry->m_Length );
 	}
 
-	return true;
+	const auto *pBytes = static_cast< const std::byte * >( pEntry->m_pData );
+	return std::vector< std::byte >( pBytes, pBytes + pEntry->m_Length );
 }
 
 //-----------------------------------------------------------------------------
 // Reads a file from the zip
 //-----------------------------------------------------------------------------
-bool CZipFile::ReadFileFromZip( HANDLE hZipFile, const char *pRelativeName, bool bTextMode, CUtlBuffer &buf )
+std::optional< std::vector< std::byte > > CZipFile::ReadFileFromZip( HANDLE hZipFile, const char *pRelativeName, bool bTextMode )
 {
 	// Lower case only
 	char pName[512];
@@ -887,39 +895,37 @@ bool CZipFile::ReadFileFromZip( HANDLE hZipFile, const char *pRelativeName, bool
 	Q_strlower( pName );
 
 	// See if entry is in list already
-	CZipEntry e;
-	e.m_Name = pName;
-	int nIndex = m_Files.Find( e );
-	if ( nIndex == m_Files.InvalidIndex() )
+	auto it = FindFile( pName );
+	if ( it == m_Files.end() )
 	{
 		// not found
-		return false;
+		return std::nullopt;
 	}
 
-	CZipEntry *pEntry = &m_Files[nIndex];
+	CZipEntry *pEntry = &it->second;
 
-	void *pData = malloc( pEntry->m_Length );
+	void *pData = MemAlloc_Alloc( pEntry->m_Length );
 	CWin32File::FileSeek( hZipFile, pEntry->m_SourceDiskOffset, FILE_BEGIN );
 	if ( !CWin32File::FileRead( hZipFile, pData, pEntry->m_Length ) )
 	{
-		free( pData );
-		return false;
+		g_pMemAlloc->Free( pData );
+		return std::nullopt;
 	}
 
+	std::vector< std::byte > out;
 	if ( bTextMode )
 	{
-		buf.SetBufferType( true, false );
-		ReadTextData( (const char *)pData, pEntry->m_Length, buf );
+		out = ReadTextData( (const char *)pData, pEntry->m_Length );
 	}
 	else
 	{
-		buf.SetBufferType( false, false );
-		buf.Put( pData, pEntry->m_Length );
+		const auto *pBytes = static_cast< const std::byte * >( pData );
+		out.assign( pBytes, pBytes + pEntry->m_Length );
 	}
 
-	free( pData );
+	g_pMemAlloc->Free( pData );
 
-	return true;
+	return out;
 }
 
 //-----------------------------------------------------------------------------
@@ -934,12 +940,10 @@ bool CZipFile::FileExistsInZip( const char *pRelativeName )
 	Q_strlower( pName );
 
 	// See if entry is in list already
-	CZipEntry e;
-	e.m_Name = pName;
-	int nIndex = m_Files.Find( e );
+	auto it = FindFile( pName );
 
 	// If it is, then it exists in the pack!
-	return nIndex != m_Files.InvalidIndex();
+	return it != m_Files.end();
 }
 
 
@@ -957,7 +961,7 @@ void CZipFile::AddFileToZip( const char *relativename, const char *fullpath )
 	fseek( temp, 0, SEEK_END );
 	int size = ftell( temp );
 	fseek( temp, 0, SEEK_SET );
-	byte *buf = (byte *)malloc( size + 1 );
+	byte *buf = (byte *)MemAlloc_Alloc( size + 1 );
 
 	// Read data
 	fread( buf, size, 1, temp );
@@ -966,7 +970,7 @@ void CZipFile::AddFileToZip( const char *relativename, const char *fullpath )
 	// Now add as a buffer
 	AddBufferToZip( relativename, buf, size, false );
 	
-	free( buf );
+	g_pMemAlloc->Free( buf );
 }
 
 //-----------------------------------------------------------------------------
@@ -974,14 +978,11 @@ void CZipFile::AddFileToZip( const char *relativename, const char *fullpath )
 //-----------------------------------------------------------------------------
 void CZipFile::RemoveFileFromZip( const char *relativename )
 {
-	CZipEntry e;
-	e.m_Name = relativename;
-	int index = m_Files.Find( e );
+	auto it = FindFile( relativename );
 
-	if ( index != m_Files.InvalidIndex() )
+	if ( it != m_Files.end() )
 	{
-		CZipEntry update = m_Files[index];
-		m_Files.Remove( update );
+		m_Files.erase( it );
 	}
 }
 
@@ -1075,19 +1076,19 @@ unsigned int CZipFile::CalculateSize( void )
 {
 	unsigned int size = 0;
 	unsigned int dirHeaders = 0;
-	for ( int i = m_Files.FirstInorder(); i != m_Files.InvalidIndex(); i = m_Files.NextInorder( i ) )
+	for ( auto &[name, entry] : m_Files )
 	{
-		CZipEntry *e = &m_Files[ i ];
+		CZipEntry *e = &entry;
 		
 		if ( e->m_Length == 0 )
 			continue;
 
 		// local file header
 		size += sizeof( ZIP_LocalFileHeader );
-		size += strlen( e->m_Name.String() );
+		size += strlen( e->m_Name.m_pName );
 
 		// every file has a directory header that duplicates the filename 
-		dirHeaders += sizeof( ZIP_FileHeader ) + strlen( e->m_Name.String() );
+		dirHeaders += sizeof( ZIP_FileHeader ) + strlen( e->m_Name.m_pName );
 
 		// calculate padding
 		if ( m_AlignmentSize != 0 )
@@ -1118,11 +1119,11 @@ unsigned int CZipFile::CalculateSize( void )
 //-----------------------------------------------------------------------------
 void CZipFile::PrintDirectory( void )
 {
-	for ( int i = m_Files.FirstInorder(); i != m_Files.InvalidIndex(); i = m_Files.NextInorder( i ) )
+	for ( auto &[name, entry] : m_Files )
 	{
-		CZipEntry *e = &m_Files[ i ];
+		CZipEntry *e = &entry;
 
-		Msg( "%s\n", e->m_Name.String() );
+		Msg( "%s\n", e->m_Name.m_pName );
 	}
 }
 
@@ -1131,23 +1132,17 @@ void CZipFile::PrintDirectory( void )
 //-----------------------------------------------------------------------------
 int CZipFile::GetNextFilename( int id, char *pBuffer, int bufferSize, int &fileSize )
 {
-	if ( id == -1 )
-	{
-		id = m_Files.FirstInorder();
-	}
-	else
-	{
-		id = m_Files.NextInorder( id );
-	}
-	if ( id == m_Files.InvalidIndex() )
+	// ids are in-order positions
+	id = ( id == -1 ) ? 0 : id + 1;
+	if ( id < 0 || id >= (int)m_Files.size() )
 	{
 		// list is empty
 		return -1;
 	}
 
-	CZipEntry *e = &m_Files[id];
+	CZipEntry *e = &std::next( m_Files.begin(), id )->second;
 
-	Q_strncpy( pBuffer, e->m_Name.String(), bufferSize );
+	Q_strncpy( pBuffer, e->m_Name.m_pName, bufferSize );
 	fileSize = e->m_Length;
 
 	return id;
@@ -1169,16 +1164,16 @@ void CZipFile::SaveToDisk( HANDLE hOutFile )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Store data out to a CUtlBuffer
+// Purpose: Store data out to a byte_writer
 //-----------------------------------------------------------------------------
-void CZipFile::SaveToBuffer( CUtlBuffer& buf )
+void CZipFile::SaveToBuffer( ks::byte_writer &buf )
 {
 	CBufferStream stream( buf );
 	SaveDirectory( stream );
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Store data back out to a stream (could be CUtlBuffer or filestream)
+// Purpose: Store data back out to a stream (could be byte_writer or filestream)
 //-----------------------------------------------------------------------------
 void CZipFile::SaveDirectory( IWriteStream& stream )
 {
@@ -1186,7 +1181,7 @@ void CZipFile::SaveDirectory( IWriteStream& stream )
 	if ( m_AlignmentSize )
 	{
 		// get a temp buffer for all padding work
-		pPaddingBuffer = malloc( m_AlignmentSize );
+		pPaddingBuffer = MemAlloc_Alloc( m_AlignmentSize );
 		memset( pPaddingBuffer, 0x00, m_AlignmentSize );
 	}
 
@@ -1196,10 +1191,9 @@ void CZipFile::SaveDirectory( IWriteStream& stream )
 	}
 
 	bool bDataWritten = false;
-	int i;
-	for ( i = m_Files.FirstInorder(); i != m_Files.InvalidIndex(); i = m_Files.NextInorder( i ) )
+	for ( auto &[name, entry] : m_Files )
 	{
-		CZipEntry *e = &m_Files[i];
+		CZipEntry *e = &entry;
 		Assert( e );
 
 		// Fix up the offset
@@ -1208,7 +1202,7 @@ void CZipFile::SaveDirectory( IWriteStream& stream )
 		if ( e->m_Length > 0 && ( m_hDiskCacheWriteFile != INVALID_HANDLE_VALUE ) )
 		{	
 			// get the data back from the write cache
-			e->m_pData = malloc( e->m_Length );
+			e->m_pData = MemAlloc_Alloc( e->m_Length );
 			if ( e->m_pData )
 			{
 				CWin32File::FileSeek( m_hDiskCacheWriteFile, e->m_DiskCacheOffset, FILE_BEGIN );
@@ -1231,7 +1225,7 @@ void CZipFile::SaveDirectory( IWriteStream& stream )
 			CRC32_Final( &e->m_ZipCRC );
 			hdr.crc32 = e->m_ZipCRC;
 			
-			const char *pFilename = e->m_Name.String();
+			const char *pFilename = e->m_Name.m_pName;
 			hdr.compressedSize = e->m_Length;
 			hdr.uncompressedSize = e->m_Length;
 			hdr.fileNameLength = strlen( pFilename );
@@ -1255,7 +1249,7 @@ void CZipFile::SaveDirectory( IWriteStream& stream )
 
 			if ( m_hDiskCacheWriteFile != INVALID_HANDLE_VALUE )
 			{
-				free( e->m_pData );
+				g_pMemAlloc->Free( e->m_pData );
 
 				// temp hackery for the logic below to succeed
 				e->m_pData = (void*)0xFFFFFFFF;
@@ -1282,9 +1276,9 @@ void CZipFile::SaveDirectory( IWriteStream& stream )
 	}
 
 	int realNumFiles = 0;
-	for ( i = m_Files.FirstInorder(); i != m_Files.InvalidIndex(); i = m_Files.NextInorder( i ) )
+	for ( auto &[name, entry] : m_Files )
 	{
-		CZipEntry *e = &m_Files[i];
+		CZipEntry *e = &entry;
 		Assert( e );
 		
 		if ( e->m_Length > 0 && e->m_pData != nullptr )
@@ -1301,7 +1295,7 @@ void CZipFile::SaveDirectory( IWriteStream& stream )
 
 			hdr.compressedSize = e->m_Length;
 			hdr.uncompressedSize = e->m_Length;
-			hdr.fileNameLength = strlen( e->m_Name.String() );
+			hdr.fileNameLength = strlen( e->m_Name.m_pName );
 			hdr.extraFieldLength = CalculatePadding( hdr.fileNameLength, e->m_ZipOffset );
 			hdr.fileCommentLength = 0;
 			hdr.diskNumberStart = 0;
@@ -1312,7 +1306,7 @@ void CZipFile::SaveDirectory( IWriteStream& stream )
 
 			// Swap the header in place
 			stream.Put( &hdr, sizeof( hdr ) );
-			stream.Put( e->m_Name.String(), strlen( e->m_Name.String() ) );
+			stream.Put( e->m_Name.m_pName, strlen( e->m_Name.m_pName ) );
 			if ( m_bCompatibleFormat )
 			{
 				stream.Put( pPaddingBuffer, extraFieldLength );
@@ -1360,7 +1354,7 @@ void CZipFile::SaveDirectory( IWriteStream& stream )
 
 	if ( pPaddingBuffer )
 	{
-		free( pPaddingBuffer );
+		g_pMemAlloc->Free( pPaddingBuffer );
 	}
 }
 
@@ -1379,8 +1373,8 @@ public:
 	virtual bool			FileExistsInZip( const char *pRelativeName );
 
 	// Reads a file from the zip - maintains alignement
-	virtual bool			ReadFileFromZip( const char *pRelativeName, bool bTextMode, CUtlBuffer &buf );
-	virtual bool			ReadFileFromZip( HANDLE hZipFile, const char *relativename, bool bTextMode, CUtlBuffer &buf );
+	virtual std::optional< std::vector< std::byte > >	ReadFileFromZip( const char *pRelativeName, bool bTextMode );
+	virtual std::optional< std::vector< std::byte > >	ReadFileFromZip( HANDLE hZipFile, const char *relativename, bool bTextMode );
 
 	// Removes a single file from the zip - maintains alignment
 	virtual void			RemoveFileFromZip( const char *relativename );
@@ -1399,7 +1393,7 @@ public:
 
 	// Writes out zip file to a buffer - uses current alignment size 
 	// (set by file's previous alignment, or a call to ForceAlignment)
-	virtual void			SaveToBuffer( CUtlBuffer& outbuf );
+	virtual void			SaveToBuffer( ks::byte_writer &outbuf );
 
 	// Writes out zip file to a filestream - uses current alignment size 
 	// (set by file's previous alignment, or a call to ForceAlignment)
@@ -1421,19 +1415,19 @@ private:
 	CZipFile				m_ZipFile;
 };
 
-static CUtlLinkedList< CZip* > g_ZipUtils;
+static std::vector< CZip* > g_ZipUtils;
 
 IZip *IZip::CreateZip( const char *pDiskCacheWritePath, bool bSortByName )
 { 
 	CZip *pZip = new CZip( pDiskCacheWritePath, bSortByName );
-	g_ZipUtils.AddToTail( pZip );
+	g_ZipUtils.push_back( pZip );
 
 	return pZip; 
 }
 
 void IZip::ReleaseZip( IZip *pZip )
 {
-	g_ZipUtils.FindAndRemove( (CZip *)pZip );
+	ks::swap_erase_first( g_ZipUtils, (CZip *)pZip );
 
 	delete ((CZip *)pZip);
 }
@@ -1457,14 +1451,14 @@ bool CZip::FileExistsInZip( const char *pRelativeName )
 	return m_ZipFile.FileExistsInZip( pRelativeName );
 }
 
-bool CZip::ReadFileFromZip( const char *pRelativeName, bool bTextMode, CUtlBuffer &buf )
+std::optional< std::vector< std::byte > > CZip::ReadFileFromZip( const char *pRelativeName, bool bTextMode )
 {
-	return m_ZipFile.ReadFileFromZip( pRelativeName, bTextMode, buf );
+	return m_ZipFile.ReadFileFromZip( pRelativeName, bTextMode );
 }
 
-bool CZip::ReadFileFromZip( HANDLE hZipFile, const char *pRelativeName, bool bTextMode, CUtlBuffer &buf )
+std::optional< std::vector< std::byte > > CZip::ReadFileFromZip( HANDLE hZipFile, const char *pRelativeName, bool bTextMode )
 {
-	return m_ZipFile.ReadFileFromZip( hZipFile, pRelativeName, bTextMode, buf );
+	return m_ZipFile.ReadFileFromZip( hZipFile, pRelativeName, bTextMode );
 }
 
 void CZip::RemoveFileFromZip( const char *relativename )
@@ -1498,7 +1492,7 @@ void CZip::AddBufferToZip( const char *relativename, void *data, int length, boo
 	m_ZipFile.AddBufferToZip( relativename, data, length, bTextMode );
 }
 
-void CZip::SaveToBuffer( CUtlBuffer& outbuf )
+void CZip::SaveToBuffer( ks::byte_writer &outbuf )
 {
 	m_ZipFile.SaveToBuffer( outbuf );
 }

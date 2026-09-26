@@ -11,11 +11,12 @@
 
 
 #include <igameevents.h>
+#include <mutex>
 #include <utlvector.h>
 #include <keyvalues.h>
 #include <networkstringtabledefs.h>
-#include <utlsymbol.h>
-#include <utldict.h>
+#include "tier1/intern_pool.h"
+#include "tier1/map_ops.h"
 #include "netmessages.h"
 
 namespace ks::net { struct CSVCMsg_GameEventList; }
@@ -37,7 +38,7 @@ public:
 		keys = nullptr;
 		local = false;
 		reliable = true;
-		elementIndex = -1;
+		name = nullptr;
 
 		numSerialized = 0;
 		numUnSerialized = 0;
@@ -47,9 +48,9 @@ public:
 
 public:
 	int			eventid;	// network index number, -1 = not networked
-	int			elementIndex;
+	const char	*name;		// key in CGameEventManager::m_EventMap
 	KeyValues	*keys;		// KeyValue describing data types, if NULL only name 
-    CUtlVector<CGameEventCallback*>	listeners;	// registered listeners
+    std::vector< CGameEventCallback* >	listeners;	// registered listeners
 	bool		local;		// local event, never tell clients about that
 	bool		reliable;	// send this event as reliable message
 
@@ -180,12 +181,12 @@ protected:
 	bool FireEventIntern( IGameEvent *event, bool bServerSide, bool bClientOnly );
 	CGameEventCallback* FindEventListener( void* listener );
 	
-	CUtlVector<CGameEventDescriptor>	m_GameEvents;	// list of all known events
-	CUtlVector<CGameEventCallback*>		m_Listeners;	// list of all registered listeners
-	CUtlSymbolTable						m_EventFiles;	// list of all loaded event files
-	CUtlVector<CUtlSymbol>				m_EventFileNames; 
-	CUtlDict<int, int>					m_EventMap;
-	CThreadFastMutex					m_mutex;		// lock this when modifying the event table
+	std::vector< CGameEventDescriptor >	m_GameEvents;	// list of all known events
+	std::vector< std::unique_ptr< CGameEventCallback > >	m_Listeners;	// owns every callback; descriptors only point at them
+	ks::intern_pool						m_EventFiles;	// list of all loaded event files
+	std::vector< std::string_view >		m_EventFileNames;	// load order, views into m_EventFiles
+	ks::idict< int >					m_EventMap;	// name -> index in m_GameEvents
+	std::recursive_mutex				m_mutex;		// lock this when modifying the event table
 
 	bool	m_bClientListenersChanged;	// true every time client changed listeners
 };

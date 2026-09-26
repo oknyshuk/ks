@@ -23,9 +23,6 @@
 #include "physconstraint_sounds.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define SF_CONSTRAINT_DISABLE_COLLISION			0x0001
 #define SF_SLIDE_LIMIT_ENDS						0x0002
 #define SF_PULLEY_RIGID							0x0002
@@ -73,12 +70,12 @@ public:
 	}
 	void LevelShutdownPostEntity() 
 	{
-		m_list.Purge();
+		m_list.clear(); m_list.shrink_to_fit();
 	}
 
 	void AddToList( CBaseEntity *pEntity, float massScale )
 	{
-		int index = m_list.AddToTail();
+		int index = std::ssize( m_list ); m_list.emplace_back();
 		constraint_anchor_t *pAnchor = &m_list[index];
 
 		pAnchor->hEntity = pEntity->GetParent();
@@ -90,7 +87,7 @@ public:
 
 	constraint_anchor_t *Find( string_t name )
 	{
-		for ( int i = m_list.Count()-1; i >=0; i-- )
+		for ( int i = std::ssize( m_list )-1; i >=0; i-- )
 		{
 			if ( FStrEq( STRING(m_list[i].name), STRING(name) ) )
 			{
@@ -101,7 +98,7 @@ public:
 	}
 
 private:
-	CUtlVector<constraint_anchor_t>	m_list;
+	std::vector< constraint_anchor_t >	m_list;
 };
 
 static CAnchorList g_AnchorList( "CAnchorList" );

@@ -10,16 +10,13 @@
 #include "vstdlib/random.h"
 #include "world.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 CStressEntityReg	*CStressEntityReg::s_pHead = nullptr;
 
 
 // CStressEntityReg::s_pHead in array form for convenient access.
-CUtlVector<CStressEntityReg*> g_StressEntityRegs;
+std::vector< CStressEntityReg* > g_StressEntityRegs;
 
-CUtlVector<EHANDLE> g_StressEntities;
+std::vector< EHANDLE > g_StressEntities;
 
 
 CBaseEntity* MoveToRandomSpot( CBaseEntity *pEnt )
@@ -62,17 +59,17 @@ Vector GetRandomSpot()
 void Test_InitRandomEntitySpawner( const CCommand &args )
 {
 	// Put the list of registered functions into array form for convenience.
-	g_StressEntityRegs.Purge();
+	g_StressEntityRegs.clear(); g_StressEntityRegs.shrink_to_fit();
 	for ( CStressEntityReg *pCur=CStressEntityReg::GetListHead(); pCur; pCur=pCur->GetNext() )
-		g_StressEntityRegs.AddToTail( pCur );
+		g_StressEntityRegs.push_back( pCur );
 
 	// Create slots for all the entities..
 	int nSlots = 100;
 	if ( args.ArgC() >= 2 )
 		nSlots = atoi( args[ 1 ] );
 
-	g_StressEntities.Purge();
-	g_StressEntities.SetSize( nSlots );
+	g_StressEntities.clear(); g_StressEntities.shrink_to_fit();
+	g_StressEntities.assign( nSlots, {} );
 
 	Msg( "Test_InitRandomEntitySpawner: created %d slots.\n", nSlots );
 }
@@ -85,7 +82,7 @@ void Test_SpawnRandomEntities( const CCommand &args )
 		Error( "Test_SpawnRandomEntities <min # entities> <max # entities> missing arguments." );
 	}
 
-	if ( g_StressEntities.Count() == 0 )
+	if ( g_StressEntities.empty() )
 	{
 		Error( "Test_SpawnRandomEntities: not initialized (call Test_InitRandomEntitySpawner frst)." );
 	} 
@@ -96,14 +93,14 @@ void Test_SpawnRandomEntities( const CCommand &args )
 
 	for ( int i=0; i < count; i++ )
 	{
-		int iSlot = RandomInt( 0, g_StressEntities.Count() - 1 );
+		int iSlot = RandomInt( 0, std::ssize( g_StressEntities ) - 1 );
 
 		// Remove any old entity in this slot.
 		if ( g_StressEntities[iSlot].Get() )
 			UTIL_RemoveImmediate( g_StressEntities[iSlot] );
 
 		// Create a new one in this slot.
-		int iType = RandomInt( 0, g_StressEntityRegs.Count() - 1 );
+		int iType = RandomInt( 0, std::ssize( g_StressEntityRegs ) - 1 );
 		g_StressEntities[iSlot] = g_StressEntityRegs[iType]->GetFn()();
 	}
 }
@@ -117,7 +114,7 @@ void Test_RandomizeInPVS( const CCommand &args )
 	}
 
 	int percent = atoi( args[ 1 ] );
-	for ( int i=0; i < g_StressEntities.Count(); i++ )
+	for ( int i=0; i < std::ssize( g_StressEntities ); i++ )
 	{
 		CBaseEntity *pEnt = g_StressEntities[i];
 
@@ -137,7 +134,7 @@ void Test_RandomizeInPVS( const CCommand &args )
 
 void Test_RemoveAllRandomEntities()
 {
-	for ( int i=0; i < g_StressEntities.Count(); i++ )
+	for ( int i=0; i < std::ssize( g_StressEntities ); i++ )
 	{
 		if ( g_StressEntities[i].Get() )
 			UTIL_Remove( g_StressEntities[i] );

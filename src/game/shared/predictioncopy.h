@@ -12,8 +12,6 @@
 #include "datamap.h"
 #include "ehandle.h"
 #include "tier1/utlstring.h"
-#include "tier1/utlrbtree.h"
-#include "tier1/utlstack.h"
 
 #if defined( CLIENT_DLL )
 class C_BaseEntity;
@@ -62,12 +60,12 @@ struct datarun_t
 struct datacopyruns_t 
 {
 public:
-	CUtlVector< datarun_t > m_vecRuns;
+	std::vector< datarun_t > m_vecRuns;
 };
 
 struct flattenedoffsets_t
 {
-	CUtlVector< typedescription_t >	m_Flattened;
+	std::vector< typedescription_t >	m_Flattened;
 	int								m_nPackedSize; // Contiguous memory to pack all of these together for TD_OFFSET_PACKED
 	int								m_nPackedStartOffset;
 };
@@ -141,7 +139,7 @@ private:
 	FORCEINLINE void ProcessField_Compare_Spew( const datamap_t *pCurrentMap, const typedescription_t *pField, const T *pOutputData, const T *pInputData, int fieldSize );
 
 	// Helper for TransferDataDescribe
-	void	DescribeFields( const CUtlVector< const datamap_t * > &vecGroups, const datamap_t *pCurrentMap, int nPredictionCopyType );
+	void	DescribeFields( const std::vector< const datamap_t * > &vecGroups, const datamap_t *pCurrentMap, int nPredictionCopyType );
 	// Main entry point
 	template< class T >
 	FORCEINLINE void ProcessField_Describe( const datamap_t *pCurrentMap, const typedescription_t *pField, const T *pOutputData, const T *pInputData, int fieldSize );
@@ -176,7 +174,6 @@ private:
 	const typedescription_t	 *m_pWatchField;
 	char const			*m_pOperation;
 
-	CUtlStack< const typedescription_t * > m_FieldStack;
 };
 
 typedef void (*FN_FIELD_DESCRIPTION)( const char *classname, const char *fieldname, const char *fieldtype,
@@ -289,11 +286,11 @@ private:
 	bool				m_bTracking : 1;
 	EHANDLE				m_hEntityToTrack;
 	const typedescription_t	*m_pTrackField;
-	CUtlString			m_strFieldName;
-	CUtlString			m_strContext;
+	std::string			m_strFieldName;
+	std::string			m_strContext;
 	// First 128 bytes of data is all we will consider
 	char				m_OrigValueBuf[ eChangeTrackerBufSize ];
-	CUtlVector< CUtlString >	 m_History;
+	std::vector< std::string >	 m_History;
 };
 
 extern CValueChangeTracker *g_pChangeTracker;

@@ -9,7 +9,6 @@
 #define C_SUN_H
 
 #include "c_baseentity.h"
-#include "utllinkedlist.h"
 #include "glow_overlay.h"
 #include "sun_shared.h"
 

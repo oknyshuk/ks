@@ -14,9 +14,6 @@
 #include "demo.h"
 #include "host.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 // Input  : world_start_state - 

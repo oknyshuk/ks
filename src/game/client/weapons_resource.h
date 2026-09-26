@@ -10,7 +10,7 @@
 #pragma once
 
 #include "shareddefs.h"
-#include "utldict.h"
+#include "tier1/map_ops.h"
 #include "hud.h"
 
 class C_BaseCombatWeapon;

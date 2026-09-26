@@ -11,7 +11,7 @@
 
 #include "studio.h"
 #include "cmodel.h"
-#include "bitvec.h"
+#include <bitset>
 
 
 class CBoneToWorld;
@@ -31,16 +31,16 @@ public:
 
 
 
-class CBoneBitList : public CBitVec<MAXSTUDIOBONES>
+class CBoneBitList : public std::bitset<MAXSTUDIOBONES>
 {
 public:
 	inline void MarkBone(int iBone)
 	{
-		Set(iBone);
+		set(iBone);
 	}
 	inline bool IsBoneMarked(int iBone)
 	{
-		return Get(iBone) != 0 ? true : false;
+		return ( *this )[iBone];
 	}
 };
 
@@ -254,10 +254,6 @@ struct ikcontextikrule_t
 	float		pad3;
 
 	ikcontextikrule_t() {}
-
-private:
-	// No copy constructors allowed
-	ikcontextikrule_t(const ikcontextikrule_t& vOther);
 };
 
 
@@ -293,7 +289,7 @@ public:
 
 	void SolveLock( const mstudioiklock_t *plock, int i, BoneVector pos[], BoneQuaternion q[], matrix3x4a_t boneToWorld[], CBoneBitList &boneComputed );
 
-	CUtlVectorFixed< CIKTarget, 12 >	m_target;
+	std::inplace_vector< CIKTarget, 12 >	m_target;
 
 	void CopyTo( CIKContext* pOther, const unsigned short * iRemapping );
 
@@ -308,8 +304,8 @@ private:
 	
 
 	// virtual IK rules, filtered and combined from each sequence
-	CUtlVector< CUtlVector< ikcontextikrule_t > > m_ikChainRule;
-	CUtlVector< ikcontextikrule_t > m_ikLock;
+	std::vector< std::vector< ikcontextikrule_t > > m_ikChainRule;
+	std::vector< ikcontextikrule_t > m_ikLock;
 	matrix3x4a_t m_rootxform;
 
 	int m_iFramecounter;
@@ -458,7 +454,7 @@ bool TraceToStudio( class IPhysicsSurfaceProps *pProps, const Ray_t& ray, CStudi
 bool TraceToStudioCsgoHitgroupsPriority( class IPhysicsSurfaceProps *pProps, const Ray_t& ray, CStudioHdr *pStudioHdr, mstudiohitboxset_t *set, matrix3x4_t **hitboxbones, int fContentsMask, const Vector &vecOrigin, float flScale, trace_t &trace );
 // TERROR: TraceToStudio variant that prioritizes hitgroups, so bullets can pass through arms and chest to hit the head, for instance
 bool TraceToStudioGrouped( IPhysicsSurfaceProps *pProps, const Ray_t& ray, CStudioHdr *pStudioHdr, mstudiohitboxset_t *set, 
-						  matrix3x4_t **hitboxbones, int fContentsMask, trace_t &tr, const CUtlVector< int > &sortedHitgroups );
+						  matrix3x4_t **hitboxbones, int fContentsMask, trace_t &tr, const std::vector< int > &sortedHitgroups );
 
 void QuaternionSM( float s, const Quaternion &p, const Quaternion &q, Quaternion &qt );
 void QuaternionMA( const Quaternion &p, float s, const Quaternion &q, Quaternion &qt );

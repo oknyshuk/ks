@@ -16,6 +16,8 @@ class CBaseAnimating;
 class CStudioHdr;
 struct studiohdr_t;
 
+#include <vector>
+
 #ifndef CLIENT_DLL
 #include "bone_setup.h"
 #endif
@@ -93,8 +95,8 @@ protected:
 	// This is an array of pose param indices on the follower to pose param indices on the owner
 	int				m_nOwnerToFollowPoseParamMapping[MAXSTUDIOPOSEPARAM];
 
-	CUtlVector<CMergedBone> m_MergedBones;
-	CVarBitVec m_BoneMergeBits;	// One bit for each bone. The bit is set if the bone gets merged.
+	std::vector< CMergedBone > m_MergedBones;
+	std::vector< bool > m_BoneMergeBits;	// One bit for each bone. The bit is set if the bone gets merged.
 
 	unsigned short m_iRawIndexMapping[ MAXSTUDIOBONES ];
 
@@ -105,7 +107,7 @@ protected:
 inline int CBoneMergeCache::IsBoneMerged( int iBone ) const
 {
 	if ( m_pOwnerHdr )
-		return m_BoneMergeBits.Get( iBone );
+		return m_BoneMergeBits[iBone];
 	else
 		return 0;
 }

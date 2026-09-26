@@ -8,8 +8,10 @@
 #ifndef ECON_ITEM_SCHEMA_MINIMAL_H
 #define ECON_ITEM_SCHEMA_MINIMAL_H
 
-#include "tier1/utlhashmaplarge.h"
-#include "tier1/utldict.h"
+#include "tier1/map_ops.h"
+#include <memory>
+#include <unordered_map>
+#include <vector>
 #include "tier1/keyvalues.h"
 
 // Forward declarations
@@ -119,16 +121,12 @@ public:
 	CEconItemDefinition *GetItemDefinitionByMapIndex( int index ) const;
 
 	// Iteration
-	int GetItemDefinitionCount() const { return m_mapItems.Count(); }
+	int GetItemDefinitionCount() const { return ( int )m_vecItems.size(); }
 
 #ifndef CLIENT_DLL
 	// Precache all models referenced by item definitions (call during map load)
 	void PrecacheItemDefinitionModels() const;
 #endif
-
-	// Type alias for compatibility with existing code
-	typedef CUtlHashMapLarge<int, CEconItemDefinition*> ItemDefinitionMap_t;
-	const ItemDefinitionMap_t& GetItemDefinitionMap() const { return m_mapItems; }
 
 	// Stub accessors for compatibility (return NULL)
 	class CEconItemAttributeDefinition *GetAttributeDefinitionByName( const char * ) const { return nullptr; }
@@ -154,10 +152,11 @@ private:
 	KeyValues *GetMergedPrefab( const char *pszPrefabName );
 
 	// Storage
-	CUtlHashMapLarge<int, CEconItemDefinition*> m_mapItems;        // By def index
-	CUtlDict<CEconItemDefinition*> m_dictItemsByName;              // By name
-	CUtlDict<KeyValues*> m_dictPrefabs;                            // Prefab definitions
-	CUtlDict<KeyValues*> m_dictMergedPrefabs;                      // Cached merged prefabs
+	std::vector<std::unique_ptr<CEconItemDefinition>> m_vecItems; // Load order; GetItemDefinitionByMapIndex order
+	std::unordered_map<int, int> m_mapItems;                       // Def index -> m_vecItems slot
+	ks::idict<CEconItemDefinition*> m_dictItemsByName;             // By name
+	ks::idict<std::unique_ptr<KeyValues>> m_dictPrefabs;           // Prefab definitions
+	ks::idict<std::unique_ptr<KeyValues>> m_dictMergedPrefabs;     // Cached merged prefabs
 
 	bool m_bInitialized;
 };

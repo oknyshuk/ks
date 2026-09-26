@@ -17,9 +17,6 @@
 #include "reflect_datamap.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // See interface.h/.cpp for specifics:  basically this ensures that we actually Sys_UnloadModule the dll and that we don't call Sys_LoadModule 
 //  over and over again.
 static CDllDemandLoader g_GameUI( "gameui" );

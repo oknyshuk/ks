@@ -14,9 +14,6 @@
 #include "replaydirector.h"
 #include "keyvalues.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 //////////////////////////////////////////////////////////////////////
 // Expose interface
@@ -46,10 +43,6 @@ static ConVar replay_delay( "replay_delay", "30", 0, "Replay broadcast delay in 
 static ConVar replay_allow_static_shots( "replay_allow_static_shots", "1", 0, "Auto director uses fixed level cameras for shots" );
 static ConVar replay_allow_camera_man( "replay_allow_camera_man", "1", 0, "Auto director allows spectators to become camera man" );
 
-static bool GameEventLessFunc( CReplayGameEvent const &e1, CReplayGameEvent const &e2 )
-{
-	return e1.m_Tick < e2.m_Tick;
-}
 
 #define RANDOM_MAX_ELEMENTS		256
 static int s_RndOrder[RANDOM_MAX_ELEMENTS];
@@ -122,7 +115,6 @@ CReplayDirector::CReplayDirector()
 	m_pReplayClient = nullptr;
 	m_iCameraMan = 0;
 	m_nNumFixedCameras = 0;
-	m_EventHistory.SetLessFunc( GameEventLessFunc );
 	m_nNextAnalyzeTick = 0;
 	m_iCameraManIndex = 0;
 }
@@ -153,7 +145,7 @@ void CReplayDirector::FireGameEvent( IGameEvent * event )
 	gameevent.m_Priority = event->GetInt( "priority", -1 ); // priorities are leveled between 0..10, -1 means ignore
 	gameevent.m_Tick = gpGlobals->tickcount;
 	
-	m_EventHistory.Insert( gameevent );
+	m_EventHistory.insert( gameevent );
 }
 
 IReplayServer* CReplayDirector::GetReplayServer( void )
@@ -255,7 +247,7 @@ void CReplayDirector::UpdateSettings()
 		}
 	}
 
-   	m_nBroadcastTick = MAX( 0, newBroadcastTick );
+   	m_nBroadcastTick = std::max( 0, newBroadcastTick );
 }
 
 const char** CReplayDirector::GetModEvents()
@@ -381,9 +373,7 @@ void CReplayDirector::StartBestPlayerCameraShot()
 
 	memset( flPlayerRanking, 0, sizeof(flPlayerRanking) );
 
-	int firstIndex = FindFirstEvent( m_nBroadcastTick );
-
-	int index = firstIndex;
+	auto index = FindFirstEvent( m_nBroadcastTick );
 
 	float flBestRank = -1.0f;
 	int iBestCamera = -1;
@@ -391,9 +381,9 @@ void CReplayDirector::StartBestPlayerCameraShot()
 
 	// sum all ranking values for the cameras
 
-	while( index != m_EventHistory.InvalidIndex() )
+	while( index != m_EventHistory.end() )
 	{
-		CReplayGameEvent &dc = m_EventHistory[index];
+		const CReplayGameEvent &dc = *index;
 
 		if ( dc.m_Tick >= m_nNextShotTick )
 			break; 
@@ -417,7 +407,7 @@ void CReplayDirector::StartBestPlayerCameraShot()
 			}
 		}
 
-		index = m_EventHistory.NextInorder( index );
+		++index;
 	}
 
 	if ( iBestCamera != -1 )
@@ -490,9 +480,7 @@ void CReplayDirector::StartBestFixedCameraShot( bool bForce )
 
 	memset( flCameraRanking, 0, sizeof(flCameraRanking) );
 
-	int firstIndex = FindFirstEvent( m_nBroadcastTick );
-
-	int index = firstIndex;
+	auto index = FindFirstEvent( m_nBroadcastTick );
 
 	float flBestRank = -1.0f;
 	int iBestCamera = -1;
@@ -500,9 +488,9 @@ void CReplayDirector::StartBestFixedCameraShot( bool bForce )
 
 	// sum all ranking values for the cameras
 
-	while( index != m_EventHistory.InvalidIndex() )
+	while( index != m_EventHistory.end() )
 	{
-		CReplayGameEvent &dc = m_EventHistory[index];
+		const CReplayGameEvent &dc = *index;
 
 		if ( dc.m_Tick >= m_nNextShotTick )
 			break; 
@@ -522,7 +510,7 @@ void CReplayDirector::StartBestFixedCameraShot( bool bForce )
 			}
 		}
 
-		index = m_EventHistory.NextInorder( index );
+		++index;
 	}
 
 	if ( !bForce && flBestRank == 0 )
@@ -540,7 +528,7 @@ void CReplayDirector::StartBestFixedCameraShot( bool bForce )
 void CReplayDirector::StartRandomShot() 
 {
 	int toTick = m_nBroadcastTick + TIME_TO_TICKS ( DEF_SHOT_LENGTH );
-	m_nNextShotTick = MIN( m_nNextShotTick, toTick );
+	m_nNextShotTick = std::min( m_nNextShotTick, toTick );
 
 	if ( RandomFloat(0,1) < 0.25 && replay_allow_static_shots.GetBool() )
 	{
@@ -554,7 +542,7 @@ void CReplayDirector::StartRandomShot()
 	}
 }
 
-void CReplayDirector::CreateShotFromEvent( CReplayGameEvent *event )
+void CReplayDirector::CreateShotFromEvent( const CReplayGameEvent *event )
 {
 	// show event at least for 2 more seconds after it occured
 	const char *name = event->m_Event->GetName();
@@ -585,7 +573,7 @@ void CReplayDirector::CreateShotFromEvent( CReplayGameEvent *event )
 			// if we show ineye view, show it more likely from killer
 			if ( RandomFloat(0,1) > (bInEye?0.3f:0.7f)  )
 			{
-				swap( attacker, victim );
+				std::swap( attacker, victim );
 			}
 						
 			// hurting a victim is shown as chase more often
@@ -596,7 +584,7 @@ void CReplayDirector::CreateShotFromEvent( CReplayGameEvent *event )
 		}
 				
 		// shot 2 seconds after death/hurt
-		m_nNextShotTick = MIN( m_nNextShotTick, (event->m_Tick+TIME_TO_TICKS(2.0)) );
+		m_nNextShotTick = std::min( m_nNextShotTick, (event->m_Tick+TIME_TO_TICKS(2.0)) );
 	}
 	else if ( bRoundStart || bRoundEnd )
 	{
@@ -610,68 +598,34 @@ void CReplayDirector::CreateShotFromEvent( CReplayGameEvent *event )
 
 void CReplayDirector::CheckHistory()
 {
-	int index = m_EventHistory.FirstInorder();
 	int lastTick = -1;
 
-	while ( index != m_EventHistory.InvalidIndex() )
+	for ( const CReplayGameEvent &dc : m_EventHistory )
 	{
-		CReplayGameEvent &dc = m_EventHistory[index];
-
 		Assert( lastTick <= dc.m_Tick );
 		lastTick = dc.m_Tick;
-
-		index = m_EventHistory.NextInorder( index );
 	}
 }
 
 void CReplayDirector::RemoveEventsFromHistory(int tick)
 {
-	int index = m_EventHistory.FirstInorder();
+	// history is sorted by tick, so the events to remove are a prefix
+	auto last = ( tick == -1 ) ? m_EventHistory.end() : m_EventHistory.lower_bound( tick );
 
-	while ( index != m_EventHistory.InvalidIndex() )
+	for ( auto it = m_EventHistory.begin(); it != last; ++it )
 	{
-		CReplayGameEvent &dc = m_EventHistory[index];
-
-		if ( (dc.m_Tick < tick) || (tick == -1) )
-		{
-			gameeventmanager->FreeEvent( dc.m_Event );
-			dc.m_Event = nullptr;
-			m_EventHistory.RemoveAt( index );
-			index = m_EventHistory.FirstInorder();	// start again
-		}
-		else
-		{
-			index = m_EventHistory.NextInorder( index );
-		}
+		gameeventmanager->FreeEvent( it->m_Event );
 	}
+	m_EventHistory.erase( m_EventHistory.begin(), last );
 
 #ifdef _DEBUG
 	CheckHistory();
 #endif
 }
 
-int CReplayDirector::FindFirstEvent( int tick )
+CReplayDirector::EventHistory_t::const_iterator CReplayDirector::FindFirstEvent( int tick ) const
 {
-	// TODO cache last queried ticks
-
-	int index = m_EventHistory.FirstInorder();
-
-	if ( index == m_EventHistory.InvalidIndex() )
-		return index; // no commands in list
-
-	CReplayGameEvent *event = &m_EventHistory[index];
-
-	while ( event->m_Tick < tick )
-	{
-		index = m_EventHistory.NextInorder( index );
-		
-		if ( index == m_EventHistory.InvalidIndex() )
-			break;
-
-		event = &m_EventHistory[index];
-	}
-
-	return index;
+	return m_EventHistory.lower_bound( tick );
 }
 
 bool CReplayDirector::SetCameraMan( int iPlayerIndex )
@@ -739,9 +693,9 @@ void CReplayDirector::FinishCameraManShot()
 {
 	Assert( m_iCameraMan == m_iPVSEntity );
 
-	int index = FindFirstEvent( m_nBroadcastTick );
+	auto index = FindFirstEvent( m_nBroadcastTick );
 
-	if ( index == m_EventHistory.InvalidIndex() )
+	if ( index == m_EventHistory.end() )
 	{
 		// check next frame again if event history is empty
 		m_nNextShotTick = m_nBroadcastTick+1;
@@ -751,9 +705,9 @@ void CReplayDirector::FinishCameraManShot()
 	m_nNextShotTick = m_nBroadcastTick + TIME_TO_TICKS( MIN_SHOT_LENGTH );
 
 	//check if camera turns camera off within broadcast time and game time
-	while( index != m_EventHistory.InvalidIndex() )
+	while( index != m_EventHistory.end() )
 	{
-		CReplayGameEvent &dc = m_EventHistory[index];
+		const CReplayGameEvent &dc = *index;
 
 		if ( dc.m_Tick >= m_nNextShotTick )
 			break;
@@ -771,7 +725,7 @@ void CReplayDirector::FinishCameraManShot()
 			}
 		}
 
-		index = m_EventHistory.NextInorder( index );
+		++index;
 	}
 
 	// camera man is still recording and live, resend camera man message
@@ -789,12 +743,12 @@ bool CReplayDirector::StartCameraManShot()
 {
 	Assert( m_nNextShotTick <= m_nBroadcastTick );
 
-	int index = FindFirstEvent( m_nNextShotTick );
+	auto index = FindFirstEvent( m_nNextShotTick );
 
 	// check for cameraman mode
-	while( index != m_EventHistory.InvalidIndex() )
+	while( index != m_EventHistory.end() )
 	{
-		CReplayGameEvent &dc = m_EventHistory[index];
+		const CReplayGameEvent &dc = *index;
 
 		// only check if this is the current tick
 		if ( dc.m_Tick > m_nBroadcastTick )
@@ -816,7 +770,7 @@ bool CReplayDirector::StartCameraManShot()
 			}
 		}
 
-		index = m_EventHistory.NextInorder( index );
+		++index;
 	}
 
 	return false;	// no camera man found
@@ -855,7 +809,7 @@ void CReplayDirector::StartInstantBroadcastShot()
 void CReplayDirector::StartNewShot()
 {
 	// we can remove all events the
-	int smallestTick = MAX(0, gpGlobals->tickcount - TIME_TO_TICKS(REPLAY_MAX_DELAY) );
+	int smallestTick = std::max(0, gpGlobals->tickcount - TIME_TO_TICKS(REPLAY_MAX_DELAY) );
     RemoveEventsFromHistory( smallestTick );
 
 	// if the delay time is to short for autodirector, just show next best thing
@@ -905,11 +859,11 @@ void CReplayDirector::StartNewShot()
 		return;
 	}
 	
-	int index = FindFirstEvent( m_nBroadcastTick );
+	auto index = FindFirstEvent( m_nBroadcastTick );
 
-	while( index != m_EventHistory.InvalidIndex() )
+	while( index != m_EventHistory.end() )
 	{
-		CReplayGameEvent &dc = m_EventHistory[index];
+		const CReplayGameEvent &dc = *index;
 
 		if ( dc.m_Tick >= m_nNextShotTick )
 			break; // we have searched enough
@@ -925,7 +879,7 @@ void CReplayDirector::StartNewShot()
 			}
 		}
 
-		index = m_EventHistory.NextInorder( index );
+		++index;
 	} 
 
 	float flDuration = TICKS_TO_TIME(m_nNextShotTick - m_nBroadcastTick);
@@ -934,7 +888,7 @@ void CReplayDirector::StartNewShot()
 		return;	// not enough time for a new shot
 
 	// find the most interesting game event for next shot
-	CReplayGameEvent *dc = FindBestGameEvent();
+	const CReplayGameEvent *dc = FindBestGameEvent();
 
 	if ( dc )
 	{
@@ -948,21 +902,20 @@ void CReplayDirector::StartNewShot()
 	}
 }
 
-CReplayGameEvent *CReplayDirector::FindBestGameEvent()
+const CReplayGameEvent *CReplayDirector::FindBestGameEvent()
 {
-	int	bestEvent[4];
+	const CReplayGameEvent *bestEvent[4] = {};
 	int	bestEventPrio[4];
 
-	Q_memset( bestEvent, 0, sizeof(bestEvent) );
 	Q_memset( bestEventPrio, 0, sizeof(bestEventPrio) );
 	
-	int index = FindFirstEvent( m_nBroadcastTick );
+	auto index = FindFirstEvent( m_nBroadcastTick );
 		
 	// search for next 4 best events within next 8 seconds
 	for (int i = 0; i<4; i ++)
 	{
 		bestEventPrio[i] = 0;
-		bestEvent[i] = 0;
+		bestEvent[i] = nullptr;
 	
 		int tillTick = m_nBroadcastTick + TIME_TO_TICKS( 2.0f*(1.0f+i) );
 
@@ -970,9 +923,9 @@ CReplayGameEvent *CReplayDirector::FindBestGameEvent()
 			break;
 
 		// sum all action for the next time
-		while ( index != m_EventHistory.InvalidIndex()  )
+		while ( index != m_EventHistory.end()  )
 		{
-			CReplayGameEvent &event = m_EventHistory[index];
+			const CReplayGameEvent &event = *index;
 
 			if ( event.m_Tick > tillTick )
 				break;
@@ -981,11 +934,11 @@ CReplayGameEvent *CReplayDirector::FindBestGameEvent()
 
 			if ( priority > bestEventPrio[i] )
 			{
-				bestEvent[i] = index;
+				bestEvent[i] = &event;
 				bestEventPrio[i] = priority;
 			}
 			
-			index = m_EventHistory.NextInorder( index );
+			++index;
 		}
 	}
 
@@ -998,22 +951,22 @@ CReplayGameEvent *CReplayDirector::FindBestGameEvent()
 		 bestEventPrio[1] >= bestEventPrio[2] &&
 		 bestEventPrio[1] >= bestEventPrio[3] )
 	{
-		return &m_EventHistory[ bestEvent[1] ];	// best case
+		return bestEvent[1];	// best case
 	}
 	else if ( bestEventPrio[0] > bestEventPrio[1] &&
 			  bestEventPrio[0] > bestEventPrio[2] )
 	{
-		return &m_EventHistory[ bestEvent[0] ];	// event 0 is very important
+		return bestEvent[0];	// event 0 is very important
 	}
 	else if (	bestEventPrio[2] > bestEventPrio[3] ) 
 	{
-		return &m_EventHistory[ bestEvent[2] ];	
+		return bestEvent[2];	
 	}
 	else
 	{
 		// event 4 is the best but too far away, so show event 1 
 		if ( bestEvent[0] )
-			return &m_EventHistory[ bestEvent[0] ];
+			return bestEvent[0];
 		else
 			return nullptr;
 	}

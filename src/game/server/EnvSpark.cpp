@@ -12,9 +12,6 @@
 #include "engine/IEngineSound.h"
 #include "particle_parse.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar fx_new_sparks ( "fx_new_sparks", "1", FCVAR_CHEAT, "Use new style sparks.\n" );
 
 //-----------------------------------------------------------------------------

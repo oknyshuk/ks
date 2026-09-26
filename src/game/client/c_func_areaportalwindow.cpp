@@ -13,9 +13,6 @@
 #include "ivrenderview.h"
 #include "engine/ivmodelinfo.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define VIEWER_PADDING	80.0f
 
 class [[= ks::reflect::NetTable{ .name = "DT_FuncAreaPortalWindow" } ]]

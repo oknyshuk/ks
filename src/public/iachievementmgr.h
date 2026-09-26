@@ -7,7 +7,6 @@
 #ifndef IACHIEVEMENTMGR_H
 #define IACHIEVEMENTMGR_H
 
-#include "utlmap.h"
 #ifndef DEDICATED
 #endif
 
@@ -78,7 +77,7 @@ public:
 	virtual void OnMapEvent( const char *pchEventName, int nPlayerSlot ) = 0;
 	virtual void SaveGlobalStateIfDirty( ) = 0;
 	virtual bool HasAchieved( const char *pchName, int nPlayerSlot ) = 0;
-	virtual const CUtlVector<int>& GetAchievedDuringCurrentGame( int nPlayerSlot ) = 0;
+	virtual const std::vector< int >& GetAchievedDuringCurrentGame( int nPlayerSlot ) = 0;
 	virtual bool WereCheatsEverOn() = 0;
 
 	virtual UIProfileInfo* GetUIProfileInfo() = 0;

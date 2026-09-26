@@ -10,9 +10,11 @@
 
 #include "datamodel/dmattributetypes.h"
 #include "tier1/utlvector.h"
-#include "tier1/utlrbtree.h"
-#include "tier1/utlsymbol.h"
-#include "tier1/mempool.h"
+#include "tier1/intern_pool.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
+#include "tier1/text_reader.h"
+#include "tier1/text_writer.h"
 #include "dmxloader/dmxloader.h"
 
 
@@ -39,14 +41,14 @@ class CDmxElement;
 	};																		\
 
 #define DECLARE_DMX_ATTRIBUTE_ARRAY_TYPE_INTERNAL( _className, _storageType, _attributeType, _attributeName ) \
-	template< > class CDmAttributeInfo< CUtlVector<_className> >				\
+	template< > class CDmAttributeInfo< std::vector< _className > >				\
 	{																			\
 	private:																	\
 		enum { ATTRIBUTE_TYPE = _attributeType };								\
 		typedef _storageType StorageType_t;										\
 		static DmAttributeType_t AttributeType() { return _attributeType; }		\
 		static const char *AttributeTypeName() { return _attributeName; }		\
-		static void SetDefaultValue( CUtlVector< _className >& value ) { value.RemoveAll(); }	\
+		static void SetDefaultValue( std::vector< _className >& value ) { value.clear(); }	\
 		friend class CDmxAttribute;												\
 		friend class CDmxElement;												\
 	};																			\
@@ -55,7 +57,7 @@ class CDmxElement;
 	DECLARE_DMX_ATTRIBUTE_TYPE_INTERNAL( _className, _className, _attributeType, _attributeName, _defaultSetStatement )
 
 #define DECLARE_DMX_ATTRIBUTE_ARRAY_TYPE( _className, _attributeType, _attributeName )\
-	DECLARE_DMX_ATTRIBUTE_ARRAY_TYPE_INTERNAL( _className, CUtlVector< _className >, _attributeType, _attributeName )
+	DECLARE_DMX_ATTRIBUTE_ARRAY_TYPE_INTERNAL( _className, std::vector< _className >, _attributeType, _attributeName )
 
 
 
@@ -65,8 +67,8 @@ class CDmxElement;
 DECLARE_DMX_ATTRIBUTE_TYPE( CDmxElement*,		AT_ELEMENT,				"element",		value = 0; )
 DECLARE_DMX_ATTRIBUTE_ARRAY_TYPE( CDmxElement*,	AT_ELEMENT_ARRAY,		"element_array" )
 
-DECLARE_DMX_ATTRIBUTE_TYPE( CUtlString,			AT_STRING,				"string",		value.Set( nullptr ); )
-DECLARE_DMX_ATTRIBUTE_ARRAY_TYPE( CUtlString,	AT_STRING_ARRAY,		"string_array" )
+DECLARE_DMX_ATTRIBUTE_TYPE( std::string,			AT_STRING,				"string",		value.assign( ks::nz( nullptr ) ); )
+DECLARE_DMX_ATTRIBUTE_ARRAY_TYPE( std::string,	AT_STRING_ARRAY,		"string_array" )
 
 
 //-----------------------------------------------------------------------------
@@ -82,15 +84,14 @@ public:
 	const char *GetTypeString() const;
 	template< class T > bool IsA() const;
 
-	// Returns the name. NOTE: The utlsymbol
-	// can be turned into a string by using g_pDataModel->String();
+	// Returns the name; the symbol is a view into s_AttributeNameSymbols (compare by data()).
 	const char *GetName() const;
-	CUtlSymbolLarge GetNameSymbol() const;
+	std::string_view GetNameSymbol() const;
 	void SetName( const char *pName );
 
 	// Gets values
 	template< class T >	const T& GetValue( ) const;
-	template< class T > const CUtlVector< T >& GetArray( ) const;
+	template< class T > const std::vector< T >& GetArray( ) const;
 	const char *GetValueString() const;
 
 	// Sets values (+ type)
@@ -103,7 +104,7 @@ public:
 	// Method to set values in an array (just directly operate on the array)
 	// NOTE: This will create a new array of the appropriate type if 
 	// the type doesn't match the current type
-	template< class T > CUtlVector< T >& GetArrayForEdit();
+	template< class T > std::vector< T >& GetArrayForEdit();
 
 	// Sets the attribute to its default value based on its type
 	void	SetToDefaultValue();
@@ -116,10 +117,14 @@ public:
 	int GetArrayCount() const;
 
 	// Read from file
-	bool Unserialize( DmAttributeType_t type, CUtlBuffer &buf );
-	bool UnserializeElement( DmAttributeType_t type, CUtlBuffer &buf );
-	bool Serialize( CUtlBuffer &buf ) const;
-	bool SerializeElement( int nIndex, CUtlBuffer &buf ) const;
+	bool Unserialize( DmAttributeType_t type, ks::byte_reader &buf );
+	bool Unserialize( DmAttributeType_t type, ks::text_reader &buf );
+	bool UnserializeElement( DmAttributeType_t type, ks::byte_reader &buf );
+	bool UnserializeElement( DmAttributeType_t type, ks::text_reader &buf );
+	bool Serialize( ks::byte_writer &buf ) const;
+	bool Serialize( ks::text_writer &buf ) const;
+	bool SerializeElement( int nIndex, ks::byte_writer &buf ) const;
+	bool SerializeElement( int nIndex, ks::text_writer &buf ) const;
 	bool SerializesOnMultipleLines() const;
 
 	// Returns the size of the variables storing the various attribute types
@@ -129,7 +134,7 @@ public:
 
 private:
 	CDmxAttribute( const char *pAttributeName );
-	CDmxAttribute( CUtlSymbolLarge attributeName );
+	CDmxAttribute( std::string_view attributeName );
 	~CDmxAttribute();
 
 	// Allocate, free memory for data
@@ -153,18 +158,18 @@ private:
 	template < class VT, class T > void GetArrayCount( int &nArrayCount ) const;
 	template < class VT, class T > void GetArrayBase( const void * &pBasePtr ) const;
 	template < class VT, class T > void SerializesOnMultipleLines( bool &bResult ) const;
-	template < class VT, class T > void SerializeType( bool &bSuccess, CUtlBuffer &buf ) const;
-	template < class VT, class T > void SerializeTypedElement( bool &bSuccess, int nIndex, CUtlBuffer &buf ) const;
-	template < class VT, class T > void UnserializeType( bool &bSuccess, CUtlBuffer &buf );
-	template < class VT, class T > void UnserializeTypedElement( bool &bSuccess, CUtlBuffer &buf );
+	template < class VT, class T, class Writer > void SerializeType( bool &bSuccess, Writer &buf ) const;
+	template < class VT, class T, class Writer > void SerializeTypedElement( bool &bSuccess, int nIndex, Writer &buf ) const;
+	template < class VT, class T, class Reader > void UnserializeType( bool &bSuccess, Reader &buf );
+	template < class VT, class T, class Reader > void UnserializeTypedElement( bool &bSuccess, Reader &buf );
 	template < class VT, class T > void SetDefaultValue( void );
 
 
 	DmAttributeType_t m_Type;
-	CUtlSymbolLarge m_Name;
+	std::string_view m_Name;
 	void *m_pData;
 
-	static CUtlSymbolTableLargeMT s_AttributeNameSymbols;
+	static ks::intern_pool_mt s_AttributeNameSymbols;
 
 	friend class CDmxElement;
 
@@ -188,7 +193,7 @@ template< class T > inline bool CDmxAttribute::IsA() const
 	return GetType() == CDmAttributeInfo< T >::ATTRIBUTE_TYPE;
 }
 
-inline CUtlSymbolLarge CDmxAttribute::GetNameSymbol() const
+inline std::string_view CDmxAttribute::GetNameSymbol() const
 {
 	return m_Name;
 }
@@ -200,6 +205,8 @@ inline CUtlSymbolLarge CDmxAttribute::GetNameSymbol() const
 template< class T > void CDmxAttribute::SetValue( const T& value )
 {
 	AllocateDataMemory( CDmAttributeInfo<T>::AttributeType() );
+	if ( !m_pData )
+		return;
 	CopyConstruct( (T*)m_pData, value );
 }
 
@@ -210,7 +217,7 @@ template< class T > void CDmxAttribute::SetValue( const T& value )
 inline const char *CDmxAttribute::GetValueString() const
 {
 	if ( m_Type == AT_STRING )
-		return *(CUtlString*)m_pData;
+		return ((std::string*)m_pData)->c_str();
 	return "";
 }
 
@@ -226,24 +233,24 @@ inline const T& CDmxAttribute::GetValue( ) const
 }
 
 template< class T > 
-inline const CUtlVector< T >& CDmxAttribute::GetArray( ) const
+inline const std::vector< T >& CDmxAttribute::GetArray( ) const
 {
-	if ( CDmAttributeInfo< CUtlVector< T > >::AttributeType() == m_Type )
-		return *( CUtlVector< T > *)m_pData;
+	if ( CDmAttributeInfo< std::vector< T > >::AttributeType() == m_Type )
+		return *( std::vector< T > *)m_pData;
 
-	static CUtlVector<T> defaultArray;
+	static std::vector< T > defaultArray;
 	return defaultArray;
 }
 
 template< class T > 
-inline CUtlVector< T >& CDmxAttribute::GetArrayForEdit( )
+inline std::vector< T >& CDmxAttribute::GetArrayForEdit( )
 {
-	if ( CDmAttributeInfo< CUtlVector< T > >::AttributeType() == m_Type )
-		return *( CUtlVector< T > *)m_pData;
+	if ( CDmAttributeInfo< std::vector< T > >::AttributeType() == m_Type )
+		return *( std::vector< T > *)m_pData;
 
-	AllocateDataMemory( CDmAttributeInfo< CUtlVector< T > >::AttributeType() );
-	Construct( (CUtlVector<T>*)m_pData );
-	return *(CUtlVector< T > *)m_pData;
+	AllocateDataMemory( CDmAttributeInfo< std::vector< T > >::AttributeType() );
+	Construct( (std::vector< T >*)m_pData );
+	return *(std::vector< T > *)m_pData;
 }
 
 #endif // DMXATTRIBUTE_H

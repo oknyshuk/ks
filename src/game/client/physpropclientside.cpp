@@ -15,9 +15,6 @@
 #include "view.h"
 #include "tier0/vprof.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define FADEOUT_TIME	1.0f
 ConVar	r_propsmaxdist( "r_propsmaxdist", "1200", 0, "Maximum visible distance" );
 
@@ -27,10 +24,10 @@ ConVar	r_propsmaxdist( "r_propsmaxdist", "1200", 0, "Maximum visible distance" )
 
 static int PropBreakablePrecacheAll( int modelIndex )
 {
-	CUtlVector<breakmodel_t> list;
+	std::vector< breakmodel_t > list;
 
 	BreakModelList( list, modelIndex, COLLISION_GROUP_NONE, 0 );
-	return list.Count();
+	return std::ssize( list );
 }
 
 C_PhysPropClientside *C_PhysPropClientside::CreateNew( bool bForce )

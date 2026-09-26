@@ -26,10 +26,13 @@
 #endif
 
 #include "vstdlib/coroutine.h"
+#include <mutex>
 #include "tier0/vprof.h"
 #include "tier0/minidump.h"
-#include "tier1/utllinkedlist.h"
 #include "tier1/utlvector.h"
+#include <deque>
+#include <optional>
+#include <ranges>
 #include <setjmp.h>
 
 // for debugging
@@ -59,9 +62,6 @@ void OutputDebugStringA( const char *pchMsg ) { fprintf( stderr, pchMsg ); fflus
 #else
 #define CoroutineDbgMsg( pchMsg, ... )
 #endif // COROUTINE_TRACE
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 #define Coroutine_longjmp longjmp
 
@@ -203,19 +203,19 @@ public:
 
 			if ( g_VProfCurrentProfile.IsEnabled() )
 			{
-				FOR_EACH_VEC_BACK( pThis->m_vecProfNodeStack, i )
+				for ( CVProfNode *pProfNode : pThis->m_vecProfNodeStack | std::views::reverse )
 				{
 					g_VProfCurrentProfile.EnterScope( 
-						pThis->m_vecProfNodeStack[i]->GetName(), 
+						pProfNode->GetName(), 
 						0,  
-						g_VProfCurrentProfile.GetBudgetGroupName( pThis->m_vecProfNodeStack[i]->GetBudgetGroupID() ), 
+						g_VProfCurrentProfile.GetBudgetGroupName( pProfNode->GetBudgetGroupID() ), 
 						false, 
-						g_VProfCurrentProfile.GetBudgetGroupFlags( pThis->m_vecProfNodeStack[i]->GetBudgetGroupID() ) 
+						g_VProfCurrentProfile.GetBudgetGroupFlags( pProfNode->GetBudgetGroupID() ) 
 					);
 			}
 			}
 
-			pThis->m_vecProfNodeStack.Purge();
+			pThis->m_vecProfNodeStack.clear(); pThis->m_vecProfNodeStack.shrink_to_fit();
 #endif
 		}
 	}
@@ -241,12 +241,12 @@ public:
 
 #if defined( VPROF_ENABLED )
 		// Exit any current vprof scope when we yield, and remember the vprof stack so we can restore it when we run again
-		m_vecProfNodeStack.RemoveAll();
+		m_vecProfNodeStack.clear();
 
 		CVProfNode *pCurNode = g_VProfCurrentProfile.GetCurrentNode();
 		while ( pCurNode && m_pVProfNodeScope && pCurNode != m_pVProfNodeScope && pCurNode != g_VProfCurrentProfile.GetRoot() )
 		{
-			m_vecProfNodeStack.AddToTail( pCurNode );
+			m_vecProfNodeStack.push_back( pCurNode );
 			g_VProfCurrentProfile.ExitScope();
 			pCurNode = g_VProfCurrentProfile.GetCurrentNode();
 		} 
@@ -293,7 +293,7 @@ public:
 	CoroutineFunc_t m_pFunc;
 	void *m_pvParam;
 #if defined( VPROF_ENABLED )
-	CUtlVector<CVProfNode *> m_vecProfNodeStack;
+	std::vector< CVProfNode * > m_vecProfNodeStack;
 	CVProfNode *m_pVProfNodeScope;
 #endif
 
@@ -316,31 +316,32 @@ public:
 		m_topofexceptionchain = 0;
 
 		// reserve the 0 index as the main coroutine
-		HCoroutine hMainCoroutine = m_ListCoroutines.AddToTail();
+		HCoroutine hMainCoroutine = AllocCoroutine();
 
-		m_ListCoroutines[hMainCoroutine].m_pchName = "(main)";
+		m_ListCoroutines[hMainCoroutine]->m_pchName = "(main)";
 #ifdef COROUTINE_TRACE
-		m_ListCoroutines[hMainCoroutine].m_hCoroutine = hMainCoroutine;
+		m_ListCoroutines[hMainCoroutine]->m_hCoroutine = hMainCoroutine;
 #endif
 
 		// mark it as currently running
-		m_VecCoroutineStack.AddToTail( hMainCoroutine );
+		m_VecCoroutineStack.push_back( hMainCoroutine );
 	}
 
 	HCoroutine CreateCoroutine( CoroutineFunc_t pFunc, void *pvParam )
 	{
-		HCoroutine hCoroutine = m_ListCoroutines.AddToTail();
+		HCoroutine hCoroutine = AllocCoroutine();
 
 		CoroutineDbgMsg( g_fmtstr.sprintf( "Coroutine_Create() hCoroutine = %x pFunc = 0x%x pvParam = 0x%x\n", hCoroutine, pFunc, pvParam ) );
 
-		m_ListCoroutines[hCoroutine].m_pFunc = pFunc;
-		m_ListCoroutines[hCoroutine].m_pvParam = pvParam;
-		m_ListCoroutines[hCoroutine].m_pSavedStack = nullptr;
-		m_ListCoroutines[hCoroutine].m_cubSavedStack = 0;
-		m_ListCoroutines[hCoroutine].m_pStackHigh = m_ListCoroutines[hCoroutine].m_pStackLow = nullptr;
-		m_ListCoroutines[hCoroutine].m_pchName = "(no name set)";
+		CCoroutine &coroutine = *m_ListCoroutines[hCoroutine];
+		coroutine.m_pFunc = pFunc;
+		coroutine.m_pvParam = pvParam;
+		coroutine.m_pSavedStack = nullptr;
+		coroutine.m_cubSavedStack = 0;
+		coroutine.m_pStackHigh = coroutine.m_pStackLow = nullptr;
+		coroutine.m_pchName = "(no name set)";
 #ifdef COROUTINE_TRACE
-		m_ListCoroutines[hCoroutine].m_hCoroutine = hCoroutine;
+		coroutine.m_hCoroutine = hCoroutine;
 #endif
 
 		return hCoroutine;
@@ -349,45 +350,46 @@ public:
 	HCoroutine GetActiveCoroutineHandle()
 	{
 		// look up the coroutine of the last item on the stack
-		return m_VecCoroutineStack[m_VecCoroutineStack.Count() - 1];
+		return m_VecCoroutineStack[std::ssize( m_VecCoroutineStack ) - 1];
 	}
 
 	CCoroutine &GetActiveCoroutine()
 	{
 		// look up the coroutine of the last item on the stack
-		return m_ListCoroutines[GetActiveCoroutineHandle()];
+		return *m_ListCoroutines[GetActiveCoroutineHandle()];
 	}
 
 	CCoroutine &GetPreviouslyActiveCoroutine()
 	{
 		// look up the coroutine that ran the current coroutine
-		return m_ListCoroutines[m_VecCoroutineStack[m_VecCoroutineStack.Count() - 2]];
+		return *m_ListCoroutines[m_VecCoroutineStack[std::ssize( m_VecCoroutineStack ) - 2]];
 	}
 
 	bool IsValidCoroutine( HCoroutine hCoroutine )
 	{
-		return m_ListCoroutines.IsValidIndex( hCoroutine ) && hCoroutine > 0;
+		return hCoroutine > 0 && hCoroutine < std::ssize( m_ListCoroutines ) && m_ListCoroutines[hCoroutine].has_value();
 	}
 
 	void SetActiveCoroutine( HCoroutine hCoroutine )
 	{
-		m_VecCoroutineStack.AddToTail( hCoroutine );
+		m_VecCoroutineStack.push_back( hCoroutine );
 	}
 
 	void PopCoroutineStack()
 	{
-		Assert( m_VecCoroutineStack.Count() > 1 );
-		m_VecCoroutineStack.Remove( m_VecCoroutineStack.Count() - 1 );
+		Assert( std::ssize( m_VecCoroutineStack ) > 1 );
+		m_VecCoroutineStack.erase( m_VecCoroutineStack.begin() + ( std::ssize( m_VecCoroutineStack ) - 1 ) );
 	}
 
 	bool IsAnyCoroutineActive()
 	{
-		return m_VecCoroutineStack.Count() > 1;
+		return std::ssize( m_VecCoroutineStack ) > 1;
 	}
 
 	void DeleteCoroutine( HCoroutine hCoroutine )
 	{
-		m_ListCoroutines.Remove( hCoroutine );
+		m_ListCoroutines[hCoroutine].reset();
+		m_FreeCoroutines.push_back( hCoroutine );
 	}
 
 #ifdef DBGFLAG_VALIDATE
@@ -395,10 +397,10 @@ public:
 	{
 		validator.Push( "CCoroutineMgr", this, pchName );
 
-		ValidateObj( m_ListCoroutines );
-		FOR_EACH_LL( m_ListCoroutines, iRoutine )
+		for ( std::optional< CCoroutine > &coroutine : m_ListCoroutines )
 		{
-			ValidateObj( m_ListCoroutines[iRoutine] );
+			if ( coroutine )
+				ValidateObj( *coroutine );
 		}
 		ValidateObj( m_VecCoroutineStack );
 
@@ -409,22 +411,41 @@ public:
 	uint32 m_topofexceptionchain;
 
 private:
-	CUtlLinkedList<CCoroutine, HCoroutine> m_ListCoroutines;
-	CUtlVector<HCoroutine> m_VecCoroutineStack;
+	HCoroutine AllocCoroutine()
+	{
+		HCoroutine hCoroutine;
+		if ( !m_FreeCoroutines.empty() )
+		{
+			hCoroutine = m_FreeCoroutines.back();
+			m_FreeCoroutines.pop_back();
+		}
+		else
+		{
+			hCoroutine = (HCoroutine)m_ListCoroutines.size();
+			m_ListCoroutines.emplace_back();
+		}
+		m_ListCoroutines[hCoroutine].emplace();
+		return hCoroutine;
+	}
+
+	// Indexed by the public handle; freed slots are reused. deque: coroutines never move while running
+	std::deque< std::optional< CCoroutine > > m_ListCoroutines;
+	std::vector< HCoroutine > m_FreeCoroutines;
+	std::vector< HCoroutine > m_VecCoroutineStack;
 };
 
 CTHREADLOCALPTR( CCoroutineMgr ) g_ThreadLocalCoroutineMgr;
 //GenericThreadLocals::CThreadLocalPtr< CCoroutineMgr > 
-CUtlVector< CCoroutineMgr * > g_VecPCoroutineMgr;
-CThreadMutex g_ThreadMutexCoroutineMgr;
+std::vector< CCoroutineMgr * > g_VecPCoroutineMgr;
+std::recursive_mutex g_ThreadMutexCoroutineMgr;
 
 CCoroutineMgr &GCoroutineMgr()
 {
 	if ( !g_ThreadLocalCoroutineMgr )
 	{
-		AUTO_LOCK( g_ThreadMutexCoroutineMgr );
+		std::scoped_lock lock( g_ThreadMutexCoroutineMgr );
 		g_ThreadLocalCoroutineMgr = new CCoroutineMgr();
-		g_VecPCoroutineMgr.AddToTail( g_ThreadLocalCoroutineMgr );
+		g_VecPCoroutineMgr.push_back( g_ThreadLocalCoroutineMgr );
 	}
 	
 	return *g_ThreadLocalCoroutineMgr;
@@ -436,13 +457,13 @@ CCoroutineMgr &GCoroutineMgr()
 //-----------------------------------------------------------------------------
 void Coroutine_ReleaseThreadMemory()
 {
-	AUTO_LOCK( g_ThreadMutexCoroutineMgr );
+	std::scoped_lock lock( g_ThreadMutexCoroutineMgr );
 
 	if ( g_ThreadLocalCoroutineMgr != static_cast<const void*>( nullptr ) )
 	{
-		int iCoroutineMgr = g_VecPCoroutineMgr.Find( g_ThreadLocalCoroutineMgr );
+		int iCoroutineMgr = ks::find_index( g_VecPCoroutineMgr, g_ThreadLocalCoroutineMgr );
 		delete g_VecPCoroutineMgr[iCoroutineMgr];
-		g_VecPCoroutineMgr.Remove( iCoroutineMgr );
+		g_VecPCoroutineMgr.erase( g_VecPCoroutineMgr.begin() + iCoroutineMgr );
 	}
 }
 
@@ -800,7 +821,7 @@ void CoroutineTestL2( void * )
 // level 1 of a test
 void CoroutineTestL1( void *pvecCoroutineL2 )
 {
-	CUtlVector<HCoroutine> &vecCoroutineL2 = *(CUtlVector<HCoroutine> *)pvecCoroutineL2;
+	std::vector< HCoroutine > &vecCoroutineL2 = *(std::vector< HCoroutine > *)pvecCoroutineL2;
 
 	int i = 20;
 
@@ -832,7 +853,7 @@ bool Coroutine_Test()
 	Coroutine_Continue( hCoroutine, nullptr );
 
 	// now test 
-	CUtlVector<HCoroutine> vecCoroutineL2;
+	std::vector< HCoroutine > vecCoroutineL2;
 	hCoroutine = Coroutine_Create( &CoroutineTestL1, &vecCoroutineL2 );
 	Coroutine_Continue( hCoroutine, nullptr );
 
@@ -842,7 +863,7 @@ bool Coroutine_Test()
 		if ( hCoroutine && !Coroutine_Continue( hCoroutine, nullptr ) )
 			hCoroutine = nullptr;
 
-		FOR_EACH_VEC_BACK( vecCoroutineL2, i )
+		for ( int i = (int)std::ssize( vecCoroutineL2 ) - 1; i >= 0; i-- )
 		{
 			if ( !Coroutine_Continue( vecCoroutineL2[i], nullptr ) )
 				vecCoroutineL2.Remove( i );
@@ -864,7 +885,7 @@ bool Coroutine_Test()
 
 	// now do a whole bunch of them
 	static const int k_nSimultaneousCoroutines = 10 * 1000;
-	CUtlVector<HCoroutine> coroutines;
+	std::vector< HCoroutine > coroutines;
 	Assert( coroutines.Base() == nullptr );
 	for (int i = 0; i < k_nSimultaneousCoroutines; i++)
 	{
@@ -909,7 +930,7 @@ size_t Coroutine_GetStackDepth()
 void Coroutine_ValidateGlobals( class CValidator &validator )
 {
 #ifdef DBGFLAG_VALIDATE
-	AUTO_LOCK( g_ThreadMutexCoroutineMgr );
+	std::scoped_lock lock( g_ThreadMutexCoroutineMgr );
 
 	for ( int i = 0; i < g_VecPCoroutineMgr.Count(); i++ )
 	{

@@ -15,9 +15,6 @@
 #include "nav_pathfind.h"
 #include "nav_colors.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern ConVar nav_area_bgcolor;
 
 unsigned int CNavLadder::m_nextID = 1;
@@ -40,7 +37,7 @@ void CNavLadder::CompressIDs( void )
 
 	if ( TheNavMesh )
 	{
-		for ( int i=0; i<TheNavMesh->GetLadders().Count(); ++i )
+		for ( int i=0; i<std::ssize( TheNavMesh->GetLadders() ); ++i )
 		{
 			CNavLadder *ladder = TheNavMesh->GetLadders()[i];
 			ladder->m_id = m_nextID++;
@@ -164,10 +161,8 @@ void CNavLadder::ConnectTo( CNavArea *area )
 CNavLadder::~CNavLadder()
 {
 	// tell the other areas we are going away
-	FOR_EACH_VEC( TheNavAreas, it )
+	for ( CNavArea *area : TheNavAreas )
 	{
-		CNavArea *area = TheNavAreas[ it ];
-
 		area->OnDestroyNotify( this );
 	}
 }
@@ -410,19 +405,19 @@ void CNavLadder::DrawLadder( void ) const
 //--------------------------------------------------------------------------------------------------------------
 void CNavLadder::DrawConnectedAreas( void )
 {
-	CUtlVector< CNavArea * > areas;
+	std::vector< CNavArea * > areas;
 	if ( m_topForwardArea )
-		areas.AddToTail( m_topForwardArea );
+		areas.push_back( m_topForwardArea );
 	if ( m_topLeftArea )
-		areas.AddToTail( m_topLeftArea );
+		areas.push_back( m_topLeftArea );
 	if ( m_topRightArea )
-		areas.AddToTail( m_topRightArea );
+		areas.push_back( m_topRightArea );
 	if ( m_topBehindArea )
-		areas.AddToTail( m_topBehindArea );
+		areas.push_back( m_topBehindArea );
 	if ( m_bottomArea )
-		areas.AddToTail( m_bottomArea );
+		areas.push_back( m_bottomArea );
 
-	for ( int i=0; i<areas.Count(); ++i )
+	for ( int i=0; i<std::ssize( areas ); ++i )
 	{
 		CNavArea *adj = areas[i];
 
@@ -457,46 +452,46 @@ void CNavLadder::FindLadderEntity( void )
 /**
  * Save a navigation ladder to the opened binary stream
  */
-void CNavLadder::Save( CUtlBuffer &fileBuffer, unsigned int version ) const
+void CNavLadder::Save( ks::byte_writer &fileBuffer, unsigned int version ) const
 {
 	// save ID
-	fileBuffer.PutUnsignedInt( m_id );
+	fileBuffer.write< unsigned int >( m_id );
 
 	// save extent of ladder
-	fileBuffer.PutFloat( m_width );
+	fileBuffer.write< float >( m_width );
 
 	// save top endpoint of ladder
-	fileBuffer.PutFloat( m_top.x );
-	fileBuffer.PutFloat( m_top.y );
-	fileBuffer.PutFloat( m_top.z );
+	fileBuffer.write< float >( m_top.x );
+	fileBuffer.write< float >( m_top.y );
+	fileBuffer.write< float >( m_top.z );
 
 	// save bottom endpoint of ladder
-	fileBuffer.PutFloat( m_bottom.x );
-	fileBuffer.PutFloat( m_bottom.y );
-	fileBuffer.PutFloat( m_bottom.z );
+	fileBuffer.write< float >( m_bottom.x );
+	fileBuffer.write< float >( m_bottom.y );
+	fileBuffer.write< float >( m_bottom.z );
 
 	// save ladder length
-	fileBuffer.PutFloat( m_length );
+	fileBuffer.write< float >( m_length );
 
 	// save direction
-	fileBuffer.PutUnsignedInt( m_dir );
+	fileBuffer.write< unsigned int >( m_dir );
 
 	// save IDs of connecting areas
 	unsigned int id;
 	id = ( m_topForwardArea ) ? m_topForwardArea->GetID() : 0;
-	fileBuffer.PutUnsignedInt( id );
+	fileBuffer.write< unsigned int >( id );
 
 	id = ( m_topLeftArea ) ? m_topLeftArea->GetID() : 0;
-	fileBuffer.PutUnsignedInt( id );
+	fileBuffer.write< unsigned int >( id );
 
 	id = ( m_topRightArea ) ? m_topRightArea->GetID() : 0;
-	fileBuffer.PutUnsignedInt( id );
+	fileBuffer.write< unsigned int >( id );
 
 	id = ( m_topBehindArea ) ? m_topBehindArea->GetID() : 0;
-	fileBuffer.PutUnsignedInt( id );
+	fileBuffer.write< unsigned int >( id );
 
 	id = ( m_bottomArea ) ? m_bottomArea->GetID() : 0;
-	fileBuffer.PutUnsignedInt( id );
+	fileBuffer.write< unsigned int >( id );
 }
 
 
@@ -504,57 +499,57 @@ void CNavLadder::Save( CUtlBuffer &fileBuffer, unsigned int version ) const
 /**
  * Load a navigation ladder from the opened binary stream
  */
-void CNavLadder::Load( CUtlBuffer &fileBuffer, unsigned int version )
+void CNavLadder::Load( ks::byte_reader &fileBuffer, unsigned int version )
 {
 	// load ID
-	m_id = fileBuffer.GetUnsignedInt();
+	m_id = fileBuffer.read< unsigned int >();
 
 	// update nextID to avoid collisions
 	if (m_id >= m_nextID)
 		m_nextID = m_id+1;
 
 	// load extent of ladder
-	m_width = fileBuffer.GetFloat();
+	m_width = fileBuffer.read< float >();
 
 	// load top endpoint of ladder
-	m_top.x = fileBuffer.GetFloat();
-	m_top.y = fileBuffer.GetFloat();
-	m_top.z = fileBuffer.GetFloat();
+	m_top.x = fileBuffer.read< float >();
+	m_top.y = fileBuffer.read< float >();
+	m_top.z = fileBuffer.read< float >();
 
 	// load bottom endpoint of ladder
-	m_bottom.x = fileBuffer.GetFloat();
-	m_bottom.y = fileBuffer.GetFloat();
-	m_bottom.z = fileBuffer.GetFloat();
+	m_bottom.x = fileBuffer.read< float >();
+	m_bottom.y = fileBuffer.read< float >();
+	m_bottom.z = fileBuffer.read< float >();
 
 	// load ladder length
-	m_length = fileBuffer.GetFloat();
+	m_length = fileBuffer.read< float >();
 
 	// load direction
-	m_dir = (NavDirType)fileBuffer.GetUnsignedInt();
+	m_dir = (NavDirType)fileBuffer.read< unsigned int >();
 	SetDir( m_dir ); // regenerate the surface normal
 
 	// load dangling status
 	if ( version == 6 )
 	{
 		bool m_isDangling;
-		fileBuffer.Get( &m_isDangling, sizeof(m_isDangling) );
+		fileBuffer.read_bytes( &m_isDangling, sizeof(m_isDangling) );
 	}
 
 	// load IDs of connecting areas
 	unsigned int id;
-	id = fileBuffer.GetUnsignedInt();
+	id = fileBuffer.read< unsigned int >();
 	m_topForwardArea = TheNavMesh->GetNavAreaByID( id );
 
-	id = fileBuffer.GetUnsignedInt();
+	id = fileBuffer.read< unsigned int >();
 	m_topLeftArea = TheNavMesh->GetNavAreaByID( id );
 
-	id = fileBuffer.GetUnsignedInt();
+	id = fileBuffer.read< unsigned int >();
 	m_topRightArea = TheNavMesh->GetNavAreaByID( id );
 
-	id = fileBuffer.GetUnsignedInt();
+	id = fileBuffer.read< unsigned int >();
 	m_topBehindArea = TheNavMesh->GetNavAreaByID( id );
 
-	id = fileBuffer.GetUnsignedInt();
+	id = fileBuffer.read< unsigned int >();
 	m_bottomArea = TheNavMesh->GetNavAreaByID( id );
 	if ( !m_bottomArea )
 	{

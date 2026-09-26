@@ -5,14 +5,12 @@
 //=============================================================================//
 
 #include "cbase.h"
+#include <set>
 #include "reflect_annotations.h"
 #include "reflect_datamap.h"
 #include "ai_squad.h"
 #include "ai_squadslot.h"
 #include "ai_basenpc.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 
@@ -154,7 +152,7 @@ void CAI_Squad::Init(string_t newName)
 	m_Name = AllocPooledString( STRING(newName) );
 	m_pNextSquad = nullptr;
 	m_flSquadSoundWaitTime = 0;
-	m_SquadMembers.RemoveAll();
+	m_SquadMembers.clear();
 
 	m_flSquadSoundWaitTime	= 0;
 
@@ -193,18 +191,18 @@ void CAI_Squad::RemoveFromSquad( CAI_BaseNPC *pNPC, bool bDeath )
 
 	// Find the index of this squad member
 	int member;
-	int myIndex = m_SquadMembers.Find( pNPC );
+	int myIndex = ks::find_index( m_SquadMembers, pNPC );
 	if (myIndex == -1)
 	{
 		DevMsg("ERROR: Attempting to remove non-existing squad membmer!\n");
 		return;
 	}
-	m_SquadMembers.Remove(myIndex);
+	m_SquadMembers.erase( m_SquadMembers.begin() + myIndex );
 
 	// Notify squad members of death 
 	if ( bDeath )
 	{
-		for (member = 0; member < m_SquadMembers.Count(); member++)
+		for (member = 0; member < std::ssize( m_SquadMembers ); member++)
 		{
 			CAI_BaseNPC* pSquadMem = m_SquadMembers[member];
 			if (pSquadMem)
@@ -237,17 +235,17 @@ void CAI_Squad::AddToSquad(CAI_BaseNPC *pNPC)
 		pNPC->GetSquad()->RemoveFromSquad(pNPC);
 	}
 
-	if (m_SquadMembers.Count() == MAX_SQUAD_MEMBERS)
+	if (std::ssize( m_SquadMembers ) == MAX_SQUAD_MEMBERS)
 	{
 		DevMsg("Error!! Squad %s is too big!!! Replacing last member\n", STRING(this->m_Name) );
-		m_SquadMembers.Remove(m_SquadMembers.Count()-1);
+		m_SquadMembers.erase( m_SquadMembers.begin() + ( std::ssize( m_SquadMembers )-1 ) );
 	}
 
-	m_SquadMembers.AddToTail( pNPC );
+	m_SquadMembers.push_back( pNPC );
 	pNPC->SetSquad( this );
 	pNPC->SetSquadName( m_Name );
 
-	if ( m_SquadMembers.Count() > 1 )
+	if ( std::ssize( m_SquadMembers ) > 1 )
 	{
 		CAI_BaseNPC *pCopyFrom = m_SquadMembers[0];
 		Assert( pCopyFrom != nullptr );
@@ -267,7 +265,7 @@ void CAI_Squad::AddToSquad(CAI_BaseNPC *pNPC)
 
 CAI_BaseNPC *CAI_Squad::SquadMemberInRange( const Vector &vecLocation, float flDist )
 {
-	for (int i = 0; i < m_SquadMembers.Count(); i++)
+	for (int i = 0; i < std::ssize( m_SquadMembers ); i++)
 	{
 		if (m_SquadMembers[i] != nullptr && (vecLocation - m_SquadMembers[i]->GetAbsOrigin() ).Length2D() <= flDist)
 			return m_SquadMembers[i];
@@ -284,7 +282,7 @@ CAI_BaseNPC *CAI_Squad::NearestSquadMember( CAI_BaseNPC *pMember )
 	float			fBestDist	= MAX_COORD_RANGE;
 	CAI_BaseNPC		*fNearestEnt = nullptr;
 	Vector			fStartLoc = pMember->GetAbsOrigin();
-	for (int i = 0; i < m_SquadMembers.Count(); i++)
+	for (int i = 0; i < std::ssize( m_SquadMembers ); i++)
 	{
 		if (m_SquadMembers[i] != nullptr)
 		{
@@ -307,7 +305,7 @@ int	CAI_Squad::GetVisibleSquadMembers( CAI_BaseNPC *pMember )
 {
 	int iCount = 0;
 
-	for (int i = 0; i < m_SquadMembers.Count(); i++)
+	for (int i = 0; i < std::ssize( m_SquadMembers ); i++)
 	{
 		// Make sure it's not the specified member
 		if ( m_SquadMembers[i] != nullptr && pMember != m_SquadMembers[i] )
@@ -330,7 +328,7 @@ CAI_BaseNPC *CAI_Squad::GetSquadMemberNearestTo( const Vector &vecLocation )
 	CAI_BaseNPC *pNearest = nullptr;
 	float		flNearest = FLT_MAX;
 
-	for ( int i = 0; i < m_SquadMembers.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_SquadMembers ); i++ )
 	{
 		float flDist;
 		flDist = m_SquadMembers[i]->GetAbsOrigin().DistToSqr( vecLocation );
@@ -380,7 +378,7 @@ CAI_BaseNPC *CAI_Squad::GetLeader( void )
 {
 	CAI_BaseNPC *pLeader = nullptr;
 	int nSilentMembers = 0;
-	for ( int i = 0; i < m_SquadMembers.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_SquadMembers ); i++ )
 	{
 		if ( !IsSilentMember( m_SquadMembers[i] ) )
 		{
@@ -392,7 +390,7 @@ CAI_BaseNPC *CAI_Squad::GetLeader( void )
 			nSilentMembers++;
 		}
 	}
-	return ( m_SquadMembers.Count() - nSilentMembers > 1) ? pLeader : nullptr;
+	return ( std::ssize( m_SquadMembers ) - nSilentMembers > 1) ? pLeader : nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -401,7 +399,7 @@ CAI_BaseNPC *CAI_Squad::GetFirstMember( AISquadIter_t *pIter, bool bIgnoreSilent
 	int i = 0;
 	if ( bIgnoreSilentMembers )
 	{
-		for ( ; i < m_SquadMembers.Count(); i++ )
+		for ( ; i < std::ssize( m_SquadMembers ); i++ )
 		{
 			if ( !IsSilentMember( m_SquadMembers[i] ) )
 				break;
@@ -410,7 +408,7 @@ CAI_BaseNPC *CAI_Squad::GetFirstMember( AISquadIter_t *pIter, bool bIgnoreSilent
 
 	if ( pIter )
 		*pIter = (AISquadIter_t)i;
-	if ( i >= m_SquadMembers.Count() )
+	if ( i >= std::ssize( m_SquadMembers ) )
 		return nullptr;
 
 	return m_SquadMembers[i];
@@ -424,14 +422,14 @@ CAI_BaseNPC *CAI_Squad::GetNextMember( AISquadIter_t *pIter, bool bIgnoreSilentM
 	i++;
 	if ( bIgnoreSilentMembers )
 	{
-		for ( ; i < m_SquadMembers.Count(); i++ )
+		for ( ; i < std::ssize( m_SquadMembers ); i++ )
 		{
 			if ( !IsSilentMember( m_SquadMembers[i] ) )
 				break;
 		}
 	}
 
-	if ( i >= m_SquadMembers.Count() )
+	if ( i >= std::ssize( m_SquadMembers ) )
 		return nullptr;
 
 	return m_SquadMembers[i];
@@ -448,7 +446,7 @@ Vector CAI_Squad::ComputeSquadCentroid( bool bIncludeSilentMembers, CBaseCombatC
 	int count = 0;
 	Vector vecSumOfOrigins = Vector( 0, 0, 0 );
 
-	for ( int i = 0; i < m_SquadMembers.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_SquadMembers ); i++ )
 	{
 		if ( (m_SquadMembers[i] != pExcludeMember) && (bIncludeSilentMembers||!IsSilentMember(m_SquadMembers[i]) ) )
 		{
@@ -469,13 +467,13 @@ int	CAI_Squad::NumMembers( bool bIgnoreSilentMembers )
 	int nSilentMembers = 0;
 	if ( bIgnoreSilentMembers )
 	{
-		for ( int i = 0; i < m_SquadMembers.Count(); i++ )
+		for ( int i = 0; i < std::ssize( m_SquadMembers ); i++ )
 		{
 			if ( IsSilentMember( m_SquadMembers[i] ) )
 				nSilentMembers++;
 		}
 	}
-	return ( m_SquadMembers.Count() - nSilentMembers );
+	return ( std::ssize( m_SquadMembers ) - nSilentMembers );
 }
 
 //-------------------------------------
@@ -490,7 +488,7 @@ void CAI_Squad::SquadNewEnemy( CBaseEntity *pEnemy )
 		return;
 	}
 
-	for (int i = 0; i < m_SquadMembers.Count(); i++)
+	for (int i = 0; i < std::ssize( m_SquadMembers ); i++)
 	{
 		CAI_BaseNPC *pMember = m_SquadMembers[i];
 		if (pMember)
@@ -522,11 +520,11 @@ void CAI_Squad::SquadNewEnemy( CBaseEntity *pEnemy )
 int	CAI_Squad::BroadcastInteraction( int interactionType, void *data, CBaseCombatCharacter *sender )
 {
 	//Must have a squad
-	if ( m_SquadMembers.Count() == 0 )
+	if ( std::ssize( m_SquadMembers ) == 0 )
 		return false;
 
 	//Broadcast to all members of the squad
-	for ( int i = 0; i < m_SquadMembers.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_SquadMembers ); i++ )
 	{
 		CAI_BaseNPC *pMember = m_SquadMembers[i]->MyNPCPointer();
 		
@@ -656,7 +654,7 @@ void CAI_Squad::VacateStrategySlot( CBaseEntity *pEnemy, int slot)
 void CAI_Squad::UpdateEnemyMemory( CAI_BaseNPC *pUpdater, CBaseEntity *pEnemy, const Vector &position )
 {
 	//Broadcast to all members of the squad
-	for ( int i = 0; i < m_SquadMembers.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_SquadMembers ); i++ )
 	{
 		if ( m_SquadMembers[i] != pUpdater )
 		{
@@ -674,28 +672,27 @@ AISquadEnemyInfo_t *CAI_Squad::FindEnemyInfo( CBaseEntity *pEnemy )
 	int i;
 	if ( gpGlobals->curtime > m_flEnemyInfoCleanupTime )
 	{
-		if ( m_EnemyInfos.Count() )
+		if ( !m_EnemyInfos.empty() )
 		{
 			m_pLastFoundEnemyInfo = nullptr;
-			CUtlRBTree<CBaseEntity *> activeEnemies;
-			SetDefLessFunc( activeEnemies );
+			std::set<CBaseEntity *> activeEnemies;
 
 			// Gather up the set of active enemies
-			for ( i = 0; i < m_SquadMembers.Count(); i++ )
+			for ( i = 0; i < std::ssize( m_SquadMembers ); i++ )
 			{
 				CBaseEntity *pMemberEnemy = m_SquadMembers[i]->GetEnemy();
-				if ( pMemberEnemy && activeEnemies.Find( pMemberEnemy ) == activeEnemies.InvalidIndex() )
+				if ( pMemberEnemy )
 				{
-					activeEnemies.Insert( pMemberEnemy );
+					activeEnemies.insert( pMemberEnemy );
 				}
 			}
 			
 			// Remove the records for deleted or unused enemies
-			for ( i = m_EnemyInfos.Count() - 1; i >= 0; --i )
+			for ( i = std::ssize( m_EnemyInfos ) - 1; i >= 0; --i )
 			{
-				if ( m_EnemyInfos[i].hEnemy == nullptr || activeEnemies.Find( m_EnemyInfos[i].hEnemy ) == activeEnemies.InvalidIndex() )
+				if ( m_EnemyInfos[i].hEnemy == nullptr || !activeEnemies.contains( m_EnemyInfos[i].hEnemy.Get() ) )
 				{
-					m_EnemyInfos.FastRemove( i );
+					ks::swap_remove( m_EnemyInfos, i );
 				}
 			}
 		}
@@ -706,7 +703,7 @@ AISquadEnemyInfo_t *CAI_Squad::FindEnemyInfo( CBaseEntity *pEnemy )
 	if ( m_pLastFoundEnemyInfo && m_pLastFoundEnemyInfo->hEnemy == pEnemy )
 		return m_pLastFoundEnemyInfo;
 
-	for ( i = 0; i < m_EnemyInfos.Count(); i++ )
+	for ( i = 0; i < std::ssize( m_EnemyInfos ); i++ )
 	{
 		if ( m_EnemyInfos[i].hEnemy == pEnemy )
 		{
@@ -716,7 +713,7 @@ AISquadEnemyInfo_t *CAI_Squad::FindEnemyInfo( CBaseEntity *pEnemy )
 	}
 
 	m_pLastFoundEnemyInfo = nullptr;
-	i = m_EnemyInfos.AddToTail();
+	i = std::ssize( m_EnemyInfos ); m_EnemyInfos.emplace_back();
 	m_EnemyInfos[i].hEnemy = pEnemy;
 
 	m_pLastFoundEnemyInfo = &m_EnemyInfos[i];
@@ -731,9 +728,9 @@ void CAI_Squad::OccupySlot( CBaseEntity *pEnemy, int i )
 { 
 #ifdef PER_ENEMY_SQUADSLOTS
 	AISquadEnemyInfo_t *pInfo = FindEnemyInfo( pEnemy );
-	pInfo->slots.Set(i);
+	pInfo->slots.set(i);
 #else
-	m_squadSlotsUsed.Set(i); 
+	m_squadSlotsUsed.set(i); 
 #endif
 }
 
@@ -743,9 +740,9 @@ void CAI_Squad::VacateSlot( CBaseEntity *pEnemy, int i )
 { 
 #ifdef PER_ENEMY_SQUADSLOTS
 	AISquadEnemyInfo_t *pInfo = FindEnemyInfo( pEnemy );
-	pInfo->slots.Clear(i);
+	pInfo->slots.reset(i);
 #else
-	m_squadSlotsUsed.Clear(i); 
+	m_squadSlotsUsed.reset(i); 
 #endif
 }
 
@@ -755,15 +752,15 @@ bool CAI_Squad::IsSlotOccupied( CBaseEntity *pEnemy, int i ) const
 { 
 #ifdef PER_ENEMY_SQUADSLOTS
 	const AISquadEnemyInfo_t *pInfo = FindEnemyInfo( pEnemy );
-	return pInfo->slots.IsBitSet(i);
+	return pInfo->slots[i];
 #else
-	return m_squadSlotsUsed.IsBitSet(i); 
+	return m_squadSlotsUsed[i]; 
 #endif
 }
 
 void CAI_Squad::SquadRemember( int iMemory )
 {
-	for (int i = 0; i < m_SquadMembers.Count(); i++)
+	for (int i = 0; i < std::ssize( m_SquadMembers ); i++)
 	{
 		if (m_SquadMembers[i] != nullptr )
 		{

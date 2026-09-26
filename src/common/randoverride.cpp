@@ -7,16 +7,13 @@
 #include "stdlib.h"
 #include "vstdlib/random.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 #define __cdecl 
 
-void __cdecl srand(unsigned int)
+void srand(unsigned int)
 {
 }
 
-int __cdecl rand()
+int rand()
 {
 	return RandomInt( 0, VALVE_RAND_MAX );
 }

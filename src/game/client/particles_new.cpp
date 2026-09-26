@@ -21,9 +21,6 @@
 #include "viewrender.h"
 
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 
 extern ConVar cl_particleeffect_aabb_buffer;
@@ -506,10 +503,10 @@ CNewParticleEffect* CNewParticleEffect::ReplaceWith( const char *pParticleSystem
 	}
 
 	// fixup any other references to the old system, to point to the new system
-	while( m_References.m_pHead )
+	while( m_References.head() )
 	{
 		// this will remove the reference from m_References
-		m_References.m_pHead->Set( pNewEffect );
+		m_References.head()->Set( pNewEffect );
 	}
 
 	// At this point any references should have been redirected,

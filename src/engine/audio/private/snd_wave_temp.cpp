@@ -7,9 +7,6 @@
 
 #include "audio_pch.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 extern IFileSystem *g_pFileSystem;
 // FIXME: shouldn't this API be part of IFileSystem?
 extern bool COM_CopyFile( const char *netpath, const char *cachepath );

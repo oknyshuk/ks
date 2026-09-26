@@ -7,8 +7,6 @@
 //=============================================================================//
 #include "audio_pch.h"
 #include "snd_mp3_source.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 CAudioSourceMP3::CAudioSourceMP3( CSfxTable *pSfx )
 {

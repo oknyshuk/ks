@@ -16,10 +16,8 @@
 #include "tier1/strtools.h"
 #include "choreoscene.h"
 #include "ichoreoeventcallback.h"
-#include "tier1/utlbuffer.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include "tier1/byte_reader.h"
+#include "tier1/byte_writer.h"
 
 int CChoreoEvent::s_nGlobalID = 1;
 
@@ -58,7 +56,7 @@ CEventRelativeTag::CEventRelativeTag( const CEventRelativeTag& src )
 //-----------------------------------------------------------------------------
 const char *CEventRelativeTag::GetName( void )
 {
-	return m_Name.Get();
+	return m_Name.data();
 }
 
 //-----------------------------------------------------------------------------
@@ -198,7 +196,7 @@ CEventAbsoluteTag::CEventAbsoluteTag( const CEventAbsoluteTag& src )
 //-----------------------------------------------------------------------------
 const char *CEventAbsoluteTag::GetName( void )
 {
-	return m_Name.Get();
+	return m_Name.data();
 }
 
 //-----------------------------------------------------------------------------
@@ -431,11 +429,11 @@ CFlexAnimationTrack::CFlexAnimationTrack( const CFlexAnimationTrack* src )
 
 	for ( int t = 0; t < 2; t++ )
 	{
-		m_Samples[ t ].Purge();
-		for ( int i = 0 ;i < src->m_Samples[ t ].Count(); i++ )
+		m_Samples[ t ].clear(); m_Samples[ t ].shrink_to_fit();
+		for ( int i = 0 ;i < std::ssize( src->m_Samples[ t ] ); i++ )
 		{
 			CExpressionSample s = src->m_Samples[ t ][ i ];
-			m_Samples[ t ].AddToTail( s );
+			m_Samples[ t ].push_back( s );
 		}
 	}
 
@@ -463,7 +461,7 @@ CFlexAnimationTrack::~CFlexAnimationTrack( void )
 
 	for ( int t = 0; t < 2; t++ )
 	{
-		m_Samples[ t ].Purge();
+		m_Samples[ t ].clear(); m_Samples[ t ].shrink_to_fit();
 	}
 }
 
@@ -483,7 +481,7 @@ void CFlexAnimationTrack::Clear( void )
 {
 	for ( int t = 0; t < 2; t++ )
 	{
-		m_Samples[ t ].RemoveAll();
+		m_Samples[ t ].clear();
 	}
 }
 
@@ -495,7 +493,7 @@ void CFlexAnimationTrack::RemoveSample( int index, int type /*=0*/ )
 {
 	Assert( type == 0 || type == 1 );
 
-	m_Samples[ type ].Remove( index );
+	m_Samples[ type ].erase( m_Samples[ type ].begin() + index );
 }
 
 //-----------------------------------------------------------------------------
@@ -527,7 +525,7 @@ int CFlexAnimationTrack::GetNumSamples( int type /*=0*/ )
 {
 	Assert( type == 0 || type == 1 );
 
-	return m_Samples[ type ].Count();
+	return std::ssize( m_Samples[ type ] );
 }
 
 //-----------------------------------------------------------------------------
@@ -747,7 +745,7 @@ float CFlexAnimationTrack::GetFracIntensity( float time, int type )
 	CExpressionSample *esEnd = nullptr;
 
 	// do binary search for sample in time period
-	int j = MAX( rampCount / 2, 1 );
+	int j = std::max( rampCount / 2, 1 );
 	int i = j;
 	while ( i > -2 && i < rampCount + 1 )
 	{
@@ -755,7 +753,7 @@ float CFlexAnimationTrack::GetFracIntensity( float time, int type )
 		esStart = GetBoundedSample( i, dummy, type );
 		esEnd = GetBoundedSample( i + 1, dummy, type );
 
-		j = MAX( j / 2, 1 );
+		j = std::max( j / 2, 1 );
 		if ( time < esStart->time)
 		{
 			i -= j;
@@ -784,8 +782,8 @@ float CFlexAnimationTrack::GetFracIntensity( float time, int type )
 	int prev = i - 1;
 	int next = i + 2;
 
-	prev = MAX( -1, prev );
-	next = MIN( next, rampCount );
+	prev = std::max( -1, prev );
+	next = std::min( next, rampCount );
 
 	bool bBoundedSampleClamped[ 2 ];
 	CExpressionSample *esPre = GetBoundedSample( prev, bBoundedSampleClamped[ 0 ], type );
@@ -918,7 +916,7 @@ CExpressionSample *CFlexAnimationTrack::AddSample( float time, float value, int 
 	sample.value = value;
 	sample.selected = false;
 
-	int idx = m_Samples[ type ].AddToTail( sample );
+	int idx = std::ssize( m_Samples[ type ] ); m_Samples[ type ].push_back( sample );
 	
 	// Resort( type );
 	return &m_Samples[ type ][ idx ];
@@ -931,9 +929,9 @@ void CFlexAnimationTrack::Resort( int type /*=0*/ )
 {
 	Assert( type == 0 || type == 1 );
 
-	for ( int i = 0; i < m_Samples[ type ].Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Samples[ type ] ); i++ )
 	{
-		for ( int j = i + 1; j < m_Samples[ type ].Count(); j++ )
+		for ( int j = i + 1; j < std::ssize( m_Samples[ type ] ); j++ )
 		{
 			CExpressionSample src = m_Samples[ type ][ i ];
 			CExpressionSample dest = m_Samples[ type ][ j ];
@@ -1116,14 +1114,14 @@ void CFlexAnimationTrack::RemoveOutOfRangeSamples( int type )
 	Assert( m_pEvent->HasEndTime() );
 	float duration = m_pEvent->GetDuration();
 
-	int c = m_Samples[ type ].Count();
+	int c = std::ssize( m_Samples[ type ] );
 	for ( int i = c-1; i >= 0; i-- )
 	{
 		CExpressionSample src = m_Samples[ type ][ i ];
 		if ( src.time < 0 ||
 			 src.time > duration )
 		{
-			m_Samples[ type ].Remove( i );
+			m_Samples[ type ].erase( m_Samples[ type ].begin() + i );
 		}
 	}
 }
@@ -1217,36 +1215,36 @@ CChoreoEvent& CChoreoEvent::operator=( const CChoreoEvent& src )
 	}
 
 	int i;
-	for ( i = 0; i < src.m_RelativeTags.Count(); i++ )
+	for ( i = 0; i < std::ssize( src.m_RelativeTags ); i++ )
 	{	
 		CEventRelativeTag newtag( src.m_RelativeTags[ i ] );
 		newtag.SetOwner( this );
-		m_RelativeTags.AddToTail( newtag );
+		m_RelativeTags.push_back( newtag );
 	}
 
-	for ( i = 0; i < src.m_TimingTags.Count(); i++ )
+	for ( i = 0; i < std::ssize( src.m_TimingTags ); i++ )
 	{	
 		CFlexTimingTag newtag( src.m_TimingTags[ i ] );
 		newtag.SetOwner( this );
-		m_TimingTags.AddToTail( newtag );
+		m_TimingTags.push_back( newtag );
 	}
 	for ( t = 0; t < NUM_ABS_TAG_TYPES; t++ )
 	{
-		for ( i = 0; i < src.m_AbsoluteTags[ t ].Count(); i++ )
+		for ( i = 0; i < std::ssize( src.m_AbsoluteTags[ t ] ); i++ )
 		{
 			CEventAbsoluteTag newtag( src.m_AbsoluteTags[ t ][ i ] );
 			newtag.SetOwner( this );
-			m_AbsoluteTags[ t ].AddToTail( newtag );
+			m_AbsoluteTags[ t ].push_back( newtag );
 		}
 	}
 
 	RemoveAllTracks();
 
-	for ( i = 0 ; i < src.m_FlexAnimationTracks.Count(); i++ )
+	for ( i = 0 ; i < std::ssize( src.m_FlexAnimationTracks ); i++ )
 	{
 		CFlexAnimationTrack *newtrack = new CFlexAnimationTrack( src.m_FlexAnimationTracks[ i ] );
 		newtrack->SetEvent( this );
-		m_FlexAnimationTracks.AddToTail( newtrack );
+		m_FlexAnimationTracks.push_back( newtrack );
 	}
 
 	m_bTrackLookupSet = src.m_bTrackLookupSet;
@@ -1293,10 +1291,10 @@ void CChoreoEvent::Init( CChoreoScene *scene )
 	m_nGlobalID			= s_nGlobalID++;
 	m_nDefaultCurveType	= CURVE_CATMULL_ROM_TO_CATMULL_ROM;
 	m_fType				= UNSPECIFIED;
-	m_Name.Set("");
-	m_Parameters.Set("");
-	m_Parameters2.Set("");
-	m_Parameters3.Set("");
+	m_Name.assign( "" );
+	m_Parameters.assign( "" );
+	m_Parameters2.assign( "" );
+	m_Parameters3.assign( "" );
 
 	m_flStartTime		= 0.0f;
 	m_flEndTime			= -1.0f;
@@ -1329,7 +1327,7 @@ void CChoreoEvent::Init( CChoreoScene *scene )
 	m_nLoopsRemaining = 0;
 
 	// Close captioning/localization support
-	m_CCToken.Set("");
+	m_CCToken.assign( "" );
 	m_ccType					= CC_MASTER;
 	m_bUsingCombinedSoundFile	= false;
 	m_uRequiredCombinedChecksum = 0; 
@@ -1385,7 +1383,7 @@ void CChoreoEvent::SetName( const char *name )
 //-----------------------------------------------------------------------------
 const char *CChoreoEvent::GetName( void )
 {
-	return m_Name.Get();
+	return m_Name.data();
 }
 
 //-----------------------------------------------------------------------------
@@ -1394,7 +1392,7 @@ const char *CChoreoEvent::GetName( void )
 //-----------------------------------------------------------------------------
 void CChoreoEvent::SetParameters( const char *param )
 {
-	m_Parameters = param;
+	m_Parameters = ks::nz( param );
 }
 
 //-----------------------------------------------------------------------------
@@ -1403,7 +1401,7 @@ void CChoreoEvent::SetParameters( const char *param )
 //-----------------------------------------------------------------------------
 const char *CChoreoEvent::GetParameters( void )
 {
-	return m_Parameters.Get();
+	return m_Parameters.data();
 }
 
 //-----------------------------------------------------------------------------
@@ -1413,7 +1411,7 @@ const char *CChoreoEvent::GetParameters( void )
 void CChoreoEvent::SetParameters2( const char *param )
 {
 	int iLength = Q_strlen( param );
-	m_Parameters2 = param;
+	m_Parameters2 = ks::nz( param );
 
 	// HACK: Remove trailing " " until faceposer is fixed
 	if ( iLength > 0 )
@@ -1423,7 +1421,7 @@ void CChoreoEvent::SetParameters2( const char *param )
 			char tmp[1024];
 			Q_strncpy( tmp, param, sizeof(tmp) );
 			tmp[iLength-1] = 0;
-			m_Parameters2.Set(tmp);
+			m_Parameters2.assign( ks::nz( tmp ) );
 		}
 	}
 }
@@ -1434,7 +1432,7 @@ void CChoreoEvent::SetParameters2( const char *param )
 //-----------------------------------------------------------------------------
 const char *CChoreoEvent::GetParameters2( void )
 {
-	return m_Parameters2.Get();
+	return m_Parameters2.data();
 }
 
 //-----------------------------------------------------------------------------
@@ -1444,7 +1442,7 @@ const char *CChoreoEvent::GetParameters2( void )
 void CChoreoEvent::SetParameters3( const char *param )
 {
 	int iLength = Q_strlen( param );
-	m_Parameters3 = param;
+	m_Parameters3 = ks::nz( param );
 
 	// HACK: Remove trailing " " until faceposer is fixed
 	if ( iLength > 0 )
@@ -1454,7 +1452,7 @@ void CChoreoEvent::SetParameters3( const char *param )
 			char tmp[1024];
 			Q_strncpy( tmp, param, sizeof(tmp) );
 			tmp[iLength-1] = 0;
-			m_Parameters3.Set(tmp);
+			m_Parameters3.assign( ks::nz( tmp ) );
 		}
 	}
 }
@@ -1465,7 +1463,7 @@ void CChoreoEvent::SetParameters3( const char *param )
 //-----------------------------------------------------------------------------
 const char *CChoreoEvent::GetParameters3( void )
 {
-	return m_Parameters3.Get();
+	return m_Parameters3.data();
 }
 
 //-----------------------------------------------------------------------------
@@ -1480,7 +1478,7 @@ const char *CChoreoEvent::GetDescription( void )
 
 	if ( !GetActor() )
 	{
-		Q_snprintf( description,sizeof(description), "global %s", m_Name.Get() );
+		Q_snprintf( description,sizeof(description), "global %s", m_Name.data() );
 	}
 	else
 	{
@@ -1622,7 +1620,7 @@ float CCurveData::GetIntensity( ICurveDataAccessor *data, float time )
 	CExpressionSample *esEnd = nullptr;
 
 	// do binary search for sample in time period
-	int j = MAX( rampCount / 2, 1 );
+	int j = std::max( rampCount / 2, 1 );
 	int i = j;
 	while ( i > -2 && i < rampCount + 1 )
 	{
@@ -1630,7 +1628,7 @@ float CCurveData::GetIntensity( ICurveDataAccessor *data, float time )
 		esStart = GetBoundedSample( data, i, dummy );
 		esEnd = GetBoundedSample( data, i + 1, dummy  );
 
-		j = MAX( j / 2, 1 );
+		j = std::max( j / 2, 1 );
 		if ( time < esStart->time)
 		{
 			i -= j;
@@ -1653,8 +1651,8 @@ float CCurveData::GetIntensity( ICurveDataAccessor *data, float time )
 	int prev = i - 1;
 	int next = i + 2;
 
-	prev = MAX( -1, prev );
-	next = MIN( next, rampCount );
+	prev = std::max( -1, prev );
+	next = std::min( next, rampCount );
 
 	bool bBoundedSampleClamped[ 2 ];
 	CExpressionSample *esPre = GetBoundedSample( data, prev, bBoundedSampleClamped[ 0 ] );
@@ -1804,7 +1802,7 @@ float CCurveData::GetIntensityArea( ICurveDataAccessor *data, float time )
 	CExpressionSample *esEnd = nullptr;
 
 	// do binary search for sample in time period
-	int j = MAX( rampCount / 2, 1 );
+	int j = std::max( rampCount / 2, 1 );
 	int i = j;
 	while ( i > -2 && i < rampCount + 1 )
 	{
@@ -1812,7 +1810,7 @@ float CCurveData::GetIntensityArea( ICurveDataAccessor *data, float time )
 		esStart = GetBoundedSample( data, i, dummy );
 		esEnd = GetBoundedSample( data, i + 1, dummy  );
 
-		j = MAX( j / 2, 1 );
+		j = std::max( j / 2, 1 );
 		if ( time < esStart->time)
 		{
 			i -= j;
@@ -1835,8 +1833,8 @@ float CCurveData::GetIntensityArea( ICurveDataAccessor *data, float time )
 	int prev = i - 1;
 	int next = i + 2;
 
-	prev = MAX( -1, prev );
-	next = MIN( next, rampCount );
+	prev = std::max( -1, prev );
+	next = std::min( next, rampCount );
 
 	bool bBoundedSampleClamped[ 2 ];
 	CExpressionSample *esPre = GetBoundedSample( data, prev, bBoundedSampleClamped[ 0 ] );
@@ -1909,19 +1907,19 @@ void CCurveData::UpdateIntensityArea( ICurveDataAccessor *data )
 		return;
 	}
 
-	if (m_RampAccumulator.Count() == rampCount + 2)
+	if (std::ssize( m_RampAccumulator ) == rampCount + 2)
 	{
 		return;
 	}
 
-	m_RampAccumulator.SetCount( rampCount + 2 );
+	m_RampAccumulator.assign( rampCount + 2, {} );
 
 	int i = -1;
 
 	bool dummy;
 	CExpressionSample *esPre = GetBoundedSample( data, i - 1, dummy );
 	CExpressionSample *esStart = GetBoundedSample( data, i, dummy );
-	CExpressionSample *esEnd = GetBoundedSample( data, MIN( i + 1, rampCount ), dummy );
+	CExpressionSample *esEnd = GetBoundedSample( data, std::min( i + 1, rampCount ), dummy );
 
 	Vector vPre( esPre->time, esPre->value, 0 );
 	Vector vStart( esStart->time, esStart->value, 0 );
@@ -1930,7 +1928,7 @@ void CCurveData::UpdateIntensityArea( ICurveDataAccessor *data )
 	Vector vOut;
 	for (i = -1; i < rampCount; i++)
 	{
-		CExpressionSample *esNext = GetBoundedSample( data, MIN( i + 2, rampCount ), dummy );
+		CExpressionSample *esNext = GetBoundedSample( data, std::min( i + 2, rampCount ), dummy );
 		Vector vNext( esNext->time, esNext->value, 0 );
 
 		Catmull_Rom_Spline_Integral_Normalize( 
@@ -2080,7 +2078,7 @@ public:
 		if ( ARRAYSIZE( g_NameMap ) != CChoreoEvent::NUM_TYPES )
 		{
 			Error( "g_NameMap contains %i entries, CChoreoEvent::NUM_TYPES == %i!",
-				ARRAYSIZE( g_NameMap ), CChoreoEvent::NUM_TYPES );
+				(int)ARRAYSIZE( g_NameMap ), CChoreoEvent::NUM_TYPES );
 		}
 		for ( int i = 0; i < CChoreoEvent::NUM_TYPES; ++i )
 		{
@@ -2162,7 +2160,7 @@ public:
 		if ( ARRAYSIZE( g_CCNameMap ) != CChoreoEvent::NUM_CC_TYPES )
 		{
 			Error( "g_CCNameMap contains %i entries, CChoreoEvent::NUM_CC_TYPES == %i!",
-				ARRAYSIZE( g_CCNameMap ), CChoreoEvent::NUM_CC_TYPES );
+				(int)ARRAYSIZE( g_CCNameMap ), CChoreoEvent::NUM_CC_TYPES );
 		}
 		for ( int i = 0; i < CChoreoEvent::NUM_CC_TYPES; ++i )
 		{
@@ -2377,7 +2375,7 @@ float CChoreoEvent::GetDuration( void )
 //-----------------------------------------------------------------------------
 void CChoreoEvent::ClearAllRelativeTags( void )
 {
-	m_RelativeTags.Purge();
+	m_RelativeTags.clear(); m_RelativeTags.shrink_to_fit();
 }
 
 //-----------------------------------------------------------------------------
@@ -2386,7 +2384,7 @@ void CChoreoEvent::ClearAllRelativeTags( void )
 //-----------------------------------------------------------------------------
 int CChoreoEvent::GetNumRelativeTags( void )
 {
-	return m_RelativeTags.Count();
+	return std::ssize( m_RelativeTags );
 }
 
 //-----------------------------------------------------------------------------
@@ -2396,7 +2394,7 @@ int CChoreoEvent::GetNumRelativeTags( void )
 //-----------------------------------------------------------------------------
 CEventRelativeTag *CChoreoEvent::GetRelativeTag( int tagnum )
 {
-	Assert( tagnum >= 0 && tagnum < m_RelativeTags.Count() );
+	Assert( tagnum >= 0 && tagnum < std::ssize( m_RelativeTags ) );
 	return &m_RelativeTags[ tagnum ];
 }
 
@@ -2408,7 +2406,7 @@ CEventRelativeTag *CChoreoEvent::GetRelativeTag( int tagnum )
 void CChoreoEvent::AddRelativeTag( const char *tagname, float percentage )
 {
 	CEventRelativeTag rt( this, tagname, percentage );
-	m_RelativeTags.AddToTail( rt );
+	m_RelativeTags.push_back( rt );
 }
 
 //-----------------------------------------------------------------------------
@@ -2417,7 +2415,7 @@ void CChoreoEvent::AddRelativeTag( const char *tagname, float percentage )
 //-----------------------------------------------------------------------------
 void CChoreoEvent::RemoveRelativeTag( const char *tagname )
 {
-	for ( int i = 0; i < m_RelativeTags.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_RelativeTags ); i++ )
 	{
 		CEventRelativeTag *prt = &m_RelativeTags[ i ];
 		if ( !prt )
@@ -2425,7 +2423,7 @@ void CChoreoEvent::RemoveRelativeTag( const char *tagname )
 
 		if ( !stricmp( prt->GetName(), tagname ) )
 		{
-			m_RelativeTags.Remove( i );
+			m_RelativeTags.erase( m_RelativeTags.begin() + i );
 			return;
 		}
 	}
@@ -2438,7 +2436,7 @@ void CChoreoEvent::RemoveRelativeTag( const char *tagname )
 //-----------------------------------------------------------------------------
 CEventRelativeTag * CChoreoEvent::FindRelativeTag( const char *tagname )
 {
-	for ( int i = 0; i < m_RelativeTags.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_RelativeTags ); i++ )
 	{
 		CEventRelativeTag *prt = &m_RelativeTags[ i ];
 		if ( !prt )
@@ -2476,7 +2474,7 @@ void CChoreoEvent::SetUsingRelativeTag( bool usetag, const char *tagname /*= 0*/
 	}
 	else
 	{
-		m_TagName.Set("");
+		m_TagName.assign( "" );
 	}
 	if ( wavname )
 	{
@@ -2484,7 +2482,7 @@ void CChoreoEvent::SetUsingRelativeTag( bool usetag, const char *tagname /*= 0*/
 	}
 	else
 	{
-		m_TagWavName.Set("");
+		m_TagWavName.assign( "" );
 	}
 }
 
@@ -2494,7 +2492,7 @@ void CChoreoEvent::SetUsingRelativeTag( bool usetag, const char *tagname /*= 0*/
 //-----------------------------------------------------------------------------
 const char *CChoreoEvent::GetRelativeTagName( void )
 {
-	return m_TagName.Get();
+	return m_TagName.data();
 }
 
 
@@ -2504,7 +2502,7 @@ const char *CChoreoEvent::GetRelativeTagName( void )
 //-----------------------------------------------------------------------------
 const char *CChoreoEvent::GetRelativeWavName( void )
 {
-	return m_TagWavName.Get();
+	return m_TagWavName.data();
 }
 
 //-----------------------------------------------------------------------------
@@ -2512,7 +2510,7 @@ const char *CChoreoEvent::GetRelativeWavName( void )
 //-----------------------------------------------------------------------------
 void CChoreoEvent::ClearAllTimingTags( void )
 {
-	m_TimingTags.Purge();
+	m_TimingTags.clear(); m_TimingTags.shrink_to_fit();
 }
 
 //-----------------------------------------------------------------------------
@@ -2521,7 +2519,7 @@ void CChoreoEvent::ClearAllTimingTags( void )
 //-----------------------------------------------------------------------------
 int CChoreoEvent::GetNumTimingTags( void )
 {
-	return m_TimingTags.Count();
+	return std::ssize( m_TimingTags );
 }
 
 //-----------------------------------------------------------------------------
@@ -2531,7 +2529,7 @@ int CChoreoEvent::GetNumTimingTags( void )
 //-----------------------------------------------------------------------------
 CFlexTimingTag *CChoreoEvent::GetTimingTag( int tagnum )
 {
-	Assert( tagnum >= 0 && tagnum < m_TimingTags.Count() );
+	Assert( tagnum >= 0 && tagnum < std::ssize( m_TimingTags ) );
 	return &m_TimingTags[ tagnum ];
 }
 
@@ -2543,15 +2541,15 @@ CFlexTimingTag *CChoreoEvent::GetTimingTag( int tagnum )
 void CChoreoEvent::AddTimingTag( const char *tagname, float percentage, bool locked )
 {
 	CFlexTimingTag tt( this, tagname, percentage, locked );
-	m_TimingTags.AddToTail( tt );
+	m_TimingTags.push_back( tt );
 
 	// Sort tags
 	CFlexTimingTag temp( (CChoreoEvent *)0x1, "", 0.0f, false );
 
 	// ugly bubble sort
-	for ( int i = 0; i < m_TimingTags.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_TimingTags ); i++ )
 	{
-		for ( int j = i + 1; j < m_TimingTags.Count(); j++ )
+		for ( int j = i + 1; j < std::ssize( m_TimingTags ); j++ )
 		{
 			CFlexTimingTag *t1 = &m_TimingTags[ i ];
 			CFlexTimingTag *t2 = &m_TimingTags[ j ];
@@ -2572,7 +2570,7 @@ void CChoreoEvent::AddTimingTag( const char *tagname, float percentage, bool loc
 //-----------------------------------------------------------------------------
 void CChoreoEvent::RemoveTimingTag( const char *tagname )
 {
-	for ( int i = 0; i < m_TimingTags.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_TimingTags ); i++ )
 	{
 		CFlexTimingTag *ptt = &m_TimingTags[ i ];
 		if ( !ptt )
@@ -2580,7 +2578,7 @@ void CChoreoEvent::RemoveTimingTag( const char *tagname )
 
 		if ( !stricmp( ptt->GetName(), tagname ) )
 		{
-			m_TimingTags.Remove( i );
+			m_TimingTags.erase( m_TimingTags.begin() + i );
 			return;
 		}
 	}
@@ -2593,7 +2591,7 @@ void CChoreoEvent::RemoveTimingTag( const char *tagname )
 //-----------------------------------------------------------------------------
 CFlexTimingTag * CChoreoEvent::FindTimingTag( const char *tagname )
 {
-	for ( int i = 0; i < m_TimingTags.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_TimingTags ); i++ )
 	{
 		CFlexTimingTag *ptt = &m_TimingTags[ i ];
 		if ( !ptt )
@@ -2630,7 +2628,7 @@ void CChoreoEvent::OnEndTimeChanged( void )
 //-----------------------------------------------------------------------------
 int CChoreoEvent::GetNumFlexAnimationTracks( void )
 {
-	return m_FlexAnimationTracks.Count();
+	return std::ssize( m_FlexAnimationTracks );
 }
 
 //-----------------------------------------------------------------------------
@@ -2655,7 +2653,7 @@ CFlexAnimationTrack *CChoreoEvent::AddTrack( const char *controllername )
 	CFlexAnimationTrack *newTrack = new CFlexAnimationTrack( this );
 	newTrack->SetFlexControllerName( controllername );
 
-	m_FlexAnimationTracks.AddToTail( newTrack );
+	m_FlexAnimationTracks.push_back( newTrack );
 
 	return newTrack;
 }
@@ -2670,7 +2668,7 @@ void CChoreoEvent::RemoveTrack( int index )
 	if ( !track )
 		return;
 
-	m_FlexAnimationTracks.Remove( index );
+	m_FlexAnimationTracks.erase( m_FlexAnimationTracks.begin() + index );
 	delete track;
 }
 
@@ -2933,7 +2931,7 @@ CChoreoEvent::AbsTagType CChoreoEvent::TypeForAbsoluteTagName( const char *name 
 //-----------------------------------------------------------------------------
 void CChoreoEvent::ClearAllAbsoluteTags( AbsTagType type )
 {
-	m_AbsoluteTags[ type ].Purge();
+	m_AbsoluteTags[ type ].clear(); m_AbsoluteTags[ type ].shrink_to_fit();
 }
 
 //-----------------------------------------------------------------------------
@@ -2943,7 +2941,7 @@ void CChoreoEvent::ClearAllAbsoluteTags( AbsTagType type )
 //-----------------------------------------------------------------------------
 int CChoreoEvent::GetNumAbsoluteTags( AbsTagType type )
 {
-	return m_AbsoluteTags[ type ].Count();
+	return std::ssize( m_AbsoluteTags[ type ] );
 }
 
 //-----------------------------------------------------------------------------
@@ -2954,7 +2952,7 @@ int CChoreoEvent::GetNumAbsoluteTags( AbsTagType type )
 //-----------------------------------------------------------------------------
 CEventAbsoluteTag *CChoreoEvent::GetAbsoluteTag( AbsTagType type, int tagnum )
 {
-	Assert( tagnum >= 0 && tagnum < m_AbsoluteTags[ type ].Count() );
+	Assert( tagnum >= 0 && tagnum < std::ssize( m_AbsoluteTags[ type ] ) );
 	return &m_AbsoluteTags[ type ][ tagnum ];
 }
 
@@ -2966,7 +2964,7 @@ CEventAbsoluteTag *CChoreoEvent::GetAbsoluteTag( AbsTagType type, int tagnum )
 //-----------------------------------------------------------------------------
 CEventAbsoluteTag *CChoreoEvent::FindAbsoluteTag( AbsTagType type, const char *tagname )
 {
-	for ( int i = 0; i < m_AbsoluteTags[ type ].Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_AbsoluteTags[ type ] ); i++ )
 	{
 		CEventAbsoluteTag *ptag = &m_AbsoluteTags[ type ][ i ];
 		if ( !ptag )
@@ -2989,15 +2987,15 @@ CEventAbsoluteTag *CChoreoEvent::FindAbsoluteTag( AbsTagType type, const char *t
 void CChoreoEvent::AddAbsoluteTag( AbsTagType type, const char *tagname, float t )
 {
 	CEventAbsoluteTag at( this, tagname, t );
-	m_AbsoluteTags[ type ].AddToTail( at );
+	m_AbsoluteTags[ type ].push_back( at );
 
 	// Sort tags
 	CEventAbsoluteTag temp( (CChoreoEvent *)0x1, "", 0.0f );
 
 	// ugly bubble sort
-	for ( int i = 0; i < m_AbsoluteTags[ type ].Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_AbsoluteTags[ type ] ); i++ )
 	{
-		for ( int j = i + 1; j < m_AbsoluteTags[ type ].Count(); j++ )
+		for ( int j = i + 1; j < std::ssize( m_AbsoluteTags[ type ] ); j++ )
 		{
 			CEventAbsoluteTag *t1 = &m_AbsoluteTags[ type ][ i ];
 			CEventAbsoluteTag *t2 = &m_AbsoluteTags[ type ][ j ];
@@ -3019,7 +3017,7 @@ void CChoreoEvent::AddAbsoluteTag( AbsTagType type, const char *tagname, float t
 //-----------------------------------------------------------------------------
 void CChoreoEvent::RemoveAbsoluteTag( AbsTagType type, const char *tagname )
 {
-	for ( int i = 0; i < m_AbsoluteTags[ type ].Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_AbsoluteTags[ type ] ); i++ )
 	{
 		CEventAbsoluteTag *ptag = &m_AbsoluteTags[ type ][ i ];
 		if ( !ptag )
@@ -3027,7 +3025,7 @@ void CChoreoEvent::RemoveAbsoluteTag( AbsTagType type, const char *tagname )
 
 		if ( !stricmp( ptag->GetName(), tagname ) )
 		{
-			m_AbsoluteTags[ type ].Remove( i );
+			m_AbsoluteTags[ type ].erase( m_AbsoluteTags[ type ].begin() + i );
 			return;
 		}
 	}
@@ -3047,7 +3045,7 @@ bool CChoreoEvent::VerifyTagOrder( )
 	// Sort tags
 	CEventAbsoluteTag temp( (CChoreoEvent *)0x1, "", 0.0f );
 
-	for ( int i = 0; i < m_AbsoluteTags[ CChoreoEvent::ORIGINAL ].Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_AbsoluteTags[ CChoreoEvent::ORIGINAL ] ); i++ )
 	{
 		CEventAbsoluteTag *ptag = &m_AbsoluteTags[ CChoreoEvent::ORIGINAL ][ i ];
 		if ( !ptag )
@@ -3059,7 +3057,7 @@ bool CChoreoEvent::VerifyTagOrder( )
 			continue;
 
 		bInOrder = false;
-		for ( int j = i + 1; j < m_AbsoluteTags[ CChoreoEvent::PLAYBACK ].Count(); j++ )
+		for ( int j = i + 1; j < std::ssize( m_AbsoluteTags[ CChoreoEvent::PLAYBACK ] ); j++ )
 		{
 			CEventAbsoluteTag *t2 = &m_AbsoluteTags[ CChoreoEvent::PLAYBACK ][ j ];
 
@@ -3181,10 +3179,10 @@ float CChoreoEvent::GetOriginalPercentageFromPlaybackPercentage( float t )
 	int end = i + 1;
 	int next = i + 2;
 
-	prev = MAX( -2, prev );
-	start = MAX( -1, start );
-	end = MIN( end, count );
-	next = MIN( next, count + 1 );
+	prev = std::max( -2, prev );
+	start = std::max( -1, start );
+	end = std::min( end, count );
+	next = std::min( next, count + 1 );
 
 	CEventAbsoluteTag *pStartTag = nullptr;
 	CEventAbsoluteTag *pEndTag = nullptr;
@@ -3307,10 +3305,10 @@ float CChoreoEvent::GetPlaybackPercentageFromOriginalPercentage( float t )
 	int end = i + 1;
 	int next = i + 2;
 
-	prev = MAX( -2, prev );
-	start = MAX( -1, start );
-	end = MIN( end, count );
-	next = MIN( next, count + 1 );
+	prev = std::max( -2, prev );
+	start = std::max( -1, start );
+	end = std::min( end, count );
+	next = std::min( next, count + 1 );
 
 	CEventAbsoluteTag *pStartTag = nullptr;
 	CEventAbsoluteTag *pEndTag = nullptr;
@@ -3461,7 +3459,7 @@ void CChoreoEvent::SetLoopCount( int numloops )
 {
 	Assert( GetType() == LOOP );
 	// Never below -1
-	m_nNumLoops = MAX( numloops, -1 );
+	m_nNumLoops = std::max( numloops, -1 );
 }
 
 //-----------------------------------------------------------------------------
@@ -3503,7 +3501,7 @@ EdgeInfo_t *CCurveData::GetEdgeInfo( int idx )
 
 int	 CCurveData::GetCount( void )
 {
-	return m_Ramp.Count();
+	return std::ssize( m_Ramp );
 }
 
 CExpressionSample *CCurveData::Get( int index )
@@ -3522,7 +3520,7 @@ CExpressionSample *CCurveData::Add( float time, float value, bool selected )
 	sample.value = value;
 	sample.selected = selected;
 
-	int idx = m_Ramp.AddToTail( sample );
+	int idx = std::ssize( m_Ramp ); m_Ramp.push_back( sample );
 	return &m_Ramp[ idx ];
 }
 
@@ -3531,12 +3529,12 @@ void CCurveData::Delete( int index )
 	if ( index < 0 || index >= GetCount() )
 		return;
 
-	m_Ramp.Remove( index );
+	m_Ramp.erase( m_Ramp.begin() + index );
 }
 
 void CCurveData::Clear( void )
 {
-	m_Ramp.RemoveAll();
+	m_Ramp.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -3544,9 +3542,9 @@ void CCurveData::Clear( void )
 //-----------------------------------------------------------------------------
 void CCurveData::Resort( ICurveDataAccessor *data )
 {
-	for ( int i = 0; i < m_Ramp.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_Ramp ); i++ )
 	{
-		for ( int j = i + 1; j < m_Ramp.Count(); j++ )
+		for ( int j = i + 1; j < std::ssize( m_Ramp ); j++ )
 		{
 			CExpressionSample src = m_Ramp[ i ];
 			CExpressionSample dest = m_Ramp[ j ];
@@ -3609,7 +3607,7 @@ void CCurveData::RemoveOutOfRangeSamples( ICurveDataAccessor *data )
 		if ( src.time < 0 ||
 			 src.time > duration + 0.01 )
 		{
-			m_Ramp.Remove( i );
+			m_Ramp.erase( m_Ramp.begin() + i );
 		}
 	}
 }
@@ -3681,14 +3679,14 @@ bool CChoreoEvent::PreventTagOverlap( void )
 		{
 			tag->SetPercentage( minP );
 
-			minDp = MIN( 0.01, minP / (i + 1) );
+			minDp = std::min<std::common_type_t<double, float>>( 0.01, minP / (i + 1) );
 			bHadOverlap = true;
 		}
 		else
 		{
 			minP = tag->GetPercentage();
 		}
-		minP = MAX( minP - minDp, 0 );
+		minP = std::max<std::common_type_t<float, int>>( minP - minDp, 0 );
 	}
 
 	return bHadOverlap;
@@ -3703,7 +3701,7 @@ bool CChoreoEvent::PreventTagOverlap( void )
 //-----------------------------------------------------------------------------
 CEventAbsoluteTag *CChoreoEvent::FindEntryTag( AbsTagType type )
 {
-	for ( int i = 0; i < m_AbsoluteTags[ type ].Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_AbsoluteTags[ type ] ); i++ )
 	{
 		CEventAbsoluteTag *ptag = &m_AbsoluteTags[ type ][ i ];
 		if ( !ptag )
@@ -3724,7 +3722,7 @@ CEventAbsoluteTag *CChoreoEvent::FindEntryTag( AbsTagType type )
 //-----------------------------------------------------------------------------
 CEventAbsoluteTag *CChoreoEvent::FindExitTag( AbsTagType type )
 {
-	for ( int i = 0; i < m_AbsoluteTags[ type ].Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_AbsoluteTags[ type ] ); i++ )
 	{
 		CEventAbsoluteTag *ptag = &m_AbsoluteTags[ type ][ i ];
 		if ( !ptag )
@@ -3750,7 +3748,7 @@ void CChoreoEvent::GetMovementStyle( char *style, int maxlen )
 
 	style[0] = 0;
 
-	const char *in = m_Parameters2.Get();
+	const char *in = m_Parameters2.data();
 	char *out = style;
 
 	while ( *in && *in != '\0' && *in != ' ' )
@@ -3774,7 +3772,7 @@ void CChoreoEvent::GetDistanceStyle( char *style, int maxlen )
 
 	style[0]= 0;
 
-	const char *in = Q_strstr( m_Parameters2.Get(), " " );
+	const char *in = Q_strstr( m_Parameters2.data(), " " );
 	if ( !in )
 		return;
 
@@ -3807,13 +3805,13 @@ void CChoreoEvent::SetCloseCaptionToken( char const *token )
 {
 	Assert( m_fType == SPEAK );
 	Assert( token );
-	m_CCToken = token;
+	m_CCToken = ks::nz( token );
 }
 
 char const *CChoreoEvent::GetCloseCaptionToken() const
 {
 	Assert( m_fType == SPEAK );
-	return m_CCToken.Get();
+	return m_CCToken.c_str();
 }
 
 bool CChoreoEvent::GetPlaybackCloseCaptionToken( char *dest, int destlen )
@@ -3839,11 +3837,11 @@ bool CChoreoEvent::GetPlaybackCloseCaptionToken( char *dest, int destlen )
 
 			if ( m_CCToken[ 0 ] != 0 )
 			{
-				Q_strncpy( dest, m_CCToken.Get(), destlen );
+				Q_strncpy( dest, m_CCToken.data(), destlen );
 			}
 			else
 			{
-				Q_strncpy( dest, m_Parameters.Get(), destlen );
+				Q_strncpy( dest, m_Parameters.data(), destlen );
 			}
 			return true;
 		}
@@ -3853,11 +3851,11 @@ bool CChoreoEvent::GetPlaybackCloseCaptionToken( char *dest, int destlen )
 			//  parameter
 			if ( m_CCToken[ 0 ] != 0 )
 			{
-				Q_strncpy( dest, m_CCToken.Get(), destlen );
+				Q_strncpy( dest, m_CCToken.data(), destlen );
 			}
 			else
 			{
-				Q_strncpy( dest, m_Parameters.Get(), destlen );
+				Q_strncpy( dest, m_Parameters.data(), destlen );
 			}
 			return true;
 		}
@@ -3971,7 +3969,7 @@ bool CChoreoEvent::ComputeCombinedBaseFileName( char *dest, int destlen, bool cr
 
 	char vcdpath[ 512 ];
 	char cleanedtoken[ MAX_CCTOKEN_STRING ];
-	CleanupTokenName( m_CCToken.Get(), cleanedtoken, sizeof( cleanedtoken ) );
+	CleanupTokenName( m_CCToken.data(), cleanedtoken, sizeof( cleanedtoken ) );
 
 	if ( Q_strlen( cleanedtoken ) <= 0 )
 		return false;
@@ -4045,7 +4043,7 @@ void CChoreoEvent::SetSuppressingCaptionAttenuation( bool suppress )
 //-----------------------------------------------------------------------------
 void CChoreoEvent::ClearEventDependencies()
 {
-	m_Dependencies.RemoveAll();
+	m_Dependencies.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -4054,9 +4052,9 @@ void CChoreoEvent::ClearEventDependencies()
 //-----------------------------------------------------------------------------
 void CChoreoEvent::AddEventDependency( CChoreoEvent *other )
 {
-	if ( m_Dependencies.Find( other ) == m_Dependencies.InvalidIndex() )
+	if ( ks::find_index( m_Dependencies, other ) == -1 )
 	{
-		m_Dependencies.AddToTail( other );
+		m_Dependencies.push_back( other );
 	}
 }
 
@@ -4064,12 +4062,12 @@ void CChoreoEvent::AddEventDependency( CChoreoEvent *other )
 // Purpose: 
 // Input  : list - 
 //-----------------------------------------------------------------------------
-void CChoreoEvent::GetEventDependencies( CUtlVector< CChoreoEvent * >& list )
+void CChoreoEvent::GetEventDependencies( std::vector< CChoreoEvent * >& list )
 {
-	int c = m_Dependencies.Count();
+	int c = std::ssize( m_Dependencies );
 	for ( int i = 0; i < c; ++i )
 	{
-		list.AddToTail( m_Dependencies[ i ] );
+		list.push_back( m_Dependencies[ i ] );
 	}
 }
 
@@ -4122,20 +4120,20 @@ float CCurveData::GetEdgeZeroValue( bool leftEdge ) const
 }
 
 
-void CChoreoEvent::SaveToBuffer( CUtlBuffer& buf, CChoreoScene *pScene, IChoreoStringPool *pStringPool )
+void CChoreoEvent::SaveToBuffer( ks::byte_writer& buf, CChoreoScene *pScene, IChoreoStringPool *pStringPool )
 {
-	buf.PutChar( GetType() );
-	buf.PutShort( pStringPool->FindOrAddString( GetName() ) );
+	buf.write< char >( GetType() );
+	buf.write< short >( pStringPool->FindOrAddString( GetName() ) );
 
 	float st = GetStartTime();
-	buf.PutFloat( st );
+	buf.write< float >( st );
 
 	float et = GetEndTime();
-	buf.PutFloat( et );
+	buf.write< float >( et );
 
-	buf.PutShort( pStringPool->FindOrAddString( GetParameters() ) );
-	buf.PutShort( pStringPool->FindOrAddString( GetParameters2() ) );
-	buf.PutShort( pStringPool->FindOrAddString( GetParameters3() ) );
+	buf.write< short >( pStringPool->FindOrAddString( GetParameters() ) );
+	buf.write< short >( pStringPool->FindOrAddString( GetParameters2() ) );
+	buf.write< short >( pStringPool->FindOrAddString( GetParameters3() ) );
 
 	m_Ramp.SaveToBuffer( buf, pStringPool );  
 
@@ -4147,39 +4145,39 @@ void CChoreoEvent::SaveToBuffer( CUtlBuffer& buf, CChoreoScene *pScene, IChoreoS
 	flags |= GetForceShortMovement() ? 1<<4 : 0;
 	flags |= GetPlayOverScript() ? 1<<5 : 0;
 
-	buf.PutUnsignedChar( flags );
+	buf.write< unsigned char >( flags );
 
-	buf.PutFloat( GetDistanceToTarget() );
+	buf.write< float >( GetDistanceToTarget() );
 
 	int numRelativeTags = GetNumRelativeTags();
 	Assert( numRelativeTags <= 255 );
-	buf.PutUnsignedChar( numRelativeTags );
+	buf.write< unsigned char >( numRelativeTags );
 
 	for ( int t = 0; t < numRelativeTags; t++ )
 	{
 		CEventRelativeTag *rt = GetRelativeTag( t );
 		Assert( rt );
-		buf.PutShort( pStringPool->FindOrAddString( rt->GetName() ) );
+		buf.write< short >( pStringPool->FindOrAddString( rt->GetName() ) );
 
 		Assert( rt->GetPercentage() >= 0.0f && rt->GetPercentage() <= 1.0f );
 		unsigned char p = rt->GetPercentage() * 255.0f;
-		buf.PutUnsignedChar( p );
+		buf.write< unsigned char >( p );
 	}
 
 	int numTimingTags = GetNumTimingTags(); 
 	Assert( numTimingTags <= 255 );
-	buf.PutUnsignedChar( numTimingTags );
+	buf.write< unsigned char >( numTimingTags );
 
 	for ( int t = 0; t < numTimingTags; t++ )
 	{
 		CFlexTimingTag *tt = GetTimingTag( t );
 		Assert( tt );
-		buf.PutShort( pStringPool->FindOrAddString( tt->GetName() ) );
+		buf.write< short >( pStringPool->FindOrAddString( tt->GetName() ) );
 
 		// save as u0.8
 		Assert( tt->GetPercentage() >= 0.0f && tt->GetPercentage() <= 1.0f );
 		unsigned char p = tt->GetPercentage() * 255.0f;
-		buf.PutUnsignedChar( p );
+		buf.write< unsigned char >( p );
 
 		// Don't save locked state, it's only used by the editor tt->GetLocked()
 	}
@@ -4189,18 +4187,18 @@ void CChoreoEvent::SaveToBuffer( CUtlBuffer& buf, CChoreoScene *pScene, IChoreoS
 	{
 		int num = GetNumAbsoluteTags( (CChoreoEvent::AbsTagType)tagtype );
 		Assert( num <= 255 );
-		buf.PutUnsignedChar( num );
+		buf.write< unsigned char >( num );
 
 		for ( int i = 0; i < num ; ++i )
 		{
 			CEventAbsoluteTag *abstag = GetAbsoluteTag( (CChoreoEvent::AbsTagType)tagtype, i );
 			Assert( abstag );
-			buf.PutShort( pStringPool->FindOrAddString( abstag->GetName() ) );
+			buf.write< short >( pStringPool->FindOrAddString( abstag->GetName() ) );
 
 			// save as u4.12
 			Assert( abstag->GetPercentage() >= 0.0f && abstag->GetPercentage() <= 15.0f );
 			unsigned short p = abstag->GetPercentage() * 4096.0f;
-			buf.PutUnsignedShort( p );
+			buf.write< unsigned short >( p );
 		}
 	}
 
@@ -4209,32 +4207,32 @@ void CChoreoEvent::SaveToBuffer( CUtlBuffer& buf, CChoreoScene *pScene, IChoreoS
 		float duration;
 		if ( GetGestureSequenceDuration( duration ) )
 		{
-			buf.PutFloat( duration );
+			buf.write< float >( duration );
 		}
 		else
 		{
-			buf.PutFloat( -1.0f );
+			buf.write< float >( -1.0f );
 		}
 	}
 
-	buf.PutChar( IsUsingRelativeTag() ? 1 : 0 );
+	buf.write< char >( IsUsingRelativeTag() ? 1 : 0 );
 	if ( IsUsingRelativeTag() )
 	{
-		buf.PutShort( pStringPool->FindOrAddString( GetRelativeTagName() ) );
-		buf.PutShort( pStringPool->FindOrAddString( GetRelativeWavName() ) );
+		buf.write< short >( pStringPool->FindOrAddString( GetRelativeTagName() ) );
+		buf.write< short >( pStringPool->FindOrAddString( GetRelativeWavName() ) );
 	}
 	
 	SaveFlexAnimationsToBuffer( buf, pStringPool );
 
 	if ( GetType() == LOOP )
 	{
-		buf.PutChar( GetLoopCount() );
+		buf.write< char >( GetLoopCount() );
 	}
 
 	if ( GetType() == CChoreoEvent::SPEAK )
 	{
-		buf.PutChar( GetCloseCaptionType() );
-		buf.PutShort( pStringPool->FindOrAddString( GetCloseCaptionToken() ) );
+		buf.write< char >( GetCloseCaptionType() );
+		buf.write< short >( pStringPool->FindOrAddString( GetCloseCaptionToken() ) );
 		flags = 0;
 
 		if ( GetCloseCaptionType() != CChoreoEvent::CC_DISABLED &&
@@ -4251,34 +4249,34 @@ void CChoreoEvent::SaveToBuffer( CUtlBuffer& buf, CChoreoScene *pScene, IChoreoS
 			flags |= ( 1<<2 );
 		}
 
-		buf.PutChar( flags );
+		buf.write< char >( flags );
 	}
 }
 
-bool CChoreoEvent::RestoreFromBuffer( CUtlBuffer& buf, CChoreoScene *pScene, IChoreoStringPool *pStringPool )
+bool CChoreoEvent::RestoreFromBuffer( ks::byte_reader& buf, CChoreoScene *pScene, IChoreoStringPool *pStringPool )
 {
 	MEM_ALLOC_CREDIT();
 
-	SetType( (EVENTTYPE)buf.GetChar() );
+	SetType( (EVENTTYPE)buf.read< char >() );
 	char sz[ 256 ];
-	pStringPool->GetString( buf.GetShort(), sz, sizeof( sz ) );
+	pStringPool->GetString( buf.read< short >(), sz, sizeof( sz ) );
 	SetName( sz );
 
-	SetStartTime( buf.GetFloat() );
-	SetEndTime( buf.GetFloat() );
+	SetStartTime( buf.read< float >() );
+	SetEndTime( buf.read< float >() );
 
 	char params[ 2048 ];
-	pStringPool->GetString( buf.GetShort(), params, sizeof( params ) );
+	pStringPool->GetString( buf.read< short >(), params, sizeof( params ) );
 	SetParameters( params );
-	pStringPool->GetString( buf.GetShort(), params, sizeof( params ) );
+	pStringPool->GetString( buf.read< short >(), params, sizeof( params ) );
 	SetParameters2( params );
-	pStringPool->GetString( buf.GetShort(), params, sizeof( params ) );
+	pStringPool->GetString( buf.read< short >(), params, sizeof( params ) );
 	SetParameters3( params );
 
 	if ( !m_Ramp.RestoreFromBuffer( buf, pStringPool ) )
 		return false;
 
-	int flags = buf.GetUnsignedChar();
+	int flags = buf.read< unsigned char >();
 	SetResumeCondition( ( flags & ( 1<<0 ) ) ? true : false );
 	SetLockBodyFacing( ( flags & ( 1<<1 ) ) ? true : false );
 	SetFixedLength( ( flags & ( 1<<2 ) ) ? true : false );
@@ -4286,23 +4284,23 @@ bool CChoreoEvent::RestoreFromBuffer( CUtlBuffer& buf, CChoreoScene *pScene, ICh
 	SetForceShortMovement( ( flags & ( 1<<4 ) ) ? true : false );
 	SetPlayOverScript( ( flags & ( 1<<5 ) ) ? true : false );
 
-	SetDistanceToTarget( buf.GetFloat() );
+	SetDistanceToTarget( buf.read< float >() );
 
-	int numRelTags = buf.GetUnsignedChar();
+	int numRelTags = buf.read< unsigned char >();
 	for ( int i = 0; i < numRelTags; ++i )
 	{
 		char tagName[ 256 ];
-		pStringPool->GetString( buf.GetShort(), tagName, sizeof( tagName ) );
-		float percentage = (float)buf.GetUnsignedChar() * 1.0f/255.0f;
+		pStringPool->GetString( buf.read< short >(), tagName, sizeof( tagName ) );
+		float percentage = (float)buf.read< unsigned char >() * 1.0f/255.0f;
 		AddRelativeTag( tagName, percentage );
 	}
 
-	int numTimingTags = buf.GetUnsignedChar();
+	int numTimingTags = buf.read< unsigned char >();
 	for ( int i = 0; i < numTimingTags; ++i )
 	{
 		char tagName[ 256 ];
-		pStringPool->GetString( buf.GetShort(), tagName, sizeof( tagName ) );
-		float percentage = (float)buf.GetUnsignedChar() * 1.0f/255.0f;
+		pStringPool->GetString( buf.read< short >(), tagName, sizeof( tagName ) );
+		float percentage = (float)buf.read< unsigned char >() * 1.0f/255.0f;
 		// Don't parse locked state, only used by editors
 		AddTimingTag( tagName, percentage, false );
 	}
@@ -4310,12 +4308,12 @@ bool CChoreoEvent::RestoreFromBuffer( CUtlBuffer& buf, CChoreoScene *pScene, ICh
 	int tagtype;
 	for ( tagtype = 0; tagtype < CChoreoEvent::NUM_ABS_TAG_TYPES; tagtype++ )
 	{
-		int num = buf.GetUnsignedChar();
+		int num = buf.read< unsigned char >();
 		for ( int i = 0; i < num; ++i )
 		{
 			char tagName[ 256 ];
-			pStringPool->GetString( buf.GetShort(), tagName, sizeof( tagName ) );
-			float percentage = (float)buf.GetUnsignedShort() * 1.0f/4096.0f;
+			pStringPool->GetString( buf.read< short >(), tagName, sizeof( tagName ) );
+			float percentage = (float)buf.read< unsigned short >() * 1.0f/4096.0f;
 
 			// Don't parse locked state, only used by editors
 			AddAbsoluteTag( (CChoreoEvent::AbsTagType)tagtype, tagName, percentage );
@@ -4324,19 +4322,19 @@ bool CChoreoEvent::RestoreFromBuffer( CUtlBuffer& buf, CChoreoScene *pScene, ICh
 
 	if ( GetType() == CChoreoEvent::GESTURE )
 	{
-		float duration = buf.GetFloat();
+		float duration = buf.read< float >();
 		if ( duration != -1 )
 		{
 			SetGestureSequenceDuration( duration );
 		}
 	}
 	
-	if ( buf.GetChar() == 1 )
+	if ( buf.read< char >() == 1 )
 	{
 		char tagname[ 256 ];
 		char wavname[ 256 ];
-		pStringPool->GetString( buf.GetShort(), tagname, sizeof( tagname ) );
-		pStringPool->GetString( buf.GetShort(), wavname, sizeof( wavname ) );
+		pStringPool->GetString( buf.read< short >(), tagname, sizeof( tagname ) );
+		pStringPool->GetString( buf.read< short >(), wavname, sizeof( wavname ) );
 
 		SetUsingRelativeTag( true, tagname, wavname );
 	}
@@ -4346,16 +4344,16 @@ bool CChoreoEvent::RestoreFromBuffer( CUtlBuffer& buf, CChoreoScene *pScene, ICh
 
 	if ( GetType() == LOOP )
 	{
-		SetLoopCount( buf.GetChar() );
+		SetLoopCount( buf.read< char >() );
 	}
 
 	if ( GetType() == CChoreoEvent::SPEAK )
 	{
-		SetCloseCaptionType( (CLOSECAPTION)buf.GetChar() );
+		SetCloseCaptionType( (CLOSECAPTION)buf.read< char >() );
 		char cctoken[ 256 ];
-		pStringPool->GetString( buf.GetShort(), cctoken, sizeof( cctoken ) );
+		pStringPool->GetString( buf.read< short >(), cctoken, sizeof( cctoken ) );
 		SetCloseCaptionToken( cctoken );
-		int flags = buf.GetChar();
+		int flags = buf.read< char >();
 		if ( flags & ( 1<<0 ) )
 		{
 			SetUsingCombinedFile( true );
@@ -4373,31 +4371,31 @@ bool CChoreoEvent::RestoreFromBuffer( CUtlBuffer& buf, CChoreoScene *pScene, ICh
 	return true;
 }
 
-void CCurveData::SaveToBuffer( CUtlBuffer& buf, IChoreoStringPool *pStringPool )
+void CCurveData::SaveToBuffer( ks::byte_writer& buf, IChoreoStringPool *pStringPool )
 {
 	int c = GetCount();
 	Assert( c <= 255 );
-	buf.PutUnsignedChar( c );
+	buf.write< unsigned char >( c );
 
 	for ( int i = 0; i < c; i++ )
 	{
 		CExpressionSample *sample = Get( i );
-		buf.PutFloat( sample->time );
+		buf.write< float >( sample->time );
 
 		Assert( sample->value >= 0.0f && sample->value <= 1.0f );
 		unsigned char v = sample->value * 255.0f;
-		buf.PutUnsignedChar( v );
+		buf.write< unsigned char >( v );
 	}	
 }
 
-bool CCurveData::RestoreFromBuffer( CUtlBuffer& buf, IChoreoStringPool *pStringPool )
+bool CCurveData::RestoreFromBuffer( ks::byte_reader& buf, IChoreoStringPool *pStringPool )
 {
-	int c = buf.GetUnsignedChar();
+	int c = buf.read< unsigned char >();
 	for ( int i = 0; i < c; i++ )
 	{
 		float t, v;
-		t = buf.GetFloat();
-		v = (float)buf.GetUnsignedChar() * 1.0f/255.0f;
+		t = buf.read< float >();
+		v = (float)buf.read< unsigned char >() * 1.0f/255.0f;
 
 		Add( t, v, false );
 	}
@@ -4405,40 +4403,40 @@ bool CCurveData::RestoreFromBuffer( CUtlBuffer& buf, IChoreoStringPool *pStringP
 	return true;
 }
 
-void CChoreoEvent::SaveFlexAnimationsToBuffer( CUtlBuffer& buf, IChoreoStringPool *pStringPool )
+void CChoreoEvent::SaveFlexAnimationsToBuffer( ks::byte_writer& buf, IChoreoStringPool *pStringPool )
 {
 	int numFlexAnimationTracks = GetNumFlexAnimationTracks();
 	Assert( numFlexAnimationTracks <= 255 );
-	buf.PutUnsignedChar( numFlexAnimationTracks );
+	buf.write< unsigned char >( numFlexAnimationTracks );
 
 	for ( int i = 0; i < numFlexAnimationTracks; i++ )
 	{
 		CFlexAnimationTrack *track = GetFlexAnimationTrack( i );
 
-		buf.PutShort( pStringPool->FindOrAddString( track->GetFlexControllerName() ) );
+		buf.write< short >( pStringPool->FindOrAddString( track->GetFlexControllerName() ) );
 
 		int flags = 0;
 		flags |= track->IsTrackActive() ? 1<<0 : 0;
 		flags |= track->IsComboType() ? 1<<1 : 0;
-		buf.PutUnsignedChar( flags );
+		buf.write< unsigned char >( flags );
 
-		buf.PutFloat( track->GetMin() );
-		buf.PutFloat( track->GetMax() );
+		buf.write< float >( track->GetMin() );
+		buf.write< float >( track->GetMax() );
 
-		buf.PutShort( track->GetNumSamples( 0 ) );
+		buf.write< short >( track->GetNumSamples( 0 ) );
         for ( int j = 0 ; j < track->GetNumSamples( 0 ) ; j++ )
 		{
 			CExpressionSample *s = track->GetSample( j, 0 );
 			if ( !s )
 				continue;
 
-			buf.PutFloat( s->time );
+			buf.write< float >( s->time );
 
 			Assert( s->value >= 0.0f && s->value <= 1.0f );
 			unsigned char v = s->value * 255.0f;
-			buf.PutUnsignedChar( v );
+			buf.write< unsigned char >( v );
 
-			buf.PutUnsignedShort( s->GetCurveType() );
+			buf.write< unsigned short >( s->GetCurveType() );
 		}
 
 		// Write out combo samples
@@ -4446,7 +4444,7 @@ void CChoreoEvent::SaveFlexAnimationsToBuffer( CUtlBuffer& buf, IChoreoStringPoo
 		{
 			int numSamples = track->GetNumSamples( 1 );
 			Assert( numSamples <= 32767 );
-			buf.PutUnsignedShort( numSamples );
+			buf.write< unsigned short >( numSamples );
 
 			for ( int j = 0; j < numSamples; j++ )
 			{
@@ -4454,58 +4452,58 @@ void CChoreoEvent::SaveFlexAnimationsToBuffer( CUtlBuffer& buf, IChoreoStringPoo
 				if ( !s )
 					continue;
 
-				buf.PutFloat( s->time );
+				buf.write< float >( s->time );
 
 				Assert( s->value >= 0.0f && s->value <= 1.0f );
 				unsigned char v = s->value * 255.0f;
-				buf.PutUnsignedChar( v );
+				buf.write< unsigned char >( v );
 
-				buf.PutUnsignedShort( s->GetCurveType() );
+				buf.write< unsigned short >( s->GetCurveType() );
 			}
 		}
 	}
 }
 
-bool CChoreoEvent::RestoreFlexAnimationsFromBuffer( CUtlBuffer& buf, IChoreoStringPool *pStringPool )
+bool CChoreoEvent::RestoreFlexAnimationsFromBuffer( ks::byte_reader& buf, IChoreoStringPool *pStringPool )
 {
-	int numTracks = buf.GetUnsignedChar();
+	int numTracks = buf.read< unsigned char >();
 
 	for ( int i = 0; i < numTracks; i++ )
 	{
 		char name[ 256 ];
-		pStringPool->GetString( buf.GetShort(), name, sizeof( name ) );
+		pStringPool->GetString( buf.read< short >(), name, sizeof( name ) );
 
 		CFlexAnimationTrack *track = AddTrack( name );
 
-		int flags = buf.GetUnsignedChar();
+		int flags = buf.read< unsigned char >();
 		track->SetTrackActive( ( flags & ( 1<<0 ) ) ? true : false );
 		track->SetComboType( ( flags & ( 1<<1 ) ) ? true : false );
 
-		track->SetMin( buf.GetFloat() );
-		track->SetMax( buf.GetFloat() );
+		track->SetMin( buf.read< float >() );
+		track->SetMax( buf.read< float >() );
 
-		int s = buf.GetShort();
+		int s = buf.read< short >();
 		for ( int j = 0; j < s; ++j )
 		{
 			float t, v;
-			t = buf.GetFloat();
-			v = (float)buf.GetUnsignedChar() * 1.0f/255.0f;
+			t = buf.read< float >();
+			v = (float)buf.read< unsigned char >() * 1.0f/255.0f;
 
 			CExpressionSample *pSample = track->AddSample( t, v, 0 );
-			pSample->SetCurveType( buf.GetUnsignedShort() );
+			pSample->SetCurveType( buf.read< unsigned short >() );
 		}
 
 		if ( track->IsComboType() )
 		{
-			int s = buf.GetUnsignedShort();
+			int s = buf.read< unsigned short >();
 			for ( int j = 0; j < s; ++j )
 			{
 				float t, v;
-				t = buf.GetFloat();
-				v = (float)buf.GetUnsignedChar() * 1.0f/255.0f;
+				t = buf.read< float >();
+				v = (float)buf.read< unsigned char >() * 1.0f/255.0f;
 
 				CExpressionSample *pSample = track->AddSample( t, v, 1 );
-				pSample->SetCurveType( buf.GetUnsignedShort() );
+				pSample->SetCurveType( buf.read< unsigned short >() );
 			}
 		}
 	}

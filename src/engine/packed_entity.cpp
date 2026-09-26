@@ -14,9 +14,6 @@
 #include "dt_send_eng.h"
 #include "server_class.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 // -------------------------------------------------------------------------------------------------- //
 // PackedEntity.
@@ -71,28 +68,28 @@ void PackedEntity::SetPackedData( SerializedEntityHandle_t handle )
 
 const CSendProxyRecipients*	PackedEntity::GetRecipients() const
 {
-	return m_Recipients.Base();
+	return m_Recipients.data();
 }
 
 
 int PackedEntity::GetNumRecipients() const
 {
-	return m_Recipients.Count();
+	return std::ssize( m_Recipients );
 }
 
 
-void PackedEntity::SetRecipients( const CUtlMemory<CSendProxyRecipients> &recipients )
+void PackedEntity::SetRecipients( std::span<const CSendProxyRecipients> recipients )
 {
-	m_Recipients.CopyArray( recipients.Base(), recipients.Count() );
+	m_Recipients.assign( recipients.begin(), recipients.end() );
 }
 
 
-bool PackedEntity::CompareRecipients( const CUtlMemory<CSendProxyRecipients> &recipients ) const
+bool PackedEntity::CompareRecipients( std::span<const CSendProxyRecipients> recipients ) const
 {
-	if ( recipients.Count() != m_Recipients.Count() )
+	if ( std::ssize( recipients ) != std::ssize( m_Recipients ) )
 		return false;
 	
-	return memcmp( recipients.Base(), m_Recipients.Base(), sizeof( CSendProxyRecipients ) * m_Recipients.Count() ) == 0;
+	return memcmp( recipients.data(), m_Recipients.data(), sizeof( CSendProxyRecipients ) * std::ssize( m_Recipients ) ) == 0;
 }	
 
 void PackedEntity::SetServerAndClientClass( ServerClass *pServerClass, ClientClass *pClientClass )

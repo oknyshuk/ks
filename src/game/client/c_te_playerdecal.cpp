@@ -29,9 +29,6 @@
 #include "c_cs_player.h"
 #include "cs_item_inventory.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 PRECACHE_REGISTER_BEGIN( GLOBAL, PrecachePlayerDecal )
 PRECACHE( MATERIAL, "decals/playerlogo01" )
 PRECACHE_REGISTER_END()
@@ -85,7 +82,7 @@ struct DecalData_t
 	int m_nTintID;
 	float m_flCreationTime;
 };
-static CUtlMap< int, DecalData_t, int, CDefLess< int > > s_mapUniqueId2DecalData;
+static std::map< int, DecalData_t > s_mapUniqueId2DecalData;
 
 void CreateDecalData( int nKey, ITexture* pTex, int nRarity, int nTintID, float flCreateTime )
 {
@@ -93,10 +90,10 @@ void CreateDecalData( int nKey, ITexture* pTex, int nRarity, int nTintID, float 
 	if ( !pTex )
 		return;
 
-	int itExisting = s_mapUniqueId2DecalData.Find( nKey );
-	if ( itExisting != s_mapUniqueId2DecalData.InvalidIndex() )
+	auto itExisting = s_mapUniqueId2DecalData.find( nKey );
+	if ( itExisting != s_mapUniqueId2DecalData.end() )
 	{
-		DecalData_t &ddata = s_mapUniqueId2DecalData[ itExisting ];
+		DecalData_t &ddata = itExisting->second;
 
 		// Release the old texture
 		Assert( ddata.m_pTex );
@@ -114,21 +111,21 @@ void CreateDecalData( int nKey, ITexture* pTex, int nRarity, int nTintID, float 
 
 	// It wasn't already in the map, so add it.
 	DecalData_t dd = { pTex, nRarity, nTintID, flCreateTime };
-	s_mapUniqueId2DecalData.Insert( nKey, dd );
+	s_mapUniqueId2DecalData.emplace( nKey, dd );
 }
 
 void DeleteDecalData( int nKey )
 {
-	int it = s_mapUniqueId2DecalData.Find( nKey );
+	auto it = s_mapUniqueId2DecalData.find( nKey );
 	Assert ( ( nKey == g_nPlayerLogoProxyForPreviewKey )
-		|| ( it != s_mapUniqueId2DecalData.InvalidIndex() ) );
-	if ( it == s_mapUniqueId2DecalData.InvalidIndex() )
+		|| ( it != s_mapUniqueId2DecalData.end() ) );
+	if ( it == s_mapUniqueId2DecalData.end() )
 		return;
 
-	Assert( s_mapUniqueId2DecalData[ it ].m_pTex );
-	s_mapUniqueId2DecalData[ it ].m_pTex->DecrementReferenceCount();
+	Assert( it->second.m_pTex );
+	it->second.m_pTex->DecrementReferenceCount();
 
-	s_mapUniqueId2DecalData.RemoveAt( it );
+	s_mapUniqueId2DecalData.erase( it );
 }
 
 bool ReadDecalData( int nKey, DecalData_t* pOutDD )
@@ -136,11 +133,11 @@ bool ReadDecalData( int nKey, DecalData_t* pOutDD )
 	if ( !pOutDD )
 		return false;
 
-	int it = s_mapUniqueId2DecalData.Find( nKey );
-	if ( it == s_mapUniqueId2DecalData.InvalidIndex() )
+	auto it = s_mapUniqueId2DecalData.find( nKey );
+	if ( it == s_mapUniqueId2DecalData.end() )
 		return false;
 
-	( *pOutDD ) = s_mapUniqueId2DecalData[ it ];
+	( *pOutDD ) = it->second;
 	return true;
 }
 
@@ -150,21 +147,21 @@ inline bool BShouldHaveDrips( const Vector& normal )
 }
 
 class C_FEPlayerDecal;
-typedef CUtlMap< int, C_FEPlayerDecal *, int, CDefLess< int > > PlayerDecalsByUniqueId_t;
+typedef std::map< int, C_FEPlayerDecal * > PlayerDecalsByUniqueId_t;
 static PlayerDecalsByUniqueId_t s_mapPlayerDecalsUniqueIDsAll;		// All client-side player decals entities
 static PlayerDecalsByUniqueId_t s_mapPlayerDecalsUniqueIDsToApply;	// Player decals entities that should still be applied to the world
-static CUtlMap< int, bool, int, CDefLess< int > > s_mapPlayerDecalsUniqueIDsRecreating;	// Player decals entities that were temporarily destroyed and getting recreated ID->bReapplyPending
+static std::map< int, bool > s_mapPlayerDecalsUniqueIDsRecreating;	// Player decals entities that were temporarily destroyed and getting recreated ID->bReapplyPending
 void OnPlayerDecalsLevelShutdown()
 {	// we purge and re-apply decals here
 	// so add all client-side decals that we know about into the IDs to apply map
-	FOR_EACH_MAP( s_mapPlayerDecalsUniqueIDsAll, i )
+	for ( const auto &[nUniqueID, pDecal] : s_mapPlayerDecalsUniqueIDsAll )
 	{
 #if PLAYERDECAL_VERBOSE_DEBUG
-		DevMsg( "DECAL: schedule for reapply ( %d )\n", s_mapPlayerDecalsUniqueIDsAll.Key( i ) );
+		DevMsg( "DECAL: schedule for reapply ( %d )\n", nUniqueID );
 #endif
-		s_mapPlayerDecalsUniqueIDsToApply.InsertOrReplace( s_mapPlayerDecalsUniqueIDsAll.Key( i ), s_mapPlayerDecalsUniqueIDsAll.Element( i ) );
+		s_mapPlayerDecalsUniqueIDsToApply.insert_or_assign( nUniqueID, pDecal );
 	}
-	s_mapPlayerDecalsUniqueIDsRecreating.RemoveAll();
+	s_mapPlayerDecalsUniqueIDsRecreating.clear();
 }
 
 class [[= ks::reflect::NetTable{ .name = "DT_FEPlayerDecal" } ]]
@@ -207,18 +204,18 @@ public:
 #if PLAYERDECAL_VERBOSE_DEBUG
 			DevMsg( "DECAL: entity removed ( %d ): %s %s %s\n",
 				m_nUniqueID,
-				( ( s_mapPlayerDecalsUniqueIDsToApply.Find( m_nUniqueID ) == s_mapPlayerDecalsUniqueIDsToApply.InvalidIndex() ) ? "" : "{was scheduled for application}" ),
-				( ( s_mapPlayerDecalsUniqueIDsAll.Find( m_nUniqueID ) == s_mapPlayerDecalsUniqueIDsAll.InvalidIndex() ) ? "[NOT REGISTERED IN MAP]" : "" ),
-				( ( s_mapPlayerDecalsUniqueIDsRecreating.Find( m_nUniqueID ) == s_mapPlayerDecalsUniqueIDsRecreating.InvalidIndex() ) ? "" : ( ( s_mapPlayerDecalsUniqueIDsRecreating.Element( s_mapPlayerDecalsUniqueIDsRecreating.Find( m_nUniqueID ) ) ? "{recreate and reapply pending}" : "{recreating, but already applied}" ) ) ) );
+				( !s_mapPlayerDecalsUniqueIDsToApply.contains( m_nUniqueID ) ? "" : "{was scheduled for application}" ),
+				( !s_mapPlayerDecalsUniqueIDsAll.contains( m_nUniqueID ) ? "[NOT REGISTERED IN MAP]" : "" ),
+				( !s_mapPlayerDecalsUniqueIDsRecreating.contains( m_nUniqueID ) ? "" : ( ( s_mapPlayerDecalsUniqueIDsRecreating.at( m_nUniqueID ) ? "{recreate and reapply pending}" : "{recreating, but already applied}" ) ) ) );
 #endif
 
-			Assert( ( s_mapPlayerDecalsUniqueIDsToApply.Find( m_nUniqueID ) == s_mapPlayerDecalsUniqueIDsToApply.InvalidIndex() ) ||
-				( s_mapPlayerDecalsUniqueIDsToApply.Element( s_mapPlayerDecalsUniqueIDsToApply.Find( m_nUniqueID ) ) == this ) );
-			s_mapPlayerDecalsUniqueIDsToApply.Remove( m_nUniqueID );
+			Assert( !s_mapPlayerDecalsUniqueIDsToApply.contains( m_nUniqueID ) ||
+				( s_mapPlayerDecalsUniqueIDsToApply.at( m_nUniqueID ) == this ) );
+			s_mapPlayerDecalsUniqueIDsToApply.erase( m_nUniqueID );
 
-			Assert( ( s_mapPlayerDecalsUniqueIDsAll.Find( m_nUniqueID ) != s_mapPlayerDecalsUniqueIDsAll.InvalidIndex() ) &&
-				( s_mapPlayerDecalsUniqueIDsAll.Element( s_mapPlayerDecalsUniqueIDsAll.Find( m_nUniqueID ) ) == this ) );
-			s_mapPlayerDecalsUniqueIDsAll.Remove( m_nUniqueID );
+			Assert( s_mapPlayerDecalsUniqueIDsAll.contains( m_nUniqueID ) &&
+				( s_mapPlayerDecalsUniqueIDsAll.at( m_nUniqueID ) == this ) );
+			s_mapPlayerDecalsUniqueIDsAll.erase( m_nUniqueID );
 		}
 	}
 
@@ -310,8 +307,8 @@ void C_FEPlayerDecal::SetDestroyedOnRecreateEntities()
 
 	if ( m_nUniqueID )
 	{	// Remeber that we are going to be recreating this decal entity
-		s_mapPlayerDecalsUniqueIDsRecreating.InsertOrReplace( m_nUniqueID,
-			s_mapPlayerDecalsUniqueIDsToApply.Find( m_nUniqueID ) != s_mapPlayerDecalsUniqueIDsToApply.InvalidIndex() );
+		s_mapPlayerDecalsUniqueIDsRecreating.insert_or_assign( m_nUniqueID,
+			s_mapPlayerDecalsUniqueIDsToApply.contains( m_nUniqueID ) );
 	}
 }
 
@@ -319,24 +316,24 @@ void C_FEPlayerDecal::PostDataUpdate( DataUpdateType_t updateType )
 {
 	if ( m_nUniqueID )
 	{
-		if ( s_mapPlayerDecalsUniqueIDsAll.Find( m_nUniqueID ) == s_mapPlayerDecalsUniqueIDsAll.InvalidIndex() )
+		if ( !s_mapPlayerDecalsUniqueIDsAll.contains( m_nUniqueID ) )
 		{
-			int idxRecreate = s_mapPlayerDecalsUniqueIDsRecreating.Find( m_nUniqueID );
+			auto idxRecreate = s_mapPlayerDecalsUniqueIDsRecreating.find( m_nUniqueID );
 			bool bApplyImmediate = true;
-			bool bRecreating = ( idxRecreate != s_mapPlayerDecalsUniqueIDsRecreating.InvalidIndex() );
+			bool bRecreating = ( idxRecreate != s_mapPlayerDecalsUniqueIDsRecreating.end() );
 			if ( bRecreating )
 			{
-				bApplyImmediate = s_mapPlayerDecalsUniqueIDsRecreating.Element( idxRecreate );
-				s_mapPlayerDecalsUniqueIDsRecreating.RemoveAt( idxRecreate );
+				bApplyImmediate = idxRecreate->second;
+				s_mapPlayerDecalsUniqueIDsRecreating.erase( idxRecreate );
 			}
 
 #if PLAYERDECAL_VERBOSE_DEBUG
 			DevMsg( "DECAL: PostDataUpdate %s decal ( %d ) %s\n", bRecreating ? "recreating" : "new", m_nUniqueID, bApplyImmediate ? "apply" : "already applied, skipping application" );
 #endif
 
-			s_mapPlayerDecalsUniqueIDsAll.InsertOrReplace( m_nUniqueID, this );
+			s_mapPlayerDecalsUniqueIDsAll.insert_or_assign( m_nUniqueID, this );
 			if ( bApplyImmediate )
-				s_mapPlayerDecalsUniqueIDsToApply.InsertOrReplace( m_nUniqueID, this );
+				s_mapPlayerDecalsUniqueIDsToApply.insert_or_assign( m_nUniqueID, this );
 		}
 	}
 
@@ -416,22 +413,22 @@ void UpdatePreviewDecal()
 
 void OnPlayerDecalsUpdate()
 {
-	FOR_EACH_MAP( s_mapPlayerDecalsUniqueIDsToApply, i )
+	for ( const auto &[nUniqueID, pDecal] : s_mapPlayerDecalsUniqueIDsToApply )
 	{
 #if PLAYERDECAL_VERBOSE_DEBUG
-		DevMsg( "DECAL: ApplyDecalDataToWorld( %d )\n", s_mapPlayerDecalsUniqueIDsToApply.Key( i ) );
+		DevMsg( "DECAL: ApplyDecalDataToWorld( %d )\n", nUniqueID );
 #endif
-		s_mapPlayerDecalsUniqueIDsToApply.Element( i )->ApplyDecalDataToWorld();
+		pDecal->ApplyDecalDataToWorld();
 	}
-	s_mapPlayerDecalsUniqueIDsToApply.RemoveAll();
+	s_mapPlayerDecalsUniqueIDsToApply.clear();
 
 #if PLAYERDECAL_VERBOSE_DEBUG
-	if ( s_mapPlayerDecalsUniqueIDsRecreating.Count() )
+	if ( !s_mapPlayerDecalsUniqueIDsRecreating.empty() )
 	{
-		DevMsg( "DECAL: Was recreating %d decals, cleared recreate cache\n", s_mapPlayerDecalsUniqueIDsRecreating.Count() );
+		DevMsg( "DECAL: Was recreating %d decals, cleared recreate cache\n", (int)s_mapPlayerDecalsUniqueIDsRecreating.size() );
 	}
 #endif
-	s_mapPlayerDecalsUniqueIDsRecreating.RemoveAll();
+	s_mapPlayerDecalsUniqueIDsRecreating.clear();
 }
 
 bool C_FEPlayerDecal::BMakeDecalReadyToApplyToWorld()
@@ -491,10 +488,10 @@ void C_FEPlayerDecal::ApplyDecalDataToWorld()
 void QcCreateDecalData( int nKey, int nStickerKitDefinition, int nTintID, bool bDrips, float flCreationTime )
 {
 	const CStickerKit *pStickerKit = GetItemSchema()->GetStickerKitDefinition( nStickerKitDefinition );
-	if ( pStickerKit && !pStickerKit->sMaterialPath.IsEmpty() )
+	if ( pStickerKit && !pStickerKit->sMaterialPath.empty() )
 	{
 		// TODO: We should convert this to be an async texture load once texture streaming is in.
-		CFmtStr fmtTextureName( "decals/sprays/%s", bDrips ? pStickerKit->sMaterialPath.Get() : pStickerKit->sMaterialPathNoDrips.Get() );
+		CFmtStr fmtTextureName( "decals/sprays/%s", bDrips ? pStickerKit->sMaterialPath.c_str() : pStickerKit->sMaterialPathNoDrips.c_str() );
 		ITexture* texture = materials->FindTexture( fmtTextureName, TEXTURE_GROUP_DECAL, false );
 
 		if ( !texture || texture->IsError() )

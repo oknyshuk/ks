@@ -16,12 +16,12 @@
 #include "tier0/threadtools.h"
 #include "tier0/icommandline.h"
 
+#include <atomic>
 #include <fcntl.h>
 #include <sys/file.h>
 #include "tier1/convar.h"
 #include "tier0/vprof.h"
 #include "tier1/fmtstr.h"
-#include "tier1/utlrbtree.h"
 
 
 #define GAMEINFO_FILENAME "GAMEINFO.TXT"
@@ -35,9 +35,7 @@ bool ShouldFailIo()
 
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 ASSERT_INVARIANT( SEEK_CUR == FILESYSTEM_SEEK_CURRENT );
 ASSERT_INVARIANT( SEEK_SET == FILESYSTEM_SEEK_HEAD );
 ASSERT_INVARIANT( SEEK_END == FILESYSTEM_SEEK_TAIL );
@@ -151,7 +149,7 @@ public:
 	virtual int FS_fflush();
 	virtual char *FS_fgets( char *dest, int destSize );
 
-	static CUtlMap< int, CInterlockedInt > m_LockedFDMap;
+	static std::map< int, std::atomic<int> > m_LockedFDMap;
 private:
 	CStdioFile( FILE *pFile, bool bWriteable )
 		: m_pFile( pFile ), m_bWriteable( bWriteable )
@@ -162,7 +160,7 @@ private:
 	bool m_bWriteable;
 };
 
-CUtlMap< int, CInterlockedInt > CStdioFile::m_LockedFDMap;
+std::map< int, std::atomic<int> > CStdioFile::m_LockedFDMap;
 
 //-----------------------------------------------------------------------------
 
@@ -215,7 +213,6 @@ CFileSystem_Stdio::CFileSystem_Stdio()
 {
 	m_bMounted = false;
 	m_bCanAsync = true;
-	SetDefLessFunc( CStdioFile::m_LockedFDMap );
 }
 
 
@@ -332,7 +329,7 @@ void *CFileSystem_Stdio::AllocOptimalReadBuffer( FileHandle_t hFile, unsigned nS
 
 	{
 		unsigned nAllocAlignment = ( bOffsetIsAligned ) ? sectorSize : 4;
-		return _aligned_malloc( nAllocSize, nAllocAlignment );
+		return MemAlloc_AllocAligned( nAllocSize, nAllocAlignment );
 	}
 }
 
@@ -350,7 +347,7 @@ void CFileSystem_Stdio::FreeOptimalReadBuffer( void *p )
 	if ( p )
 	{
 		{
-			 _aligned_free( p );
+			 MemAlloc_FreeAligned( p );
 		}
 	}
 }
@@ -722,15 +719,15 @@ CStdioFile *CStdioFile::FS_fopen( const char *filename, const char *options, int
 			ThreadId_t curThread = ThreadGetCurrentId();
 			
 			int fd = fileno_unlocked( pFile );
-			int iLockID = m_LockedFDMap.Find( fd );
+			auto iLockID = m_LockedFDMap.find( fd );
 			int ret = flock( fd, LOCK_EX | LOCK_NB );
 			if ( ret < 0 )
 			{
 				if ( errno == EWOULDBLOCK  )
 				{
-					if ( iLockID != m_LockedFDMap.InvalidIndex() && 
-						 m_LockedFDMap[iLockID] != -1 && 
-						 curThread != m_LockedFDMap[iLockID] )
+					if ( iLockID != m_LockedFDMap.end() && 
+						 iLockID->second != -1 && 
+						 curThread != iLockID->second )
 					{
 						ret = flock( fd, LOCK_EX );
 						if ( ret < 0 )
@@ -747,10 +744,10 @@ CStdioFile *CStdioFile::FS_fopen( const char *filename, const char *options, int
 				}
 			}
 
-			if ( iLockID != m_LockedFDMap.InvalidIndex() )
-				m_LockedFDMap[iLockID] = curThread;
+			if ( iLockID != m_LockedFDMap.end() )
+				iLockID->second = curThread;
 			else
-				m_LockedFDMap.Insert( fd, curThread );
+				m_LockedFDMap.emplace( fd, curThread );
 			
 			rewind( pFile );
 		}
@@ -777,9 +774,9 @@ void CStdioFile::FS_fclose()
 		fflush( m_pFile );
 		int fd = fileno_unlocked( m_pFile );
 		flock( fd, LOCK_UN );
-		int iLockID = m_LockedFDMap.Find( fd );
-		if ( iLockID != m_LockedFDMap.InvalidIndex() )
-			m_LockedFDMap[ iLockID ] = -1;
+		auto iLockID = m_LockedFDMap.find( fd );
+		if ( iLockID != m_LockedFDMap.end() )
+			iLockID->second = -1;
 	}
 	fclose(m_pFile);
 }
@@ -855,7 +852,7 @@ size_t CStdioFile::FS_fwrite( const void *src, size_t size )
 
 		while ( remaining > 0 )
 		{
-			size_t bytesToCopy = MIN(remaining, WRITE_CHUNK);
+			size_t bytesToCopy = std::min<std::common_type_t<size_t, int>>(remaining, WRITE_CHUNK);
 
 			total += fwrite(current, 1, bytesToCopy, m_pFile);
 

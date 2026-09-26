@@ -11,9 +11,6 @@
 #include "materialsystem/imesh.h"
 #include "toolframework_client.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // -------------------------------------------------------------------------------- //
 // An entity used to access overlays (and change their texture)
 // -------------------------------------------------------------------------------- //

@@ -32,9 +32,6 @@ extern CEngineSprite *Draw_SetSpriteTexture( const model_t *pSpriteModel, int fr
 
 #endif // CLIENT_DLL
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 //-----------------------------------------------------------------------------
 // constants
 //-----------------------------------------------------------------------------

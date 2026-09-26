@@ -158,12 +158,12 @@ Rml::ElementDocument *RocketUIImpl::LoadDocumentFile(
   document = destinationCtx->LoadDocument(filepath);
 
   if (loadDocumentFunc && unloadDocumentFunc) {
-    CUtlPair<LoadDocumentFn, UnloadDocumentFn> documentFuncPair(
+    std::pair<LoadDocumentFn, UnloadDocumentFn> documentFuncPair(
         loadDocumentFunc, unloadDocumentFunc);
-    CUtlPair<RocketDesinationContext_t,
-             CUtlPair<LoadDocumentFn, UnloadDocumentFn>>
+    std::pair<RocketDesinationContext_t,
+             std::pair<LoadDocumentFn, UnloadDocumentFn>>
         reloadFunctionEntry(ctx, documentFuncPair);
-    m_documentReloadFuncs.AddToTail(reloadFunctionEntry);
+    m_documentReloadFuncs.push_back( reloadFunctionEntry );
   }
 
   return document;
@@ -527,17 +527,17 @@ bool RocketUIImpl::ReloadDocuments() {
   // Reload runs on the main thread alongside recording; disabling rocket_enable
   // stops new recording while documents are torn down/rebuilt, and released
   // geometry is reclaimed safely via the frame-tagged graveyard.
-  CUtlVector<CUtlPair<RocketDesinationContext_t,
-                      CUtlPair<LoadDocumentFn, UnloadDocumentFn>>>
+  std::vector< std::pair<RocketDesinationContext_t,
+                      std::pair<LoadDocumentFn, UnloadDocumentFn>> >
       copyOfPairs;
 
-  for (int i = 0; i < m_documentReloadFuncs.Count(); i++) {
-    copyOfPairs.AddToTail(m_documentReloadFuncs[i]);
+  for (int i = 0; i < std::ssize( m_documentReloadFuncs ); i++) {
+    copyOfPairs.push_back( m_documentReloadFuncs[i] );
   }
 
-  m_documentReloadFuncs.Purge();
+  m_documentReloadFuncs.clear(); m_documentReloadFuncs.shrink_to_fit();
 
-  for (int i = 0; i < copyOfPairs.Count(); i++) {
+  for (int i = 0; i < std::ssize( copyOfPairs ); i++) {
     // A document can only be rebuilt while its context is the one in play (a HUD
     // element's loader needs a live HUD). Keep the rest registered, or
     // `rocket_reload` from the menu costs the HUD its hot-reload hooks.
@@ -552,7 +552,7 @@ bool RocketUIImpl::ReloadDocuments() {
     }
 
     if (!bReloadable) {
-      m_documentReloadFuncs.AddToTail(copyOfPairs[i]);
+      m_documentReloadFuncs.push_back( copyOfPairs[i] );
       continue;
     }
 

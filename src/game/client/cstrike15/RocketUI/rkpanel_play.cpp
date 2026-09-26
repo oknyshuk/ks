@@ -27,7 +27,6 @@ static void BindPlayPanel( Rml::DataModelConstructor &c )
     } );
     c.BindEventCallback( "close_play", []( Rml::DataModelHandle, Rml::Event &, const Rml::VariantList & ) {
         RocketPlayDocument::ShowPanel( false );
-        RocketPlayDocument::UnloadDialog();
     } );
 }
 RK_HUD_SECTION( BindPlayPanel );
@@ -143,16 +142,19 @@ void RocketPlayDocument::StartServer()
         mapName.c_str()
     );
 
-    // Close the panel before starting the server
+    // Hide; this runs inside the panel's own data-event callback, so it must not
+    // close (see rkpanel.h).
     ShowPanel( false );
-    UnloadDialog();
 
     engine->ClientCmd_Unrestricted( szMapCommand );
 }
 
 void RocketPlayDocument::LoadDialog()
 {
-    if( m_pInstance || !RkPanelLoad( m_pInstance, ROCKET_CONTEXT_CURRENT, "panel_play.rml", LoadDialog, UnloadDialog ) )
+    // Transient panel: rebuild here so it lands in the context current now.
+    UnloadDialog();
+
+    if( !RkPanelLoad( m_pInstance, ROCKET_CONTEXT_CURRENT, "panel_play.rml", LoadDialog, UnloadDialog ) )
         return;
 
     PopulateMapList();
@@ -166,10 +168,7 @@ void RocketPlayDocument::UnloadDialog()
 void RocketPlayDocument::ShowPanel( bool bShow, bool immediate )
 {
     if( bShow )
-    {
-        LoadDialog();
-        PopulateMapList();   // the maps folder can change between openings
-    }
+        LoadDialog();   // rebuilds the panel, re-scanning the maps folder
 
     RkPanelShow( m_pInstance, m_bVisible, bShow );
 }

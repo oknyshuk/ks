@@ -7,13 +7,11 @@
 #include "blackbox.h"
 #include "tier0/basetypes.h"
 #include "cmd.h"
-#include "tier1/utllinkedlist.h"
 #include "tier1/convar.h"
 #include "tier1/fmtstr.h"
 #include "tier1/interface.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include <deque>
+#include <string>
 
 // development only, off by default for 360
 ConVar blackbox( "blackbox", "1" );
@@ -31,13 +29,7 @@ static const char* gTypeMap[] =
 
 struct CBlackBoxRecord
 {
-	CBlackBoxRecord(const char *new_message) 
-	{
-		m_time = Plat_FloatTime();
-		m_message = new char[strlen(new_message)+1];
-		strcpy(m_message, new_message);
-	}
-	~CBlackBoxRecord() { if (m_message) delete m_message; };
+	CBlackBoxRecord( const char *new_message ) : m_time( Plat_FloatTime() ), m_message( new_message ) {}
 
 	operator const char *() const	
 	{
@@ -48,13 +40,13 @@ struct CBlackBoxRecord
 		int mm = int(temp/60) % 60;
 		float ss = temp - ((mm + (hh * 60)) * 60);
 
-		buf.sprintf( "[%02d:%02d:%02.3f]: %s", hh, mm, ss, m_message );
+		buf.sprintf( "[%02d:%02d:%02.3f]: %s", hh, mm, ss, m_message.c_str() );
 
 		return buf;
 	}
 
 	double m_time;
-	char *m_message;
+	std::string m_message;
 };
 
 class CBlackBox: public IBlackBox
@@ -82,7 +74,7 @@ public:
 private:
 	bool ValidType(int type) { return (type >= 0 && type < TYPE_COUNT); };
 
-	CUtlVector<CBlackBoxRecord *> m_records[TYPE_COUNT];
+	std::deque< CBlackBoxRecord > m_records[TYPE_COUNT];	// oldest first
 	uint m_record_limits[TYPE_COUNT];
 };
 
@@ -115,15 +107,9 @@ void CBlackBox::Record( int type, const char *msg )
 	if ( !ValidType(type) )	
 		return;
 
-	CBlackBoxRecord *new_record = new CBlackBoxRecord( msg );
-	
-	m_records[type].AddToTail( new_record );
-	if ( (uint)m_records[type].Count() > m_record_limits[type] )
-	{
-		CBlackBoxRecord *old_record = m_records[type].Head();		 
-		m_records[type].Remove( 0 );
-		delete old_record;
-	}
+	m_records[type].emplace_back( msg );
+	if ( (uint)std::ssize( m_records[type] ) > m_record_limits[type] )
+		m_records[type].pop_front();
 }
 
 void CBlackBox::SetLimit(int type, unsigned int count)
@@ -139,7 +125,7 @@ const char *CBlackBox::Get( int type, unsigned int index )
 	if ( !ValidType( type ))
 		return nullptr;
 	
-	return (*m_records[type][index]);
+	return m_records[type][index];
 }
 
 const char *CBlackBox::GetTypeName( int type )
@@ -160,7 +146,7 @@ int CBlackBox::Count( int type )
 	if ( !ValidType( type ))
 		return -1;
 
-	return m_records[type].Count();
+	return std::ssize( m_records[type] );
 }
 
 void CBlackBox::Flush( int type )
@@ -168,7 +154,7 @@ void CBlackBox::Flush( int type )
 	if ( !ValidType( type ))
 		return;
 
-	m_records[type].PurgeAndDeleteElements();
+	m_records[type].clear();
 }
 
 CON_COMMAND_F( blackbox_record, "Record an entry into the blackbox", FCVAR_DONTRECORD )

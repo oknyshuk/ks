@@ -9,9 +9,6 @@
 #include "filesystem_helpers.h"
 #include "characterset.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // wordbreak parsing set
 static characterset_t	g_BreakSet, g_BreakSetIncludingColons;
 

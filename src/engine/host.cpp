@@ -4,7 +4,10 @@
 //
 //===========================================================================//
 
+#include "tier1/text_writer.h"
+#include <atomic>
 #include "tier0/fasttimer.h"
+#include "tier0/memalloc.h"
 
 
 #include "tier1/fmtstr.h"
@@ -129,9 +132,6 @@ extern ConVar cl_cloud_settings;
 extern IVAudio *vaudio;
 void *g_pMilesAudioEngineRef;
 #endif
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Forward declarations
@@ -288,7 +288,7 @@ void Snd_Restart_f()
 
 	extern bool snd_firsttime;
 
-	CUtlVector<musicsave_t> music;
+	std::vector< musicsave_t > music;
 
 	// Ask sound system for current music tracks
 	S_GetCurrentlyPlayingMusic( music );
@@ -298,7 +298,7 @@ void Snd_Restart_f()
 	GetBaseLocalClient().ClearSounds();
 	S_Init();
 
-	for ( int i = 0; i < music.Count(); i++ )
+	for ( int i = 0; i < std::ssize( music ); i++ )
 	{
 		S_RestartSong( &music[i] );
 	}
@@ -533,7 +533,7 @@ ConVar host_threaded_sound_simplethread( "host_threaded_sound_simplethread", "0"
 
 extern ConVar threadpool_reserve;
 CThreadEvent g_ReleaseThreadReservation( true );
-CInterlockedInt g_NumReservedThreads;
+std::atomic<int> g_NumReservedThreads;
 
 void ThreadPoolReserverFunction()
 {
@@ -730,13 +730,13 @@ bool GetFileFromRemoteStorage( ISteamRemoteStorage *pRemoteStorage, const char *
 
 	if ( nFileSize > 0 )
 	{
-		CUtlMemory<char> buf( 0, nFileSize );
-		if ( pRemoteStorage->FileRead( pszRemoteFileName, buf.Base(), nFileSize ) == nFileSize )
+		std::vector<char> buf( nFileSize );
+		if ( pRemoteStorage->FileRead( pszRemoteFileName, buf.data(), nFileSize ) == nFileSize )
 		{
 			FileHandle_t hFile = g_pFileSystem->Open( pszLocalFileName, "wb", pathID );
 			if( hFile )
 			{
-				bSuccess = g_pFileSystem->Write( buf.Base(), nFileSize, hFile ) == nFileSize;
+				bSuccess = g_pFileSystem->Write( buf.data(), nFileSize, hFile ) == nFileSize;
 				g_pFileSystem->Close( hFile );
 
 				if ( bSuccess )
@@ -1153,7 +1153,7 @@ void Host_WriteConfiguration( const int iController, const char *filename )
 
 		// Generate a new .cfg file.
 		char		szFileName[MAX_PATH];
-		CUtlBuffer	configBuff( 0, 0, CUtlBuffer::TEXT_BUFFER);
+		ks::text_writer	configBuff;
 
 		Q_snprintf( szFileName, sizeof(szFileName), "cfg/%s", filename );
 		g_pFileSystem->CreateDirHierarchy( "cfg", GetConfigPathID() );
@@ -1164,7 +1164,7 @@ void Host_WriteConfiguration( const int iController, const char *filename )
 		}
 
 		// Always throw away all keys that are left over.
-		configBuff.Printf( "unbindall\n" );
+		configBuff.printf( "unbindall\n" );
 
 		Key_WriteBindings( configBuff );
 		ConVarUtilities->WriteVariables( &configBuff );
@@ -1176,12 +1176,12 @@ void Host_WriteConfiguration( const int iController, const char *filename )
 			ACTIVE_SPLITSCREEN_PLAYER_GUARD( hh );
 			if ( g_ClientDLL->IN_IsKeyDown( "in_jlook", down ) && down )
 			{
-				configBuff.Printf( "cmd%d +jlook\n", hh+1 );
+				configBuff.printf( "cmd%d +jlook\n", hh+1 );
 			}
 		}
 #endif // DEDICATED
 
-		if ( !configBuff.TellMaxPut() )
+		if ( configBuff.empty() )
 		{
 			// nothing to write
 			return;
@@ -1191,14 +1191,14 @@ void Host_WriteConfiguration( const int iController, const char *filename )
 
 
 		// make a persistent copy that async will use and free
-		char *tempBlock = new char[configBuff.TellMaxPut()];
-		Q_memcpy( tempBlock, configBuff.Base(), configBuff.TellMaxPut() );
+		char *tempBlock = new char[configBuff.size()];
+		Q_memcpy( tempBlock, configBuff.c_str(), configBuff.size() );
 
 		// async write the buffer, and then free it
 		char		szFileNameToWriteLocal[MAX_PATH] = {};
 		g_pFileSystem->GetSearchPath( GetConfigPathID(), false, szFileNameToWriteLocal, sizeof( szFileNameToWriteLocal ) );
 		V_strcat_safe( szFileNameToWriteLocal, szFileName );
-		g_pFileSystem->AsyncWrite( szFileNameToWriteLocal, tempBlock, configBuff.TellMaxPut(), true );
+		g_pFileSystem->AsyncWrite( szFileNameToWriteLocal, tempBlock, configBuff.size(), true );
 
 		ConMsg( "Host_WriteConfiguration: Wrote %s\n", szFileName );
 	}
@@ -1584,16 +1584,16 @@ void Host_AccumulateTime( float dt )
 		if ( CommandLine()->CheckParm( "-tools" ) == nullptr && !g_bReplayLoadedTools )
 		{
 #endif // !NO_TOOLFRAMEWORK
-			host_frametime = MIN( host_frametime, MAX_FRAMETIME * fullscale);
-			host_frametime_unscaled = MIN( host_frametime_unscaled, MAX_FRAMETIME );
-			host_frametime_unscaled = MAX( host_frametime_unscaled, MIN_FRAMETIME );
+			host_frametime = std::min<std::common_type_t<float, double>>( host_frametime, MAX_FRAMETIME * fullscale);
+			host_frametime_unscaled = std::min<std::common_type_t<float, double>>( host_frametime_unscaled, MAX_FRAMETIME );
+			host_frametime_unscaled = std::max<std::common_type_t<float, double>>( host_frametime_unscaled, MIN_FRAMETIME );
 #ifndef NO_TOOLFRAMEWORK
 		}
 		else
 		{
-			host_frametime = MIN( host_frametime, MAX_TOOLS_FRAMETIME * fullscale);
-			host_frametime_unscaled = MIN( host_frametime_unscaled, MAX_TOOLS_FRAMETIME );
-			host_frametime_unscaled = MAX( host_frametime_unscaled, MIN_TOOLS_FRAMETIME );
+			host_frametime = std::min<std::common_type_t<float, double>>( host_frametime, MAX_TOOLS_FRAMETIME * fullscale);
+			host_frametime_unscaled = std::min<std::common_type_t<float, double>>( host_frametime_unscaled, MAX_TOOLS_FRAMETIME );
+			host_frametime_unscaled = std::max<std::common_type_t<float, double>>( host_frametime_unscaled, MIN_TOOLS_FRAMETIME );
 		}
 #endif // !NO_TOOLFRAMEWORK
 	}
@@ -1602,16 +1602,16 @@ void Host_AccumulateTime( float dt )
 		if ( CommandLine()->CheckParm( "-tools" ) != nullptr && !g_bReplayLoadedTools )
 		{
 			host_frametime_unbounded = host_frametime;
-			host_frametime = MIN( host_frametime, MAX_TOOLS_FRAMETIME );
-			host_frametime = MAX( host_frametime, MIN_TOOLS_FRAMETIME );
+			host_frametime = std::min<std::common_type_t<float, double>>( host_frametime, MAX_TOOLS_FRAMETIME );
+			host_frametime = std::max<std::common_type_t<float, double>>( host_frametime, MIN_TOOLS_FRAMETIME );
 			host_frametime_unscaled = host_frametime;
 		}
 		else
 #endif // !NO_TOOLFRAMEWORK
 	{	// don't allow really long or short frames
 		host_frametime_unbounded = host_frametime;
-		host_frametime = MIN( host_frametime, MAX_FRAMETIME );
-		host_frametime = MAX( host_frametime, MIN_FRAMETIME );
+		host_frametime = std::min<std::common_type_t<float, double>>( host_frametime, MAX_FRAMETIME );
+		host_frametime = std::max<std::common_type_t<float, double>>( host_frametime, MIN_FRAMETIME );
 		host_frametime_unscaled = host_frametime;
 	}
 
@@ -2182,10 +2182,10 @@ void CFrameTimer::ComputeFrameVariability()
 		if ( m_pFrameTimeHistory[ ii1 ] == 0.0f )
 			continue;
 
-		double ft = MIN( m_pFrameTimeHistory[ ii1 ], 0.25 );
+		double ft = std::min<std::common_type_t<float, double>>( m_pFrameTimeHistory[ ii1 ], 0.25 );
 		sumFrameTime += ft;
 
-		ft = MIN( m_pFrameStartTimeHistory[ ii1 ], 0.25 );
+		ft = std::min<std::common_type_t<float, double>>( m_pFrameStartTimeHistory[ ii1 ], 0.25 );
 		sumFrameStartTime += ft;
 
 		++count;
@@ -2205,12 +2205,12 @@ void CFrameTimer::ComputeFrameVariability()
 		if ( m_pFrameTimeHistory[ ii2 ] == 0.0f )
 			continue;
 
-		double ft = MIN( m_pFrameTimeHistory[ ii2 ], 0.25 );
+		double ft = std::min<std::common_type_t<float, double>>( m_pFrameTimeHistory[ ii2 ], 0.25 );
 		double dt = ft - avgFrameTime;
 
 		devSquaredFrameTime += ( dt * dt );
 
-		ft = MIN( m_pFrameStartTimeHistory[ ii2 ], 0.25 );
+		ft = std::min<std::common_type_t<float, double>>( m_pFrameStartTimeHistory[ ii2 ], 0.25 );
 		dt = ft - avgFrameStartTime;
 		devSquaredFrameStartTime += ( dt * dt );
 	}
@@ -2571,7 +2571,7 @@ void _Host_RunFrame_Render()
 void CL_FindInterpolatedAddAngle( float t, float& frac, AddAngle **prev, AddAngle **pnextangle )
 {
 #ifndef DEDICATED
-	int c = GetLocalClient().addangle.Count();
+	int c = std::ssize( GetLocalClient().addangle );
 
 	*prev = nullptr;
 	*pnextangle = nullptr;
@@ -2617,18 +2617,18 @@ void CL_DiscardOldAddAngleEntries( float t )
 #ifndef DEDICATED
 	float killtime = t - host_state.interval_per_tick - 0.1f;
 
-	for ( int i = 0; i < GetLocalClient().addangle.Count(); i++ )
+	for ( int i = 0; i < std::ssize( GetLocalClient().addangle ); i++ )
 	{
 		AddAngle *p = &GetLocalClient().addangle[ i ];
 		if ( p->starttime <= killtime )
 		{
-			GetLocalClient().addangle.Remove( i );
+			{ auto &addangle = GetLocalClient().addangle; addangle.erase( addangle.begin() + i ); }
 			--i;
 		}
 	}
 
 	// It's safe to reset the master counter once all the entries decay
-	if ( GetLocalClient().addangle.Count() == 0 )
+	if ( std::ssize( GetLocalClient().addangle ) == 0 )
 	{
 		GetLocalClient().prevaddangletotal = GetLocalClient().addangletotal = 0.0f;
 	}
@@ -3234,7 +3234,7 @@ void _Host_RunFrame (float time)
 				if ( host_runframe_input_parcelremainder.GetBool() )
 				{
 					//sv_alternateticks creates instances where we're guaranteed to have a first-loop prevremainder of more than a tick, creating negative frame times for input deeper down
-					float fParcelRemainder = MIN( prevremainder, host_state.interval_per_tick );
+					float fParcelRemainder = std::min<std::common_type_t<double, float>>( prevremainder, host_state.interval_per_tick );
 					_Host_RunFrame_Input( fParcelRemainder, bFinalTick );
 					prevremainder -= fParcelRemainder;
 				}
@@ -4888,7 +4888,7 @@ void Host_Shutdown(void)
 #if !defined( DEDICATED )
 	if ( !sv.IsDedicated() )
 	{
-		TRACESHUTDOWN( Steam3Client().Shutdown() );
+		Steam3Client().Shutdown();
 	}
 #endif
 

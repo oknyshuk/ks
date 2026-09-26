@@ -245,9 +245,9 @@ void CLoggingSystem::SetGlobalSpewLevel( LoggingSeverity_t minimumSeverity )
 void CLoggingSystem::PushLoggingState( bool bThreadLocal, bool bClearState )
 {
 	if ( !m_pStateMutex )
-		m_pStateMutex = new CThreadFastMutex();
+		m_pStateMutex = new std::recursive_mutex();
 
-	m_pStateMutex->Lock();
+	m_pStateMutex->lock();
 	
 	int nNewState = FindUnusedStateIndex();
 	// Ensure we're not out of state blocks.
@@ -276,15 +276,15 @@ void CLoggingSystem::PushLoggingState( bool bThreadLocal, bool bClearState )
 		m_nGlobalStateIndex = nNewState;
 	}
 
-	m_pStateMutex->Unlock();
+	m_pStateMutex->unlock();
 }
 
 void CLoggingSystem::PopLoggingState( bool bThreadLocal )
 {
 	if ( !m_pStateMutex )
-		m_pStateMutex = new CThreadFastMutex();
+		m_pStateMutex = new std::recursive_mutex();
 
-	m_pStateMutex->Lock();
+	m_pStateMutex->lock();
 
 	int nCurrentState = bThreadLocal ? (int)g_nThreadLocalStateIndex : m_nGlobalStateIndex;
 	
@@ -303,15 +303,15 @@ void CLoggingSystem::PopLoggingState( bool bThreadLocal )
 		m_nGlobalStateIndex = m_LoggingStates[nCurrentState].m_nPreviousStackEntry;
 	}
 
-	m_pStateMutex->Unlock();
+	m_pStateMutex->unlock();
 }
 
 void CLoggingSystem::RegisterLoggingListener( ILoggingListener *pListener )
 {
 	if ( !m_pStateMutex )
-		m_pStateMutex = new CThreadFastMutex();
+		m_pStateMutex = new std::recursive_mutex();
 
-	m_pStateMutex->Lock();
+	m_pStateMutex->lock();
 	LoggingState_t *pState = GetCurrentState();
 	if ( pState->m_nListenerCount >= ARRAYSIZE(pState->m_RegisteredListeners) )
 	{
@@ -323,15 +323,15 @@ void CLoggingSystem::RegisterLoggingListener( ILoggingListener *pListener )
 		pState->m_RegisteredListeners[pState->m_nListenerCount] = pListener;
 		++ pState->m_nListenerCount;
 	}
-	m_pStateMutex->Unlock();
+	m_pStateMutex->unlock();
 }
 
 bool CLoggingSystem::IsListenerRegistered( ILoggingListener *pListener )
 {
 	if ( !m_pStateMutex )
-		m_pStateMutex = new CThreadFastMutex();
+		m_pStateMutex = new std::recursive_mutex();
 
-	m_pStateMutex->Lock();
+	m_pStateMutex->lock();
 	const LoggingState_t *pState = GetCurrentState();
 	bool bFound = false;
 	for ( int i = 0; i < pState->m_nListenerCount; ++ i )
@@ -342,28 +342,28 @@ bool CLoggingSystem::IsListenerRegistered( ILoggingListener *pListener )
 			break;
 		}
 	}
-	m_pStateMutex->Unlock();
+	m_pStateMutex->unlock();
 	return bFound;
 }
 
 void CLoggingSystem::ResetCurrentLoggingState()
 {
 	if ( !m_pStateMutex )
-		m_pStateMutex = new CThreadFastMutex();
+		m_pStateMutex = new std::recursive_mutex();
 
-	m_pStateMutex->Lock();
+	m_pStateMutex->lock();
 	LoggingState_t *pState = GetCurrentState();
 	pState->m_nListenerCount = 0;
 	pState->m_pLoggingResponse = &m_DefaultLoggingResponse;
-	m_pStateMutex->Unlock();
+	m_pStateMutex->unlock();
 }
 
 void CLoggingSystem::SetLoggingResponsePolicy( ILoggingResponsePolicy *pLoggingResponse )
 {
 	if ( !m_pStateMutex )
-		m_pStateMutex = new CThreadFastMutex();
+		m_pStateMutex = new std::recursive_mutex();
 
-	m_pStateMutex->Lock();
+	m_pStateMutex->lock();
 	LoggingState_t *pState = GetCurrentState();
 	if ( pLoggingResponse == nullptr )
 	{
@@ -373,7 +373,7 @@ void CLoggingSystem::SetLoggingResponsePolicy( ILoggingResponsePolicy *pLoggingR
 	{
 		pState->m_pLoggingResponse = pLoggingResponse;
 	}
-	m_pStateMutex->Unlock();
+	m_pStateMutex->unlock();
 }
 
 LoggingResponse_t CLoggingSystem::LogDirect( LoggingChannelID_t channelID, LoggingSeverity_t severity, Color color, const tchar *pMessage )
@@ -390,9 +390,9 @@ LoggingResponse_t CLoggingSystem::LogDirect( LoggingChannelID_t channelID, Loggi
 	
 	// It is assumed that the mutex is reentrant safe on all platforms.
 	if ( !m_pStateMutex )
-		m_pStateMutex = new CThreadFastMutex();
+		m_pStateMutex = new std::recursive_mutex();
 
-	m_pStateMutex->Lock();
+	m_pStateMutex->lock();
 
 	LoggingState_t *pState = GetCurrentState();
 	
@@ -408,7 +408,7 @@ LoggingResponse_t CLoggingSystem::LogDirect( LoggingChannelID_t channelID, Loggi
 		response = LR_DEBUGGER;
 	}
 
-	m_pStateMutex->Unlock();
+	m_pStateMutex->unlock();
 
 	switch( response )
 	{

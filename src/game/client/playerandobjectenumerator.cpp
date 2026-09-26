@@ -10,20 +10,17 @@
 #include "c_ai_basenpc.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 // Enumator class for ragdolls being affected by explosive forces
 CPlayerAndObjectEnumerator::CPlayerAndObjectEnumerator( float radius )
 {
 	m_flRadiusSquared		= radius * radius;
-	m_Objects.RemoveAll();
+	m_Objects.clear();
 	m_pLocal = C_BasePlayer::GetLocalPlayer();
 }
 
 int	CPlayerAndObjectEnumerator::GetObjectCount()
 {
-	return m_Objects.Count();
+	return std::ssize( m_Objects );
 }
 
 C_BaseEntity *CPlayerAndObjectEnumerator::GetObject( int index )
@@ -72,7 +69,7 @@ IterationRetval_t CPlayerAndObjectEnumerator::EnumElement( IHandleEntity *pHandl
 
 	CHandle< C_BaseEntity > h;
 	h = pEnt;
-	m_Objects.AddToTail( h );
+	m_Objects.push_back( h );
 
 	return ITERATION_CONTINUE;
 }

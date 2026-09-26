@@ -10,9 +10,6 @@
 #include "volume_clouds_ps20.inc"
 #include "volume_clouds_ps20b.inc"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 void InitParamsVolumeClouds( CBaseVSShader *pShader, IMaterialVar** params, const char *pMaterialName, VolumeCloudsVars_t &info )
 {

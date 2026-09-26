@@ -13,9 +13,6 @@
 #include "eyeglint_ps20.inc"
 #include "eyeglint_ps20b.inc"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 DEFINE_FALLBACK_SHADER( EyeGlint, EyeGlint_dx9 )
 BEGIN_VS_SHADER( EyeGlint_dx9, "Help for EyeGlint" )

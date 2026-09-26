@@ -19,7 +19,7 @@
 
 // Container to hold all the KeyValue stats to send only if the convar "steamworks_immediate_upload" is set to 0.
 // Otherwise, the stats are uploaded as they are received.
-typedef CUtlVector< KeyValues* > KeyValueStatList;
+typedef std::vector< KeyValues* > KeyValueStatList;
 
 struct ClientServerSession_t
 {
@@ -142,7 +142,7 @@ protected:
 	KeyValueStatList	m_StatsToSend;
 	ClientServerSession_t m_ActiveSession;
 	int					m_iServerConnectCount;
-	CUtlString			m_sSessionConVarName;
+	std::string			m_sSessionConVarName;
 	ConVarRef*			m_pSessionConVar;
 };
 	

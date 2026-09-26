@@ -19,9 +19,6 @@
 #include "clientinferno.h"
 
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 PRECACHE_REGISTER_BEGIN( GLOBAL, InfernoMaterials )
 	PRECACHE( MATERIAL, "sprites/white" )

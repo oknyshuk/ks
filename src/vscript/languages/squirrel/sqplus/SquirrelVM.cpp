@@ -11,7 +11,6 @@
 #include <sqstdaux.h>
 #include <sqstdblob.h>
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#include "memdbgon.h"
 #endif
 
 #define STRLEN(n) strlen(n)

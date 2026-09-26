@@ -22,9 +22,6 @@
 #include "server.h"
 #include "cdll_int.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 #ifdef DEDICATED
 void ForceReloadProfile( void );
 

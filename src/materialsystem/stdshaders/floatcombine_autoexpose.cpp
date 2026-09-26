@@ -11,9 +11,6 @@
 #include "floatcombine_autoexpose_ps20.inc"
 #include "floatcombine_autoexpose_ps20b.inc"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 BEGIN_VS_SHADER( floatcombine_autoexpose, "Help for floatcombine_autoexpose" )
 	BEGIN_SHADER_PARAMS

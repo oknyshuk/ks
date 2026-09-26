@@ -38,7 +38,8 @@
 
 #include "tier0/platform.h"
 #include "tier1/refcount.h"
-#include "tier1/utlenvelope.h"
+#include "tier1/strtools.h"
+#include "tier1/envelope.h"
 #include <typeinfo>
 
 
@@ -390,7 +391,7 @@ public:
 // Since this code determines the type to store in the functor based on the actual arguments,
 // this is achieved by changing the point of call. 
 //
-// See also CUtlEnvelope
+// See also ks::envelope
 //-----------------------------------------------------------------------------
 // convert a reference to a passable value
 template <typename T>
@@ -521,8 +522,6 @@ FUNC_GENERATE_ALL( DEFINE_MEMBER_FUNC_PROXY );
 // The actual functor implementation
 //
 //-----------------------------------------------------------------------------
-
-#include "tier0/memdbgon.h"
 
 typedef CRefCounted1<CFunctor, CRefCountServiceMT> CFunctorBase;
 
@@ -827,8 +826,6 @@ FUNC_GENERATE_ALL( DEFINE_MEMBER_FUNCTOR_DIRECT );
 }
 
 FUNC_GENERATE_ALL( DEFINE_CONST_MEMBER_FUNCTOR_DIRECT );
-
-#include "tier0/memdbgoff.h"
 
 //-----------------------------------------------------------------------------
 // Factory class useable as templated traits

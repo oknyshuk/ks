@@ -149,7 +149,7 @@ private:
 		bool bTouched;
 	};
 
-	CUtlVector<RecordedEntity_t> m_PlaybackEntities;
+	std::vector< RecordedEntity_t > m_PlaybackEntities;
 };
 
 #endif // TOOLFRAMEWORK_CLIENT_H

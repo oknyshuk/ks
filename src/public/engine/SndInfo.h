@@ -8,7 +8,7 @@
 #define SNDINFO_H
 
 class Vector;
-#include "utlsymbol.h"
+#include "tier1/filename_table.h"
 
 //-----------------------------------------------------------------------------
 // Purpose:  Client side only 

@@ -12,9 +12,6 @@
 #include "cs_gamerules.h"
 #include "cs_bot.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 
 //--------------------------------------------------------------------------------------------------------------
 ConVar bot_loadout( "bot_loadout", "", FCVAR_CHEAT, "bots are given these items at round start" );
@@ -376,10 +373,11 @@ void BuyState::OnUpdate( CCSBot *me )
 	const char *cheatWeaponString = bot_loadout.GetString();
 	if ( cheatWeaponString && *cheatWeaponString )
 	{
-		CSplitString loadout( cheatWeaponString, " " );
-		for ( int i=0; i<loadout.Count(); ++i )
+		std::vector< std::string > loadout;
+		V_SplitString( cheatWeaponString, " ", loadout );
+		for ( int i=0; i<std::ssize( loadout ); ++i )
 		{
-			const char *item = loadout[i];
+			const char *item = loadout[i].c_str();
 			if ( FStrEq( item, "vest" ) )
 			{
 				me->GiveNamedItem( "item_kevlar" );

@@ -23,9 +23,6 @@
 #include "mapentities_shared.h"
 #include "gamestringpool.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 ConVar	r_drawsprites( "r_drawsprites", "1", FCVAR_CHEAT );
 
 //-----------------------------------------------------------------------------
@@ -491,7 +488,7 @@ void CSprite::GetToolRecordingState( KeyValues *msg )
 	if ( m_bWorldSpaceScale )
 	{
 		CEngineSprite *psprite = ( CEngineSprite * )modelinfo->GetModelExtraData( GetModel() );
-		float flMinSize = MIN( psprite->GetWidth(), psprite->GetHeight() );
+		float flMinSize = std::min( psprite->GetWidth(), psprite->GetHeight() );
 		renderscale /= flMinSize;
 	}
 
@@ -509,7 +506,7 @@ void CSprite::GetToolRecordingState( KeyValues *msg )
 	msg->SetPtr( "sprite", &state );
 }
 
-CUtlVector< CSprite * > g_ClientsideSprites;
+std::vector< CSprite * > g_ClientsideSprites;
 
 // ===================== For clientside spawning of sprites =====================
 void CSprite::RecreateAllClientside()
@@ -522,7 +519,7 @@ void CSprite::DestroyAllClientside()
 {
 	// This only gets called during LevelInitPostEntity and LevelShutdown so we're going to use 
 	// Release() instead of Remove() or UTIL_Remove
-	while ( g_ClientsideSprites.Count() > 0 )
+	while ( !g_ClientsideSprites.empty() )
 	{
 		CSprite *p = g_ClientsideSprites[0];
 
@@ -539,7 +536,7 @@ bool CSprite::InitializeClientside()
 	}
 
 	m_bClientOnly = true;
-	g_ClientsideSprites.AddToTail( this );
+	g_ClientsideSprites.push_back( this );
 	
 	Spawn();
 

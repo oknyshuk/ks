@@ -5,7 +5,7 @@
 // $NoKeywords: $
 //=============================================================================//
 #include "server_pch.h"
-#include <utllinkedlist.h>
+#include <mutex>
 
 #include "hltvserver.h"
 #if defined( REPLAY_ENABLED )
@@ -14,10 +14,7 @@
 #include "framesnapshot.h"
 #include "sys_dll.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
-DEFINE_FIXEDSIZE_ALLOCATOR( CFrameSnapshot, 64, 64 );
+DEFINE_FIXEDSIZE_ALLOCATOR( CFrameSnapshot, 64, ks::fixed_pool::grow::fast );
 
 
 static ConVar sv_creationtickcheck( "sv_creationtickcheck", "1", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "Do extended check for encoding of timestamps against tickcount" );
@@ -30,10 +27,9 @@ CFrameSnapshotManager *framesnapshotmanager = &g_FrameSnapshotManager;
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CFrameSnapshotManager::CFrameSnapshotManager( void ) : m_PackedEntitiesPool( MAX_EDICTS / 16, CUtlMemoryPool::GROW_SLOW )
+CFrameSnapshotManager::CFrameSnapshotManager( void ) : m_PackedEntitiesPool( MAX_EDICTS / 16, ks::fixed_pool::grow::slow )
 {
 	COMPILE_TIME_ASSERT( INVALID_PACKED_ENTITY_HANDLE == 0 );
-	Assert( INVALID_PACKED_ENTITY_HANDLE == m_PackedEntities.InvalidIndex() );
 	Q_memset( m_pLastPackedData, 0x00, MAX_EDICTS * sizeof(PackedEntityHandle_t) );
 }
 
@@ -43,15 +39,10 @@ CFrameSnapshotManager::CFrameSnapshotManager( void ) : m_PackedEntitiesPool( MAX
 CFrameSnapshotManager::~CFrameSnapshotManager( void )
 {
 #ifdef _DEBUG
-	if ( IsInErrorExit() )
+	if ( !IsInErrorExit() )
 	{
-		// These may have been freed already. Don't crash when freeing these.
-		Q_memset( &m_PackedEntities, 0, sizeof( m_PackedEntities ) );
-	}
-	else
-	{
-		Assert( m_FrameSnapshots.Count() == 0 );
-		Assert( m_PackedEntities.Count() == 0 );
+		Assert( m_FrameSnapshots.empty() );
+		Assert( m_PackedEntitiesPool.count() == 0 );
 	}
 #endif
 }
@@ -63,27 +54,26 @@ CFrameSnapshotManager::~CFrameSnapshotManager( void )
 void CFrameSnapshotManager::LevelChanged()
 {
 	// Clear all lists...
-	Assert( m_FrameSnapshots.Count() == 0 );
+	Assert( m_FrameSnapshots.empty() );
 
 	// Release the most recent snapshot...
-	m_PackedEntities.RemoveAll();
-	m_PackedEntitiesPool.Clear();
-	m_PackedEntityCache.RemoveAll();
+	m_PackedEntitiesPool.clear();
+	m_PackedEntityCache.clear();
 	COMPILE_TIME_ASSERT( INVALID_PACKED_ENTITY_HANDLE == 0 );
 	Q_memset( m_pLastPackedData, 0x00, MAX_EDICTS * sizeof(PackedEntityHandle_t) );
 }
 
 CFrameSnapshot *CFrameSnapshotManager::NextSnapshot( CFrameSnapshot *pSnapshot )
 {
-	if ( !pSnapshot || ((unsigned short)pSnapshot->m_ListIndex == m_FrameSnapshots.InvalidIndex()) )
+	if ( !pSnapshot )
 		return nullptr;
 
-	int next = m_FrameSnapshots.Next(pSnapshot->m_ListIndex);
-	if ( next == m_FrameSnapshots.InvalidIndex() )
+	auto next = std::next( pSnapshot->m_ListIter );
+	if ( next == m_FrameSnapshots.end() )
 		return nullptr;
 
 	// return next element in list
-	return m_FrameSnapshots[ next ];
+	return *next;
 }
 
 CFrameSnapshot*	CFrameSnapshotManager::CreateEmptySnapshot(
@@ -94,7 +84,7 @@ CFrameSnapshot*	CFrameSnapshotManager::CreateEmptySnapshot(
 {
 	CFrameSnapshot *snap = nullptr;
 	{
-		AUTO_LOCK_FM( m_FrameSnapshotsWriteMutex );
+		std::scoped_lock lock( m_FrameSnapshotsWriteMutex );
 		snap = new CFrameSnapshot;
 		snap->AddReference();
 	}
@@ -124,8 +114,8 @@ CFrameSnapshot*	CFrameSnapshotManager::CreateEmptySnapshot(
 	}
 
 	{
-		AUTO_LOCK_FM( m_FrameSnapshotsWriteMutex );
-		snap->m_ListIndex = m_FrameSnapshots.AddToTail( snap );
+		std::scoped_lock lock( m_FrameSnapshotsWriteMutex );
+		snap->m_ListIter = m_FrameSnapshots.insert( m_FrameSnapshots.end(), snap );
 	}
 
 	return snap;
@@ -205,8 +195,8 @@ CFrameSnapshot* CFrameSnapshotManager::TakeTickSnapshot(
 		Q_memset( snap->m_pReplayEntityData, 0, snap->m_nValidEntities * sizeof(CReplayEntityData) );
 	}
 #endif
-	snap->m_iExplicitDeleteSlots.CopyArray( m_iExplicitDeleteSlots.Base(), m_iExplicitDeleteSlots.Count() );
-	m_iExplicitDeleteSlots.Purge();
+	snap->m_iExplicitDeleteSlots.assign( m_iExplicitDeleteSlots.begin(), m_iExplicitDeleteSlots.end() );
+	m_iExplicitDeleteSlots.clear(); m_iExplicitDeleteSlots.shrink_to_fit();
 
 	return snap;
 }
@@ -227,7 +217,7 @@ void CFrameSnapshotManager::DeleteFrameSnapshot( CFrameSnapshot* pSnapshot )
 	}
 
 	
-	m_FrameSnapshots.Remove( pSnapshot->m_ListIndex );
+	m_FrameSnapshots.erase( pSnapshot->m_ListIter );
 	delete pSnapshot;
 }
 
@@ -235,19 +225,17 @@ void CFrameSnapshotManager::RemoveEntityReference( PackedEntityHandle_t handle )
 {
 	Assert( handle != INVALID_PACKED_ENTITY_HANDLE );
 
-	PackedEntity *packedEntity = m_PackedEntities[ handle ];
+	PackedEntity *packedEntity = PackedEntityFromHandle( handle );
 
 	if ( --packedEntity->m_ReferenceCount <= 0)
 	{
-		AUTO_LOCK_FM( m_WriteMutex );
+		std::scoped_lock lock( m_WriteMutex );
 
-		m_PackedEntities.Remove( handle ); 
-		m_PackedEntitiesPool.Free( packedEntity );
+		m_PackedEntitiesPool.free( packedEntity );
 
 		// if we have a uncompression cache, remove reference too
-		FOR_EACH_VEC( m_PackedEntityCache, i )
+		for ( UnpackedDataCache_t &pdc : m_PackedEntityCache )
 		{
-			UnpackedDataCache_t &pdc = m_PackedEntityCache[i];
 			if ( pdc.pEntity == packedEntity )
 			{
 				pdc.pEntity = nullptr;
@@ -262,16 +250,16 @@ void CFrameSnapshotManager::AddEntityReference( PackedEntityHandle_t handle )
 {
 	Assert( handle != INVALID_PACKED_ENTITY_HANDLE );
 
-	m_PackedEntities[ handle ]->m_ReferenceCount++;
+	PackedEntityFromHandle( handle )->m_ReferenceCount++;
 }
 
 void CFrameSnapshotManager::AddExplicitDelete( int iSlot )
 {
-	AUTO_LOCK_FM( m_WriteMutex );
+	std::scoped_lock lock( m_WriteMutex );
 
-	if ( m_iExplicitDeleteSlots.Find(iSlot) == m_iExplicitDeleteSlots.InvalidIndex() )
+	if ( ks::find_index( m_iExplicitDeleteSlots, iSlot ) == -1 )
 	{
-		m_iExplicitDeleteSlots.AddToTail( iSlot );
+		m_iExplicitDeleteSlots.push_back( iSlot );
 	}
 }
 
@@ -283,7 +271,7 @@ bool CFrameSnapshotManager::ShouldForceRepack( CFrameSnapshot* pSnapshot, int en
 {
 	if ( sv_creationtickcheck.GetBool() )
 	{
-		PackedEntity *pe = m_PackedEntities[ handle ];
+		PackedEntity *pe = PackedEntityFromHandle( handle );
 		Assert( pe );
 		if ( pe && pe->ShouldCheckCreationTick() )
 		{
@@ -317,7 +305,7 @@ bool CFrameSnapshotManager::UsePreviouslySentPacket( CFrameSnapshot* pSnapshot,
 
 			Assert( entity < pSnapshot->m_nNumEntities );
 			pSnapshot->m_pEntities[entity].m_pPackedData = handle;
-			m_PackedEntities[handle]->m_ReferenceCount++;
+			PackedEntityFromHandle( handle )->m_ReferenceCount++;
 			return true;
 		}
 		else
@@ -339,7 +327,7 @@ PackedEntity* CFrameSnapshotManager::GetPreviouslySentPacket( int iEntity, int i
 		// serial number change....
 		if ( m_pSerialNumber[iEntity] == iSerialNumber )
 		{
-			return m_PackedEntities[handle];
+			return PackedEntityFromHandle( handle );
 		}
 		else
 		{
@@ -377,10 +365,10 @@ PackedEntity* CFrameSnapshotManager::CreateLocalPackedEntity( CFrameSnapshot* pS
 {
 	MEM_ALLOC_CREDIT();
 
-	m_WriteMutex.Lock();
-	PackedEntity *packedEntity = m_PackedEntitiesPool.Alloc();
-	PackedEntityHandle_t handle = m_PackedEntities.AddToTail( packedEntity );
-	m_WriteMutex.Unlock();
+	m_WriteMutex.lock();
+	PackedEntity *packedEntity = m_PackedEntitiesPool.alloc();
+	PackedEntityHandle_t handle = reinterpret_cast< PackedEntityHandle_t >( packedEntity );
+	m_WriteMutex.unlock();
 
 	Assert( entity < pSnapshot->m_nNumEntities );
 	Assert( entity >= 0 && entity < ARRAYSIZE(m_pLastPackedData) );
@@ -400,16 +388,16 @@ PackedEntity* CFrameSnapshotManager::CreateLocalPackedEntity( CFrameSnapshot* pS
 // ------------------------------------------------------------------------------------------------ //
 UnpackedDataCache_t *CFrameSnapshotManager::GetCachedUncompressedEntity( PackedEntity *packedEntity )
 {
-	if ( m_PackedEntityCache.Count() == 0 )
+	if ( m_PackedEntityCache.empty() )
 	{
 		// ops, we have no cache yet, create one and reset counter
 		m_nPackedEntityCacheCounter = 0;
-		m_PackedEntityCache.SetCount( 128 );
+		m_PackedEntityCache.assign( 128, {} );
 
-		FOR_EACH_VEC( m_PackedEntityCache, i )
+		for ( UnpackedDataCache_t &cacheEntry : m_PackedEntityCache )
 		{
-			m_PackedEntityCache[i].pEntity = nullptr;
-			m_PackedEntityCache[i].counter = 0;
+			cacheEntry.pEntity = nullptr;
+			cacheEntry.counter = 0;
 		}
 	}
 
@@ -420,9 +408,9 @@ UnpackedDataCache_t *CFrameSnapshotManager::GetCachedUncompressedEntity( PackedE
 	int oldestValue = m_nPackedEntityCacheCounter;
 
 
-	FOR_EACH_VEC( m_PackedEntityCache, i )
+	for ( UnpackedDataCache_t &cacheEntry : m_PackedEntityCache )
 	{
-		UnpackedDataCache_t *pdc = &m_PackedEntityCache[i];
+		UnpackedDataCache_t *pdc = &cacheEntry;
 
 		if ( pdc->pEntity == packedEntity )
 		{
@@ -450,7 +438,7 @@ UnpackedDataCache_t *CFrameSnapshotManager::GetCachedUncompressedEntity( PackedE
 void CFrameSnapshotManager::BuildSnapshotList( CFrameSnapshot *pCurrentSnapshot, CFrameSnapshot *pLastSnapshot, uint32 nSnapshotSet, CReferencedSnapshotList &list )
 {
 	// Keep list building thread-safe
-	AUTO_LOCK_FM( m_FrameSnapshotsWriteMutex );
+	std::scoped_lock lock( m_FrameSnapshotsWriteMutex );
 
 	int nInsanity = 0;
 	CFrameSnapshot *pSnapshot;
@@ -469,7 +457,7 @@ void CFrameSnapshotManager::BuildSnapshotList( CFrameSnapshot *pCurrentSnapshot,
 		if( pSnapshot->m_nSnapshotSet == nSnapshotSet )
 		{
 			pSnapshot->AddReference();
-			list.m_vecSnapshots.AddToTail( pSnapshot );
+			list.m_vecSnapshots.push_back( pSnapshot );
 		}
 
 		++nInsanity;
@@ -560,7 +548,7 @@ void CFrameSnapshot::ReleaseReference()
 	// Crash in CFrameSnapshotManager::GetPackedEntity where a CBaseClient's m_pBaseline snapshot could be removed the CReferencedSnapshotList destructor 
 	// for another client that is in WriteTempEntities
 	//
-	AUTO_LOCK_FM( framesnapshotmanager->m_FrameSnapshotsWriteMutex );
+	std::scoped_lock lock( framesnapshotmanager->m_FrameSnapshotsWriteMutex );
 
 	Assert( m_nReferences > 0 );
 

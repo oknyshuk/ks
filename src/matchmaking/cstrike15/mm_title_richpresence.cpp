@@ -7,9 +7,6 @@
 #include "mm_title_richpresence.h"
 #include "mm_title_contextvalues.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static void SetAllUsersContext( DWORD dwContextId, DWORD dwValue, bool bAsync = true )
 {
 }

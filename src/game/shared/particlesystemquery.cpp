@@ -30,8 +30,8 @@
 #include "ai_utils.h"
 #endif
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
+#include <memory>
+#include <mutex>
 
 
 #if defined( CLIENT_DLL )
@@ -160,7 +160,7 @@ private:
 #if defined( CLIENT_DLL )
 
 	CTSQueue< TProjectedTextureInfo * > m_ProjectedInfoAdds;
-	CUtlVector< TProjectedTextureInfo * > m_ActiveProjectedInfos;
+	std::vector< TProjectedTextureInfo * > m_ActiveProjectedInfos;
 
 #endif // #if defined( CLIENT_DLL )
 };
@@ -177,8 +177,8 @@ IParticleSystemQuery *g_pParticleSystemQuery = &s_ParticleSystemQuery;
 EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CParticleSystemQuery, IParticleSystemQuery, PARTICLE_SYSTEM_QUERY_INTERFACE_VERSION, s_ParticleSystemQuery );
 #endif
 
-static CThreadFastMutex s_LightMutex;
-static CThreadFastMutex s_BoneMutex;
+static std::recursive_mutex s_LightMutex;
+static std::recursive_mutex s_BoneMutex;
 
 //-----------------------------------------------------------------------------
 // Inherited from IParticleSystemQuery
@@ -195,10 +195,10 @@ void CParticleSystemQuery::GetLightingAtPoint( const Vector& vecOrigin, Color &c
 
 	if ( engine->IsInGame() )
 	{
-		s_LightMutex.Lock();
+		s_LightMutex.lock();
 		// Compute our lighting at our position
 		Vector totalColor = engine->GetLightForPoint( vecOrigin, true );
-		s_LightMutex.Unlock();
+		s_LightMutex.unlock();
 
 		// Get our lighting information
 		cTint.SetColor( totalColor.x*255, totalColor.y*255, totalColor.z*255, 0 );
@@ -218,9 +218,9 @@ void CParticleSystemQuery::SetUpLightingEnvironment( const Vector& pos )
 	if ( !engine->IsInGame() )
 		return;
 
-	s_LightMutex.Lock();
+	s_LightMutex.lock();
 	modelrender->SetupLighting( pos );
-	s_LightMutex.Unlock();
+	s_LightMutex.unlock();
 #endif
 }
 
@@ -319,7 +319,7 @@ void CParticleSystemQuery::GetRandomPointsOnControllingObjectHitBox(
 		Vector vecBasePos;
 		pParticles->GetControlPointAtTime( nControlPointNumber, pParticles->m_flCurTime, &vecBasePos );
 
-		s_BoneMutex.Lock();
+		s_BoneMutex.lock();
 		C_BaseAnimating *pAnimating = pMoveParent->GetBaseAnimating();
 		if ( pAnimating )
 		{
@@ -346,13 +346,13 @@ void CParticleSystemQuery::GetRandomPointsOnControllingObjectHitBox(
 						int nHitbox = 0;
 						int nNumIters = nNumTrysToGetAPointInsideTheModel;
 						if (! vecDirectionalBias.IsZero( 0.0001 ) )
-							nNumIters = MAX( nNumIters, 5 );
+							nNumIters = std::max( nNumIters, 5 );
 						int nHitboxMin = 0;
 						int nHitboxMax = set->numhitboxes - 1;
 						if ( nDesiredHitbox >= 0 )
 						{
-							nHitboxMin = MIN( set->numhitboxes - 1, nDesiredHitbox );
-							nHitboxMax = MIN( set->numhitboxes - 1, nDesiredHitbox );
+							nHitboxMin = std::min( set->numhitboxes - 1, nDesiredHitbox );
+							nHitboxMax = std::min( set->numhitboxes - 1, nDesiredHitbox );
 						}
 				
 						for( int i=0 ; i < nNumPtsOut; i++)
@@ -436,7 +436,7 @@ void CParticleSystemQuery::GetRandomPointsOnControllingObjectHitBox(
 			int nHitbox = 0;
 			int nNumIters = nNumTrysToGetAPointInsideTheModel;
 			if (! vecDirectionalBias.IsZero( 0.0001 ) )
-				nNumIters = MAX( nNumIters, 5 );
+				nNumIters = std::max( nNumIters, 5 );
 
 			for( int i=0 ; i < nNumPtsOut; i++)
 			{
@@ -488,7 +488,7 @@ void CParticleSystemQuery::GetRandomPointsOnControllingObjectHitBox(
 			}
 		}
 
-		s_BoneMutex.Unlock();
+		s_BoneMutex.unlock();
 	}
 #endif
 	if (! bSucesss )
@@ -538,7 +538,7 @@ void CParticleSystemQuery::GetClosestControllingObjectHitBox(
 		Vector vecBasePos;
 		pParticles->GetControlPointAtTime( nControlPointNumber, pParticles->m_flCurTime, &vecBasePos );
 
-		s_BoneMutex.Lock();
+		s_BoneMutex.lock();
 		C_BaseAnimating *pAnimating = pMoveParent->GetBaseAnimating();
 		if ( pAnimating )
 		{
@@ -568,8 +568,8 @@ void CParticleSystemQuery::GetClosestControllingObjectHitBox(
 						int nHitboxMax = set->numhitboxes - 1;
 						if ( nDesiredHitbox >= 0 )
 						{
-							nHitboxMin = MIN( set->numhitboxes - 1, nDesiredHitbox );
-							nHitboxMax = MIN( set->numhitboxes - 1, nDesiredHitbox );
+							nHitboxMin = std::min( set->numhitboxes - 1, nDesiredHitbox );
+							nHitboxMax = std::min( set->numhitboxes - 1, nDesiredHitbox );
 						}
 
 						for( int i=0 ; i < nNumPtsIn; i++)
@@ -618,7 +618,7 @@ void CParticleSystemQuery::GetClosestControllingObjectHitBox(
 				}
 			}
 		}
-		s_BoneMutex.Unlock();
+		s_BoneMutex.unlock();
 	}
 #endif
 	if (! bSucesss )
@@ -647,7 +647,7 @@ int CParticleSystemQuery::GetControllingObjectHitBoxInfo(
 	int nRet = 0;
 
 #ifndef GAME_DLL
-	s_BoneMutex.Lock();
+	s_BoneMutex.lock();
 
 	EHANDLE *phMoveParent = reinterpret_cast<EHANDLE *> ( pParticles->ControlPoint( nControlPointNumber ).m_pObject );
 	CBaseEntity *pMoveParent = nullptr;
@@ -720,7 +720,7 @@ int CParticleSystemQuery::GetControllingObjectHitBoxInfo(
 			nRet = 1;
 		}
 	}
-	s_BoneMutex.Unlock();
+	s_BoneMutex.unlock();
 #endif
 	return nRet;
 }
@@ -743,7 +743,7 @@ bool CParticleSystemQuery::IsPointInControllingObjectHitBox(
 	}
 	if ( pMoveParent )
 	{
-		s_BoneMutex.Lock();
+		s_BoneMutex.lock();
 		C_BaseAnimating *pAnimating = pMoveParent->GetBaseAnimating();
 
 		bool bInBBox = false;
@@ -805,7 +805,7 @@ bool CParticleSystemQuery::IsPointInControllingObjectHitBox(
 				bSuccess = true;
 		}
 
-		s_BoneMutex.Unlock();
+		s_BoneMutex.unlock();
 	}
 #endif
 	return bSuccess;
@@ -832,15 +832,15 @@ void CParticleSystemQuery::GetControllingObjectOBBox(
 #endif
 }
 
-extern CUtlVector< RayTracingEnvironment * > g_RayTraceEnvironments;
+extern std::vector< std::unique_ptr< RayTracingEnvironment > > g_RayTraceEnvironments;
 
 void CParticleSystemQuery::TraceAgainstRayTraceEnv( int envnumber, const FourRays &rays, fltx4 TMin, fltx4 TMax,
 													  RayTracingResult *rslt_out, int32 skip_id ) const
 {
 #if defined( CLIENT_DLL )
-	if ( g_RayTraceEnvironments.IsValidIndex( envnumber ) )
+	if ( ks::is_valid_index( g_RayTraceEnvironments, envnumber ) )
 	{
-		RayTracingEnvironment *RtEnv = g_RayTraceEnvironments.Element( envnumber );
+		RayTracingEnvironment *RtEnv = g_RayTraceEnvironments[ envnumber ].get();
 		RtEnv->Trace4Rays( rays, TMin, TMax, rslt_out, skip_id );
 	}
 #endif
@@ -963,7 +963,7 @@ float CParticleSystemQuery::GetPixelVisibility( int *pQueryHandle, const Vector 
 	pixelvis_queryparams_t params;
 	params.Init( vecOrigin, flScale, 1.0 );
 	float flVisibility = PixelVisibility_FractionVisible( params, pQueryHandle );
-	flVisibility = MAX( 0.0f, flVisibility );
+	flVisibility = std::max( 0.0f, flVisibility );
 	return flVisibility;
 #else
 	return 0.0f;
@@ -1057,11 +1057,11 @@ void *CParticleSystemQuery::GetModel( char const *pMdlName )
 // 	int modelIndex = modelinfo->GetModelIndex( pMdlName );
 // 	const model_t *pModel = modelinfo->GetModel( modOelIndex );
 
-	CUtlString	ModelName = "models/";
+	std::string	ModelName = "models/";
 
 	ModelName += pMdlName;
 
- 	model_t *pModel = (model_t *)engine->LoadModel( ModelName ); //, true );
+ 	model_t *pModel = (model_t *)engine->LoadModel( ModelName.c_str() ); //, true );
  	//pMdlName = "models/weapons/shells/shell_pistol.mdl";
 	return ( void * )pModel;
 #else
@@ -1073,7 +1073,7 @@ void *CParticleSystemQuery::GetModel( char const *pMdlName )
 void CParticleSystemQuery::PreSimulate( ) 
 { 
 #if defined( CLIENT_DLL )
-	for( int i = 0; i < m_ActiveProjectedInfos.Count(); i++ )
+	for( int i = 0; i < std::ssize( m_ActiveProjectedInfos ); i++ )
 	{
 		m_ActiveProjectedInfos[ i ]->m_bUsedThisFrame = false;
 	}
@@ -1088,15 +1088,15 @@ void CParticleSystemQuery::PostSimulate( )
 
 	while( m_ProjectedInfoAdds.PopItem( &pInfo ) == true )
 	{
-		m_ActiveProjectedInfos.AddToTail( pInfo );
+		m_ActiveProjectedInfos.push_back( pInfo );
 	}
 
-	for( int i = 0; i < m_ActiveProjectedInfos.Count(); i++ )
+	for( int i = 0; i < std::ssize( m_ActiveProjectedInfos ); i++ )
 	{
 		if ( m_ActiveProjectedInfos[ i ]->m_bUsedThisFrame == false )
 		{
 			delete m_ActiveProjectedInfos[ i ]->m_pEntity;
-			m_ActiveProjectedInfos.Remove( i );
+			m_ActiveProjectedInfos.erase( m_ActiveProjectedInfos.begin() + i );
 			i--;
 			continue;
 		}

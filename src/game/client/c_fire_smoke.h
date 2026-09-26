@@ -16,7 +16,8 @@
 #include "glow_overlay.h"
 #include "view.h"
 #include "particle_litsmokeemitter.h"
-#include "tier1/utlobjectreference.h"
+#include "tier1/tracked_ref.h"
+#include "tier1/intrusive_ptr.h"
 
 
 void RecvProxy_Scale( const CRecvProxyData *pData, void *pStruct, void *pOut );
@@ -176,8 +177,8 @@ protected:
 
 	void	UpdateEffects( void );
 
-	//CSmartPtr<CEmberEffect> m_pEmberEmitter;
-	CSmartPtr<CLitSmokeEmitter> m_pSmokeEmitter;
+	//ks::intrusive_ptr<CEmberEffect> m_pEmberEmitter;
+	ks::intrusive_ptr<CLitSmokeEmitter> m_pSmokeEmitter;
 
 	C_FireSprite			m_entFlames[NUM_CHILD_FLAMES];
 	C_FireFromAboveSprite	m_entFlamesFromAbove[NUM_CHILD_FLAMES];
@@ -188,7 +189,7 @@ protected:
 	CFireOverlay		*m_pFireOverlay;
 
 	// New Particle Fire Effect
-	CUtlReference<CNewParticleEffect> m_hEffect;
+	ks::tracked_ref<CNewParticleEffect> m_hEffect;
 private:
 	C_FireSmoke( const C_FireSmoke & );
 };

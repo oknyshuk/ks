@@ -22,7 +22,7 @@ public:
 	~CSPSharedMemoryManager( void );
 
 private:
-	CUtlVector<CSPSharedMemory *> m_SharedSpaces;
+	std::vector< CSPSharedMemory * > m_SharedSpaces;
 	friend class CSPSharedMemory;
 };
 

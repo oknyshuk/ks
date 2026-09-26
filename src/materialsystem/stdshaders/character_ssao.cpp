@@ -11,14 +11,10 @@
 #include "convar.h"
 
 #include "character_ssao_vs20.inc"
-#include "character_ssao_vs30.inc"
 #include "character_ssao_ps20.inc"
 #include "character_ssao_ps20b.inc"
 #include "character_ssao_ps30.inc"
 #include "shaderlib/commandbuilder.h"
-
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
 
 // this shader processes a screen-space normal + depth prepass into screen-space AO for later reference
 

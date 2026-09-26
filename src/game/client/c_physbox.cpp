@@ -9,9 +9,6 @@
 #include "reflect_annotations.h"
 #include "c_physbox.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 IMPLEMENT_REFLECT_CLIENTCLASS( C_PhysBox, DT_PhysBox, CPhysBox )
 
 

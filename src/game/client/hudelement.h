@@ -11,7 +11,7 @@
 #include "hud_element_helper.h"
 #include "networkvar.h"
 #include "GameEventListener.h"
-#include "tier0/memdbgon.h"
+#include "tier0/memalloc.h"
 #undef new
 
 class CHud;
@@ -80,7 +80,7 @@ public:
     void *operator new( size_t stAllocateBlock )	
 	{												
 		Assert( stAllocateBlock != 0 );				
-		void *pMem = malloc( stAllocateBlock );
+		void *pMem = MemAlloc_Alloc( stAllocateBlock );
 		memset( pMem, 0, stAllocateBlock );
 		return pMem;												
 	}
@@ -96,10 +96,10 @@ public:
 	void operator delete( void *pMem )				
 	{												
 #if defined( _DEBUG )
-		int size = _msize( pMem );					
+		int size = g_pMemAlloc->GetSize( pMem );					
 		memset( pMem, 0xcd, size );					
 #endif
-		free( pMem );								
+		g_pMemAlloc->Free( pMem );								
 	}
 
 	void operator delete( void *pMem, int nBlockUse, const char *pFileName, int nLine )				
@@ -152,11 +152,11 @@ private:
 	bool						m_bNeedsRemove;
 	bool						m_bIsParentedToClientDLLRootPanel;
 
-	CUtlVector< int >			m_HudRenderGroups;
+	std::vector< int >			m_HudRenderGroups;
 	CHud						*m_pHud;
 };
 
-#include "utlpriorityqueue.h"
+#include "tier1/vector_ops.h"
 
 inline bool RenderGroupLessFunc( CHudElement * const &lhs, CHudElement * const &rhs )
 {
@@ -171,14 +171,11 @@ class CHudRenderGroup
 public:
 	CHudRenderGroup()
 	{
-		m_pLockingElements.SetLessFunc( RenderGroupLessFunc );
 		bHidden = false;
 	}
 
 	bool bHidden;
-	CUtlPriorityQueue< CHudElement * >	m_pLockingElements;
+	std::vector< CHudElement * >	m_pLockingElements;	// heap by RenderGroupLessFunc, highest priority first
 };
-
-#include "tier0/memdbgoff.h"
 
 #endif // HUDELEMENT_H

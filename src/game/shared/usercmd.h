@@ -37,7 +37,7 @@ public:
 		Reset();
 	}
 
-	virtual ~CUserCmd() { };
+	~CUserCmd() { };
 
 	void Reset()
 	{

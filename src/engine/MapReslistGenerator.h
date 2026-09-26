@@ -9,8 +9,10 @@
 
 #include "filesystem.h"
 #include "utlvector.h"
-#include "utlsymbol.h"
+#include "tier1/intern_pool.h"
 #include "utlstring.h"
+#include "tier1/map_ops.h"
+#include <set>
 
 // Map list creation
 // Map entry
@@ -25,7 +27,7 @@ struct maplist_map_t
 //	pMapFile: If you're using a maplist file, this should be the filename of it
 //	pSystemMsg: Used to preface and debug messages
 //	iCurrentMap: The map in the list to begin at. Handles the -startmap parameter for you.
-bool BuildGeneralMapList( CUtlVector<maplist_map_t> *aMaps, bool bUseMapListFile, const char *pMapFile, const char *pSystemMsg, int *iCurrentMap );
+bool BuildGeneralMapList( std::vector< maplist_map_t > *aMaps, bool bUseMapListFile, const char *pMapFile, const char *pSystemMsg, int *iCurrentMap );
 
 // initialization
 void MapReslistGenerator_Init();
@@ -100,22 +102,22 @@ private:
 	bool		m_bAutoQuit;
 
 	// list of all maps to scan
-	CUtlVector<maplist_map_t> m_Maps;
+	std::vector< maplist_map_t > m_Maps;
 	int m_iCurrentMap;
 	float m_flNextMapRunTime;
-	CUtlSymbolTable m_AlreadyWrittenFileNames;
+	ks::intern_pool m_AlreadyWrittenFileNames;
 	int m_iPauseTimeBetweenMaps;
 
 	char		m_szPrefix[64];
 	char		m_szLevelName[MAX_PATH];
 
-	CUtlSymbolTable m_DeletionList;
-	CUtlRBTree< CUtlSymbol > m_DeletionListWarnings;
-	CUtlSymbolTable m_DeletionListWarningsSymbols;
+	ks::intern_pool m_DeletionList;
+	std::vector< std::string_view > m_DeletionListWarnings;	// first-seen order, views into m_DeletionListWarningsSymbols
+	ks::intern_pool m_DeletionListWarningsSymbols;
 
-	CUtlRBTree< CUtlString, int > m_MapLog;
-	CUtlRBTree< CUtlString, int > m_EngineLog;
-	CUtlString	m_sResListDir;
+	std::set< std::string, ks::iless > m_MapLog;
+	std::set< std::string, ks::iless > m_EngineLog;
+	std::string	m_sResListDir;
 };
 
 // singleton accessor

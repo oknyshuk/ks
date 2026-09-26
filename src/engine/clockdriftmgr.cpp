@@ -10,9 +10,6 @@
 #include "server.h"
 #include "enginethreads.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 ConVar cl_clock_correction( "cl_clock_correction", "1", FCVAR_CHEAT, "Enable/disable clock correction on the client." );
 
@@ -139,13 +136,13 @@ float CClockDriftMgr::AdjustFrameTime( float inputFrameTime )
 		{
 			flAdjustmentPerSec = -GetClockAdjustmentAmount( flCurDiffInMS );
 			flAdjustmentThisFrame = inputFrameTime * flAdjustmentPerSec;
-			flAdjustmentThisFrame = MAX( flAdjustmentThisFrame, -flCurDiffInSeconds );
+			flAdjustmentThisFrame = std::max( flAdjustmentThisFrame, -flCurDiffInSeconds );
 		}
 		else if ( flCurDiffInMS < -cl_clock_correction_adjustment_min_offset.GetFloat() )
 		{
 			flAdjustmentPerSec = GetClockAdjustmentAmount( -flCurDiffInMS );
 			flAdjustmentThisFrame = inputFrameTime * flAdjustmentPerSec;
-			flAdjustmentThisFrame = MIN( flAdjustmentThisFrame, -flCurDiffInSeconds );
+			flAdjustmentThisFrame = std::min( flAdjustmentThisFrame, -flCurDiffInSeconds );
 		}
 
 		if ( IsEngineThreaded() )
@@ -186,8 +183,8 @@ void CClockDriftMgr::ShowDebugInfo( float flAdjustment )
 		int exactDiff = GetBaseLocalClient().GetClientTickCount() - m_nServerTick;
 		for ( int i=0; i < NUM_CLOCKDRIFT_SAMPLES; i++ )
 		{
-			high = MAX( high, m_ClockOffsets[i] );
-			low = MIN( low, m_ClockOffsets[i] );
+			high = std::max<std::common_type_t<int, float>>( high, m_ClockOffsets[i] );
+			low = std::min<std::common_type_t<int, float>>( low, m_ClockOffsets[i] );
 		}
 
 		Msg( "Clock drift: adjustment (per sec): %.2fms, avg: %.3f, lo: %d, hi: %d, ex: %d\n", flAdjustment*1000.0f, GetCurrentClockDifference(), low, high, exactDiff );

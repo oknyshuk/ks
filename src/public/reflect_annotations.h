@@ -194,10 +194,8 @@ template <name_t Name, auto Table, auto Fn = nullptr, bool AtHead = false> struc
 // member to annotate, so the kind cannot be derived: N.enc must name it.
 template <name_t Name, Net N = Net{}, auto Fn = nullptr> struct Bare {};
 
-// A CUtlVector prop: Send/RecvPropUtlVector. Member is the vector, Max its element cap, Table the
-// sub-table each element is described by (the element prop is unnamed, so it cannot come from a
-// member). Fn is the recv-side resize callback, unused on the send side. Everything else --
-// offset, element size, the ensure-capacity and resize thunks -- is derivable from the member.
+// A vector prop (any container WireVec supports). Max is the element cap, Table the element
+// sub-table (null for scalars), Fn an optional recv-side resize that must value-initialise.
 template <name_t Member, int Max, auto Table, auto Fn = nullptr, name_t Tbl = name_t{}>
 struct UtlVec {};
 
@@ -216,11 +214,14 @@ struct Exclude { name_t table{}; name_t prop{}; };
 // Class-level and repeatable: a member declared in a *base* that this table sends itself, which
 // is what every _NOBASE table does. Named by identifier rather than by ^^Base::member so that a
 // private base member is still reachable, and so the annotation reads like the SENDINFO it
-// replaces. Fn is an optional proxy, as in Proxy<F>. Table is the sub-table an embedded member
-// points at: that pointer is not derivable from the member's type, because a Source sub-table
-// lives in a namespace the class does not reference, so it has to be named when the embedded
-// type is not itself migrated.
-template <name_t Name, Net N = Net{}, auto Fn = nullptr, auto Table = nullptr> struct From {};
+// replaces. Fn is an optional proxy, as in Proxy<F>. An embedded member's table is generated from
+// its type; use FromTable<> to route it through an existing one instead.
+template <name_t Name, Net N = Net{}, auto Fn = nullptr> struct From {};
+
+// From<> for a member sent through a named sub-table -- normally the class's DT_*::g_RecvTable /
+// g_SendTable, which must be reused rather than regenerated. Table is required, and second so the
+// Name/Net/Fn tail reads as in From<>.
+template <name_t Name, auto Table, Net N = Net{}, auto Fn = nullptr> struct FromTable {};
 
 // From<> for prediction, and the common case rather than the exception: prediction is declared on
 // base classes, so 8 of CBaseViewModel's 11 entries are inherited. The base's annotation cannot

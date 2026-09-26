@@ -9,7 +9,14 @@
 
 
 #include "ifilelist.h"
-#include "tier1/utldict.h"
+#include "tier1/map_ops.h"
+#include "tier1/slot_pool.h"
+#include <deque>
+#include <set>
+#include <memory>
+#include <atomic>
+#include <mutex>
+#include <vector>
 
 
 class CBaseFileSystem;
@@ -59,7 +66,7 @@ public:
 	CRC32_t			m_CRC;		// The CRC for this file.
 	
 	CPathIDFileList	*m_pPathIDFileList;
-	int				m_PathIDFileListDictIndex;		// Our index into m_pPathIDFileList->m_Files
+	const char		*m_pFilename;		// Our key in m_pPathIDFileList->m_Files
 	
 	int				m_iNeedsVerificationListIndex;	// Index into m_NeedsVerificationList or -1 if not in the list.
 };
@@ -75,10 +82,8 @@ public:
 	CFileInfo*		AddFileInfo( const char *pFilename );
 
 public:
-	CUtlSymbol						m_PathID;				// "" for a null path ID.
-	CUtlDict<CFileInfo*,int>		m_Files;
-	CUtlLinkedList<CFileInfo*,int>	m_UnverifiedCRCFiles;	// These are the files whose CRCs have not been verified yet.
-															// These just point at entries in m_Files.
+	std::string						m_PathID;				// "" for a null path ID.
+	std::map< std::string, std::unique_ptr< CFileInfo >, ks::path_iless >	m_Files;
 };
 
 
@@ -142,22 +147,28 @@ private:
 
 	CRC32_t					CalculateCRCForFile( FileHandle_t fp );
 
+	void AddToNeedsVerificationList( CFileInfo *pInfo )
+	{
+		pInfo->m_iNeedsVerificationListIndex = (int)m_NeedsVerificationList.size();
+		m_NeedsVerificationList.push_back( pInfo );
+	}
+
 private:
-	CUtlLinkedList<CFileInfo*>		m_NeedsVerificationList;	// The list of files that need CRCs verified.
-	CUtlDict<CPathIDFileList*,int>	m_PathIDs;
+	std::vector< CFileInfo * >		m_NeedsVerificationList;	// The list of files that need CRCs verified.
+	ks::idict< std::unique_ptr< CPathIDFileList > >	m_PathIDs;
 	CBaseFileSystem					*m_pFileSystem;
-	CThreadMutex					m_Mutex;	// Threads call into here, so we need to be safe.
+	std::recursive_mutex				m_Mutex;	// Threads call into here, so we need to be safe.
 };
 
 
 inline const char* CFileInfo::GetFilename()
 {
-	return m_pPathIDFileList->m_Files.GetElementName( m_PathIDFileListDictIndex );
+	return m_pFilename;
 }
 
 inline const char* CFileInfo::GetPathIDString()
 {
-	return m_pPathIDFileList->m_PathID.String();
+	return m_pPathIDFileList->m_PathID.c_str();
 }
 
 
@@ -174,10 +185,11 @@ struct TrackedFile_t
 		m_bPackOrVPKFile = false;
 		m_bFileInVPK = false;
 		m_cubTotalRead = 0;
+		m_bInRecentFileList = false;
 	}
 	CRC32_t m_crcIdentifier;
-	CUtlString m_filename;
-	CUtlString m_path;
+	std::string m_filename;
+	std::string m_path;
 	int m_nFileFraction;
 
 	MD5Context_t m_md5ctx;
@@ -188,7 +200,7 @@ struct TrackedFile_t
 	int64 m_nFilePos;
 	int64 m_nLength;
 	int64 m_cubSequentialRead;
-	int m_idxRecentFileList;
+	bool m_bInRecentFileList;	// queued in CFileTracker2::m_RecentFileList (or popped without a path)
 	int m_PackFileID;
 	int m_nPackFileNumber;
 	bool m_bPackOrVPKFile;
@@ -196,8 +208,8 @@ struct TrackedFile_t
 
 	void RebuildFileName( const char *pFilename, const char *pPathID )
 	{
-		m_filename = pFilename;
-		m_path = pPathID;
+		m_filename = ks::nz( pFilename );
+		m_path = ks::nz( pPathID );
 
 		CRC32_t crcFilename;
 		CRC32_Init( &crcFilename );
@@ -217,12 +229,12 @@ struct TrackedFile_t
 			return true;
 		if ( lhs.m_nFileFraction > rhs.m_nFileFraction )
 			return false;
-		int nCmp = Q_strcmp( lhs.m_filename.String(), rhs.m_filename.String() );
+		int nCmp = Q_strcmp( lhs.m_filename.c_str(), rhs.m_filename.c_str() );
 		if ( nCmp < 0 )
 			return true;
 		if ( nCmp > 0 )
 			return false;
-		nCmp = Q_strcmp( lhs.m_path.String(), rhs.m_path.String() );
+		nCmp = Q_strcmp( lhs.m_path.c_str(), rhs.m_path.c_str() );
 		if ( nCmp < 0 )
 			return true;
 		return false;
@@ -248,22 +260,25 @@ struct FileInVPK_t
 	int m_nFileOffset;
 	int m_idxAllOpenedFiles;
 
-	static bool Less( const FileInVPK_t& lhs, const FileInVPK_t& rhs )
+	struct Less
 	{
-		if ( lhs.m_nFileOffset < rhs.m_nFileOffset )
-			return true;
-		if ( lhs.m_nFileOffset > rhs.m_nFileOffset )
+		bool operator()( const FileInVPK_t& lhs, const FileInVPK_t& rhs ) const
+		{
+			if ( lhs.m_nFileOffset < rhs.m_nFileOffset )
+				return true;
+			if ( lhs.m_nFileOffset > rhs.m_nFileOffset )
+				return false;
+			if ( lhs.m_nPackFileNumber < rhs.m_nPackFileNumber )
+				return true;
+			if ( lhs.m_nPackFileNumber > rhs.m_nPackFileNumber )
+				return false;
+			if ( lhs.m_PackFileID < rhs.m_PackFileID )
+				return true;
+			if ( lhs.m_PackFileID > rhs.m_PackFileID )
+				return false;
 			return false;
-		if ( lhs.m_nPackFileNumber < rhs.m_nPackFileNumber )
-			return true;
-		if ( lhs.m_nPackFileNumber > rhs.m_nPackFileNumber )
-			return false;
-		if ( lhs.m_PackFileID < rhs.m_PackFileID )
-			return true;
-		if ( lhs.m_PackFileID > rhs.m_PackFileID )
-			return false;
-		return false;
-	}
+		}
+	};
 
 };
 
@@ -280,22 +295,25 @@ struct TrackedVPKFile_t
 	int m_nFileFraction;
 	int m_idxAllOpenedFiles;
 
-	static bool Less( const TrackedVPKFile_t& lhs, const TrackedVPKFile_t& rhs )
+	struct Less
 	{
-		if ( lhs.m_nPackFileNumber < rhs.m_nPackFileNumber )
-			return true;
-		if ( lhs.m_nPackFileNumber > rhs.m_nPackFileNumber )
+		bool operator()( const TrackedVPKFile_t& lhs, const TrackedVPKFile_t& rhs ) const
+		{
+			if ( lhs.m_nPackFileNumber < rhs.m_nPackFileNumber )
+				return true;
+			if ( lhs.m_nPackFileNumber > rhs.m_nPackFileNumber )
+				return false;
+			if ( lhs.m_nFileFraction < rhs.m_nFileFraction )
+				return true;
+			if ( lhs.m_nFileFraction > rhs.m_nFileFraction )
+				return false;
+			if ( lhs.m_PackFileID < rhs.m_PackFileID )
+				return true;
+			if ( lhs.m_PackFileID > rhs.m_PackFileID )
+				return false;
 			return false;
-		if ( lhs.m_nFileFraction < rhs.m_nFileFraction )
-			return true;
-		if ( lhs.m_nFileFraction > rhs.m_nFileFraction )
-			return false;
-		if ( lhs.m_PackFileID < rhs.m_PackFileID )
-			return true;
-		if ( lhs.m_PackFileID > rhs.m_PackFileID )
-			return false;
-		return false;
-	}
+		}
+	};
 
 };
 
@@ -357,27 +375,53 @@ private:
 	static const int k_nFileFractionSize = 0x00100000; // 1 MB
 	static const int k_nFileFractionMask = 0xFFF00000; // 1 MB
 
-	CUtlRBTree< TrackedFile_t, int > m_treeAllOpenedFiles;
-	CUtlMap< FILE *, int, int > m_mapAllOpenFiles; // points into m_treeAllOpenedFiles
+	// Orders file indices by their TrackedFile_t; also accepts a probe TrackedFile_t.
+	struct OpenedFileLess
+	{
+		using is_transparent = void;
+		const std::deque< TrackedFile_t > *m_pFiles;
+		const TrackedFile_t &At( int i ) const					{ return (*m_pFiles)[i]; }
+		const TrackedFile_t &At( const TrackedFile_t &f ) const	{ return f; }
+		template < class A, class B >
+		bool operator()( const A &a, const B &b ) const			{ return TrackedFile_t::Less( At( a ), At( b ) ); }
+	};
 
-	CUtlRBTree< FileInVPK_t, int > m_treeFileInVPK;
+	int FindOpenedFile( const TrackedFile_t &probe ) const
+	{
+		auto it = m_OpenedFilesByName.find( probe );
+		return it == m_OpenedFilesByName.end() ? -1 : *it;
+	}
+	int InsertOpenedFile( const TrackedFile_t &file )
+	{
+		int idx = (int)m_AllOpenedFiles.size();
+		m_AllOpenedFiles.push_back( file );
+		m_OpenedFilesByName.insert( idx );
+		return idx;
+	}
 
-	CUtlRBTree< TrackedVPKFile_t, int > m_treeTrackedVPKFiles;
+	// Index + 1 is the VPK m_PackFileID that goes over the network; files are never removed.
+	std::deque< TrackedFile_t > m_AllOpenedFiles;
+	std::set< int, OpenedFileLess > m_OpenedFilesByName{ OpenedFileLess{ &m_AllOpenedFiles } };
+	std::map< FILE *, int > m_mapAllOpenFiles; // points into m_AllOpenedFiles
 
-	CUtlLinkedList<int> m_RecentFileList; // points into m_treeAllOpenedFiles
+	std::set< FileInVPK_t, FileInVPK_t::Less > m_treeFileInVPK;
+
+	std::set< TrackedVPKFile_t, TrackedVPKFile_t::Less > m_treeTrackedVPKFiles;
+
+	std::deque< int > m_RecentFileList; // points into m_AllOpenedFiles
 	int m_cMissedReads;
 	CBaseFileSystem					*m_pFileSystem;
-	CThreadMutex					m_Mutex;	// Threads call into here, so we need to be safe.
+	std::recursive_mutex				m_Mutex;	// Threads call into here, so we need to be safe.
 
 	bool m_bComputeFileHashes;
 	CThreadEvent m_threadEventWorkToDo;
 	CThreadEvent m_threadEventWorkCompleted;
-	volatile bool m_bThreadShouldRun;
+	std::atomic<bool> m_bThreadShouldRun;
 	ThreadHandle_t m_hWorkThread;
 
 	CTSQueue< StuffToMD5_t >				m_PendingJobs;
 	CTSQueue< StuffToMD5_t >				m_CompletedJobs;
-	CUtlLinkedList< SubmittedMd5Job_t >		m_SubmittedJobs;
+	ks::slot_pool< SubmittedMd5Job_t >		m_SubmittedJobs;	// handle + 1 is the request id handed out
 
 	// just stats
 	int m_cThreadBlocks;

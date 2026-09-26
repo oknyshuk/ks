@@ -11,13 +11,7 @@
 #include "mathlib/vector.h"
 #include "mathlib/mathlib.h"
 #include "tier1/strtools.h"
-#include "bitvec.h"
 #include "vstdlib/random.h"
-
-// FIXME: Can't use this until we get multithreaded allocations in tier0 working for tools
-// This is used by VVIS and fails to link
-// NOTE: This must be the last file included!!!
-//#include "tier0/memdbgon.h"
 
 #include "stdio.h"
 
@@ -340,7 +334,7 @@ void CBitWrite::WriteBitVec3Normal( const Vector& fa )
 void CBitWrite::WriteBitAngle( float fAngle, int numbits )
 {
 
-	unsigned int shift = GetBitForBitnum(numbits);
+	unsigned int shift = 1 << ( numbits & 31 );
 	unsigned int mask = shift - 1;
 
 	int d = (int)( (fAngle / 360.0) * shift );
@@ -414,7 +408,7 @@ bool CBitRead::Seek( int nPosition )
 			m_nBitsAvail = 1;
 		}
 		m_nInBufWord >>= ( nAdjPosition & 31 );
-		m_nBitsAvail = MIN( m_nBitsAvail, 32 - ( nAdjPosition & 31 ) );	// in case grabnextdword overflowed
+		m_nBitsAvail = std::min( m_nBitsAvail, 32 - ( nAdjPosition & 31 ) );	// in case grabnextdword overflowed
 	}
 	return bSucc;
 }
@@ -643,7 +637,7 @@ bool CBitRead::ReadBytes(void *pOut, int nBytes)
 
 float CBitRead::ReadBitAngle( int numbits )
 {
-	float shift = (float)( GetBitForBitnum(numbits) );
+	float shift = (float)( 1 << ( numbits & 31 ) );
 
 	int i = ReadUBitLong( numbits );
 	float fReturn = (float)i * (360.0 / shift);

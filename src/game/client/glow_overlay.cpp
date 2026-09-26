@@ -12,13 +12,9 @@
 #include "precache_register.h"
 #include "c_pixel_visibility.h"
 #include "glow_overlay.h"
-#include "utllinkedlist.h"
 #include "view_shared.h"
 #include "tier0/vprof.h"
 #include "materialsystem/imaterialvar.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 PRECACHE_REGISTER_BEGIN( GLOBAL, PrecacheEffectGlow )
 PRECACHE( MATERIAL, "sun/overlay" )
@@ -36,21 +32,22 @@ public:
 
 	virtual void LevelShutdownPostEntity()
 	{
-		m_GlowOverlays.PurgeAndDeleteElements();
-	}
-
-	unsigned short AddToOverlayList( CGlowOverlay *pGlow )
-	{
-		return m_GlowOverlays.AddToTail( pGlow );
-	}
-	void RemoveFromOverlayList( unsigned short handle )
-	{
-		if( handle != m_GlowOverlays.InvalidIndex() )
+		// each overlay's destructor unlinks itself
+		while ( !m_GlowOverlays.empty() )
 		{
-			m_GlowOverlays.Remove( handle );
+			delete m_GlowOverlays.front();
 		}
 	}
-	CUtlLinkedList<CGlowOverlay*, unsigned short> m_GlowOverlays;
+
+	std::list<CGlowOverlay*>::iterator AddToOverlayList( CGlowOverlay *pGlow )
+	{
+		return m_GlowOverlays.insert( m_GlowOverlays.end(), pGlow );
+	}
+	void RemoveFromOverlayList( std::list<CGlowOverlay*>::iterator it )
+	{
+		m_GlowOverlays.erase( it );
+	}
+	std::list<CGlowOverlay*> m_GlowOverlays;
 };
 CGlowOverlaySystem g_GlowOverlaySystem;
 
@@ -81,7 +78,6 @@ void Do2DRotation( Vector vIn, Vector &vOut, float flDegrees, int i1, int i2, in
 
 CGlowOverlay::CGlowOverlay()
 {
-	m_ListIndex = 0xFFFF;
 	m_nSprites = 0;
 	m_flGlowObstructionScale = 0.0f;
 	m_bDirectional = false;
@@ -109,7 +105,10 @@ CGlowOverlay::CGlowOverlay()
 
 CGlowOverlay::~CGlowOverlay()
 {
-	g_GlowOverlaySystem.RemoveFromOverlayList( m_ListIndex );
+	if ( m_ListIndex )
+	{
+		g_GlowOverlaySystem.RemoveFromOverlayList( *m_ListIndex );
+	}
 }
 
 
@@ -259,7 +258,7 @@ void CGlowOverlay::UpdateGlowObstruction( const Vector &vToGlow, bool bCacheFull
 		else
 		{
 			m_flGlowObstructionScale -= gpGlobals->frametime / cl_sun_decay_rate.GetFloat();
-			m_flGlowObstructionScale = MAX( m_flGlowObstructionScale, 0.0f );
+			m_flGlowObstructionScale = std::max( m_flGlowObstructionScale, 0.0f );
 		}
 	}
 	else
@@ -271,7 +270,7 @@ void CGlowOverlay::UpdateGlowObstruction( const Vector &vToGlow, bool bCacheFull
 		else
 		{
 			m_flGlowObstructionScale += gpGlobals->frametime / cl_sun_decay_rate.GetFloat();
-			m_flGlowObstructionScale = MIN( m_flGlowObstructionScale, 1.0f );
+			m_flGlowObstructionScale = std::min( m_flGlowObstructionScale, 1.0f );
 		}
 	}
 }
@@ -480,7 +479,7 @@ void CGlowOverlay::Draw( bool bCacheFullSceneState )
 void CGlowOverlay::Activate()
 {
 	m_bActivated = true;
-	if( m_ListIndex == 0xFFFF )
+	if( !m_ListIndex )
 	{
 		m_ListIndex = g_GlowOverlaySystem.AddToOverlayList( this );
 	}
@@ -501,11 +500,10 @@ void CGlowOverlay::DrawOverlays( bool bCacheFullSceneState )
 
 	bool bClippingEnabled = pRenderContext->EnableClipping( true );
 
-	unsigned short iNext;
-	for( unsigned short i=g_GlowOverlaySystem.m_GlowOverlays.Head(); i != g_GlowOverlaySystem.m_GlowOverlays.InvalidIndex(); i = iNext )
+	auto &overlays = g_GlowOverlaySystem.m_GlowOverlays;
+	for ( auto it = overlays.begin(); it != overlays.end(); )
 	{
-		iNext = g_GlowOverlaySystem.m_GlowOverlays.Next( i );
-		CGlowOverlay *pOverlay = g_GlowOverlaySystem.m_GlowOverlays[i];
+		CGlowOverlay *pOverlay = *it++;
 		
 		if( !pOverlay->m_bActivated )
 			continue;
@@ -526,12 +524,8 @@ void CGlowOverlay::DrawOverlays( bool bCacheFullSceneState )
 
 void CGlowOverlay::UpdateSkyOverlays( float zFar, bool bCacheFullSceneState )
 {
-	unsigned short iNext;
-	for( unsigned short i=g_GlowOverlaySystem.m_GlowOverlays.Head(); i != g_GlowOverlaySystem.m_GlowOverlays.InvalidIndex(); i = iNext )
+	for ( CGlowOverlay *pOverlay : g_GlowOverlaySystem.m_GlowOverlays )
 	{
-		iNext = g_GlowOverlaySystem.m_GlowOverlays.Next( i );
-		CGlowOverlay *pOverlay = g_GlowOverlaySystem.m_GlowOverlays[i];
-		
 		if( !pOverlay->m_bActivated || !pOverlay->m_bDirectional || !pOverlay->m_bInSky )
 			continue;
 

@@ -8,9 +8,6 @@
 
 #include "tier0/vprof.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 CClientThinkList g_ClientThinkList;
 
 
@@ -79,7 +76,7 @@ void CClientThinkList::SetNextClientThink( ClientThinkHandle_t hThink, float flN
 	if ( m_bInThinkLoop )
 	{
 		// Queue up all changes
-		int i = m_aChangeList.AddToTail();
+		int i = std::ssize( m_aChangeList ); m_aChangeList.emplace_back();
 		m_aChangeList[i].m_hEnt = INVALID_CLIENTENTITY_HANDLE;
 		m_aChangeList[i].m_hThink = hThink;
 		m_aChangeList[i].m_flNextTime = flNextTime;
@@ -113,7 +110,7 @@ void CClientThinkList::SetNextClientThink( ClientEntityHandle_t hEnt, float flNe
 	if ( m_bInThinkLoop )
 	{
 		// Queue up all changes
-		int i = m_aChangeList.AddToTail();
+		int i = std::ssize( m_aChangeList ); m_aChangeList.emplace_back();
 		m_aChangeList[i].m_hEnt = hEnt;
 		m_aChangeList[i].m_hThink = hThink;
 		m_aChangeList[i].m_flNextTime = flNextTime;
@@ -123,7 +120,7 @@ void CClientThinkList::SetNextClientThink( ClientEntityHandle_t hEnt, float flNe
 	// Add it to the list if it's not already in there.
 	if ( hThink == INVALID_THINK_HANDLE )
 	{
-		hThink = (ClientThinkHandle_t)(uintp)m_ThinkEntries.AddToTail();
+		hThink = (ClientThinkHandle_t)(uintp)m_ThinkEntries.emplace_back();
 		pThink->SetThinkHandle( hThink );
 
 		ThinkEntry_t *pEntry = GetThinkEntry( hThink );
@@ -148,7 +145,7 @@ void CClientThinkList::RemoveThinkable( ClientThinkHandle_t hThink )
 	if ( m_bInThinkLoop )
 	{
 		// Queue up all changes
-		int i = m_aChangeList.AddToTail();
+		int i = std::ssize( m_aChangeList ); m_aChangeList.emplace_back();
 		m_aChangeList[i].m_hEnt = INVALID_CLIENTENTITY_HANDLE;
 		m_aChangeList[i].m_hThink = hThink;
 		m_aChangeList[i].m_flNextTime = CLIENT_THINK_NEVER;
@@ -161,7 +158,7 @@ void CClientThinkList::RemoveThinkable( ClientThinkHandle_t hThink )
 	{
 		pThink->SetThinkHandle( INVALID_THINK_HANDLE );
 	}
-	m_ThinkEntries.Remove( (unsigned long)hThink );
+	m_ThinkEntries.erase( (unsigned short)(uintp)hThink );
 }
 
 
@@ -270,7 +267,7 @@ void CClientThinkList::PerformThinkFunctions()
 {
 	VPROF_("Client Thinks", 1, VPROF_BUDGETGROUP_CLIENT_SIM, false, BUDGETFLAG_CLIENT);
 
-	int nMaxList = m_ThinkEntries.Count();
+	int nMaxList = (int)m_ThinkEntries.size();
 	if ( nMaxList == 0 )
 		return;
 
@@ -281,9 +278,9 @@ void CClientThinkList::PerformThinkFunctions()
 	// prevent bad situations where an entity can think more than once in a frame.
 	ThinkEntry_t **ppThinkEntryList = (ThinkEntry_t**)stackalloc( nMaxList * sizeof(ThinkEntry_t*) );
 	int nThinkCount = 0;
-	for ( unsigned short iCur=m_ThinkEntries.Head(); iCur != m_ThinkEntries.InvalidIndex(); iCur = m_ThinkEntries.Next( iCur ) )
+	for ( ThinkEntry_t &entry : m_ThinkEntries )
 	{
-		AddEntityToFrameThinkList( &m_ThinkEntries[iCur], false, nThinkCount, ppThinkEntryList );
+		AddEntityToFrameThinkList( &entry, false, nThinkCount, ppThinkEntryList );
 		Assert( nThinkCount <= nMaxList );
 	}
 
@@ -321,14 +318,14 @@ void CClientThinkList::PerformThinkFunctions()
 	m_bInThinkLoop = false;
 
 	// Apply changes to the think list
-	int nCount = m_aChangeList.Count();
+	int nCount = std::ssize( m_aChangeList );
 	for ( int i = 0; i < nCount; ++i )
 	{
 		ClientThinkHandle_t hThink = m_aChangeList[i].m_hThink;
 		if ( hThink != INVALID_THINK_HANDLE )
 		{
 			// This can happen if the same think handle was removed twice
-			if ( !m_ThinkEntries.IsInList( (unsigned long)hThink ) )
+			if ( !m_ThinkEntries.contains( (unsigned short)(uintp)hThink ) )
 				continue;
 
 			// NOTE: This is necessary for the case where the client entity handle
@@ -341,7 +338,7 @@ void CClientThinkList::PerformThinkFunctions()
 			SetNextClientThink( m_aChangeList[i].m_hEnt, m_aChangeList[i].m_flNextTime );
 		}
 	}
-	m_aChangeList.RemoveAll();
+	m_aChangeList.clear();
 
 	// Clear out the client-side entity deletion list.
 	CleanUpDeleteList();
@@ -370,7 +367,7 @@ void CClientThinkList::AddToDeleteList( ClientEntityHandle_t hEnt )
 		// take care of this.  The delete list is for client-side only entities.
 		if ( !pEntity->GetClientNetworkable() )
 		{
-			m_aDeleteList.AddToTail( hEnt );
+			m_aDeleteList.push_back( hEnt );
 			pEntity->SetRemovalFlag( true );
 		}
 	}
@@ -383,7 +380,7 @@ void CClientThinkList::RemoveFromDeleteList( ClientEntityHandle_t hEnt )
 	if ( hEnt == ClientEntityList().InvalidHandle() )
 		return;
 
-	int nSize = m_aDeleteList.Count();
+	int nSize = std::ssize( m_aDeleteList );
 	for ( int iHandle = 0; iHandle < nSize; ++iHandle )
 	{
 		if ( m_aDeleteList[iHandle] == hEnt )
@@ -401,7 +398,7 @@ void CClientThinkList::RemoveFromDeleteList( ClientEntityHandle_t hEnt )
 
 void CClientThinkList::CleanUpDeleteList()
 {
-	int nThinkCount = m_aDeleteList.Count();
+	int nThinkCount = std::ssize( m_aDeleteList );
 	for ( int iThink = 0; iThink < nThinkCount; ++iThink )
 	{
 		ClientEntityHandle_t handle = m_aDeleteList[iThink];
@@ -421,6 +418,6 @@ void CClientThinkList::CleanUpDeleteList()
 		}
 	}
 
-	m_aDeleteList.RemoveAll();
+	m_aDeleteList.clear();
 }
 

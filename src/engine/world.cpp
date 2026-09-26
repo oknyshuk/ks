@@ -28,8 +28,6 @@
 #include "icliententitylist.h"
 #include "client_class.h"
 #include "icliententity.h"
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 //-----------------------------------------------------------------------------
 // Method to convert edict to index
@@ -121,7 +119,7 @@ static void CM_GetCollideableTriggerTestBox( ICollideable *pCollide, Vector *pMi
 class CTouchLinks : public IPartitionEnumerator
 {
 public:
-	CTouchLinks( edict_t* pEnt, const Vector* pPrevAbsOrigin, bool accurateBboxTriggerChecks ) : m_TouchedEntities( 8, 8 )
+	CTouchLinks( edict_t* pEnt, const Vector* pPrevAbsOrigin, bool accurateBboxTriggerChecks )
 	{
 		m_pEnt = pEnt;
 		m_pCollide = pEnt->GetCollideable();
@@ -185,7 +183,7 @@ public:
 					return ITERATION_CONTINUE;
 			}
 
-			m_TouchedEntities.AddToTail( pTouch );
+			m_TouchedEntities.push_back( pTouch );
 		}
 
 		return ITERATION_CONTINUE;
@@ -193,7 +191,7 @@ public:
 
 	void HandleTouchedEntities()
 	{
-		for ( int i = 0; i < m_TouchedEntities.Count(); ++i )
+		for ( int i = 0; i < std::ssize( m_TouchedEntities ); ++i )
 		{
 			serverGameEnts->MarkEntitiesAsTouching( m_TouchedEntities[i], m_pEnt );
 		}
@@ -205,7 +203,7 @@ private:
 	edict_t *m_pEnt;
 	ICollideable *m_pCollide;
 	uint m_nRequiredTriggerFlags;
-	CUtlVector< edict_t* > m_TouchedEntities;
+	std::vector< edict_t* > m_TouchedEntities;
 };
 
 //-----------------------------------------------------------------------------
@@ -214,7 +212,7 @@ private:
 class CTouchLinks_ClientSide : public IPartitionEnumerator
 {
 public:
-	CTouchLinks_ClientSide( IClientEntity *pEnt, const Vector* pPrevAbsOrigin, bool accurateBboxTriggerChecks ) : m_TouchedEntities( 8, 8 )
+	CTouchLinks_ClientSide( IClientEntity *pEnt, const Vector* pPrevAbsOrigin, bool accurateBboxTriggerChecks )
 	{
 		m_pEnt = pEnt;
 		m_pCollide = pEnt->GetCollideable();
@@ -282,7 +280,7 @@ public:
 			}
 		}
 
-		m_TouchedEntities.AddToTail( pTriggerEntity );
+		m_TouchedEntities.push_back( pTriggerEntity );
 #endif
 
 		return ITERATION_CONTINUE;
@@ -296,7 +294,7 @@ public:
 			return;
 		}
 
-		for ( int i = 0; i < m_TouchedEntities.Count(); ++i )
+		for ( int i = 0; i < std::ssize( m_TouchedEntities ); ++i )
 		{
 			g_ClientDLL->MarkEntitiesAsTouching( m_TouchedEntities[i], m_pEnt );
 		}
@@ -309,7 +307,7 @@ private:
 	IClientEntity *m_pEnt;
 	ICollideable *m_pCollide;
 	uint m_nRequiredTriggerFlags;
-	CUtlVector< IClientEntity* > m_TouchedEntities;
+	std::vector< IClientEntity* > m_TouchedEntities;
 };
 
 // enumerator class that's used to update touch links for a trigger when 
@@ -317,7 +315,7 @@ private:
 class CTriggerMoved : public IPartitionEnumerator
 {
 public:
-	CTriggerMoved( bool accurateBboxTriggerChecks ) : m_TouchedEntities( 8, 8 )
+	CTriggerMoved( bool accurateBboxTriggerChecks )
 	{
 		m_bAccurateBBoxCheck = accurateBboxTriggerChecks;
 	}
@@ -390,7 +388,7 @@ public:
 				return ITERATION_CONTINUE;
 		}
 
-		m_TouchedEntities.AddToTail( pTouch );
+		m_TouchedEntities.push_back( pTouch );
 #endif
 
 		return ITERATION_CONTINUE;
@@ -398,7 +396,7 @@ public:
 
 	void HandleTouchedEntities( )
 	{
-		for ( int i = 0; i < m_TouchedEntities.Count(); ++i )
+		for ( int i = 0; i < std::ssize( m_TouchedEntities ); ++i )
 		{
 			serverGameEnts->MarkEntitiesAsTouching( m_TouchedEntities[i], m_pTriggerEntity );
 		}
@@ -409,7 +407,7 @@ private:
 	ICollideable* m_pTrigger;
 	int m_triggerSolidFlags;
 	Vector m_vecDelta;
-	CUtlVector< edict_t* > m_TouchedEntities;
+	std::vector< edict_t* > m_TouchedEntities;
 	bool m_bAccurateBBoxCheck;
 };
 
@@ -418,7 +416,7 @@ private:
 class CTriggerMoved_ClientSide : public IPartitionEnumerator
 {
 public:
-	CTriggerMoved_ClientSide( bool accurateBboxTriggerChecks ) : m_TouchedEntities( 8, 8 )
+	CTriggerMoved_ClientSide( bool accurateBboxTriggerChecks )
 	{
 		m_bAccurateBBoxCheck = accurateBboxTriggerChecks;
 	}
@@ -487,7 +485,7 @@ public:
 				return ITERATION_CONTINUE;
 		}
 
-		m_TouchedEntities.AddToTail( pTouch );
+		m_TouchedEntities.push_back( pTouch );
 #endif
 
 		return ITERATION_CONTINUE;
@@ -501,7 +499,7 @@ public:
 			return;
 		}
 
-		for ( int i = 0; i < m_TouchedEntities.Count(); ++i )
+		for ( int i = 0; i < std::ssize( m_TouchedEntities ); ++i )
 		{
 			g_ClientDLL->MarkEntitiesAsTouching( m_TouchedEntities[i], m_pTriggerEntity );
 		}
@@ -513,7 +511,7 @@ private:
 	ICollideable* m_pTrigger;
 	int m_triggerSolidFlags;
 	Vector m_vecDelta;
-	CUtlVector< IClientEntity* > m_TouchedEntities;
+	std::vector< IClientEntity* > m_TouchedEntities;
 	bool m_bAccurateBBoxCheck;
 };
 

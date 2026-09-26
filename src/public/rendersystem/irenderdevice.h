@@ -11,9 +11,9 @@
 
 
 #include "tier1/interface.h"
+#include "tier1/byte_reader.h"
 #include "appframework/iappsystem.h"
 #include "bitmap/imageformat.h"
-#include "tier1/utlbuffer.h"
 #include "mathlib/vector4d.h"
 #include "bitmap/colorformat.h"
 #include "rendersystem/renderstate.h"
@@ -410,10 +410,9 @@ public:
 	virtual void DestroyRenderTargetBinding( RenderTargetBinding_t hBinding ) = 0;
 
 	// Utility methods to make shader creation simpler
-	// NOTE: For the utlbuffer version, use a binary buffer for a compiled shader
-	// and a text buffer for a source-code (.fxc) shader
+	// NOTE: The span and pointer+size versions without a shader version take a compiled shader
 	RenderShaderHandle_t CreateShader( RenderShaderType_t nType, const char *pProgram, size_t nBufLen, const char *pShaderVersion );
-	RenderShaderHandle_t CreateShader( RenderShaderType_t nType, CUtlBuffer &buf, const char *pShaderVersion = nullptr );
+	RenderShaderHandle_t CreateShader( RenderShaderType_t nType, std::span< const std::byte > compiled );
 	RenderShaderHandle_t CreateShader( RenderShaderType_t nType, const void *pCompiledProgram, size_t nBufLen );
 
 	// Creates render state objects
@@ -473,19 +472,19 @@ public:
 // Helper wrapper for IRenderShaderBuffer for reading precompiled shader files
 // NOTE: This is meant to be instanced on the stack; so don't call Release!
 //-----------------------------------------------------------------------------
-class CUtlRenderShaderBuffer : public IRenderShaderBuffer
+class RenderShaderByteBuffer : public IRenderShaderBuffer
 {
 public:
-	CUtlRenderShaderBuffer( CUtlBuffer &buf ) : m_pBuf( &buf ) {}
+	RenderShaderByteBuffer( std::span< const std::byte > bytes ) : m_bytes( bytes ) {}
 
 	virtual size_t GetSize() const
 	{
-		return m_pBuf->TellMaxPut();
+		return m_bytes.size();
 	}
 
 	virtual const void* GetBits() const
 	{
-		return m_pBuf->Base();
+		return m_bytes.data();
 	}
 
 	virtual void Release()
@@ -494,7 +493,7 @@ public:
 	}
 
 private:
-	CUtlBuffer *m_pBuf;
+	std::span< const std::byte > m_bytes;
 };
 
 
@@ -518,25 +517,15 @@ inline RenderShaderHandle_t IRenderDevice::CreateShader( RenderShaderType_t nTyp
 	return hShader;
 }
 
-inline RenderShaderHandle_t IRenderDevice::CreateShader( RenderShaderType_t nType, CUtlBuffer &buf, const char *pShaderVersion )
+inline RenderShaderHandle_t IRenderDevice::CreateShader( RenderShaderType_t nType, std::span< const std::byte > compiled )
 {
-	// NOTE: Text buffers are assumed to have source-code shader files
-	// Binary buffers are assumed to have compiled shader files
-	if ( buf.IsText() )
-	{
-		Assert( pShaderVersion );
-		return CreateShader( nType, (const char *)buf.Base(), buf.TellMaxPut(), pShaderVersion );
-	}
-
-	CUtlRenderShaderBuffer shaderBuffer( buf );
+	RenderShaderByteBuffer shaderBuffer( compiled );
 	return CreateShader( nType, &shaderBuffer );
 }
 
 inline RenderShaderHandle_t IRenderDevice::CreateShader( RenderShaderType_t nType, const void *pCompiledProgram, size_t nBufLen )
 {
-	Assert( nBufLen == ( int )nBufLen ); // make sure we're not trimming 4Gb+ sizes
-	CUtlBuffer tmpBuf( pCompiledProgram, ( int )nBufLen, CUtlBuffer::READ_ONLY );
-	return CreateShader( nType, tmpBuf, nullptr );
+	return CreateShader( nType, ks::byte_view( pCompiledProgram, nBufLen ) );
 }
 
 

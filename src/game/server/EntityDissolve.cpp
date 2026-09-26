@@ -18,9 +18,6 @@
 #include "ai_basenpc.h"
 #include "reflect_sendtable.h"
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 static const char *s_pElectroThinkContext = "ElectroThinkContext";
 
 

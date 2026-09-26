@@ -178,7 +178,7 @@ private:
 
 #ifdef PANORAMA_ENABLE
 	CSGOGameUIState_t m_CSGOGameUIState;
-	CUtlVector< ICSGOGameUIStateListener* > m_GameUIStateListeners;
+	std::vector< ICSGOGameUIStateListener* > m_GameUIStateListeners;
 
 	bool m_bFirstActivationForSession = true;
 	bool m_bInLevelLoading = false;

@@ -32,7 +32,6 @@
 #include "gl_shader.h"
 #include "ivideomode.h"
 #include "cdll_engine_int.h"
-#include "utldict.h"
 #include "filesystem.h"
 #include "server.h"
 #include "game/client/iclientrendertargets.h"
@@ -50,9 +49,6 @@ extern IFileSystem *g_pFileSystem;
 #include "igame.h"
 
 #include "toolframework/itoolframework.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 // Start the frame count at one so stuff gets updated the first frame
 int	r_framecount = 1;               // used for dlight + lightstyle push checking
@@ -93,9 +89,9 @@ static CTextureReference g_FullFrameDepth;
 
 
 // each sort ID's mesh for the depth fill render
-CUtlVector<IMesh *> g_DepthMeshForSortID;
+std::vector< IMesh * > g_DepthMeshForSortID;
 // Each surface's first vertex index in the depth fill VB
-CUtlVector<uint16> g_DepthFillVBFirstVertexForSurface;
+std::vector< uint16 > g_DepthFillVBFirstVertexForSurface;
 
 void WorldStaticMeshCreate( void );
 void WorldStaticMeshDestroy( void );
@@ -1499,7 +1495,7 @@ struct meshlist_t
 	VertexFormat_t vertexFormat;
 };
 
-static CUtlVector<meshlist_t> g_Meshes;
+static std::vector< meshlist_t > g_Meshes;
 
 ConVar mat_max_worldmesh_vertices("mat_max_worldmesh_vertices", "65536");
 
@@ -1517,13 +1513,13 @@ int FindOrAddMesh( IMaterial *pMaterial, int vertexCount )
 
 	int nMaxVertices = pRenderContext->GetMaxVerticesToRender( pMaterial );
 	int worldLimit = mat_max_worldmesh_vertices.GetInt();
-	worldLimit = MAX(worldLimit,1024);
+	worldLimit = std::max(worldLimit,1024);
 	if ( nMaxVertices > worldLimit )
 	{
 		nMaxVertices = mat_max_worldmesh_vertices.GetInt();
 	}
 
-	for ( int i = 0; i < g_Meshes.Count(); i++ )
+	for ( int i = 0; i < std::ssize( g_Meshes ); i++ )
 	{
 		if ( g_Meshes[i].vertexFormat != format )
 			continue;
@@ -1535,7 +1531,7 @@ int FindOrAddMesh( IMaterial *pMaterial, int vertexCount )
 		return i;
 	}
 
-	int index = g_Meshes.AddToTail();
+	int index = std::ssize( g_Meshes ); g_Meshes.emplace_back();
 	g_Meshes[index].vertCount = vertexCount;
 	g_Meshes[index].vertexFormat = format;
 	g_Meshes[index].pMaterial = pMaterial;
@@ -1594,7 +1590,7 @@ void WorldStaticMeshCreate( void )
 {
 	r_framecount = 1;
 	WorldStaticMeshDestroy();
-	g_Meshes.RemoveAll();
+	g_Meshes.clear();
 
 	SetTexInfoBaseTexture2Flags();
 
@@ -1613,17 +1609,17 @@ void WorldStaticMeshCreate( void )
 	// Not entirely true since we need the correct lightmap page for WorldVertexTransition materials.
 	g_pShadowMgr->SetNumWorldMaterialBuckets( nSortIDs );
 
-	Assert( !g_WorldStaticMeshes.Count() );
-	g_WorldStaticMeshes.SetCount( nSortIDs );
-	memset( g_WorldStaticMeshes.Base(), 0, sizeof(g_WorldStaticMeshes[0]) * g_WorldStaticMeshes.Count() );
+	Assert( !std::ssize( g_WorldStaticMeshes ) );
+	g_WorldStaticMeshes.assign( nSortIDs, {} );
+	memset( g_WorldStaticMeshes.data(), 0, sizeof(g_WorldStaticMeshes[0]) * std::ssize( g_WorldStaticMeshes ) );
 
 	CMSurfaceSortList matSortArray;
 	matSortArray.Init( nSortIDs, 512 );
-	CUtlVector<int> sortIndex;
-	sortIndex.SetCount( g_WorldStaticMeshes.Count() );
-	CUtlVector<int> depthMeshIndexList;
-	depthMeshIndexList.SetCount( g_WorldStaticMeshes.Count() );
-	g_DepthMeshForSortID.SetCount( g_WorldStaticMeshes.Count() );
+	std::vector< int > sortIndex;
+	sortIndex.assign( std::ssize( g_WorldStaticMeshes ), {} );
+	std::vector< int > depthMeshIndexList;
+	depthMeshIndexList.assign( std::ssize( g_WorldStaticMeshes ), {} );
+	g_DepthMeshForSortID.assign( std::ssize( g_WorldStaticMeshes ), {} );
 	extern bool g_bReplayLoadedTools;
 	bool bTools = CommandLine()->CheckParm( "-tools" ) != nullptr || g_bReplayLoadedTools;
 
@@ -1655,7 +1651,7 @@ void WorldStaticMeshCreate( void )
 	}
 
 	// iterate the arrays and create buffers
-	for ( i = 0; i < g_WorldStaticMeshes.Count(); i++ )
+	for ( i = 0; i < std::ssize( g_WorldStaticMeshes ); i++ )
 	{
 		const surfacesortgroup_t &group = matSortArray.GetGroupForSortID(0,i);
 		int vertexCount = VertexCountForSurfaceList( matSortArray, group );
@@ -1699,8 +1695,8 @@ void WorldStaticMeshCreate( void )
 		Assert(vertBufferIndex == g_Meshes[i].vertCount);
 	}
 #else
-	g_DepthFillVBFirstVertexForSurface.SetCount( host_state.worldbrush->numsurfaces );
-	for ( i = 0; i < g_Meshes.Count(); i++ )
+	g_DepthFillVBFirstVertexForSurface.assign( host_state.worldbrush->numsurfaces, {} );
+	for ( i = 0; i < std::ssize( g_Meshes ); i++ )
 	{
 		Assert( g_Meshes[i].vertCount > 0 );
 		if ( g_VBAllocTracker )
@@ -1712,7 +1708,7 @@ void WorldStaticMeshCreate( void )
 		CMeshBuilder meshBuilder;
 		meshBuilder.Begin( g_Meshes[i].pMesh, MATERIAL_TRIANGLES, g_Meshes[i].vertCount, 0 );
 
-		for ( int j = 0; j < g_WorldStaticMeshes.Count(); j++ )
+		for ( int j = 0; j < std::ssize( g_WorldStaticMeshes ); j++ )
 		{
 			int meshId = sortIndex[j];
 			if ( meshId == i )
@@ -1756,7 +1752,7 @@ void WorldStaticMeshDestroy( void )
 	CMatRenderContextPtr pRenderContext( materials );
 
 	// Blat out the static meshes associated with each material
-	for ( int i = 0; i < g_Meshes.Count(); i++ )
+	for ( int i = 0; i < std::ssize( g_Meshes ); i++ )
 	{
 #ifdef NEWMESH
 		pRenderContext->DestroyVertexBuffer( g_Meshes[i].pVertexBuffer );
@@ -1764,9 +1760,9 @@ void WorldStaticMeshDestroy( void )
 		pRenderContext->DestroyStaticMesh( g_Meshes[i].pMesh );
 #endif
 	}
-	g_WorldStaticMeshes.Purge();
-	g_Meshes.RemoveAll();
-	g_DepthMeshForSortID.RemoveAll();
+	g_WorldStaticMeshes.clear(); g_WorldStaticMeshes.shrink_to_fit();
+	g_Meshes.clear();
+	g_DepthMeshForSortID.clear();
 }
 
 

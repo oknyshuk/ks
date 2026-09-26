@@ -14,42 +14,12 @@
 #include "dt_utlvector_common.h"
 
 
-
-#define RECVINFO_UTLVECTOR( varName )	#varName, \
-										offsetof(currentRecvDTClass, varName), \
-										sizeof(((currentRecvDTClass*)0)->varName[0]), \
-										GetResizeUtlVectorTemplate( ((currentRecvDTClass*)0)->varName ), \
-										GetEnsureCapacityTemplate( ((currentRecvDTClass*)0)->varName )
-
-// Use this macro to specify a utlvector where you specify the function
-// that gets called to make sure the size of the utlvector is correct.
-// The size function looks like this: void ResizeUtlVector( void *pVoid, int len )
-#define RECVINFO_UTLVECTOR_SIZEFN( varName, resizeFn )	#varName, \
-										offsetof(currentRecvDTClass, varName), \
-										sizeof(((currentRecvDTClass*)0)->varName[0]), \
-										resizeFn, \
-										GetEnsureCapacityTemplate( ((currentRecvDTClass*)0)->varName )
-
-
-#define RecvPropUtlVectorDataTable( varName, nMaxElements, dataTableName ) \
-	RecvPropUtlVector( RECVINFO_UTLVECTOR( varName ), nMaxElements, RecvPropDataTable(nullptr,0,0, &REFERENCE_RECV_TABLE( dataTableName  ) ) )
-
-
-//
-// Receive a property sent with SendPropUtlVector.
-//
-// Example usage:
-//
-//	RecvPropUtlVectorDataTable( m_StructArray, 11, DT_StructArray )
-//
-//	RecvPropUtlVector( RECVINFO_UTLVECTOR( m_FloatArray ), 16, RecvPropFloat(NULL,0,0) )
-//
+// Produced by game/shared/reflect_recvtable.h, with ops from WireVec (resize may be a class callback).
 RecvProp RecvPropUtlVector(
-	const char *pVarName,		// Use RECVINFO_UTLVECTOR to generate these first 5 parameters.
+	const char *pVarName,
 	int offset,
 	int sizeofVar,
-	ResizeUtlVectorFn fn,
-	EnsureCapacityFn ensureFn,
+	const WireVecOps &ops,
 
 	int nMaxElements,	// Max # of elements in the array. Keep this as low as possible.
 	RecvProp pArrayProp	// The definition of the property you're receiving into.

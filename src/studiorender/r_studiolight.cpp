@@ -16,9 +16,6 @@
 #include "mathlib/mathlib.h"
 #include <float.h>
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
 void R_WorldLightDelta( const LightDesc_t *wl, const Vector& org, Vector& delta );
 
 

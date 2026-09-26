@@ -87,7 +87,7 @@ private:
 		Vector2D m_EndPoints[2];		// normalized [0,1] coordinates, (0,0) is top-left
 		uint8 m_nColor[4];
 	};
-	CUtlVector< CDebugLine > m_debugLines;
+	std::vector< CDebugLine > m_debugLines;
 
 	void RenderDebugLines2D( uint nNumLines, const CDebugLine *pLines );
 };

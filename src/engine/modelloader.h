@@ -12,7 +12,6 @@ class IMaterial;
 class IFileList;
 
 
-#include "tier1/utlmemory.h"
 #include "engine/ivmodelinfo.h"
 
 //-----------------------------------------------------------------------------
@@ -66,9 +65,6 @@ public:
 	// Start up modelloader subsystem
 	virtual void		Init( void ) = 0;
 	virtual void		Shutdown( void ) = 0;
-
-	virtual int			GetCount( void ) = 0;
-	virtual model_t		*GetModelForIndex( int i ) = 0;
 
 	// Look up name for model
 	virtual const char *GetName( const model_t *model ) = 0;
@@ -140,7 +136,7 @@ public:
 	virtual model_t		*GetDynamicCombinedModel( const char *name, bool bClientOnly ) = 0;
 	virtual void		UpdateDynamicCombinedModel( model_t *pModel, MDLHandle_t Handle, bool bClientSide ) = 0;
 
-	virtual bool		SetCombineModels( model_t *pModel, const CUtlVector< SCombinerModelInput_t > &vecModelsToCombine ) = 0;
+	virtual bool		SetCombineModels( model_t *pModel, const std::vector< SCombinerModelInput_t > &vecModelsToCombine ) = 0;
 	virtual bool		FinishCombinedModel( model_t *pModel, CombinedModelLoadedCallback pFunc, void *pUserData = nullptr ) = 0;
 
 	// Called by client code to query dynamic model state

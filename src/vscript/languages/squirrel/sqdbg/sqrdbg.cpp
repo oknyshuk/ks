@@ -10,7 +10,6 @@ SQInteger error_handler(HSQUIRRELVM v);
 
 #include "serialize_state.inl"
 #if defined(VSCRIPT_DLL_EXPORT) || defined(VSQUIRREL_TEST)
-#include "memdbgon.h"
 #endif
 
 HSQREMOTEDBG sq_rdbg_init(HSQUIRRELVM v,unsigned short port,SQBool autoupdate)

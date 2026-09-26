@@ -14,14 +14,12 @@
 #include "tier1/keyvalues.h"
 #include "tier1/utlvector.h"
 #include "tier1/tier1.h"
+#include "tier1/intern_pool.h"
 #include "filesystem_engine.h"
 #include "toolframework/itoolframework.h"
 #include "baseclientstate.h"
 #include "sys.h"
 #include "tier1/fmtstr.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 class IToolSystem;
 extern CreateInterfaceFn g_AppSystemFactory;
@@ -41,16 +39,16 @@ struct ToolModule_t
 		m_sFirstTool = other.m_sFirstTool;
 		m_pModule = other.m_pModule;
 		m_pDictionary = other.m_pDictionary;
-		m_Systems.CopyArray( other.m_Systems.Base(), other.m_Systems.Count() );
+		m_Systems.assign( other.m_Systems.begin(), other.m_Systems.end() );
 		return *this;
 	}
 
-	CUtlString			m_sDllName;
-	CUtlString			m_sFirstTool;
+	std::string			m_sDllName;
+	std::string			m_sFirstTool;
 	CSysModule			*m_pModule;
 	IToolDictionary		*m_pDictionary;
 
-	CUtlVector< IToolSystem * > m_Systems;
+	std::vector< IToolSystem * > m_Systems;
 };
 
 //-----------------------------------------------------------------------------
@@ -168,11 +166,11 @@ public:
 	ToolModule_t	*Find( char const *pModuleName );
 								 
 	void			UnloadTools( char const *pModule, bool bCheckCanQuit );
-	void			GetModules( CUtlVector< CUtlString > &list );
+	void			GetModules( std::vector< std::string > &list );
 
 private:
 	void			LoadToolsFromEngineToolsManifest();
-	void			LoadToolsFromCommandLine( CUtlVector< CUtlString > &list );
+	void			LoadToolsFromCommandLine( std::vector< std::string > &list );
 
 	ToolModule_t	*LoadToolsFromLibrary( const char *dllname );
 
@@ -187,8 +185,8 @@ private:
 	// Purpose: Shuts down all tool dictionaries
 	void			ShutdownToolDictionaries();
 
-	CUtlVector< IToolSystem * >		m_ToolSystems;
-	CUtlVector< ToolModule_t > m_Modules;
+	std::vector< IToolSystem * >		m_ToolSystems;
+	std::vector< ToolModule_t > m_Modules;
 
 	int m_nActiveToolIndex;
 	bool m_bInToolMode;
@@ -207,7 +205,7 @@ IToolFrameworkInternal *toolframework = &g_ToolFrameworkInternal;
 //-----------------------------------------------------------------------------
 void CToolFrameworkInternal::InvokeMethod( ToolSystemFunc_t f )
 {
-	int toolCount = m_ToolSystems.Count();
+	int toolCount = std::ssize( m_ToolSystems );
 	for ( int i = 0; i < toolCount; ++i )
 	{
 		IToolSystem *sys = m_ToolSystems[i];
@@ -221,7 +219,7 @@ void CToolFrameworkInternal::InvokeMethod( ToolSystemFunc_t f )
 //-----------------------------------------------------------------------------
 void CToolFrameworkInternal::InvokeMethodInt( ToolSystemFunc_Int_t f, int arg )
 {
-	int toolCount = m_ToolSystems.Count();
+	int toolCount = std::ssize( m_ToolSystems );
 	for ( int i = 0; i < toolCount; ++i )
 	{
 		IToolSystem *sys = m_ToolSystems[i];
@@ -282,7 +280,7 @@ InitReturnVal_t CToolFrameworkInternal::Init()
 	// FIXME: Eventually this should be -edit
 	if ( CommandLine()->FindParm( "-tools" ) )
 	{
-		CUtlVector< CUtlString > vecToolList;
+		std::vector< std::string > vecToolList;
 		int toolParamIndex = CommandLine()->FindParm( "-tools" );
 		if ( toolParamIndex != 0 )
 		{
@@ -293,11 +291,11 @@ InitReturnVal_t CToolFrameworkInternal::Init()
 				if ( !pToolName || !*pToolName || *pToolName == '-' || *pToolName == '+' )
 					break;
 
-				vecToolList.AddToTail( CUtlString( pToolName ) );
+				vecToolList.push_back( std::string( ks::nz( pToolName ) ) );
 			}
 		}
 
-		if ( vecToolList.Count() > 0 )
+		if ( !vecToolList.empty() )
 		{
 			LoadToolsFromCommandLine( vecToolList );
 		}
@@ -318,7 +316,7 @@ bool CToolFrameworkInternal::PostInit()
 {
 	bool bRetVal = true;
 
-	int toolCount = m_ToolSystems.Count();
+	int toolCount = std::ssize( m_ToolSystems );
 	for ( int i = 0; i < toolCount; ++i )
 	{
 		IToolSystem *system = m_ToolSystems[ i ];
@@ -358,7 +356,7 @@ void CToolFrameworkInternal::Shutdown()
 //-----------------------------------------------------------------------------
 void CToolFrameworkInternal::Think( bool finalTick )
 {
-	int toolCount = m_ToolSystems.Count();
+	int toolCount = std::ssize( m_ToolSystems );
 	for ( int i = 0; i < toolCount; ++i )
 	{
 		IToolSystem *system = m_ToolSystems[ i ];
@@ -377,7 +375,7 @@ bool CToolFrameworkInternal::ServerInit( CreateInterfaceFn serverFactory )
 
 	bool retval = true;
 
-	int toolCount = m_ToolSystems.Count();
+	int toolCount = std::ssize( m_ToolSystems );
 	for ( int i = 0; i < toolCount; ++i )
 	{
 		IToolSystem *system = m_ToolSystems[ i ];
@@ -402,7 +400,7 @@ bool CToolFrameworkInternal::ClientInit( CreateInterfaceFn clientFactory )
 
 	bool retval = true;
 
-	int toolCount = m_ToolSystems.Count();
+	int toolCount = std::ssize( m_ToolSystems );
 	for ( int i = 0; i < toolCount; ++i )
 	{
 		IToolSystem *system = m_ToolSystems[ i ];
@@ -423,7 +421,7 @@ bool CToolFrameworkInternal::ClientInit( CreateInterfaceFn clientFactory )
 void CToolFrameworkInternal::ServerShutdown()
 {
 	// Reverse order
-	int toolCount = m_ToolSystems.Count();
+	int toolCount = std::ssize( m_ToolSystems );
 	for ( int i = toolCount - 1; i >= 0; --i )
 	{
 		IToolSystem *system = m_ToolSystems[ i ];
@@ -439,7 +437,7 @@ void CToolFrameworkInternal::ServerShutdown()
 void CToolFrameworkInternal::ClientShutdown()
 {
 	// Reverse order
-	int toolCount = m_ToolSystems.Count();
+	int toolCount = std::ssize( m_ToolSystems );
 	for ( int i = toolCount - 1; i >= 0; --i )
 	{
 		IToolSystem *system = m_ToolSystems[ i ];
@@ -455,7 +453,7 @@ void CToolFrameworkInternal::ClientShutdown()
 //-----------------------------------------------------------------------------
 bool CToolFrameworkInternal::CanQuit()
 {
-	int toolCount = m_ToolSystems.Count();
+	int toolCount = std::ssize( m_ToolSystems );
 	for ( int i = 0; i < toolCount; ++i )
 	{
 		IToolSystem *system = m_ToolSystems[ i ];
@@ -476,14 +474,14 @@ void CToolFrameworkInternal::ShutdownModules()
 {
 	// Shutdown dictionaries
 	int i;
-	for ( i = m_Modules.Count(); --i >= 0; )
+	for ( i = std::ssize( m_Modules ); --i >= 0; )
 	{
 		Assert( !m_Modules[i].m_pDictionary );
 		Sys_UnloadModule( m_Modules[i].m_pModule );
 		m_Modules[i].m_pModule = nullptr;
 	}
 
-	m_Modules.RemoveAll();
+	m_Modules.clear();
 }
 
 
@@ -494,12 +492,12 @@ void CToolFrameworkInternal::ShutdownToolDictionaries()
 {
 	// Shutdown dictionaries
 	int i;
-	for ( i = m_Modules.Count(); --i >= 0; )
+	for ( i = std::ssize( m_Modules ); --i >= 0; )
 	{
 		m_Modules[i].m_pDictionary->Shutdown();
 	}
 
-	for ( i = m_Modules.Count(); --i >= 0; )
+	for ( i = std::ssize( m_Modules ); --i >= 0; )
 	{
 		m_Modules[i].m_pDictionary->Disconnect();
 		m_Modules[i].m_pDictionary = nullptr;
@@ -518,14 +516,14 @@ void CToolFrameworkInternal::ShutdownTools()
 
 	// Reverse order
 	int i;
-	int toolCount = m_ToolSystems.Count();
+	int toolCount = std::ssize( m_ToolSystems );
 	for ( i = toolCount - 1; i >= 0; --i )
 	{
 		IToolSystem *system = m_ToolSystems[ i ];
 		system->Shutdown();
 	}
 
-	m_ToolSystems.RemoveAll();
+	m_ToolSystems.clear();
 
 	ShutdownToolDictionaries();
 	ShutdownModules();
@@ -576,12 +574,12 @@ ToolModule_t *CToolFrameworkInternal::LoadToolsFromLibrary( const char *dllname 
 
 	dictionary->CreateTools();
 
-	int idx = m_Modules.AddToTail();
+	int idx = std::ssize( m_Modules ); m_Modules.emplace_back();
 
 	ToolModule_t *tm = &m_Modules[ idx ];
 	tm->m_pDictionary = dictionary;
 	tm->m_pModule = module;
-	tm->m_sDllName = dllname;
+	tm->m_sDllName = ks::nz( dllname );
 
 	bool first = true;
 	int toolCount = dictionary->GetToolCount();
@@ -597,9 +595,9 @@ ToolModule_t *CToolFrameworkInternal::LoadToolsFromLibrary( const char *dllname 
 				tm->m_sFirstTool = tool->GetToolName();
 			}
 			// Add to global dictionary
-			m_ToolSystems.AddToTail( tool );
+			m_ToolSystems.push_back( tool );
 			// Add to local dicitionary
-			tm->m_Systems.AddToTail( tool );
+			tm->m_Systems.push_back( tool );
 		}
 	}
 
@@ -708,14 +706,14 @@ IMaterialProxy *CToolFrameworkInternal::LookupProxy( const char *proxyName )
 }
 
 
-void CToolFrameworkInternal::LoadToolsFromCommandLine( CUtlVector< CUtlString > &list )
+void CToolFrameworkInternal::LoadToolsFromCommandLine( std::vector< std::string > &list )
 {
 	m_bInToolMode = true;
 
 	// CHECK both bin/tools and gamedir/bin/tools
-	for ( int i = 0; i < list.Count(); ++i )
+	for ( int i = 0; i < std::ssize( list ); ++i )
 	{
-		LoadToolsFromLibrary( CFmtStr( "tools/%s.dll", list[ i ].String() ) );
+		LoadToolsFromLibrary( CFmtStr( "tools/%s.dll", list[ i ].c_str() ) );
 	}
 }
 	
@@ -761,10 +759,10 @@ void CToolFrameworkInternal::LoadToolsFromEngineToolsManifest()
 
 ToolModule_t *CToolFrameworkInternal::Find( char const *pModuleName )
 {
-	for ( int i = 0; i < m_Modules.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_Modules ); ++i )
 	{
 		ToolModule_t *tm = &m_Modules[ i ];
-		if ( !Q_stricmp( tm->m_sDllName.String(), pModuleName ) )
+		if ( !Q_stricmp( tm->m_sDllName.c_str(), pModuleName ) )
 			return tm;
 	}
 
@@ -819,8 +817,8 @@ int CToolAutoCompleteFileList::AutoCompletionFunc( char const *partial, char com
 		Q_snprintf(searchpath,sizeof(searchpath),"*.%s", m_pszExtension );
 	}
 
-	CUtlSymbolTable entries( 0, 0, true );
-	CUtlVector< CUtlSymbol > symbols;
+	ks::intern_pool entries( true );
+	std::vector< std::string_view > symbols;
 
 	char const *findfn = Sys_FindFirstEx( searchpath, "EXECUTABLE_PATH", nullptr, 0 );
 	while ( findfn )
@@ -844,34 +842,31 @@ int CToolAutoCompleteFileList::AutoCompletionFunc( char const *partial, char com
 
 		if ( add )
 		{
-			CUtlSymbol sym = entries.AddString( findfn );
-
-			int idx = symbols.Find( sym );
-			if ( idx == symbols.InvalidIndex() )
+			if ( !entries.contains( findfn ) )
 			{
-				symbols.AddToTail( sym );
+				symbols.push_back( entries.intern( findfn ) );
 			}
 		}
 
 		findfn = Sys_FindNext( nullptr, 0 );
 
 		// Too many
-		if ( symbols.Count() >= COMMAND_COMPLETION_MAXITEMS )
+		if ( std::ssize( symbols ) >= COMMAND_COMPLETION_MAXITEMS )
 			break;
 	}
 
 	Sys_FindClose();
 
-	for ( int i = 0; i < symbols.Count(); i++ )
+	for ( int i = 0; i < std::ssize( symbols ); i++ )
 	{
-		char const *filename = entries.String( symbols[ i ] );
+		char const *filename = symbols[ i ].data();
 
 		Q_snprintf( commands[ i ], sizeof( commands[ i ] ), "%s %s", cmdname, filename );
 		// Remove .dem
 		commands[ i ][ strlen( commands[ i ] ) - 4 ] = 0;
 	}
 
-	return symbols.Count();
+	return std::ssize( symbols );
 }
 
 static int g_ToolLoad_CompletionFunc( const char *partial, char commands[ COMMAND_COMPLETION_MAXITEMS ][ COMMAND_COMPLETION_ITEM_LENGTH ] )
@@ -903,12 +898,12 @@ public:
 			substring = (char *)partial + strlen( cmdname ) + 1;
 		}
 
-		CUtlVector< CUtlString > modules;
+		std::vector< std::string > modules;
 		int c = 0;
 		g_ToolFrameworkInternal.GetModules( modules );
-		for ( int i = 0; i < modules.Count(); i++ )
+		for ( int i = 0; i < std::ssize( modules ); i++ )
 		{
-			char const *pFileName = modules[ i ].String();
+			char const *pFileName = modules[ i ].c_str();
 			char filename[ MAX_PATH ];
 			Q_FileBase( pFileName, filename, sizeof( filename ) );
 
@@ -995,7 +990,7 @@ bool CToolFrameworkInternal::LoadToolModule( char const *pToolModule, bool bSwit
 		return false;
 	}
 
-	for ( int i = 0; i < tm->m_Systems.Count(); ++i )
+	for ( int i = 0; i < std::ssize( tm->m_Systems ); ++i )
 	{
 		IToolSystem *sys = tm->m_Systems[ i ];
 		if ( sys )
@@ -1010,19 +1005,19 @@ bool CToolFrameworkInternal::LoadToolModule( char const *pToolModule, bool bSwit
 	// Since this is a late init, do some more work
 	if ( bSwitchToFirst )
 	{
-		SwitchToTool( tm->m_sFirstTool.String() );
+		SwitchToTool( tm->m_sFirstTool.c_str() );
 	}
 
 	return true;
 }
 
-void CToolFrameworkInternal::GetModules( CUtlVector< CUtlString > &list )
+void CToolFrameworkInternal::GetModules( std::vector< std::string > &list )
 {
-	for ( int i = 0; i < m_Modules.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_Modules ); ++i )
 	{
-		CUtlString str;
+		std::string str;
 		str = m_Modules[ i ].m_sDllName;
-		list.AddToTail( str );
+		list.push_back( str );
 	}
 }
 
@@ -1037,7 +1032,7 @@ void CToolFrameworkInternal::UnloadTools( char const *pModule, bool bCheckCanQui
 
 	if ( bCheckCanQuit )
 	{		
-		for ( int i = tm->m_Systems.Count() - 1; i >= 0; --i )
+		for ( int i = std::ssize( tm->m_Systems ) - 1; i >= 0; --i )
 		{
 			IToolSystem *sys = tm->m_Systems[ i ];
 			if ( !sys->CanQuit( "OnUnload" ) )
@@ -1049,11 +1044,11 @@ void CToolFrameworkInternal::UnloadTools( char const *pModule, bool bCheckCanQui
 		}
 	}
 
-	for ( int i = tm->m_Systems.Count() - 1; i >= 0; --i )
+	for ( int i = std::ssize( tm->m_Systems ) - 1; i >= 0; --i )
 	{
 		IToolSystem *sys = tm->m_Systems[ i ];
 
-		int idx =  m_ToolSystems.Find( sys );
+		int idx =  ks::find_index( m_ToolSystems, sys );
 		if ( idx == m_nActiveToolIndex )
 		{
 			sys->OnToolDeactivate();
@@ -1064,7 +1059,7 @@ void CToolFrameworkInternal::UnloadTools( char const *pModule, bool bCheckCanQui
 		sys->ServerShutdown();
 		sys->ClientShutdown();
 
-		m_ToolSystems.Remove( idx );
+		m_ToolSystems.erase( m_ToolSystems.begin() + idx );
 	}
 
 	tm->m_pDictionary->Shutdown();
@@ -1075,11 +1070,11 @@ void CToolFrameworkInternal::UnloadTools( char const *pModule, bool bCheckCanQui
 
 	Sys_UnloadModule( tm->m_pModule );
 
-	for ( int i = 0; i < m_Modules.Count(); ++i )
+	for ( int i = 0; i < std::ssize( m_Modules ); ++i )
 	{
 		if ( m_Modules[ i ].m_pModule == tm->m_pModule )
 		{
-			m_Modules.Remove( i );
+			m_Modules.erase( m_Modules.begin() + i );
 			break;
 		}
 	}
@@ -1271,7 +1266,7 @@ const char* CToolFrameworkInternal::GetEntityData( const char *pActualEntityData
 
 void* CToolFrameworkInternal::QueryInterface( const char *pInterfaceName )
 {
-	int toolCount = m_ToolSystems.Count();
+	int toolCount = std::ssize( m_ToolSystems );
 	for ( int i = 0; i < toolCount; ++i )
 	{
 		IToolSystem *tool = m_ToolSystems[ i ];
@@ -1298,7 +1293,7 @@ void CToolFrameworkInternal::PostToolMessage( HTOOLHANDLE hEntity, KeyValues *ms
 {
 	// FIXME: Only message topmost tool?
 
-	int toolCount = m_ToolSystems.Count();
+	int toolCount = std::ssize( m_ToolSystems );
 	for ( int i = 0; i < toolCount; ++i )
 	{
 		IToolSystem *tool = m_ToolSystems[ i ];
@@ -1385,7 +1380,7 @@ void CToolFrameworkInternal::UI_PostSimulateAllTools()
 //-----------------------------------------------------------------------------
 int CToolFrameworkInternal::GetToolCount()
 {
-	return m_ToolSystems.Count();
+	return std::ssize( m_ToolSystems );
 }
 
 //-----------------------------------------------------------------------------
@@ -1395,7 +1390,7 @@ int CToolFrameworkInternal::GetToolCount()
 //-----------------------------------------------------------------------------
 const char *CToolFrameworkInternal::GetToolName( int index )
 {
-	if ( index < 0 || index >= m_ToolSystems.Count() )
+	if ( index < 0 || index >= std::ssize( m_ToolSystems ) )
 	{
 		return "";
 	}
@@ -1413,7 +1408,7 @@ const char *CToolFrameworkInternal::GetToolName( int index )
 //-----------------------------------------------------------------------------
 void CToolFrameworkInternal::SwitchToTool( int index )
 {
-	if ( ( m_ToolSystems.Count() < 1 ) || ( index >= m_ToolSystems.Count() ) )
+	if ( ( std::ssize( m_ToolSystems ) < 1 ) || ( index >= std::ssize( m_ToolSystems ) ) )
 	{
 		m_nActiveToolIndex = -1;
 		return;
@@ -1463,7 +1458,7 @@ IToolSystem *CToolFrameworkInternal::SwitchToTool( const char* pToolName )
 //-----------------------------------------------------------------------------
 bool CToolFrameworkInternal::IsTopmostTool( const IToolSystem *sys )
 {
-	if ( m_ToolSystems.Count() <= 0 || ( m_nActiveToolIndex < 0 ) )
+	if ( std::ssize( m_ToolSystems ) <= 0 || ( m_nActiveToolIndex < 0 ) )
 		return false;
 
 	return ( m_ToolSystems[ m_nActiveToolIndex ] == sys );
@@ -1479,7 +1474,7 @@ IToolSystem *CToolFrameworkInternal::GetTopmostTool()
 //-----------------------------------------------------------------------------
 const IToolSystem *CToolFrameworkInternal::GetToolSystem( int index ) const
 {
-	if ( ( index < 0 ) || ( index >= m_ToolSystems.Count() ) )
+	if ( ( index < 0 ) || ( index >= std::ssize( m_ToolSystems ) ) )
 		return nullptr;
 
 	return m_ToolSystems[index];

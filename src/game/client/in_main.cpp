@@ -32,9 +32,7 @@ extern ConVar cam_idealyaw;
 // For showing/hiding the scoreboard
 #include <game/client/iviewport.h>
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 int in_impulse[ MAX_SPLITSCREEN_PLAYERS ];
 static int in_cancel[ MAX_SPLITSCREEN_PLAYERS ];
 ConVar cl_anglespeedkey( "cl_anglespeedkey", "0.67", 0 );
@@ -273,7 +271,7 @@ int KB_ConvertString( char *in, char **ppout )
 	*pOut = '\0';
 
 	int maxlen = strlen( sz ) + 1;
-	pOut = ( char * )malloc( maxlen );
+	pOut = ( char * )MemAlloc_Alloc( maxlen );
 	Q_strncpy( pOut, sz, maxlen );
 	*ppout = pOut;
 
@@ -787,7 +785,7 @@ float CInput::DetermineKeySpeed( int nSlot, float frametime )
 		if ( user.m_flKeyboardSampleTime <= 0 )
 			return 0.0f;
 	
-		frametime = MIN( user.m_flKeyboardSampleTime, frametime );
+		frametime = std::min( user.m_flKeyboardSampleTime, frametime );
 		user.m_flKeyboardSampleTime -= frametime;
 	}
 	

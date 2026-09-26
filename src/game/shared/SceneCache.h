@@ -7,22 +7,13 @@
 #ifndef SCENECACHE_H
 #define SCENECACHE_H
 
-#include "UtlCachedFileData.h"
+#include "cached_file_data.h"
 #include "SoundEmitterSystem/isoundemittersystembase.h"
+#include <flat_set>
 
 class CChoreoEvent;
 
 #define SCENECACHE_VERSION		7
-
-
-class CSceneCacheListLess
-{
-public:
-	bool Less( const int &lhs, const int &rhs, void *pCtx )
-	{
-		return lhs < rhs;
-	}
-};
 
 
 #pragma pack(1)
@@ -30,7 +21,7 @@ class CSceneCache : public IBaseCacheInfo
 {
 public:
 	unsigned int		msecs;
-	CUtlSortVector< int, CSceneCacheListLess > sounds;
+	std::flat_multiset< int > sounds;
 
 	CSceneCache();
 //	CSceneCache( const CSceneCache& src );
@@ -38,12 +29,12 @@ public:
 	int	GetSoundCount() const;
 	char const *GetSoundName( int index );
 
-	virtual void Save( CUtlBuffer& buf  );
-	virtual void Restore( CUtlBuffer& buf  );
+	virtual void Save( ks::byte_writer& buf );
+	virtual void Restore( ks::byte_reader& buf );
 	virtual void Rebuild( char const *filename );
 
 	static unsigned int ComputeSoundScriptFileTimestampChecksum();
-	static void PrecacheSceneEvent( CChoreoEvent *event, CUtlSortVector< int, CSceneCacheListLess > &soundlist );
+	static void PrecacheSceneEvent( CChoreoEvent *event, std::flat_multiset< int > &soundlist );
 };
 #pragma pack()
 

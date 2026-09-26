@@ -14,9 +14,6 @@
 #include "bone_setup.h"
 #include "soundchars.h"
 
-// NOTE: This has to be the last file included!
-#include "tier0/memdbgon.h"
-
 
 //-----------------------------------------------------------------------------
 // Find sequence by name 

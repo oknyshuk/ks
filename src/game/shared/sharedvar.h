@@ -13,7 +13,6 @@
 #include "basehandle.h"
 
 
-#pragma warning( disable : 4284 ) // warning C4284: return type for 'CNetworkVarT<int>::operator ->' is 'int *' (ie; not a UDT or reference to a UDT.  Will produce errors if applied using infix notation)
 
 
 #if defined( GAME_DLL )
@@ -728,7 +727,7 @@ public:
 
 // Prevent Shared Vars from using UtlVector templates without the UtlVector wrapper
 template< class Type, class Changer >
-class CSharedVarBase< CUtlVector<Type>, Changer >
+class CSharedVarBase< std::vector< Type >, Changer >
 {
 public:
 	CSharedVarBase( void )
@@ -752,13 +751,13 @@ protected:
 
 public:
 	ISPSharedMemory		*m_pSharedMemory;
-	CUtlVector<Type>	*m_pValue;
+	std::vector< Type >	*m_pValue;
 };
 
 
 // Shared UtlVector wrapper.
 template< class Type, class Changer >
-class CSharedUtlVectorBase : public CSharedVarBase< CUtlVector<Type>, Changer >
+class CSharedUtlVectorBase : public CSharedVarBase< std::vector< Type >, Changer >
 {
 public:
 	void Initialize( char *pchName, int iEntNum )
@@ -766,23 +765,23 @@ public:
 		Assert( !this->m_pSharedMemory && !(CSharedUtlVectorBase<Type,Changer>::m_pValue) );
 
 		this->m_pSharedMemory = engine->GetSinglePlayerSharedMemorySpace( pchName, iEntNum );
-		this->m_pSharedMemory->Init( sizeof( CUtlVector<Type> ) );
-		CSharedUtlVectorBase<Type,Changer>::m_pValue = (CUtlVector<Type>*)this->m_pSharedMemory->Base();
+		this->m_pSharedMemory->Init( sizeof( std::vector< Type > ) );
+		CSharedUtlVectorBase<Type,Changer>::m_pValue = (std::vector< Type >*)this->m_pSharedMemory->Base();
 	}
 
 #if defined( GAME_DLL )
 	// Data can only be set on the server
-	operator CUtlVector<Type>&()
+	operator std::vector< Type >&()
 	{
 		return *CSharedUtlVectorBase<Type,Changer>::m_pValue; 
 	}
 
-	CUtlVector<Type>& GetForModify()
+	std::vector< Type >& GetForModify()
 	{
 		return *CSharedUtlVectorBase<Type,Changer>::m_pValue;
 	}
 
-	CUtlVector<Type>* operator->()
+	std::vector< Type >* operator->()
 	{
 		return CSharedUtlVectorBase<Type,Changer>::m_pValue; 
 	}
@@ -805,17 +804,17 @@ public:
 	}
 #endif
 
-	operator const CUtlVector<Type>&() const 
+	operator const std::vector< Type >&() const 
 	{
 		return *CSharedUtlVectorBase<Type,Changer>::m_pValue; 
 	}
 
-	const CUtlVector<Type>& Get() const 
+	const std::vector< Type >& Get() const 
 	{
 		return *CSharedUtlVectorBase<Type,Changer>::m_pValue; 
 	}
 
-	const CUtlVector<Type>* operator->() const 
+	const std::vector< Type >* operator->() const 
 	{
 		return CSharedUtlVectorBase<Type,Changer>::m_pValue; 
 	}

@@ -8,13 +8,10 @@
 #include <keyvalues.h>
 #include <tier0/mem.h>
 #include "filesystem.h"
-#include "utldict.h"
+#include "tier1/map_ops.h"
 #include "ammodef.h"
 #include "util_shared.h"
 #include "weapon_parse.h"
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 // Static default item definition for fallback (never returns NULL for backwards compatibility)
 static CEconItemDefinition s_DefaultItemDef;
@@ -180,7 +177,7 @@ KeyValues* ReadEncryptedKVFile( IFileSystem *filesystem, const char *szFilenameW
 }
 
 
-CUtlSortVector< WeaponInfoLookup*, CWeaponInfoLookupListLess > FileWeaponInfo_t::ms_vecWeaponInfoLookup;
+std::vector< WeaponInfoLookup* > FileWeaponInfo_t::ms_vecWeaponInfoLookup;
 
 bool							FileWeaponInfo_t::ms_bWeaponInfoLookupInitialized;
 
@@ -246,12 +243,13 @@ FileWeaponInfo_t::FileWeaponInfo_t()
 
 	if ( !ms_bWeaponInfoLookupInitialized )
 	{
-		ms_vecWeaponInfoLookup.Insert( new WeaponInfoLookup( offsetof( FileWeaponInfo_t, iMaxClip1 ), FIELD_INTEGER, "primary clip size" ) );
-		ms_vecWeaponInfoLookup.Insert( new WeaponInfoLookup( offsetof( FileWeaponInfo_t, iMaxClip2 ), FIELD_INTEGER, "secondary clip size" ) );
-		ms_vecWeaponInfoLookup.Insert( new WeaponInfoLookup( offsetof( FileWeaponInfo_t, iDefaultClip1 ), FIELD_INTEGER, "primary default clip size" ) );
-		ms_vecWeaponInfoLookup.Insert( new WeaponInfoLookup( offsetof( FileWeaponInfo_t, iDefaultClip2 ), FIELD_INTEGER, "secondary default clip size" ) );
-		ms_vecWeaponInfoLookup.Insert( new WeaponInfoLookup( offsetof( FileWeaponInfo_t, iSlot ), FIELD_INTEGER, "bucket slot" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( FileWeaponInfo_t, iMaxClip1 ), FIELD_INTEGER, "primary clip size" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( FileWeaponInfo_t, iMaxClip2 ), FIELD_INTEGER, "secondary clip size" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( FileWeaponInfo_t, iDefaultClip1 ), FIELD_INTEGER, "primary default clip size" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( FileWeaponInfo_t, iDefaultClip2 ), FIELD_INTEGER, "secondary default clip size" ) );
+		ms_vecWeaponInfoLookup.push_back( new WeaponInfoLookup( offsetof( FileWeaponInfo_t, iSlot ), FIELD_INTEGER, "bucket slot" ) );
 
+		std::ranges::stable_sort( ms_vecWeaponInfoLookup, CWeaponInfoLookupListLess() );
 		ms_bWeaponInfoLookupInitialized = true;
 	}
 }
@@ -469,23 +467,26 @@ static int WeaponInfoLookupCompare( WeaponInfoLookup * const * src1, WeaponInfoL
 // Convert a schema attribute classname into an index of g_WeaponInfoTable
 int FileWeaponInfo_t::GetIndexofAttribute( string_t iszAttribClassName ) const
 {
-	if ( ms_vecWeaponInfoLookup.Count() == 0 )
+	if ( ms_vecWeaponInfoLookup.empty() )
 		return -1;
 
 	if ( ms_vecWeaponInfoLookup[ 0 ]->m_iszAttribClassName.IsSerialNumberOutOfDate() )
 	{
 		// If the strings are out of date, rebuild and resort them
-		FOR_EACH_VEC( ms_vecWeaponInfoLookup, i )
+		for ( WeaponInfoLookup *pWeaponInfoLookup : ms_vecWeaponInfoLookup )
 		{
-			ms_vecWeaponInfoLookup[ i ]->m_iszAttribClassName.Get();
+			pWeaponInfoLookup->m_iszAttribClassName.Get();
 		}
 
-		ms_vecWeaponInfoLookup.Sort( &WeaponInfoLookupCompare );
+		ks::qsort( ms_vecWeaponInfoLookup, &WeaponInfoLookupCompare );
 	}
 
 	WeaponInfoLookup searchKey;
 	searchKey.m_iszAttribClassName.SetFastNoCopy( iszAttribClassName );
-	return ms_vecWeaponInfoLookup.Find( &searchKey );
+	auto it = std::ranges::lower_bound( ms_vecWeaponInfoLookup, &searchKey, CWeaponInfoLookupListLess() );
+	if ( it == ms_vecWeaponInfoLookup.end() || CWeaponInfoLookupListLess()( &searchKey, *it ) )
+		return -1;
+	return (int)( it - ms_vecWeaponInfoLookup.begin() );
 }
 
 
@@ -549,9 +550,9 @@ void CWeaponDatabase::PrecacheAllWeapons()
 // 	if ( m_bPreCached )
 // 		return;
 
-	FOR_EACH_DICT( m_WeaponInfoDatabase, it )
+	for ( const auto &[name, handle] : m_WeaponInfoDatabase )
 	{
-		const char* szClassName = m_WeaponInfoDatabase.GetElementName( it );
+		const char* szClassName = name.c_str();
 
 #if defined( CLIENT_DLL )
 		// don't try to precache items that don't have entities (e.g. the items don't exist as entities on the client)
@@ -568,9 +569,9 @@ void CWeaponDatabase::PrecacheAllWeapons()
 
 void CWeaponDatabase::RefreshAllWeapons()
 {
-	FOR_EACH_DICT( m_WeaponInfoDatabase, it )
+	for ( const auto &[name, handle] : m_WeaponInfoDatabase )
 	{
-		FileWeaponInfo_t* pWeaponInfo = m_WeaponInfoDatabase[it];
+		FileWeaponInfo_t* pWeaponInfo = m_WeaponInfos[handle].get();
 		if ( pWeaponInfo )
 		{
 			pWeaponInfo->RefreshDynamicParameters();
@@ -580,23 +581,24 @@ void CWeaponDatabase::RefreshAllWeapons()
 
 WEAPON_FILE_INFO_HANDLE CWeaponDatabase::FindWeaponInfo( const char *name )
 {
-	return m_WeaponInfoDatabase.Find( name );
+	auto it = m_WeaponInfoDatabase.find( name );
+	return it != m_WeaponInfoDatabase.end() ? it->second : GetInvalidWeaponInfoHandle();
 }
 
 
 WEAPON_FILE_INFO_HANDLE CWeaponDatabase::FindOrCreateWeaponInfo( const char *name )
 {
 	// Complain about duplicately defined metaclass names...
-	unsigned short lookup = m_WeaponInfoDatabase.Find( name );
-	if ( lookup != m_WeaponInfoDatabase.InvalidIndex() )
+	auto it = m_WeaponInfoDatabase.find( name );
+	if ( it != m_WeaponInfoDatabase.end() )
 	{
-		return lookup;
+		return it->second;
 	}
 
-	FileWeaponInfo_t *insert = CreateWeaponInfo();
-
-	lookup = m_WeaponInfoDatabase.Insert( name, insert );
-	Assert( lookup != m_WeaponInfoDatabase.InvalidIndex() );
+	WEAPON_FILE_INFO_HANDLE lookup = (WEAPON_FILE_INFO_HANDLE)m_WeaponInfos.size();
+	Assert( lookup != GetInvalidWeaponInfoHandle() );
+	m_WeaponInfos.emplace_back( CreateWeaponInfo() );
+	m_WeaponInfoDatabase.emplace( name, lookup );
 	return lookup;
 }
 
@@ -608,17 +610,12 @@ static FileWeaponInfo_t * Helper_GetNullWeaponInfo()
 
 FileWeaponInfo_t * CWeaponDatabase::GetFileWeaponInfoFromHandle( WEAPON_FILE_INFO_HANDLE handle )
 {
-	if ( handle >= m_WeaponInfoDatabase.Count() )
+	if ( handle >= m_WeaponInfos.size() )
 	{
 		return Helper_GetNullWeaponInfo();
 	}
 
-	if ( handle == m_WeaponInfoDatabase.InvalidIndex() )
-	{
-		return Helper_GetNullWeaponInfo();
-	}
-
-	return m_WeaponInfoDatabase[ handle ];
+	return m_WeaponInfos[ handle ].get();
 }
 
 
@@ -649,12 +646,8 @@ bool CWeaponDatabase::LoadWeaponDataFromFile( IFileSystem* filesystem, const cha
 
 void CWeaponDatabase::Reset()
 {
-	int c = m_WeaponInfoDatabase.Count(); 
-	for ( int i = 0; i < c; ++i )
-	{
-		delete m_WeaponInfoDatabase[ i ];
-	}
-	m_WeaponInfoDatabase.RemoveAll();
+	m_WeaponInfoDatabase.clear();
+	m_WeaponInfos.clear();
 
 #ifdef _DEBUG
 	memset(g_bUsedWeaponSlots, 0, sizeof(g_bUsedWeaponSlots));

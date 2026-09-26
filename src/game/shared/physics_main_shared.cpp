@@ -7,26 +7,23 @@
 
 #include "cbase.h"
 #include "engine/IEngineSound.h"
-#include "mempool.h"
+#include "tier1/fixed_pool.h"
 #include "movevars_shared.h"
-#include "utlrbtree.h"
 #include "tier0/vprof.h"
 #include "entitydatainstantiator.h"
 #include "positionwatcher.h"
 #include "movetype_push.h"
 #include "vphysicsupdateai.h"
 #include "igamesystem.h"
-#include "utlmultilist.h"
 #include "tier1/callqueue.h"
 #include "engine/ivdebugoverlay.h"
+#include <algorithm>
+#include <vector>
 
-
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
 
 // memory pool for storing links between entities
-static CUtlMemoryPool g_EdictTouchLinks( sizeof(touchlink_t), MAX_EDICTS, CUtlMemoryPool::GROW_NONE, "g_EdictTouchLinks");
-static CUtlMemoryPool g_EntityGroundLinks( sizeof( groundlink_t ), MAX_EDICTS, CUtlMemoryPool::GROW_NONE, "g_EntityGroundLinks");
+static ks::fixed_pool g_EdictTouchLinks( sizeof(touchlink_t), MAX_EDICTS, ks::fixed_pool::grow::none, "g_EdictTouchLinks", alignof(touchlink_t) );
+static ks::fixed_pool g_EntityGroundLinks( sizeof( groundlink_t ), MAX_EDICTS, ks::fixed_pool::grow::none, "g_EntityGroundLinks", alignof(groundlink_t) );
 
 struct watcher_t
 {
@@ -34,14 +31,9 @@ struct watcher_t
 	IWatcherCallback	*pWatcherCallback;
 };
 
-static CUtlMultiList<watcher_t, unsigned short>	g_WatcherList;
 class CWatcherList
 {
 public:
-	//CWatcherList(); NOTE: Dataobj doesn't support constructors - it zeros the memory
-	~CWatcherList();	// frees the positionwatcher_t's to the pool
-	void Init();
-
 	void NotifyPositionChanged( CBaseEntity *pEntity );
 	void NotifyVPhysicsStateChanged( IPhysicsObject *pPhysics, CBaseEntity *pEntity, bool bAwake );
 
@@ -51,8 +43,8 @@ public:
 private:
 	int GetCallbackObjects( IWatcherCallback **pList, int listMax );
 
-	unsigned short Find( CBaseEntity *pEntity );
-	unsigned short m_list;
+	std::vector<watcher_t>::iterator Find( CBaseEntity *pEntity );
+	std::vector<watcher_t> m_list;
 };
 
 int linksallocated = 0;
@@ -274,37 +266,25 @@ void CBaseEntity::DestroyDataObject( int type )
 	RemoveDataObjectType( type );
 }
 
-void CWatcherList::Init()
-{
-	m_list = g_WatcherList.CreateList();
-}
-
-CWatcherList::~CWatcherList()
-{
-	g_WatcherList.DestroyList( m_list );
-}
-
 int CWatcherList::GetCallbackObjects( IWatcherCallback **pList, int listMax )
 {
 	int index = 0;
-	unsigned short next = g_WatcherList.InvalidIndex();
-	for ( unsigned short node = g_WatcherList.Head( m_list ); node != g_WatcherList.InvalidIndex(); node = next )
+	for ( auto it = m_list.begin(); it != m_list.end(); )
 	{
-		next = g_WatcherList.Next( node );
-		watcher_t *pNode = &g_WatcherList.Element(node);
-		if ( pNode->hWatcher.Get() )
+		if ( it->hWatcher.Get() )
 		{
-			pList[index] = pNode->pWatcherCallback;
+			pList[index] = it->pWatcherCallback;
 			index++;
 			if ( index >= listMax )
 			{
 				Assert(0);
 				return index;
 			}
+			++it;
 		}
 		else
 		{
-			g_WatcherList.Remove( m_list, node );
+			it = m_list.erase( it );
 		}
 	}
 	return index;
@@ -338,35 +318,24 @@ void CWatcherList::NotifyVPhysicsStateChanged( IPhysicsObject *pPhysics, CBaseEn
 	}
 }
 
-unsigned short CWatcherList::Find( CBaseEntity *pEntity )
+std::vector<watcher_t>::iterator CWatcherList::Find( CBaseEntity *pEntity )
 {
-	unsigned short next = g_WatcherList.InvalidIndex();
-	for ( unsigned short node = g_WatcherList.Head( m_list ); node != g_WatcherList.InvalidIndex(); node = next )
-	{
-		next = g_WatcherList.Next( node );
-		watcher_t *pNode = &g_WatcherList.Element(node);
-		if ( pNode->hWatcher.Get() == pEntity )
-		{
-			return node;
-		}
-	}
-	return g_WatcherList.InvalidIndex();
+	return std::ranges::find_if( m_list, [pEntity]( const watcher_t &w ) { return w.hWatcher.Get() == pEntity; } );
 }
 
 void CWatcherList::RemoveWatcher( CBaseEntity *pEntity )
 {
-	unsigned short node = Find( pEntity );
-	if ( node != g_WatcherList.InvalidIndex() )
+	auto it = Find( pEntity );
+	if ( it != m_list.end() )
 	{
-		g_WatcherList.Remove( m_list, node );
+		m_list.erase( it );
 	}
 }
 
 
 void CWatcherList::AddToList( CBaseEntity *pWatcher )
 {
-	unsigned short node = Find( pWatcher );
-	if ( node == g_WatcherList.InvalidIndex() )
+	if ( Find( pWatcher ) == m_list.end() )
 	{
 		watcher_t watcher;
 		watcher.hWatcher = pWatcher;
@@ -375,7 +344,7 @@ void CWatcherList::AddToList( CBaseEntity *pWatcher )
 
 		if ( watcher.pWatcherCallback )
 		{
-			g_WatcherList.AddToTail( m_list, watcher );
+			m_list.push_back( watcher );
 		}
 	}
 }
@@ -386,7 +355,6 @@ static void AddWatcherToEntity( CBaseEntity *pWatcher, CBaseEntity *pEntity, int
 	if ( !pList )
 	{
 		pList = ( CWatcherList * )pEntity->CreateDataObject( watcherType );
-		pList->Init();
 	}
 
 	pList->AddToList( pWatcher );
@@ -507,7 +475,7 @@ static inline float GetActualGravity( CBaseEntity *pEnt )
 //-----------------------------------------------------------------------------
 inline touchlink_t *AllocTouchLink( void )
 {
-	touchlink_t *link = (touchlink_t*)g_EdictTouchLinks.Alloc( sizeof(touchlink_t) );
+	touchlink_t *link = (touchlink_t*)g_EdictTouchLinks.alloc( sizeof(touchlink_t) );
 	if ( link )
 	{
 		++linksallocated;
@@ -540,7 +508,7 @@ inline void FreeTouchLink( touchlink_t *link )
 	}
 
 	// Necessary to catch crashes
-	g_EdictTouchLinks.Free( link );
+	g_EdictTouchLinks.free( link );
 }
 
 //-----------------------------------------------------------------------------
@@ -549,7 +517,7 @@ inline void FreeTouchLink( touchlink_t *link )
 //-----------------------------------------------------------------------------
 inline groundlink_t *AllocGroundLink( void )
 {
-	groundlink_t *link = (groundlink_t*)g_EntityGroundLinks.Alloc( sizeof(groundlink_t) );
+	groundlink_t *link = (groundlink_t*)g_EntityGroundLinks.alloc( sizeof(groundlink_t) );
 	if ( link )
 	{
 		++groundlinksallocated;
@@ -574,7 +542,7 @@ inline void FreeGroundLink( groundlink_t *link )
 		--groundlinksallocated;
 	}
 
-	g_EntityGroundLinks.Free( link );
+	g_EntityGroundLinks.free( link );
 }
 
 //-----------------------------------------------------------------------------
@@ -708,7 +676,7 @@ void CBaseEntity::PhysicsRemoveToucher( CBaseEntity *otherEntity, touchlink_t *l
 	link->prevLink->nextLink = link->nextLink;
 
 	if ( DebugTouchlinks() )
-		Msg( "remove 0x%p: %s-%s (%d-%d) [%d in play, %d max]\n", link, link->entityTouched->GetDebugName(), otherEntity->GetDebugName(), link->entityTouched->entindex(), otherEntity->entindex(), linksallocated, g_EdictTouchLinks.PeakCount() );
+		Msg( "remove 0x%p: %s-%s (%d-%d) [%d in play, %d max]\n", link, link->entityTouched->GetDebugName(), otherEntity->GetDebugName(), link->entityTouched->entindex(), otherEntity->entindex(), linksallocated, g_EdictTouchLinks.peak_count() );
 	FreeTouchLink( link );
 }
 
@@ -735,7 +703,7 @@ void CBaseEntity::PhysicsRemoveTouchedList( CBaseEntity *ent )
 
 			// kill it
 			if ( DebugTouchlinks() )
-				Msg( "remove 0x%p: %s-%s (%d-%d) [%d in play, %d max]\n", link, ent->GetDebugName(), link->entityTouched->GetDebugName(), ent->entindex(), link->entityTouched->entindex(), linksallocated, g_EdictTouchLinks.PeakCount() );
+				Msg( "remove 0x%p: %s-%s (%d-%d) [%d in play, %d max]\n", link, ent->GetDebugName(), link->entityTouched->GetDebugName(), ent->entindex(), link->entityTouched->entindex(), linksallocated, g_EdictTouchLinks.peak_count() );
 			FreeTouchLink( link );
 			link = nextLink;
 		}
@@ -1011,7 +979,7 @@ touchlink_t *CBaseEntity::PhysicsMarkEntityAsTouched( CBaseEntity *other )
 	// build new link
 	link = AllocTouchLink();
 	if ( DebugTouchlinks() )
-		Msg( "add 0x%p: %s-%s (%d-%d) [%d in play, %d max]\n", link, GetDebugName(), other->GetDebugName(), entindex(), other->entindex(), linksallocated, g_EdictTouchLinks.PeakCount() );
+		Msg( "add 0x%p: %s-%s (%d-%d) [%d in play, %d max]\n", link, GetDebugName(), other->GetDebugName(), entindex(), other->entindex(), linksallocated, g_EdictTouchLinks.peak_count() );
 	if ( !link )
 		return nullptr;
 
@@ -1892,7 +1860,7 @@ bool CBaseEntity::PhysicsRunThink( thinkmethods_t thinkMethod )
 		return bAlive;
 
 	// Fire the rest of 'em
-	for ( int i = 0; i < m_aThinkFunctions.Count(); i++ )
+	for ( int i = 0; i < std::ssize( m_aThinkFunctions ); i++ )
 	{
 #ifdef _DEBUG
 		// Set the context
@@ -1920,7 +1888,7 @@ struct ThinkSync
 {
 	float					thinktime;
 	int						thinktick;
-	CUtlVector< EHANDLE >	entities;
+	std::vector< EHANDLE >	entities;
 
 	ThinkSync()
 	{
@@ -1931,10 +1899,10 @@ struct ThinkSync
 	{
 		thinktime = src.thinktime;
 		thinktick = src.thinktick;
-		int c = src.entities.Count();
+		int c = std::ssize( src.entities );
 		for ( int i = 0; i < c; i++ )
 		{
-			entities.AddToTail( src.entities[ i ] );
+			entities.push_back( src.entities[ i ] );
 		}
 	}
 };
@@ -1949,8 +1917,7 @@ static ConVar sv_thinktimecheck( "sv_thinktimecheck", "0", 0, "Check for thinkti
 class CThinkSyncTester
 {
 public:
-	CThinkSyncTester() :
-	  m_Thinkers( 0, 0, ThinkLessFunc )
+	CThinkSyncTester()
 	{
 		  m_nLastFrameCount = -1;
 		  m_bShouldCheck = false;
@@ -1965,7 +1932,7 @@ public:
 			{
 				// Report
 				Report();
-				m_Thinkers.RemoveAll();
+				m_Thinkers.clear();
 				m_nLastFrameCount = framecount;
 			}
 
@@ -1985,48 +1952,34 @@ public:
 		p->thinktick = thinktick;
 		EHANDLE h;
 		h = ent;
-		p->entities.AddToTail( h );
+		p->entities.push_back( h );
 #endif
 	}
 
 private:
 
-	static bool ThinkLessFunc( const ThinkSync& item1, const ThinkSync& item2 )
-	{
-		return item1.thinktime < item2.thinktime;
-	}
-
 	ThinkSync	*FindOrAddItem( CBaseEntity *ent, float thinktime )
 	{
-		ThinkSync item;
+		ThinkSync &item = m_Thinkers[ thinktime ];
 		item.thinktime = thinktime;
-
-		int idx = m_Thinkers.Find( item );
-		if ( idx == m_Thinkers.InvalidIndex() )
-		{
-			idx = m_Thinkers.Insert( item );
-		}
-		
-		return &m_Thinkers[ idx ];
+		return &item;
 	}
 
 	void Report()
 	{
-		if ( m_Thinkers.Count() == 0 )
+		if ( m_Thinkers.empty() )
 			return;
 
 		Msg( "-----------------\nThink report frame %i\n", gpGlobals->tickcount );
 
-		for ( int i = m_Thinkers.FirstInorder(); 
-			i != m_Thinkers.InvalidIndex(); 
-			i = m_Thinkers.NextInorder( i ) )
+		for ( auto &[flThinkTime, item] : m_Thinkers )
 		{
-			ThinkSync *p = &m_Thinkers[ i ];
+			ThinkSync *p = &item;
 			Assert( p );
 			if ( !p )
 				continue;
 
-			int ecount = p->entities.Count();
+			int ecount = std::ssize( p->entities );
 			if ( !ecount )
 			{
 				continue;
@@ -2051,7 +2004,7 @@ private:
 		}
 	}
 
-	CUtlRBTree< ThinkSync >	m_Thinkers;
+	std::map< float, ThinkSync >	m_Thinkers;	// keyed by thinktime
 	int			m_nLastFrameCount;
 	bool		m_bShouldCheck;
 };

@@ -25,8 +25,7 @@
 #include "../../client.h"
 #include "../../cl_main.h"
 #include "tier3/tier3.h"
-#include "utldict.h"
-#include "mempool.h"
+#include "tier1/fixed_pool.h"
 #include "../../enginetrace.h"			// for traceline
 #include "../../public/bspflags.h"		// for traceline
 #include "../../public/gametrace.h"		// for traceline
@@ -45,15 +44,17 @@
 #include "../../cl_splitscreen.h"
 #include "../../common/blackbox_helper.h"
 #include "snd_op_sys/sos_system.h"
+#include <set>
+#include <mutex>
+#include <atomic>
 #include "snd_dev_common.h"
-#include "tier1/utlhashtable.h"
+#include <unordered_map>
+#include "tier1/map_ops.h"
 
 #include "cl_steamauth.h"
 
 
-// memdbgon must be the last include file in a .cpp file!!!
-#include "tier0/memdbgon.h"
-
+#include "tier0/memalloc.h"
 ///////////////////////////////////
 // DEBUGGING
 //
@@ -118,7 +119,7 @@ ConVar snd_report_verbose_error( "snd_report_verbose_error", "0", FCVAR_CHEAT, "
 
 // store all played sounds for eliminating unplayed sounds for optimizations
 ConVar snd_store_filepaths("snd_store_filepaths", "");
-CUtlDict <int, int> g_StoreFilePaths;
+ks::idict< int > g_StoreFilePaths;
 
 enum ESndMergeMethod
 {
@@ -179,9 +180,9 @@ void S_EnableMusic( bool bEnable )
 	}
 }
 
-CThreadMutex g_SndMutex;
-#define THREAD_LOCK_SOUND() AUTO_LOCK( g_SndMutex )
-CThreadFastMutex g_ActiveSoundListMutex;
+std::recursive_mutex g_SndMutex;
+#define THREAD_LOCK_SOUND() std::scoped_lock soundLock( g_SndMutex )
+std::recursive_mutex g_ActiveSoundListMutex;
 
 
 void CActiveChannels::Add( channel_t *pChannel )
@@ -224,9 +225,9 @@ void CActiveChannels::GetActiveChannels( CChannelList &list ) const
 	list.m_hasDryChannels = true;
 }
 
-void CActiveChannels::CopyActiveSounds( CUtlVector<activethreadsound_t> &list ) const
+void CActiveChannels::CopyActiveSounds( std::vector< activethreadsound_t > &list ) const
 {
-	list.SetCount( m_count );
+	list.assign( m_count, {} );
 	for ( int i = 0; i < m_count; i++ )
 	{
 		list[i].m_nGuid = channels[m_list[i]].guid;
@@ -256,7 +257,7 @@ channel_t * CActiveChannels::FindActiveChannelByGuid( int guid ) const
 	return nullptr;
 }
 
-void CActiveChannels::DumpChannelInfo( CUtlBuffer &buf )
+void CActiveChannels::DumpChannelInfo( ks::text_writer &buf )
 {
 	char nameBuf[ MAX_PATH ];
 	for ( int i = 0; i < m_count; i++ )
@@ -264,7 +265,7 @@ void CActiveChannels::DumpChannelInfo( CUtlBuffer &buf )
 		channel_t *pChannel = &channels[ m_list[ i ] ];
 		if ( pChannel->sfx != nullptr )
 		{
-			buf.Printf( "%d. ch=%d %s p=%.2f,%.2f,%.2f v=%d s=%d l=%d  \n", i, m_list[ i ], pChannel->sfx->getname( nameBuf, sizeof(nameBuf) ), 
+			buf.printf( "%d. ch=%d %s p=%.2f,%.2f,%.2f v=%d s=%d l=%d  \n", i, m_list[ i ], pChannel->sfx->getname( nameBuf, sizeof(nameBuf) ), 
 						pChannel->origin[0], pChannel->origin[1], pChannel->origin[2], pChannel->master_vol, pChannel->soundsource, pChannel->sfx->pSource->IsLooped() );
 		}
 	}
@@ -351,15 +352,15 @@ static	float	s_lastsoundtime = 0.0f;
 
 bool s_bOnLoadScreen = false;
 
-static CClassMemoryPool< CSfxTable > s_SoundPool( MAX_SFX );
+static ks::object_pool< CSfxTable > s_SoundPool( MAX_SFX );
 struct SfxDictEntry
 {
 	CSfxTable *pSfx;
 };
 
-static CUtlMap< FileNameHandle_t, SfxDictEntry > s_Sounds( 0, 0, DefLessFunc( FileNameHandle_t ) );
+static std::map< FileNameHandle_t, SfxDictEntry > s_Sounds;
 
-CThreadFastMutex g_SoundMapMutex;
+std::recursive_mutex g_SoundMapMutex;
 
 class CDummySfx : public CSfxTable
 {
@@ -398,7 +399,7 @@ bool SND_IsInGame( void )
 
 CSfxTable::CSfxTable()
 {
-	m_namePoolIndex = s_Sounds.InvalidIndex();
+	m_fnHandle = nullptr;
 	pSource = nullptr;
 	m_bUseErrorFilename = false;
 	m_bIsUISound = false;
@@ -409,16 +410,16 @@ CSfxTable::CSfxTable()
 }
 
 
-void CSfxTable::SetNamePoolIndex( int index )
+void CSfxTable::SetFileNameHandle( FileNameHandle_t hName )
 {
-	m_namePoolIndex = index;
+	m_fnHandle = hName;
 	char nameBuf[MAX_PATH];
-	if ( m_namePoolIndex != s_Sounds.InvalidIndex() )
+	if ( m_fnHandle )
 	{
 		OnNameChanged(getname(nameBuf,sizeof(nameBuf)));
 	}
 #ifdef _DEBUG
-	m_pDebugName = strdup( getname(nameBuf, sizeof(nameBuf)) );
+	m_pDebugName = MemAlloc_StrDup( getname(nameBuf, sizeof(nameBuf)) );
 #endif
 }
 
@@ -456,12 +457,12 @@ void CSfxTable::OnNameChanged( const char *pName )
 //-----------------------------------------------------------------------------
 const char *CSfxTable::getname( char *pBuf, size_t bufLen )
 {
-	if ( s_Sounds.InvalidIndex() != m_namePoolIndex )
+	if ( m_fnHandle )
 	{
 		// based on pix capture, prior version using va() causing extra copies, was too costly
 		// purposely doing it here
 		// using va() was also very risky, naive code could easily get pointer contents changed
-		g_pFileSystem->String( s_Sounds.Key( m_namePoolIndex ), pBuf, bufLen );
+		g_pFileSystem->String( m_fnHandle, pBuf, bufLen );
 		return pBuf;
 	}
 	return nullptr;
@@ -469,11 +470,7 @@ const char *CSfxTable::getname( char *pBuf, size_t bufLen )
 
 FileNameHandle_t CSfxTable::GetFileNameHandle()
 {
-	if ( s_Sounds.InvalidIndex() != m_namePoolIndex )
-	{
-		return s_Sounds.Key( m_namePoolIndex );
-	}
-	return nullptr;
+	return m_fnHandle;
 }
 
 //-----------------------------------------------------------------------------
@@ -662,7 +659,7 @@ void OnSndVarChanged( IConVar *pVar, const char *pOldString, float flOldValue )
 	}
 }
 
-void GetAudioDeviceList(CUtlVector<audio_device_description_t>& v)
+void GetAudioDeviceList(std::vector< audio_device_description_t >& v)
 {
 	v = g_AudioDeviceList.m_list;
 }
@@ -691,24 +688,24 @@ void S_CheckDevice()
 	}
 }
 
-void S_GetAudioDeviceList( CUtlVector<audio_device_description_t> &audioList )
+void S_GetAudioDeviceList( std::vector< audio_device_description_t > &audioList )
 {
-	audioList.RemoveAll();
-	if ( g_AudioDeviceList.m_nSubsystem == AUDIO_SUBSYSTEM_XAUDIO && g_AudioDeviceList.m_list.Count() > 0 )
+	audioList.clear();
+	if ( g_AudioDeviceList.m_nSubsystem == AUDIO_SUBSYSTEM_XAUDIO && std::ssize( g_AudioDeviceList.m_list ) > 0 )
 	{
-		audioList.AddToTail();
+		audioList.emplace_back();
 		audioList[0].InitAsNullDevice();
 		V_sprintf_safe( audioList[0].m_friendlyName, "#OS_Default_Device" );
 		audioList[0].m_nSubsystemId = AUDIO_SUBSYSTEM_XAUDIO;
 		audioList[0].m_bIsAvailable = true;
 	}
-	for ( int i = 0; i < g_AudioDeviceList.m_list.Count(); i++ )
+	for ( int i = 0; i < std::ssize( g_AudioDeviceList.m_list ); i++ )
 	{
 
 		if ( g_AudioDeviceList.m_list[i].m_bIsAvailable )
 
 		{
-			audioList.AddToTail(g_AudioDeviceList.m_list[i]);
+			audioList.push_back( g_AudioDeviceList.m_list[i] );
 		}
 	}
 }
@@ -724,7 +721,7 @@ CON_COMMAND( sound_device_list, "Lists all available audio devices." )
 {
 	g_AudioDeviceList.UpdateDeviceList();
 
-	int nDeviceCount = g_AudioDeviceList.m_list.Count();
+	int nDeviceCount = std::ssize( g_AudioDeviceList.m_list );
 	Msg( "Found %d available audio devices\n", nDeviceCount );
 	for ( int i = 0; i < nDeviceCount; i++ )
 	{
@@ -920,16 +917,16 @@ void S_Shutdown(void)
 
 		SNDDMA_Shutdown();
 
-		for ( int i = s_Sounds.FirstInorder(); i != s_Sounds.InvalidIndex(); i = s_Sounds.NextInorder( i ) )
+		for ( auto &[fnHandle, entry] : s_Sounds )
 		{
-			if ( s_Sounds[i].pSfx )
+			if ( entry.pSfx )
 			{
-				delete s_Sounds[i].pSfx->pSource;
-				s_Sounds[i].pSfx->pSource = nullptr;
+				delete entry.pSfx->pSource;
+				entry.pSfx->pSource = nullptr;
 			}
 		}
-		s_Sounds.RemoveAll();
-		s_SoundPool.Clear();
+		s_Sounds.clear();
+		s_SoundPool.clear();
 
 		// release DSP resources
 		FreeDsps( true );
@@ -981,7 +978,6 @@ bool S_IsInitted()
 //-----------------------------------------------------------------------------
 CSfxTable *S_FindName( const char *szName, int *pInCache )
 {
-	int			i;
 	CSfxTable	*sfx = nullptr;
 	char		szBuff[MAX_PATH];
 	const char	*pName;
@@ -993,14 +989,14 @@ CSfxTable *S_FindName( const char *szName, int *pInCache )
 
 	pName = szName;
 
-	AUTO_LOCK( g_SoundMapMutex );
+	std::scoped_lock soundMapLock( g_SoundMapMutex );
 
 	// see if already loaded
 	FileNameHandle_t fnHandle = g_pFileSystem->FindOrAddFileName( pName );
-	i = s_Sounds.Find( fnHandle );
-	if ( i != s_Sounds.InvalidIndex() )
+	auto it = s_Sounds.find( fnHandle );
+	if ( it != s_Sounds.end() )
 	{
-		sfx = s_Sounds[i].pSfx;
+		sfx = it->second.pSfx;
 		Assert( sfx );
 		if ( pInCache )
 		{
@@ -1012,14 +1008,14 @@ CSfxTable *S_FindName( const char *szName, int *pInCache )
 	else
 	{
 		SfxDictEntry entry;
-		entry.pSfx = ( CSfxTable * )s_SoundPool.Alloc();
+		entry.pSfx = s_SoundPool.alloc();
 
 		Assert( entry.pSfx );
 
-		i = s_Sounds.Insert( fnHandle, entry );
-		sfx = s_Sounds[i].pSfx;
+		s_Sounds.emplace( fnHandle, entry );
+		sfx = entry.pSfx;
 
-		sfx->SetNamePoolIndex( i );
+		sfx->SetFileNameHandle( fnHandle );
 		sfx->pSource = nullptr;
 
 		if ( pInCache )
@@ -1207,10 +1203,11 @@ void S_ReloadFilesInList( IFileList *pFilesToReload )
 	// Reload any sounds that are:
 	//	 a) not from the Steam caches
 	//	 b) not in the whitelist
-	int iLast = s_Sounds.LastInorder();
-	for ( int i = s_Sounds.FirstInorder(); i != iLast; i = s_Sounds.NextInorder( i ) )
+	// Stops before the last entry.
+	auto iLast = s_Sounds.empty() ? s_Sounds.end() : std::prev( s_Sounds.end() );
+	for ( auto i = s_Sounds.begin(); i != iLast; ++i )
 	{
-		FileNameHandle_t fnHandle = s_Sounds.Key( i );
+		FileNameHandle_t fnHandle = i->first;
 		char filename[MAX_PATH * 3];
 		if ( !g_pFileSystem->String( fnHandle, filename, sizeof( filename ) ) )
 		{
@@ -1219,7 +1216,7 @@ void S_ReloadFilesInList( IFileList *pFilesToReload )
 		}
 	
 		// If the file isn't cached in yet, then the filesystem hasn't touched its file, so don't bother.
-		CSfxTable *sfx = s_Sounds[i].pSfx;
+		CSfxTable *sfx = i->second.pSfx;
 		if ( sfx )
 		{
 			char fullFilename[MAX_PATH*2];
@@ -1720,7 +1717,7 @@ bool S_IsMusic( channel_t *pChannel )
 // Purpose: For save/restore of currently playing music
 // Input  : list - 
 //-----------------------------------------------------------------------------
-void S_GetCurrentlyPlayingMusic( CUtlVector< musicsave_t >& musiclist )
+void S_GetCurrentlyPlayingMusic( std::vector< musicsave_t >& musiclist )
 {
 	CChannelList list;
 	g_ActiveChannels.GetActiveChannels( list );
@@ -1736,7 +1733,7 @@ void S_GetCurrentlyPlayingMusic( CUtlVector< musicsave_t >& musiclist )
 		song.sampleposition = pChannel->pMixer->GetPositionForSave();
 		song.master_volume = pChannel->master_vol;
 
-		musiclist.AddToTail( song );
+		musiclist.push_back( song );
 	}
 }
 
@@ -1837,7 +1834,7 @@ void S_GetActiveSaveRestoreChannels( ChannelSaveVector& channelSaves )
 				channelSave.opStackElapsedStopTime = 0.0f;
 			}
 			
-			channelSaves.AddToTail( channelSave );
+			channelSaves.push_back( channelSave );
 		}
 	}
 }
@@ -3300,7 +3297,7 @@ void DAS_StoreNode( das_room_t *proom, int dsp_preset)
 	if ( !proom->bskyabove )
 	{
 		// inside range - halls & tunnels have nodes every 5*width
-		g_das_nodes[i].range_max = fpmin(DAS_DIST_MAX, MIN(proom->width_max * 5, proom->length_max) ); 
+		g_das_nodes[i].range_max = fpmin(DAS_DIST_MAX, std::min(proom->width_max * 5, proom->length_max) ); 
 		g_das_nodes[i].range_min = DAS_DIST_MIN;
 	}
 	else
@@ -3574,8 +3571,8 @@ bool DAS_CalcRoomProps( das_room_t *proom )
 	
 	// width is always the smaller of the dimensions
 
-	width_max = MIN (dist[j], dist[j+1]);
-	length_max = MAX (dist[j], dist[j+1]);
+	width_max = std::min(dist[j], dist[j+1]);
+	length_max = std::max(dist[j], dist[j+1]);
 
 	// get max height
 
@@ -4732,7 +4729,7 @@ void SND_MergeVolumes( const int build_volumes[ MAX_SPLITSCREEN_CLIENTS ][CCHANV
 		default:
 		case SND_MERGE_SUMANDCLIP:
 			{
-				volumes[ v ] = MIN( val, 255 );
+				volumes[ v ] = std::min( val, 255 );
 			}
 			break;
 		case SND_MERGE_MAX:
@@ -4783,7 +4780,7 @@ void SND_MergeVolumes( const float build_volumes[ MAX_SPLITSCREEN_CLIENTS ][CCHA
 		default:
 		case SND_MERGE_SUMANDCLIP:
 			{
-				volumes[ v ] = MIN( val, 1.0 );
+				volumes[ v ] = std::min<std::common_type_t<float, double>>( val, 1.0 );
 			}
 			break;
 		case SND_MERGE_MAX:
@@ -4807,9 +4804,9 @@ void SND_MergeVolumes( const float build_volumes[ MAX_SPLITSCREEN_CLIENTS ][CCHA
 	}
 }
 
-static CInterlockedInt s_nSoundGuid = 0;
+static std::atomic<int> s_nSoundGuid = 0;
 static int s_nMaxQueuedGUID = 0;	// Max GUID to go through the queue. Used to optimize some tests.
-static CUtlVector<activethreadsound_t> g_ActiveSoundsLastUpdate( 0, MAX_CHANNELS );
+static std::vector< activethreadsound_t > g_ActiveSoundsLastUpdate;
 
 static int SND_GetGUID()
 {
@@ -5033,7 +5030,7 @@ void SND_Spatialize(channel_t *ch)
 		si.pflRadius = &ch->radius;
 	}
 
-	CUtlVector< Vector > utlVecMultiOrigins;
+	std::vector< Vector > utlVecMultiOrigins;
 	si.m_pUtlVecMultiOrigins = &utlVecMultiOrigins;
 	si.m_pUtlVecMultiAngles = nullptr;
 
@@ -5212,7 +5209,7 @@ void SND_Spatialize(channel_t *ch)
 		ch->sfx->pSource && 
 		ch->sfx->pSource->GetType() == CAudioSource::AUDIO_SOURCE_VOICE )
 	{
-		gain = MAX(gain, voice_minimum_gain.GetFloat());
+		gain = std::max(gain, voice_minimum_gain.GetFloat());
 	}
 
 	// map gain through global mixer by soundtype
@@ -5289,11 +5286,11 @@ void SND_Spatialize(channel_t *ch)
 			// clamp to 3 to fool the volume clippers so we don't skip mixing partial channels (lower level mix code doesn't distinguish this yet)
 			for ( int i = 0; i < IFRONT_LEFTD; i++ )
 			{
-				int nMax = MAX(volumes[i], volumeOpposite[i]);
+				int nMax = std::max(volumes[i], volumeOpposite[i]);
 				if ( nMax )
 				{
-					volumes[i] = MAX(volumes[i],3);
-					volumeOpposite[i] = MAX(volumeOpposite[i],3);
+					volumes[i] = std::max<std::common_type_t<float, int>>(volumes[i],3);
+					volumeOpposite[i] = std::max<std::common_type_t<float, int>>(volumeOpposite[i],3);
 				}
 			}
 			ChannelSetVolTargets( ch, volumeOpposite, IFRONT_LEFTD, CCHANVOLUMES/2 );
@@ -6009,7 +6006,7 @@ void DumpFilePaths(const char *filename)
 
 	// Generate a new .cfg file.
 	char		szFileName[MAX_PATH];
-	CUtlBuffer	configBuff( 0, 0, CUtlBuffer::TEXT_BUFFER);
+	ks::text_writer configBuff;
 
 	char computername[ 64 ];
 	Q_memset( computername, 0, sizeof( computername ) );
@@ -6029,23 +6026,23 @@ void DumpFilePaths(const char *filename)
 		return;
 	}
 
-	for (int i = 0; i < g_StoreFilePaths.Count(); i++)
+	for ( const auto &[path, count] : g_StoreFilePaths )
 	{
-		configBuff.Printf( "%s %i, ", g_StoreFilePaths.GetElementName( i ), g_StoreFilePaths[i] );
+		configBuff.printf( "%s %i, ", path.c_str(), count );
 	}
 
-	if ( !configBuff.TellMaxPut() )
+	if ( configBuff.empty() )
 	{
 		// nothing to write
 		return;
 	}
 
 	// make a persistent copy that async will use and free
-	char *tempBlock = new char[configBuff.TellMaxPut()];
-	Q_memcpy( tempBlock, configBuff.Base(), configBuff.TellMaxPut() );
+	char *tempBlock = new char[configBuff.size()];
+	Q_memcpy( tempBlock, configBuff.c_str(), configBuff.size() );
 
 	// async write the buffer, and then free it
-	g_pFileSystem->AsyncWrite( szFileName, tempBlock, configBuff.TellMaxPut(), true );
+	g_pFileSystem->AsyncWrite( szFileName, tempBlock, configBuff.size(), true );
 
 	
 	ConMsg( "snd_dump_filepaths: Wrote %s\n", szFileName );
@@ -6123,14 +6120,14 @@ static int S_StartSound_Immediate( StartSoundParams_t& params )
 		if( CommandLine()->FindParm("-playtest") != 0 &&
 			!( params.flags & ( SND_STOP | SND_CHANGE_VOL | SND_CHANGE_PITCH ) ) )
 		{
-			int i = g_StoreFilePaths.Find( sndname );
-			if ( !g_StoreFilePaths.IsValidIndex( i ) )
+			auto it = g_StoreFilePaths.find( sndname );
+			if ( it == g_StoreFilePaths.end() )
 			{
-				g_StoreFilePaths.Insert( sndname, 1 );
+				g_StoreFilePaths.emplace( sndname, 1 );
 			}
 			else
 			{
-				g_StoreFilePaths[i] = g_StoreFilePaths[i] + 1; 
+				it->second = it->second + 1; 
 			}
 		}
 	}
@@ -6193,7 +6190,7 @@ static int S_StartSound_Immediate( StartSoundParams_t& params )
 	si.pAngles = nullptr;
 	si.pflRadius = &flSoundRadius;
 
-	CUtlVector< Vector > utlVecMultiOrigins;
+	std::vector< Vector > utlVecMultiOrigins;
 	si.m_pUtlVecMultiOrigins = &utlVecMultiOrigins;
 	si.m_pUtlVecMultiAngles = nullptr;
 
@@ -6377,12 +6374,11 @@ static int S_StartSound_Immediate( StartSoundParams_t& params )
 				// Pass through
 			case SE_FILE_NOT_FOUND:
 				{
-					static CUtlRBTree< FileNameHandle_t > s_MissingSounds( 0, 0, DefLessFunc( FileNameHandle_t ) );
+					static std::set< FileNameHandle_t > s_MissingSounds;
 					FileNameHandle_t h;
 					h = g_pFileSystem->FindOrAddFileName( sndname );
-					if ( ( s_MissingSounds.Find( h ) == s_MissingSounds.InvalidIndex() ) || snd_report_verbose_error.GetBool() )
+					if ( s_MissingSounds.insert( h ).second || snd_report_verbose_error.GetBool() )
 					{
-						s_MissingSounds.Insert( h );
 						pText = "File is missing from disk/repository.";
 					}
 					else
@@ -7094,7 +7090,7 @@ bool S_IsSoundStillPlaying( int guid )
 	THREAD_LOCK_SOUND();
 	if ( host_threaded_sound.GetBool() )
 	{ 
-		AUTO_LOCK( g_ActiveSoundListMutex );
+		std::scoped_lock activeSoundListLock( g_ActiveSoundListMutex );
 		if ( guid > s_nMaxQueuedGUID )
 		{
 			// If the GUID is greater than the last set of queued GUID, it means the sound has probably not made through the active sound list yet
@@ -7102,7 +7098,7 @@ bool S_IsSoundStillPlaying( int guid )
 			return true;
 		}
 		// don't need to lock the sound mutex if we use this list
-		for ( int i = 0; i < g_ActiveSoundsLastUpdate.Count(); i++ )
+		for ( int i = 0; i < std::ssize( g_ActiveSoundsLastUpdate ); i++ )
 		{
 			if ( guid == g_ActiveSoundsLastUpdate[i].m_nGuid )
 				return true;
@@ -7172,13 +7168,13 @@ float S_GetElapsedTimeByGuid( int guid )
 {
 	if ( host_threaded_sound.GetBool() )
 	{
-		AUTO_LOCK( g_ActiveSoundListMutex );
+		std::scoped_lock activeSoundListLock( g_ActiveSoundListMutex );
 		if ( guid < s_nMaxQueuedGUID )
 		{
 			// The guid is in the range of GUIDs from current active sounds, let's do the look-up.
 
 			// don't need to lock the sound mutex if we use this list
-			for ( int i = 0; i < g_ActiveSoundsLastUpdate.Count(); i++ )
+			for ( int i = 0; i < std::ssize( g_ActiveSoundsLastUpdate ); i++ )
 			{
 				if ( guid == g_ActiveSoundsLastUpdate[i].m_nGuid )
 					return g_ActiveSoundsLastUpdate[i].m_flElapsedTime;
@@ -7198,7 +7194,7 @@ float S_GetElapsedTimeByGuid( int guid )
 // Purpose: 
 // Input  : sndlist - 
 //-----------------------------------------------------------------------------
-void S_GetActiveSounds( CUtlVector< SndInfo_t >& sndlist )
+void S_GetActiveSounds( std::vector< SndInfo_t >& sndlist )
 {
 	THREAD_LOCK_SOUND();
 	CChannelList list;
@@ -7235,7 +7231,7 @@ void S_GetActiveSounds( CUtlVector< SndInfo_t >& sndlist )
 		// for snd_show, networked sounds get colored differently than local sounds
 		info.m_bFromServer		= ch->flags.fromserver; 
 
-		sndlist.AddToTail( info );
+		sndlist.push_back( info );
 	}
 }
 
@@ -7478,7 +7474,7 @@ ConVar snd_debug_gaincurvevol( "snd_debug_gaincurvevol", "1.0", FCVAR_NONE, "Vis
 
 void DEBUG_drawGainCurve(void)
 {
-	CUtlVector<float>	gainList;
+	std::vector< float >	gainList;
 
 	float startY = .03;
 	float totalY = .4;
@@ -7494,11 +7490,11 @@ void DEBUG_drawGainCurve(void)
 		if(gain < minGain)
 			break;
 	//	gainList.AddToTail((float)(maxEntries - i) / ((float) maxEntries));
-		gainList.AddToTail(gain);
+		gainList.push_back( gain );
 
 	}
 
-	int count = gainList.Count();
+	int count = std::ssize( gainList );
 	char str[32];
 	sprintf(str, "%i ft", 0);  
 	CDebugOverlay::AddScreenTextOverlay(0, 0, .1, 0, 255, 0, 255,  str);
@@ -7564,15 +7560,15 @@ void S_StartQueuedSounds()
 			break;
 		}
 		int nGuid = S_StartSound_Immediate( soundParams );
-		lastGUID = MAX( lastGUID, nGuid );
+		lastGUID = std::max( lastGUID, nGuid );
 	}
 	s_nMaxQueuedGUID = lastGUID;
 }
 
-static CUtlHashtable< HSOUNDSCRIPTHASH, int > s_SoundsPrintedLastUpdate;
+static std::unordered_map< HSOUNDSCRIPTHASH, int > s_SoundsPrintedLastUpdate;
 void OnSndShowEdgeChanged( IConVar *var, const char *pOldValue, float flOldValue )
 {
-	s_SoundsPrintedLastUpdate.Purge();
+	s_SoundsPrintedLastUpdate.clear();
 }
 /*
 ============
@@ -7608,10 +7604,10 @@ void S_Update( const CAudioState *pAudioState )
 		S_StartQueuedSounds();
 	}
 
-	g_SndMutex.Lock();
+	g_SndMutex.lock();
 	if ( host_threaded_sound.GetInt() )
 	{
-		AUTO_LOCK( g_ActiveSoundListMutex );
+		std::scoped_lock activeSoundListLock( g_ActiveSoundListMutex );
 		g_ActiveChannels.CopyActiveSounds( g_ActiveSoundsLastUpdate );
 	}
 
@@ -7716,7 +7712,7 @@ void S_Update( const CAudioState *pAudioState )
 			{
 				voiceChannelCount++;
 				int iThisChannelMaxVol = ChannelGetMaxVol( ch );
-				voiceChannelMaxVolume = MAX( voiceChannelMaxVolume, iThisChannelMaxVol );
+				voiceChannelMaxVolume = std::max( voiceChannelMaxVolume, iThisChannelMaxVol );
 			}
 		}
 	}
@@ -7746,7 +7742,7 @@ void S_Update( const CAudioState *pAudioState )
 			{
 				voiceChannelCount++;
 				int iThisChannelMaxVol = ChannelGetMaxVol( ch );
-				voiceChannelMaxVolume = MAX( voiceChannelMaxVolume, iThisChannelMaxVol );
+				voiceChannelMaxVolume = std::max( voiceChannelMaxVolume, iThisChannelMaxVol );
 			}
 		}
 
@@ -7908,15 +7904,14 @@ void S_Update( const CAudioState *pAudioState )
 			{
 				bool bPrint = false;
 				// did we print this sound last frame? If we didn't, then print it now
-				int nFind = s_SoundsPrintedLastUpdate.Find( ch->m_nSoundScriptHash );
-				if ( nFind == s_SoundsPrintedLastUpdate.InvalidHandle() )
+				auto [itLast, bInserted] = s_SoundsPrintedLastUpdate.try_emplace( ch->m_nSoundScriptHash, s_nPrintTickCount );
+				if ( bInserted )
 				{
 					bPrint = true;
-					s_SoundsPrintedLastUpdate.Insert( ch->m_nSoundScriptHash, s_nPrintTickCount );
 				}
 				else
 				{
-					int &nLastPlayed = s_SoundsPrintedLastUpdate.Element( nFind );
+					int &nLastPlayed = itLast->second;
 					if ( uint( s_nPrintTickCount - nLastPlayed ) > uint( snd_show_print.GetInt() ) )
 					{
 						bPrint = true;
@@ -7975,7 +7970,7 @@ void S_Update( const CAudioState *pAudioState )
 		}
 	}
 
-	g_SndMutex.Unlock();
+	g_SndMutex.unlock();
 
 	if ( s_bOnLoadScreen )
 		return;
@@ -8456,7 +8451,7 @@ void S_DspParms( const CCommand &args )
 		return;
 	}
 	
-	int cparam = MIN( args.ArgC() - 4, 16);
+	int cparam = std::min( args.ArgC() - 4, 16);
 
 	float params[16];
 	Q_memset( params, 0, sizeof(float) * 16 );
@@ -8606,9 +8601,9 @@ void S_PurgeSoundsDueToLanguageChange()
 {
 	DevMsg( "S_PurgeSoundsDueToLanguageChange()\n" );
 
-	for ( int i = s_Sounds.FirstInorder(); i != s_Sounds.InvalidIndex(); i = s_Sounds.NextInorder( i ) )
+	for ( auto &[fnHandle, entry] : s_Sounds )
 	{
-		CSfxTable *pSfx = s_Sounds[i].pSfx;
+		CSfxTable *pSfx = entry.pSfx;
 		if ( pSfx && pSfx->pSource )
 		{
 			if ( pSfx->m_bIsUISound || pSfx->m_bIsMusic )
@@ -8634,16 +8629,6 @@ void S_PurgeSoundsDueToLanguageChange()
 	}
 }
 
-static bool SortByNameLessFunc( const int &lhs, const int &rhs )
-{
-	CSfxTable *pSfx1 = s_Sounds[lhs].pSfx;
-	CSfxTable *pSfx2 = s_Sounds[rhs].pSfx;
-	char nameBuf1[MAX_PATH];
-	char nameBuf2[MAX_PATH];
-
-	return CaselessStringLessThan( pSfx1->getname(nameBuf1,sizeof(nameBuf1)), pSfx2->getname(nameBuf2,sizeof(nameBuf2)) );
-}
-
 void S_SoundList(void)
 {
 	CSfxTable		*sfx;
@@ -8652,9 +8637,9 @@ void S_SoundList(void)
 	char			nameBuf[MAX_PATH];
 
 	total = 0;
-	for ( int i = s_Sounds.FirstInorder(); i != s_Sounds.InvalidIndex(); i = s_Sounds.NextInorder( i ) )
+	for ( auto &[fnHandle, entry] : s_Sounds )
 	{
-		sfx = s_Sounds[i].pSfx;
+		sfx = entry.pSfx;
 		pSource = sfx->pSource;
 		if ( !pSource )
 			continue;
@@ -8764,7 +8749,7 @@ static void S_Say( const CCommand &args )
 }
 
 
-float S_GetMono16Samples( const char *pszName, CUtlVector< short >& sampleList )
+float S_GetMono16Samples( const char *pszName, std::vector< short >& sampleList )
 {
 	CSfxTable *pSfx = S_PrecacheSound( PSkipSoundChars( pszName ) );
 	if ( !pSfx )
@@ -8800,7 +8785,7 @@ float S_GetMono16Samples( const char *pszName, CUtlVector< short >& sampleList )
 	int remaining = totalsamples;
 	while ( remaining > 0 )
 	{
-		int blockSize = MIN( remaining, 1000 );
+		int blockSize = std::min( remaining, 1000 );
 
 		char copyBuf[AUDIOSOURCE_COPYBUF_SIZE];
 		int copied = pWave->GetOutputData( (void **)&pData, pos, blockSize, copyBuf );
@@ -8846,7 +8831,7 @@ float S_GetMono16Samples( const char *pszName, CUtlVector< short >& sampleList )
 						Assert( 0 );
 					}
 
-					sampleList.AddToTail( sample );
+					sampleList.push_back( sample );
 				}
 			}
 			break;
@@ -8886,7 +8871,7 @@ float S_GetMono16Samples( const char *pszName, CUtlVector< short >& sampleList )
 					}
 
 					short sample = ( left + right ) >> 1;
-					sampleList.AddToTail( sample );
+					sampleList.push_back( sample );
 				}
 			}
 			break;
@@ -8953,7 +8938,7 @@ CON_COMMAND( snd_print_channel_by_index, "Prints the content of a channel from i
 		return;
 	}
 
-	AUTO_LOCK( g_SndMutex );
+	std::scoped_lock soundLock( g_SndMutex );
 	channel_t *pChannel = &channels[ nIndex ];
 	PrintChannel( "PrintChannel", pChannel );
 }
@@ -8968,7 +8953,7 @@ CON_COMMAND( snd_print_channel_by_guid, "Prints the content of a channel from it
 
 	int nGuid = atoi( args.Arg( 1 ) );
 
-	AUTO_LOCK( g_SndMutex );
+	std::scoped_lock soundLock( g_SndMutex );
 	channel_t *pChannel = nullptr;
 	for ( int i = 0 ; i < MAX_CHANNELS ; ++i )
 	{
@@ -8989,7 +8974,7 @@ CON_COMMAND( snd_print_channel_by_guid, "Prints the content of a channel from it
 
 CON_COMMAND( snd_print_channels, "Prints all the active channel.")
 {
-	AUTO_LOCK( g_SndMutex );
+	std::scoped_lock soundLock( g_SndMutex );
 
 	int nNumActiveChannels = g_ActiveChannels.GetActiveCount();
 	Msg( "Total Channels: %d\n", nNumActiveChannels);
@@ -9019,7 +9004,7 @@ CON_COMMAND( snd_set_master_volume, "Sets the master volume for a channel. snd_s
 	int nGuid = atoi( args.Arg( 1 ) );
 	int nVolume = atoi( args.Arg( 2 ) );
 
-	AUTO_LOCK( g_SndMutex );
+	std::scoped_lock soundLock( g_SndMutex );
 
 	channel_t *pChannel = nullptr;
 	for ( int i = 0 ; i < MAX_CHANNELS ; ++i )

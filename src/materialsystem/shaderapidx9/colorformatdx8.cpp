@@ -6,17 +6,6 @@
 //
 //=============================================================================//
 
-////#define APIENTRY 
-//#if defined(_WIN32) && !defined(_X360)
-////#define WIN32_LEAN_AND_MEAN
-////#define _WIN32_WINNT 0x0500
-////#include <windows.h>
-////#include <assert.h>
-//#endif
-//#include <GL/gl.h>
-//#include "tier0/platform.h"
-////#include <GL/glext.h>
-////#include "tier0/dynfunction.h"
 #define DISABLE_PROTECTED_THINGS
 #include "togl/rendermechanism.h"
 #include "locald3dtypes.h"
@@ -28,9 +17,6 @@
 #include "tier1/strtools.h"
 #include "shaderdevicedx8.h"
 
-
-// Must be last
-#include "tier0/memdbgon.h"
 
 
 //-----------------------------------------------------------------------------

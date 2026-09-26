@@ -17,7 +17,7 @@ public:
 		if ( !p )
 		{
 			p = (T *)MemAlloc_AllocAligned( sizeof( T ) * MAXSTUDIOBONES, 16 );
-			if ( ((size_t)p) % MAX(TSLIST_NODE_ALIGNMENT,16) != 0 )
+			if ( ((size_t)p) % std::max(TSLIST_NODE_ALIGNMENT,16) != 0 )
 				DebuggerBreak();
 		}
 

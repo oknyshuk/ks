@@ -30,7 +30,7 @@ struct ScopeData
     int top_h, bottom_y, bottom_h, left_w, right_w;
     int core_x, core_y, thickness;   // sharp cross (steady)
     int blur_x, blur_y, blur;        // soft sprite cross (moving)
-    Rml::String opacity;
+    Rml::String opacity = "1";
     bool steady;
 
     bool operator==( const ScopeData & ) const = default;
@@ -107,7 +107,7 @@ void RkHudScope::UpdateScope()
     int screenTall = dim.y;
 
     const float kScopeMinFOV = 25.0f;
-    float flTargetFOVForZoom = MAX( pWeapon->GetZoomFOV( pWeapon->GetCSZoomLevel() ), kScopeMinFOV );
+    float flTargetFOVForZoom = std::max<std::common_type_t<int, float>>( pWeapon->GetZoomFOV( pWeapon->GetCSZoomLevel() ), kScopeMinFOV );
 
     // Reset animation when not scoped
     if( pPlayer->GetFOV() == pPlayer->GetDefaultFOV() && !pPlayer->m_bIsScoped )
@@ -132,7 +132,7 @@ void RkHudScope::UpdateScope()
     float fWeaponInaccuracy = pWeapon->GetInaccuracy() + pWeapon->GetSpread();
     if( !cl_crosshair_sniper_show_normal_inaccuracy.GetBool() )
         fWeaponInaccuracy -= pWeapon->GetInaccuracyStand( Secondary_Mode ) + pWeapon->GetSpread();
-    fWeaponInaccuracy = MAX( fWeaponInaccuracy, 0 );
+    fWeaponInaccuracy = std::max<std::common_type_t<float, int>>( fWeaponInaccuracy, 0 );
 
     float fRawSpreadDistance = fWeaponInaccuracy * fInaccuracyIn640x480Pixels;
     float fSpreadDistance = clamp( fRawSpreadDistance, 0.0f, 100.0f );
@@ -164,7 +164,7 @@ void RkHudScope::UpdateScope()
     int centerY = ( screenTall / 2 ) + offsetY;
 
     // --- publish -----------------------------------------------------------
-    // The clamps stay here: MAX(y1,0) and friends are logic about a viewport
+    // The clamps stay here: std::max(y1,0) and friends are logic about a viewport
     // that can be pushed off-screen by the bob, not styling.
     ScopeData next;
     next.screen_w = screenWide;
@@ -174,11 +174,11 @@ void RkHudScope::UpdateScope()
     next.scope_w = x2 - x1;
     next.scope_h = y2 - y1;
     next.scope_x2 = x2;
-    next.top_h = MAX( y1, 0 );
+    next.top_h = std::max( y1, 0 );
     next.bottom_y = y2;
-    next.bottom_h = MAX( screenTall - y2, 0 );
-    next.left_w = MAX( x1, 0 );
-    next.right_w = MAX( screenWide - x2, 0 );
+    next.bottom_h = std::max( screenTall - y2, 0 );
+    next.left_w = std::max( x1, 0 );
+    next.right_w = std::max( screenWide - x2, 0 );
 
     // Reticle: faithful port of the legacy CHudScope -- a hard toggle between a
     // thin sharp solid line (steady) and Valve's scope_line_blur sprite (moving),
